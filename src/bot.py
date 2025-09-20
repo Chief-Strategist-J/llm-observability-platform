@@ -1,5 +1,6 @@
 import streamlit as st
 from agent import generate_response, stream_response
+from graph import store_message, fetch_conversation, init_chat
 
 def render_header() -> None:
     st.markdown(
@@ -30,12 +31,13 @@ def render_message(role: str, content: str) -> None:
         unsafe_allow_html=True,
     )
 
+CHAT_ID = "demo-chat"
+
 def handle_submit(message: str) -> None:
-    # show user bubble immediately
     st.session_state.messages.append({"role": "user", "content": message})
     render_message("user", message)
+    store_message(CHAT_ID, "user", message)
 
-    # stream assistant reply
     placeholder = st.empty()
     partial_text = ""
 
@@ -55,7 +57,6 @@ def handle_submit(message: str) -> None:
                 unsafe_allow_html=True,
             )
     except Exception:
-        # graceful fallback (non-streaming)
         partial_text = generate_response(message)
         placeholder.markdown(
             f"""
@@ -70,7 +71,6 @@ def handle_submit(message: str) -> None:
             unsafe_allow_html=True,
         )
 
-    # finalize + persist assistant message
     if partial_text:
         placeholder.markdown(
             f"""
@@ -85,6 +85,7 @@ def handle_submit(message: str) -> None:
             unsafe_allow_html=True,
         )
         st.session_state.messages.append({"role": "assistant", "content": partial_text})
+        store_message(CHAT_ID, "assistant", partial_text)
 
 def main() -> None:
     st.set_page_config(page_title="Ebert 🎬", page_icon="🍿", layout="centered")
@@ -99,10 +100,21 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
+    # ensure chat node exists
+    init_chat(CHAT_ID)
+
     if "messages" not in st.session_state:
-        st.session_state.messages = [
-            {"role": "assistant", "content": "Hi 👋 I'm Ebert! Ask me about movies 🎥"},
-        ]
+        # load existing history from Neo4j
+        history = fetch_conversation(CHAT_ID)
+        if history:
+            st.session_state.messages = [
+                {"role": row["role"], "content": row["content"]} for row in history
+            ]
+        else:
+            st.session_state.messages = [
+                {"role": "assistant", "content": "Hi 👋 I'm Ebert! Ask me about movies 🎥"},
+            ]
+            store_message(CHAT_ID, "assistant", "Hi 👋 I'm Ebert! Ask me about movies 🎥")
 
     render_header()
 
