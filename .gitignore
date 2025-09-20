@@ -1,7 +1,27 @@
-__pycache__
-.streamlit/secrets.toml
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+.venv/
 .env
-.venv
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# System files
 .DS_Store
-.vscode
-.pytest_cache
+.vscode/
+
+# Testing cache
+.pytest_cache/
+
+# Project-specific data
+neo4j/
+data/
+
+# Logs
+*.log

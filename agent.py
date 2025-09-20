@@ -1,12 +1,19 @@
-from llm import llm
-from graph import graph
+from llm_client import llm
+from langchain_core.prompts import ChatPromptTemplate
+from langchain.schema import StrOutputParser
 
-# Create a movie chat chain
+chat_prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", "You are a movie expert. Be concise, clear, and helpful."),
+        ("human", "{input}"),
+    ]
+)
 
-# Create a set of tools
 
-# Create chat history callback
+movie_chat = chat_prompt | llm | StrOutputParser()
 
-# Create the agent
-
-# Create a handler to call the agent
+def generate_response(user_input: str) -> str:
+    try:
+        return movie_chat.invoke({"input": user_input})
+    except Exception as e:
+        return f"⚠️ Error: {e}"
