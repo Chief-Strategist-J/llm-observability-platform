@@ -1,6 +1,6 @@
 import streamlit as st
 from agent import generate_response, stream_response
-from graph import store_message, fetch_conversation, init_chat
+from graph import store_message, fetch_conversation, init_chat, enrich_message
 
 def render_header() -> None:
     st.markdown(
@@ -34,10 +34,22 @@ def render_message(role: str, content: str) -> None:
 CHAT_ID = "demo-chat"
 
 def handle_submit(message: str) -> None:
+    # show user bubble immediately
     st.session_state.messages.append({"role": "user", "content": message})
     render_message("user", message)
-    store_message(CHAT_ID, "user", message)
 
+    # persist + enrich (user)
+    try:
+        user_msg_id = store_message(CHAT_ID, "user", message)
+    except Exception:
+        user_msg_id = None
+    if user_msg_id:
+        try:
+            enrich_message(user_msg_id, message)
+        except Exception:
+            pass
+
+    # stream assistant reply
     placeholder = st.empty()
     partial_text = ""
 
@@ -57,6 +69,7 @@ def handle_submit(message: str) -> None:
                 unsafe_allow_html=True,
             )
     except Exception:
+        # graceful fallback (non-streaming)
         partial_text = generate_response(message)
         placeholder.markdown(
             f"""
@@ -71,6 +84,7 @@ def handle_submit(message: str) -> None:
             unsafe_allow_html=True,
         )
 
+    # finalize + persist + enrich (assistant)
     if partial_text:
         placeholder.markdown(
             f"""
@@ -85,7 +99,16 @@ def handle_submit(message: str) -> None:
             unsafe_allow_html=True,
         )
         st.session_state.messages.append({"role": "assistant", "content": partial_text})
-        store_message(CHAT_ID, "assistant", partial_text)
+
+        try:
+            asst_msg_id = store_message(CHAT_ID, "assistant", partial_text)
+        except Exception:
+            asst_msg_id = None
+        if asst_msg_id:
+            try:
+                enrich_message(asst_msg_id, partial_text)
+            except Exception:
+                pass
 
 def main() -> None:
     st.set_page_config(page_title="Ebert 🎬", page_icon="🍿", layout="centered")
@@ -114,7 +137,13 @@ def main() -> None:
             st.session_state.messages = [
                 {"role": "assistant", "content": "Hi 👋 I'm Ebert! Ask me about movies 🎥"},
             ]
-            store_message(CHAT_ID, "assistant", "Hi 👋 I'm Ebert! Ask me about movies 🎥")
+            # persist the greeting
+            try:
+                greet_id = store_message(CHAT_ID, "assistant", "Hi 👋 I'm Ebert! Ask me about movies 🎥")
+                if greet_id:
+                    enrich_message(greet_id, "Hi 👋 I'm Ebert! Ask me about movies 🎥")
+            except Exception:
+                pass
 
     render_header()
 
