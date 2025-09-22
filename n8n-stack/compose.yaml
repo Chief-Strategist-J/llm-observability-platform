@@ -1,0 +1,98 @@
+name: n8n_stack
+
+networks:
+  edge: {}
+  backplane:
+    internal: true
+
+volumes:
+  n8n_data:
+  traefik_data:
+
+services:
+  # optional HTTPS reverse proxy (binds :80/:443). Comment out if ports in use.
+  traefik:
+    image: traefik:latest
+    restart: unless-stopped
+    command:
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:8081
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:8443
+      - --certificatesresolvers.mytlschallenge.acme.tlschallenge=true
+      - --certificatesresolvers.mytlschallenge.acme.email=${SSL_EMAIL}
+      - --certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "8081:8081"
+      - "8443:8443"
+    volumes:
+      - traefik_data:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [edge, backplane]
+  n8n:
+    build:
+      context: ./n8n
+    image: local/n8n-with-logs:latest
+    restart: unless-stopped
+    depends_on: [traefik]
+    # local development access even without Traefik
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      - N8N_HOST=${SUBDOMAIN}.${DOMAIN_NAME}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - TZ=${TZ}
+      - NODE_ENV=production
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+
+      # runners + native python runner (optional beta)
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_NATIVE_PYTHON_RUNNER=true
+
+      # file logging
+      - N8N_LOG_LEVEL=info
+      - N8N_LOG_OUTPUT=file
+      - N8N_LOG_FILE_LOCATION=/var/log/n8n/n8n.log
+      - N8N_LOG_FILE_SIZE_MAX=32
+      - N8N_LOG_FILE_COUNT_MAX=30
+
+      # harden a bit
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_VERSION_NOTIFICATIONS_ENABLED=false
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/local-files:/files
+      - ./n8n/logs:/var/log/n8n
+      - ./n8n/custom-nodes:/home/node/.n8n/custom-nodes
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.n8n.rule=Host(`${SUBDOMAIN}.${DOMAIN_NAME}`)
+      - traefik.http.routers.n8n.entrypoints=web,websecure
+      - traefik.http.routers.n8n.tls.certresolver=mytlschallenge
+    networks: [edge, backplane]
+
+  # small proxy API so your other apps can trigger n8n webhooks and query executions
+  automation-api:
+    build:
+      context: ./automation-api
+    image: local/automation-api:latest
+    restart: unless-stopped
+    depends_on: [n8n]
+    environment:
+      - PORT=8080
+      - N8N_BASE_URL=http://n8n:5678
+      - N8N_API_KEY=${N8N_API_KEY}
+    ports:
+      - "127.0.0.1:8080:8080"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.automation-api.rule=Host(`api.${DOMAIN_NAME}`)
+      - traefik.http.routers.automation-api.entrypoints=web,websecure
+      - traefik.http.routers.automation-api.tls.certresolver=mytlschallenge
+    networks: [edge, backplane]
