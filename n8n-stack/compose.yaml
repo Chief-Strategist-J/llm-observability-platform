@@ -7,10 +7,9 @@ networks:
 
 volumes:
   n8n_data:
-  traefik_data:
+  grafana_data:
 
 services:
-  # optional HTTPS reverse proxy (binds :80/:443). Comment out if ports in use.
   traefik:
     image: traefik:latest
     restart: unless-stopped
@@ -19,50 +18,36 @@ services:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --entrypoints.web.address=:8081
-      - --entrypoints.web.http.redirections.entryPoint.to=websecure
-      - --entrypoints.web.http.redirections.entrypoint.scheme=https
       - --entrypoints.websecure.address=:8443
-      - --certificatesresolvers.mytlschallenge.acme.tlschallenge=true
-      - --certificatesresolvers.mytlschallenge.acme.email=${SSL_EMAIL}
-      - --certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json
+      - --log.level=INFO
+      - --accesslog=true
     ports:
-      - "8081:8081"
-      - "8443:8443"
+      - "127.0.0.1:8081:8081"
+      - "127.0.0.1:8443:8443"
     volumes:
-      - traefik_data:/letsencrypt
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks: [edge, backplane]
+
   n8n:
     build:
       context: ./n8n
     image: local/n8n-with-logs:latest
+    pull_policy: build
     restart: unless-stopped
-    depends_on: [traefik]
-    # local development access even without Traefik
-    ports:
-      - "127.0.0.1:5678:5678"
     environment:
-      - N8N_HOST=${SUBDOMAIN}.${DOMAIN_NAME}
+      - N8N_HOST=n8n.localtest.me
       - N8N_PORT=5678
-      - N8N_PROTOCOL=https
-      - WEBHOOK_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/
-      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
-      - TZ=${TZ}
+      - N8N_SECURE_COOKIE=false
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://n8n.localtest.me:8081/
+      - GENERIC_TIMEZONE=Asia/Kolkata
+      - TZ=Asia/Kolkata
       - NODE_ENV=production
-      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
-
-      # runners + native python runner (optional beta)
-      - N8N_RUNNERS_ENABLED=true
-      - N8N_NATIVE_PYTHON_RUNNER=true
-
-      # file logging
-      - N8N_LOG_LEVEL=info
+      - N8N_LOG_LEVEL=debug
       - N8N_LOG_OUTPUT=file
       - N8N_LOG_FILE_LOCATION=/var/log/n8n/n8n.log
       - N8N_LOG_FILE_SIZE_MAX=32
       - N8N_LOG_FILE_COUNT_MAX=30
-
-      # harden a bit
       - N8N_DIAGNOSTICS_ENABLED=false
       - N8N_VERSION_NOTIFICATIONS_ENABLED=false
     volumes:
@@ -72,27 +57,60 @@ services:
       - ./n8n/custom-nodes:/home/node/.n8n/custom-nodes
     labels:
       - traefik.enable=true
-      - traefik.http.routers.n8n.rule=Host(`${SUBDOMAIN}.${DOMAIN_NAME}`)
-      - traefik.http.routers.n8n.entrypoints=web,websecure
-      - traefik.http.routers.n8n.tls.certresolver=mytlschallenge
+      - traefik.http.routers.n8n.rule=Host(`n8n.localtest.me`)
+      - traefik.http.routers.n8n.entrypoints=web
+      - traefik.http.services.n8n.loadbalancer.server.port=5678
     networks: [edge, backplane]
 
-  # small proxy API so your other apps can trigger n8n webhooks and query executions
   automation-api:
     build:
       context: ./automation-api
     image: local/automation-api:latest
+    pull_policy: build
     restart: unless-stopped
-    depends_on: [n8n]
     environment:
       - PORT=8080
       - N8N_BASE_URL=http://n8n:5678
-      - N8N_API_KEY=${N8N_API_KEY}
-    ports:
-      - "127.0.0.1:8080:8080"
+      - N8N_WEBHOOK_PATH=/webhook/automation
     labels:
       - traefik.enable=true
-      - traefik.http.routers.automation-api.rule=Host(`api.${DOMAIN_NAME}`)
-      - traefik.http.routers.automation-api.entrypoints=web,websecure
-      - traefik.http.routers.automation-api.tls.certresolver=mytlschallenge
+      - traefik.http.routers.automation.rule=Host(`api.localtest.me`)
+      - traefik.http.routers.automation.entrypoints=web
+      - traefik.http.services.automation.loadbalancer.server.port=8080
     networks: [edge, backplane]
+
+  loki:
+    image: grafana/loki:2.9.8
+    restart: unless-stopped
+    command: -config.file=/etc/loki/config.yml
+    volumes:
+      - ./loki/config.yml:/etc/loki/config.yml:ro
+    ports:
+      - "127.0.0.1:3100:3100"
+    networks: [backplane]
+
+  promtail:
+    image: grafana/promtail:2.9.8
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./promtail/config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [backplane]
+  grafana:
+      image: grafana/grafana:10.4.6
+      restart: unless-stopped
+      environment:
+        - GF_PATHS_CONFIG=/etc/grafana/grafana.ini
+        - GF_SERVER_HTTP_ADDR=0.0.0.0
+        - GF_SERVER_HTTP_PORT=3030
+      volumes:
+        - grafana_data:/var/lib/grafana
+        - ./grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+        - ./grafana/provisioning:/etc/grafana/provisioning:ro
+        - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+        - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      ports:
+        - "3030:3030"  # Try without 127.0.0.1 binding first
+      networks: [backplane]
