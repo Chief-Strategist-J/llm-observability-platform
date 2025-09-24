@@ -113,7 +113,7 @@ services:
       - ./promtail/config.yml:/etc/promtail/config.yml:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks: [backplane]
+    networks: [backplane, edge]
     depends_on:
       - loki
 
