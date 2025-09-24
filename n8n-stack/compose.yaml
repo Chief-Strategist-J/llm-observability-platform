@@ -3,11 +3,13 @@ name: n8n_stack
 networks:
   edge: {}
   backplane:
-    internal: true
+    internal: false  # Change this to allow DNS resolution
+    driver: bridge
 
 volumes:
   n8n_data:
   grafana_data:
+  loki_data:
 
 services:
   traefik:
@@ -80,14 +82,20 @@ services:
     networks: [edge, backplane]
 
   loki:
-    image: grafana/loki:2.9.8
-    restart: unless-stopped
-    command: -config.file=/etc/loki/config.yml
-    volumes:
-      - ./loki/config.yml:/etc/loki/config.yml:ro
-    ports:
-      - "127.0.0.1:3100:3100"
-    networks: [backplane]
+      image: grafana/loki:2.9.8
+      restart: unless-stopped
+      command: -config.file=/etc/loki/config.yml
+      user: root
+      volumes:
+        - ./loki/config.yml:/etc/loki/config.yml:ro
+        - loki_data:/tmp/loki
+      ports:
+        - "127.0.0.1:3100:3100"
+      networks: 
+        backplane:
+          aliases:
+            - loki-server
+        edge:
 
   promtail:
     image: grafana/promtail:2.9.8
@@ -98,19 +106,24 @@ services:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks: [backplane]
+    depends_on:
+      - loki
+
   grafana:
-      image: grafana/grafana:10.4.6
-      restart: unless-stopped
-      environment:
-        - GF_PATHS_CONFIG=/etc/grafana/grafana.ini
-        - GF_SERVER_HTTP_ADDR=0.0.0.0
-        - GF_SERVER_HTTP_PORT=3030
-      volumes:
-        - grafana_data:/var/lib/grafana
-        - ./grafana/grafana.ini:/etc/grafana/grafana.ini:ro
-        - ./grafana/provisioning:/etc/grafana/provisioning:ro
-        - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
-        - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
-      ports:
-        - "3030:3030"  # Try without 127.0.0.1 binding first
-      networks: [backplane]
+    image: grafana/grafana:10.4.6
+    restart: unless-stopped
+    environment:
+      - GF_PATHS_CONFIG=/etc/grafana/grafana.ini
+      - GF_SERVER_HTTP_ADDR=0.0.0.0
+      - GF_SERVER_HTTP_PORT=3030
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+    ports:
+      - "127.0.0.1:3030:3030"
+    networks: [backplane, edge]
+    depends_on:
+      - loki
