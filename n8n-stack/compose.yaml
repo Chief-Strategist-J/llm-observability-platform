@@ -36,8 +36,16 @@ services:
     image: local/n8n-with-logs:latest
     pull_policy: build
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+      - 9.9.9.9
+    dns_opt:
+      - timeout:2
+      - attempts:3
     environment:
       - N8N_HOST=n8n.localtest.me
+      - NODE_OPTIONS=--dns-result-order=ipv4first
       - N8N_PORT=5678
       - N8N_SECURE_COOKIE=false
       - N8N_PROTOCOL=http
