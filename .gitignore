@@ -25,3 +25,5 @@ data/
 
 # Logs
 *.log
+n8n-stack/traefik/certs/n8n.localtest.me-key.pem
+n8n-stack/traefik/certs/n8n.localtest.me.pem
