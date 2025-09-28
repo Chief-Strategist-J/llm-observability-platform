@@ -114,6 +114,22 @@ python-multipart==0.0.6
 httpx==0.25.2
 EOF
 
+# === CPU-ONLY REQUIREMENTS (for production scaling) ===
+cat > "$PROJECT_NAME/requirements-full.txt" << 'EOF'
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+qdrant-client==1.7.0
+sentence-transformers==2.2.2
+torch==2.0.1+cpu
+torchvision==0.15.2+cpu
+torchaudio==2.0.2+cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
+numpy==1.24.3
+python-multipart==0.0.6
+httpx==0.25.2
+EOF
+
 # === MAIN APP ===
 cat > "$PROJECT_NAME/main.py" << 'EOF'
 """Main FastAPI application."""
