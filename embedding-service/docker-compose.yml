@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:v1.7.4
     container_name: qdrant-db
     ports:
       - "6333:6333"
@@ -11,10 +9,20 @@ services:
       - ./data/qdrant:/qdrant/storage:rw
     environment:
       - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+      - QDRANT__LOG_LEVEL=INFO
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   embedding-api:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
     container_name: embedding-api
     ports:
       - "8000:8000"
@@ -22,11 +30,20 @@ services:
       - QDRANT_URL=http://qdrant:6333
       - VECTOR_DIM=384
       - COLLECTION_NAME=embeddings
+      - EMBEDDING_MODEL=demo
+      - LOG_LEVEL=INFO
     depends_on:
-      - qdrant
+      qdrant:
+        condition: service_healthy
     volumes:
-      - .:/app
+      - .:/app:rw
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
 networks:
   default:
