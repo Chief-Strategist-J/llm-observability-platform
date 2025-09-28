@@ -1,825 +1,477 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_NAME="embedding-service"
+PROJECT_NAME="rag-service"
 
-echo "🚀 Creating embedding service with vertical folder structure..."
+echo "🚀 Creating minimal RAG service..."
 
-# Create vertical folder structure
 mkdir -p "$PROJECT_NAME"
 mkdir -p "$PROJECT_NAME/data/qdrant"
 mkdir -p "$PROJECT_NAME/api/routes"
-mkdir -p "$PROJECT_NAME/api/middleware"
-mkdir -p "$PROJECT_NAME/core/config"
-mkdir -p "$PROJECT_NAME/core/models"
-mkdir -p "$PROJECT_NAME/core/schemas"
-mkdir -p "$PROJECT_NAME/services/embedding"
-mkdir -p "$PROJECT_NAME/services/storage"
-mkdir -p "$PROJECT_NAME/handlers"
-mkdir -p "$PROJECT_NAME/utils"
-mkdir -p "$PROJECT_NAME/tests/unit"
-mkdir -p "$PROJECT_NAME/tests/integration"
-mkdir -p "$PROJECT_NAME/scripts"
+mkdir -p "$PROJECT_NAME/core"
+mkdir -p "$PROJECT_NAME/services"
 
-echo "📁 Folder structure created:"
-echo "
-$PROJECT_NAME/
-├── data/qdrant/                 # Persistent Qdrant data
-├── api/
-│   ├── routes/                  # API route definitions
-│   └── middleware/              # Custom middleware
-├── core/
-│   ├── config/                  # Configuration files
-│   ├── models/                  # Data models
-│   └── schemas/                 # Pydantic schemas
-├── services/
-│   ├── embedding/               # Embedding logic
-│   └── storage/                 # Storage interfaces
-├── handlers/                    # Request handlers
-├── utils/                       # Utilities
-├── tests/
-│   ├── unit/                    # Unit tests
-│   └── integration/             # Integration tests
-└── scripts/                     # Deployment scripts
-"
-
-# === DOCKER COMPOSE ===
 cat > "$PROJECT_NAME/docker-compose.yml" << 'EOF'
 version: '3.8'
-
 services:
   qdrant:
     image: qdrant/qdrant:latest
     container_name: qdrant-db
     ports:
       - "6333:6333"
-      - "6334:6334"
     volumes:
-      - ./data/qdrant:/qdrant/storage:rw
+      - ./data/qdrant:/qdrant/storage
     environment:
       - QDRANT__SERVICE__HTTP_PORT=6333
     restart: unless-stopped
+    profiles: ["active"]
 
-  embedding-api:
+  rag-api:
     build: .
-    container_name: embedding-api
+    container_name: rag-api
     ports:
       - "8000:8000"
     environment:
       - QDRANT_URL=http://qdrant:6333
-      - VECTOR_DIM=384
-      - COLLECTION_NAME=embeddings
     depends_on:
       - qdrant
     volumes:
       - .:/app
     restart: unless-stopped
-
-networks:
-  default:
-    driver: bridge
+    profiles: ["active"]
 EOF
 
-# === DOCKERFILE ===
 cat > "$PROJECT_NAME/Dockerfile" << 'EOF'
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
 COPY . .
 
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-keep-alive", "300"]
 EOF
 
-# === REQUIREMENTS ===
 cat > "$PROJECT_NAME/requirements.txt" << 'EOF'
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-pydantic==2.5.0
-qdrant-client==1.7.0
-numpy==1.24.3
-python-multipart==0.0.6
-httpx==0.25.2
-EOF
-
-# === CPU-ONLY REQUIREMENTS (for production scaling) ===
-cat > "$PROJECT_NAME/requirements-full.txt" << 'EOF'
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-pydantic==2.5.0
 qdrant-client==1.7.0
 sentence-transformers==2.2.2
-torch==2.0.1+cpu
-torchvision==0.15.2+cpu
-torchaudio==2.0.2+cpu
---extra-index-url https://download.pytorch.org/whl/cpu
-numpy==1.24.3
+pymupdf==1.23.14
 python-multipart==0.0.6
-httpx==0.25.2
+numpy==1.24.3
+torch==2.0.1+cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
 EOF
 
-# === MAIN APP ===
 cat > "$PROJECT_NAME/main.py" << 'EOF'
-"""Main FastAPI application."""
-from fastapi import FastAPI
-from api.routes import health, collections, search
-from core.config.settings import settings
+from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.responses import JSONResponse
+import uvicorn
+from api.routes import upload_pdf, search_rag
+from core.config import settings
 
-app = FastAPI(
-    title="Embedding Service",
-    description="Vector embedding service with Qdrant",
-    version="1.0.0"
+app: FastAPI = FastAPI(
+    title="RAG Service", 
+    version="1.0.0",
+    timeout=300
 )
 
-# Include routers
-app.include_router(health.router, prefix="/api/v1")
-app.include_router(collections.router, prefix="/api/v1")
-app.include_router(search.router, prefix="/api/v1")
+app.include_router(upload_pdf.router)
+app.include_router(search_rag.router)
+
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "healthy"}
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
 EOF
 
-# === CORE CONFIG ===
-cat > "$PROJECT_NAME/core/config/__init__.py" << 'EOF'
+cat > "$PROJECT_NAME/core/__init__.py" << 'EOF'
 EOF
 
-cat > "$PROJECT_NAME/core/config/settings.py" << 'EOF'
-"""Application settings."""
+cat > "$PROJECT_NAME/core/config.py" << 'EOF'
 import os
 
 class Settings:
     QDRANT_URL: str = os.getenv("QDRANT_URL", "http://localhost:6333")
-    VECTOR_DIM: int = int(os.getenv("VECTOR_DIM", "384"))
-    COLLECTION_NAME: str = os.getenv("COLLECTION_NAME", "embeddings")
-    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+    VECTOR_SIZE: int = 384
+    COLLECTION_NAME: str = "documents"
+    MODEL_NAME: str = "all-MiniLM-L6-v2"
 
-settings = Settings()
+settings: Settings = Settings()
 EOF
 
-# === CORE MODELS ===
-cat > "$PROJECT_NAME/core/models/__init__.py" << 'EOF'
-EOF
-
-cat > "$PROJECT_NAME/core/models/vector_point.py" << 'EOF'
-"""Vector point data model."""
-from typing import Dict, Any, List, Union
+cat > "$PROJECT_NAME/core/models.py" << 'EOF'
+from typing import List, Dict, Any
 from dataclasses import dataclass
 
 @dataclass
-class VectorPoint:
-    id: Union[str, int]
-    vector: List[float]
-    payload: Dict[str, Any] = None
-    
-    def __post_init__(self):
-        if self.payload is None:
-            self.payload = {}
-EOF
-
-# === CORE SCHEMAS ===
-cat > "$PROJECT_NAME/core/schemas/__init__.py" << 'EOF'
-EOF
-
-cat > "$PROJECT_NAME/core/schemas/requests.py" << 'EOF'
-"""Request schemas."""
-from typing import List, Optional, Dict, Any, Union
-from pydantic import BaseModel
-
-class EmbedRequest(BaseModel):
-    text: str
-    collection: Optional[str] = None
-
-class UpsertRequest(BaseModel):
-    items: List[Dict[str, Any]]
-    collection: Optional[str] = None
-
-class SearchRequest(BaseModel):
-    query: str
-    limit: int = 10
-    collection: Optional[str] = None
-    with_payload: bool = True
-
-class CreateCollectionRequest(BaseModel):
-    name: str
-    vector_size: int = 384
-    distance: str = "Cosine"
-EOF
-
-cat > "$PROJECT_NAME/core/schemas/responses.py" << 'EOF'
-"""Response schemas."""
-from typing import List, Dict, Any, Optional
-from pydantic import BaseModel
-
-class HealthResponse(BaseModel):
-    status: str = "healthy"
-    service: str = "embedding-service"
-
-class EmbedResponse(BaseModel):
-    vector: List[float]
-    dimension: int
-
-class SearchResult(BaseModel):
+class Document:
     id: str
+    text: str
+    metadata: Dict[str, Any]
+
+@dataclass
+class SearchResult:
+    id: str
+    text: str
     score: float
-    payload: Optional[Dict[str, Any]] = None
-
-class SearchResponse(BaseModel):
-    results: List[SearchResult]
-    total: int
-
-class StatusResponse(BaseModel):
-    success: bool
-    message: str
+    metadata: Dict[str, Any]
 EOF
 
-# === SERVICES - EMBEDDING ===
-cat > "$PROJECT_NAME/services/embedding/__init__.py" << 'EOF'
+cat > "$PROJECT_NAME/services/__init__.py" << 'EOF'
 EOF
 
-cat > "$PROJECT_NAME/services/embedding/text_embedder.py" << 'EOF'
-"""Text embedding service."""
-import hashlib
+cat > "$PROJECT_NAME/services/pdf_processor.py" << 'EOF'
+import fitz
 from typing import List
-import logging
+from io import BytesIO
+import gc
 
-logger = logging.getLogger(__name__)
-
-class TextEmbedder:
-    def __init__(self, model_name: str = "demo", vector_dim: int = 384):
-        self.model_name = model_name
-        self.vector_dim = vector_dim
-        self._load_model()
-    
-    def _load_model(self):
-        """Load embedding model."""
-        if self.model_name == "demo":
-            logger.info("Using demo hash-based embedder")
-        else:
-            try:
-                # Uncomment for production:
-                # from sentence_transformers import SentenceTransformer
-                # self.model = SentenceTransformer(self.model_name)
-                pass
-            except ImportError:
-                logger.warning("sentence-transformers not available, using demo embedder")
-    
-    def embed(self, text: str) -> List[float]:
-        """Generate embedding for text."""
-        if self.model_name == "demo":
-            return self._hash_embed(text)
-        else:
-            # return self.model.encode(text).tolist()
-            return self._hash_embed(text)
-    
-    def _hash_embed(self, text: str) -> List[float]:
-        """Demo embedding using hash."""
-        if not text:
-            text = "empty"
-        
-        # Create deterministic hash
-        hash_bytes = hashlib.sha256(text.lower().encode()).digest()
-        
-        # Convert to vector
-        vector = []
-        for i in range(self.vector_dim):
-            byte_val = hash_bytes[i % len(hash_bytes)]
-            # Normalize to [-1, 1]
-            normalized = (byte_val - 127.5) / 127.5
-            vector.append(float(normalized))
-        
-        return vector
-EOF
-
-# === SERVICES - STORAGE ===
-cat > "$PROJECT_NAME/services/storage/__init__.py" << 'EOF'
-EOF
-
-cat > "$PROJECT_NAME/services/storage/qdrant_client.py" << 'EOF'
-"""Qdrant storage client."""
-from typing import List, Dict, Any, Optional
-import logging
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
-from core.models.vector_point import VectorPoint
-
-logger = logging.getLogger(__name__)
-
-class QdrantStorage:
-    def __init__(self, url: str):
-        self.client = QdrantClient(url=url)
-        self.url = url
-        logger.info(f"Connected to Qdrant at {url}")
-    
-    def create_collection(self, name: str, vector_size: int = 384, distance: str = "Cosine"):
-        """Create a new collection."""
-        distance_map = {
-            "Cosine": Distance.COSINE,
-            "Dot": Distance.DOT, 
-            "Euclid": Distance.EUCLID
-        }
-        
+class PDFProcessor:
+    def extract_text(self, pdf_bytes: bytes) -> str:
         try:
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            text: str = ""
+            
+            total_pages: int = len(doc)
+            
+            for page_num in range(total_pages):
+                page = doc[page_num]
+                page_text: str = page.get_text()
+                text += page_text + "\n"
+                
+                if page_num % 50 == 0:
+                    gc.collect()
+            
+            doc.close()
+            gc.collect()
+            
+            return text.strip()
+        except Exception as e:
+            raise Exception(f"PDF extraction failed: {str(e)}")
+    
+    def chunk_text(self, text: str, chunk_size: int = 800, overlap: int = 100) -> List[str]:
+        if not text.strip():
+            return []
+            
+        words: List[str] = text.split()
+        chunks: List[str] = []
+        
+        for i in range(0, len(words), chunk_size - overlap):
+            chunk_words: List[str] = words[i:i + chunk_size]
+            chunk: str = " ".join(chunk_words)
+            
+            if chunk.strip():
+                chunks.append(chunk.strip())
+        
+        return chunks
+EOF
+
+cat > "$PROJECT_NAME/services/embedding_service.py" << 'EOF'
+from sentence_transformers import SentenceTransformer
+from typing import List
+import numpy as np
+from core.config import settings
+
+class EmbeddingService:
+    def __init__(self):
+        self.model: SentenceTransformer = SentenceTransformer(settings.MODEL_NAME)
+    
+    def embed_text(self, text: str) -> List[float]:
+        embedding: np.ndarray = self.model.encode(text)
+        return embedding.tolist()
+    
+    def embed_batch(self, texts: List[str]) -> List[List[float]]:
+        embeddings: np.ndarray = self.model.encode(texts)
+        return embeddings.tolist()
+EOF
+
+cat > "$PROJECT_NAME/services/qdrant_service.py" << 'EOF'
+from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams, PointStruct, Filter
+from typing import List, Dict, Any
+import uuid
+import gc
+from core.config import settings
+from core.models import Document, SearchResult
+
+class QdrantService:
+    def __init__(self):
+        self.client: QdrantClient = QdrantClient(url=settings.QDRANT_URL, timeout=300)
+        self._ensure_collection()
+    
+    def _ensure_collection(self) -> None:
+        try:
+            self.client.get_collection(settings.COLLECTION_NAME)
+        except:
             self.client.create_collection(
-                collection_name=name,
+                collection_name=settings.COLLECTION_NAME,
                 vectors_config=VectorParams(
-                    size=vector_size,
-                    distance=distance_map.get(distance, Distance.COSINE)
+                    size=settings.VECTOR_SIZE,
+                    distance=Distance.COSINE
                 )
             )
-            logger.info(f"Created collection: {name}")
+    
+    def upsert_documents_batch(self, documents: List[Document], embeddings: List[List[float]], batch_size: int = 100) -> bool:
+        try:
+            total_docs: int = len(documents)
+            
+            for i in range(0, total_docs, batch_size):
+                batch_docs: List[Document] = documents[i:i + batch_size]
+                batch_embeddings: List[List[float]] = embeddings[i:i + batch_size]
+                
+                points: List[PointStruct] = []
+                
+                for doc, embedding in zip(batch_docs, batch_embeddings):
+                    point: PointStruct = PointStruct(
+                        id=doc.id,
+                        vector=embedding,
+                        payload={
+                            "text": doc.text,
+                            "metadata": doc.metadata
+                        }
+                    )
+                    points.append(point)
+                
+                self.client.upsert(
+                    collection_name=settings.COLLECTION_NAME,
+                    points=points,
+                    wait=True
+                )
+                
+                points.clear()
+                gc.collect()
+            
             return True
         except Exception as e:
-            logger.error(f"Error creating collection {name}: {e}")
+            print(f"Upsert error: {e}")
             return False
     
-    def collection_exists(self, name: str) -> bool:
-        """Check if collection exists."""
-        try:
-            collections = self.client.get_collections()
-            return any(c.name == name for c in collections.collections)
-        except Exception as e:
-            logger.error(f"Error checking collection {name}: {e}")
-            return False
-    
-    def upsert_points(self, collection: str, points: List[VectorPoint]):
-        """Insert or update points."""
-        qdrant_points = [
-            PointStruct(
-                id=point.id,
-                vector=point.vector,
-                payload=point.payload
-            ) for point in points
-        ]
-        
-        try:
-            self.client.upsert(
-                collection_name=collection,
-                points=qdrant_points,
-                wait=True
-            )
-            logger.info(f"Upserted {len(points)} points to {collection}")
-            return True
-        except Exception as e:
-            logger.error(f"Error upserting to {collection}: {e}")
-            return False
-    
-    def search(
-        self, 
-        collection: str, 
-        query_vector: List[float], 
-        limit: int = 10,
-        with_payload: bool = True
-    ) -> List[Dict[str, Any]]:
-        """Search for similar vectors."""
+    def search(self, query_vector: List[float], limit: int = 5) -> List[SearchResult]:
         try:
             results = self.client.query_points(
-                collection_name=collection,
+                collection_name=settings.COLLECTION_NAME,
                 query=query_vector,
                 limit=limit,
-                with_payload=with_payload
+                with_payload=True
             )
             
-            return [
-                {
-                    "id": str(point.id),
-                    "score": float(point.score),
-                    "payload": point.payload if with_payload else None
-                }
-                for point in results.points
-            ]
-        except Exception as e:
-            logger.error(f"Error searching in {collection}: {e}")
+            search_results: List[SearchResult] = []
+            for point in results.points:
+                result: SearchResult = SearchResult(
+                    id=str(point.id),
+                    text=point.payload["text"],
+                    score=float(point.score),
+                    metadata=point.payload["metadata"]
+                )
+                search_results.append(result)
+            
+            return search_results
+        except:
             return []
 EOF
 
-# === HANDLERS ===
-cat > "$PROJECT_NAME/handlers/__init__.py" << 'EOF'
-EOF
-
-cat > "$PROJECT_NAME/handlers/embedding_handler.py" << 'EOF'
-"""Embedding request handlers."""
+cat > "$PROJECT_NAME/services/rag_service.py" << 'EOF'
 from typing import List
-from services.embedding.text_embedder import TextEmbedder
-from services.storage.qdrant_client import QdrantStorage
-from core.models.vector_point import VectorPoint
-from core.config.settings import settings
+from services.embedding_service import EmbeddingService
+from services.qdrant_service import QdrantService
+from core.models import SearchResult
 
-class EmbeddingHandler:
+class RAGService:
     def __init__(self):
-        self.embedder = TextEmbedder(
-            model_name=settings.EMBEDDING_MODEL,
-            vector_dim=settings.VECTOR_DIM
-        )
-        self.storage = QdrantStorage(settings.QDRANT_URL)
+        self.embedding_service: EmbeddingService = EmbeddingService()
+        self.qdrant_service: QdrantService = QdrantService()
     
-    def embed_text(self, text: str) -> List[float]:
-        """Generate embedding for text."""
-        return self.embedder.embed(text)
-    
-    def store_embeddings(self, collection: str, items: List[dict]) -> bool:
-        """Store text embeddings."""
-        points = []
-        for item in items:
-            text = item.get("text", "")
-            vector = self.embedder.embed(text)
-            point = VectorPoint(
-                id=item.get("id"),
-                vector=vector,
-                payload=item.get("payload", {})
-            )
-            points.append(point)
+    def search_and_generate(self, query: str, limit: int = 3) -> dict[str, any]:
+        query_embedding: List[float] = self.embedding_service.embed_text(query)
+        search_results: List[SearchResult] = self.qdrant_service.search(query_embedding, limit)
         
-        return self.storage.upsert_points(collection, points)
-    
-    def search_similar(
-        self, 
-        collection: str, 
-        query: str, 
-        limit: int = 10,
-        with_payload: bool = True
-    ):
-        """Search for similar texts."""
-        query_vector = self.embedder.embed(query)
-        return self.storage.search(collection, query_vector, limit, with_payload)
+        if not search_results:
+            return {
+                "answer": "No relevant documents found.",
+                "sources": []
+            }
+        
+        context: str = "\n\n".join([result.text for result in search_results])
+        
+        answer: str = f"Based on the available documents:\n\n{context}"
+        
+        sources: List[dict] = [
+            {
+                "id": result.id,
+                "score": result.score,
+                "text": result.text[:200] + "..." if len(result.text) > 200 else result.text
+            }
+            for result in search_results
+        ]
+        
+        return {
+            "answer": answer,
+            "sources": sources,
+            "query": query
+        }
 EOF
 
-# === API ROUTES ===
 cat > "$PROJECT_NAME/api/__init__.py" << 'EOF'
 EOF
 
 cat > "$PROJECT_NAME/api/routes/__init__.py" << 'EOF'
 EOF
 
-cat > "$PROJECT_NAME/api/routes/health.py" << 'EOF'
-"""Health check routes."""
-from fastapi import APIRouter
-from core.schemas.responses import HealthResponse
+cat > "$PROJECT_NAME/api/routes/upload_pdf.py" << 'EOF'
+from fastapi import APIRouter, File, UploadFile, HTTPException
+from fastapi.responses import JSONResponse
+import uuid
+from services.pdf_processor import PDFProcessor
+from services.embedding_service import EmbeddingService
+from services.qdrant_service import QdrantService
+from core.models import Document
 
-router = APIRouter(tags=["health"])
+router: APIRouter = APIRouter(prefix="/upload", tags=["upload"])
 
-@router.get("/health", response_model=HealthResponse)
-async def health_check():
-    return HealthResponse()
+@router.post("/pdf")
+async def upload_pdf(file: UploadFile = File(...)) -> JSONResponse:
+    if not file.filename.endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Only PDF files allowed")
+    
+    try:
+        pdf_bytes: bytes = await file.read()
+        
+        processor: PDFProcessor = PDFProcessor()
+        text: str = processor.extract_text(pdf_bytes)
+        chunks: list[str] = processor.chunk_text(text)
+        
+        embedding_service: EmbeddingService = EmbeddingService()
+        embeddings: list[list[float]] = embedding_service.embed_batch(chunks)
+        
+        documents: list[Document] = []
+        for i, chunk in enumerate(chunks):
+            doc: Document = Document(
+                id=f"{file.filename}_{i}",
+                text=chunk,
+                metadata={"filename": file.filename, "chunk": i}
+            )
+            documents.append(doc)
+        
+        qdrant_service: QdrantService = QdrantService()
+        success: bool = qdrant_service.upsert_documents(documents, embeddings)
+        
+        if success:
+            return JSONResponse({
+                "message": "PDF processed successfully",
+                "chunks": len(chunks),
+                "filename": file.filename
+            })
+        else:
+            raise HTTPException(status_code=500, detail="Failed to store embeddings")
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
 EOF
 
-cat > "$PROJECT_NAME/api/routes/collections.py" << 'EOF'
-"""Collection management routes."""
+cat > "$PROJECT_NAME/api/routes/search_rag.py" << 'EOF'
 from fastapi import APIRouter, HTTPException
-from core.schemas.requests import CreateCollectionRequest, UpsertRequest
-from core.schemas.responses import StatusResponse
-from handlers.embedding_handler import EmbeddingHandler
-from core.config.settings import settings
+from pydantic import BaseModel
+from services.rag_service import RAGService
 
-router = APIRouter(prefix="/collections", tags=["collections"])
-handler = EmbeddingHandler()
+router: APIRouter = APIRouter(prefix="/search", tags=["search"])
 
-@router.post("/create", response_model=StatusResponse)
-async def create_collection(request: CreateCollectionRequest):
-    """Create a new collection."""
-    success = handler.storage.create_collection(
-        name=request.name,
-        vector_size=request.vector_size,
-        distance=request.distance
-    )
-    return StatusResponse(
-        success=success,
-        message=f"Collection {request.name} created" if success else "Failed to create collection"
-    )
+class SearchRequest(BaseModel):
+    query: str
 
-@router.post("/init", response_model=StatusResponse)
-async def init_default_collection():
-    """Initialize default collection."""
-    if not handler.storage.collection_exists(settings.COLLECTION_NAME):
-        success = handler.storage.create_collection(
-            name=settings.COLLECTION_NAME,
-            vector_size=settings.VECTOR_DIM
-        )
-        return StatusResponse(
-            success=success,
-            message=f"Initialized collection: {settings.COLLECTION_NAME}"
-        )
-    return StatusResponse(success=True, message="Collection already exists")
-
-@router.post("/upsert", response_model=StatusResponse)
-async def upsert_items(request: UpsertRequest):
-    """Add items to collection."""
-    collection = request.collection or settings.COLLECTION_NAME
+@router.post("/rag")
+async def search_rag(request: SearchRequest) -> dict[str, any]:
+    if not request.query.strip():
+        raise HTTPException(status_code=400, detail="Query cannot be empty")
     
-    # Ensure collection exists
-    if not handler.storage.collection_exists(collection):
-        handler.storage.create_collection(collection, settings.VECTOR_DIM)
-    
-    success = handler.store_embeddings(collection, request.items)
-    return StatusResponse(
-        success=success,
-        message=f"Upserted {len(request.items)} items" if success else "Failed to upsert items"
-    )
+    try:
+        rag_service: RAGService = RAGService()
+        result: dict[str, any] = rag_service.search_and_generate(request.query)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 EOF
 
-cat > "$PROJECT_NAME/api/routes/search.py" << 'EOF'
-"""Search routes."""
-from fastapi import APIRouter
-from core.schemas.requests import SearchRequest, EmbedRequest
-from core.schemas.responses import SearchResponse, EmbedResponse
-from handlers.embedding_handler import EmbeddingHandler
-from core.config.settings import settings
-
-router = APIRouter(tags=["search"])
-handler = EmbeddingHandler()
-
-@router.post("/embed", response_model=EmbedResponse)
-async def embed_text(request: EmbedRequest):
-    """Generate embedding for text."""
-    vector = handler.embed_text(request.text)
-    return EmbedResponse(
-        vector=vector,
-        dimension=len(vector)
-    )
-
-@router.post("/search", response_model=SearchResponse)
-async def search_similar(request: SearchRequest):
-    """Search for similar items."""
-    collection = request.collection or settings.COLLECTION_NAME
-    
-    results = handler.search_similar(
-        collection=collection,
-        query=request.query,
-        limit=request.limit,
-        with_payload=request.with_payload
-    )
-    
-    return SearchResponse(
-        results=results,
-        total=len(results)
-    )
-EOF
-
-# === MIDDLEWARE ===
-cat > "$PROJECT_NAME/api/middleware/__init__.py" << 'EOF'
-EOF
-
-cat > "$PROJECT_NAME/api/middleware/logging.py" << 'EOF'
-"""Logging middleware."""
-import time
-import logging
-from fastapi import Request
-
-logger = logging.getLogger(__name__)
-
-async def log_requests(request: Request, call_next):
-    start_time = time.time()
-    response = await call_next(request)
-    process_time = time.time() - start_time
-    
-    logger.info(f"{request.method} {request.url.path} - {response.status_code} - {process_time:.3f}s")
-    return response
-EOF
-
-# === UTILS ===
-cat > "$PROJECT_NAME/utils/__init__.py" << 'EOF'
-EOF
-
-cat > "$PROJECT_NAME/utils/helpers.py" << 'EOF'
-"""Utility functions."""
-import logging
-
-def setup_logging():
-    """Setup application logging."""
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-
-def validate_vector_dim(vector, expected_dim):
-    """Validate vector dimensions."""
-    return len(vector) == expected_dim
-EOF
-
-# === TESTS ===
-cat > "$PROJECT_NAME/tests/__init__.py" << 'EOF'
-EOF
-
-cat > "$PROJECT_NAME/tests/unit/__init__.py" << 'EOF'
-EOF
-
-cat > "$PROJECT_NAME/tests/unit/test_embeddings.py" << 'EOF'
-"""Test embedding functionality."""
-import pytest
-from services.embedding.text_embedder import TextEmbedder
-
-def test_text_embedder():
-    embedder = TextEmbedder("demo", 384)
-    vector = embedder.embed("test text")
-    assert len(vector) == 384
-    assert all(isinstance(v, float) for v in vector)
-
-def test_consistent_embeddings():
-    embedder = TextEmbedder("demo", 384)
-    text = "consistent test"
-    vec1 = embedder.embed(text)
-    vec2 = embedder.embed(text)
-    assert vec1 == vec2
-EOF
-
-cat > "$PROJECT_NAME/tests/integration/__init__.py" << 'EOF'
-EOF
-
-cat > "$PROJECT_NAME/tests/integration/test_api.py" << 'EOF'
-"""Test API endpoints."""
-# Integration tests would go here
-pass
-EOF
-
-# === SCRIPTS ===
-cat > "$PROJECT_NAME/scripts/setup.py" << 'EOF'
-"""Setup script for development."""
-import subprocess
-import sys
-
-def install_dependencies():
-    """Install Python dependencies."""
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
-
-def run_tests():
-    """Run test suite."""
-    subprocess.check_call([sys.executable, "-m", "pytest", "tests/"])
-
-if __name__ == "__main__":
-    print("Setting up embedding service...")
-    install_dependencies()
-    print("Setup complete!")
-EOF
-
-# === README ===
-cat > "$PROJECT_NAME/README.md" << 'EOF'
-# Embedding Service
-
-Vector embedding microservice with Qdrant backend.
-
-## 📁 Structure
-
-```
-embedding-service/
-├── data/qdrant/                 # Persistent storage
-├── api/routes/                  # FastAPI routes
-├── core/                        # Core configuration & models
-├── services/                    # Business logic
-├── handlers/                    # Request processing
-├── utils/                       # Helper functions
-└── tests/                       # Test suites
-```
-
-## 🚀 Quick Start
-
-```bash
-# Start services
-docker-compose up -d
-
-# Check health
-curl http://localhost:8000/api/v1/health
-
-# Initialize collection
-curl -X POST http://localhost:8000/api/v1/collections/init
-
-# Add data
-curl -X POST http://localhost:8000/api/v1/collections/upsert \
-  -H "Content-Type: application/json" \
-  -d '{
-    "items": [
-      {"id": "1", "text": "Machine learning is fascinating", "payload": {"category": "tech"}},
-      {"id": "2", "text": "Deep learning models are powerful", "payload": {"category": "ai"}}
-    ]
-  }'
-
-# Search
-curl -X POST http://localhost:8000/api/v1/search \
-  -H "Content-Type: application/json" \
-  -d '{"query": "artificial intelligence", "limit": 5}'
-```
-
-## 🔧 Development
-
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Run locally
-uvicorn main:app --reload
-
-# Run tests
-pytest tests/
-```
-
-## 📊 API Endpoints
-
-- `GET /api/v1/health` - Health check
-- `POST /api/v1/collections/init` - Initialize default collection
-- `POST /api/v1/collections/create` - Create new collection
-- `POST /api/v1/collections/upsert` - Add/update items
-- `POST /api/v1/embed` - Generate text embedding
-- `POST /api/v1/search` - Search similar items
-
-## 🌐 Access
-
-- **API Docs**: http://localhost:8000/docs
-- **Qdrant UI**: http://localhost:6333/dashboard
-EOF
-
-# === .gitignore ===
 cat > "$PROJECT_NAME/.gitignore" << 'EOF'
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# PyInstaller
-*.manifest
-*.spec
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
-
-# Environments
+*.pyc
 .env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Project specific
 data/qdrant/*
 !data/qdrant/.gitkeep
-logs/
+.DS_Store
 *.log
 EOF
 
-# Create empty .gitkeep for qdrant data directory
 touch "$PROJECT_NAME/data/qdrant/.gitkeep"
 
-echo "✅ Embedding service created successfully!"
+cat > "$PROJECT_NAME/start.sh" << 'EOF'
+#!/bin/bash
+echo "Starting RAG service..."
+docker-compose --profile active up -d
+echo "Service started at http://localhost:8000"
+echo "API docs: http://localhost:8000/docs"
+EOF
+
+cat > "$PROJECT_NAME/stop.sh" << 'EOF'
+#!/bin/bash
+echo "Stopping RAG service..."
+docker-compose --profile active down
+echo "Service stopped"
+EOF
+
+chmod +x "$PROJECT_NAME/start.sh"
+chmod +x "$PROJECT_NAME/stop.sh"
+
+cat > "$PROJECT_NAME/README.md" << 'EOF'
+# RAG Service
+
+Minimal RAG service with PDF processing and Qdrant vector database.
+
+## Quick Start
+
+```bash
+# Start service
+./start.sh
+
+# Stop service
+./stop.sh
+```
+
+## API Endpoints
+
+1. **Upload PDF**: `POST /upload/pdf`
+   - Upload PDF file for processing and embedding
+
+2. **Search RAG**: `POST /search/rag`
+   - Query: `{"query": "your question"}`
+   - Returns answer with sources
+
+## Access
+- API: http://localhost:8000/docs
+- Qdrant: http://localhost:6333/dashboard
+
+## Usage
+
+1. Start service with `./start.sh`
+2. Upload PDF via `/upload/pdf`
+3. Query via `/search/rag`
+4. Stop service with `./stop.sh`
+EOF
+
+echo "✅ RAG service created successfully!"
 echo ""
-echo "📋 Quick Commands:"
+echo "📋 Commands:"
 echo "cd $PROJECT_NAME"
-echo "docker-compose up -d              # Start services"
-echo "curl localhost:8000/api/v1/health # Health check"
+echo "./start.sh    # Start service"
+echo "./stop.sh     # Stop service"
 echo ""
-echo "🌐 Access URLs:"
+echo "🌐 URLs:"
 echo "- API: http://localhost:8000/docs"
 echo "- Qdrant: http://localhost:6333/dashboard"

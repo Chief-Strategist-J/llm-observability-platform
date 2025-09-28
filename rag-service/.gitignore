@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+data/qdrant/*
+!data/qdrant/.gitkeep
+.DS_Store
+*.log
