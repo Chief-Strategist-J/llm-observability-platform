@@ -1,0 +1,36 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual envs
+.venv/
+env/
+venv/
+
+# Logs & outputs
+logs/
+*.log
+
+# Secrets & configs
+.env
+*.secret
+*.key
+*.pem
+
+# Data & models (huge / not needed in image)
+data/
+models/
+*.pt
+*.bin
+*.ckpt
+
+# Dev junk
+*.ipynb
+.DS_Store
+.idea/
+.vscode/
+
+# Docker local overrides
+docker-compose.override.yml
