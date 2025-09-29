@@ -1,477 +1,546 @@
 #!/usr/bin/env bash
+# Creates a complete RAG service (FastAPI + Qdrant) and starts it with Docker.
+# Usage: bash setup_rag_service.sh
 set -euo pipefail
 
-PROJECT_NAME="rag-service"
+PROJECT="rag-service"
 
-echo "🚀 Creating minimal RAG service..."
+echo "==> Rebuilding $PROJECT ..."
+rm -rf "$PROJECT"
+mkdir -p "$PROJECT"/{adapters/vector_store,adapters/document_parser,adapters/embedding_model,core/domain,core/ports,core/usecases,api,logs}
 
-mkdir -p "$PROJECT_NAME"
-mkdir -p "$PROJECT_NAME/data/qdrant"
-mkdir -p "$PROJECT_NAME/api/routes"
-mkdir -p "$PROJECT_NAME/core"
-mkdir -p "$PROJECT_NAME/services"
-
-cat > "$PROJECT_NAME/docker-compose.yml" << 'EOF'
-version: '3.8'
+# -------------------- docker-compose.yml --------------------
+cat > "$PROJECT/docker-compose.yml" <<'EOF'
 services:
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:v1.6.1
     container_name: qdrant-db
     ports:
       - "6333:6333"
     volumes:
-      - ./data/qdrant:/qdrant/storage
-    environment:
-      - QDRANT__SERVICE__HTTP_PORT=6333
+      - qdrant_data:/qdrant/storage
     restart: unless-stopped
-    profiles: ["active"]
 
-  rag-api:
+  api:
     build: .
     container_name: rag-api
     ports:
       - "8000:8000"
     environment:
-      - QDRANT_URL=http://qdrant:6333
-    depends_on:
-      - qdrant
+      - QDRANT_URL=http://qdrant-db:6333
+      - LOG_LEVEL=INFO
     volumes:
-      - .:/app
+      - ./logs:/app/logs
     restart: unless-stopped
-    profiles: ["active"]
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+volumes:
+  qdrant_data:
 EOF
 
-cat > "$PROJECT_NAME/Dockerfile" << 'EOF'
+# -------------------- Dockerfile --------------------
+cat > "$PROJECT/Dockerfile" <<'EOF'
 FROM python:3.11-slim
 
 WORKDIR /app
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl gcc g++ && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir torch==2.0.1 torchvision==0.15.2 --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir --no-deps sentence-transformers==2.2.2 && \
+    pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+RUN mkdir -p logs && chmod 755 logs
+
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-keep-alive", "300"]
+CMD ["python", "-m", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
 EOF
 
-cat > "$PROJECT_NAME/requirements.txt" << 'EOF'
+# -------------------- requirements.txt --------------------
+cat > "$PROJECT/requirements.txt" <<'EOF'
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-qdrant-client==1.7.0
-sentence-transformers==2.2.2
-pymupdf==1.23.14
+pydantic==2.5.3
 python-multipart==0.0.6
+qdrant-client==1.6.4
+pymupdf==1.23.14
+transformers==4.30.0
+tokenizers==0.13.3
+huggingface-hub==0.16.4
+safetensors==0.3.1
 numpy==1.24.3
-torch==2.0.1+cpu
---extra-index-url https://download.pytorch.org/whl/cpu
+scikit-learn==1.3.0
+scipy==1.11.1
+tqdm==4.65.0
+filelock==3.12.2
+regex==2023.6.3
+nltk==3.8.1
+pillow==10.0.0
 EOF
 
-cat > "$PROJECT_NAME/main.py" << 'EOF'
-from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.responses import JSONResponse
-import uvicorn
-from api.routes import upload_pdf, search_rag
-from core.config import settings
+# -------------------- core/domain --------------------
+: > "$PROJECT/core/__init__.py"
+: > "$PROJECT/core/domain/__init__.py"
 
-app: FastAPI = FastAPI(
-    title="RAG Service", 
-    version="1.0.0",
-    timeout=300
-)
-
-app.include_router(upload_pdf.router)
-app.include_router(search_rag.router)
-
-@app.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "healthy"}
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-EOF
-
-cat > "$PROJECT_NAME/core/__init__.py" << 'EOF'
-EOF
-
-cat > "$PROJECT_NAME/core/config.py" << 'EOF'
-import os
-
-class Settings:
-    QDRANT_URL: str = os.getenv("QDRANT_URL", "http://localhost:6333")
-    VECTOR_SIZE: int = 384
-    COLLECTION_NAME: str = "documents"
-    MODEL_NAME: str = "all-MiniLM-L6-v2"
-
-settings: Settings = Settings()
-EOF
-
-cat > "$PROJECT_NAME/core/models.py" << 'EOF'
-from typing import List, Dict, Any
+cat > "$PROJECT/core/domain/models.py" <<'EOF'
 from dataclasses import dataclass
+from typing import List, Dict, Any
 
 @dataclass
-class Document:
+class Chunk:
     id: str
     text: str
     metadata: Dict[str, Any]
 
 @dataclass
 class SearchResult:
-    id: str
-    text: str
+    chunk: Chunk
     score: float
-    metadata: Dict[str, Any]
+
+@dataclass
+class QueryRequest:
+    query: str
+    limit: int = 5
 EOF
 
-cat > "$PROJECT_NAME/services/__init__.py" << 'EOF'
-EOF
+# -------------------- core/ports --------------------
+: > "$PROJECT/core/ports/__init__.py"
 
-cat > "$PROJECT_NAME/services/pdf_processor.py" << 'EOF'
-import fitz
+cat > "$PROJECT/core/ports/vector_store.py" <<'EOF'
+from abc import ABC, abstractmethod
 from typing import List
-from io import BytesIO
-import gc
+from core.domain.models import Chunk, SearchResult
 
-class PDFProcessor:
-    def extract_text(self, pdf_bytes: bytes) -> str:
-        try:
-            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-            text: str = ""
-            
-            total_pages: int = len(doc)
-            
-            for page_num in range(total_pages):
-                page = doc[page_num]
-                page_text: str = page.get_text()
-                text += page_text + "\n"
-                
-                if page_num % 50 == 0:
-                    gc.collect()
-            
-            doc.close()
-            gc.collect()
-            
-            return text.strip()
-        except Exception as e:
-            raise Exception(f"PDF extraction failed: {str(e)}")
-    
-    def chunk_text(self, text: str, chunk_size: int = 800, overlap: int = 100) -> List[str]:
-        if not text.strip():
-            return []
-            
-        words: List[str] = text.split()
-        chunks: List[str] = []
-        
-        for i in range(0, len(words), chunk_size - overlap):
-            chunk_words: List[str] = words[i:i + chunk_size]
-            chunk: str = " ".join(chunk_words)
-            
-            if chunk.strip():
-                chunks.append(chunk.strip())
-        
-        return chunks
+class VectorStorePort(ABC):
+    @abstractmethod
+    async def upsert(self, chunks: List[Chunk], embeddings: List[List[float]]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def search(self, embedding: List[float], limit: int) -> List[SearchResult]:
+        raise NotImplementedError
 EOF
 
-cat > "$PROJECT_NAME/services/embedding_service.py" << 'EOF'
-from sentence_transformers import SentenceTransformer
+cat > "$PROJECT/core/ports/document_parser.py" <<'EOF'
+from abc import ABC, abstractmethod
+from typing import AsyncIterator
+
+class DocumentParserPort(ABC):
+    @abstractmethod
+    async def parse(self, file_bytes: bytes) -> str:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def chunk(self, text: str) -> AsyncIterator[str]:
+        raise NotImplementedError
+EOF
+
+cat > "$PROJECT/core/ports/embedding_model.py" <<'EOF'
+from abc import ABC, abstractmethod
 from typing import List
-import numpy as np
-from core.config import settings
 
-class EmbeddingService:
-    def __init__(self):
-        self.model: SentenceTransformer = SentenceTransformer(settings.MODEL_NAME)
-    
-    def embed_text(self, text: str) -> List[float]:
-        embedding: np.ndarray = self.model.encode(text)
-        return embedding.tolist()
-    
-    def embed_batch(self, texts: List[str]) -> List[List[float]]:
-        embeddings: np.ndarray = self.model.encode(texts)
-        return embeddings.tolist()
+class EmbeddingModelPort(ABC):
+    @abstractmethod
+    async def embed_text(self, text: str) -> List[float]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def embed_batch(self, texts: List[str]) -> List[List[float]]:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def dimension(self) -> int:
+        raise NotImplementedError
 EOF
 
-cat > "$PROJECT_NAME/services/qdrant_service.py" << 'EOF'
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct, Filter
-from typing import List, Dict, Any
-import uuid
-import gc
-from core.config import settings
-from core.models import Document, SearchResult
+# -------------------- core/usecases --------------------
+: > "$PROJECT/core/usecases/__init__.py"
 
-class QdrantService:
-    def __init__(self):
-        self.client: QdrantClient = QdrantClient(url=settings.QDRANT_URL, timeout=300)
-        self._ensure_collection()
-    
-    def _ensure_collection(self) -> None:
-        try:
-            self.client.get_collection(settings.COLLECTION_NAME)
-        except:
-            self.client.create_collection(
-                collection_name=settings.COLLECTION_NAME,
-                vectors_config=VectorParams(
-                    size=settings.VECTOR_SIZE,
-                    distance=Distance.COSINE
-                )
-            )
-    
-    def upsert_documents_batch(self, documents: List[Document], embeddings: List[List[float]], batch_size: int = 100) -> bool:
-        try:
-            total_docs: int = len(documents)
-            
-            for i in range(0, total_docs, batch_size):
-                batch_docs: List[Document] = documents[i:i + batch_size]
-                batch_embeddings: List[List[float]] = embeddings[i:i + batch_size]
-                
-                points: List[PointStruct] = []
-                
-                for doc, embedding in zip(batch_docs, batch_embeddings):
-                    point: PointStruct = PointStruct(
-                        id=doc.id,
-                        vector=embedding,
-                        payload={
-                            "text": doc.text,
-                            "metadata": doc.metadata
-                        }
-                    )
-                    points.append(point)
-                
-                self.client.upsert(
-                    collection_name=settings.COLLECTION_NAME,
-                    points=points,
-                    wait=True
-                )
-                
-                points.clear()
-                gc.collect()
-            
-            return True
-        except Exception as e:
-            print(f"Upsert error: {e}")
-            return False
-    
-    def search(self, query_vector: List[float], limit: int = 5) -> List[SearchResult]:
-        try:
-            results = self.client.query_points(
-                collection_name=settings.COLLECTION_NAME,
-                query=query_vector,
-                limit=limit,
-                with_payload=True
-            )
-            
-            search_results: List[SearchResult] = []
-            for point in results.points:
-                result: SearchResult = SearchResult(
-                    id=str(point.id),
-                    text=point.payload["text"],
-                    score=float(point.score),
-                    metadata=point.payload["metadata"]
-                )
-                search_results.append(result)
-            
-            return search_results
-        except:
-            return []
-EOF
-
-cat > "$PROJECT_NAME/services/rag_service.py" << 'EOF'
+cat > "$PROJECT/core/usecases/ingest.py" <<'EOF'
 from typing import List
-from services.embedding_service import EmbeddingService
-from services.qdrant_service import QdrantService
-from core.models import SearchResult
+import logging
+from uuid import uuid4
+from core.domain.models import Chunk
+from core.ports.document_parser import DocumentParserPort
+from core.ports.embedding_model import EmbeddingModelPort
+from core.ports.vector_store import VectorStorePort
 
-class RAGService:
-    def __init__(self):
-        self.embedding_service: EmbeddingService = EmbeddingService()
-        self.qdrant_service: QdrantService = QdrantService()
-    
-    def search_and_generate(self, query: str, limit: int = 3) -> dict[str, any]:
-        query_embedding: List[float] = self.embedding_service.embed_text(query)
-        search_results: List[SearchResult] = self.qdrant_service.search(query_embedding, limit)
-        
-        if not search_results:
-            return {
-                "answer": "No relevant documents found.",
-                "sources": []
-            }
-        
-        context: str = "\n\n".join([result.text for result in search_results])
-        
-        answer: str = f"Based on the available documents:\n\n{context}"
-        
-        sources: List[dict] = [
-            {
-                "id": result.id,
-                "score": result.score,
-                "text": result.text[:200] + "..." if len(result.text) > 200 else result.text
-            }
-            for result in search_results
+logger = logging.getLogger(__name__)
+
+async def ingest_document(
+    file_bytes: bytes,
+    filename: str,
+    parser: DocumentParserPort,
+    embedder: EmbeddingModelPort,
+    vector_store: VectorStorePort
+) -> dict:
+    logger.info(f"Ingesting: {filename}")
+
+    text = await parser.parse(file_bytes)
+    logger.info(f"Extracted {len(text)} chars")
+
+    chunks: List[Chunk] = []
+    texts: List[str] = []
+
+    async for chunk_text in parser.chunk(text):
+        idx = len(chunks)
+        chunks.append(Chunk(
+            id=str(uuid4()),
+            text=chunk_text,
+            metadata={"filename": filename, "chunk_index": idx}
+        ))
+        texts.append(chunk_text)
+
+    logger.info(f"Created {len(chunks)} chunks")
+
+    embeddings = await embedder.embed_batch(texts)
+    await vector_store.upsert(chunks, embeddings)
+
+    logger.info(f"Stored {len(chunks)} chunks")
+    return {"chunks": len(chunks), "filename": filename}
+EOF
+
+cat > "$PROJECT/core/usecases/search.py" <<'EOF'
+import logging
+from core.domain.models import QueryRequest
+from core.ports.embedding_model import EmbeddingModelPort
+from core.ports.vector_store import VectorStorePort
+
+logger = logging.getLogger(__name__)
+
+async def search_documents(
+    request: QueryRequest,
+    embedder: EmbeddingModelPort,
+    vector_store: VectorStorePort
+) -> dict:
+    logger.info(f"Search: {request.query[:50]}")
+
+    query_embedding = await embedder.embed_text(request.query)
+    results = await vector_store.search(query_embedding, request.limit)
+
+    if not results:
+        return {"query": request.query, "answer": "No documents found", "sources": []}
+
+    context = "\n\n".join([r.chunk.text for r in results[:3]])
+    answer = f"Based on documents:\n\n{context[:800]}..."
+
+    return {
+        "query": request.query,
+        "answer": answer,
+        "sources": [
+            {"text": r.chunk.text[:300], "score": round(r.score, 3), "metadata": r.chunk.metadata}
+            for r in results
         ]
-        
-        return {
-            "answer": answer,
-            "sources": sources,
-            "query": query
-        }
+    }
 EOF
 
-cat > "$PROJECT_NAME/api/__init__.py" << 'EOF'
+# -------------------- adapters: document_parser --------------------
+: > "$PROJECT/adapters/__init__.py"
+: > "$PROJECT/adapters/document_parser/__init__.py"
+
+cat > "$PROJECT/adapters/document_parser/pdf_parser.py" <<'EOF'
+import fitz  # PyMuPDF
+from typing import AsyncIterator
+from core.ports.document_parser import DocumentParserPort
+
+class PDFParser(DocumentParserPort):
+    def __init__(self, chunk_size: int = 500, overlap: int = 50):
+        self.chunk_size = chunk_size
+        self.overlap = overlap
+
+    async def parse(self, file_bytes: bytes) -> str:
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        text = "\n\n".join(page.get_text() for page in doc)
+        doc.close()
+        return text
+
+    async def chunk(self, text: str) -> AsyncIterator[str]:
+        words = text.split()
+        step = self.chunk_size - self.overlap
+        for i in range(0, len(words), step):
+            chunk = " ".join(words[i:i + self.chunk_size])
+            if len(chunk) > 50:
+                yield chunk
 EOF
 
-cat > "$PROJECT_NAME/api/routes/__init__.py" << 'EOF'
+# -------------------- adapters: embedding_model --------------------
+: > "$PROJECT/adapters/embedding_model/__init__.py"
+
+cat > "$PROJECT/adapters/embedding_model/sentence_transformer.py" <<'EOF'
+from typing import List
+import asyncio
+from sentence_transformers import SentenceTransformer
+from core.ports.embedding_model import EmbeddingModelPort
+
+class SentenceTransformerModel(EmbeddingModelPort):
+    _instance = None
+    _model = None
+
+    def __new__(cls, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._model = SentenceTransformer(model_name)
+        return cls._instance
+
+    @property
+    def dimension(self) -> int:
+        return self._model.get_sentence_embedding_dimension()
+
+    async def embed_text(self, text: str) -> List[float]:
+        loop = asyncio.get_event_loop()
+        embedding = await loop.run_in_executor(
+            None,
+            lambda: self._model.encode(text, show_progress_bar=False, normalize_embeddings=True)
+        )
+        return embedding.tolist()
+
+    async def embed_batch(self, texts: List[str]) -> List[List[float]]:
+        loop = asyncio.get_event_loop()
+        embeddings = await loop.run_in_executor(
+            None,
+            lambda: self._model.encode(texts, show_progress_bar=False, batch_size=8, normalize_embeddings=True)
+        )
+        return [emb.tolist() for emb in embeddings]
 EOF
 
-cat > "$PROJECT_NAME/api/routes/upload_pdf.py" << 'EOF'
-from fastapi import APIRouter, File, UploadFile, HTTPException
-from fastapi.responses import JSONResponse
-import uuid
-from services.pdf_processor import PDFProcessor
-from services.embedding_service import EmbeddingService
-from services.qdrant_service import QdrantService
-from core.models import Document
+# -------------------- adapters: vector_store --------------------
+: > "$PROJECT/adapters/vector_store/__init__.py"
 
-router: APIRouter = APIRouter(prefix="/upload", tags=["upload"])
+cat > "$PROJECT/adapters/vector_store/qdrant_store.py" <<'EOF'
+from typing import List
+import asyncio
+import time
+from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams, PointStruct
+from core.ports.vector_store import VectorStorePort
+from core.domain.models import Chunk, SearchResult
 
-@router.post("/pdf")
-async def upload_pdf(file: UploadFile = File(...)) -> JSONResponse:
-    if not file.filename.endswith('.pdf'):
-        raise HTTPException(status_code=400, detail="Only PDF files allowed")
-    
-    try:
-        pdf_bytes: bytes = await file.read()
-        
-        processor: PDFProcessor = PDFProcessor()
-        text: str = processor.extract_text(pdf_bytes)
-        chunks: list[str] = processor.chunk_text(text)
-        
-        embedding_service: EmbeddingService = EmbeddingService()
-        embeddings: list[list[float]] = embedding_service.embed_batch(chunks)
-        
-        documents: list[Document] = []
-        for i, chunk in enumerate(chunks):
-            doc: Document = Document(
-                id=f"{file.filename}_{i}",
-                text=chunk,
-                metadata={"filename": file.filename, "chunk": i}
+class QdrantStore(VectorStorePort):
+    def __init__(self, url: str, collection: str, dimension: int):
+        self.client = self._connect(url)
+        self.collection = collection
+        self.dimension = dimension
+        self._ensure_collection()
+
+    def _connect(self, url: str) -> QdrantClient:
+        for attempt in range(30):
+            try:
+                client = QdrantClient(url=url, timeout=10)
+                client.get_collections()
+                return client
+            except Exception as e:
+                if attempt < 29:
+                    time.sleep(2)
+                else:
+                    raise Exception(f"Qdrant connection failed: {e}")
+
+    def _ensure_collection(self):
+        try:
+            self.client.get_collection(self.collection)
+        except Exception:
+            self.client.create_collection(
+                collection_name=self.collection,
+                vectors_config=VectorParams(size=self.dimension, distance=Distance.COSINE)
             )
-            documents.append(doc)
-        
-        qdrant_service: QdrantService = QdrantService()
-        success: bool = qdrant_service.upsert_documents(documents, embeddings)
-        
-        if success:
-            return JSONResponse({
-                "message": "PDF processed successfully",
-                "chunks": len(chunks),
-                "filename": file.filename
-            })
-        else:
-            raise HTTPException(status_code=500, detail="Failed to store embeddings")
-            
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
+
+    async def upsert(self, chunks: List[Chunk], embeddings: List[List[float]]) -> None:
+        loop = asyncio.get_event_loop()
+        points = [
+            PointStruct(
+                id=chunk.id,
+                vector=embedding,
+                payload={"text": chunk.text, "metadata": chunk.metadata}
+            )
+            for chunk, embedding in zip(chunks, embeddings)
+        ]
+        await loop.run_in_executor(
+            None,
+            lambda: self.client.upsert(collection_name=self.collection, points=points, wait=True)
+        )
+
+    async def search(self, embedding: List[float], limit: int) -> List[SearchResult]:
+        loop = asyncio.get_event_loop()
+        results = await loop.run_in_executor(
+            None,
+            lambda: self.client.search(
+                collection_name=self.collection,
+                query_vector=embedding,
+                limit=limit,
+                with_payload=True,
+                with_vectors=False
+            )
+        )
+        return [
+            SearchResult(
+                chunk=Chunk(
+                    id=str(r.id),
+                    text=r.payload["text"],
+                    metadata=r.payload["metadata"]
+                ),
+                score=r.score
+            )
+            for r in results
+        ]
 EOF
 
-cat > "$PROJECT_NAME/api/routes/search_rag.py" << 'EOF'
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from services.rag_service import RAGService
+# -------------------- api/main.py --------------------
+: > "$PROJECT/api/__init__.py"
 
-router: APIRouter = APIRouter(prefix="/search", tags=["search"])
+cat > "$PROJECT/api/main.py" <<'EOF'
+from fastapi import FastAPI, File, UploadFile, HTTPException
+from pydantic import BaseModel
+from typing import Optional
+import os
+import logging
+import sys
+
+from core.domain.models import QueryRequest
+from core.usecases.ingest import ingest_document
+from core.usecases.search import search_documents
+from adapters.document_parser.pdf_parser import PDFParser
+from adapters.embedding_model.sentence_transformer import SentenceTransformerModel
+from adapters.vector_store.qdrant_store import QdrantStore
+
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.FileHandler('logs/app.log'), logging.StreamHandler(sys.stdout)]
+)
+
+logger = logging.getLogger(__name__)
+
+app = FastAPI(title="RAG Service")
+
+embedder = None
+vector_store = None
+
+@app.on_event("startup")
+async def startup():
+    global embedder, vector_store
+    logger.info("Loading embedding model...")
+    embedder = SentenceTransformerModel()
+    logger.info(f"Model loaded: dimension={embedder.dimension}")
+
+    logger.info("Connecting to Qdrant...")
+    vector_store = QdrantStore(
+        url=os.getenv("QDRANT_URL", "http://localhost:6333"),
+        collection="documents",
+        dimension=embedder.dimension
+    )
+    logger.info("Qdrant connected")
+
+@app.get("/health")
+async def health():
+    return {"status": "ok", "embedder": embedder is not None, "vector_store": vector_store is not None}
+
+@app.post("/upload")
+async def upload(file: UploadFile = File(...)):
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+
+    content = await file.read()
+    if len(content) > 200 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Max 200MB")
+
+    parser = PDFParser()
+    result = await ingest_document(content, file.filename, parser, embedder, vector_store)
+    return {"success": True, **result}
 
 class SearchRequest(BaseModel):
     query: str
+    limit: Optional[int] = 5
 
-@router.post("/rag")
-async def search_rag(request: SearchRequest) -> dict[str, any]:
-    if not request.query.strip():
-        raise HTTPException(status_code=400, detail="Query cannot be empty")
-    
-    try:
-        rag_service: RAGService = RAGService()
-        result: dict[str, any] = rag_service.search_and_generate(request.query)
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+@app.post("/search")
+async def search(req: SearchRequest):
+    query_req = QueryRequest(query=req.query, limit=req.limit)
+    return await search_documents(query_req, embedder, vector_store)
 EOF
 
-cat > "$PROJECT_NAME/.gitignore" << 'EOF'
+# -------------------- helper scripts --------------------
+cat > "$PROJECT/start.sh" <<'EOF'
+#!/bin/bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Clean previous containers
+docker compose down -v 2>/dev/null || true
+
+echo "Cleaning old image (if any)..."
+docker rmi rag-service-api 2>/dev/null || true
+
+echo "Starting Qdrant..."
+docker compose up -d qdrant
+
+echo "Waiting for Qdrant (max 60s)..."
+for i in {1..30}; do
+  if curl -sf http://localhost:6333 >/dev/null 2>&1; then
+    echo "Qdrant ready"
+    break
+  fi
+  sleep 2
+  if [ $i -eq 30 ]; then
+    echo "Qdrant failed to start"; exit 1
+  fi
+done
+
+echo "Building API..."
+docker compose build --no-cache api
+
+echo "Starting API..."
+docker compose up -d api
+
+echo "Waiting for API health (max 30s)..."
+for i in {1..30}; do
+  if curl -sf http://localhost:8000/health >/dev/null 2>&1; then
+    echo "API ready at http://localhost:8000/docs"
+    exit 0
+  fi
+  sleep 1
+done
+echo "API failed to pass health check. Run ./debug.sh"
+exit 1
+EOF
+
+cat > "$PROJECT/stop.sh" <<'EOF'
+#!/bin/bash
+docker compose down -v
+EOF
+
+cat > "$PROJECT/debug.sh" <<'EOF'
+#!/bin/bash
+echo "=== Qdrant ==="
+docker logs qdrant-db --tail 50 || echo "qdrant-db not running"
+echo ""
+echo "=== API ==="
+docker logs rag-api --tail 50 || echo "rag-api not running"
+echo ""
+echo "=== Status ==="
+docker ps -a | grep -E "qdrant-db|rag-api" || echo "No containers"
+EOF
+
+# -------------------- gitignore --------------------
+cat > "$PROJECT/.gitignore" <<'EOF'
 __pycache__/
 *.pyc
+logs/
 .env
-data/qdrant/*
-!data/qdrant/.gitkeep
-.DS_Store
-*.log
 EOF
 
-touch "$PROJECT_NAME/data/qdrant/.gitkeep"
+chmod +x "$PROJECT/start.sh" "$PROJECT/stop.sh" "$PROJECT/debug.sh"
 
-cat > "$PROJECT_NAME/start.sh" << 'EOF'
-#!/bin/bash
-echo "Starting RAG service..."
-docker-compose --profile active up -d
-echo "Service started at http://localhost:8000"
-echo "API docs: http://localhost:8000/docs"
-EOF
-
-cat > "$PROJECT_NAME/stop.sh" << 'EOF'
-#!/bin/bash
-echo "Stopping RAG service..."
-docker-compose --profile active down
-echo "Service stopped"
-EOF
-
-chmod +x "$PROJECT_NAME/start.sh"
-chmod +x "$PROJECT_NAME/stop.sh"
-
-cat > "$PROJECT_NAME/README.md" << 'EOF'
-# RAG Service
-
-Minimal RAG service with PDF processing and Qdrant vector database.
-
-## Quick Start
-
-```bash
-# Start service
-./start.sh
-
-# Stop service
-./stop.sh
-```
-
-## API Endpoints
-
-1. **Upload PDF**: `POST /upload/pdf`
-   - Upload PDF file for processing and embedding
-
-2. **Search RAG**: `POST /search/rag`
-   - Query: `{"query": "your question"}`
-   - Returns answer with sources
-
-## Access
-- API: http://localhost:8000/docs
-- Qdrant: http://localhost:6333/dashboard
-
-## Usage
-
-1. Start service with `./start.sh`
-2. Upload PDF via `/upload/pdf`
-3. Query via `/search/rag`
-4. Stop service with `./stop.sh`
-EOF
-
-echo "✅ RAG service created successfully!"
-echo ""
-echo "📋 Commands:"
-echo "cd $PROJECT_NAME"
-echo "./start.sh    # Start service"
-echo "./stop.sh     # Stop service"
-echo ""
-echo "🌐 URLs:"
-echo "- API: http://localhost:8000/docs"
-echo "- Qdrant: http://localhost:6333/dashboard"
+echo "==> Done."
+echo "Run: cd $PROJECT && ./start.sh"

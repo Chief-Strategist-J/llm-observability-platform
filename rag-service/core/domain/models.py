@@ -1,15 +1,18 @@
-from typing import List, Dict, Any
 from dataclasses import dataclass
+from typing import List, Dict, Any
 
 @dataclass
-class Document:
+class Chunk:
     id: str
     text: str
     metadata: Dict[str, Any]
 
 @dataclass
 class SearchResult:
-    id: str
-    text: str
+    chunk: Chunk
     score: float
-    metadata: Dict[str, Any]
+
+@dataclass
+class QueryRequest:
+    query: str
+    limit: int = 5
