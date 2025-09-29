@@ -1,7 +1,4 @@
 __pycache__/
 *.pyc
+logs/
 .env
-data/qdrant/*
-!data/qdrant/.gitkeep
-.DS_Store
-*.log
