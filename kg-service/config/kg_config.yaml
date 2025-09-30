@@ -1,0 +1,46 @@
+chunking:
+  strategy: "semantic"
+  chunk_size: 512
+  chunk_overlap: 50
+  min_chunk_size: 100
+
+embedding:
+  model: "sentence-transformers/all-MiniLM-L6-v2"
+  dimension: 384
+  batch_size: 32
+
+entity_extraction:
+  spacy_model: "en_core_web_sm"
+  min_confidence: 0.5
+  entity_types:
+    - PERSON
+    - ORG
+    - GPE
+    - DATE
+    - MONEY
+    - PRODUCT
+    - EVENT
+
+relation_extraction:
+  max_distance: 3
+  min_confidence: 0.6
+  relation_types:
+    - WORKS_FOR
+    - LOCATED_IN
+    - PART_OF
+    - RELATED_TO
+    - CREATED_BY
+    - HAPPENS_ON
+
+memory:
+  short_term:
+    max_items: 50
+    ttl_seconds: 3600
+  long_term:
+    decay_days: 30
+    importance_threshold: 0.7
+
+reasoning:
+  max_hops: 3
+  similarity_threshold: 0.75
+  max_results: 10
