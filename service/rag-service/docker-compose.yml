@@ -20,6 +20,3 @@ services:
       resources:
         limits:
           memory: 2G
-
-volumes:
-  qdrant_data:
