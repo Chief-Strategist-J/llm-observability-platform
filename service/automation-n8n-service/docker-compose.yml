@@ -1,4 +1,4 @@
-name: n8n_stack
+version: '3.8'
 
 networks:
   edge: {}
@@ -16,6 +16,7 @@ services:
       context: ./n8n
     image: local/n8n-with-logs:latest
     pull_policy: build
+    container_name: n8n
     restart: unless-stopped
     dns:
       - 8.8.8.8
@@ -47,15 +48,38 @@ services:
       - ./n8n/logs:/var/log/n8n
       - ./n8n/custom-nodes:/home/node/.n8n/custom-nodes
     networks: [edge, backplane]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5678/rest/workflows", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
 
   automation-api:
     build:
       context: ./automation-api
     image: local/automation-api:latest
     pull_policy: build
+    container_name: automation-api
     restart: unless-stopped
     environment:
       - PORT=8080
       - N8N_BASE_URL=http://n8n:5678
       - N8N_WEBHOOK_PATH=/webhook/automation
     networks: [edge, backplane]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; urllib.request.urlopen('http://localhost:8080/health', timeout=3); sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
