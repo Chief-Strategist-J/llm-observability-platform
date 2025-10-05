@@ -1,11 +1,11 @@
 version: '3.8'
 
-# Shared routing and proxy services
+# Shared proxy and routing services
 services:
   traefik:
     image: traefik:latest
     container_name: traefik
-    profiles: ["routing"]  # Only starts with --profile routing
+    profiles: ["proxy"]  # Changed from "routing" to "proxy"
     restart: unless-stopped
     command:
       - --api.insecure=true
@@ -28,9 +28,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/dynamic:/dynamic:ro
       - ./traefik/certs:/certs
-      - traefik_certs:/certs
+      - traefik_certs:/certs/acme  # Fixed path for Let's Encrypt
     networks:
-      - routing-network
+      - proxy-network
       - app-network  # Connect to main app network
 
 # Shared volumes for certificates
@@ -38,10 +38,10 @@ volumes:
   traefik_certs:
     driver: local
 
-# Routing network for proxy services
+# Proxy network for routing services
 networks:
-  routing-network:
+  proxy-network:
     driver: bridge
     ipam:
       config:
-        - subnet: ${ROUTING_SUBNET:-172.28.0.0/16}
+        - subnet: ${PROXY_SUBNET:-172.28.0.0/16}

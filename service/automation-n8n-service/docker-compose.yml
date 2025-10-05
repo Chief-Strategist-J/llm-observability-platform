@@ -5,7 +5,7 @@ networks:
   backplane:
     internal: false  # Change this to allow DNS resolution
     driver: bridge
-    external: true  # Connect to shared routing network
+    external: true  # Connect to shared proxy network
 
 volumes:
   n8n_data:
