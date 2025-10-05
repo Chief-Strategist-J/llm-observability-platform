@@ -5,7 +5,7 @@ services:
     build: .
     container_name: rag-api
     ports:
-      - "8000:8000"
+      - "8003:8003"
     environment:
       - QDRANT_URL=http://qdrant:6333
       - LOG_LEVEL=INFO
@@ -16,7 +16,14 @@ services:
     depends_on:
       qdrant:
         condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          memory: 2G
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; urllib.request.urlopen('http://localhost:8003/health', timeout=3); sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"

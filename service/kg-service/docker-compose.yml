@@ -4,7 +4,8 @@ services:
   kg-api:
     build: .
     container_name: kg-api
-    ports: ["8002:8002"]
+    ports:
+      - "8002:8002"
     env_file: [.env]
     environment:
       - NEO4J_URI=bolt://neo4j:7687
@@ -25,6 +26,11 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
 
 networks:
   kg-network:
