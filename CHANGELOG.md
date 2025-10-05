@@ -44,3 +44,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `api/graphql/` folder to each service for GraphQL API
 - Added `events/` folder to each service for Kafka integration
 - Consistent folder structure across all services for maintainability
+
+## [Unreleased]
+
+### Added
+- Unified monitoring stack in `infrastructure/monitoring/` with Loki, Promtail, and Grafana
+- Profile-based conditional activation for monitoring using `--profile monitoring`
+- Centralized log collection from all Docker containers
+- Isolated `monitoring-network` for monitoring services
+
+### Changed
+- Moved Grafana, Loki, and Promtail from `service/automation-n8n-service/` to shared `infrastructure/monitoring/`
+- Updated Promtail configuration for dynamic container discovery across all services
+- Updated `service/automation-n8n-service/compose.yaml` to remove monitoring services
+- Simplified monitoring deployment with single compose file
+
+### Removed
+- Duplicate Grafana, Loki, and Promtail configurations from individual services
+- Redundant monitoring volumes and networks in service-specific compose files
+
