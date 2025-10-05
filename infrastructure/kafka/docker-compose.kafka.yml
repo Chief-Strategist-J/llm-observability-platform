@@ -46,14 +46,6 @@ services:
         max-size: "10m"
         max-file: "2"
 
-# Kafka network for isolation
-networks:
-  kafka-network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: ${KAFKA_SUBNET:-172.29.0.0/16}
-services:
   kafka-ui:
     image: kafbat/kafka-ui:latest
     container_name: kafka-ui
@@ -65,3 +57,11 @@ services:
     depends_on:
       - kafka
     profiles: ["kafka"]
+
+# Kafka network for isolation
+networks:
+  kafka-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${KAFKA_SUBNET:-172.29.0.0/16}
