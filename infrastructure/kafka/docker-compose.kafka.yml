@@ -28,7 +28,7 @@ services:
       KAFKA_DEFAULT_REPLICATION_FACTOR: 1
 
       # Disable diagnostics for faster startup
-      KAFKA_DIAGNOSTICS_ENABLED: false
+      KAFKA_DIAGNOSTICS_ENABLED: "false"
 
     ports:
       - "9092:9092"
