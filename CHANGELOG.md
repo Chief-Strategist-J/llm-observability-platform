@@ -84,3 +84,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Infrastructure services are shared across all application services
 - Conditional activation prevents resource waste when services aren't needed
 
+
+## [Unreleased]
+
+### Added
+- Lightweight Kafka infrastructure in `infrastructure/kafka/` using KRaft mode
+- Profile-based conditional activation for Kafka using `--profile kafka`
+- Single-node Kafka setup for development with easy scaling path
+- Kafka documentation in `infrastructure/kafka/README.md`
+- Environment variable configuration for Kafka networking
+
+### Infrastructure Enhancement
+- KRaft mode for faster startup and lower resource usage
+- Proper listener configuration for container and host communication
+- Health checks for Kafka broker availability
+- Structured logging for Kafka services
+
+### Event-Driven Architecture Foundation
+- Ready for integration with all services (ai-proxy-service, kg-service, rag-service, automation-n8n-service)
+- Supports multiple topics for different event types
+- Easy to extend to multi-broker cluster for production scaling
+
