@@ -2,15 +2,26 @@
 
 Lightweight Kafka setup for event-driven architecture development.
 
+## Folder Structure
+
+```
+infrastructure/kafka/
+├── docker-compose.kafka.yml    # Main Kafka configuration
+├── README.md                   # This file
+├── config/                     # Kafka broker configurations
+├── topics/                     # Topic definitions and scripts
+└── events/                     # Event schemas and examples
+```
+
 ## Quick Start
 
 ```bash
 # Start Kafka only
-docker-compose -f infrastructure/kafka/docker-compose.kafka.yml --profile kafka up -d
+docker-compose -f docker-compose.kafka.yml --profile kafka up -d
 
 # Start with services that need Kafka
-docker-compose -f infrastructure/kafka/docker-compose.kafka.yml --profile kafka \
-  -f service/kg-service/docker-compose.yml up -d
+docker-compose -f docker-compose.kafka.yml --profile kafka \
+  -f ../../service/kg-service/docker-compose.yml up -d
 ```
 
 ## Access Points
@@ -55,5 +66,15 @@ See Apache Kafka documentation for multi-node setup.
 - **Lightweight**: Single node for development
 - **Scalable**: Easy to expand to multiple brokers
 - **Conditional**: Only runs when explicitly requested
+
+## Testing
+
+Run the event flow test:
+```bash
+# From project root
+./test_kafka_flow.sh
+# or
+python test_kafka_events.py
+```
 
 See CHANGELOG.md for detailed changes.
