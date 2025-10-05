@@ -5,33 +5,6 @@ networks:
   backplane:
     internal: false  # Change this to allow DNS resolution
     driver: bridge
-
-volumes:
-  n8n_data:
-
-services:
-  traefik:
-    image: traefik:latest
-    restart: unless-stopped
-    command:
-      - --api.insecure=true
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --entrypoints.web.address=:8081
-      - --entrypoints.websecure.address=:8443
-      - --log.level=INFO
-      - --accesslog=true
-      - --providers.file.directory=/dynamic
-      - --providers.file.watch=true
-    ports:
-      - "127.0.0.1:8081:8081"
-      - "127.0.0.1:8443:8443"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik/dynamic:/dynamic:ro
-      - ./traefik/certs:/certs:ro
-    networks: [edge, backplane]
-
   n8n:
     build:
       context: ./n8n
@@ -51,7 +24,7 @@ services:
       - N8N_PORT=5678
       - N8N_SECURE_COOKIE=false
       - N8N_PROTOCOL=https
-      - WEBHOOK_URL=https://n8n.localtest.me:8443/
+      - WEBHOOK_URL=https://n8n.localtest.me/
       - GENERIC_TIMEZONE=Asia/Kolkata
       - TZ=Asia/Kolkata
       - NODE_ENV=production
@@ -75,6 +48,7 @@ services:
       - traefik.http.routers.n8n-https.rule=Host(`n8n.localtest.me`)
       - traefik.http.routers.n8n-https.entrypoints=websecure
       - traefik.http.routers.n8n-https.tls=true
+      - traefik.http.routers.n8n-https.tls.certresolver=letsencrypt
     networks: [edge, backplane]
 
   automation-api:
@@ -92,4 +66,8 @@ services:
       - traefik.http.routers.automation.rule=Host(`api.localtest.me`)
       - traefik.http.routers.automation.entrypoints=web
       - traefik.http.services.automation.loadbalancer.server.port=8080
+      - traefik.http.routers.automation-https.entrypoints=websecure
+      - traefik.http.routers.automation-https.tls=true
+      - traefik.http.routers.automation-https.tls.certresolver=letsencrypt
     networks: [edge, backplane]
+{{ ... }}
