@@ -5,6 +5,12 @@ networks:
   backplane:
     internal: false  # Change this to allow DNS resolution
     driver: bridge
+    external: true  # Connect to shared routing network
+
+volumes:
+  n8n_data:
+
+services:
   n8n:
     build:
       context: ./n8n
@@ -40,15 +46,6 @@ networks:
       - ./n8n/local-files:/files
       - ./n8n/logs:/var/log/n8n
       - ./n8n/custom-nodes:/home/node/.n8n/custom-nodes
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.n8n.rule=Host(`n8n.localtest.me`)
-      - traefik.http.routers.n8n.entrypoints=web
-      - traefik.http.services.n8n.loadbalancer.server.port=5678
-      - traefik.http.routers.n8n-https.rule=Host(`n8n.localtest.me`)
-      - traefik.http.routers.n8n-https.entrypoints=websecure
-      - traefik.http.routers.n8n-https.tls=true
-      - traefik.http.routers.n8n-https.tls.certresolver=letsencrypt
     networks: [edge, backplane]
 
   automation-api:
@@ -61,13 +58,5 @@ networks:
       - PORT=8080
       - N8N_BASE_URL=http://n8n:5678
       - N8N_WEBHOOK_PATH=/webhook/automation
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.automation.rule=Host(`api.localtest.me`)
-      - traefik.http.routers.automation.entrypoints=web
-      - traefik.http.services.automation.loadbalancer.server.port=8080
-      - traefik.http.routers.automation-https.entrypoints=websecure
-      - traefik.http.routers.automation-https.tls=true
-      - traefik.http.routers.automation-https.tls.certresolver=letsencrypt
     networks: [edge, backplane]
 {{ ... }}
