@@ -5,19 +5,25 @@ Lightweight Kafka setup for event-driven architecture.
 ## Quick Start
 
 ```bash
-# Start Kafka
+# Start Kafka + UI
 docker-compose -f docker-compose.kafka.yml --profile kafka up -d
 
 # Test Kafka
 ./test_kafka_flow.sh
-
-# Stop Kafka
-docker-compose -f docker-compose.kafka.yml --profile kafka down
 ```
 
-## Access
+## Access Points
 
-- **Broker**: localhost:9092
+- **Kafka Broker**: localhost:9092
+- **Kafka UI Dashboard**: http://localhost:8080
+
+## Dashboard Features
+
+- **Topics Management**: Create, view, delete topics
+- **Message Browser**: View messages in topics
+- **Consumer Groups**: Monitor consumer group status
+- **Broker Health**: Cluster and broker metrics
+- **Real-time Monitoring**: Live topic and partition stats
 
 ## Test
 
