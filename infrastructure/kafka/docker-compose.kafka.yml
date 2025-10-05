@@ -1,14 +1,14 @@
 version: '3.8'
 
-# Lightweight Kafka setup for development - can scale to multiple nodes later
+# Optimized Kafka setup for faster startup and development
 services:
   kafka:
-    image: apache/kafka:latest
+    image: apache/kafka-native:latest  # Faster startup than apache/kafka
     container_name: kafka
-    profiles: ["kafka"]  # Only starts with --profile kafka
+    profiles: ["kafka"]
     restart: unless-stopped
     environment:
-      # KRaft mode configuration (lightweight single node)
+      # Optimized KRaft configuration for faster startup
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
@@ -17,33 +17,38 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
 
-      # Lightweight settings for development
+      # Optimized for fast startup
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
 
-      # Topic defaults
-      KAFKA_NUM_PARTITIONS: 3
+      # Reduced partitions for faster topic creation
+      KAFKA_NUM_PARTITIONS: 1
       KAFKA_DEFAULT_REPLICATION_FACTOR: 1
 
+      # Disable diagnostics for faster startup
+      KAFKA_DIAGNOSTICS_ENABLED: false
+
     ports:
-      - "9092:9092"  # Kafka broker port
+      - "9092:9092"
 
     networks:
       - kafka-network
 
+    # Optimized health check for faster startup detection
     healthcheck:
       test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server=localhost:9092 || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      interval: 15s  # Reduced from 30s
+      timeout: 5s    # Reduced from 10s
+      retries: 3     # Reduced from 5
+      start_period: 30s  # Reduced from 60s
 
+    # Optimized logging for faster I/O
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
+        max-size: "5m"  # Reduced from 10m
         max-file: "2"
 
   kafka-ui:
@@ -55,7 +60,8 @@ services:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     profiles: ["kafka"]
 
 # Kafka network for isolation
