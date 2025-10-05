@@ -63,3 +63,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Duplicate Grafana, Loki, and Promtail configurations from individual services
 - Redundant monitoring volumes and networks in service-specific compose files
 
+
+## [Unreleased]
+
+### Added
+- Shared routing infrastructure in `infrastructure/docker-compose.routing.yml` with Traefik
+- Profile-based conditional activation for routing using `--profile routing`
+- Isolated `routing-network` for proxy services
+- Automatic SSL certificate management with Let's Encrypt
+
+### Changed
+- Moved Traefik configuration from `service/automation-n8n-service/` to shared `infrastructure/`
+- Updated `service/automation-n8n-service/docker-compose.yml` to use shared Traefik
+- Renamed `compose.yaml` to `docker-compose.yml` for better linting support
+- Added routing documentation in `infrastructure/README.routing.md`
+
+### Infrastructure Consolidation
+- Centralized all shared services (databases, monitoring, routing) in `infrastructure/`
+- Services now only contain their specific logic and Docker configurations
+- Infrastructure services are shared across all application services
+- Conditional activation prevents resource waste when services aren't needed
+
