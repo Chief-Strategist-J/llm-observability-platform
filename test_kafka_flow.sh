@@ -1,5 +1,39 @@
 #!/bin/bash
-# Optimized Kafka Test - Faster startup
+# Comprehensive Kafka Test with Full Cleanup
+
+echo "🧹 Starting comprehensive cleanup..."
+
+# Stop all running containers
+echo "Stopping all containers..."
+docker stop $(docker ps -aq) 2>/dev/null || true
+
+# Remove all containers
+echo "Removing all containers..."
+docker rm $(docker ps -aq) 2>/dev/null || true
+
+# Remove Kafka-related images
+echo "Removing Kafka images..."
+docker rmi apache/kafka:latest apache/kafka-native:latest kafbat/kafka-ui:latest 2>/dev/null || true
+
+# Remove all unused networks
+echo "Removing unused networks..."
+docker network prune -f
+
+# Remove all unused volumes
+echo "Removing unused volumes..."
+docker volume prune -f
+
+# Clean up Docker system
+echo "Cleaning Docker system..."
+docker system prune -f
+
+# Clear any hanging processes
+echo "Clearing processes..."
+pkill -f kafka 2>/dev/null || true
+pkill -f docker-compose 2>/dev/null || true
+
+echo "✅ Cleanup complete!"
+echo ""
 
 echo "🚀 Starting optimized Kafka test..."
 
@@ -21,3 +55,4 @@ timeout 3 docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap
 echo "✅ Kafka test complete!"
 echo "🛑 Stopping Kafka..."
 docker-compose -f infrastructure/kafka/docker-compose.kafka.yml --profile kafka down
+docker-compose -f infrastructure/kafka/docker-compose.kafka.yml --profile kafka up -d
