@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
+
 from core.domain.models import STTResponse
+
 
 class STTProviderPort(ABC):
     @abstractmethod

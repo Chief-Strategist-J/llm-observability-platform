@@ -104,4 +104,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ready for integration with all services (ai-proxy-service, kg-service, rag-service, automation-n8n-service)
 - Supports multiple topics for different event types
 - Easy to extend to multi-broker cluster for production scaling
-

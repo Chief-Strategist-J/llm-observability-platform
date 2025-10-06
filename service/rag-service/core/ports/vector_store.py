@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
-from typing import List
+
 from core.domain.models import Chunk, SearchResult
+
 
 class VectorStorePort(ABC):
     @abstractmethod
-    async def upsert(self, chunks: List[Chunk], embeddings: List[List[float]]) -> None:
+    async def upsert(self, chunks: list[Chunk], embeddings: list[list[float]]) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    async def search(self, embedding: List[float], limit: int) -> List[SearchResult]:
+    async def search(self, embedding: list[float], limit: int) -> list[SearchResult]:
         raise NotImplementedError
