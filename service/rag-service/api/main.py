@@ -1,6 +1,6 @@
 """RAG Service API.
 
-This module provides a FastAPI-based REST API for the RAG (Retrieval-Augmented
+This module provides a FastAPI-based REST API for the RAG (Retrieval- Augmented
 Generation) service, including endpoints for document upload, search, and health checks.
 
 """

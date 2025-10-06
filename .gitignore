@@ -15,6 +15,7 @@ __pycache__/
 # System files
 .DS_Store
 .vscode/
+service/kg-service/venv
 
 # Testing cache
 .pytest_cache/
