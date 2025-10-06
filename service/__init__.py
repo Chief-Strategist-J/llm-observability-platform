@@ -3,7 +3,6 @@
 from pathlib import Path
 import sys
 
-
 # Add the service directory to Python path
 service_dir = Path(__file__).parent
 if str(service_dir) not in sys.path:
@@ -11,7 +10,6 @@ if str(service_dir) not in sys.path:
 
 # Simple aliases for service directories with hyphens
 import types
-
 
 # kg-service
 kg_service = types.ModuleType("kg_service")

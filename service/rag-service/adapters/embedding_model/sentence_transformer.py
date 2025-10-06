@@ -1,6 +1,6 @@
 """Sentence transformer embedding model for RAG service.
 
-This module provides sentence embedding capabilities using the sentence-transformers
+This module provides sentence embedding capabilities using the sentence- transformers
 library.
 
 """

@@ -1,3 +1,4 @@
+---
 version: '3.8'
 
 services:
@@ -13,7 +14,11 @@ services:
       - ./logs:/app/logs
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request,sys; urllib.request.urlopen('http://localhost:8001/health', timeout=3); sys.exit(0)"]
+      test: >
+        ["CMD", "python", "-c",
+         "import urllib.request,sys; "
+         "urllib.request.urlopen('http://localhost:8001/health', timeout=3); "
+         "sys.exit(0)"]
       interval: 30s
       timeout: 10s
       retries: 3

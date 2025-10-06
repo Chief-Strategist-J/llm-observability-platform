@@ -1,3 +1,4 @@
+---
 tls:
   certificates:
     - certFile: /certs/n8n.localtest.me.pem

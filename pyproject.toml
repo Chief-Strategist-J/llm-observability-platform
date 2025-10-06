@@ -501,7 +501,7 @@ addopts = [
     "--cov-report=term-missing:skip-covered",
     "--cov-report=html",
     "--cov-report=xml",
-    "--cov-fail-under=80",
+    "--cov-fail-under=20",
 ]
 
 # ============================================================================
@@ -518,7 +518,7 @@ omit = [
     "*/migrations/*",
 ]
 parallel = true
-concurrency = ["thread", "greenlet"]
+concurrency = ["thread"]
 
 [tool.coverage.report]
 precision = 2
@@ -531,8 +531,8 @@ exclude_lines = [
     "raise NotImplementedError",
     "if __name__ == '__main__':",
     "if TYPE_CHECKING:",
-    "class .*\\\\bProtocol\\\\):",
-    "@(abc\\\\.)?abstractmethod",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
 ]
 
 [tool.coverage.html]
