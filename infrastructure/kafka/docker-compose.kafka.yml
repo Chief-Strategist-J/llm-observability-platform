@@ -1,20 +1,21 @@
+---
 version: '3.8'
 
-# Optimized Kafka setup for faster startup and development
+
 services:
   kafka:
-    image: apache/kafka-native:latest  # Faster startup than apache/kafka
+    image: apache/kafka-native:latest
     container_name: kafka
     profiles: ["kafka"]
     restart: unless-stopped
     environment:
-      # Optimized KRaft configuration for faster startup
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: |
+        CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
 
       # Optimized for fast startup
@@ -38,7 +39,9 @@ services:
 
     # Optimized health check for faster startup detection
     healthcheck:
-      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server=localhost:9092 || exit 1"]
+      test: >
+        ["CMD-SHELL", "kafka-broker-api-versions "
+         "--bootstrap-server=localhost:9092 || exit 1"]
       interval: 15s  # Reduced from 30s
       timeout: 5s    # Reduced from 10s
       retries: 3     # Reduced from 5
@@ -58,16 +61,18 @@ services:
       - "8080:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: |
+        kafka:9092  # Use hostname on same network
     depends_on:
       kafka:
-        condition: service_healthy
+        condition: service_started
+    networks:
+      - kafka-network  # Put kafka-ui on same network as kafka
     profiles: ["kafka"]
 
 # Kafka network for isolation
 networks:
   kafka-network:
-    driver: bridge
     ipam:
       config:
         - subnet: ${KAFKA_SUBNET:-172.29.0.0/16}

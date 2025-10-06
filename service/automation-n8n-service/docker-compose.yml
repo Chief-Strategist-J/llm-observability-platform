@@ -1,3 +1,4 @@
+---
 version: '3.8'
 
 networks:
@@ -49,7 +50,9 @@ services:
       - ./n8n/custom-nodes:/home/node/.n8n/custom-nodes
     networks: [edge, backplane]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5678/rest/workflows", "||", "exit", "1"]
+      test: >
+        ["CMD", "curl", "-f", "http://localhost:5678/rest/workflows",
+         "||", "exit", "1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -73,7 +76,9 @@ services:
       - N8N_WEBHOOK_PATH=/webhook/automation
     networks: [edge, backplane]
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request,sys; urllib.request.urlopen('http://localhost:8080/health', timeout=3); sys.exit(0)"]
+      test: >
+        ["CMD", "python", "-c",
+         "import urllib.request,sys; urllib.request.urlopen('http://localhost:8080/health', timeout=3); sys.exit(0)"]
       interval: 30s
       timeout: 10s
       retries: 3

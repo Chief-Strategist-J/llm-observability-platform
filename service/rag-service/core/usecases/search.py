@@ -1,14 +1,14 @@
 import logging
-from core.domain.models import QueryRequest
-from core.ports.embedding_model import EmbeddingModelPort
-from core.ports.vector_store import VectorStorePort
+
+from ..domain.models import QueryRequest
+from ..ports.embedding_model import EmbeddingModelPort
+from ..ports.vector_store import VectorStorePort
 
 logger = logging.getLogger(__name__)
 
+
 async def search_documents(
-    request: QueryRequest,
-    embedder: EmbeddingModelPort,
-    vector_store: VectorStorePort
+    request: QueryRequest, embedder: EmbeddingModelPort, vector_store: VectorStorePort
 ) -> dict:
     logger.info(f"Search: {request.query[:50]}")
 
@@ -25,7 +25,11 @@ async def search_documents(
         "query": request.query,
         "answer": answer,
         "sources": [
-            {"text": r.chunk.text[:300], "score": round(r.score, 3), "metadata": r.chunk.metadata}
+            {
+                "text": r.chunk.text[:300],
+                "score": round(r.score, 3),
+                "metadata": r.chunk.metadata,
+            }
             for r in results
-        ]
+        ],
     }

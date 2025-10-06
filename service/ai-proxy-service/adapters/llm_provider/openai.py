@@ -1,6 +1,7 @@
-import httpx
-from core.ports.llm_provider import LLMProviderPort
 from core.domain.models import LLMResponse
+from core.ports.llm_provider import LLMProviderPort
+import httpx
+
 
 class OpenAILLM(LLMProviderPort):
     def __init__(self, api_key: str, model: str):
@@ -9,10 +10,12 @@ class OpenAILLM(LLMProviderPort):
         self.url = "https://api.openai.com/v1/chat/completions"
         self.headers = {
             "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
-    
-    async def generate(self, prompt: str, max_tokens: int, temperature: float) -> LLMResponse:
+
+    async def generate(
+        self, prompt: str, max_tokens: int, temperature: float
+    ) -> LLMResponse:
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.post(
                 self.url,
@@ -21,13 +24,13 @@ class OpenAILLM(LLMProviderPort):
                     "model": self.model,
                     "messages": [{"role": "user", "content": prompt}],
                     "max_tokens": max_tokens,
-                    "temperature": temperature
-                }
+                    "temperature": temperature,
+                },
             )
             response.raise_for_status()
             data = response.json()
             return LLMResponse(
                 text=data["choices"][0]["message"]["content"],
                 provider="openai",
-                model=self.model
+                model=self.model,
             )
