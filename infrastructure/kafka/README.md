@@ -1,109 +1,79 @@
+# Kafka (Single-node) with Docker + Kafka UI
 
-# Kafka & Kafka-UI Docker Setup
+Minimal, fast, and reliable local Kafka with dual listeners for host and Docker clients, plus a concise test suite.
 
-This guide explains how to run Apache Kafka and Kafka UI using separate Docker Compose files.
-
-## Folder Structure
-
-```
-
-project-root/
-├── docker-compose.kafka.yml
-├── docker-compose.kafka-ui.yml
-└── README.md
-
-````
-
-## Prerequisites
-
-1. Install Docker and Docker Compose v2:
+## Quick Start
 
 ```bash
-docker --version
-docker compose version
-````
+cd infrastructure/kafka
 
-2. (Optional) Create a `.env` file to set the Kafka subnet:
+# Start broker (host listener on 29092) and UI
+docker-compose -f docker-compose.kafka.yml --profile kafka up -d
+docker-compose -f docker-compose.kafka-ui.yml --profile kafka-ui up -d
 
+# Run tests (producer, consumer, partitions, large message)
+python3 test_kafka.py
+
+# Open UI
+xdg-open http://localhost:8080 2>/dev/null || echo "Open http://localhost:8080"
 ```
-KAFKA_SUBNET=172.29.0.0/16
-```
 
-## Running the Services
+## Endpoints
 
-### Start Kafka Broker
+- Kafka (host): `localhost:29092`
+- Kafka (docker network): `kafka:9092`
+- Kafka UI: `http://localhost:8080`
+
+## Compose Highlights
+
+- Dual listeners: internal `PLAINTEXT_INTERNAL://kafka:9092`, external `PLAINTEXT_EXTERNAL://localhost:29092`
+- KRaft single-node: broker+controller, voter `1@kafka:9093`
+- Message limits raised to 10 MB; socket buffer 100 MB
+- Faster consumer startup: `KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0`
+- Persistent volume `kafka-data`
+
+## Useful Commands
 
 ```bash
-docker compose -f docker-compose.kafka.yml --profile kafka up -d
+# List topics (inside broker)
+docker exec kafka /opt/kafka/bin/kafka-topics.sh --list --bootstrap-server localhost:9092
+
+# Create topic
+docker exec kafka /opt/kafka/bin/kafka-topics.sh --create \
+  --bootstrap-server localhost:9092 \
+  --topic my-topic \
+  --partitions 3 \
+  --replication-factor 1
+
+# Console producer/consumer (inside broker)
+docker exec -it kafka /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic my-topic
+docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic my-topic --from-beginning --max-messages 10
+
+# Logs
+docker logs kafka
+docker logs kafka-ui
+
+# Stop
+docker-compose -f docker-compose.kafka-ui.yml --profile kafka-ui down
+docker-compose -f docker-compose.kafka.yml --profile kafka down
 ```
-
-Check logs:
-
-```bash
-docker logs -f kafka
-```
-
-Verify health:
-
-```bash
-docker inspect --format='{{json .State.Health}}' kafka | jq
-```
-
-Test Kafka connectivity:
-
-```bash
-docker exec -it kafka kafka-topics.sh --bootstrap-server localhost:9092 --list
-```
-
-### Start Kafka UI
-
-```bash
-docker compose -f docker-compose.kafka-ui.yml --profile kafka up -d
-```
-
-Access Kafka UI: [http://localhost:8080](http://localhost:8080)
-
-Check logs:
-
-```bash
-docker logs -f kafka-ui
-```
-
-### Running Both Together
-
-```bash
-docker compose -f docker-compose.kafka.yml -f docker-compose.kafka-ui.yml up -d
-```
-
-## Stop & Clean Up
-
-Stop services:
-
-```bash
-docker compose -f docker-compose.kafka.yml down
-docker compose -f docker-compose.kafka-ui.yml down
-```
-
-Remove volumes if needed:
-
-```bash
-docker volume ls
-docker volume rm <volume_name>
-```
-
-## Quick Health Summary
-
-| Service      | Port | Health Check                        |
-| ------------ | ---- | ----------------------------------- |
-| Kafka broker | 9092 | `kafka-broker-api-versions` command |
-| Kafka UI     | 8080 | Web UI loads successfully           |
 
 ## Notes
 
-* Kafka and Kafka UI auto-restart (`restart: unless-stopped`).
-* Kafka UI uses the same network as Kafka (`kafka-network`).
-* Adjust ports or subnet in `.env` if they conflict with your environment.
+- Python tests default to `localhost:29092` and cover connection, topic ops, producer/consumer, partitions, and 5MB message end-to-end.
+- Kafka UI connects via Docker network using `kafka:9092` and should show brokers/topics.
 
-**Author:** Chief
-**Version:** 1.0
-**Last Updated:** October 2025
+## Troubleshooting
+
+```bash
+# Verify broker
+docker ps | grep kafka
+docker exec kafka sh -c 'nc -z localhost 9092'
+
+# Network
+docker network inspect kafka_kafka-network | jq '.[0].Containers' 2>/dev/null || true
+
+# Reset (destructive)
+docker-compose -f docker-compose.kafka.yml --profile kafka down -v && \
+docker-compose -f docker-compose.kafka.yml --profile kafka up -d
+```

@@ -1,21 +1,26 @@
-version: '3.8'
-
+# docker-compose.kafka-ui.yml - WORKING VERSION
 services:
   kafka-ui:
-    image: kafbat/kafka-ui:latest
+    image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
+    restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
-    depends_on:
-      kafka:
-        condition: service_started
+      KAFKA_CLUSTERS_0_METRICS_PORT: 9997
+      DYNAMIC_CONFIG_ENABLED: "true"
     networks:
       - kafka-network
-    profiles: ["kafka"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
 networks:
   kafka-network:
     external: true
+    name: kafka_kafka-network
