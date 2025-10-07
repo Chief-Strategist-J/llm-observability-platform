@@ -1,6 +1,4 @@
----
 version: '3.8'
-
 
 services:
   kafka:
@@ -18,17 +16,12 @@ services:
         CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
 
-      # Optimized for fast startup
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-
-      # Reduced partitions for faster topic creation
       KAFKA_NUM_PARTITIONS: 1
       KAFKA_DEFAULT_REPLICATION_FACTOR: 1
-
-      # Disable diagnostics for faster startup
       KAFKA_DIAGNOSTICS_ENABLED: "false"
 
     ports:
@@ -37,40 +30,20 @@ services:
     networks:
       - kafka-network
 
-    # Optimized health check for faster startup detection
     healthcheck:
       test: >
-        ["CMD-SHELL", "kafka-broker-api-versions "
-         "--bootstrap-server=localhost:9092 || exit 1"]
-      interval: 15s  # Reduced from 30s
-      timeout: 5s    # Reduced from 10s
-      retries: 3     # Reduced from 5
-      start_period: 30s  # Reduced from 60s
+        ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server=localhost:9092 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
-    # Optimized logging for faster I/O
     logging:
       driver: "json-file"
       options:
-        max-size: "5m"  # Reduced from 10m
+        max-size: "5m"
         max-file: "2"
 
-  kafka-ui:
-    image: kafbat/kafka-ui:latest
-    container_name: kafka-ui
-    ports:
-      - "8080:8080"
-    environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: |
-        kafka:9092  # Use hostname on same network
-    depends_on:
-      kafka:
-        condition: service_started
-    networks:
-      - kafka-network  # Put kafka-ui on same network as kafka
-    profiles: ["kafka"]
-
-# Kafka network for isolation
 networks:
   kafka-network:
     ipam:

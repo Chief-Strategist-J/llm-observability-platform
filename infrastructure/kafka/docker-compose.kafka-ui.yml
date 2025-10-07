@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  kafka-ui:
+    image: kafbat/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_started
+    networks:
+      - kafka-network
+    profiles: ["kafka"]
+
+networks:
+  kafka-network:
+    external: true

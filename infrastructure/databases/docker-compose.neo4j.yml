@@ -1,35 +1,26 @@
----
 version: '3.8'
 
-# Shared database services - only start when needed
 services:
   neo4j:
     image: neo4j:5.15.0-community
     container_name: neo4j-llm
-    profiles: ["databases"]  # Only starts with --profile databases
+    profiles: ["databases"]
     restart: unless-stopped
 
     environment:
-      # Database authentication
       - NEO4J_AUTH=${NEO4J_AUTH:-neo4j/Scaibu@123}
-      # Accept the license
       - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
-      # Memory settings (tuned for an 8GB host)
       - NEO4J_server_memory_heap_initial__size=${NEO4J_HEAP_INITIAL:-256m}
       - NEO4J_server_memory_heap_max__size=${NEO4J_HEAP_MAX:-512m}
       - NEO4J_server_memory_pagecache_size=${NEO4J_PAGECACHE:-256m}
-      # Listen addresses (correctly named)
       - NEO4J_server_default__listen__address=0.0.0.0
       - NEO4J_server_bolt_listen__address=0.0.0.0:${NEO4J_BOLT_PORT:-7687}
       - NEO4J_server_http_listen__address=0.0.0.0:${NEO4J_HTTP_PORT:-7474}
-      # Plugins and APOC
       - NEO4J_PLUGINS=${NEO4J_PLUGINS:-["apoc"]}
       - NEO4J_dbms_security_procedures_unrestricted=apoc.*
       - NEO4J_dbms_security_procedures_allowlist=apoc.*
       - NEO4J_apoc_export_file_enabled=true
       - NEO4J_apoc_import_file_enabled=true
-      # Disable strict config validation
-      # (helps ignore other spurious NEO4J_* env vars)
       - NEO4J_server_config_strict__validation_enabled=false
 
     ports:
@@ -55,10 +46,7 @@ services:
           cpus: "0.5"
 
     healthcheck:
-      test: [
-        "CMD-SHELL",
-        "cypher-shell -u neo4j -p Scaibu@123 'RETURN 1' || exit 1"
-      ]
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p Scaibu@123 'RETURN 1' || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -70,52 +58,6 @@ services:
         max-size: "10m"
         max-file: "2"
 
-  qdrant:
-    image: qdrant/qdrant:v1.7.4
-    container_name: qdrant-llm
-    profiles: ["databases"]  # Only starts with --profile databases
-    restart: unless-stopped
-
-    environment:
-      - QDRANT__SERVICE__HTTP_PORT=6333
-      - QDRANT__SERVICE__GRPC_PORT=6334
-      - QDRANT__STORAGE__STORAGE_PATH=/qdrant/storage
-      - QDRANT__STORAGE__TEMP_PATH=/qdrant/temp
-
-    ports:
-      - "${QDRANT_PORT:-6333}:6333"
-      - "${QDRANT_GRPC_PORT:-6334}:6334"
-
-    volumes:
-      - qdrant_storage:/qdrant/storage
-      - qdrant_temp:/qdrant/temp
-
-    networks:
-      - database-network
-
-    deploy:
-      resources:
-        limits:
-          memory: ${QDRANT_MEMORY_LIMIT:-1g}
-          cpus: "${QDRANT_CPUS:-1.0}"
-        reservations:
-          memory: 512m
-          cpus: "0.5"
-
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:6333/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "2"
-
-# Shared volumes for databases
 volumes:
   neo4j_data:
     driver: local
@@ -125,12 +67,7 @@ volumes:
     driver: local
   neo4j_plugins:
     driver: local
-  qdrant_storage:
-    driver: local
-  qdrant_temp:
-    driver: local
 
-# Isolated network for databases
 networks:
   database-network:
     driver: bridge
