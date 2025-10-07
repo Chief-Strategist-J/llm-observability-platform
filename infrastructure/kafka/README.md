@@ -1,4 +1,4 @@
-```markdown
+
 # Kafka & Kafka-UI Docker Setup
 
 This guide explains how to run Apache Kafka and Kafka UI using separate Docker Compose files.
@@ -107,5 +107,3 @@ docker volume rm <volume_name>
 **Author:** Chief
 **Version:** 1.0
 **Last Updated:** October 2025
-
-```
