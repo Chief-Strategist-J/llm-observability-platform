@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  neo4j:
+    image: neo4j:5.26.1
+    container_name: neo4j-memory
+    restart: unless-stopped
+    environment:
+      - NEO4J_AUTH=${NEO4J_AUTH}
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_PLUGINS=${NEO4J_PLUGINS}
+    ports:
+      - "${NEO4J_HTTP_PORT}:7474"
+      - "${NEO4J_BOLT_PORT}:7687"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+    networks:
+      - mcp-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: "1.0"
+        reservations:
+          memory: 1g
+
+  neo4j-mcp-memory:
+    image: mcp/neo4j-memory:latest
+    container_name: neo4j-mcp-memory
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:172.17.0.1"
+    environment:
+      - NEO4J_URI=bolt://localhost:7687
+      - NEO4J_HOST=localhost
+      - NEO4J_USERNAME=${NEO4J_USER}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - NEO4J_DATABASE=neo4j
+      - NEO4J_TRANSPORT=stdio
+      - NEO4J_MCP_SERVER_HOST=0.0.0.0
+      - NEO4J_MCP_SERVER_PORT=8000
+      - NEO4J_MCP_SERVER_PATH=/mcp/
+      - NEO4J_NAMESPACE=memory-kg
+      - NEO4J_MCP_SERVER_ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - NEO4J_MCP_SERVER_ALLOW_ORIGINS=${ALLOW_ORIGINS}
+    ports:
+      - "8000:8000"
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    networks:
+      - mcp-network
+
+  neo4j-mcp-cypher:
+    image: mcp/neo4j-cypher:latest
+    container_name: neo4j-mcp-cypher
+    restart: unless-stopped
+    environment:
+      - NEO4J_URI=bolt://localhost:7687
+      - NEO4J_USERNAME=${NEO4J_USER}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - NEO4J_DATABASE=neo4j
+      - NEO4J_TRANSPORT=stdio
+      - NEO4J_MCP_SERVER_HOST=0.0.0.0
+      - NEO4J_MCP_SERVER_PORT=8001
+      - NEO4J_MCP_SERVER_PATH=/mcp/
+      - NEO4J_NAMESPACE=cypher-kg
+      - NEO4J_READ_TIMEOUT=60
+      - NEO4J_RESPONSE_TOKEN_LIMIT=4000
+      - NEO4J_READ_ONLY=false
+    ports:
+      - "8001:8001"
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    networks:
+      - mcp-network
+
+  neo4j-mcp-data-modeling:
+    image: mcp/neo4j-data-modeling:latest
+    container_name: neo4j-mcp-data-modeling
+    restart: unless-stopped
+    environment:
+      - NEO4J_TRANSPORT=stdio
+      - NEO4J_MCP_SERVER_HOST=0.0.0.0
+      - NEO4J_MCP_SERVER_PORT=8002
+      - NEO4J_MCP_SERVER_PATH=/mcp/
+      - NEO4J_NAMESPACE=data-modeling
+      - NEO4J_MCP_SERVER_ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - NEO4J_MCP_SERVER_ALLOW_ORIGINS=${ALLOW_ORIGINS}
+    ports:
+      - "8002:8002"
+    networks:
+      - mcp-network
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_import:
+  neo4j_plugins:
+
+networks:
+  mcp-network:
+    driver: bridge
