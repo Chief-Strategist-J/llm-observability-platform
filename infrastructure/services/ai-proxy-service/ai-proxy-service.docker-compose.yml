@@ -3,7 +3,9 @@ version: '3.8'
 
 services:
   api:
-    build: .
+    build:
+      context: ../../service/ai-proxy-service
+      dockerfile: Dockerfile
     container_name: ai-proxy-api
     ports:
       - "8001:8001"

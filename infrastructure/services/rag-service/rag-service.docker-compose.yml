@@ -3,7 +3,9 @@ version: '3.8'
 
 services:
   api:
-    build: .
+    build:
+      context: ../../service/rag-service
+      dockerfile: Dockerfile
     container_name: rag-api
     ports:
       - "8003:8003"
