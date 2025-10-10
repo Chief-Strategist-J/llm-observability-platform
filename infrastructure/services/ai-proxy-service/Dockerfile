@@ -6,10 +6,15 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/*
 
+# Copy from build context (service directory)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY __init__.py .
+COPY adapters/ ./adapters/
+COPY api/ ./api/
+COPY core/ ./core/
+COPY config/ ./config/
 
 EXPOSE 8000
 

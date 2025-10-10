@@ -6,6 +6,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends curl gcc g++ && \
     rm -rf /var/lib/apt/lists/*
 
+# Copy from build context (service directory)
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir --upgrade pip && \
@@ -13,7 +14,10 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir --no-deps sentence-transformers==2.2.2 && \
     pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY __init__.py .
+COPY adapters/ ./adapters/
+COPY api/ ./api/
+COPY core/ ./core/
 
 RUN mkdir -p logs && chmod 755 logs
 

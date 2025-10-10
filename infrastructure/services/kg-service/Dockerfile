@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl gcc g++ \
  && rm -rf /var/lib/apt/lists/*
 
+# Copy from build context (service directory)
 COPY requirements.txt .
 RUN python -m pip install -U pip && pip install --no-cache-dir -r requirements.txt
 
@@ -14,7 +15,12 @@ RUN python -m pip install -U pip && pip install --no-cache-dir -r requirements.t
 RUN pip install "en_core_web_sm@https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1.tar.gz"
 
 
-COPY . .
+COPY __init__.py .
+COPY adapters/ ./adapters/
+COPY api/ ./api/
+COPY core/ ./core/
+COPY config/ ./config/
+
 RUN mkdir -p logs
 
 EXPOSE 8002

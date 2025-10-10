@@ -3,7 +3,9 @@ version: '3.8'
 
 services:
   kg-api:
-    build: .
+    build:
+      context: ../../service/kg-service
+      dockerfile: Dockerfile
     container_name: kg-api
     ports:
       - "8002:8002"
