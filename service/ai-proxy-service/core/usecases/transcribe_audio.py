@@ -1,5 +1,5 @@
-from core.domain.models import STTRequest, STTResponse
-from core.ports.stt_provider import STTProviderPort
+from ..domain.models import STTRequest, STTResponse
+from ..ports.stt_provider import STTProviderPort
 
 
 async def transcribe_audio(

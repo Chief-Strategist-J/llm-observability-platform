@@ -56,6 +56,43 @@ services:
         max-size: "10m"
         max-file: "2"
 
+  ai-proxy:
+    build:
+      context: ./infrastructure/services/ai-proxy-service
+      dockerfile: Dockerfile
+    container_name: ai-proxy-api
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./infrastructure/services/ai-proxy-service/.env
+    volumes:
+      - ./infrastructure/services/ai-proxy-service/config:/app/config:ro
+      - ./infrastructure/services/ai-proxy-service/logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - llm-network
+    depends_on:
+      - ollama
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: >
+        ["CMD", "python", "-c",
+         "import urllib.request,sys; "
+         "urllib.request.urlopen('http://localhost:8001/health', timeout=3); "
+         "sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
+
 volumes:
   ollama_data:
     driver: local
