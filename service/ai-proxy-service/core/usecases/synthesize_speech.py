@@ -1,5 +1,5 @@
-from core.domain.models import TTSRequest, TTSResponse
-from core.ports.tts_provider import TTSProviderPort
+from ..domain.models import TTSRequest, TTSResponse
+from ..ports.tts_provider import TTSProviderPort
 
 
 async def synthesize_speech(
