@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Proxy Setup</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/setup.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>AI Proxy Setup</h1>
+        <form id="setup-form">
+            <label for="provider">Select Provider:</label>
+            <select id="provider" name="provider">
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="grok">Grok</option>
+            </select>
+
+            <label for="api_key">API Key:</label>
+            <input type="text" id="api_key" name="api_key" required>
+
+            <button type="submit">Save</button>
+        </form>
+
+        <div id="response"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/setup.js') }}"></script>
+</body>
+</html>

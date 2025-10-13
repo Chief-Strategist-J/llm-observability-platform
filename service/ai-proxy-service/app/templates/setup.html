@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Proxy - API Configuration</title>
+    <link rel="stylesheet" href="/static/css/setup.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>AI Proxy Service Configuration</h1>
+            <p>Configure your API keys for various AI service providers</p>
+        </header>
+
+        <main class="main-content">
+            <form id="setup-form" class="config-form">
+                <div class="form-section">
+                    <h3>OpenAI Configuration</h3>
+                    <div class="input-group">
+                        <label for="openai_key">API Key</label>
+                        <input type="password" id="openai_key" name="openai_key" placeholder="sk-..." required>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Anthropic Configuration</h3>
+                    <div class="input-group">
+                        <label for="anthropic_key">API Key</label>
+                        <input type="password" id="anthropic_key" name="anthropic_key" placeholder="sk-ant-api03-..." required>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Grok Configuration</h3>
+                    <div class="input-group">
+                        <label for="grok_key">API Key</label>
+                        <input type="password" id="grok_key" name="grok_key" placeholder="xai-..." required>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Cloudflare Workers AI</h3>
+                    <div class="input-group">
+                        <label for="cloudflare_token">API Token</label>
+                        <input type="password" id="cloudflare_token" name="cloudflare_token" placeholder="Cloudflare API token" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="cloudflare_account">Account ID</label>
+                        <input type="text" id="cloudflare_account" name="cloudflare_account" placeholder="Cloudflare Account ID" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-button">Save Configuration</button>
+            </form>
+
+            <div id="response" class="response-message"></div>
+
+            <div class="help-section">
+                <h3>API Key Sources</h3>
+                <ul>
+                    <li><strong>OpenAI:</strong> <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a></li>
+                    <li><strong>Anthropic:</strong> <a href="https://console.anthropic.com/" target="_blank">Anthropic Console</a></li>
+                    <li><strong>Grok:</strong> <a href="https://console.x.ai/" target="_blank">xAI Console</a></li>
+                    <li><strong>Cloudflare:</strong> <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank">Cloudflare Dashboard</a></li>
+                </ul>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/setup.js"></script>
+</body>
+</html>
