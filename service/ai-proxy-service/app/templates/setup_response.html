@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Setup Result</title>
+</head>
+<body>
+    <h1>Setup Status</h1>
+    {% if providers %}
+        <ul>
+        {% for name, key in providers.items() %}
+            <li>{{ name }}: {{ 'Configured' if key else 'Not Configured' }}</li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>No providers configured yet.</p>
+    {% endif %}
+</body>
+</html>

@@ -16,6 +16,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY service/ai-proxy-service/ ./service/ai-proxy-service/
 
+# Create config directory and set permissions
+RUN mkdir -p service/ai-proxy-service/config && \
+    chmod 755 service/ai-proxy-service/config && \
+    chown -R appuser:appuser service/ai-proxy-service/config
+
 # Set Python path to include the service directory
 ENV PYTHONPATH=/app
 

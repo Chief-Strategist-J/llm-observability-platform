@@ -9,10 +9,11 @@ import logging
 import sys
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from strawberry.fastapi import GraphQLRouter
 
 from .config import app_state
-from .routes import GenerateRequest, generate_endpoint, health_endpoint
+from .routes import GenerateRequest, generate_endpoint, health_endpoint, router
 from .schema import schema
 
 logging.basicConfig(
@@ -23,6 +24,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="AI Proxy")
+
+# Mount static files
+app.mount(
+    "/static",
+    StaticFiles(directory="service/ai-proxy-service/app/static"),
+    name="static",
+)
 
 
 @app.on_event("startup")
@@ -42,6 +50,7 @@ async def startup():
 
 graphql_app = GraphQLRouter(schema)
 app.include_router(graphql_app, prefix="/graphql")
+app.include_router(router)
 
 
 @app.get("/health")
