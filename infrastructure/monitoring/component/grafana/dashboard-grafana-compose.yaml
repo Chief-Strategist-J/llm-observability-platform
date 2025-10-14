@@ -1,0 +1,36 @@
+services:
+  grafana-development:
+    image: grafana-custom:latest
+    container_name: grafana-development
+    restart: unless-stopped
+    env_file:
+      - grafana.env
+      - grafana-secrets.env
+    ports:
+      - "31001:3000"
+    volumes:
+      - ./storage/development:/var/lib/grafana
+
+  grafana-staging:
+    image: grafana-custom:latest
+    container_name: grafana-staging
+    restart: unless-stopped
+    env_file:
+      - grafana.env
+      - grafana-secrets.env
+    ports:
+      - "31002:3000"
+    volumes:
+      - ./storage/staging:/var/lib/grafana
+
+  grafana-production:
+    image: grafana-custom:latest
+    container_name: grafana-production
+    restart: unless-stopped
+    env_file:
+      - grafana.env
+      - grafana-secrets.env
+    ports:
+      - "31003:3000"
+    volumes:
+      - ./storage/production:/var/lib/grafana
