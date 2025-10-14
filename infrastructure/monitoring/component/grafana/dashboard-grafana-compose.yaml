@@ -10,6 +10,8 @@ services:
       - "31001:3000"
     volumes:
       - ./storage/development:/var/lib/grafana
+    networks:
+      - monitoring-network
 
   grafana-staging:
     image: grafana-custom:latest
@@ -22,6 +24,8 @@ services:
       - "31002:3000"
     volumes:
       - ./storage/staging:/var/lib/grafana
+    networks:
+      - monitoring-network
 
   grafana-production:
     image: grafana-custom:latest
@@ -34,3 +38,9 @@ services:
       - "31003:3000"
     volumes:
       - ./storage/production:/var/lib/grafana
+    networks:
+      - monitoring-network
+
+networks:
+  monitoring-network:
+    external: true
