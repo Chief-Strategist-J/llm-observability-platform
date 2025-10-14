@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  loki:
+    build:
+      context: ./loki
+      dockerfile: Dockerfile
+    container_name: loki
+    restart: unless-stopped
+    volumes:
+      - ./loki/data:/loki
+      - ./loki/wal:/loki/wal
+    ports:
+      - "31090:3100"
+    networks:
+      - monitoring-network
+
+  promtail:
+    build:
+      context: ./promtail
+      dockerfile: Dockerfile
+    container_name: promtail
+    restart: unless-stopped
+    volumes:
+      - ../grafana/storage:/host-logs:ro
+      - /var/log:/var/log:ro
+    networks:
+      - monitoring-network
+
+networks:
+  monitoring-network:
+    external: true
