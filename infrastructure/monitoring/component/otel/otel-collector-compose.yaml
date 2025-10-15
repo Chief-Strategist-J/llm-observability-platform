@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  otel-collector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: otel-collector
+    restart: unless-stopped
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8888:8888"   # Prometheus metrics
+      - "8889:8889"   # Prometheus metrics (alternative)
+      - "14250:14250" # Jaeger gRPC
+      - "6831:6831"   # Jaeger compact
+      - "6832:6832"   # Jaeger binary
+      - "9411:9411"   # Zipkin
+    networks:
+      - monitoring-network
+    depends_on:
+      - loki
+      - prometheus
+      - tempo
+
+networks:
+  monitoring-network:
+    external: true
