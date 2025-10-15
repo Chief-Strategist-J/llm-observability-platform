@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  tempo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tempo
+    restart: unless-stopped
+    ports:
+      - "3200:3200"   # HTTP
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "14268:14268" # Jaeger
+    volumes:
+      - ./data:/tmp/tempo
+    networks:
+      - monitoring-network
+
+networks:
+  monitoring-network:
+    external: true

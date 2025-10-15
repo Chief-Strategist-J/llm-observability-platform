@@ -1,0 +1,45 @@
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9095
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+ingester:
+  lifecycler:
+    ring:
+      kvstore:
+        store: inmemory
+      replication_factor: 1
+
+storage:
+  trace:
+    backend: local
+    local:
+      path: /tmp/tempo/blocks
+
+compactor:
+  compaction:
+    block_retention: 168h  # 1 week
+
+metrics_generator:
+  processor:
+    span_metrics:
+      dimensions:
+        - name
+        - service.name
+        - span.kind
+  target_metrics:
+    - prometheus_remote_write: http://prometheus:9090/api/v1/write
+
+overrides:
+  defaults:
+    ingestion:
+      rate_limit_bytes: 10485760  # 10MB
+      burst_size_bytes: 10485760   # 10MB
