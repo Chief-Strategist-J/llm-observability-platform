@@ -1,0 +1,84 @@
+###############################################################
+# Temporal Local Development - Access Information
+#
+# PostgreSQL:
+#   Host: localhost
+#   Port: 5432
+#   User: temporal
+#   Password: temporal
+#
+# Temporal Server (gRPC):
+#   Host: localhost
+#   Port: 7233
+#
+# Temporal Web UI:
+#   URL: http://localhost:8080
+#
+###############################################################
+
+version: "3.8"
+
+services:
+  postgresql:
+    container_name: temporal-postgresql
+    image: postgres:14
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+    ports:
+      - "5432:5432"
+    volumes:
+      - temporal_pg_data:/var/lib/postgresql/data
+    networks:
+      - temporal-network
+
+  temporal:
+    container_name: temporal
+    image: temporalio/auto-setup:1.25
+    depends_on:
+      - postgresql
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=postgresql
+      - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/config/dynamicconfig/development-sql.yaml
+    ports:
+      - "7233:7233"
+    volumes:
+      - ./dynamicconfig:/etc/temporal/config/dynamicconfig
+    networks:
+      - temporal-network
+
+  temporal-admin-tools:
+    container_name: temporal-admin-tools
+    image: temporalio/admin-tools:1.25
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+    stdin_open: true
+    tty: true
+    networks:
+      - temporal-network
+
+  temporal-ui:
+    container_name: temporal-ui
+    image: temporalio/ui:2.26.2
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    ports:
+      - "8080:8080"
+    networks:
+      - temporal-network
+
+volumes:
+  temporal_pg_data:
+
+networks:
+  temporal-network:
+    driver: bridge
