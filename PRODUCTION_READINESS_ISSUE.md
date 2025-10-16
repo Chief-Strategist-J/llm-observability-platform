@@ -146,7 +146,7 @@ The LLM Chatbot Python project is currently in development phase with several cr
 5. Submit pull request with detailed description
 
 ## Resources
-- [Current Project Structure](https://github.com/Chief-Strategist-J/llm-chatbot-python)
+- [Current Project Structure](https://github.com/Chief-Strategist-J/llm_chatbot_python)
 - [Original Neo4j GraphAcademy Implementation](https://github.com/neo4j-graphacademy/llm-chatbot-python)
 - [Production Readiness Checklist](./docs/production-checklist.md)
 

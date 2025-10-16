@@ -1,7 +1,7 @@
-"""Package: datetime
+"""Logging Pipeline Workflow.
 
-Contains the timedelta class, which represents a duration defined by days,
-hours, minutes and seconds.
+Defines the workflow for executing logging pipeline activities.
+
 """
 
 from datetime import timedelta
@@ -9,15 +9,12 @@ from datetime import timedelta
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 
-from infrastructure.orchestrator.activities import start_app_container
-
 
 @workflow.defn
 class LoggingPipelineWorkflow:
     """Workflow for executing logging pipeline activities.
 
-    This workflow handles the execution of container startup activities for logging
-    pipeline services with proper retry policies and timeouts.
+    Handles container startup activities with proper retry policies and timeouts.
 
     """
 
@@ -26,12 +23,15 @@ class LoggingPipelineWorkflow:
         """Execute the logging pipeline workflow.
 
         Args:
-            service_name: Name of the service to start in the container
+            service_name: Name of the service to start in the container.
 
         Returns:
-            Result of the container startup activity execution
+            Result of the container startup activity execution.
 
         """
+        # Dynamic import ensures non-deterministic modules are never loaded at top-level
+        from infrastructure.orchestrator.activities import start_app_container
+
         return await workflow.execute_activity(
             start_app_container,
             service_name,

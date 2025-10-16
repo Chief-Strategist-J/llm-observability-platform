@@ -18,7 +18,7 @@ if __name__ == "__main__":
 from temporalio.client import Client
 from temporalio.worker import Worker
 
-from infrastructure.orchestrator.activities.start_app import start_app_container
+from infrastructure.orchestrator.activities import start_app_container
 from infrastructure.orchestrator.workflows.logging_pipeline_workflow import (
     LoggingPipelineWorkflow,
 )

@@ -24,7 +24,6 @@ Dependencies:
 import asyncio
 import subprocess
 import time
-import urllib.request
 
 import docker
 from temporalio import activity
@@ -38,7 +37,7 @@ class ContainerConfig:
     CONTAINER_NAME = "ai-proxy-api"
     SERVICE_NAME = "api"
 
-    PROJECT_ROOT = "/home/j/live/dinesh/llm-chatbot-python"
+    PROJECT_ROOT = "/home/j/live/dinesh/llm_chatbot_python"
     SERVICE_DIR = f"{PROJECT_ROOT}/infrastructure/services/ai-proxy-service"
     COMPOSE_FILE = f"{SERVICE_DIR}/ai-proxy-service.docker-compose.yml"
 
@@ -189,6 +188,8 @@ async def _check_container_health() -> bool:
         bool: True if health check passes, False otherwise.
 
     """
+    import urllib.request
+
     try:
         with urllib.request.urlopen(
             ContainerConfig.HEALTH_ENDPOINT,

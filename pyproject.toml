@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "llm-chatbot-python"
+name = "llm_chatbot_python"
 version = "0.1.0"
 description = "Ultra-strict LLM chatbot with maximum code quality enforcement"
 authors = ["Your Name <your.email@example.com>"]
