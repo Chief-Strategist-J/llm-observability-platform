@@ -1,11 +1,12 @@
 services:
   grafana-development:
-    image: grafana-custom:latest
+    image: grafana/grafana:latest
     container_name: grafana-development
     restart: unless-stopped
-    env_file:
-      - grafana.env
-      - grafana-secrets.env
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=SuperSecret123!
+      - GF_USERS_ALLOW_SIGN_UP=false
     ports:
       - "31001:3000"
     volumes:
@@ -14,12 +15,13 @@ services:
       - monitoring-network
 
   grafana-staging:
-    image: grafana-custom:latest
+    image: grafana/grafana:latest
     container_name: grafana-staging
     restart: unless-stopped
-    env_file:
-      - grafana.env
-      - grafana-secrets.env
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=SuperSecret123!
+      - GF_USERS_ALLOW_SIGN_UP=false
     ports:
       - "31002:3000"
     volumes:
@@ -28,12 +30,13 @@ services:
       - monitoring-network
 
   grafana-production:
-    image: grafana-custom:latest
+    image: grafana/grafana:latest
     container_name: grafana-production
     restart: unless-stopped
-    env_file:
-      - grafana.env
-      - grafana-secrets.env
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=SuperSecret123!
+      - GF_USERS_ALLOW_SIGN_UP=false
     ports:
       - "31003:3000"
     volumes:
