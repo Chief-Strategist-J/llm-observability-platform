@@ -1,9 +1,8 @@
 """Temporal activity for managing Promtail container.
 
-This module provides a Temporal activity to start the Promtail log shipping
-container, which forwards logs to Loki as part of the monitoring
-infrastructure. It handles container lifecycle management and ensures
-Promtail is running and ready.
+This module provides a Temporal activity to start the Promtail log shipping container,
+which forwards logs to Loki as part of the monitoring infrastructure. It handles
+container lifecycle management and ensures Promtail is running and ready.
 
 """
 
@@ -16,7 +15,9 @@ from temporalio import activity
 
 
 class PromtailConfig:
-    """Configuration for Promtail container management."""
+    """
+    Configuration for Promtail container management.
+    """
 
     CONTAINER_NAME = "promtail"
 
@@ -74,21 +75,17 @@ async def _get_or_start_promtail(client):
 
     Returns:
         Docker container object.
+
     """
     try:
         container = client.containers.get(PromtailConfig.CONTAINER_NAME)
 
         if container.status == "running":
-            log_msg = (
-                f"Container {PromtailConfig.CONTAINER_NAME} is already "
-                "running"
-            )
+            log_msg = f"Container {PromtailConfig.CONTAINER_NAME} is already " "running"
             activity.logger.info(log_msg)
             return container
 
-        log_msg = (
-            f"Starting existing container {PromtailConfig.CONTAINER_NAME}"
-        )
+        log_msg = f"Starting existing container {PromtailConfig.CONTAINER_NAME}"
         activity.logger.info(log_msg)
         container.start()
 
@@ -144,9 +141,7 @@ async def _start_promtail_via_compose() -> None:
 
         activity.logger.info(f"Docker-compose output: {result.stdout}")
         if result.stderr:
-            activity.logger.warning(
-                f"Docker-compose warnings: {result.stderr}"
-            )
+            activity.logger.warning(f"Docker-compose warnings: {result.stderr}")
 
     except subprocess.CalledProcessError as e:
         activity.logger.error(f"Docker-compose failed: {e.stderr}")
@@ -184,9 +179,7 @@ async def _wait_for_running_promtail(container) -> bool:
                 return True
 
         except Exception as e:
-            activity.logger.warning(
-                f"Promtail status check failed: {e!s}"
-            )
+            activity.logger.warning(f"Promtail status check failed: {e!s}")
 
         elapsed_time = time.time() - start_time
         log_msg = f"Waiting for Promtail to start... ({elapsed_time:.0f}s)"
@@ -194,7 +187,6 @@ async def _wait_for_running_promtail(container) -> bool:
         await asyncio.sleep(PromtailConfig.CHECK_INTERVAL)
 
     error_msg = (
-        f"Promtail did not start within {PromtailConfig.MAX_WAIT_TIME} "
-        "seconds"
+        f"Promtail did not start within {PromtailConfig.MAX_WAIT_TIME} " "seconds"
     )
     raise RuntimeError(error_msg)

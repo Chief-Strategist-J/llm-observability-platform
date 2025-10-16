@@ -31,15 +31,15 @@ from temporalio import activity
 
 
 class ContainerConfig:
-    """Configuration for container management activities."""
+    """
+    Configuration for container management activities.
+    """
 
     CONTAINER_NAME = "ai-proxy-api"
     SERVICE_NAME = "api"
 
     PROJECT_ROOT = "/home/j/live/dinesh/llm-chatbot-python"
-    SERVICE_DIR = (
-        f"{PROJECT_ROOT}/infrastructure/services/ai-proxy-service"
-    )
+    SERVICE_DIR = f"{PROJECT_ROOT}/infrastructure/services/ai-proxy-service"
     COMPOSE_FILE = f"{SERVICE_DIR}/ai-proxy-service.docker-compose.yml"
 
     HEALTH_ENDPOINT = "http://localhost:8001/health"
@@ -144,14 +144,14 @@ async def _get_or_start_container(client):
 
     Returns:
         Docker container object.
+
     """
     try:
         container = client.containers.get(ContainerConfig.CONTAINER_NAME)
 
         if container.status == "running":
             log_msg = (
-                f"Container {ContainerConfig.CONTAINER_NAME} is already "
-                "running"
+                f"Container {ContainerConfig.CONTAINER_NAME} is already " "running"
             )
             activity.logger.info(log_msg)
 
@@ -160,15 +160,13 @@ async def _get_or_start_container(client):
                 return container
 
             log_msg = (
-                "Container is running but not healthy, restarting via "
-                "docker-compose"
+                "Container is running but not healthy, restarting via " "docker-compose"
             )
             activity.logger.info(log_msg)
             await _start_container_via_compose()
         else:
             log_msg = (
-                f"Starting existing container "
-                f"{ContainerConfig.CONTAINER_NAME}"
+                f"Starting existing container " f"{ContainerConfig.CONTAINER_NAME}"
             )
             activity.logger.info(log_msg)
             container.start()
@@ -189,6 +187,7 @@ async def _check_container_health() -> bool:
 
     Returns:
         bool: True if health check passes, False otherwise.
+
     """
     try:
         with urllib.request.urlopen(
@@ -247,17 +246,13 @@ async def _start_container_via_compose() -> None:
 
         activity.logger.info(f"Docker-compose output: {result.stdout}")
         if result.stderr:
-            activity.logger.warning(
-                f"Docker-compose warnings: {result.stderr}"
-            )
+            activity.logger.warning(f"Docker-compose warnings: {result.stderr}")
 
     except subprocess.CalledProcessError as e:
         activity.logger.error(f"Docker-compose failed: {e.stderr}")
         activity.logger.error(f"Command: {e.cmd}")
         activity.logger.error(f"Return code: {e.returncode}")
-        error_msg = (
-            f"Failed to start ai-proxy-service via docker-compose: {e}"
-        )
+        error_msg = f"Failed to start ai-proxy-service via docker-compose: {e}"
         raise RuntimeError(error_msg) from e
 
 
@@ -288,10 +283,7 @@ async def _wait_for_healthy_container(container) -> bool:
             container.reload()
 
             if container.status != "running":
-                error_msg = (
-                    f"Container is not running. Status: "
-                    f"{container.status}"
-                )
+                error_msg = f"Container is not running. Status: " f"{container.status}"
                 raise RuntimeError(error_msg)
 
             if await _check_container_health():
@@ -303,8 +295,7 @@ async def _wait_for_healthy_container(container) -> bool:
 
         elapsed_time = time.time() - start_time
         log_msg = (
-            f"Waiting for container to become healthy... "
-            f"({elapsed_time:.0f}s)"
+            f"Waiting for container to become healthy... " f"({elapsed_time:.0f}s)"
         )
         activity.logger.info(log_msg)
         await asyncio.sleep(ContainerConfig.HEALTH_CHECK_INTERVAL)

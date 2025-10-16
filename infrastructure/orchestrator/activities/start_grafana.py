@@ -1,9 +1,9 @@
 """Temporal activity for managing Grafana container.
 
-This module provides a Temporal activity to start the Grafana monitoring
-container, which provides visualization and dashboards for the monitoring
-infrastructure. It handles container lifecycle management and health
-checking to ensure Grafana is ready to serve dashboards.
+This module provides a Temporal activity to start the Grafana monitoring container,
+which provides visualization and dashboards for the monitoring infrastructure. It
+handles container lifecycle management and health checking to ensure Grafana is ready to
+serve dashboards.
 
 """
 
@@ -17,7 +17,9 @@ from temporalio import activity
 
 
 class GrafanaConfig:
-    """Configuration for Grafana container management."""
+    """
+    Configuration for Grafana container management.
+    """
 
     PORTS = {"development": 31001, "staging": 31002, "production": 31003}
 
@@ -62,9 +64,7 @@ async def start_grafana(environment: str = "production") -> bool:
         True
 
     """
-    activity.logger.info(
-        f"Starting Grafana container for environment: {environment}"
-    )
+    activity.logger.info(f"Starting Grafana container for environment: {environment}")
 
     try:
         client = docker.from_env()
@@ -77,9 +77,7 @@ async def start_grafana(environment: str = "production") -> bool:
         return await _wait_for_healthy_grafana(container, port)
 
     except Exception as e:
-        error_msg = (
-            f"Failed to start Grafana container for {environment}: {e!s}"
-        )
+        error_msg = f"Failed to start Grafana container for {environment}: {e!s}"
         activity.logger.error(error_msg)
         raise RuntimeError(error_msg) from e
 
@@ -95,14 +93,13 @@ async def _get_or_start_grafana(client, container_name, environment, port):
 
     Returns:
         Docker container object.
+
     """
     try:
         container = client.containers.get(container_name)
 
         if container.status == "running":
-            activity.logger.info(
-                f"Container {container_name} is already running"
-            )
+            activity.logger.info(f"Container {container_name} is already running")
             return container
 
         activity.logger.info(f"Starting existing container {container_name}")
@@ -110,8 +107,7 @@ async def _get_or_start_grafana(client, container_name, environment, port):
 
     except docker.errors.NotFound:
         log_msg = (
-            f"Container {container_name} not found, starting via "
-            "docker-compose"
+            f"Container {container_name} not found, starting via " "docker-compose"
         )
         activity.logger.info(log_msg)
         await _start_grafana_via_compose(environment)
@@ -161,9 +157,7 @@ async def _start_grafana_via_compose(environment: str) -> None:
 
         activity.logger.info(f"Docker-compose output: {result.stdout}")
         if result.stderr:
-            activity.logger.warning(
-                f"Docker-compose warnings: {result.stderr}"
-            )
+            activity.logger.warning(f"Docker-compose warnings: {result.stderr}")
 
     except subprocess.CalledProcessError as e:
         activity.logger.error(f"Docker-compose failed: {e.stderr}")
@@ -199,15 +193,10 @@ async def _wait_for_healthy_grafana(container, port: int) -> bool:
             container.reload()
 
             if container.status != "running":
-                error_msg = (
-                    f"Container is not running. Status: "
-                    f"{container.status}"
-                )
+                error_msg = f"Container is not running. Status: " f"{container.status}"
                 raise RuntimeError(error_msg)
 
-            health_endpoint = GrafanaConfig.HEALTH_ENDPOINT_TEMPLATE.format(
-                port=port
-            )
+            health_endpoint = GrafanaConfig.HEALTH_ENDPOINT_TEMPLATE.format(port=port)
             try:
                 with urllib.request.urlopen(
                     health_endpoint, timeout=GrafanaConfig.REQUEST_TIMEOUT
@@ -222,10 +211,7 @@ async def _wait_for_healthy_grafana(container, port: int) -> bool:
             activity.logger.warning(f"Grafana health check failed: {e!s}")
 
         elapsed_time = time.time() - start_time
-        log_msg = (
-            f"Waiting for Grafana to become healthy... "
-            f"({elapsed_time:.0f}s)"
-        )
+        log_msg = f"Waiting for Grafana to become healthy... " f"({elapsed_time:.0f}s)"
         activity.logger.info(log_msg)
         await asyncio.sleep(GrafanaConfig.CHECK_INTERVAL)
 
