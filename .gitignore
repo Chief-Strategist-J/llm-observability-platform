@@ -241,9 +241,10 @@ infrastructure/*/logs/
 infrastructure/*/cache/
 
 # Monitoring
-infrastructure/monitoring/grafana/data/
 infrastructure/monitoring/loki/data/
 infrastructure/monitoring/prometheus/data/
+infrastructure/monitoring/component/loki/loki/data/
+infrastructure/monitoring/component/loki/loki/wal/
 
 # Kafka
 infrastructure/kafka/data/
