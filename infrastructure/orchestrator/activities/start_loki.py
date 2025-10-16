@@ -1,9 +1,8 @@
 """Temporal activity for managing Loki container.
 
-This module provides a Temporal activity to start the Loki logging service
-container, which is part of the monitoring infrastructure. It handles
-container lifecycle management and health checking to ensure Loki is ready
-to receive logs.
+This module provides a Temporal activity to start the Loki logging service container,
+which is part of the monitoring infrastructure. It handles container lifecycle
+management and health checking to ensure Loki is ready to receive logs.
 
 """
 
@@ -17,7 +16,9 @@ from temporalio import activity
 
 
 class LokiConfig:
-    """Configuration for Loki container management."""
+    """
+    Configuration for Loki container management.
+    """
 
     CONTAINER_NAME = "loki"
     PORT = 3100
@@ -80,6 +81,7 @@ async def _get_or_start_loki(client):
 
     Returns:
         Docker container object.
+
     """
     try:
         container = client.containers.get(LokiConfig.CONTAINER_NAME)
@@ -146,9 +148,7 @@ async def _start_loki_via_compose() -> None:
 
         activity.logger.info(f"Docker-compose output: {result.stdout}")
         if result.stderr:
-            activity.logger.warning(
-                f"Docker-compose warnings: {result.stderr}"
-            )
+            activity.logger.warning(f"Docker-compose warnings: {result.stderr}")
 
     except subprocess.CalledProcessError as e:
         activity.logger.error(f"Docker-compose failed: {e.stderr}")
@@ -182,10 +182,7 @@ async def _wait_for_healthy_loki(container) -> bool:
             container.reload()
 
             if container.status != "running":
-                error_msg = (
-                    f"Container is not running. Status: "
-                    f"{container.status}"
-                )
+                error_msg = f"Container is not running. Status: " f"{container.status}"
                 raise RuntimeError(error_msg)
 
             try:
@@ -203,14 +200,11 @@ async def _wait_for_healthy_loki(container) -> bool:
             activity.logger.warning(f"Loki health check failed: {e!s}")
 
         elapsed_time = time.time() - start_time
-        log_msg = (
-            f"Waiting for Loki to become healthy... ({elapsed_time:.0f}s)"
-        )
+        log_msg = f"Waiting for Loki to become healthy... ({elapsed_time:.0f}s)"
         activity.logger.info(log_msg)
         await asyncio.sleep(LokiConfig.CHECK_INTERVAL)
 
     error_msg = (
-        f"Loki did not become healthy within {LokiConfig.MAX_WAIT_TIME} "
-        "seconds"
+        f"Loki did not become healthy within {LokiConfig.MAX_WAIT_TIME} " "seconds"
     )
     raise RuntimeError(error_msg)
