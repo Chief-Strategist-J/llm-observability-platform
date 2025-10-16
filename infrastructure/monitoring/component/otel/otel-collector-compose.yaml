@@ -18,10 +18,6 @@ services:
       - "9411:9411"   # Zipkin
     networks:
       - monitoring-network
-    depends_on:
-      - loki
-      - prometheus
-      - tempo
 
 networks:
   monitoring-network:
