@@ -32,26 +32,14 @@ processors:
 exporters:
   logging:
     loglevel: info
-  otlp:
-    endpoint: "http://tempo:4317"
-    insecure: true
-  prometheus:
-    endpoint: "http://prometheus:9090"
-  loki:
-    endpoint: "http://loki:3100/loki/api/v1/push"
-    insecure: true
 
 service:
   pipelines:
     traces:
       receivers: [otlp, jaeger, zipkin]
       processors: [memory_limiter, batch]
-      exporters: [logging, otlp]
+      exporters: [logging]
     metrics:
       receivers: [otlp, prometheus]
       processors: [memory_limiter, batch]
-      exporters: [logging, prometheus]
-    logs:
-      receivers: [otlp]
-      processors: [memory_limiter, batch]
-      exporters: [logging, loki]
+      exporters: [logging]

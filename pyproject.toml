@@ -6,6 +6,8 @@ authors = ["Your Name <your.email@example.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.12"
+temporalio = "^1.8.0"
+docker = "^7.0.0"
 
 [tool.poetry.group.dev.dependencies]
 # LINTING & CODE QUALITY - MAXIMUM STRICTNESS TOOLS
