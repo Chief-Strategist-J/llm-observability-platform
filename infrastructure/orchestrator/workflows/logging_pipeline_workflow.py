@@ -29,12 +29,12 @@ class LoggingPipelineWorkflow:
             Result of the container startup activity execution.
 
         """
-        # Dynamic import ensures non-deterministic modules are never loaded at top-level
-        from infrastructure.orchestrator.activities import start_app_container
-
+        # Use activity by name instead of importing to avoid sandbox restrictions
         return await workflow.execute_activity(
-            start_app_container,
+            "start_app_container",
             service_name,
-            start_to_close_timeout=timedelta(minutes=2),
+            start_to_close_timeout=timedelta(
+                minutes=10
+            ),  # Increased from 2 to 10 minutes
             retry_policy=RetryPolicy(maximum_attempts=1),
         )

@@ -12,12 +12,13 @@ import sys
 
 # Add the project root to sys.path when running as a script
 if __name__ == "__main__":
-    project_root = Path(__file__).parent.parent.parent.parent
+    project_root = Path(__file__).parent.parent.parent.parent.parent
     sys.path.insert(0, str(project_root))
 
 from temporalio.client import Client
 from temporalio.worker import Worker
 
+# Import activities to register them with Temporal
 from infrastructure.orchestrator.activities import start_app_container
 from infrastructure.orchestrator.workflows.logging_pipeline_workflow import (
     LoggingPipelineWorkflow,

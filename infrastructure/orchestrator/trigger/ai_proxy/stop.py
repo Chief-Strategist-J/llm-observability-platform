@@ -1,54 +1,14 @@
 #!/usr/bin/env python3
-"""Modular trigger script to stop services using Temporal workflows.
+"""Simple autonomous script to stop and clean up ai-proxy-service containers.
 
-This script provides a configurable way to stop any service workflow that was started
-using the corresponding start trigger script. It can terminate workflows by ID.
+This script directly uses Docker commands to stop and remove containers, volumes,
+networks, and images without requiring complex module imports.
 
 """
 
 import asyncio
 import logging
-import os
-from pathlib import Path
-import sys
-
-# Add the project root to sys.path when running as a script
-if __name__ == "__main__":
-    project_root = Path(__file__).parent.parent.parent.parent
-    sys.path.insert(0, str(project_root))
-
-from temporalio.client import Client
-
-
-class WorkflowConfig:
-    """
-    Configuration for workflow execution.
-    """
-
-    # Default configuration
-    DEFAULT_TEMPORAL_HOST = "localhost:7233"
-    DEFAULT_WEB_UI_URL = "http://localhost:8080"
-    DEFAULT_STOP_REASON = "Manual stop requested via trigger script"
-
-    def __init__(
-        self,
-        temporal_host: str | None = None,
-        web_ui_url: str | None = None,
-        stop_reason: str | None = None,
-    ):
-        """
-        Initialize workflow configuration with optional overrides.
-        """
-        self.temporal_host = temporal_host or os.getenv(
-            "TEMPORAL_HOST", self.DEFAULT_TEMPORAL_HOST
-        )
-        self.web_ui_url = web_ui_url or os.getenv(
-            "TEMPORAL_WEB_UI_URL", self.DEFAULT_WEB_UI_URL
-        )
-        self.stop_reason = stop_reason or os.getenv(
-            "TEMPORAL_STOP_REASON", self.DEFAULT_STOP_REASON
-        )
-
+import subprocess
 
 # Configure logging
 logging.basicConfig(
@@ -57,105 +17,271 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def stop_service_workflow(workflow_id: str, config: WorkflowConfig) -> bool:
-    """Stop a service workflow with the given configuration.
+async def stop_and_clean_containers():
+    """
+    Stop and clean up all ai-proxy-service related Docker resources.
+    """
+    logger.info("Starting autonomous cleanup of ai-proxy-service containers...")
 
-    Args:
-        workflow_id: The workflow ID to terminate
-        config: WorkflowConfig object containing configuration
+    # Get container IDs first, then operate on them
+    container_ids = await _get_container_ids("ai-proxy")
+    if container_ids:
+        # Stop containers
+        await _stop_containers(container_ids)
+        # Remove containers
+        await _remove_containers(container_ids)
 
-    Returns:
-        bool: True if workflow was terminated successfully
+    # Remove images (including specific ones by ID)
+    await _remove_images("ai-proxy")
+    await _remove_specific_image("a851efa06dc0")  # Remove the specific image mentioned
 
+    # Remove networks
+    await _remove_networks("ai-proxy")
+    await _remove_specific_network(
+        "ai-proxy-service_default"
+    )  # Remove the specific network
+
+    # Clean up volumes
+    await _cleanup_volumes()
+
+    logger.info("Autonomous cleanup completed!")
+
+
+async def _get_container_ids(name_filter):
+    """
+    Get container IDs for containers matching the name filter.
     """
     try:
-        # Connect to Temporal server
-        logger.info(f"Connecting to Temporal server at {config.temporal_host}")
-        client = await Client.connect(config.temporal_host)
-
-        # Get the workflow handle
-        logger.info(f"Getting workflow handle for ID: {workflow_id}")
-        handle = client.get_workflow_handle(workflow_id)
-
-        # Terminate the workflow
-        logger.info(f"Terminating workflow '{workflow_id}'")
-        logger.info(f"Reason: {config.stop_reason}")
-
-        await handle.terminate(config.stop_reason)
-
-        logger.info("Successfully terminated workflow!")
-        logger.info(f"Check {config.web_ui_url} for confirmation")
-
-        return True
-
+        result = subprocess.run(
+            ["docker", "ps", "-aq", "-f", f"name={name_filter}"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            container_ids = [
+                cid.strip() for cid in result.stdout.strip().split("\n") if cid.strip()
+            ]
+            logger.info(
+                f"Found {len(container_ids)} containers matching '{name_filter}'"
+            )
+            return container_ids
+        logger.warning(f"Error listing containers: {result.stderr}")
+        return []
     except Exception as e:
-        logger.error(f"Failed to terminate workflow '{workflow_id}': {e}")
-        return False
+        logger.error(f"Error getting container IDs: {e}")
+        return []
 
 
-def parse_arguments() -> tuple[str, WorkflowConfig]:
-    """Parse command line arguments and return workflow ID and configuration.
-
-    Returns:
-        tuple: (workflow_id, config) where config is WorkflowConfig object
-
+async def _stop_containers(container_ids):
     """
-    # Check if workflow ID was provided
-    if len(sys.argv) < 2:
-        logger.error(
-            "Usage: python3 trigger/ai_proxy/stop.py <workflow_id> [stop_reason]"
-        )
-        logger.info(
-            "Example: python3 trigger/ai_proxy/stop.py ai_proxy_service_1699123400"
-        )
-        logger.info(
-            "Optional: python3 trigger/ai_proxy/stop.py ai_proxy_service_1699123400 'Emergency stop'"
-        )
-        logger.info(
-            "Get the workflow ID from the start script output or Temporal Web UI"
-        )
-        sys.exit(1)
+    Stop containers by their IDs.
+    """
+    for container_id in container_ids:
+        try:
+            logger.info(f"Stopping container {container_id[:12]}...")
+            result = subprocess.run(
+                ["docker", "stop", container_id],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.returncode == 0:
+                logger.info(f"Stopped container {container_id[:12]}")
+            else:
+                logger.warning(
+                    f"Error stopping container {container_id[:12]}: {result.stderr}"
+                )
+        except Exception as e:
+            logger.error(f"Failed to stop container {container_id[:12]}: {e}")
 
-    workflow_id = sys.argv[1]
 
-    # Default configuration
-    config = WorkflowConfig()
+async def _remove_containers(container_ids):
+    """
+    Remove containers by their IDs.
+    """
+    for container_id in container_ids:
+        try:
+            logger.info(f"Removing container {container_id[:12]}...")
+            result = subprocess.run(
+                ["docker", "rm", container_id],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.returncode == 0:
+                logger.info(f"Removed container {container_id[:12]}")
+            else:
+                logger.warning(
+                    f"Error removing container {container_id[:12]}: {result.stderr}"
+                )
+        except Exception as e:
+            logger.error(f"Failed to remove container {container_id[:12]}: {e}")
 
-    # Optional stop reason
-    if len(sys.argv) > 2:
-        config.stop_reason = sys.argv[2]
 
-    return workflow_id, config
+async def _remove_images(name_filter):
+    """
+    Remove images matching the name filter.
+    """
+    try:
+        logger.info(f"Removing images matching '{name_filter}'...")
+        result = subprocess.run(
+            ["docker", "images", "-q", name_filter],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            image_ids = [
+                iid.strip() for iid in result.stdout.strip().split("\n") if iid.strip()
+            ]
+            for image_id in image_ids:
+                try:
+                    logger.info(f"Removing image {image_id[:12]}...")
+                    remove_result = subprocess.run(
+                        ["docker", "rmi", image_id, "-f"],
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                    )
+                    if remove_result.returncode == 0:
+                        logger.info(f"Removed image {image_id[:12]}")
+                    else:
+                        logger.warning(
+                            f"Error removing image {image_id[:12]}: {remove_result.stderr}"
+                        )
+                except Exception as e:
+                    logger.error(f"Failed to remove image {image_id[:12]}: {e}")
+        else:
+            logger.info(f"No images found matching '{name_filter}'")
+    except Exception as e:
+        logger.error(f"Error listing images: {e}")
+
+
+async def _remove_networks(name_filter):
+    """
+    Remove networks matching the name filter.
+    """
+    try:
+        logger.info(f"Removing networks matching '{name_filter}'...")
+        result = subprocess.run(
+            ["docker", "network", "ls", "--format", "{{.Name}}"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            network_names = [
+                name.strip()
+                for name in result.stdout.strip().split("\n")
+                if name.strip()
+            ]
+
+            for network_name in network_names:
+                if name_filter in network_name and network_name not in [
+                    "bridge",
+                    "host",
+                    "none",
+                ]:
+                    try:
+                        logger.info(f"Removing network '{network_name}'...")
+                        remove_result = subprocess.run(
+                            ["docker", "network", "rm", network_name],
+                            capture_output=True,
+                            text=True,
+                            check=False,
+                        )
+                        if remove_result.returncode == 0:
+                            logger.info(f"Removed network '{network_name}'")
+                        else:
+                            logger.warning(
+                                f"Error removing network '{network_name}': {remove_result.stderr}"
+                            )
+                    except Exception as e:
+                        logger.error(f"Failed to remove network '{network_name}': {e}")
+        else:
+            logger.warning(f"Error listing networks: {result.stderr}")
+    except Exception as e:
+        logger.error(f"Error during network cleanup: {e}")
+
+
+async def _remove_specific_image(image_id):
+    """
+    Remove a specific image by ID.
+    """
+    try:
+        logger.info(f"Removing specific image {image_id[:12]}...")
+        result = subprocess.run(
+            ["docker", "rmi", image_id, "-f"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            logger.info(f"Removed specific image {image_id[:12]}")
+        else:
+            logger.warning(
+                f"Error removing specific image {image_id[:12]}: {result.stderr}"
+            )
+    except Exception as e:
+        logger.error(f"Failed to remove specific image {image_id[:12]}: {e}")
+
+
+async def _remove_specific_network(network_name):
+    """
+    Remove a specific network by name.
+    """
+    try:
+        logger.info(f"Removing specific network '{network_name}'...")
+        result = subprocess.run(
+            ["docker", "network", "rm", network_name],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            logger.info(f"Removed specific network '{network_name}'")
+        else:
+            logger.warning(
+                f"Error removing specific network '{network_name}': {result.stderr}"
+            )
+    except Exception as e:
+        logger.error(f"Failed to remove specific network '{network_name}': {e}")
+
+
+async def _cleanup_volumes():
+    """
+    Clean up orphaned volumes.
+    """
+    try:
+        logger.info("Cleaning up volumes...")
+        result = subprocess.run(
+            ["docker", "volume", "prune", "-f"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0 and result.stdout:
+            logger.info(f"Volume cleanup: {result.stdout.strip()}")
+        else:
+            logger.info("No volumes to clean up")
+    except Exception as e:
+        logger.warning(f"Error cleaning volumes: {e}")
 
 
 async def main():
     """
-    Main entry point for the stop trigger script.
+    Main entry point.
     """
-    logger.info("Stopping service workflow via Temporal...")
+    logger.info("=" * 60)
+    logger.info("🔄 AUTONOMOUS AI-PROXY CLEANUP")
     logger.info("=" * 60)
 
-    # Parse workflow ID and configuration from arguments
-    workflow_id, config = parse_arguments()
+    await stop_and_clean_containers()
 
-    # Log configuration being used
-    logger.info("Using configuration:")
-    logger.info(f"  Workflow ID: {workflow_id}")
-    logger.info(f"  Temporal Host: {config.temporal_host}")
-    logger.info(f"  Web UI: {config.web_ui_url}")
-    logger.info(f"  Stop Reason: {config.stop_reason}")
     logger.info("=" * 60)
-
-    success = await stop_service_workflow(workflow_id, config)
-
-    if success:
-        logger.info("=" * 60)
-        logger.info("✅ Workflow terminated successfully!")
-        logger.info("📋 The service container should now be stopped")
-    else:
-        logger.error("=" * 60)
-        logger.error("❌ Failed to terminate workflow")
-        sys.exit(1)
+    logger.info("✅ Cleanup completed successfully!")
+    logger.info("📋 Check 'docker ps' and 'docker images' to verify cleanup")
 
 
 if __name__ == "__main__":

@@ -14,10 +14,13 @@ import sys
 
 # Add the project root to sys.path when running as a script
 if __name__ == "__main__":
-    project_root = Path(__file__).parent.parent.parent.parent
+    project_root = Path(__file__).parent.parent.parent.parent.parent
     sys.path.insert(0, str(project_root))
 
 from temporalio.client import Client
+
+# Import the updated container activities
+from infrastructure.orchestrator.activities import start_app_container
 
 
 class WorkflowConfig:
@@ -68,16 +71,14 @@ logger = logging.getLogger(__name__)
 
 
 async def start_service_workflow(config: WorkflowConfig) -> str | None:
-    """Start a service workflow with the given configuration.
-
-    Args:
-        config: WorkflowConfig object containing all configuration
-
-    Returns:
-        str: Workflow ID if successful, None if failed
-
+    """
+    Start a service workflow with the given configuration and container setup.
     """
     try:
+        # Start container and wait for health
+        logger.info(f"Starting container for service: {config.service_name}")
+        await start_app_container(config.service_name)
+
         # Connect to Temporal server
         logger.info(f"Connecting to Temporal server at {config.temporal_host}")
         client = await Client.connect(config.temporal_host)
@@ -111,16 +112,11 @@ async def start_service_workflow(config: WorkflowConfig) -> str | None:
 
 
 def parse_arguments() -> WorkflowConfig:
-    """Parse command line arguments and return configuration.
-
-    Returns:
-        WorkflowConfig: Configuration object with parsed arguments
-
     """
-    # Default configuration
+    Parse command line arguments and return configuration.
+    """
     config = WorkflowConfig()
 
-    # Parse command line arguments
     if len(sys.argv) > 1:
         config.service_name = sys.argv[1]
 
@@ -135,15 +131,13 @@ def parse_arguments() -> WorkflowConfig:
 
 async def main():
     """
-    Main entry point for the trigger script.
+    Main entry point for the start trigger script.
     """
     logger.info("Starting service via Temporal workflow...")
     logger.info("=" * 60)
 
-    # Parse configuration from arguments or environment
     config = parse_arguments()
 
-    # Log configuration being used
     logger.info("Using configuration:")
     logger.info(f"  Service: {config.service_name}")
     logger.info(f"  Workflow: {config.workflow_name}")
