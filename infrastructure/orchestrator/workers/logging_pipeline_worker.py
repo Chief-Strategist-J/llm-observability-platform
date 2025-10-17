@@ -12,14 +12,24 @@ import sys
 
 # Add the project root to sys.path when running as a script
 if __name__ == "__main__":
-    project_root = Path(__file__).parent.parent.parent.parent.parent
+    project_root = Path(__file__).parent.parent.parent.parent
     sys.path.insert(0, str(project_root))
 
 from temporalio.client import Client
 from temporalio.worker import Worker
 
-# Import activities to register them with Temporal
-from infrastructure.orchestrator.activities import start_app_container
+from infrastructure.orchestrator.activities.common_activity.grafana_activity import (
+    start_grafana_container,
+    stop_grafana_container,
+)
+from infrastructure.orchestrator.activities.common_activity.loki_activity import (
+    start_loki_container,
+    stop_loki_container,
+)
+from infrastructure.orchestrator.activities.common_activity.promtail_activity import (
+    start_promtail_container,
+    stop_promtail_container,
+)
 from infrastructure.orchestrator.workflows.logging_pipeline_workflow import (
     LoggingPipelineWorkflow,
 )
@@ -42,7 +52,14 @@ async def main() -> None:
         client,
         task_queue="logging-pipeline",
         workflows=[LoggingPipelineWorkflow],
-        activities=[start_app_container],
+        activities=[
+            start_grafana_container,
+            stop_grafana_container,
+            start_loki_container,
+            stop_loki_container,
+            start_promtail_container,
+            stop_promtail_container,
+        ],
     )
 
     await worker.run()

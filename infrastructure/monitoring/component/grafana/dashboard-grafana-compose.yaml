@@ -1,6 +1,11 @@
+version: "3.9"
+
 services:
-  grafana-development:
-    image: grafana/grafana:latest
+  grafana:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: grafana/grafana:custom
     container_name: grafana-development
     restart: unless-stopped
     environment:
@@ -10,40 +15,13 @@ services:
     ports:
       - "31001:3000"
     volumes:
-      - ./storage/development:/var/lib/grafana
+      - grafana-data:/var/lib/grafana
     networks:
       - monitoring-network
 
-  grafana-staging:
-    image: grafana/grafana:latest
-    container_name: grafana-staging
-    restart: unless-stopped
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=SuperSecret123!
-      - GF_USERS_ALLOW_SIGN_UP=false
-    ports:
-      - "31002:3000"
-    volumes:
-      - ./storage/staging:/var/lib/grafana
-    networks:
-      - monitoring-network
-
-  grafana-production:
-    image: grafana/grafana:latest
-    container_name: grafana-production
-    restart: unless-stopped
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=SuperSecret123!
-      - GF_USERS_ALLOW_SIGN_UP=false
-    ports:
-      - "31003:3000"
-    volumes:
-      - ./storage/production:/var/lib/grafana
-    networks:
-      - monitoring-network
+volumes:
+  grafana-data:
 
 networks:
   monitoring-network:
-    external: true
+    driver: bridge
