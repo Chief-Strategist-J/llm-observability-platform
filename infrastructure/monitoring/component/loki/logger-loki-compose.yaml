@@ -1,32 +1,36 @@
-version: "3.9"
+version: "3.8"
 
 services:
   loki:
     build:
       context: ./loki
       dockerfile: Dockerfile
+    image: loki:custom
     container_name: loki
-    restart: unless-stopped
-    volumes:
-      - ./loki/data:/loki
-      - ./loki/wal:/loki/wal
+    user: "472"
     ports:
-      - "31090:3100"
-    networks:
-      - monitoring-network
+      - "3100:3100"
+    volumes:
+      - loki-data:/loki
+    restart: unless-stopped
 
   promtail:
     build:
       context: ./promtail
       dockerfile: Dockerfile
+    image: promtail:custom
     container_name: promtail
-    restart: unless-stopped
+    user: "472"
+    depends_on:
+      - loki
+    ports:
+      - "9080:9080"
+    # bind only the host logs; do NOT mount /etc/promtail (that would overwrite the config inside the image)
     volumes:
-      - ../grafana/storage:/host-logs:ro
-      - /var/log:/var/log:ro
-    networks:
-      - monitoring-network
+      - ./logs:/host-logs:ro
+      - promtail-positions:/tmp
+    restart: unless-stopped
 
-networks:
-  monitoring-network:
-    external: true
+volumes:
+  loki-data:
+  promtail-positions:

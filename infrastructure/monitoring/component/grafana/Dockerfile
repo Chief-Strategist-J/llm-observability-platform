@@ -1,3 +1,4 @@
+# Base image
 FROM grafana/grafana:11.1.0
 
 # Switch to root to set up permissions
@@ -27,7 +28,7 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
-# Switch to grafana user for security
+# Switch to Grafana user for security
 USER grafana
 
 # Start Grafana

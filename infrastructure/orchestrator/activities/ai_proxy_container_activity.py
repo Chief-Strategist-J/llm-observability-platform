@@ -375,7 +375,6 @@ async def _wait_for_healthy_container(container) -> bool:
                     return True
         except Exception as e:
             activity.logger.debug(f"Health check failed: {e}")
-            # Immediate retry - no artificial delays
 
     raise RuntimeError(
         f"Container did not become healthy within {ContainerConfig.MAX_WAIT_TIME} seconds"
@@ -397,5 +396,6 @@ async def _fetch_container_logs():
         activity.logger.error(
             f"Cannot fetch logs: container {ContainerConfig.CONTAINER_NAME} not found"
         )
-    except Exception as e:
+    except (docker.errors.APIError, docker.errors.DockerException) as e:
         activity.logger.error(f"Failed to fetch Docker logs: {e}")
+        
