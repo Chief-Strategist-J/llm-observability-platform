@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple trigger script to start Grafana service using Temporal workflows.
+Simple trigger script to start Logs Pipeline using Temporal workflows.
 """
 
 import asyncio
@@ -8,6 +8,7 @@ import logging
 import os
 from pathlib import Path
 import sys
+import time
 
 if __name__ == "__main__":
     project_root = Path(__file__).parent.parent.parent.parent.parent
@@ -15,13 +16,11 @@ if __name__ == "__main__":
 
 from temporalio.client import Client
 
-from infrastructure.orchestrator.activities import start_grafana_container
-
 
 class WorkflowConfig:
-    DEFAULT_SERVICE_NAME = "grafana"
-    DEFAULT_WORKFLOW_NAME = "LoggingPipelineWorkflow"
-    DEFAULT_TASK_QUEUE = "logging-pipeline"
+    DEFAULT_SERVICE_NAME = "logs-pipeline"
+    DEFAULT_WORKFLOW_NAME = "LogsPipelineWorkflow"
+    DEFAULT_TASK_QUEUE = "logs-pipeline-queue"
     DEFAULT_TEMPORAL_HOST = "localhost:7233"
     DEFAULT_WEB_UI_URL = "http://localhost:8080"
 
@@ -56,20 +55,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def start_grafana_service(config: WorkflowConfig) -> str | None:
+async def start_logs_pipeline(config: WorkflowConfig) -> str | None:
     try:
-        logger.info(f"Starting Grafana container for {config.service_name}")
-        grafana_started = await start_grafana_container(config.service_name)
-        if not grafana_started:
-            logger.error("Failed to start Grafana container")
-            return None
-
         logger.info(f"Connecting to Temporal server at {config.temporal_host}")
         client = await Client.connect(config.temporal_host)
 
-        import time
-
-        workflow_id = f"{config.service_name.replace('-', '_')}-{int(time.time())}"
+        workflow_id = f"{config.service_name.replace('-', '_')}_{int(time.time())}"
 
         result = await client.start_workflow(
             config.workflow_name,
@@ -78,7 +69,7 @@ async def start_grafana_service(config: WorkflowConfig) -> str | None:
             task_queue=config.task_queue,
         )
 
-        logger.info("Grafana service workflow started successfully!")
+        logger.info("Logs Pipeline workflow started successfully!")
         logger.info(f"Workflow ID: {result.id}")
         logger.info(f"Check {config.web_ui_url} to monitor progress")
         return result.id
@@ -104,8 +95,8 @@ def parse_arguments() -> WorkflowConfig:
 
 
 async def main():
-    logger.info("Starting Grafana service...")
-    logger.info("=" * 60)
+    logger.info("Starting Logs Pipeline (Grafana + Loki + Promtail)...")
+    logger.info("=" * 80)
 
     config = parse_arguments()
 
@@ -114,19 +105,26 @@ async def main():
     logger.info(f"Task Queue: {config.task_queue}")
     logger.info(f"Temporal Host: {config.temporal_host}")
     logger.info(f"Web UI: {config.web_ui_url}")
-    logger.info("=" * 60)
+    logger.info("=" * 80)
 
-    workflow_id = await start_grafana_service(config)
+    workflow_id = await start_logs_pipeline(config)
 
     if workflow_id:
-        logger.info("=" * 60)
-        logger.info("✅ Grafana workflow started successfully!")
+        logger.info("=" * 80)
+        logger.info("✅ Logs Pipeline workflow started successfully!")
         logger.info(f"📋 Workflow ID: {workflow_id}")
-        logger.info("🔗 To stop this workflow later, use:")
-        logger.info(f"   python3 trigger/ai_proxy/stop.py {workflow_id}")
+        logger.info("")
+        logger.info("🔗 Service URLs:")
+        logger.info("   Grafana:  http://localhost:31001 (admin/SuperSecret123!)")
+        logger.info("   Loki:     http://localhost:3100")
+        logger.info("   Promtail: http://localhost:9080/metrics")
+        logger.info("")
+        logger.info("🛑 To stop this workflow:")
+        logger.info(f"   python3 trigger/logs_pipeline/stop.py {workflow_id}")
+        logger.info("=" * 80)
     else:
-        logger.error("=" * 60)
-        logger.error("❌ Failed to start Grafana workflow")
+        logger.error("=" * 80)
+        logger.error("❌ Failed to start Logs Pipeline workflow")
         sys.exit(1)
 
 

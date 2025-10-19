@@ -7,25 +7,34 @@ from docker.errors import APIError, DockerException, ImageNotFound, NotFound
 from temporalio import activity
 
 # Service Access Information:
-# URL: http://localhost:3100
-# Username: N/A (No authentication by default)
-# Password: N/A
-# API Endpoints: /ready, /metrics, /loki/api/v1/push, /loki/api/v1/query
+# Browser UI: http://localhost:7474
+# Bolt Protocol: bolt://localhost:7687
+# Username: neo4j (default)
+# Password: Neo4jPassword123! (set via NEO4J_AUTH)
+# Note: Change password in production for security
 
 logging.basicConfig(level=logging.INFO)
 
 CONFIG = {
-    "image_name": "grafana/loki:latest",
-    "container_name": "loki-development",
-    "environment": {},
-    "ports": {"3100/tcp": 3100},
+    "image_name": "neo4j:latest",
+    "container_name": "neo4j-development",
+    "environment": {
+        "NEO4J_AUTH": "neo4j/Neo4jPassword123!",
+        "NEO4J_ACCEPT_LICENSE_AGREEMENT": "yes",
+        "NEO4J_dbms_memory_pagecache_size": "512M",
+        "NEO4J_dbms_memory_heap_initial__size": "512M",
+        "NEO4J_dbms_memory_heap_max__size": "512M",
+    },
+    "ports": {"7474/tcp": 7474, "7687/tcp": 7687},  # HTTP  # Bolt
     "volumes": {
-        "loki-data": {"bind": "/loki", "mode": "rw"},
-        "loki-config": {"bind": "/etc/loki", "mode": "rw"},
+        "neo4j-data": {"bind": "/data", "mode": "rw"},
+        "neo4j-logs": {"bind": "/logs", "mode": "rw"},
+        "neo4j-import": {"bind": "/var/lib/neo4j/import", "mode": "rw"},
+        "neo4j-plugins": {"bind": "/plugins", "mode": "rw"},
     },
     "restart_policy": {"Name": "unless-stopped"},
-    "network": "observability-network",
-    "resources": {"mem_limit": "256m", "cpus": 0.5},
+    "network": "data-network",
+    "resources": {"mem_limit": "1g", "cpus": 1.0},
     "start_timeout": 30,
     "stop_timeout": 30,
     "retry_attempts": 3,
@@ -62,12 +71,14 @@ def cleanup_dead_container(container):
 
 
 @activity.defn
-async def start_loki_container(service_name: str) -> bool:
-    logging.info(f"Starting Loki for {service_name}")
+async def start_neo4j_container(service_name: str) -> bool:
+    logging.info(f"Starting Neo4j for {service_name}")
 
-    if is_port_in_use(3100):
-        logging.error("Port 3100 already in use")
-        return False
+    required_ports = [7474, 7687]
+    for port in required_ports:
+        if is_port_in_use(port):
+            logging.error(f"Port {port} already in use")
+            return False
 
     ensure_network()
 
@@ -80,7 +91,7 @@ async def start_loki_container(service_name: str) -> bool:
 
                 if container:
                     if container.status == "running":
-                        logging.info("Loki already running")
+                        logging.info("Neo4j already running")
                         return True
                     if container.status in [
                         "exited",
@@ -99,12 +110,12 @@ async def start_loki_container(service_name: str) -> bool:
                     client.images.get(CONFIG["image_name"])
                     logging.info("Image already exists, skipping pull")
                 except ImageNotFound:
-                    logging.info("Pulling Loki image")
+                    logging.info("Pulling Neo4j image")
                     try:
                         client.images.pull(CONFIG["image_name"])
-                        logging.info("Loki image pulled successfully")
+                        logging.info("Neo4j image pulled successfully")
                     except Exception as e:
-                        logging.exception(f"Failed to pull Loki image: {e}")
+                        logging.exception(f"Failed to pull Neo4j image: {e}")
                         return False
 
                 client.containers.run(
@@ -124,5 +135,5 @@ async def start_loki_container(service_name: str) -> bool:
         except (DockerException, APIError) as e:
             logging.exception(f"Attempt {attempt + 1} failed: {e}")
             time.sleep(CONFIG["retry_delay"])
-    logging.error("All attempts to start Loki failed")
+    logging.error("All attempts to start Neo4j failed")
     return False

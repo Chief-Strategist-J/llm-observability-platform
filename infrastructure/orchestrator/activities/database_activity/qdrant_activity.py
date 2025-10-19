@@ -7,25 +7,27 @@ from docker.errors import APIError, DockerException, ImageNotFound, NotFound
 from temporalio import activity
 
 # Service Access Information:
-# URL: http://localhost:3100
-# Username: N/A (No authentication by default)
+# REST API: http://localhost:6333
+# gRPC API: localhost:6334
+# Web Dashboard: http://localhost:6333/dashboard
+# Username: N/A (Configure API key if needed)
 # Password: N/A
-# API Endpoints: /ready, /metrics, /loki/api/v1/push, /loki/api/v1/query
+# API Documentation: http://localhost:6333/docs
 
 logging.basicConfig(level=logging.INFO)
 
 CONFIG = {
-    "image_name": "grafana/loki:latest",
-    "container_name": "loki-development",
+    "image_name": "qdrant/qdrant:latest",
+    "container_name": "qdrant-development",
     "environment": {},
-    "ports": {"3100/tcp": 3100},
+    "ports": {"6333/tcp": 6333, "6334/tcp": 6334},  # HTTP/REST API  # gRPC API
     "volumes": {
-        "loki-data": {"bind": "/loki", "mode": "rw"},
-        "loki-config": {"bind": "/etc/loki", "mode": "rw"},
+        "qdrant-storage": {"bind": "/qdrant/storage", "mode": "rw"},
+        "qdrant-snapshots": {"bind": "/qdrant/snapshots", "mode": "rw"},
     },
     "restart_policy": {"Name": "unless-stopped"},
-    "network": "observability-network",
-    "resources": {"mem_limit": "256m", "cpus": 0.5},
+    "network": "data-network",
+    "resources": {"mem_limit": "512m", "cpus": 0.5},
     "start_timeout": 30,
     "stop_timeout": 30,
     "retry_attempts": 3,
@@ -62,12 +64,14 @@ def cleanup_dead_container(container):
 
 
 @activity.defn
-async def start_loki_container(service_name: str) -> bool:
-    logging.info(f"Starting Loki for {service_name}")
+async def start_qdrant_container(service_name: str) -> bool:
+    logging.info(f"Starting Qdrant for {service_name}")
 
-    if is_port_in_use(3100):
-        logging.error("Port 3100 already in use")
-        return False
+    required_ports = [6333, 6334]
+    for port in required_ports:
+        if is_port_in_use(port):
+            logging.error(f"Port {port} already in use")
+            return False
 
     ensure_network()
 
@@ -80,7 +84,7 @@ async def start_loki_container(service_name: str) -> bool:
 
                 if container:
                     if container.status == "running":
-                        logging.info("Loki already running")
+                        logging.info("Qdrant already running")
                         return True
                     if container.status in [
                         "exited",
@@ -99,12 +103,12 @@ async def start_loki_container(service_name: str) -> bool:
                     client.images.get(CONFIG["image_name"])
                     logging.info("Image already exists, skipping pull")
                 except ImageNotFound:
-                    logging.info("Pulling Loki image")
+                    logging.info("Pulling Qdrant image")
                     try:
                         client.images.pull(CONFIG["image_name"])
-                        logging.info("Loki image pulled successfully")
+                        logging.info("Qdrant image pulled successfully")
                     except Exception as e:
-                        logging.exception(f"Failed to pull Loki image: {e}")
+                        logging.exception(f"Failed to pull Qdrant image: {e}")
                         return False
 
                 client.containers.run(
@@ -124,5 +128,5 @@ async def start_loki_container(service_name: str) -> bool:
         except (DockerException, APIError) as e:
             logging.exception(f"Attempt {attempt + 1} failed: {e}")
             time.sleep(CONFIG["retry_delay"])
-    logging.error("All attempts to start Loki failed")
+    logging.error("All attempts to start Qdrant failed")
     return False

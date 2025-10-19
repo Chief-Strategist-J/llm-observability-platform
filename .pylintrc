@@ -172,9 +172,7 @@ const-naming-style=UPPER_CASE
 # style.
 #const-rgx=
 
-# Minimum line length for functions/classes that require docstrings, shorter
-# ones are exempt.
-docstring-min-length=-1
+
 
 # Naming style matching correct function names.
 function-naming-style=snake_case
@@ -225,9 +223,6 @@ module-naming-style=snake_case
 # the name regexes allow several styles.
 name-group=
 
-# Regular expression which should only match function or class names that do
-# not require a docstring.
-no-docstring-rgx=^_
 
 # List of decorators that produce properties, such as abc.abstractproperty. Add
 # to this list to register other decorators that produce valid properties.
@@ -388,18 +383,6 @@ known-third-party=enchant
 
 # Couples of modules and preferred modules, separated by a comma.
 preferred-modules=
-
-
-[LOGGING]
-
-# The type of string formatting that logging methods do. `old` means using %
-# formatting, `new` is for `{}` formatting.
-logging-format-style=old
-
-# Logging modules to check that the string format arguments are in logging
-# function parameter format.
-logging-modules=logging
-
 
 [MESSAGES CONTROL]
 
