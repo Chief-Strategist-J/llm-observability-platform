@@ -7,25 +7,25 @@ from docker.errors import APIError, DockerException, ImageNotFound, NotFound
 from temporalio import activity
 
 # Service Access Information:
-# URL: http://localhost:3100
+# URL: http://localhost:9090
 # Username: N/A (No authentication by default)
 # Password: N/A
-# API Endpoints: /ready, /metrics, /loki/api/v1/push, /loki/api/v1/query
+# Note: Add authentication via config file if needed in production
 
 logging.basicConfig(level=logging.INFO)
 
 CONFIG = {
-    "image_name": "grafana/loki:latest",
-    "container_name": "loki-development",
+    "image_name": "prom/prometheus:latest",
+    "container_name": "prometheus-development",
     "environment": {},
-    "ports": {"3100/tcp": 3100},
+    "ports": {"9090/tcp": 9090},
     "volumes": {
-        "loki-data": {"bind": "/loki", "mode": "rw"},
-        "loki-config": {"bind": "/etc/loki", "mode": "rw"},
+        "prometheus-data": {"bind": "/prometheus", "mode": "rw"},
+        "prometheus-config": {"bind": "/etc/prometheus", "mode": "rw"},
     },
     "restart_policy": {"Name": "unless-stopped"},
     "network": "observability-network",
-    "resources": {"mem_limit": "256m", "cpus": 0.5},
+    "resources": {"mem_limit": "512m", "cpus": 1.0},
     "start_timeout": 30,
     "stop_timeout": 30,
     "retry_attempts": 3,
@@ -62,11 +62,11 @@ def cleanup_dead_container(container):
 
 
 @activity.defn
-async def start_loki_container(service_name: str) -> bool:
-    logging.info(f"Starting Loki for {service_name}")
+async def start_prometheus_container(service_name: str) -> bool:
+    logging.info(f"Starting Prometheus for {service_name}")
 
-    if is_port_in_use(3100):
-        logging.error("Port 3100 already in use")
+    if is_port_in_use(9090):
+        logging.error("Port 9090 already in use")
         return False
 
     ensure_network()
@@ -80,7 +80,7 @@ async def start_loki_container(service_name: str) -> bool:
 
                 if container:
                     if container.status == "running":
-                        logging.info("Loki already running")
+                        logging.info("Prometheus already running")
                         return True
                     if container.status in [
                         "exited",
@@ -99,12 +99,12 @@ async def start_loki_container(service_name: str) -> bool:
                     client.images.get(CONFIG["image_name"])
                     logging.info("Image already exists, skipping pull")
                 except ImageNotFound:
-                    logging.info("Pulling Loki image")
+                    logging.info("Pulling Prometheus image")
                     try:
                         client.images.pull(CONFIG["image_name"])
-                        logging.info("Loki image pulled successfully")
+                        logging.info("Prometheus image pulled successfully")
                     except Exception as e:
-                        logging.exception(f"Failed to pull Loki image: {e}")
+                        logging.exception(f"Failed to pull Prometheus image: {e}")
                         return False
 
                 client.containers.run(
@@ -124,5 +124,5 @@ async def start_loki_container(service_name: str) -> bool:
         except (DockerException, APIError) as e:
             logging.exception(f"Attempt {attempt + 1} failed: {e}")
             time.sleep(CONFIG["retry_delay"])
-    logging.error("All attempts to start Loki failed")
+    logging.error("All attempts to start Prometheus failed")
     return False

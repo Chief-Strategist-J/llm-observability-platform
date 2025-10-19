@@ -1,264 +1,130 @@
-"""Temporal activities for managing Promtail log shipper containers.
-
-Activities:
-    - start_promtail_container: Starts the Promtail container
-    - stop_promtail_container: Stops the Promtail container and cleans up resources
-"""
-
-import asyncio
-import os
-from pathlib import Path
-import subprocess
+import logging
+import socket
 import time
 
 import docker
+from docker.errors import APIError, DockerException, ImageNotFound, NotFound
 from temporalio import activity
 
+# Service Access Information:
+# URL: http://localhost:9080
+# Username: N/A
+# Password: N/A
+# Purpose: Ships logs to Loki
+# Metrics endpoint: http://localhost:9080/metrics
 
-class PromtailConfig:
-    """Configuration for Promtail container management."""
-    
-    CONTAINER_NAME = "promtail"
-    SERVICE_NAME = "promtail"
-    _current_file = Path(__file__)
-    PROJECT_ROOT = str(_current_file.parent.parent.parent.parent.parent.resolve())
-    SERVICE_DIR = os.path.join(
-        PROJECT_ROOT, "infrastructure", "monitoring", "component", "loki"
-    )
-    COMPOSE_FILE = os.path.join(SERVICE_DIR, "logger-loki-compose.yaml")
-    
-    # Promtail doesn't have a standard health endpoint, check if container is running
-    HEALTH_CHECK_TIMEOUT = 5
-    HEALTH_CHECK_INTERVAL = 5
-    MAX_WAIT_TIME = 60
-    MAX_RACE_RETRIES = 3
+logging.basicConfig(level=logging.INFO)
+
+CONFIG = {
+    "image_name": "grafana/promtail:latest",
+    "container_name": "promtail-development",
+    "environment": {},
+    "ports": {"9080/tcp": 9080},
+    "volumes": {
+        "promtail-config": {"bind": "/etc/promtail", "mode": "rw"},
+        "/var/log": {"bind": "/var/log", "mode": "ro"},
+        "/var/run/docker.sock": {"bind": "/var/run/docker.sock", "mode": "ro"},
+    },
+    "restart_policy": {"Name": "unless-stopped"},
+    "network": "observability-network",
+    "resources": {"mem_limit": "128m", "cpus": 0.25},
+    "start_timeout": 30,
+    "stop_timeout": 30,
+    "retry_attempts": 3,
+    "retry_delay": 5,
+}
+
+try:
+    client = docker.from_env()
+except DockerException as e:
+    raise RuntimeError(f"Docker daemon unreachable: {e}")
+
+
+def is_port_in_use(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(("localhost", port)) == 0
+
+
+def ensure_network():
+    try:
+        client.networks.get(CONFIG["network"])
+        logging.info(f"Network {CONFIG['network']} exists")
+    except NotFound:
+        logging.info(f"Network {CONFIG['network']} not found, creating")
+        client.networks.create(CONFIG["network"], driver="bridge")
+        logging.info(f"Network {CONFIG['network']} created")
+
+
+def cleanup_dead_container(container):
+    if container.status == "dead":
+        logging.warning("Container in dead state, removing")
+        container.remove(force=True)
+        return True
+    return False
 
 
 @activity.defn
 async def start_promtail_container(service_name: str) -> bool:
-    """Start the Promtail container."""
-    activity.logger.info(f"Starting Promtail container for service: {service_name}")
-    
-    try:
-        await _build_promtail_container()
-        client = docker.from_env()
-        race_attempts = 0
-        
-        while race_attempts < PromtailConfig.MAX_RACE_RETRIES:
+    logging.info(f"Starting Promtail for {service_name}")
+
+    if is_port_in_use(9080):
+        logging.error("Port 9080 already in use")
+        return False
+
+    ensure_network()
+
+    for attempt in range(CONFIG["retry_attempts"]):
+        try:
             try:
-                container = await _get_or_start_promtail_container(client)
-                return await _wait_for_running_promtail(container)
-            except RuntimeError as e:
-                race_attempts += 1
-                activity.logger.warning(f"Attempt {race_attempts} failed: {e}")
-                await asyncio.sleep(2)
-        
-        await _fetch_promtail_logs()
-        raise RuntimeError("Promtail failed to start")
-    
-    except Exception as e:
-        activity.logger.error(f"Failed to start Promtail: {e}")
-        await _fetch_promtail_logs()
-        raise
+                container = client.containers.get(CONFIG["container_name"])
+                if cleanup_dead_container(container):
+                    container = None
 
-
-@activity.defn
-async def stop_promtail_container(service_name: str) -> bool:
-    """Stop the Promtail container and clean up resources."""
-    activity.logger.info(f"Stopping Promtail for service: {service_name}")
-    
-    client = docker.from_env()
-    containers_to_stop = []
-    
-    for container in client.containers.list(all=True):
-        if service_name in container.name or PromtailConfig.CONTAINER_NAME in container.name:
-            containers_to_stop.append(container)
-            activity.logger.info(f"Found container: {container.name}")
-    
-    if not containers_to_stop:
-        activity.logger.info(f"No containers found for: {service_name}")
-        return True
-    
-    for container in containers_to_stop:
-        await _stop_and_clean_promtail_container(client, container)
-    
-    await _cleanup_promtail_resources(client, service_name)
-    return True
-
-
-async def _build_promtail_container() -> None:
-    """Build the Promtail container using docker-compose."""
-    cmd = [
-        "docker-compose",
-        "-f", PromtailConfig.COMPOSE_FILE,
-        "build", PromtailConfig.SERVICE_NAME,
-    ]
-    try:
-        activity.logger.info(f"Building Promtail: {' '.join(cmd)}")
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, check=True,
-            cwd=PromtailConfig.SERVICE_DIR,
-        )
-        activity.logger.info(f"Build output: {result.stdout}")
-    except subprocess.CalledProcessError as e:
-        activity.logger.error(f"Build failed: {e.stderr}")
-        raise RuntimeError(f"Failed to build Promtail: {e}") from e
-
-
-async def _get_or_start_promtail_container(client):
-    """Get existing Promtail container or start a new one."""
-    try:
-        container = client.containers.get(PromtailConfig.CONTAINER_NAME)
-        container.reload()
-        
-        if container.status == "running":
-            activity.logger.info(f"Container {PromtailConfig.CONTAINER_NAME} is running")
-            return container
-        else:
-            activity.logger.info(f"Starting existing container {PromtailConfig.CONTAINER_NAME}")
-            container.start()
-    except docker.errors.NotFound:
-        activity.logger.info(f"Container not found, starting via docker-compose")
-        await _start_promtail_via_compose()
-    
-    return client.containers.get(PromtailConfig.CONTAINER_NAME)
-
-
-async def _start_promtail_via_compose() -> None:
-    """Start Promtail using docker-compose."""
-    cmd = [
-        "docker-compose",
-        "-f", PromtailConfig.COMPOSE_FILE,
-        "up", "-d", PromtailConfig.SERVICE_NAME,
-    ]
-    try:
-        activity.logger.info(f"Starting via docker-compose: {' '.join(cmd)}")
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, check=True,
-            cwd=PromtailConfig.SERVICE_DIR,
-        )
-        activity.logger.info(f"Start output: {result.stdout}")
-    except subprocess.CalledProcessError as e:
-        activity.logger.error(f"Start failed: {e.stderr}")
-        raise RuntimeError(f"Failed to start Promtail: {e}") from e
-
-
-async def _wait_for_running_promtail(container) -> bool:
-    """Wait for Promtail to be running and stable."""
-    start_time = time.time()
-    while time.time() - start_time < PromtailConfig.MAX_WAIT_TIME:
-        try:
-            container.reload()
-            if container.status == "running":
-                # Wait a bit more to ensure it stays running
-                await asyncio.sleep(5)
-                container.reload()
-                if container.status == "running":
-                    activity.logger.info("Promtail is running!")
-                    return True
-            else:
-                raise RuntimeError(f"Container status: {container.status}")
-        except Exception as e:
-            activity.logger.debug(f"Status check failed: {e}")
-        
-        await asyncio.sleep(PromtailConfig.HEALTH_CHECK_INTERVAL)
-    
-    raise RuntimeError(f"Container not running within {PromtailConfig.MAX_WAIT_TIME}s")
-
-
-async def _stop_and_clean_promtail_container(client, container):
-    """Stop and clean a single Promtail container."""
-    container_name = container.name
-    
-    try:
-        activity.logger.info(f"Stopping container {container_name}...")
-        container.stop(timeout=30)
-        container.wait()
-        activity.logger.info(f"Container {container_name} stopped")
-        
-        activity.logger.info(f"Removing container {container_name}...")
-        container.remove(force=True)
-        activity.logger.info(f"Container {container_name} removed")
-        
-        await _remove_promtail_volumes(client, container)
-        await _remove_promtail_networks(client, container)
-    
-    except Exception as e:
-        activity.logger.error(f"Failed to stop {container_name}: {e}")
-        try:
-            container.remove(force=True)
-            activity.logger.info(f"Force removed {container_name}")
-        except Exception as e2:
-            activity.logger.error(f"Force remove failed: {e2}")
-
-
-async def _remove_promtail_volumes(client, container):
-    """Remove volumes associated with Promtail container."""
-    try:
-        for mount in container.attrs.get("Mounts", []):
-            if mount.get("Name"):
-                volume_name = mount["Name"]
+                if container:
+                    if container.status == "running":
+                        logging.info("Promtail already running")
+                        return True
+                    if container.status in [
+                        "exited",
+                        "created",
+                        "paused",
+                        "restarting",
+                    ]:
+                        logging.info(
+                            f"Starting existing container (status: {container.status})"
+                        )
+                        container.start()
+                        return True
+            except NotFound:
+                logging.info("Container not found, creating new one")
                 try:
-                    volume = client.volumes.get(volume_name)
-                    volume.remove(force=True)
-                    activity.logger.info(f"Removed volume: {volume_name}")
-                except docker.errors.NotFound:
-                    pass
-                except Exception as e:
-                    activity.logger.error(f"Failed to remove volume: {e}")
-    except Exception as e:
-        activity.logger.error(f"Volume cleanup error: {e}")
-
-
-async def _remove_promtail_networks(client, container):
-    """Remove networks associated with Promtail container."""
-    try:
-        networks = container.attrs.get("NetworkSettings", {}).get("Networks", {})
-        for net_name in networks.keys():
-            if net_name not in ["bridge", "host", "none"]:
-                try:
-                    network = client.networks.get(net_name)
-                    network.remove()
-                    activity.logger.info(f"Removed network: {net_name}")
-                except docker.errors.NotFound:
-                    pass
-                except Exception as e:
-                    activity.logger.error(f"Failed to remove network: {e}")
-    except Exception as e:
-        activity.logger.error(f"Network cleanup error: {e}")
-
-
-async def _cleanup_promtail_resources(client, service_name):
-    """Clean up orphaned Promtail resources."""
-    try:
-        for image in client.images.list():
-            for tag in image.tags:
-                if service_name in tag:
+                    client.images.get(CONFIG["image_name"])
+                    logging.info("Image already exists, skipping pull")
+                except ImageNotFound:
+                    logging.info("Pulling Promtail image")
                     try:
-                        client.images.remove(image.id, force=True)
-                        activity.logger.info(f"Removed image: {tag}")
+                        client.images.pull(CONFIG["image_name"])
+                        logging.info("Promtail image pulled successfully")
                     except Exception as e:
-                        activity.logger.error(f"Failed to remove image: {e}")
-        
-        for network in client.networks.list():
-            if service_name in network.name:
-                try:
-                    network.remove()
-                    activity.logger.info(f"Removed network: {network.name}")
-                except Exception as e:
-                    activity.logger.error(f"Failed to remove network: {e}")
-    except Exception as e:
-        activity.logger.error(f"Resource cleanup error: {e}")
+                        logging.exception(f"Failed to pull Promtail image: {e}")
+                        return False
 
-
-async def _fetch_promtail_logs():
-    """Fetch and log Promtail container logs."""
-    try:
-        client = docker.from_env()
-        container = client.containers.get(PromtailConfig.CONTAINER_NAME)
-        logs = container.logs(tail=1000).decode("utf-8", errors="replace")
-        activity.logger.error(f"Promtail logs:\n{logs}")
-    except docker.errors.NotFound:
-        activity.logger.error(f"Cannot fetch logs: container not found")
-    except Exception as e:
-        activity.logger.error(f"Failed to fetch logs: {e}")
+                client.containers.run(
+                    image=CONFIG["image_name"],
+                    name=CONFIG["container_name"],
+                    environment=CONFIG["environment"],
+                    ports=CONFIG["ports"],
+                    volumes=CONFIG["volumes"],
+                    restart_policy=CONFIG["restart_policy"],
+                    network=CONFIG["network"],
+                    detach=True,
+                    mem_limit=CONFIG["resources"]["mem_limit"],
+                    nano_cpus=int(CONFIG["resources"]["cpus"] * 1e9),
+                )
+                logging.info("Container started successfully")
+            return True
+        except (DockerException, APIError) as e:
+            logging.exception(f"Attempt {attempt + 1} failed: {e}")
+            time.sleep(CONFIG["retry_delay"])
+    logging.error("All attempts to start Promtail failed")
+    return False

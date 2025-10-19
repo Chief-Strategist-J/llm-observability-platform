@@ -7,22 +7,27 @@ from docker.errors import APIError, DockerException, ImageNotFound, NotFound
 from temporalio import activity
 
 # Service Access Information:
-# URL: http://localhost:3100
-# Username: N/A (No authentication by default)
+# OTLP gRPC Receiver: localhost:4319
+# OTLP HTTP Receiver: localhost:4320
+# Health Check: http://localhost:13133
+# Metrics: http://localhost:8888/metrics
+# Username: N/A
 # Password: N/A
-# API Endpoints: /ready, /metrics, /loki/api/v1/push, /loki/api/v1/query
+# Purpose: Collects telemetry data and exports to Prometheus/Jaeger
 
 logging.basicConfig(level=logging.INFO)
 
 CONFIG = {
-    "image_name": "grafana/loki:latest",
-    "container_name": "loki-development",
+    "image_name": "otel/opentelemetry-collector:latest",
+    "container_name": "opentelemetry-collector-development",
     "environment": {},
-    "ports": {"3100/tcp": 3100},
-    "volumes": {
-        "loki-data": {"bind": "/loki", "mode": "rw"},
-        "loki-config": {"bind": "/etc/loki", "mode": "rw"},
+    "ports": {
+        "4319/tcp": 4319,  # OTLP gRPC receiver
+        "4320/tcp": 4320,  # OTLP HTTP receiver
+        "13133/tcp": 13133,  # Health check
+        "8888/tcp": 8888,  # Metrics
     },
+    "volumes": {"otel-config": {"bind": "/etc/otelcol", "mode": "rw"}},
     "restart_policy": {"Name": "unless-stopped"},
     "network": "observability-network",
     "resources": {"mem_limit": "256m", "cpus": 0.5},
@@ -62,12 +67,14 @@ def cleanup_dead_container(container):
 
 
 @activity.defn
-async def start_loki_container(service_name: str) -> bool:
-    logging.info(f"Starting Loki for {service_name}")
+async def start_opentelemetry_container(service_name: str) -> bool:
+    logging.info(f"Starting OpenTelemetry Collector for {service_name}")
 
-    if is_port_in_use(3100):
-        logging.error("Port 3100 already in use")
-        return False
+    required_ports = [4319, 4320, 13133, 8888]
+    for port in required_ports:
+        if is_port_in_use(port):
+            logging.error(f"Port {port} already in use")
+            return False
 
     ensure_network()
 
@@ -80,7 +87,7 @@ async def start_loki_container(service_name: str) -> bool:
 
                 if container:
                     if container.status == "running":
-                        logging.info("Loki already running")
+                        logging.info("OpenTelemetry Collector already running")
                         return True
                     if container.status in [
                         "exited",
@@ -99,12 +106,16 @@ async def start_loki_container(service_name: str) -> bool:
                     client.images.get(CONFIG["image_name"])
                     logging.info("Image already exists, skipping pull")
                 except ImageNotFound:
-                    logging.info("Pulling Loki image")
+                    logging.info("Pulling OpenTelemetry Collector image")
                     try:
                         client.images.pull(CONFIG["image_name"])
-                        logging.info("Loki image pulled successfully")
+                        logging.info(
+                            "OpenTelemetry Collector image pulled successfully"
+                        )
                     except Exception as e:
-                        logging.exception(f"Failed to pull Loki image: {e}")
+                        logging.exception(
+                            f"Failed to pull OpenTelemetry Collector image: {e}"
+                        )
                         return False
 
                 client.containers.run(
@@ -124,5 +135,5 @@ async def start_loki_container(service_name: str) -> bool:
         except (DockerException, APIError) as e:
             logging.exception(f"Attempt {attempt + 1} failed: {e}")
             time.sleep(CONFIG["retry_delay"])
-    logging.error("All attempts to start Loki failed")
+    logging.error("All attempts to start OpenTelemetry Collector failed")
     return False

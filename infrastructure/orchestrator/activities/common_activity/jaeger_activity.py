@@ -7,25 +7,34 @@ from docker.errors import APIError, DockerException, ImageNotFound, NotFound
 from temporalio import activity
 
 # Service Access Information:
-# URL: http://localhost:3100
+# UI URL: http://localhost:16686
+# OTLP gRPC Collector: localhost:4317
+# OTLP HTTP Collector: localhost:4318
 # Username: N/A (No authentication by default)
 # Password: N/A
-# API Endpoints: /ready, /metrics, /loki/api/v1/push, /loki/api/v1/query
+# Note: all-in-one includes collector, query service, and UI
 
 logging.basicConfig(level=logging.INFO)
 
 CONFIG = {
-    "image_name": "grafana/loki:latest",
-    "container_name": "loki-development",
-    "environment": {},
-    "ports": {"3100/tcp": 3100},
-    "volumes": {
-        "loki-data": {"bind": "/loki", "mode": "rw"},
-        "loki-config": {"bind": "/etc/loki", "mode": "rw"},
+    "image_name": "jaegertracing/all-in-one:latest",
+    "container_name": "jaeger-development",
+    "environment": {
+        "COLLECTOR_OTLP_ENABLED": "true",
+        "COLLECTOR_ZIPKIN_HOST_PORT": ":9411",
     },
+    "ports": {
+        "16686/tcp": 16686,  # UI
+        "4317/tcp": 4317,  # OTLP gRPC
+        "4318/tcp": 4318,  # OTLP HTTP
+        "14250/tcp": 14250,  # Model proto
+        "14268/tcp": 14268,  # Jaeger thrift
+        "9411/tcp": 9411,  # Zipkin
+    },
+    "volumes": {"jaeger-data": {"bind": "/tmp", "mode": "rw"}},
     "restart_policy": {"Name": "unless-stopped"},
     "network": "observability-network",
-    "resources": {"mem_limit": "256m", "cpus": 0.5},
+    "resources": {"mem_limit": "512m", "cpus": 0.5},
     "start_timeout": 30,
     "stop_timeout": 30,
     "retry_attempts": 3,
@@ -62,12 +71,14 @@ def cleanup_dead_container(container):
 
 
 @activity.defn
-async def start_loki_container(service_name: str) -> bool:
-    logging.info(f"Starting Loki for {service_name}")
+async def start_jaeger_container(service_name: str) -> bool:
+    logging.info(f"Starting Jaeger for {service_name}")
 
-    if is_port_in_use(3100):
-        logging.error("Port 3100 already in use")
-        return False
+    required_ports = [16686, 4317, 4318, 14250, 14268, 9411]
+    for port in required_ports:
+        if is_port_in_use(port):
+            logging.error(f"Port {port} already in use")
+            return False
 
     ensure_network()
 
@@ -80,7 +91,7 @@ async def start_loki_container(service_name: str) -> bool:
 
                 if container:
                     if container.status == "running":
-                        logging.info("Loki already running")
+                        logging.info("Jaeger already running")
                         return True
                     if container.status in [
                         "exited",
@@ -99,12 +110,12 @@ async def start_loki_container(service_name: str) -> bool:
                     client.images.get(CONFIG["image_name"])
                     logging.info("Image already exists, skipping pull")
                 except ImageNotFound:
-                    logging.info("Pulling Loki image")
+                    logging.info("Pulling Jaeger image")
                     try:
                         client.images.pull(CONFIG["image_name"])
-                        logging.info("Loki image pulled successfully")
+                        logging.info("Jaeger image pulled successfully")
                     except Exception as e:
-                        logging.exception(f"Failed to pull Loki image: {e}")
+                        logging.exception(f"Failed to pull Jaeger image: {e}")
                         return False
 
                 client.containers.run(
@@ -124,5 +135,5 @@ async def start_loki_container(service_name: str) -> bool:
         except (DockerException, APIError) as e:
             logging.exception(f"Attempt {attempt + 1} failed: {e}")
             time.sleep(CONFIG["retry_delay"])
-    logging.error("All attempts to start Loki failed")
+    logging.error("All attempts to start Jaeger failed")
     return False
