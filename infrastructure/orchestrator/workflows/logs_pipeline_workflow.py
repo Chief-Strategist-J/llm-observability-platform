@@ -28,7 +28,7 @@ class LogsPipelineWorkflow:
         2. Start Promtail (log shipper)
         3. Start Grafana (visualization dashboard)
 
-        """
+        """ 
         # Start Loki first
         await workflow.execute_activity(
             "start_loki_container",
@@ -48,6 +48,13 @@ class LogsPipelineWorkflow:
         # Start Grafana for visualization
         await workflow.execute_activity(
             "start_grafana_container",
+            service_name,
+            start_to_close_timeout=timedelta(minutes=5),
+            retry_policy=RetryPolicy(maximum_attempts=3),
+        )
+
+        await workflow.execute_activity(
+            "configure_grafana",
             service_name,
             start_to_close_timeout=timedelta(minutes=5),
             retry_policy=RetryPolicy(maximum_attempts=3),

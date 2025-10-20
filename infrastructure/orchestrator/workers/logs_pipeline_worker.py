@@ -18,7 +18,8 @@ from temporalio.client import Client
 from temporalio.worker import Worker
 
 from infrastructure.orchestrator.activities.common_activity.grafana_activity import (
-    start_grafana_container,
+    start_grafana_container, configure_grafana,
+
 )
 from infrastructure.orchestrator.activities.common_activity.loki_activity import (
     start_loki_container,
@@ -52,6 +53,7 @@ async def main() -> None:
             start_loki_container,
             start_promtail_container,
             start_grafana_container,
+            configure_grafana,
         ],
     )
 
