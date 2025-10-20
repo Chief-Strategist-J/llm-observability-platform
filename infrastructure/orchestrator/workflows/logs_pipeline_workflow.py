@@ -28,7 +28,7 @@ class LogsPipelineWorkflow:
         2. Start Promtail (log shipper)
         3. Start Grafana (visualization dashboard)
 
-        """ 
+        """
         # Start Loki first
         await workflow.execute_activity(
             "start_loki_container",
