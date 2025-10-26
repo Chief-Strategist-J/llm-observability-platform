@@ -1,0 +1,36 @@
+apiVersion: 1
+
+providers:
+  - name: Infrastructure
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/infrastructure
+
+  - name: Application
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/application
+
+  - name: Temporal
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/temporal
+
+dashboards:
+  - name: "Infrastructure Overview"
+    folder: Infrastructure
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/infrastructure/overview.json
+
+  - name: "Application Performance"
+    folder: Application
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/application/performance.json
+
+  - name: "Temporal Workers"
+    folder: Temporal
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/temporal/workers.json

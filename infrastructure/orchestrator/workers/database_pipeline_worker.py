@@ -7,6 +7,7 @@ operations, specifically handling Neo4j and Qdrant container startup tasks.
 """
 
 import asyncio
+import logging
 from pathlib import Path
 import sys
 
@@ -27,6 +28,12 @@ from infrastructure.orchestrator.workflows.database_pipeline_workflow import (
     DatabasePipelineWorkflow,
 )
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
 
 async def main() -> None:
     """Main entry point for the database pipeline worker.
@@ -39,23 +46,47 @@ async def main() -> None:
     'database-pipeline-queue' task queue.
 
     """
-    client = await Client.connect("localhost:7233")
+    client = None
+    worker = None
 
-    worker = Worker(
-        client,
-        task_queue="database-pipeline-queue",
-        workflows=[DatabasePipelineWorkflow],
-        activities=[
-            start_neo4j_container,
-            start_qdrant_container,
-        ],
-    )
+    try:
+        logger.info("Attempting to connect to Temporal server at localhost:7233")
+        client = await Client.connect("localhost:7233")
+        logger.info("Successfully connected to Temporal server")
 
-    print("Database Pipeline Worker started. Task Queue: database-pipeline-queue")
-    print("Listening for workflows: DatabasePipelineWorkflow")
-    print("Press Ctrl+C to stop the worker")
+        logger.info("Initializing Database Pipeline Worker")
+        worker = Worker(
+            client,
+            task_queue="database-pipeline-queue",
+            workflows=[DatabasePipelineWorkflow],
+            activities=[
+                start_neo4j_container,
+                start_qdrant_container,
+            ],
+        )
 
-    await worker.run()
+        logger.info(
+            "Database Pipeline Worker started. Task Queue: database-pipeline-queue"
+        )
+        logger.info("Listening for workflows: DatabasePipelineWorkflow")
+        logger.info(
+            "Available activities: start_neo4j_container, start_qdrant_container"
+        )
+        logger.info("Press Ctrl+C to stop the worker")
+
+        await worker.run()
+
+    except KeyboardInterrupt:
+        logger.info("Received keyboard interrupt, shutting down gracefully...")
+    except Exception as e:
+        logger.error(f"Worker encountered an error: {e}", exc_info=True)
+        raise
+    finally:
+        if worker:
+            logger.info("Stopping Database Pipeline Worker")
+        if client:
+            logger.info("Closing Temporal client connection")
+            await client.close()
 
 
 if __name__ == "__main__":

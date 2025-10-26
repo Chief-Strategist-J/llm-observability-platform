@@ -1,0 +1,32 @@
+batch:
+  send_batch_size: 1024
+  timeout: 1s
+  send_batch_max_size: 2048
+
+resource_detection:
+  detectors: [env, system, docker]
+  timeout: 5s
+
+attributes:
+  actions:
+    - key: service.name
+      action: upsert
+      value: "llm-chatbot"
+    - key: deployment.environment
+      action: upsert
+      value: "development"
+    - key: service.version
+      action: upsert
+      value: "1.0.0"
+
+memory_limiter:
+  check_interval: 5s
+  limit_mib: 512
+  spike_limit_mib: 128
+
+transform:
+  log_statements:
+    - context: log
+      statements:
+        - set(attributes["log_type"], "application")
+        - set(resource.attributes["service.name"], "llm-chatbot")

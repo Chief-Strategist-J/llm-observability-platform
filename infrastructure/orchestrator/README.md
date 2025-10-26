@@ -23,7 +23,8 @@ temporal-orchestrator/
 │   ├── ai_proxy_container_activity.py
 │   ├── my_new_activity.py           # Example new activity
 │   └── common_activity/
-│       ├── grafana_activity.py
+│       ├── start_grafana_activity.py
+│       ├── configure_grafana_activity.py
 │       ├── loki_activity.py
 │       ├── otel_activity.py
 │       ├── promotheus_activity.py

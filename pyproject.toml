@@ -9,6 +9,14 @@ python = "^3.12"
 temporalio = "^1.8.0"
 docker = "^7.0.0"
 
+# OpenTelemetry Dependencies
+opentelemetry-api = "^1.28.0"
+opentelemetry-sdk = "^1.28.0"
+opentelemetry-exporter-otlp = "^1.28.0"
+opentelemetry-instrumentation = "^0.49b0"
+opentelemetry-instrumentation-requests = "^0.49b0"
+opentelemetry-instrumentation-logging = "^0.49b0"
+
 [tool.poetry.group.dev.dependencies]
 # LINTING & CODE QUALITY - MAXIMUM STRICTNESS TOOLS
 ruff = "^0.6.0"

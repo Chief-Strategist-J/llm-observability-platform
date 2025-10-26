@@ -7,6 +7,7 @@ operations, specifically handling Jaeger and Grafana container startup tasks.
 """
 
 import asyncio
+import logging
 from pathlib import Path
 import sys
 
@@ -17,15 +18,21 @@ if __name__ == "__main__":
 from temporalio.client import Client
 from temporalio.worker import Worker
 
-from infrastructure.orchestrator.activities.common_activity.grafana_activity import (
-    start_grafana_container,
-)
 from infrastructure.orchestrator.activities.common_activity.jaeger_activity import (
     start_jaeger_container,
+)
+from infrastructure.orchestrator.activities.common_activity.start_grafana_activity import (
+    start_grafana_container,
 )
 from infrastructure.orchestrator.workflows.tracing_pipeline_workflow import (
     TracingPipelineWorkflow,
 )
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 
 async def main() -> None:
@@ -39,23 +46,47 @@ async def main() -> None:
     'tracing-pipeline-queue' task queue.
 
     """
-    client = await Client.connect("localhost:7233")
+    client = None
+    worker = None
 
-    worker = Worker(
-        client,
-        task_queue="tracing-pipeline-queue",
-        workflows=[TracingPipelineWorkflow],
-        activities=[
-            start_jaeger_container,
-            start_grafana_container,
-        ],
-    )
+    try:
+        logger.info("Attempting to connect to Temporal server at localhost:7233")
+        client = await Client.connect("localhost:7233")
+        logger.info("Successfully connected to Temporal server")
 
-    print("Tracing Pipeline Worker started. Task Queue: tracing-pipeline-queue")
-    print("Listening for workflows: TracingPipelineWorkflow")
-    print("Press Ctrl+C to stop the worker")
+        logger.info("Initializing Tracing Pipeline Worker")
+        worker = Worker(
+            client,
+            task_queue="tracing-pipeline-queue",
+            workflows=[TracingPipelineWorkflow],
+            activities=[
+                start_jaeger_container,
+                start_grafana_container,
+            ],
+        )
 
-    await worker.run()
+        logger.info(
+            "Tracing Pipeline Worker started. Task Queue: tracing-pipeline-queue"
+        )
+        logger.info("Listening for workflows: TracingPipelineWorkflow")
+        logger.info(
+            "Available activities: start_jaeger_container, start_grafana_container"
+        )
+        logger.info("Press Ctrl+C to stop the worker")
+
+        await worker.run()
+
+    except KeyboardInterrupt:
+        logger.info("Received keyboard interrupt, shutting down gracefully...")
+    except Exception as e:
+        logger.error(f"Worker encountered an error: {e}", exc_info=True)
+        raise
+    finally:
+        if worker:
+            logger.info("Stopping Tracing Pipeline Worker")
+        if client:
+            logger.info("Closing Temporal client connection")
+            await client.close()
 
 
 if __name__ == "__main__":
