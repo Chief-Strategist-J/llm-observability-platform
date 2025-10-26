@@ -30,3 +30,13 @@ sys.modules["service.rag_service"] = rag_service
 automation_n8n_service = types.ModuleType("automation_n8n_service")
 automation_n8n_service.__path__ = [str(service_dir / "automation-n8n-service")]
 sys.modules["service.automation_n8n_service"] = automation_n8n_service
+
+# redis-service (standalone module)
+redis_service = types.ModuleType("redis_service")
+redis_service.__path__ = [str(service_dir)]
+sys.modules["service.redis_service"] = redis_service
+
+# telemetry (standalone module)
+telemetry = types.ModuleType("telemetry")
+telemetry.__path__ = [str(service_dir)]
+sys.modules["service.telemetry"] = telemetry

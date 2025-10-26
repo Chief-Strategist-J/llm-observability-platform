@@ -33,8 +33,15 @@ from infrastructure.orchestrator.activities.common_activity.start_grafana_activi
 from infrastructure.orchestrator.activities.database_activity.neo4j_activity import (
     start_neo4j_container,
 )
-from infrastructure.orchestrator.activities.database_activity.qdrant_activity import (
-    start_qdrant_container,
+from infrastructure.orchestrator.activities.common_activity.redis_activity import (
+    start_redis_container,
+    stop_redis_container,
+    get_redis_status,
+)
+from infrastructure.orchestrator.activities.common_activity.configure_redis_activity import (
+    configure_redis_container,
+    validate_redis_config,
+    update_redis_config,
 )
 
 __all__ = [
@@ -49,4 +56,10 @@ __all__ = [
     "start_prometheus_container",
     "start_neo4j_container",
     "start_qdrant_container",
+    "start_redis_container",
+    "stop_redis_container",
+    "get_redis_status",
+    "configure_redis_container",
+    "validate_redis_config",
+    "update_redis_config",
 ]

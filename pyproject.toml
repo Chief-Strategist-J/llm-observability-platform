@@ -17,6 +17,10 @@ opentelemetry-instrumentation = "^0.49b0"
 opentelemetry-instrumentation-requests = "^0.49b0"
 opentelemetry-instrumentation-logging = "^0.49b0"
 
+# Redis Dependencies
+redis = "^5.0.0"
+redis-py-cluster = "^2.1.0"
+
 [tool.poetry.group.dev.dependencies]
 # LINTING & CODE QUALITY - MAXIMUM STRICTNESS TOOLS
 ruff = "^0.6.0"

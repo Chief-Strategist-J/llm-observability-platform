@@ -9,10 +9,6 @@ from datetime import datetime
 import logging
 import os
 import sys
-
-import yaml
-from fastapi import FastAPI, HTTPException, BackgroundTasks
-from pydantic import BaseModel, Field
 from typing import Any
 
 from adapters.chunking.semantic_chunker import SemanticChunker
@@ -24,6 +20,9 @@ from core.domain.models import IngestionRequest, QueryContext
 from core.usecases.ingest_content import ingest_content
 from core.usecases.manage_memory import decay_old_memories, store_interaction
 from core.usecases.reason_query import reason_query
+from fastapi import BackgroundTasks, FastAPI, HTTPException
+from pydantic import BaseModel, Field
+import yaml
 
 logging.basicConfig(
     level=logging.INFO,

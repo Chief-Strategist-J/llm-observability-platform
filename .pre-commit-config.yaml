@@ -247,7 +247,7 @@ repos:
           import re
           files = sys.argv[1:]
           pattern = re.compile(r'#\s*(TODO|FIXME|XXX|HACK|BUG)', re.IGNORECASE)
-          matches = [(f, i+1, line.strip()) for f in files 
+          matches = [(f, i+1, line.strip()) for f in files
                      for i, line in enumerate(open(f)) if pattern.search(line)]
           for f, l, line in matches:
               print(f'{f}:{l}: {line}')
@@ -321,8 +321,8 @@ repos:
               # Filter to only service/ files if they exist
               service_files = [f for f in files if f.startswith('service/')]
               if service_files:
-                  result = subprocess.run(['radon', 'cc', '--min', 'C', 
-                                           '--show-complexity', '--total-average'] + service_files, 
+                  result = subprocess.run(['radon', 'cc', '--min', 'C',
+                                           '--show-complexity', '--total-average'] + service_files,
                                            capture_output=True, text=True)
                   print(result.stdout)
                   if result.stderr:
@@ -352,7 +352,7 @@ repos:
               # Filter to only service/ files if they exist
               service_files = [f for f in files if f.startswith('service/')]
               if service_files:
-                  result = subprocess.run(['radon', 'mi', '--min', 'B', '--show'] + service_files, 
+                  result = subprocess.run(['radon', 'mi', '--min', 'B', '--show'] + service_files,
                                            capture_output=True, text=True)
                   print(result.stdout)
                   if result.stderr:
