@@ -9,8 +9,8 @@ from infrastructure.orchestrator.activities.ai_proxy_container_activity import (
     start_app_container,
     stop_app_container,
 )
-from infrastructure.orchestrator.activities.common_activity.grafana_activity import (
-    start_grafana_container,
+from infrastructure.orchestrator.activities.common_activity.configure_grafana_activity import (
+    configure_grafana,
 )
 from infrastructure.orchestrator.activities.common_activity.jaeger_activity import (
     start_jaeger_container,
@@ -27,6 +27,9 @@ from infrastructure.orchestrator.activities.common_activity.prometheus_activity 
 from infrastructure.orchestrator.activities.common_activity.promtail_activity import (
     start_promtail_container,
 )
+from infrastructure.orchestrator.activities.common_activity.start_grafana_activity import (
+    start_grafana_container,
+)
 from infrastructure.orchestrator.activities.database_activity.neo4j_activity import (
     start_neo4j_container,
 )
@@ -38,6 +41,7 @@ __all__ = [
     "start_app_container",
     "stop_app_container",
     "start_grafana_container",
+    "configure_grafana",
     "start_loki_container",
     "start_promtail_container",
     "start_jaeger_container",

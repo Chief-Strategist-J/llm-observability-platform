@@ -1,0 +1,24 @@
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  memory_ballast:
+    size_mib: 165
+
+service:
+  extensions: [health_check, memory_ballast]
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [resource_detection, attributes, batch]
+      exporters: [logging, otlp]
+    metrics:
+      receivers: [otlp, hostmetrics, docker_stats, prometheus]
+      processors: [resource_detection, attributes, batch]
+      exporters: [logging, prometheus]
+    logs:
+      receivers: [otlp, filelog]
+      processors: [resource_detection, attributes, batch]
+      exporters: [logging, loki]

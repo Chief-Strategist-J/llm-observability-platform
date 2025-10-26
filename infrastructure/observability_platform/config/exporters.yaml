@@ -1,0 +1,31 @@
+otlp:
+  endpoint: http://otel-collector:4318
+  insecure: true
+  sending_queue:
+    queue_size: 512
+  timeout: 30s
+
+prometheus:
+  endpoint: http://prometheus:9090
+  namespace: "llm_chatbot"
+  metric_expiration: 180m
+  send_metadata: true
+
+jaeger:
+  endpoint: http://jaeger:14250/api/traces
+  insecure: true
+  sending_queue:
+    queue_size: 512
+  timeout: 30s
+
+loki:
+  endpoint: http://loki:3100/loki/api/v1/push
+  insecure: true
+  sending_queue:
+    queue_size: 512
+  timeout: 30s
+  labels:
+    attributes: true
+    resource:
+      service.name: service_name
+      deployment.environment: deployment_environment
