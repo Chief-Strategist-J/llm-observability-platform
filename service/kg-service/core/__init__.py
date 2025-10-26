@@ -1,5 +1,3 @@
-from . import domain
-from . import ports
-from . import usecases
+from . import domain, ports, usecases
 
 __all__ = ["domain", "ports", "usecases"]

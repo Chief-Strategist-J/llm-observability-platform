@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Comprehensive Kafka Testing Script Tests producer, consumer, and various Kafka features."""
+"""
+Comprehensive Kafka Testing Script Tests producer, consumer, and various Kafka features.
+"""
 
 from datetime import datetime
 import json
@@ -29,7 +31,9 @@ class KafkaTestSuite:
         self.results.append({"time": timestamp, "status": status, "message": message})
 
     def test_connection(self) -> bool:
-        """Test basic Kafka connection."""
+        """
+        Test basic Kafka connection.
+        """
         self.log("Testing Kafka connection...")
         try:
             admin = KafkaAdminClient(
@@ -47,7 +51,9 @@ class KafkaTestSuite:
             return False
 
     def create_topic(self) -> bool:
-        """Create test topic."""
+        """
+        Create test topic.
+        """
         self.log(f"Creating topic: {self.test_topic}")
         try:
             admin = KafkaAdminClient(bootstrap_servers=self.bootstrap_servers)
@@ -66,7 +72,9 @@ class KafkaTestSuite:
             return False
 
     def test_producer(self, num_messages: int = 10) -> bool:
-        """Test message production."""
+        """
+        Test message production.
+        """
         self.log(f"Testing producer - sending {num_messages} messages...")
         try:
             producer = KafkaProducer(
@@ -113,7 +121,9 @@ class KafkaTestSuite:
             return False
 
     def test_consumer(self, timeout: int = 30) -> bool:
-        """Test message consumption."""
+        """
+        Test message consumption.
+        """
         self.log(f"Testing consumer - reading messages (timeout: {timeout}s)...")
         try:
             consumer = KafkaConsumer(
@@ -159,7 +169,9 @@ class KafkaTestSuite:
             return False
 
     def test_large_message(self, size_mb: float = 5.0) -> bool:
-        """Test sending and receiving a large message."""
+        """
+        Test sending and receiving a large message.
+        """
         self.log(f"Testing large message ({size_mb}MB)...")
         try:
             producer = KafkaProducer(
@@ -227,7 +239,9 @@ class KafkaTestSuite:
             return False
 
     def test_partitions(self) -> bool:
-        """Test message distribution across partitions."""
+        """
+        Test message distribution across partitions.
+        """
         self.log("Testing partition distribution...")
         try:
             producer = KafkaProducer(
@@ -261,7 +275,9 @@ class KafkaTestSuite:
             return False
 
     def list_topics(self) -> bool:
-        """List all topics in the cluster."""
+        """
+        List all topics in the cluster.
+        """
         self.log("Listing all topics...")
         try:
             admin = KafkaAdminClient(bootstrap_servers=self.bootstrap_servers)
@@ -276,7 +292,9 @@ class KafkaTestSuite:
             return False
 
     def run_all_tests(self):
-        """Run complete test suite."""
+        """
+        Run complete test suite.
+        """
         print("\n" + "=" * 70)
         print("KAFKA COMPREHENSIVE TEST SUITE")
         print("=" * 70 + "\n")

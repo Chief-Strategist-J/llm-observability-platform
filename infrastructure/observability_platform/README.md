@@ -27,6 +27,12 @@ The observability stack consists of:
 - **UI**: http://localhost:3100 (via Grafana)
 - **Receives logs from**: OpenTelemetry Collector
 
+### 5. **Redis** (redis:7-alpine)
+- **Purpose**: High-performance caching and data storage
+- **Access**: redis://localhost:6379
+- **Features**: In-memory cache, session storage, pub/sub messaging
+- **Integration**: Application-level caching with telemetry
+
 ## 📁 Configuration Files
 
 ### `telemetry.yaml` - Main Pipeline Configuration
@@ -312,7 +318,72 @@ datasources:
   - name: Loki
     type: loki
     url: http://loki:3100
+## 💾 Redis Integration
+
+### Redis Activity Management
+
+Use the Redis activity for container management:
+
+```python
+from infrastructure.orchestrator.activities.common_activity.redis_activity import (
+    start_redis_container,
+    stop_redis_container,
+    get_redis_status
+)
+
+# Start Redis
+await start_redis_container("my-service")
+
+# Check status
+status = await get_redis_status("my-service")
+print(f"Redis: {status['status']}")
+print(f"Connection: {status['connection_url']}")
 ```
+
+### Redis Configuration
+
+Configure Redis with custom settings:
+
+```python
+from infrastructure.orchestrator.activities.common_activity.configure_redis_activity import (
+    configure_redis_container,
+    update_redis_config
+)
+
+# Configure Redis
+await configure_redis_container("my-service")
+
+# Update specific settings
+await update_redis_config("my-service", {
+    "maxmemory": "512mb",
+    "maxmemory_policy": "allkeys-lfu"
+})
+```
+
+### Application Integration
+
+Integrate Redis caching in your application:
+
+```python
+from service.redis_service import initialize_redis, get_redis_service
+
+# Initialize Redis
+await initialize_redis(host="localhost", port=6379)
+
+# Use in your code
+redis_service = get_redis_service()
+await redis_service.set_cache("user:123", {"name": "John"})
+user_data = await redis_service.get_cache("user:123")
+```
+
+### Redis Metrics
+
+Redis performance metrics are automatically collected via OpenTelemetry:
+
+- **Connection Status**: Connected/disconnected state
+- **Operation Metrics**: Request count, duration, success/failure rates
+- **Memory Usage**: Peak memory, fragmentation, eviction statistics
+- **Cache Performance**: Hit/miss ratios, keyspace statistics
 
 ## 🚨 Alerting Setup
 

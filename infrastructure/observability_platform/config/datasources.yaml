@@ -19,3 +19,9 @@ datasources:
     access: proxy
     url: http://loki:3100
     editable: true
+
+  - name: Redis
+    type: redis-datasource
+    access: proxy
+    url: http://redis:6379
+    editable: true
