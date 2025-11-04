@@ -62,6 +62,7 @@ async def main() -> None:
 
         # delayed imports (sys.path already set)
         from infrastructure.orchestrator.workflows.logs_pipeline_workflow import LogsPipelineWorkflow
+        
         from infrastructure.orchestrator.activities.configurations_activity.loki_activity import (
             start_loki_activity,
             stop_loki_activity,
@@ -116,6 +117,12 @@ async def main() -> None:
             restart_redis_activity,
             delete_redis_activity,
         )
+        from infrastructure.orchestrator.activities.configurations_activity.kafka_activity import (
+            start_kafka_activity,
+            stop_kafka_activity,
+            restart_kafka_activity,
+            delete_kafka_activity,
+        )
         
 
         worker = Worker(
@@ -159,6 +166,10 @@ async def main() -> None:
                 stop_redis_activity,
                 restart_redis_activity,
                 delete_redis_activity,
+                start_kafka_activity,
+                stop_kafka_activity,
+                restart_kafka_activity,
+                delete_kafka_activity,
             ],
         )
 
