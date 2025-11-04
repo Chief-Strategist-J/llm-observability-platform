@@ -95,35 +95,14 @@ def parse_arguments() -> WorkflowConfig:
 
 
 async def main():
-    logger.info("Starting Logs Pipeline (Grafana + Loki + Promtail)...")
-    logger.info("=" * 80)
-
+    logger.info("Starting Logs Pipeline")
+    
     config = parse_arguments()
-
-    logger.info(f"Service: {config.service_name}")
-    logger.info(f"Workflow: {config.workflow_name}")
-    logger.info(f"Task Queue: {config.task_queue}")
-    logger.info(f"Temporal Host: {config.temporal_host}")
-    logger.info(f"Web UI: {config.web_ui_url}")
-    logger.info("=" * 80)
-
     workflow_id = await start_logs_pipeline(config)
 
     if workflow_id:
-        logger.info("=" * 80)
         logger.info("✅ Logs Pipeline workflow started successfully!")
-        logger.info(f"📋 Workflow ID: {workflow_id}")
-        logger.info("")
-        logger.info("🔗 Service URLs:")
-        logger.info("   Grafana:  http://localhost:31001 (admin/SuperSecret123!)")
-        logger.info("   Loki:     http://localhost:3100")
-        logger.info("   Promtail: http://localhost:9080/metrics")
-        logger.info("")
-        logger.info("🛑 To stop this workflow:")
-        logger.info(f"   python3 trigger/logs_pipeline/stop.py {workflow_id}")
-        logger.info("=" * 80)
     else:
-        logger.error("=" * 80)
         logger.error("❌ Failed to start Logs Pipeline workflow")
         sys.exit(1)
 
