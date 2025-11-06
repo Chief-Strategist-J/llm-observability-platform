@@ -1,25 +1,29 @@
-# ONE-COLLECTOR OBSERVABILITY PLATFORM
+Perfect — now that the architecture is 100% finalized, I’ll give you the **exact runtime flow** of the system — step-by-step — from:
 
-## Overview
+* a service starting → logs being collected → config updating → system self-healing
+* and later metrics/traces entering automatically.
 
-This document outlines the architecture and implementation plan for an organization-wide observability platform using OpenTelemetry Collector and Loki, designed with a modular, activity-based approach and clear priorities (P0, P1, P2, P3). The platform supports logs (P0), with built-in extensibility for metrics (P1) and traces (P2).
+This is the **core execution flow** your platform will follow every day.
 
-## Architecture Overview
+---
+
+# ✅ HIGH-LEVEL FLOW (Plain-English)
 
 ```
-START: ONE-COLLECTOR OBSERVABILITY PLATFORM
-│
-? intent = [INGEST | QUERY | ALERT | OPERATE | CONTROL_PLANE | AI_PRODUCT]
-│
-├─ INGEST  ───────────────────────────────► TREE A  (P0)
-├─ QUERY   ───────────────────────────────► TREE B  (P1)
-├─ ALERT   ───────────────────────────────► TREE C  (P1)
-├─ OPERATE ───────────────────────────────► TREE D  (P0→P1→P2)
-├─ CONTROL_PLANE ────────────────────────► TREE E  (P0→P2)
-└─ AI_PRODUCT (future ML/analytics) ─────► TREE F  (P3)
+A service runs → It produces logs → Logs written to container stdout
+→ OpenTelemetry Collector reads them → Normalizes & labels them
+→ Sends them to Loki → Visible in Grafana
+
+Meanwhile…
+
+Control Plane watches for new/removed services
+→ Updates registry → Rebuilds collector config → Reloads collector safely
+→ Verifies pipeline health → Alerts if issues → Auto-recovers if needed
 ```
 
-## System Flow
+---
+
+# ✅ SYSTEM FLOW (ASCII SEQUENCE)
 
 ```
 ┌─────────────────┐
@@ -34,9 +38,9 @@ START: ONE-COLLECTOR OBSERVABILITY PLATFORM
         ▼
 ┌──────────────────────────────────┐
 │ OpenTelemetry Collector Agent    │ (Single Collector)
-│   filelog_receiver()            │
-│   + attributes/resource/batch    │
-│   + loki_exporter()             │
+│   filelog_receiver()             │
+│   + attributes/resource/batch     │
+│   + loki_exporter()              │
 └───────┬──────────────────────────┘
         │ pushes logs
         ▼
@@ -50,7 +54,9 @@ START: ONE-COLLECTOR OBSERVABILITY PLATFORM
 └────────────────┘
 ```
 
-## Control Plane Flow
+---
+
+# ✅ CONTROL PLANE FLOW (DYNAMIC AUTO-DISCOVERY + CONFIG ROLLOUT)
 
 ```
        [New Service Starts]
@@ -88,203 +94,285 @@ START: ONE-COLLECTOR OBSERVABILITY PLATFORM
       rollback, alert, retry
 ```
 
-## TREE A — INGEST (Apps & Containers → OpenTelemetry Collector → Loki)
+---
 
-### Application Code Path (SDK) [P0]
-- **OTelCollectorAgent**
-  - `filelog_receiver(include_patterns)`
-  - `resource_processor()`
-  - `attributes_processor(mapping_rules)`
-  - `batch_processor(size, timeout)`
-  - `loki_exporter(endpoint)`
+# ✅ TEMPORAL WORKFLOW LOOP (Automation)
 
-**Activities:**
-- `discover_log_files_activity()`
-- `tail_and_ship_logs_activity()`
-- `label_enrichment_activity()`
+```
+LOOP forever (every 15-30s or event-triggered)
+│
+├─ docker_watch_activity
+├─ k8s_watch_activity
+│
+├─ register_or_update_registry_activity
+│
+├─ build_config_activity
+├─ validate_config_activity
+│
+├─ push_config_activity
+├─ canary_reload_activity
+│
+├─ verify_reload_activity
+│
+└─ if failed → rollback_config_activity + send_alert_activity
+```
 
-### Container Logs (Agent + Control Plane) [P0→P2]
-- **DiscoveryService**
-  - `detect_container_log_paths()`
-  - `detect_pod_metadata()`
-  - `watch_docker_events()`
-  - `watch_k8s_api()`
-  - `watch_filesystem()`
-  - `emit_discovery_event()`
+This workflow **never stops** — it is the *brain* of the system.
 
-- **LogSourceRegistry**
-  - `register_log_target()`
-  - `update_source_metadata()`
-  - `lookup_sources()`
-  - `remove_source()`
-  - `list_all_sources()`
+---
 
-- **OtelConfigBuilder**
-  - `generate_log_pipeline()`
-  - `generate_metrics_pipeline()` (P1)
-  - `generate_traces_pipeline()` (P2)
+# ✅ FUTURE FLOW (WHEN YOU LATER ADD METRICS + TRACES)
 
-- **AgentManager**
-  - `push_config_to_collector()`
-  - `reload_collector_service()`
-  - `verify_reload_result()`
+You **do not** change the system, you **only add 2 lines in config**:
 
-## TREE B — QUERY (Grafana + API; Logs now, Metrics/Traces later) [P1]
+```
+APP → otel auto-instrument → otlp → Collector
+                   │
+                   ├─ metrics → Prometheus
+                   └─ traces → Tempo/Jaeger
+```
 
-### Human Grafana [P1]
-- **LokiQuerierClient**
-  - `query_range(query, start, end, limit)`
-  - `query_instant(query)`
-  - `stream_logs_in_realtime()`
-  - `parse_logql_response()`
+The **Control Plane** already knows how to:
 
-### Automation API [P2]
-- **BatchQueryExecutor**
-  - `fan_out_time_windows()`
-  - `merge_results()`
-  - `backoff_on_rate_limit()`
+```
+generate_metrics_pipeline()
+generate_traces_pipeline()
+reload_collector()
+verify_health()
+```
 
-## TREE C — ALERT (Log-based & metric-based alerts) [P1]
+So **the same workflow continues working**.
 
-### Loki Ruler [P1]
-- **LokiRulerClient**
-  - `create_log_alert_rule()`
-  - `update_alert_rule()`
-  - `delete_alert_rule()`
-  - `list_alert_rules()`
-  - `test_rule_trigger()`
+---
 
-### Grafana Alerting [P1]
-- **AlertGenerator**
-  - `generate_alert_thresholds()`
-  - `send_alert_notification()`
-  - `deduplicate_and_group_alerts()`
-  - `silence_alert_temporarily()`
+# ✅ WHAT MAKES THIS DESIGN CORRECT & FUTURE-PROOF
 
-## TREE D — OPERATE (Lifecycle, Scale, Security, SLOs) [P0→P1→P2]
+| Goal                      | Achieved By                                    |
+| ------------------------- | ---------------------------------------------- |
+| No code changes in apps   | Logs collected from stdout by filelog receiver |
+| Single ingestion pipeline | Collector handles logs+metrics+traces          |
+| Dynamic configuration     | Registry + ConfigBuilder + AgentManager        |
+| Safe rollouts             | Canary reload + rollback activity              |
+| Horizontal scaling        | Distributed Loki + S3/MinIO chunk backend      |
+| AI-ready later            | Export pipelines in TREE F, P3                 |
 
-### P0: Loki Lifecycle
-- Start/Stop/Restart/Delete Loki
-- Verify health
+---
 
-### P1: Distributed Loki + Storage + Frontend
-- **ChunkStorageBackend**
-  - `upload_chunk(chunk_data, metadata)`
-  - `download_chunk(chunk_id)`
-  - `list_chunks(prefix)`
-  - `verify_storage_health()`
-  - `rotate_or_archive_old_chunks()`
+# ✅ TL;DR (One Sentence)
 
-- **HealthMonitor**
-  - `check_distributor_health()`
-  - `check_ingester_health()`
-  - `check_querier_health()`
-  - `summarize_component_status()`
+> **Logs now, metrics later, traces later — all via one collector — automatically discovered, dynamically configured, hot-reloaded, monitored, and ready for AI training export.**
 
-### P2: Security + Tenancy + SLOs
-- **CertManager**
-- **GatewayAuthMiddleware**
-- **AccessPolicyManager**
-- **MetricsCollector**
-- **SLOEvaluator**
-- **ChaosTester**
+---
 
-## TREE E — CONTROL_PLANE (Discovery → Registry → Config Builder → AgentManager) [P0→P2]
+## 🎯 NEXT (Your immediate engineering move)
 
-### DiscoveryService
-- `watch_docker_events()`
-- `watch_k8s_api()`
-- `watch_filesystem()`
-- `emit_discovery_event()`
+Pick one and I will generate it **ready to paste into your code**:
 
-### LogSourceRegistry
-- `register_source(metadata)`
-- `update_source()`
-- `delete_source()`
-- `list_sources()`
+| Option  | I will deliver                                                 |
+| ------- | -------------------------------------------------------------- |
+| **A**   | `otel-collector.yaml` (filelog→Loki, production safe)          |
+| **B**   | `collector_dynamic_reload_workflow.py` (Temporal workflow)     |
+| **C**   | Full `control_plane/` repo skeleton (classes + activity stubs) |
+| **D**   | Kubernetes DaemonSet version of the collector                  |
+| **ALL** | Everything, ordered in correct implementation sequence         |
 
-### OtelConfigBuilder
-- `load_registry_state()`
-- `generate_log_pipeline()`
-- `validate_config()`
-- `render_yaml()`
+Reply with: **A**, **B**, **C**, **D**, or **ALL**.
+Great question — this is **core architecture clarity**.
+Once you understand **Control Plane vs Data Plane**, everything else becomes obvious.
 
-### AgentManager
-- `push_config_to_collector()`
-- `trigger_reload_api()`
-- `check_reload_result()`
+---
 
-## TREE F — AI_PRODUCT (Analytics, ML, Monetization) [P3 Future]
+# ✅ SHORT DEFINITION
 
-### Anomaly Detection & Insights
-- Training Data Pipeline
-- Model Training & Serving
-- Real-time Detection
+| Plane             | What it Does                                                                  | Example Components                                                     | Your Responsibility                         |
+| ----------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------- |
+| **Data Plane**    | Actually **collects, processes, and ships logs/metrics/traces**               | OpenTelemetry Collector, Loki, Prometheus, Tempo, Jaeger               | Reliable + fast + stable ingestion          |
+| **Control Plane** | **Decides configuration**, manages discovery, orchestration, scaling, reloads | DiscoveryService, Registry, ConfigBuilder, AgentManager, HealthMonitor | Intelligence + automation + dynamic updates |
 
-### Smart Routing & Auto-Remediation
-- `recommend_relabel_rules_activity()`
-- `auto_rollout_config_activity()`
+**Data Plane = “Do the work.”**
+**Control Plane = “Decide *how* the work happens.”**
 
-### Productization & Marketplace
-- Package as SaaS
-- Self-hosted Helm charts
-- Compliance & Telemetry
+---
 
-## Implementation Phases (Detailed Roadmap)
+# ✅ MASTER SYSTEM TREE (Control Plane vs Data Plane)
 
-### P0 (Weeks 0–2) — Foundation
-- [ ] Loki + Grafana (dev compose)
-- [ ] OTel Collector (filelog→Loki)
-- [ ] Basic DiscoveryService (docker watcher)
-- [ ] LogSourceRegistry (sqlite)
-- [ ] OtelConfigBuilder (logs only)
-- [ ] AgentManager push & reload
-- [ ] Temporal workflow for collector reloads
+```
+START: OBSERVABILITY PLATFORM ARCHITECTURE
+│
+? layer = [DATA_PLANE | CONTROL_PLANE | BACKENDS]
+│
+├─ DATA_PLANE     ───────────────► TREE A (Log/Metrics/Traces flow)
+├─ CONTROL_PLANE  ───────────────► TREE B (Automation & Management)
+└─ BACKENDS       ───────────────► TREE C (Storage & Query)
+```
 
-### P1 (Weeks 3–8) — Production Readiness
-- [ ] Distributed Loki + object store
-- [ ] Query Frontend + caching
-- [ ] LokiRuler alerts + dashboards
-- [ ] OTLP receiver + metrics pipeline
-- [ ] Auto-instrumentation wrappers
-- [ ] Canary reload & rollback
+---
 
-### P2 (Weeks 9–16) — Enterprise Features
-- [ ] mTLS & CertManager
-- [ ] Per-tenant OrgID
-- [ ] Quotas & retention policies
-- [ ] SLO monitoring
-- [ ] Chaos tests & runbooks
+## TREE A — DATA PLANE (the actual runtime pipeline)
 
-### P3 (Months 4+) — AI/ML & Monetization
-- [ ] Training data export pipeline
-- [ ] Anomaly detection models
-- [ ] Auto-remediation features
-- [ ] SaaS packaging & licensing
+```
+DATA_PLANE
+│
+? signal = [logs | metrics | traces]
+│
+├─ logs  (current P0)
+│   USE:
+│     • OTelCollectorAgent
+│         - filelog_receiver()
+│         - attributes_processor()
+│         - resource_processor()
+│         - batch_processor()
+│         - loki_exporter()
+│   PURPOSE:
+│     Move logs → from stdout → to Loki reliably.
 
-## Design Principles
+├─ metrics (P1 later)
+│   USE:
+│     • OTelCollectorAgent (same agent!)
+│         - otlp_receiver()
+│         - metric_aggregation_processor()
+│         - prometheusremotewrite_exporter()
+│   PURPOSE:
+│     Collect app metrics → Prometheus → dashboards → alerts.
 
-1. **Loose Coupling**
-   - Event-driven architecture
-   - Message bus for inter-service communication
-   - Clear API contracts between components
+└─ traces (P1/P2 later)
+    USE:
+      • OTelCollectorAgent (same agent!)
+          - otlp_receiver()
+          - sampling_processor()
+          - tempo_exporter() or jaeger_exporter()
+    PURPOSE:
+      Distributed tracing → root cause analysis.
 
-2. **Idempotency**
-   - All activities are retryable
-   - State transitions are atomic
-   - No side effects on retries
+```
 
-3. **Observability**
-   - Metrics for all critical paths
-   - Structured logging
-   - Distributed tracing
+### DATA PLANE Key Rule
 
-4. **Security**
-   - mTLS for service communication
-   - RBAC for API access
-   - Audit logging for all changes
+**One collector → Three pipelines**
+You do **NOT** deploy different agents later.
 
-5. **Extensibility**
-   - Plugin architecture for collectors/exporters
-   - Versioned APIs
-   - Backward compatibility guarantees
+---
+
+## TREE B — CONTROL PLANE (automation & intelligence layer)
+
+```
+CONTROL_PLANE
+│
+? function = [discover | store | build_config | deploy_config | verify | heal]
+│
+├─ discover  (detect new services/log paths)
+│   CLASS: DiscoveryService
+│   METHODS:
+│     - watch_docker_events()
+│     - watch_k8s_api()
+│     - detect_container_log_paths()
+
+├─ store  (state tracking)
+│   CLASS: LogSourceRegistry
+│   METHODS:
+│     - register_log_target()
+│     - update_source_labels()
+│     - list_sources()
+
+├─ build_config  (collector config generation)
+│   CLASS: OtelConfigBuilder
+│   METHODS:
+│     - generate_log_pipeline()
+│     - generate_metrics_pipeline()     (later)
+│     - generate_traces_pipeline()      (later)
+│     - validate_config()
+
+├─ deploy_config  (reload collector safely)
+│   CLASS: AgentManager
+│   METHODS:
+│     - push_config_to_collector()
+│     - canary_reload()
+│     - rollback_config()
+│     - verify_reload()
+
+├─ verify (health & correctness)
+│   CLASS: HealthMonitor
+│   METHODS:
+│     - check_collector_queue_backpressure()
+│     - check_loki_push_errors()
+│     - check_end_to_end_sample_log()
+
+└─ heal (self-recovery control loops)
+    CLASS: RepairController (optional P2)
+    METHODS:
+      - auto_apply_fallback_config()
+      - restart_failed_components()
+      - notify_on_persistent_failure()
+
+```
+
+### CONTROL PLANE Key Rule
+
+**Control Plane never touches logs.
+It only decides how logs should be collected.**
+
+---
+
+## TREE C — BACKENDS (storage & query layer)
+
+```
+BACKENDS
+│
+├─ Logs Store → Loki
+│   - chunk_storage (S3 / MinIO)
+│   - index_store (boltdb-shipper)
+│   - query_frontend (parallelized search)
+
+├─ Metrics Store → Prometheus / Mimir
+│   - time-series retention
+│   - alert evaluation
+
+└─ Traces Store → Tempo / Jaeger
+    - span graph storage
+    - service dependency maps
+```
+
+---
+
+# ✅ FLOW TOGETHER (COMBINED SYSTEM SEQUENCE, PRODUCTION)
+
+```
+[APP] ── stdout ──▶ [DATA PLANE: OTel Collector] ──▶ [LOKI]
+
+[New container starts] ──▶ [CONTROL PLANE: Discovery] 
+    └─▶ Registry
+        └─▶ ConfigBuilder
+            └─▶ AgentManager reloads collector
+                └─▶ HealthMonitor verifies success
+```
+
+Data Plane **does the work**.
+Control Plane **keeps it correct, updated, safe, auto-healing**.
+
+---
+
+# ✅ WHY THIS MATTERS (Business / Product Direction)
+
+| Goal                                    | Achieved Because                                  |
+| --------------------------------------- | ------------------------------------------------- |
+| You can **sell this as a platform**     | Control Plane = your IP                           |
+| You can later **add AI-based analysis** | Logs/metrics/traces are unified & labeled cleanly |
+| You can automate everything             | Activities are modular + workflow-driven          |
+| You avoid vendor lock-in                | Collector is vendor-neutral OpenTelemetry         |
+| You avoid rewrites later                | Same pipelines → logs → metrics → traces          |
+
+You now have an **enterprise-correct architecture that scales to a product.**
+
+---
+
+# ✅ If you're ready, I can now generate one of these:
+
+| Option  | Output                                                                |
+| ------- | --------------------------------------------------------------------- |
+| **A**   | Full folder structure (`/control_plane`, `/data_plane`, `/workflows`) |
+| **B**   | All classes + empty method stubs (so you just fill logic)             |
+| **C**   | Temporal workflow skeletons                                           |
+| **D**   | Docker + K8s deployment starter                                       |
+| **ALL** | Everything, staged, in build order                                    |
+
+Just reply: **A**, **B**, **C**, **D**, or **ALL**.
