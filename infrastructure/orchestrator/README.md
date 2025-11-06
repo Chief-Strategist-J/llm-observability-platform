@@ -184,13 +184,14 @@ cd infrastructure/orchestrator
 docker-compose -f temporal-orchestrator-compose.yaml down -v
 docker system prune -f
 docker-compose -f temporal-orchestrator-compose.yaml up -d
+cd ../..
 ```
 
 ### Verify Services
 
 ```bash
 docker ps
-curl http://localhost:8080/api/v1/namespaces/default
+curl http://0.0.0.0:8080/namespaces/default/workflows
 docker exec temporal-postgresql psql -U temporal -d temporal -c "SELECT 1;"
 ```
 

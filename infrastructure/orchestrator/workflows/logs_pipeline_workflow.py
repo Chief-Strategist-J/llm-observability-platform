@@ -13,12 +13,24 @@ class LogsPipelineWorkflow:
         )
         t = timedelta(minutes=5)
 
-        # await workflow.execute_activity(
-        #     "start_loki_activity",
-        #     arg=service_name,
-        #     start_to_close_timeout=t,
-        #     retry_policy=rp,
-        # )
+        await workflow.execute_activity(
+            "start_opentelemetry_collector",
+            arg=service_name,
+            start_to_close_timeout=t,
+            retry_policy=rp,
+        )
+        await workflow.execute_activity(
+            "start_loki_activity",
+            arg=service_name,
+            start_to_close_timeout=t,
+            retry_policy=rp,
+        )
+        await workflow.execute_activity(
+            "start_grafana_activity",
+            arg=service_name,
+            start_to_close_timeout=t,
+            retry_policy=rp,
+        )
         # await workflow.execute_activity(
         #     "stop_loki_activity",
         #     arg=service_name,
@@ -91,12 +103,7 @@ class LogsPipelineWorkflow:
         #     start_to_close_timeout=t,
         #     retry_policy=rp,
         # )
-        # await workflow.execute_activity(
-        #     "start_grafana_activity",
-        #     arg=service_name,
-        #     start_to_close_timeout=t,
-        #     retry_policy=rp,
-        # )
+      
         # await workflow.execute_activity(
         #     "restart_grafana_activity",
         #     arg=service_name,
@@ -139,12 +146,7 @@ class LogsPipelineWorkflow:
         #     start_to_close_timeout=t,
         #     retry_policy=rp,
         # )
-        # await workflow.execute_activity(
-        #     "start_opentelemetry_collector",
-        #     arg=service_name,
-        #     start_to_close_timeout=t,
-        #     retry_policy=rp,
-        # )
+        
         # await workflow.execute_activity(
         #     "restart_opentelemetry_collector",
         #     arg=service_name,
@@ -235,30 +237,30 @@ class LogsPipelineWorkflow:
         #     start_to_close_timeout=t,
         #     retry_policy=rp,
         # )
-        await workflow.execute_activity(
-            "start_kafka_activity",
-            arg=service_name,
-            start_to_close_timeout=t,
-            retry_policy=rp,
-        )
-        await workflow.execute_activity(
-            "restart_kafka_activity",
-            arg=service_name,
-            start_to_close_timeout=t,
-            retry_policy=rp,
-        )
-        await workflow.execute_activity(
-            "stop_kafka_activity",
-            arg=service_name,
-            start_to_close_timeout=t,
-            retry_policy=rp,
-        )
-        await workflow.execute_activity(
-            "delete_kafka_activity",
-            args=[service_name, False],
-            start_to_close_timeout=t,
-            retry_policy=rp,
-        )
+        # await workflow.execute_activity(
+        #     "start_kafka_activity",
+        #     arg=service_name,
+        #     start_to_close_timeout=t,
+        #     retry_policy=rp,
+        # )
+        # await workflow.execute_activity(
+        #     "restart_kafka_activity",
+        #     arg=service_name,
+        #     start_to_close_timeout=t,
+        #     retry_policy=rp,
+        # )
+        # await workflow.execute_activity(
+        #     "stop_kafka_activity",
+        #     arg=service_name,
+        #     start_to_close_timeout=t,
+        #     retry_policy=rp,
+        # )
+        # await workflow.execute_activity(
+        #     "delete_kafka_activity",
+        #     args=[service_name, False],
+        #     start_to_close_timeout=t,
+        #     retry_policy=rp,
+        # )
 
 
         return "Logs pipeline fully configured"
