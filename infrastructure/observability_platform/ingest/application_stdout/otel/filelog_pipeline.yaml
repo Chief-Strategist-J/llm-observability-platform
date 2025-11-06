@@ -1,0 +1,33 @@
+extensions:
+  configmapwatcher:
+
+receivers:
+  filelog:
+    include:
+      - "${LOG_FILE_GLOB}"
+    start_at: end
+
+processors:
+  resource:
+    attributes:
+      - key: service.name
+        value: "${SERVICE_NAME}"
+        action: upsert
+  attributes:
+    actions:
+      - key: log.source
+        value: "application_stdout"
+        action: upsert
+  batch:
+
+exporters:
+  loki:
+    endpoint: "${LOKI_ENDPOINT}"
+
+service:
+  extensions: [configmapwatcher]
+  pipelines:
+    logs:
+      receivers: [filelog]
+      processors: [resource, attributes, batch]
+      exporters: [loki]
