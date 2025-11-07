@@ -20,14 +20,14 @@ class OpenTelemetryCollectorManager(BaseService):
                 4318: 4318,
                 13133: 13133,
                 8888: 8888,
-                8889: 8889,
+                8889: 8889
             },
             volumes={
                 "otel-config": "/etc/otelcol",
                 "otel-data": "/var/lib/otelcol",
-                "/var/run/docker.sock": "/var/run/docker.sock:ro",
-                "/var/log/application": "/var/log/application:ro",
-                "/var/log/infrastructure": "/var/log/infrastructure:ro",
+                "/var/run/docker.sock": {"bind": "/var/run/docker.sock", "mode": "ro"},
+                "/var/log/application": {"bind": "/var/log/application", "mode": "ro"},
+                "/var/log/infrastructure": {"bind": "/var/log/infrastructure", "mode": "ro"}
             },
             network="observability-network",
             memory="512m",
@@ -37,7 +37,7 @@ class OpenTelemetryCollectorManager(BaseService):
             environment={"OTEL_LOG_LEVEL": "INFO"},
             command=[
                 "--config=/etc/otelcol/telemetry.yaml",
-                "--config-dir=/etc/otelcol",
+                "--config-dir=/etc/otelcol"
             ],
             healthcheck={
                 "test": ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:13133/ || exit 1"],
