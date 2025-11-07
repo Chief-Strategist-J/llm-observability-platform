@@ -247,4 +247,136 @@ docker-compose -f temporal-orchestrator-compose.yaml down
 [Web UI / Logs]           http://localhost:8080
 ```
 
+# 🌲 **MASTER EXECUTION + RELATIONSHIP TREE**
+
+```
+PIPELINE_SYSTEM
+│
+├─ CONTROL_PLANE  (META: decisions, identity, routing, meaning)
+│   │
+│   ├─ WorkflowConfig  (meta config)
+│   │     │
+│   │     ├─ service_name        = logical pipeline identity
+│   │     ├─ workflow_name       = workflow class to start
+│   │     ├─ task_queue          = execution route (auto: <service_name>-queue)
+│   │     ├─ temporal_host       = cluster connection target
+│   │     └─ web_ui_url          = observation URL (optional / meta only)
+│   │
+│   ├─ PipelineExecutor  (meta orchestrator)
+│   │     │
+│   │     ├─ reads WorkflowConfig
+│   │     ├─ connects to temporal_host
+│   │     └─ start_workflow(
+│   │           workflow_name,
+│   │           arg = service_name,
+│   │           task_queue = task_queue
+│   │        )
+│   │
+│   └─ Workflow State Machine (meta logic)
+│         │
+│         └─ Describes *order* of operations (not actual work):
+│                start_opentelemetry → start_loki → start_grafana → return result
+│
+└────────────────────→ TRAVEL ACROSS NETWORK
+                        (Temporal API call)
+```
+
+---
+
+# 🛰️ **TEMPORAL ROUTING LAYER (Control → Execution Bridge)**
+
+```
+TEMPORAL_SERVER
+│
+├─ Receives workflow start request
+│
+├─ Creates Workflow Execution History (META: deterministic timeline)
+│
+└─ SCHEDULE_WORKFLOW_TASK
+       │
+       └─ Route by queue:
+           task_queue = "<service_name>-queue"
+```
+
+**This is the critical relationship:**
+
+```
+WorkflowConfig.task_queue  MUST MATCH  WorkerConfig.task_queue
+```
+
+This is the **binding point** of the system.
+
+---
+
+# ⚙️ **DATA_PLANE (Execution Happens Here)**
+
+```
+DATA_PLANE
+│
+├─ WorkerConfig  (meta execution environment description)
+│   │
+│   ├─ host           = temporal endpoint
+│   ├─ task_queue     = execution queue (same as WorkflowConfig)
+│   ├─ namespace      = logical tenant
+│   └─ max_concurrency  (optional runtime tuning)
+│
+├─ Worker (runtime executor process)
+│   │
+│   ├─ Registers:
+│   │     - Workflows: [LogsPipelineWorkflow]
+│   │     - Activities: [start_loki, start_grafana, etc]
+│   │
+│   └─ Listens on task_queue
+│         │
+│         └─ When workflow tasks arrive → run workflow logic step-by-step
+│
+└─ Activity Executor (real work happens here)
+      │
+      ├─ start_opentelemetry_collector(service_name)
+      ├─ start_loki_activity(service_name)
+      ├─ start_grafana_activity(service_name)
+      └─ etc...
+      │
+      └─ These functions produce **real side-effects**:
+            - Launch containers
+            - Configure services
+            - Apply setup changes
+```
+
+---
+
+# 🎛️ **WORKFLOW EXECUTION PLAY-BY-PLAY**
+
+```
+Workflow (META: high-level sequence)
+│
+└─ Step 1: schedule activity: start_opentelemetry_collector
+      │
+      └─ Temporal routes → Worker → Activity executes (real work)
+             │
+             └─ Return OK → Workflow proceeds
+
+└─ Step 2: schedule activity: start_loki_activity
+      │
+      (same dispatch-execute-return pattern)
+
+└─ Step 3: schedule activity: start_grafana_activity
+
+└─ Workflow returns: "Logs pipeline fully configured"
+```
+
+---
+
+# ⚡ RELATIONSHIP CLASSIFICATION (Final clarity)
+
+| Relationship                                        | Direction    | Type              | Explanation                                   |
+| --------------------------------------------------- | ------------ | ----------------- | --------------------------------------------- |
+| PipelineExecutor → WorkflowConfig                   | uses         | META              | Executor reads config to know *what to start* |
+| PipelineExecutor → Temporal Server                  | commands     | CONTROL           | Executor tells Temporal to create workflow    |
+| WorkflowConfig.task_queue ↔ WorkerConfig.task_queue | binding link | ROUTING           | Ensures workflow tasks and worker match       |
+| Temporal Server → Worker                            | dispatches   | EXECUTION ROUTING | Server delivers tasks to worker queue         |
+| Worker → Workflow                                   | hosts        | EXECUTION CONTEXT | Worker runs workflow state machine            |
+| Workflow → Activities                               | delegates    | TASK EXECUTION    | Workflow requests work, activities do work    |
+| Activities → External Systems                       | acts         | REAL EFFECT       | System state changes happen here              |
+
 ---
