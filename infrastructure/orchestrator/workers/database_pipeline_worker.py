@@ -1,18 +1,20 @@
 import asyncio
 from infrastructure.orchestrator.base.base_worker import BaseWorker, WorkerConfig
-
 from infrastructure.orchestrator.activities.configurations_activity.neo4j_activity import (
-    start_neo4j_activity, stop_neo4j_activity,
-    restart_neo4j_activity, delete_neo4j_activity,
+    start_neo4j_activity,
+    stop_neo4j_activity,
+    restart_neo4j_activity,
+    delete_neo4j_activity,
 )
 from infrastructure.orchestrator.activities.configurations_activity.qdrant_activity import (
-    start_qdrant_activity, stop_qdrant_activity,
-    restart_qdrant_activity, delete_qdrant_activity,
+    start_qdrant_activity,
+    stop_qdrant_activity,
+    restart_qdrant_activity,
+    delete_qdrant_activity,
 )
-from infrastructure.orchestrator.workflows.database_workflow import (
-    DatabaseWorkflow,
+from infrastructure.orchestrator.workflows.database_pipeline_workflow import (
+    DatabasePipelineWorkflow,
 )
-
 
 class DatabasePipelineWorker(BaseWorker):
     @property
@@ -32,7 +34,6 @@ class DatabasePipelineWorker(BaseWorker):
             delete_qdrant_activity,
         ]
 
-
 async def main():
     worker = DatabasePipelineWorker(
         WorkerConfig(
@@ -44,7 +45,6 @@ async def main():
         )
     )
     await worker.run()
-
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -1,18 +1,4 @@
-# file: infrastructure/orchestrator/base/base_container_activity.py
 from __future__ import annotations
-
-"""
-Base container orchestration utilities (Docker SDK) — final version.
-
-Fixes included:
-- Ensures image exists (pull with optional manual timeout)
-- Normalizes user-friendly volume shorthands to Docker SDK shape
-- Converts fractional `cpus` -> `nano_cpus` (Docker SDK)
-- Builds run args dynamically, omitting None/empty values
-- ENSURES docker network exists (creates it if necessary and not builtin 'bridge')
-- Defensive retry when start fails due to missing network
-- BaseService wrapper for higher-level managers
-"""
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -130,17 +116,11 @@ class BaseContainerManager(ABC):
         raise NotImplementedError
 
 
-# --------------- helpers ---------------
+
 def _normalize_volumes_for_docker(
     volumes: Dict[str, Union[str, Tuple[str, str], List[Any], Dict[str, Any]]]
 ) -> Dict[str, Dict[str, str]]:
-    """
-    Normalize convenient volume shorthand into the Docker SDK expected mapping:
-      - "name": "/container/path"
-      - "name": ("/container/path", "ro")
-      - "name": {"bind": "/container/path", "mode": "rw"}
-    Returns dict: {name: {"bind": "/container/path", "mode": "rw"}}
-    """
+
     normalized: Dict[str, Dict[str, str]] = {}
     for host, val in volumes.items():
         if val is None:
@@ -171,10 +151,6 @@ def _normalize_volumes_for_docker(
 
 
 def _validate_and_normalize_volumes_in_run_args(run_args: Dict[str, Any]) -> None:
-    """
-    Ensure run_args['volumes'] is a dict with dict values containing 'bind'.
-    Normalize shorthand shapes if necessary. Raises TypeError on invalid shapes.
-    """
     if "volumes" not in run_args:
         return
 
@@ -182,16 +158,15 @@ def _validate_and_normalize_volumes_in_run_args(run_args: Dict[str, Any]) -> Non
     if not isinstance(raw, dict):
         raise TypeError(f"'volumes' run-arg must be a dict; got {type(raw).__name__}")
 
-    # If values are dicts with 'bind', accept as-is (validate)
+    
     if all(isinstance(v, dict) and "bind" in v for v in raw.values()):
         return
 
-    # Otherwise attempt normalization
-    normalized = _normalize_volumes_for_docker(raw)  # may raise TypeError
+    normalized = _normalize_volumes_for_docker(raw)
     run_args["volumes"] = normalized
 
 
-# --------------- ContainerManager ---------------
+
 class ContainerManager(BaseContainerManager):
     def __init__(self, config: ContainerConfig) -> None:
         self.config = config
@@ -199,7 +174,7 @@ class ContainerManager(BaseContainerManager):
         self.client: DockerClient = DockerClient.from_env()
         self.container: Optional[Container] = None
 
-    # --- Image helpers ---
+    
     def _ensure_image_exists(self) -> None:
         try:
             logger.debug("Checking image locally: %s", self.config.image)
@@ -238,17 +213,12 @@ class ContainerManager(BaseContainerManager):
             raise last_exc
         raise RuntimeError("Unknown error pulling image")
 
-    # --- Network helpers ---
+    
     def _is_builtin_network(self, network_name: Optional[str]) -> bool:
-        # treat None or 'bridge' as builtin — don't try to create them
+        
         return not network_name or network_name == "bridge"
 
     def _ensure_network_exists(self) -> None:
-        """
-        Ensure the named network exists on the Docker daemon.
-        If network is 'bridge' or None, do nothing (bridge exists).
-        Otherwise, if network not found, create it with driver 'bridge'.
-        """
         net_name = self.config.network
         if self._is_builtin_network(net_name):
             logger.debug("Network is builtin or unspecified (%r) — skipping create", net_name)
@@ -260,7 +230,6 @@ class ContainerManager(BaseContainerManager):
             self.client.networks.get(net_name)
             logger.debug("Docker network %s exists", net_name)
         except NotFound:
-            # create with driver 'bridge' — this is the simplest default
             try:
                 logger.info("Creating Docker network: %s", net_name)
                 self.client.networks.create(net_name, driver="bridge")
@@ -272,16 +241,13 @@ class ContainerManager(BaseContainerManager):
             logger.exception("Error while checking/creating Docker network %s: %s", net_name, e)
             raise
 
-    # --- lifecycle ---
     def start(self) -> None:
         logger.debug("Starting container: %s", self.config.name)
         try:
             existing = self._get_existing_container()
-            # Make sure network exists before starting or creating container
             try:
                 self._ensure_network_exists()
             except Exception:
-                # If network creation fails, still attempt — but surface original exception later
                 logger.warning("Network ensure step failed; continuing to attempt start/create (may still error)")
 
             if existing:
@@ -291,7 +257,6 @@ class ContainerManager(BaseContainerManager):
                     self.container = existing
                     return
                 except DockerException as start_exc:
-                    # If error appears to be network-related, try ensuring network exists and retry once.
                     msg = str(start_exc).lower()
                     if "network" in msg and "not found" in msg:
                         logger.warning("Start failed due to missing network; attempting to (re)create network and retry start")
@@ -302,10 +267,8 @@ class ContainerManager(BaseContainerManager):
                     logger.exception("Failed to start existing container %s: %s", self.config.name, start_exc)
                     raise
 
-            # No existing container — create one. Ensure image is present.
             self._ensure_image_exists()
 
-            # Build run_args dynamically; omit None/empty values
             run_args: Dict[str, Any] = {
                 "image": self.config.image,
                 "name": self.config.name,
@@ -371,11 +334,9 @@ class ContainerManager(BaseContainerManager):
             add_arg("security_opt", self.config.security_opt)
             add_arg("storage_opt", self.config.storage_opt)
 
-            # Merge extra_params last (user may override)
             if self.config.extra_params:
                 run_args.update(self.config.extra_params)
 
-            # Defensive normalization if extra_params replaced 'volumes'
             _validate_and_normalize_volumes_in_run_args(run_args)
 
             debug_args = {k: v for k, v in run_args.items() if k not in ("environment", "labels", "volumes")}
@@ -385,11 +346,9 @@ class ContainerManager(BaseContainerManager):
                 self.container = self.client.containers.run(**run_args)
                 logger.info("Container %s created & started.", self.config.name)
             except DockerException as run_exc:
-                # If failure points to missing network, try ensuring network exists then retry start.
                 msg = str(run_exc).lower()
                 if "network" in msg and "not found" in msg:
                     logger.warning("containers.run failed due to missing network; attempting to create network and retry")
-                    # Create network and attempt to get & start a possibly-created container (by name)
                     self._ensure_network_exists()
                     try:
                         self.container = self.client.containers.get(self.config.name)
@@ -399,7 +358,6 @@ class ContainerManager(BaseContainerManager):
                     except Exception as second_exc:
                         logger.exception("Retry after network create failed: %s", second_exc)
                         raise
-                # otherwise re-raise
                 logger.exception("containers.run raised an error: %s", run_exc)
                 raise
 
