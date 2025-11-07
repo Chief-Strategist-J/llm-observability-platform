@@ -1,5 +1,0 @@
----
-tls:
-  certificates:
-    - certFile: /certs/n8n.localtest.me.pem
-      keyFile: /certs/n8n.localtest.me-key.pem

@@ -2,17 +2,16 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any, Union, Tuple
+from typing import Dict, List, Optional, Any, Union, Tuple, TYPE_CHECKING
 from enum import Enum
 import logging
 import time
 import concurrent.futures
 import re
 
-import docker
-from docker import DockerClient
-from docker.models.containers import Container
-from docker.errors import NotFound, ImageNotFound, DockerException, APIError
+# Avoid importing docker at module import time so this module can be safely imported
+# inside contexts that require deterministic imports (e.g., Temporal workflow sandbox).
+# Docker is imported lazily inside functions/constructors at runtime.
 
 # Logging
 logging.basicConfig(
@@ -20,6 +19,11 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s:%(lineno)d - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    # For type-checking only; these imports will not execute at runtime.
+    from docker import DockerClient  # type: ignore
+    from docker.models.containers import Container  # type: ignore
 
 
 class ContainerState(Enum):
@@ -116,7 +120,6 @@ class BaseContainerManager(ABC):
         raise NotImplementedError
 
 
-
 def _normalize_volumes_for_docker(
     volumes: Dict[str, Union[str, Tuple[str, str], List[Any], Dict[str, Any]]]
 ) -> Dict[str, Dict[str, str]]:
@@ -158,7 +161,7 @@ def _validate_and_normalize_volumes_in_run_args(run_args: Dict[str, Any]) -> Non
     if not isinstance(raw, dict):
         raise TypeError(f"'volumes' run-arg must be a dict; got {type(raw).__name__}")
 
-    
+    # If already normalized with 'bind' keys, assume fine.
     if all(isinstance(v, dict) and "bind" in v for v in raw.values()):
         return
 
@@ -166,16 +169,27 @@ def _validate_and_normalize_volumes_in_run_args(run_args: Dict[str, Any]) -> Non
     run_args["volumes"] = normalized
 
 
+def get_docker_client():
+    """
+    Lazily import docker and return a Docker client instance.
+    """
+    # local import so module-level import of this module doesn't import docker
+    import docker  # type: ignore
+    return docker.from_env()
+
 
 class ContainerManager(BaseContainerManager):
     def __init__(self, config: ContainerConfig) -> None:
         self.config = config
         self.config.validate()
-        self.client: DockerClient = DockerClient.from_env()
-        self.container: Optional[Container] = None
+        # create client lazily at runtime
+        self.client = get_docker_client()  # type: ignore
+        self.container: Optional["Container"] = None
 
-    
     def _ensure_image_exists(self) -> None:
+        # import exceptions locally to avoid top-level docker import
+        from docker.errors import ImageNotFound, DockerException  # type: ignore
+
         try:
             logger.debug("Checking image locally: %s", self.config.image)
             self.client.images.get(self.config.image)
@@ -213,12 +227,13 @@ class ContainerManager(BaseContainerManager):
             raise last_exc
         raise RuntimeError("Unknown error pulling image")
 
-    
     def _is_builtin_network(self, network_name: Optional[str]) -> bool:
-        
         return not network_name or network_name == "bridge"
 
     def _ensure_network_exists(self) -> None:
+        # import exceptions locally to avoid top-level docker import
+        from docker.errors import NotFound, DockerException  # type: ignore
+
         net_name = self.config.network
         if self._is_builtin_network(net_name):
             logger.debug("Network is builtin or unspecified (%r) — skipping create", net_name)
@@ -234,7 +249,7 @@ class ContainerManager(BaseContainerManager):
                 logger.info("Creating Docker network: %s", net_name)
                 self.client.networks.create(net_name, driver="bridge")
                 logger.info("Docker network %s created", net_name)
-            except APIError as api_err:
+            except Exception as api_err:
                 logger.exception("Failed to create Docker network %s: %s", net_name, api_err)
                 raise
         except DockerException as e:
@@ -242,6 +257,9 @@ class ContainerManager(BaseContainerManager):
             raise
 
     def start(self) -> None:
+        # import exceptions locally
+        from docker.errors import DockerException, NotFound  # type: ignore
+
         logger.debug("Starting container: %s", self.config.name)
         try:
             existing = self._get_existing_container()
@@ -326,6 +344,8 @@ class ContainerManager(BaseContainerManager):
             add_arg("device_requests", self.config.device_requests)
             add_arg("healthcheck", self.config.healthcheck)
             add_arg("log_driver", self.config.log_driver)
+            # The docker SDK uses "log_config" or "log_driver"/"log_opts" depending on API;
+            # keep the original "log_options" name mapping used earlier.
             add_arg("log_opts", self.config.log_options)
             add_arg("shm_size", self.config.shm_size)
             add_arg("tmpfs", self.config.tmpfs)
@@ -361,19 +381,21 @@ class ContainerManager(BaseContainerManager):
                 logger.exception("containers.run raised an error: %s", run_exc)
                 raise
 
-        except DockerException as de:
-            logger.exception("DockerException when starting container %s: %s", self.config.name, de)
-            raise
-        except Exception:
-            logger.exception("Unexpected error when starting container %s", self.config.name)
+        except Exception as de:
+            # Keep behavior: log and re-raise
+            logger.exception("Error when starting container %s: %s", self.config.name, de)
             raise
 
     def stop(self, timeout: int = 10) -> None:
         logger.debug("Stopping container: %s", self.config.name)
         container = self._get_existing_container()
         if container:
-            container.stop(timeout=timeout)
-            logger.info("Container %s stopped.", self.config.name)
+            try:
+                container.stop(timeout=timeout)
+                logger.info("Container %s stopped.", self.config.name)
+            except Exception as e:
+                logger.exception("Error stopping container %s: %s", self.config.name, e)
+                raise
         else:
             logger.warning("Container %s not present (stop skipped).", self.config.name)
 
@@ -381,12 +403,16 @@ class ContainerManager(BaseContainerManager):
         logger.debug("Restarting container: %s", self.config.name)
         container = self._get_existing_container()
         if container:
-            container.restart()
-            logger.info("Container %s restarted.", self.config.name)
+            try:
+                container.restart()
+                logger.info("Container %s restarted.", self.config.name)
+            except Exception as e:
+                logger.exception("Error restarting container %s: %s", self.config.name, e)
+                raise
         else:
             logger.warning("Container %s not present (restart skipped).", self.config.name)
 
-    def delete(self, force: bool = False, backup: bool = True) -> None:
+    def delete(self, force: bool = False, backup: bool = False) -> None:
         import threading
         import datetime
         import os
@@ -399,8 +425,7 @@ class ContainerManager(BaseContainerManager):
         with self._delete_lock:
             container = self._get_existing_container()
             if not container:
-                logger.warning("Container %s not present (delete skipped).",
-                            self.config.name)
+                logger.warning("Container %s not present (delete skipped).", self.config.name)
                 return
 
             errors: list[str] = []
@@ -498,6 +523,7 @@ class ContainerManager(BaseContainerManager):
                     errors.append(f"container ops: {e}")
 
                 try:
+                    # remove by image name as provided by config
                     self.client.images.remove(self.config.image, force=force)
                     logger.info("Image %s removed.", self.config.image)
                 except ImageNotFound:
@@ -542,9 +568,14 @@ class ContainerManager(BaseContainerManager):
             logger.warning("Container %s not present (logs empty).", self.config.name)
             return ""
         logs_bytes = container.logs(follow=follow)
-        return logs_bytes.decode("utf-8", errors="ignore")
+        # container.logs may return bytes or str depending on SDK; ensure string
+        if isinstance(logs_bytes, (bytes, bytearray)):
+            return logs_bytes.decode("utf-8", errors="ignore")
+        return str(logs_bytes)
 
-    def _get_existing_container(self) -> Optional[Container]:
+    def _get_existing_container(self) -> Optional["Container"]:
+        # import NotFound locally to avoid top-level docker import
+        from docker.errors import NotFound  # type: ignore
         try:
             return self.client.containers.get(self.config.name)
         except NotFound:

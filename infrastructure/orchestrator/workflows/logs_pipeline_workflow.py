@@ -14,7 +14,18 @@ class LogsPipelineWorkflow(BaseWorkflow):
             maximum_attempts=3,
         )
         t = timedelta(minutes=5)
-
+        await workflow.execute_activity(
+            "stop_opentelemetry_collector",
+            arg=service_name,
+            start_to_close_timeout=t,
+            retry_policy=rp,
+        )
+        await workflow.execute_activity(
+            "delete_opentelemetry_collector",
+            arg=service_name,
+            start_to_close_timeout=t,
+            retry_policy=rp,
+        )
         await workflow.execute_activity(
             "start_opentelemetry_collector",
             arg=service_name,

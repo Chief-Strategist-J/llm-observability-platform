@@ -278,7 +278,7 @@ PIPELINE_SYSTEM
 │                start_opentelemetry → start_loki → start_grafana → return result
 │
 └────────────────────→ TRAVEL ACROSS NETWORK
-                        (Temporal API call)
+                            (Temporal API call)
 ```
 
 ---
