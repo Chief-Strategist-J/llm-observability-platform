@@ -1,8 +1,10 @@
 import logging
+from typing import Dict, Any
 from temporalio import activity
-from infrastructure.orchestrator.base.base_container_activity import ContainerConfig, BaseService
+from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
 
 logger = logging.getLogger(__name__)
+
 
 class PromtailManager(BaseService):
     SERVICE_NAME = "Promtail"
@@ -35,44 +37,24 @@ class PromtailManager(BaseService):
 
 
 @activity.defn
-async def start_promtail_activity(service_name: str) -> bool:
-    try:
-        manager = PromtailManager()
-        manager.run()
-        return True
-    except Exception as e:
-        logger.error("Failed to start Promtail service: %s", e, exc_info=True)
-        return False
+async def start_promtail_activity(params: Dict[str, Any]) -> bool:
+    PromtailManager().run()
+    return True
 
 
 @activity.defn
-async def stop_promtail_activity(service_name: str) -> bool:
-    try:
-        manager = PromtailManager()
-        manager.stop(timeout=30)
-        return True
-    except Exception as e:
-        logger.error("Failed to stop Promtail service: %s", e, exc_info=True)
-        return False
+async def stop_promtail_activity(params: Dict[str, Any]) -> bool:
+    PromtailManager().stop(timeout=30)
+    return True
 
 
 @activity.defn
-async def restart_promtail_activity(service_name: str) -> bool:
-    try:
-        manager = PromtailManager()
-        manager.restart()
-        return True
-    except Exception as e:
-        logger.error("Failed to restart Promtail service: %s", e, exc_info=True)
-        return False
+async def restart_promtail_activity(params: Dict[str, Any]) -> bool:
+    PromtailManager().restart()
+    return True
 
 
 @activity.defn
-async def delete_promtail_activity(service_name: str, force: bool = False) -> bool:
-    try:
-        manager = PromtailManager()
-        manager.delete(force=force)
-        return True
-    except Exception as e:
-        logger.error("Failed to delete Promtail service: %s", e, exc_info=True)
-        return False
+async def delete_promtail_activity(params: Dict[str, Any]) -> bool:
+    PromtailManager().delete(force=False)
+    return True

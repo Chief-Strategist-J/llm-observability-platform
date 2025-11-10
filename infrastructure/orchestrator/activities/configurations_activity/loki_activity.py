@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, Dict, Any
 from temporalio import activity
 from infrastructure.orchestrator.base.base_container_activity import (
     BaseService,
@@ -31,8 +31,7 @@ class LokiManager(BaseService):
                 healthcheck={
                     "test": [
                         "CMD-SHELL",
-                        "wget --no-verbose --tries=1 --spider "
-                        "http://localhost:3100/ready || exit 1",
+                        "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1",
                     ],
                     "interval": 30000000000,
                     "timeout": 10000000000,
@@ -45,10 +44,7 @@ class LokiManager(BaseService):
         logger.info("LokiManager initialized")
 
     def query_logs(self, query: str, limit: int = 100) -> str:
-        cmd = (
-            f'wget -qO- "http://localhost:3100/loki/api/v1/query'
-            f'?query={query}&limit={limit}"'
-        )
+        cmd = f'wget -qO- "http://localhost:3100/loki/api/v1/query?query={query}&limit={limit}"'
         code, out = self.exec(cmd)
         if code != 0:
             logger.error("Failed to query logs: %s", out)
@@ -65,50 +61,28 @@ class LokiManager(BaseService):
 
 
 @activity.defn
-async def start_loki_activity(service_name: str) -> bool:
-    try:
-        loki = LokiManager()
-        loki.run()
-        return True
-    except Exception as e:
-        msg = f"Failed to start Loki service {service_name}: {e}"
-        logger.error(msg, exc_info=True)
-        raise activity.ActivityError(msg) from e
+async def start_loki_activity(params: Dict[str, Any]) -> bool:
+    loki = LokiManager()
+    loki.run()
+    return True
 
 
 @activity.defn
-async def stop_loki_activity(service_name: str) -> bool:
-    try:
-        loki = LokiManager()
-        loki.stop(timeout=30)
-        return True
-    except Exception as e:
-        msg = f"Failed to stop Loki service {service_name}: {e}"
-        logger.error(msg, exc_info=True)
-        raise activity.ActivityError(msg) from e
+async def stop_loki_activity(params: Dict[str, Any]) -> bool:
+    loki = LokiManager()
+    loki.stop(timeout=30)
+    return True
 
 
 @activity.defn
-async def restart_loki_activity(service_name: str) -> bool:
-    try:
-        loki = LokiManager()
-        loki.restart()
-        return True
-    except Exception as e:
-        msg = f"Failed to restart Loki service {service_name}: {e}"
-        logger.error(msg, exc_info=True)
-        raise activity.ActivityError(msg) from e
+async def restart_loki_activity(params: Dict[str, Any]) -> bool:
+    loki = LokiManager()
+    loki.restart()
+    return True
 
 
 @activity.defn
-async def delete_loki_activity(
-    service_name: str, force: bool = False
-) -> bool:
-    try:
-        loki = LokiManager()
-        loki.delete(force=force)
-        return True
-    except Exception as e:
-        msg = f"Failed to delete Loki service {service_name}: {e}"
-        logger.error(msg, exc_info=True)
-        raise activity.ActivityError(msg) from e
+async def delete_loki_activity(params: Dict[str, Any]) -> bool:
+    loki = LokiManager()
+    loki.delete(force=False)
+    return True

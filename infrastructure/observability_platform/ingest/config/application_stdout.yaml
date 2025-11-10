@@ -1,0 +1,14 @@
+directories:
+  - /var/log
+
+labels:
+  service: application_stdout
+
+ship:
+  protocol: loki
+  endpoint: http://loki-development:3100
+  timeout_seconds: 10
+
+batch:
+  max_size: 200
+  interval_seconds: 5

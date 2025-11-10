@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Dict, Any, Optional
 from temporalio import activity
 from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
 
@@ -52,57 +52,37 @@ class RedisManager(BaseService):
         super().__init__(config=config, extra=extra_data)
 
     def ping(self) -> bool:
-        exit_code, output = self.exec("redis-cli ping")
-        return exit_code == 0 and "PONG" in output
+        code, out = self.exec("redis-cli ping")
+        return code == 0 and "PONG" in out
 
     def get_info(self) -> str:
-        exit_code, output = self.exec("redis-cli INFO")
-        return output if exit_code == 0 else ""
+        code, out = self.exec("redis-cli INFO")
+        return out if code == 0 else ""
 
     def flush_all(self) -> bool:
-        exit_code, output = self.exec("redis-cli FLUSHALL")
-        return exit_code == 0 and "OK" in output
+        code, out = self.exec("redis-cli FLUSHALL")
+        return code == 0 and "OK" in out
 
 
 @activity.defn
-async def start_redis_activity(service_name: str) -> bool:
-    try:
-        manager = RedisManager()
-        manager.run()
-        return True
-    except Exception as e:
-        logger.error("Failed to start Redis service: %s", str(e), exc_info=True)
-        return False
+async def start_redis_activity(params: Dict[str, Any]) -> bool:
+    RedisManager().run()
+    return True
 
 
 @activity.defn
-async def stop_redis_activity(service_name: str) -> bool:
-    try:
-        manager = RedisManager()
-        manager.stop(timeout=30)
-        return True
-    except Exception as e:
-        logger.error("Failed to stop Redis service: %s", str(e), exc_info=True)
-        return False
+async def stop_redis_activity(params: Dict[str, Any]) -> bool:
+    RedisManager().stop(timeout=30)
+    return True
 
 
 @activity.defn
-async def restart_redis_activity(service_name: str) -> bool:
-    try:
-        manager = RedisManager()
-        manager.restart()
-        return True
-    except Exception as e:
-        logger.error("Failed to restart Redis service: %s", str(e), exc_info=True)
-        return False
+async def restart_redis_activity(params: Dict[str, Any]) -> bool:
+    RedisManager().restart()
+    return True
 
 
 @activity.defn
-async def delete_redis_activity(service_name: str, force: bool = False) -> bool:
-    try:
-        manager = RedisManager()
-        manager.delete(force=force)
-        return True
-    except Exception as e:
-        logger.error("Failed to delete Redis service: %s", str(e), exc_info=True)
-        return False
+async def delete_redis_activity(params: Dict[str, Any]) -> bool:
+    RedisManager().delete(force=False)
+    return True

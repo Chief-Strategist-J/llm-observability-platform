@@ -1,7 +1,5 @@
-import asyncio
 import subprocess
 import tempfile
-from temporalio import activity
 
 class DiscoveryService:
     def list_containers(self):
@@ -51,33 +49,3 @@ class AgentManager:
         return True
     def reload(self):
         return True
-
-@activity.defn
-async def docker_k8s_watch_activity(poll_interval: int = 5):
-    d = DiscoveryService()
-    while True:
-        yield d.list_containers()
-        await asyncio.sleep(poll_interval)
-
-@activity.defn
-async def register_service_activity(container_info):
-    r = LogSourceRegistry()
-    return r.register(container_info)
-
-@activity.defn
-async def generate_and_validate_config_activity(container_log_paths):
-    c = OtelConfigBuilder()
-    return c.build(container_log_paths)
-
-@activity.defn
-async def push_and_reload_activity(new_config):
-    m = AgentManager()
-    m.push(new_config)
-    m.reload()
-    return True
-
-if __name__ == "__main__":
-    d = DiscoveryService()
-    print(d.list_containers())
-    print(d.detect_container_log_paths())
-    print(d.detect_container_metadata())

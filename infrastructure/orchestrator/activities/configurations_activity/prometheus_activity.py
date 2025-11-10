@@ -1,4 +1,5 @@
 import logging
+from typing import Dict, Any
 from temporalio import activity
 from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
 
@@ -30,7 +31,10 @@ class PrometheusManager(BaseService):
                 "--storage.tsdb.path=/prometheus"
             ],
             healthcheck={
-                "test": ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy || exit 1"],
+                "test": [
+                    "CMD-SHELL",
+                    "wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy || exit 1"
+                ],
                 "interval": 30000000000,
                 "timeout": 10000000000,
                 "retries": 3,
@@ -41,44 +45,24 @@ class PrometheusManager(BaseService):
 
 
 @activity.defn
-async def start_prometheus_activity(service_name: str) -> bool:
-    try:
-        manager = PrometheusManager()
-        manager.run()
-        return True
-    except Exception as e:
-        logger.error("Failed to start Prometheus service: %s", e, exc_info=True)
-        return False
+async def start_prometheus_activity(params: Dict[str, Any]) -> bool:
+    PrometheusManager().run()
+    return True
 
 
 @activity.defn
-async def stop_prometheus_activity(service_name: str) -> bool:
-    try:
-        manager = PrometheusManager()
-        manager.stop(timeout=30)
-        return True
-    except Exception as e:
-        logger.error("Failed to stop Prometheus service: %s", e, exc_info=True)
-        return False
+async def stop_prometheus_activity(params: Dict[str, Any]) -> bool:
+    PrometheusManager().stop(timeout=30)
+    return True
 
 
 @activity.defn
-async def restart_prometheus_activity(service_name: str) -> bool:
-    try:
-        manager = PrometheusManager()
-        manager.restart()
-        return True
-    except Exception as e:
-        logger.error("Failed to restart Prometheus service: %s", e, exc_info=True)
-        return False
+async def restart_prometheus_activity(params: Dict[str, Any]) -> bool:
+    PrometheusManager().restart()
+    return True
 
 
 @activity.defn
-async def delete_prometheus_activity(service_name: str, force: bool = False) -> bool:
-    try:
-        manager = PrometheusManager()
-        manager.delete(force=force)
-        return True
-    except Exception as e:
-        logger.error("Failed to delete Prometheus service: %s", e, exc_info=True)
-        return False
+async def delete_prometheus_activity(params: Dict[str, Any]) -> bool:
+    PrometheusManager().delete(force=False)
+    return True

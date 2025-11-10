@@ -1,21 +1,3 @@
-###############################################################
-# Temporal Local Development - Access Information
-#
-# PostgreSQL:
-#   Host: localhost
-#   Port: 5432
-#   User: temporal
-#   Password: temporal
-#
-# Temporal Server (gRPC):
-#   Host: localhost
-#   Port: 7233
-#
-# Temporal Web UI:
-#   URL: http://localhost:8080
-#
-###############################################################
-
 version: "3.8"
 
 services:
@@ -70,7 +52,9 @@ services:
       - temporal
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+      - TEMPORAL_CORS_ORIGINS=http://localhost:8080,http://127.0.0.1:8080
+      - TEMPORAL_CSRF_ENABLED=true
+
     ports:
       - "8080:8080"
     networks:

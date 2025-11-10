@@ -1,4 +1,5 @@
 import logging
+from typing import Dict, Any
 from temporalio import activity
 from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
 
@@ -34,7 +35,10 @@ class JaegerManager(BaseService):
                 "COLLECTOR_ZIPKIN_HOST_PORT": ":9411",
             },
             healthcheck={
-                "test": ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:16686/ || exit 1"],
+                "test": [
+                    "CMD-SHELL",
+                    "wget --no-verbose --tries=1 --spider http://localhost:16686/ || exit 1"
+                ],
                 "interval": 30000000000,
                 "timeout": 10000000000,
                 "retries": 3,
@@ -44,53 +48,37 @@ class JaegerManager(BaseService):
         super().__init__(config)
 
     def get_services(self) -> str:
-        command = 'wget -qO- "http://localhost:16686/api/services"'
-        exit_code, output = self.exec(command)
-        if exit_code != 0:
-            logger.error("Failed to get services: %s", output)
+        cmd = 'wget -qO- "http://localhost:16686/api/services"'
+        code, out = self.exec(cmd)
+        if code != 0:
+            logger.error("Failed to get services: %s", out)
             return ""
-        return output
+        return out
 
 
 @activity.defn
-async def start_jaeger_activity(service_name: str) -> bool:
-    try:
-        manager = JaegerManager()
-        manager.run()
-        return True
-    except Exception as e:
-        logger.error("Failed to start Jaeger service: %s", e, exc_info=True)
-        return False
+async def start_jaeger_activity(params: Dict[str, Any]) -> bool:
+    manager = JaegerManager()
+    manager.run()
+    return True
 
 
 @activity.defn
-async def stop_jaeger_activity(service_name: str) -> bool:
-    try:
-        manager = JaegerManager()
-        manager.stop(timeout=30)
-        return True
-    except Exception as e:
-        logger.error("Failed to stop Jaeger service: %s", e, exc_info=True)
-        return False
+async def stop_jaeger_activity(params: Dict[str, Any]) -> bool:
+    manager = JaegerManager()
+    manager.stop(timeout=30)
+    return True
 
 
 @activity.defn
-async def restart_jaeger_activity(service_name: str) -> bool:
-    try:
-        manager = JaegerManager()
-        manager.restart()
-        return True
-    except Exception as e:
-        logger.error("Failed to restart Jaeger service: %s", e, exc_info=True)
-        return False
+async def restart_jaeger_activity(params: Dict[str, Any]) -> bool:
+    manager = JaegerManager()
+    manager.restart()
+    return True
 
 
 @activity.defn
-async def delete_jaeger_activity(service_name: str, force: bool = False) -> bool:
-    try:
-        manager = JaegerManager()
-        manager.delete(force=force)
-        return True
-    except Exception as e:
-        logger.error("Failed to delete Jaeger service: %s", e, exc_info=True)
-        return False
+async def delete_jaeger_activity(params: Dict[str, Any]) -> bool:
+    manager = JaegerManager()
+    manager.delete(force=False)
+    return True

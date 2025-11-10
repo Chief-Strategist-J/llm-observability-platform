@@ -1,0 +1,47 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+processors:
+  batch:
+    send_batch_size: 100
+    timeout: 5s
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 128
+  resource:
+    attributes:
+    - key: app
+      value: application-stdout-ingest
+      action: upsert
+    - key: environment
+      value: development
+      action: upsert
+exporters:
+  debug:
+    verbosity: detailed
+  file:
+    path: /home/j/live/dinesh/llm-chatbot-python/infrastructure/infrastructure/orchestrator/dynamicconfig/otel-logs.jsonl
+  loki:
+    endpoint: http://localhost:3100/loki/api/v1/push
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+service:
+  extensions:
+  - health_check
+  pipelines:
+    logs:
+      receivers:
+      - otlp
+      processors:
+      - memory_limiter
+      - resource
+      - batch
+      exporters:
+      - loki
+      - file
+      - debug
