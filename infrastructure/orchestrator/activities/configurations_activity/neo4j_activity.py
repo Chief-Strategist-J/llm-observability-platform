@@ -1,4 +1,5 @@
 import logging
+from typing import Dict, Any
 from temporalio import activity
 from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
 
@@ -38,7 +39,10 @@ class Neo4jManager(BaseService):
                 "NEO4J_dbms_memory_heap_max__size": "512M",
             },
             healthcheck={
-                "test": ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"],
+                "test": [
+                    "CMD-SHELL",
+                    "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"
+                ],
                 "interval": 30000000000,
                 "timeout": 10000000000,
                 "retries": 3,
@@ -48,53 +52,37 @@ class Neo4jManager(BaseService):
         super().__init__(config)
 
     def execute_cypher(self, query: str) -> str:
-        command = f'cypher-shell -u neo4j -p Neo4jPassword123! "{query}"'
-        exit_code, output = self.exec(command)
-        if exit_code != 0:
-            logger.error("Failed to execute Cypher query: %s", output)
+        cmd = f'cypher-shell -u neo4j -p Neo4jPassword123! "{query}"'
+        code, out = self.exec(cmd)
+        if code != 0:
+            logger.error("Failed to execute Cypher query: %s", out)
             return ""
-        return output
+        return out
 
 
 @activity.defn
-async def start_neo4j_activity(service_name: str) -> bool:
-    try:
-        manager = Neo4jManager()
-        manager.run()
-        return True
-    except Exception as e:
-        logger.error("Failed to start Neo4j: %s", e, exc_info=True)
-        return False
+async def start_neo4j_activity(params: Dict[str, Any]) -> bool:
+    manager = Neo4jManager()
+    manager.run()
+    return True
 
 
 @activity.defn
-async def stop_neo4j_activity(service_name: str) -> bool:
-    try:
-        manager = Neo4jManager()
-        manager.stop(timeout=30)
-        return True
-    except Exception as e:
-        logger.error("Failed to stop Neo4j: %s", e, exc_info=True)
-        return False
+async def stop_neo4j_activity(params: Dict[str, Any]) -> bool:
+    manager = Neo4jManager()
+    manager.stop(timeout=30)
+    return True
 
 
 @activity.defn
-async def restart_neo4j_activity(service_name: str) -> bool:
-    try:
-        manager = Neo4jManager()
-        manager.restart()
-        return True
-    except Exception as e:
-        logger.error("Failed to restart Neo4j: %s", e, exc_info=True)
-        return False
+async def restart_neo4j_activity(params: Dict[str, Any]) -> bool:
+    manager = Neo4jManager()
+    manager.restart()
+    return True
 
 
 @activity.defn
-async def delete_neo4j_activity(service_name: str, force: bool = False) -> bool:
-    try:
-        manager = Neo4jManager()
-        manager.delete(force=force)
-        return True
-    except Exception as e:
-        logger.error("Failed to delete Neo4j: %s", e, exc_info=True)
-        return False
+async def delete_neo4j_activity(params: Dict[str, Any]) -> bool:
+    manager = Neo4jManager()
+    manager.delete(force=False)
+    return True

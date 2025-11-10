@@ -1,3 +1,4 @@
+# infrastructure/orchestrator/workers/logs_pipeline_worker.py
 from __future__ import annotations
 
 import asyncio
@@ -6,7 +7,8 @@ import sys
 from pathlib import Path
 
 project_root = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(project_root))
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 from infrastructure.orchestrator.base.base_worker import BaseWorker, WorkerConfig
 
@@ -23,7 +25,8 @@ class LogsPipelineWorker(BaseWorker):
     @property
     def workflows(self):
         from infrastructure.orchestrator.workflows.logs_pipeline_workflow import LogsPipelineWorkflow
-        return [LogsPipelineWorkflow]
+        from infrastructure.orchestrator.workflows.application_stdout_ingest_workflow import ApplicationStdoutIngestWorkflow
+        return [LogsPipelineWorkflow, ApplicationStdoutIngestWorkflow]
 
     @property
     def activities(self):
@@ -67,6 +70,18 @@ class LogsPipelineWorker(BaseWorker):
             start_kafka_activity, stop_kafka_activity,
             restart_kafka_activity, delete_kafka_activity,
         )
+        from infrastructure.observability_platform.ingest.application_stdout.activities.discover_log_files_activity import (
+            discover_log_files_activity,
+        )
+        from infrastructure.observability_platform.ingest.application_stdout.activities.label_enrichment_activity import (
+            label_enrichment_activity,
+        )
+        from infrastructure.observability_platform.ingest.application_stdout.activities.tail_and_ship_logs_activity import (
+            tail_and_ship_logs_activity,
+        )
+        from infrastructure.observability_platform.ingest.application_stdout.activities.application_stdout_configure_activity import (
+            application_stdout_configure_activity,
+        )
 
         return [
             start_loki_activity, stop_loki_activity,
@@ -89,6 +104,10 @@ class LogsPipelineWorker(BaseWorker):
             restart_redis_activity, delete_redis_activity,
             start_kafka_activity, stop_kafka_activity,
             restart_kafka_activity, delete_kafka_activity,
+            discover_log_files_activity,
+            label_enrichment_activity,
+            tail_and_ship_logs_activity,
+            application_stdout_configure_activity,
         ]
 
 

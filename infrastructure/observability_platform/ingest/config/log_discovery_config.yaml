@@ -1,0 +1,25 @@
+version: 1
+discovery:
+  search_paths:
+  - /var/log
+  include_patterns:
+  - '*.log'
+  - '*.out'
+  - '*.txt'
+  exclude_patterns:
+  - '*.gz'
+  - '*.zip'
+  recursive: true
+  follow_symlinks: false
+labels:
+  environment: development
+  source: application_stdout
+  app: application-stdout-ingest
+batch:
+  enabled: true
+  size: 200
+  flush_interval_seconds: 5
+ship:
+  protocol: loki
+  endpoint: http://localhost:3100
+  timeout_seconds: 10

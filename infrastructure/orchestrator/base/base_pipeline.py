@@ -4,7 +4,7 @@ import time
 import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
 
 if __name__ == "__main__":
     project_root = Path(__file__).parent.parent.parent.parent.parent
@@ -31,12 +31,15 @@ class WorkflowConfig:
         task_queue: Optional[str] = None,
         temporal_host: Optional[str] = None,
         web_ui_url: Optional[str] = None,
+        params: Optional[Dict[str, Any]] = None,
     ):
         self.service_name = service_name or self.DEFAULT_SERVICE_NAME
         self.workflow_name = workflow_name or self.DEFAULT_WORKFLOW_NAME
         self.task_queue = task_queue or self.DEFAULT_TASK_QUEUE
         self.temporal_host = temporal_host or self.DEFAULT_TEMPORAL_HOST
         self.web_ui_url = web_ui_url or self.DEFAULT_WEB_UI_URL
+
+        self.params = params or {"service_name": self.service_name}
 
 
 class PipelineBase(ABC):
@@ -65,9 +68,10 @@ class PipelineExecutor(PipelineBase):
                 f"{int(time.time())}"
             )
 
+            # WE ALWAYS PASS ONE SINGLE PARAM: params dict
             result = await client.start_workflow(
                 self.config.workflow_name,
-                self.config.service_name,
+                self.config.params,
                 id=workflow_id,
                 task_queue=self.config.task_queue,
             )

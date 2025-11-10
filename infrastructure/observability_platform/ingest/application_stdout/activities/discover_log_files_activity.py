@@ -1,35 +1,13 @@
-import pathlib
-from typing import List, Optional
-import logging
 from temporalio import activity
+from infrastructure.observability_platform.ingest.application_stdout.model.config_model import FileConfigStore
+from infrastructure.observability_platform.ingest.application_stdout.service.log_discovery_service import LocalLogDiscoveryService
 
-logger = logging.getLogger(__name__)
+CONFIG_PATH = "infrastructure/observability_platform/ingest/config/log_discovery_config.yaml"
 
-class FileDiscoveryManager:
-    def __init__(self, search_paths: List[str], include_patterns: Optional[List[str]] = None):
-        self.search_paths = search_paths
-        self.include_patterns = include_patterns or ["*.log", "*.out", "*.txt"]
-
-    def discover(self) -> List[str]:
-        files = []
-        for base_path in self.search_paths:
-            p = pathlib.Path(base_path)
-            if not p.exists():
-                continue
-            for pattern in self.include_patterns:
-                for match in p.rglob(pattern):
-                    if match.is_file():
-                        files.append(str(match.resolve()))
-        return files
 
 @activity.defn
-async def discover_log_files_activity(
-    search_paths: List[str],
-    include_patterns: Optional[List[str]] = None
-) -> List[str]:
-    return FileDiscoveryManager(search_paths, include_patterns).discover()
-
-if __name__ == "__main__":
-    manager = FileDiscoveryManager(["./logs", "/var/log"], ["*.log"])
-    result = manager.discover()
-    print(result)
+async def discover_log_files_activity(params: dict) -> list:
+    store = FileConfigStore(CONFIG_PATH)
+    config = store.ensure_exists()
+    service = LocalLogDiscoveryService(config)
+    return service.discover()

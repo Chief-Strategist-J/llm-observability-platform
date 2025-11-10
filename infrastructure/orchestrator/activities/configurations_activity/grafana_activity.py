@@ -1,4 +1,5 @@
 import logging
+from typing import Dict, Any
 from temporalio import activity
 from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
 
@@ -55,44 +56,28 @@ class GrafanaManager(BaseService):
 
 
 @activity.defn
-async def start_grafana_activity(service_name: str) -> bool:
-    try:
-        manager = GrafanaManager()
-        manager.run()
-        return True
-    except Exception as e:
-        logger.error("Failed to start Grafana service: %s", e, exc_info=True)
-        return False
+async def start_grafana_activity(params: Dict[str, Any]) -> bool:
+    manager = GrafanaManager()
+    manager.run()
+    return True
 
 
 @activity.defn
-async def stop_grafana_activity(service_name: str) -> bool:
-    try:
-        manager = GrafanaManager()
-        manager.stop(timeout=30)
-        return True
-    except Exception as e:
-        logger.error("Failed to stop Grafana service: %s", e, exc_info=True)
-        return False
+async def stop_grafana_activity(params: Dict[str, Any]) -> bool:
+    manager = GrafanaManager()
+    manager.stop(timeout=30)
+    return True
 
 
 @activity.defn
-async def restart_grafana_activity(service_name: str) -> bool:
-    try:
-        manager = GrafanaManager()
-        manager.restart()
-        return True
-    except Exception as e:
-        logger.error("Failed to restart Grafana service: %s", e, exc_info=True)
-        return False
+async def restart_grafana_activity(params: Dict[str, Any]) -> bool:
+    manager = GrafanaManager()
+    manager.restart()
+    return True
 
 
 @activity.defn
-async def delete_grafana_activity(service_name: str, force: bool = False) -> bool:
-    try:
-        manager = GrafanaManager()
-        manager.delete(force=force)
-        return True
-    except Exception as e:
-        logger.error("Failed to delete Grafana service: %s", e, exc_info=True)
-        return False
+async def delete_grafana_activity(params: Dict[str, Any]) -> bool:
+    manager = GrafanaManager()
+    manager.delete(force=False)
+    return True

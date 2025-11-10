@@ -1,101 +1,41 @@
-import asyncio
-from typing import List, Dict, Callable
+import logging
+from typing import Dict, Any, List, Optional
 from temporalio import activity
+from infrastructure.observability_platform.ingest.application_stdout.model.config_model import FileConfigStore
 
-class FileTailManager:
-    def __init__(self, paths: List[str], on_line: Callable[[str, str], None]):
-        self.paths = paths
-        self.on_line = on_line
-        self.tasks = []
+logger = logging.getLogger(__name__)
 
-    async def tail_file(self, path: str):
-        f = open(path, "r")
-        f.seek(0, 2)
-        while True:
-            line = f.readline()
-            if not line:
-                await asyncio.sleep(0.2)
-                continue
-            self.on_line(path, line.rstrip("\n"))
+CONFIG_PATH = "infrastructure/observability_platform/ingest/config/log_discovery_config.yaml"
 
-    async def run(self):
-        for p in self.paths:
-            self.tasks.append(asyncio.create_task(self.tail_file(p)))
-        await asyncio.gather(*self.tasks)
 
-class LabelEnrichmentManager:
-    def __init__(self, labels: Dict[str, str]):
-        self.labels = labels
+class DefaultLabelEnricher:
+    def __init__(self):
+        self.store = FileConfigStore(CONFIG_PATH)
 
-    def apply(self, records: List[Dict[str, str]]) -> List[Dict[str, str]]:
-        out = []
-        for r in records:
-            x = dict(r)
-            x["labels"] = dict(self.labels)
-            out.append(x)
-        return out
+    def _resolve_labels(self, labels: Optional[Dict[str, str]]) -> Dict[str, str]:
+        if labels is not None:
+            return dict(labels)
+        cfg = self.store.load()
+        return dict(getattr(cfg.labels, "values", {}))
 
-class BatchManager:
-    def __init__(self, size: int):
-        self.size = size
-        self.buffer = []
+    def enrich(self, files: List[str], labels: Optional[Dict[str, str]]) -> List[Dict[str, Any]]:
+        resolved = self._resolve_labels(labels)
+        return [{"path": p, "labels": resolved} for p in files]
 
-    def add(self, rec: Dict[str, str]) -> List[List[Dict[str, str]]]:
-        batches = []
-        self.buffer.append(rec)
-        if len(self.buffer) >= self.size:
-            batches.append(self.buffer)
-            self.buffer = []
-        return batches
-
-class OtlpFormatManager:
-    def convert(self, batch: List[Dict[str, str]]) -> List[Dict]:
-        out = []
-        for r in batch:
-            out.append({
-                "resource": {"file.path": r["path"]},
-                "attributes": r["labels"],
-                "body": r["line"]
-            })
-        return out
 
 @activity.defn
-async def tail_label_batch_otlp_activity(paths: List[str], labels: Dict[str, str], batch_size: int) -> None:
-    queue = asyncio.Queue()
-    def handle(path: str, line: str):
-        queue.put_nowait({"path": path, "line": line})
-    tail = FileTailManager(paths, handle)
-    enrich = LabelEnrichmentManager(labels)
-    batcher = BatchManager(batch_size)
-    otlp = OtlpFormatManager()
-    async def consumer():
-        while True:
-            rec = await queue.get()
-            batches = batcher.add(rec)
-            for b in batches:
-                enriched = enrich.apply(b)
-                formatted = otlp.convert(enriched)
-                for item in formatted:
-                    print(item)
-    await asyncio.gather(tail.run(), consumer())
+async def label_enrichment_activity(params: dict) -> List[Dict[str, Any]]:
+    logger.info("label_enrichment_activity start")
 
-if __name__ == "__main__":
-    async def main():
-        q = asyncio.Queue()
-        def h(p,l):
-            q.put_nowait({"path": p, "line": l})
-        tail = FileTailManager(["./logs/app.log"], h)
-        enrich = LabelEnrichmentManager({"env": "dev", "app": "demo"})
-        batcher = BatchManager(3)
-        otlp = OtlpFormatManager()
-        async def c():
-            while True:
-                r = await q.get()
-                bs = batcher.add(r)
-                for b in bs:
-                    e = enrich.apply(b)
-                    f = otlp.convert(e)
-                    for item in f:
-                        print(item)
-        await asyncio.gather(tail.run(), c())
-    asyncio.run(main())
+    files = params.get("files")
+    labels = params.get("labels")
+
+    if not isinstance(files, list) or any(not isinstance(x, str) for x in files):
+        logger.error("files must be List[str]")
+        raise ValueError("files must be List[str]")
+
+    enricher = DefaultLabelEnricher()
+    enriched = enricher.enrich(files, labels)
+
+    logger.info("label_enrichment_activity done count=%d", len(enriched))
+    return enriched
