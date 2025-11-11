@@ -43,9 +43,14 @@ INGEST
 │         - batch_processor(size, timeout)
 │         - loki_exporter(endpoint)
 │   ACTIVITIES (atomic):
-│     - discover_log_files_activity
-│     - tail_and_ship_logs_activity
-│     - label_enrichment_activity
+│     - application_stdout_configure_activity.py  # Handles configuration initialization and validation
+│     - discover_log_files_activity.py           # Discovers and registers log files for monitoring
+│     - tail_and_ship_logs_activity.py           # Tails log files and forwards them to Loki
+│     - label_enrichment_activity.py             # Adds contextual labels to log entries
+│   SERVICES:
+│     - log_discovery_service.py                 # Core service for discovering and managing log sources
+│   MODELS:
+│     - config_model.py                          # Defines data models for configuration management
 │
 ├─ container_logs (k8s/docker auto-discovery) [P0]
 │   USE:
