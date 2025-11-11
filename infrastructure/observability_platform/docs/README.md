@@ -49,11 +49,18 @@ INGEST
 │     - label_enrichment_activity.py             # Adds contextual labels to log entries
 │     - add_loki_datasource_activity.py          # Automatically configures Loki datasource in Grafana
 │   SERVICES:
-│     - log_discovery_service.py                 # Core service for discovering and managing log sources
+│     - log_discovery_service.py                 # Discovers log files based on configured patterns and paths
+│         • LocalLogDiscoveryService: Handles local filesystem log discovery
+│         • Supports recursive search and pattern matching
+│         • Excludes files based on exclude patterns
 │   API CLIENTS:
 │     - grafana_client.py                        # Client for interacting with Grafana API (datasource management)
 │   MODELS:
 │     - config_model.py                          # Defines data models for configuration management
+│         • LogDiscoveryConfig: Main configuration container
+│         • Handles config validation and serialization
+│         • Supports YAML config file operations
+│         • Manages default values and config merging
 │
 ├─ container_logs (k8s/docker auto-discovery) [P0]
 │   USE:
