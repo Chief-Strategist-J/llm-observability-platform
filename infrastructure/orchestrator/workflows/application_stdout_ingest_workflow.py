@@ -22,6 +22,14 @@ class ApplicationStdoutIngestWorkflow(BaseWorkflow):
         if not conf:
             return "configuration failed"
 
+        await workflow.execute_activity(
+            "add_loki_datasource_activity",
+            params,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=rp,
+        )
+
+
         await workflow.sleep(5)
 
         discovered = await workflow.execute_activity(

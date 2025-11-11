@@ -5,6 +5,8 @@ import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional, Dict, Any
+from typing import List
+
 
 if __name__ == "__main__":
     project_root = Path(__file__).parent.parent.parent.parent.parent
@@ -121,3 +123,31 @@ class PipelineExecutor(PipelineBase):
             "ts": int(time.time())
         }))
         sys.exit(1)
+
+
+class ChainedPipelineExecutor:
+    def __init__(self, workflows: List[WorkflowConfig]):
+        self.workflows = workflows
+
+    async def run(self) -> Optional[str]:
+        if not self.workflows:
+            return None
+
+        client = await Client.connect(self.workflows[0].temporal_host)
+        result = None
+
+        for config in self.workflows:
+            workflow_id = f"{config.service_name.replace('-', '_')}_{int(time.time())}"
+
+            handle = await client.start_workflow(
+                config.workflow_name,
+                config.params,
+                id=workflow_id,
+                task_queue=config.task_queue,
+            )
+
+            logger.info(f"[CHAIN] Started workflow: {workflow_id}")
+            result = await handle.result()
+            logger.info(f"[CHAIN] Completed workflow: {workflow_id} result={result}")
+
+        return result
