@@ -47,8 +47,11 @@ INGEST
 │     - discover_log_files_activity.py           # Discovers and registers log files for monitoring
 │     - tail_and_ship_logs_activity.py           # Tails log files and forwards them to Loki
 │     - label_enrichment_activity.py             # Adds contextual labels to log entries
+│     - add_loki_datasource_activity.py          # Automatically configures Loki datasource in Grafana
 │   SERVICES:
 │     - log_discovery_service.py                 # Core service for discovering and managing log sources
+│   API CLIENTS:
+│     - grafana_client.py                        # Client for interacting with Grafana API (datasource management)
 │   MODELS:
 │     - config_model.py                          # Defines data models for configuration management
 │
