@@ -85,6 +85,9 @@ class LogsPipelineWorker(BaseWorker):
         from infrastructure.observability_platform.ingest.application_stdout.activities.add_loki_datasource_activity import (
             add_loki_datasource_activity,
         )
+        from infrastructure.observability_platform.ingest.application_stdout.activities.discover_docker_logs_activity import (
+            discover_docker_logs_activity,
+        )
 
         return [
             start_loki_activity, stop_loki_activity,
@@ -112,6 +115,7 @@ class LogsPipelineWorker(BaseWorker):
             tail_and_ship_logs_activity,
             application_stdout_configure_activity,
             add_loki_datasource_activity,
+            discover_docker_logs_activity
         ]
 
 

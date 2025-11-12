@@ -29,15 +29,23 @@ class ApplicationStdoutIngestWorkflow(BaseWorkflow):
             retry_policy=rp,
         )
 
-
         await workflow.sleep(5)
 
-        discovered = await workflow.execute_activity(
+        local_logs = await workflow.execute_activity(
             "discover_log_files_activity",
             conf,
             start_to_close_timeout=t,
             retry_policy=rp,
         )
+
+        docker_logs = await workflow.execute_activity(
+            "discover_docker_logs_activity",
+            conf,
+            start_to_close_timeout=t,
+            retry_policy=rp,
+        )
+
+        discovered = sorted(set(local_logs + docker_logs))
 
         enriched = await workflow.execute_activity(
             "label_enrichment_activity",
