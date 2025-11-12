@@ -1,0 +1,10 @@
+generated_at_utc: '2025-11-11T15:57:36.465966Z'
+generated_by: docker.log.discovery
+discovered_docker_logs:
+- infrastructure/observability_platform/ingest/config/docker-logs/grafana-development-f331ea57abe8.log
+- infrastructure/observability_platform/ingest/config/docker-logs/loki-development-364831e9b001.log
+- infrastructure/observability_platform/ingest/config/docker-logs/opentelemetry-collector-development-4a7299395e04.log
+- infrastructure/observability_platform/ingest/config/docker-logs/temporal-9debfe09a934.log
+- infrastructure/observability_platform/ingest/config/docker-logs/temporal-admin-tools-6864fab284aa.log
+- infrastructure/observability_platform/ingest/config/docker-logs/temporal-postgresql-d142e6e6f866.log
+- infrastructure/observability_platform/ingest/config/docker-logs/temporal-ui-e1ad28fc932d.log
