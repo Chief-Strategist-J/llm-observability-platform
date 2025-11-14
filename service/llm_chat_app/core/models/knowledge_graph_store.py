@@ -26,24 +26,38 @@ def _host_resolves(uri: Optional[str]) -> bool:
     if not uri:
         logger.debug("event=host_resolve_check result=empty_uri")
         return False
+
     try:
-        if uri.startswith("bolt://") or uri.startswith("neo4j://") or uri.startswith("neo4j+s://"):
+        # Extract host from the URI safely
+        if uri.startswith(("bolt://", "neo4j://", "neo4j+s://")):
             if uri.startswith("bolt://"):
                 hostport = uri[len("bolt://"):]
             elif uri.startswith("neo4j://"):
                 hostport = uri[len("neo4j://"):]
             elif uri.startswith("neo4j+s://"):
                 hostport = uri[len("neo4j+s://"):]
-            else:
-                hostport = uri
             host = hostport.split(":")[0]
         else:
             host = uri.split(":")[0]
-        socket.getaddrinfo(host, None)
-        logger.debug("event=host_resolve_success host=%s", host)
-        return True
+
+        # IMPORTANT FIX:
+        # Use a TCP socket connection attempt instead of DNS resolution.
+        # This works inside Docker networks and host machines.
+        import socket
+        s = socket.socket()
+        s.settimeout(1)
+
+        try:
+            s.connect((host, 7687))  # Try Neo4j bolt port directly
+            logger.debug("event=host_resolve_success host=%s", host)
+            s.close()
+            return True
+        except Exception as e:
+            logger.debug("event=host_resolve_failed host=%s err=%s", host, str(e))
+            return False
+
     except Exception as e:
-        logger.debug("event=host_resolve_failed uri=%s error=%s", uri, str(e)[:50])
+        logger.debug("event=host_resolve_exception uri=%s error=%s", uri, str(e))
         return False
 
 def _extract_entities_and_topics(prompt: str, response: str, model: str) -> Dict[str, Any]:
