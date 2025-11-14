@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from core.client.ai_client import get_ai_response
-from core.models.graph_store import store_conversation, get_user_conversations
+from core.models.knowledge_graph_store import store_conversation_as_knowledge_graph, get_conversation_context
 from core.services.category_service import get_categories_and_models, get_models_for_category, get_default_model_for_category
 
 logging.basicConfig(
@@ -113,18 +113,21 @@ if st.sidebar.button("🗑️ Reset Chat"):
     st.rerun()
 
 if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "text": "How can I help you?"}]
+    st.session_state.messages = []
     st.session_state._loaded_user = None
 
 if st.session_state.get("_loaded_user") != user_name:
     logger.info("event=app_loading_history user=%s", user_name)
-    conv = get_user_conversations(user_name, limit=200)
+    conv = get_conversation_context(user_name, limit=200)
     if conv:
         st.session_state.messages = conv
         logger.info("event=app_history_loaded user=%s count=%s", user_name, len(conv))
     else:
-        st.session_state.messages = [{"role": "assistant", "text": "How can I help you?"}]
+        st.session_state.messages = []
     st.session_state._loaded_user = user_name
+
+if not st.session_state.messages:
+    st.session_state.messages.append({"role": "assistant", "text": "How can I help you?"})
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
@@ -139,8 +142,13 @@ if prompt:
     start = time.time()
     logger.info("event=app_chat_request model=%s user=%s category=%s prompt_len=%s", model_choice, user_name, selected_category, len(prompt))
 
+    conversation_history = []
+    for msg in st.session_state.messages[:-1]:
+        role = "assistant" if msg["role"] == "assistant" else "user"
+        conversation_history.append({"role": role, "content": msg["text"]})
+
     with st.spinner(f"Generating response with {model_choice}..."):
-        res = get_ai_response(prompt, model_choice)
+        res = get_ai_response(prompt, model_choice, conversation_history=conversation_history)
     
     bot_text = res.get("text", "")
     success = res.get("success", False)
@@ -154,7 +162,7 @@ if prompt:
     st.session_state.messages.append({"role": "assistant", "text": bot_text})
 
     try:
-        store_conversation(user_name, prompt, bot_text, model=model_choice, version="latest")
+        store_conversation_as_knowledge_graph(user_name, prompt, bot_text, model=model_choice, version="latest")
         logger.info("event=app_conversation_saved user=%s model=%s", user_name, model_choice)
     except Exception as e:
         logger.error("event=app_conversation_save_failed user=%s model=%s error=%s", user_name, model_choice, str(e))

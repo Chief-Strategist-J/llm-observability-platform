@@ -44,8 +44,14 @@ def fetch_models_from_api(force_refresh: bool = False) -> List[Dict[str, Any]]:
             return []
         
         models = []
+        deprecated_count = 0
         for item in result:
             if not isinstance(item, dict):
+                continue
+            
+            properties = item.get("properties", [])
+            if isinstance(properties, list) and any(p.get("property_id") == "deprecated" for p in properties if isinstance(p, dict)):
+                deprecated_count += 1
                 continue
             
             model_name = item.get("name") or item.get("id")
@@ -58,11 +64,11 @@ def fetch_models_from_api(force_refresh: bool = False) -> List[Dict[str, Any]]:
                     "id": item.get("id"),
                     "task": task_name or "Unknown",
                     "description": item.get("description", ""),
-                    "properties": item.get("properties", [])
+                    "properties": properties
                 })
         
         _MODELS_CACHE = models
-        logger.info("event=models_fetch_success count=%s", len(models))
+        logger.info("event=models_fetch_success count=%s deprecated_filtered=%s", len(models), deprecated_count)
         return models
         
     except requests.exceptions.Timeout:
@@ -79,16 +85,19 @@ def run_model(model_name: str, prompt: str, params: Optional[Dict[str, Any]] = N
     
     url = f"{_BASE_URL}/accounts/{CLOUDFLARE_ACCOUNT_ID}/ai/run/{model_name}"
     
-    payload = {
-        "messages": [
-            {"role": "user", "content": prompt}
-        ]
-    }
+    if params and "messages" in params:
+        payload = params
+    else:
+        payload = {
+            "messages": [
+                {"role": "user", "content": prompt}
+            ]
+        }
     
-    if params:
+    if params and "messages" not in params:
         payload.update(params)
     
-    logger.info("event=run_model_start model=%s url=%s", model_name, url)
+    logger.info("event=run_model_start model=%s url=%s messages_count=%s", model_name, url, len(payload.get("messages", [])))
     
     try:
         resp = requests.post(url, json=payload, headers=_get_headers(), timeout=timeout)
@@ -99,11 +108,17 @@ def run_model(model_name: str, prompt: str, params: Optional[Dict[str, Any]] = N
             body = {"raw_text": resp.text}
         
         if not resp.ok:
+            error_msg = "Unknown error"
+            if isinstance(body, dict):
+                errors = body.get("errors", [])
+                if isinstance(errors, list) and len(errors) > 0:
+                    error_msg = errors[0].get("message", error_msg)
+            
             logger.error("event=run_model_failed model=%s status=%s body=%s", model_name, resp.status_code, body)
             return {
                 "success": False,
                 "status_code": resp.status_code,
-                "error": body.get("errors", [{}])[0].get("message", "Unknown error") if isinstance(body, dict) else "API error",
+                "error": error_msg,
                 "body": body
             }
         
