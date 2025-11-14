@@ -1,3 +1,7 @@
+from pathlib import Path as _Path
+from dotenv import load_dotenv as _load_dotenv
+_load_dotenv(_Path(__file__).resolve().parents[2] / ".env.llm_chat_app", override=True)
+
 import os
 import logging
 from pathlib import Path
@@ -37,7 +41,6 @@ class ChatManager(BaseService):
     def _resolve_context(self, path: str) -> Path:
         p = Path(path)
         if not p.is_absolute():
-            # Find the repository root by walking up until we detect a marker.
             cur = Path(__file__).resolve().parent
             markers = ("service", "pyproject.toml", "setup.py", ".git")
             for _ in range(10):
@@ -128,7 +131,6 @@ async def run_chat_container_activity(params: Dict[str, Any]) -> bool:
     name = _manager_name_from_params(params)
     manager = ChatManager(image=image, name=name)
     try:
-        # Check local image exists before trying to start; if missing and no Dockerfile, fail fast.
         try:
             import docker
             client = docker.from_env()
@@ -140,7 +142,6 @@ async def run_chat_container_activity(params: Dict[str, Any]) -> bool:
                     logger.error("run_chat_container_activity: image %s not found locally and no Dockerfile present. Will not attempt to pull. Set LLM_CHAT_SKIP_DOCKER=true if you don't want docker operations.", image)
                     return False
         except Exception:
-            # if docker client is not available, proceed to manager.run() which will fail in controlled way.
             pass
         manager.run()
         logger.info("run_chat_container_activity success name=%s image=%s", manager.config.name, manager.config.image)
@@ -234,22 +235,54 @@ async def delete_neo4j_dependency_activity(params: Dict[str, Any]) -> bool:
 
 @activity.defn
 async def verify_cloudflare_dependency_activity(params: Dict[str, Any]) -> bool:
+    logger.info("event=start_verification params=%s", params)
+
     if LLM_CHAT_SKIP_CLOUDFLARE:
-        logger.info("verify_cloudflare_dependency_activity: skipped because LLM_CHAT_SKIP_CLOUDFLARE=%s", os.environ.get("LLM_CHAT_SKIP_CLOUDFLARE"))
+        logger.info("event=skip_verification reason=flag_enabled")
         return True
-    url = params.get("cloudflare_url") or os.environ.get("CLOUDFLARE_AI_URL") or os.environ.get("CLOUDFLARE_AI_BASE")
-    token = params.get("cloudflare_token") or os.environ.get("CLOUDFLARE_API_TOKEN")
+
+    url = (
+        params.get("cloudflare_url")
+        or os.environ.get("CLOUDFLARE_AI_URL")
+        or os.environ.get("CLOUDFLARE_AI_BASE")
+    )
+
+    token = (
+        params.get("cloudflare_token")
+        or os.environ.get("CLOUDFLARE_API_TOKEN")
+    )
+
+    logger.info("event=env_loaded url=%s token_present=%s", url, bool(token))
+
+    if url and "/ai/run" in url and "@cf/" not in url:
+        if not url.endswith("/"):
+            url = url + "/"
+        url = url + "@cf/meta/llama-3.1-8b-instruct"
+        logger.info("event=url_normalized model_url=%s", url)
+
     if not url or not token:
-        logger.error("verify_cloudflare_dependency_activity missing_url_or_token; set CLOUDFLARE_API_TOKEN in your env or set LLM_CHAT_SKIP_CLOUDFLARE=true to skip")
+        logger.error("event=missing_fields url=%s token=%s", url, token)
         return False
+
+    verify_url = "https://api.cloudflare.com/client/v4/user/tokens/verify"
+    headers = {"Authorization": f"Bearer {token}"}
+
     try:
-        headers = {"Authorization": f"Bearer {token}"}
-        resp = requests.head(url, headers=headers, timeout=10)
-        logger.info("verify_cloudflare_dependency_activity status=%s url=%s", resp.status_code, url)
-        return resp.status_code < 400
+        resp1 = requests.get(verify_url, headers=headers, timeout=10)
+        logger.info("event=token_verify status=%s", resp1.status_code)
+
+        payload = {"prompt": "hello"}
+        resp2 = requests.post(url, headers=headers, json=payload, timeout=10)
+        logger.info("event=model_test status=%s", resp2.status_code)
+
+        ok = resp1.status_code < 400 and resp2.status_code < 400
+        logger.info("event=verification_done success=%s", ok)
+        return ok
+
     except Exception as e:
-        logger.exception("verify_cloudflare_dependency_activity failed url=%s error=%s", url, e)
+        logger.exception("event=verification_exception url=%s error=%s", url, e)
         return False
+
 
 @activity.defn
 async def check_chat_health_activity(params: Dict[str, Any]) -> bool:

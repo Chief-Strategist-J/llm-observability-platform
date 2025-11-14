@@ -1,8 +1,0 @@
-models:
-  - name: cloudflare-gpt
-    version: "1.0"
-    backend: cloudflare
-    endpoint: ""
-    defaults:
-      temperature: 0.2
-      max_tokens: 512
