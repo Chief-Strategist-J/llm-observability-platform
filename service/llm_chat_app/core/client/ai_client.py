@@ -1,10 +1,10 @@
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 from core.client.cloudflare_client import run_model
 
 logger = logging.getLogger(__name__)
 
-def get_ai_response(prompt: str, model: str, timeout: int = 30) -> Dict[str, Any]:
+def get_ai_response(prompt: str, model: str, conversation_history: Optional[List[Dict[str, str]]] = None, timeout: int = 30) -> Dict[str, Any]:
     if not prompt or not prompt.strip():
         logger.error("event=ai_response_empty_prompt model=%s", model)
         return {
@@ -21,9 +21,14 @@ def get_ai_response(prompt: str, model: str, timeout: int = 30) -> Dict[str, Any
             "success": False
         }
     
-    logger.info("event=ai_response_start model=%s prompt_len=%s", model, len(prompt))
+    logger.info("event=ai_response_start model=%s prompt_len=%s history_len=%s", model, len(prompt), len(conversation_history) if conversation_history else 0)
     
-    result = run_model(model, prompt, timeout=timeout)
+    params = None
+    if conversation_history and len(conversation_history) > 0:
+        messages = conversation_history + [{"role": "user", "content": prompt}]
+        params = {"messages": messages}
+    
+    result = run_model(model, prompt, params=params, timeout=timeout)
     
     if not result.get("success"):
         error_msg = result.get("error", "Unknown error")
@@ -41,13 +46,22 @@ def get_ai_response(prompt: str, model: str, timeout: int = 30) -> Dict[str, Any
     if isinstance(body, dict):
         result_data = body.get("result", {})
         if isinstance(result_data, dict):
-            response_text = (
-                result_data.get("response") or 
-                result_data.get("content") or 
-                result_data.get("output") or 
-                result_data.get("text") or
-                ""
-            )
+            choices = result_data.get("choices", [])
+            if isinstance(choices, list) and len(choices) > 0:
+                first_choice = choices[0]
+                if isinstance(first_choice, dict):
+                    message = first_choice.get("message", {})
+                    if isinstance(message, dict):
+                        response_text = message.get("content", "")
+            
+            if not response_text:
+                response_text = (
+                    result_data.get("response") or 
+                    result_data.get("content") or 
+                    result_data.get("output") or 
+                    result_data.get("text") or
+                    ""
+                )
         elif isinstance(result_data, str):
             response_text = result_data
     
