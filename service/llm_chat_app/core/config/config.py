@@ -1,50 +1,28 @@
-# core/config/config.py
 import os
+import logging
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+logger = logging.getLogger(__name__)
 
-NEO4J_URI = os.getenv("NEO4J_URI", "bolt://neo4j:7687")
-NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
+_env_path = Path(__file__).resolve().parents[2] / ".env.llm_chat_app"
+load_dotenv(_env_path, override=True)
+logger.info("event=config_loaded path=%s exists=%s", str(_env_path), _env_path.exists())
 
-CLOUDFLARE_ACCOUNT_ID = os.getenv(
-    "CLOUDFLARE_ACCOUNT_ID",
-    "718e73ec2e4dc0f92912bdeba7977bf2"
-)
+NEO4J_URI = os.getenv("NEO4J_URI")
+NEO4J_USER = os.getenv("NEO4J_USER")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 
-CLOUDFLARE_API_TOKEN = os.getenv(
-    "CLOUDFLARE_API_TOKEN",
-    "1R_3h3AQpV_DGQihx8p7HkGQELLHja6AQD77oqZe"
-)
+CLOUDFLARE_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
+CLOUDFLARE_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN")
 
-CLOUDFLARE_AI_BASE = os.getenv(
-    "CLOUDFLARE_AI_BASE",
-    f"https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/ai/run"
-)
+DEFAULT_IMAGE_TAG = os.getenv("DEFAULT_IMAGE_TAG")
+DEFAULT_CONTAINER_NAME = os.getenv("DEFAULT_CONTAINER_NAME")
 
-DEFAULT_IMAGE_TAG = os.getenv("DEFAULT_IMAGE_TAG", "llm_chat_app:latest")
-DEFAULT_CONTAINER_NAME = os.getenv("DEFAULT_CONTAINER_NAME", "llm-chat-app")
+TEMPORAL_HOST = os.getenv("TEMPORAL_HOST")
+TEMPORAL_TASK_QUEUE = os.getenv("TEMPORAL_TASK_QUEUE")
 
-TEMPORAL_HOST = os.getenv("TEMPORAL_HOST", "localhost:7233")
-TEMPORAL_TASK_QUEUE = os.getenv("TEMPORAL_TASK_QUEUE", "chat-service-queue")
-
-MODEL_REGISTRY = [
-    {
-        "name": "cloudflare-gpt",
-        "version": "1.0",
-        "backend": "cloudflare",
-        "endpoint": "",
-        "defaults": {
-            "temperature": 0.2,
-            "max_tokens": 512
-        }
-    }
-]
-
-
-def get_model_entry(name: str):
-    for m in MODEL_REGISTRY:
-        if m.get("name") == name:
-            return m
-    return None
+if not CLOUDFLARE_ACCOUNT_ID or not CLOUDFLARE_API_TOKEN:
+    logger.error("event=config_missing_cloudflare account_id=%s token=%s", bool(CLOUDFLARE_ACCOUNT_ID), bool(CLOUDFLARE_API_TOKEN))
+else:
+    logger.info("event=config_cloudflare_ok account_id_len=%s", len(CLOUDFLARE_ACCOUNT_ID))
