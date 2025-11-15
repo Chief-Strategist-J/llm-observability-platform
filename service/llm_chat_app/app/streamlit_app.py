@@ -148,13 +148,24 @@ if prompt:
         conversation_history.append({"role": role, "content": msg["text"]})
 
     with st.spinner(f"Generating response with {model_choice}..."):
-        res = get_ai_response(prompt, model_choice, conversation_history=conversation_history)
+        res = get_ai_response(prompt, model_choice, conversation_history=conversation_history, enable_deep_analysis=True)
     
     bot_text = res.get("text", "")
     success = res.get("success", False)
+    deep_analysis = res.get("deep_analysis")
     
     duration = time.time() - start
-    logger.info("event=app_chat_response model=%s user=%s duration=%.4f success=%s response_len=%s", model_choice, user_name, duration, success, len(bot_text))
+    
+    if deep_analysis:
+        emotion = deep_analysis.get("layer_2_emotional_state", {}).get("core_emotion", "unknown")
+        intensity = deep_analysis.get("layer_2_emotional_state", {}).get("intensity", 0)
+        meta_core = deep_analysis.get("layer_5_meta_questions", {}).get("meta_5", "unknown")
+        
+        logger.info("event=app_chat_response model=%s user=%s duration=%.4f success=%s response_len=%s emotion=%s intensity=%s meta_core=%s", 
+                   model_choice, user_name, duration, success, len(bot_text), emotion, intensity, meta_core)
+    else:
+        logger.info("event=app_chat_response model=%s user=%s duration=%.4f success=%s response_len=%s", 
+                   model_choice, user_name, duration, success, len(bot_text))
 
     with st.chat_message("assistant"):
         st.write(bot_text)
@@ -162,7 +173,15 @@ if prompt:
     st.session_state.messages.append({"role": "assistant", "text": bot_text})
 
     try:
-        store_conversation_as_knowledge_graph(user_name, prompt, bot_text, model=model_choice, version="latest")
-        logger.info("event=app_conversation_saved user=%s model=%s", user_name, model_choice)
+        store_conversation_as_knowledge_graph(
+            user_name, 
+            prompt, 
+            bot_text, 
+            model=model_choice, 
+            version="latest",
+            metadata={"deep_analysis": deep_analysis} if deep_analysis else None
+        )
+        logger.info("event=app_conversation_saved user=%s model=%s has_deep_analysis=%s", 
+                   user_name, model_choice, bool(deep_analysis))
     except Exception as e:
         logger.error("event=app_conversation_save_failed user=%s model=%s error=%s", user_name, model_choice, str(e))
