@@ -1,15 +1,17 @@
-# LLM Chatbot Python
+# LLM Observability Platform
 
-A Python-based LLM chatbot application with Streamlit interface, container orchestration, and observability features.
+A comprehensive Python-based observability platform for Large Language Models (LLMs) with chat interface, container orchestration, monitoring, and advanced analytics capabilities.
 
 ## Features
 
 - **Interactive Chat Interface**: Streamlit-based web UI for chatting with LLM models
 - **Model Selection**: Support for multiple LLM categories and models from Cloudflare
 - **Conversation History**: Persistent chat history with user sessions
-- **Deep Analysis**: Advanced emotional and meta-analysis of conversations
+- **Deep Analysis**: Advanced emotional and meta-analysis of conversations and LLM responses
 - **Container Orchestration**: Docker-based deployment with automatic scaling
-- **Observability**: Integrated logging, monitoring, and health checks
+- **Observability Suite**: Comprehensive monitoring for LLM performance, usage metrics, and behavioral analytics
+- **Health Monitoring**: Real-time health checks and alerting for LLM services
+- **Performance Tracking**: Detailed metrics on response times, token usage, and model performance
 - **Multi-Cloud Support**: Deployment options for Fly.io and Render
 
 ## Project Structure
@@ -159,6 +161,19 @@ The application includes comprehensive observability:
 3. Make your changes
 4. Ensure all linting rules pass
 5. Submit a pull request
+
+## Important Links
+
+**Connect with Scaibu:**
+- **Email**: chief.stategist.j@gmail.com
+- **Medium**: https://medium.com/@scaibu
+- **LinkedIn**: https://www.linkedin.com/in/chiefj/
+- **Twitter**: https://x.com/ChiefErj
+- **Instagram**: https://www.instagram.com/chief._.jaydeep/
+- **Discord Server**: https://discord.com/invite/FzZPnjZa
+- **Website**: https://scaibu.lovable.app/
+- **Service Booking**: https://topmate.io/jaydeep_wagh/1194002
+- **Contact**: 9664920749
 
 ## License
 
