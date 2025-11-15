@@ -37,7 +37,6 @@ llm-chatbot-python/
 
 - Python 3.12+ with virtual environment
 - Docker and Docker Compose
-- 4GB+ RAM for full observability stack
 - Access to LLM APIs (Cloudflare Workers AI recommended)
 
 ### Infrastructure Setup
@@ -55,13 +54,10 @@ curl http://localhost:8080/namespaces/default/workflows  # Web UI
 docker exec temporal-postgresql psql -U temporal -d temporal -c "SELECT 1;"
 ```
 
-3. **Start Observability Stack:**
+3. **Start Observability Components:**
 ```bash
-# Auto-discover and setup Docker logs
+# Start logging pipeline
 python infrastructure/orchestrator/trigger/logging_pipeline/start.py
-
-# Or manually start specific services
-docker-compose -f infrastructure/observability_platform/docker-compose.yaml up -d
 ```
 
 ### Application Setup
@@ -110,17 +106,11 @@ streamlit run app/streamlit_app.py --server.port 8501
 
 ### Service Discovery
 
-**Docker Auto-Discovery:**
-- Automatically scans running containers
-- Generates Promtail filelog configurations
-- Creates Loki data sources and Grafana dashboards
-- Supports container labels and annotations
-
-**Kubernetes Support:**
-- Pod discovery via Kubernetes API
-- Extracts pod metadata and labels
-- Deploys OpenTelemetry daemonsets
-- Generates K8s-specific log configurations
+**Available Components:**
+- **Logging Pipeline**: Loki log aggregation with container discovery
+- **Metrics Pipeline**: Prometheus metrics collection and Grafana dashboards
+- **Tracing Pipeline**: OpenTelemetry tracing with distributed systems support
+- **AI Proxy Service**: Containerized LLM API proxy with monitoring
 
 ### Docker Deployment
 
@@ -254,29 +244,21 @@ The platform follows a **microservices pattern** with:
 - **Health Monitoring**: Real-time LLM service health with automatic failover
 
 **Infrastructure Automation:**
-- **One-Command Setup**: `observeai install --docker-logs|--k8s-logs|--metrics|--traces`
-- **Auto-Configuration**: Dynamic generation of Prometheus configs, Grafana datasources
-- **Intelligent Routing**: Task queue-based service orchestration with retry policies
-- **Resource Management**: Automatic scaling and resource allocation based on load
+- **Temporal Workflows**: Orchestration of container lifecycle and configuration
+- **Service Management**: Multi-container orchestration with dependencies
+- **Resource Management**: Container scaling and resource allocation
 
 ## Deployment Options
 
-### Docker Compose (Recommended)
+### Docker Compose
 ```bash
-# Full observability stack
-docker-compose -f infrastructure/observability_platform/docker-compose.yaml up -d
-
-# With Temporal orchestrator
+# Temporal orchestrator
 docker-compose -f infrastructure/orchestrator/temporal-orchestrator-compose.yaml up -d
-```
 
-### Kubernetes
-```bash
-# Helm chart for observability stack
-helm install observability ./deployment/kubernetes/observability/
-
-# Temporal on Kubernetes
-kubectl apply -f deployment/kubernetes/temporal/
+# Start specific services via Temporal workflows
+python infrastructure/orchestrator/trigger/logging_pipeline/start.py
+python infrastructure/orchestrator/trigger/metrics_pipeline/start.py
+python infrastructure/orchestrator/trigger/tracing_pipeline/start.py
 ```
 
 ### Cloud Platforms
@@ -292,67 +274,38 @@ fly deploy
 - Automated deployment via `worker/workflows/render_deploy_workflow.py`
 - Zero-dockerfile deployment with automatic environment detection
 
-**Manual Cloud Setup:**
-1. Deploy Temporal cluster (PostgreSQL + Temporal Server)
-2. Configure observability stack (Loki, Prometheus, Grafana)
-3. Deploy application containers with proper networking
-4. Update environment variables for cloud endpoints
-
 ## Observability Features
 
 ### LLM-Specific Monitoring
 
 **Performance Metrics:**
-- Response time percentiles (p50, p95, p99)
-- Token usage and cost tracking per model
-- Error rates and failure patterns
-- Concurrent user sessions and model utilization
+- Response time tracking and analysis
+- Token usage and cost monitoring
+- Error rates and failure pattern detection
+- User session management
 
 **Deep Analysis:**
-- **Emotional State Analysis**: Core emotion detection and intensity scoring
+- **Emotional State Analysis**: Core emotion detection with intensity scoring
 - **Meta-Cognitive Tracking**: Higher-level reasoning pattern analysis
 - **Conversation Flow**: Topic transitions and engagement metrics
 - **Quality Assessment**: Response coherence and relevance scoring
 
-**Health Monitoring:**
-- Real-time LLM service availability checks
-- Automatic failover and circuit breaker patterns
-- Resource utilization (memory, CPU, GPU if applicable)
-- API rate limiting and throttling alerts
-
 ### Infrastructure Observability
 
 **Log Management:**
-- Centralized log collection via Loki
-- Automatic container log discovery
+- Loki-based log aggregation
 - Structured logging with correlation IDs
-- Log retention policies and archival
+- Container log collection and processing
 
 **Metrics Collection:**
-- Prometheus auto-discovery of metrics endpoints
-- RED (Rate, Errors, Duration) dashboards
-- USE (Utilization, Saturation, Errors) monitoring
-- Custom business metrics for LLM operations
+- Prometheus metrics endpoint discovery
+- Grafana dashboard integration
+- Performance and usage tracking
 
 **Distributed Tracing:**
 - OpenTelemetry OTLP trace collection
 - Service dependency mapping
 - Request flow visualization
-- Trace-to-log correlation for debugging
-
-### Alerting and Automation
-
-**AI Root Cause Analysis:**
-- Automated incident correlation across logs, metrics, traces
-- Pattern recognition for recurring issues
-- Suggested remediation actions
-- MTTR (Mean Time To Resolution) tracking
-
-**Predictive Monitoring:**
-- Anomaly detection in LLM response patterns
-- Capacity planning based on usage trends
-- Performance degradation prediction
-- Automated scaling recommendations
 
 ## Contributing
 
@@ -373,15 +326,3 @@ fly deploy
 - **Discord Server**: https://discord.com/invite/FzZPnjZa
 - **Website**: https://scaibu.lovable.app/
 - **Service Booking**: https://topmate.io/jaydeep_wagh/1194002
-- **Contact**: 9664920749
-
-## License
-
-[Add your license information here]
-
-## Support
-
-For issues and questions:
-- Check the documentation in `docs/`
-- Review the architecture overview in `docs/architecture/overview.md`
-- Check deployment guides in `docs/deployment/`
