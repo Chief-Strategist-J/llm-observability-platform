@@ -206,6 +206,10 @@ secrets/
 *.key
 *.crt
 
+# Environment files for specific services
+service/llm_chat_app/.env.chat
+service/llm_chat_app/.env.llm_chat_app
+
 # OS
 .DS_Store
 .DS_Store?

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 PROJECT_ROOT="/home/j/live/dinesh/llm-chatbot-python/service/llm_chat_app"
@@ -7,56 +7,49 @@ ORCH_PATH="/home/j/live/dinesh/infrastructure/orchestrator"
 ORCH_FILE="temporal-orchestrator-compose.yaml"
 
 log() {
-    echo ""
-    echo "============================================"
+    echo -e "\n============================================"
     echo " $1"
-    echo "============================================"
-    echo ""
+    echo "============================================\n"
 }
 
 ask() {
     read -p "$1 (y/n): " c
-    if [ "$c" != "y" ]; then return 1; fi
-    return 0
+    [[ "$c" == "y" ]]
+}
+
+install_if_missing() {
+    local tool="$1"
+    local install_cmd="$2"
+
+    if command -v "$tool" >/dev/null 2>&1; then
+        echo "$tool already installed"
+    else
+        echo "Installing $tool..."
+        eval "$install_cmd"
+    fi
 }
 
 install_core_tools() {
     sudo apt update -y
-    sudo apt install -y curl wget git unzip python3 python3-pip python3-venv build-essential jq
+    sudo apt install -y curl wget git unzip python3 python3-pip python3-venv build-essential jq ca-certificates gnupg
 }
 
 install_docker() {
-    if ! command -v docker >/dev/null; then
-        curl -fsSL https://get.docker.com | bash
-        sudo usermod -aG docker $USER
-    fi
+    install_if_missing "docker" "curl -fsSL https://get.docker.com | bash && sudo usermod -aG docker $USER"
 }
 
 install_clis() {
-    if ! command -v temporal >/dev/null; then
-        curl -s https://temporal.download/cli.sh | bash
-    fi
-    if ! command -v railway >/dev/null; then
-        bash <(curl -fsSL https://railway.app/install.sh)
-    fi
-    if ! command -v fly >/dev/null; then
-        curl -L https://fly.io/install.sh | sh
-        export FLYCTL_INSTALL="$HOME/.fly"
-        export PATH="$FLYCTL_INSTALL/bin:$PATH"
-    fi
-    if ! command -v render >/dev/null; then
-        npm install -g render-cli || true
-    fi
-    if ! command -v gh >/dev/null; then
-        sudo apt install -y gh
-    fi
+    install_if_missing "temporal" "curl -s https://temporal.download/cli.sh | bash"
+    install_if_missing "railway" "bash <(curl -fsSL https://railway.app/install.sh)"
+    install_if_missing "flyctl" "curl -L https://fly.io/install.sh | sh; export FLYCTL_INSTALL=\$HOME/.fly; export PATH=\$FLYCTL_INSTALL/bin:\$PATH"
+    install_if_missing "render" "npm install -g render-cli"
+    install_if_missing "gh" "sudo apt install -y gh"
 }
 
 setup_python() {
     if [ ! -d "$VENV_PATH" ]; then
         python3 -m venv "$VENV_PATH"
     fi
-
     source "$VENV_PATH/bin/activate"
     pip install --upgrade pip
     pip install -r "$PROJECT_ROOT/requirements.txt"
@@ -67,9 +60,11 @@ ask_for_api_keys() {
     read -p "Enter Neo4j Aura API Key: " NEO4J_AURA_API_KEY
     read -p "Enter Neo4j Aura API Secret: " NEO4J_AURA_API_SECRET
 
-    echo "RENDER_API_KEY=$RENDER_API_KEY" >> "$PROJECT_ROOT/.env.llm_chat_app"
-    echo "NEO4J_AURA_API_KEY=$NEO4J_AURA_API_KEY" >> "$PROJECT_ROOT/.env.llm_chat_app"
-    echo "NEO4J_AURA_API_SECRET=$NEO4J_AURA_API_SECRET" >> "$PROJECT_ROOT/.env.llm_chat_app"
+    {
+        echo "RENDER_API_KEY=$RENDER_API_KEY"
+        echo "NEO4J_AURA_API_KEY=$NEO4J_AURA_API_KEY"
+        echo "NEO4J_AURA_API_SECRET=$NEO4J_AURA_API_SECRET"
+    } >> "$PROJECT_ROOT/.env.llm_chat_app"
 }
 
 load_env() {
@@ -82,16 +77,18 @@ load_env() {
 }
 
 platform_logins() {
+    echo "These commands will open browser windows."
+    ask "Continue login?" || return
     railway login
-    fly auth login
+    flyctl auth login
     gh auth login
 }
 
 reset_orchestrator() {
     cd "$ORCH_PATH"
-    docker-compose -f "$ORCH_FILE" down -v || true
+    docker compose -f "$ORCH_FILE" down -v || true
     docker system prune -f || true
-    docker-compose -f "$ORCH_FILE" up -d
+    docker compose -f "$ORCH_FILE" up -d
     cd "$PROJECT_ROOT"
 }
 
@@ -102,15 +99,15 @@ start_worker() {
 
 log "LLM Chatbot Full Setup"
 
-if ask "Install core tools?"; then install_core_tools; fi
-if ask "Install Docker?"; then install_docker; fi
-if ask "Install CLI tools?"; then install_clis; fi
-if ask "Setup Python environment?"; then setup_python; fi
-if ask "Provide API Keys?"; then ask_for_api_keys; fi
-if ask "Load environment variables?"; then load_env; fi
-if ask "Login to all platforms?"; then platform_logins; fi
-if ask "Reset Temporal Orchestrator?"; then reset_orchestrator; fi
-if ask "Start Temporal Worker?"; then start_worker; fi
+ask "Install core tools?" && install_core_tools
+ask "Install Docker?" && install_docker
+ask "Install CLI tools?" && install_clis
+ask "Setup Python environment?" && setup_python
+ask "Provide API Keys?" && ask_for_api_keys
+ask "Load environment variables?" && load_env
+ask "Login to all platforms?" && platform_logins
+ask "Reset Temporal Orchestrator?" && reset_orchestrator
+ask "Start Temporal Worker?" && start_worker
 
-log "Setup Completed"
+log "Setup Completed Successfully!"
 echo "Run workflows using triggers."

@@ -5,6 +5,7 @@ import socket
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from core.config.config import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
+from core.services.deep_analysis_service import analyze_user_intent_and_emotion
 
 logger = logging.getLogger(__name__)
 
@@ -26,38 +27,24 @@ def _host_resolves(uri: Optional[str]) -> bool:
     if not uri:
         logger.debug("event=host_resolve_check result=empty_uri")
         return False
-
     try:
-        # Extract host from the URI safely
-        if uri.startswith(("bolt://", "neo4j://", "neo4j+s://")):
+        if uri.startswith("bolt://") or uri.startswith("neo4j://") or uri.startswith("neo4j+s://"):
             if uri.startswith("bolt://"):
                 hostport = uri[len("bolt://"):]
             elif uri.startswith("neo4j://"):
                 hostport = uri[len("neo4j://"):]
             elif uri.startswith("neo4j+s://"):
                 hostport = uri[len("neo4j+s://"):]
+            else:
+                hostport = uri
             host = hostport.split(":")[0]
         else:
             host = uri.split(":")[0]
-
-        # IMPORTANT FIX:
-        # Use a TCP socket connection attempt instead of DNS resolution.
-        # This works inside Docker networks and host machines.
-        import socket
-        s = socket.socket()
-        s.settimeout(1)
-
-        try:
-            s.connect((host, 7687))  # Try Neo4j bolt port directly
-            logger.debug("event=host_resolve_success host=%s", host)
-            s.close()
-            return True
-        except Exception as e:
-            logger.debug("event=host_resolve_failed host=%s err=%s", host, str(e))
-            return False
-
+        socket.getaddrinfo(host, None)
+        logger.debug("event=host_resolve_success host=%s", host)
+        return True
     except Exception as e:
-        logger.debug("event=host_resolve_exception uri=%s error=%s", uri, str(e))
+        logger.debug("event=host_resolve_failed uri=%s error=%s", uri, str(e)[:50])
         return False
 
 def _extract_entities_and_topics(prompt: str, response: str, model: str) -> Dict[str, Any]:
@@ -69,7 +56,11 @@ def _extract_entities_and_topics(prompt: str, response: str, model: str) -> Dict
     prompt_lower = prompt.lower()
     response_lower = response.lower()
     
-    common_topics = ["weather", "code", "help", "question", "python", "ai", "data", "api", "error", "fix"]
+    common_topics = [
+        "weather", "code", "help", "question", "python", "ai", "data", "api", 
+        "error", "fix", "deploy", "database", "docker", "javascript", "react",
+        "backend", "frontend", "testing", "debug", "performance", "security"
+    ]
     for topic in common_topics:
         if topic in prompt_lower or topic in response_lower:
             topics.append(topic)
@@ -91,18 +82,25 @@ def store_conversation_as_knowledge_graph(
     response: str, 
     model: str = "unknown", 
     version: str = "unknown",
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None,
+    conversation_history: Optional[List[Dict[str, str]]] = None
 ) -> None:
     ts = int(__import__("time").time())
     
-    logger.info("event=kg_store_start user=%s model=%s prompt_len=%s response_len=%s ts=%s", 
-                user, model, len(prompt), len(response), ts)
+    logger.info("event=kg_store_start user=%s model=%s prompt_len=%s response_len=%s ts=%s history_len=%s", 
+                user, model, len(prompt), len(response), ts, len(conversation_history) if conversation_history else 0)
     
-    extracted = _extract_entities_and_topics(prompt, response, model)
-    entities = extracted["entities"]
-    topics = extracted["topics"]
+    logger.info("event=kg_deep_analysis_start user=%s ts=%s", user, ts)
+    deep_analysis = analyze_user_intent_and_emotion(prompt, response, conversation_history)
+    logger.info("event=kg_deep_analysis_complete user=%s emotion=%s intent=%s", 
+                user, 
+                deep_analysis.get("emotion", {}).get("primary"),
+                deep_analysis.get("intent", {}).get("primary"))
     
-    logger.info("event=kg_extracted entities=%s topics=%s", entities, topics)
+    entities = deep_analysis.get("entities", [])
+    topics = deep_analysis.get("topics", [])
+    
+    logger.info("event=kg_extracted entities=%s topics=%s", len(entities), len(topics))
     
     try:
         if _NEO4J_AVAILABLE and NEO4J_URI and _host_resolves(NEO4J_URI):
@@ -134,7 +132,15 @@ def store_conversation_as_knowledge_graph(
                             response: $response,
                             model: $model,
                             version: $version,
-                            ts: $ts
+                            ts: $ts,
+                            emotion_primary: $emotion_primary,
+                            emotion_intensity: $emotion_intensity,
+                            intent_primary: $intent_primary,
+                            urgency: $urgency,
+                            knowledge_level: $knowledge_level,
+                            cognitive_load: $cognitive_load,
+                            confidence: $confidence,
+                            empowerment: $empowerment
                         })
                         RETURN id(c) as conv_id
                         """,
@@ -144,11 +150,22 @@ def store_conversation_as_knowledge_graph(
                             "response": response,
                             "model": model,
                             "version": version,
-                            "ts": ts
+                            "ts": ts,
+                            "emotion_primary": deep_analysis.get("emotion", {}).get("primary", "neutral"),
+                            "emotion_intensity": deep_analysis.get("emotion", {}).get("intensity", 5),
+                            "intent_primary": deep_analysis.get("intent", {}).get("primary", "learn"),
+                            "urgency": deep_analysis.get("intent", {}).get("urgency", 5),
+                            "knowledge_level": deep_analysis.get("meta_level_3_context", {}).get("user_knowledge_level", "intermediate"),
+                            "cognitive_load": deep_analysis.get("meta_level_5_psychological", {}).get("cognitive_load", 5),
+                            "confidence": deep_analysis.get("meta_level_4_patterns", {}).get("confidence_level", 5),
+                            "empowerment": deep_analysis.get("meta_level_7_transformative", {}).get("empowerment_level", 5)
                         }
                     )
                     conv_id = conv_result.single()["conv_id"]
-                    logger.info("event=kg_conversation_created conv_id=%s", conv_id)
+                    logger.info("event=kg_conversation_created conv_id=%s emotion=%s intent=%s", 
+                               conv_id,
+                               deep_analysis.get("emotion", {}).get("primary"),
+                               deep_analysis.get("intent", {}).get("primary"))
                     
                     session.run(
                         """
@@ -194,11 +211,29 @@ def store_conversation_as_knowledge_graph(
                         )
                         logger.debug("event=kg_entity_linked entity=%s", entity[:30])
                     
+                    emotion_node_name = deep_analysis.get("emotion", {}).get("primary", "neutral")
+                    session.run(
+                        """
+                        MERGE (em:Emotion {name: $emotion})
+                        WITH em
+                        MATCH (c:Conversation {id: $conv_id})
+                        MERGE (c)-[:FEELS {intensity: $intensity}]->(em)
+                        """,
+                        {
+                            "emotion": emotion_node_name,
+                            "intensity": deep_analysis.get("emotion", {}).get("intensity", 5),
+                            "conv_id": f"{user}_{ts}"
+                        }
+                    )
+                    logger.debug("event=kg_emotion_linked emotion=%s intensity=%s", 
+                                emotion_node_name, 
+                                deep_analysis.get("emotion", {}).get("intensity"))
+                    
                     prev_conversations = session.run(
                         """
                         MATCH (u:User {name: $user})-[:ASKED]->(prev:Conversation)
                         WHERE prev.ts < $ts
-                        RETURN prev.id as prev_id
+                        RETURN prev.id as prev_id, prev.emotion_primary as prev_emotion
                         ORDER BY prev.ts DESC
                         LIMIT 1
                         """,
@@ -208,15 +243,27 @@ def store_conversation_as_knowledge_graph(
                     prev_record = prev_conversations.single()
                     if prev_record:
                         prev_id = prev_record["prev_id"]
+                        prev_emotion = prev_record.get("prev_emotion", "neutral")
+                        curr_emotion = deep_analysis.get("emotion", {}).get("primary", "neutral")
+                        
                         session.run(
                             """
                             MATCH (prev:Conversation {id: $prev_id})
                             MATCH (curr:Conversation {id: $curr_id})
-                            MERGE (prev)-[:FOLLOWED_BY]->(curr)
+                            MERGE (prev)-[:FOLLOWED_BY {
+                                emotion_shift: $emotion_shift,
+                                time_gap: $time_gap
+                            }]->(curr)
                             """,
-                            {"prev_id": prev_id, "curr_id": f"{user}_{ts}"}
+                            {
+                                "prev_id": prev_id,
+                                "curr_id": f"{user}_{ts}",
+                                "emotion_shift": f"{prev_emotion}_to_{curr_emotion}",
+                                "time_gap": 0
+                            }
                         )
-                        logger.info("event=kg_conversation_chain prev=%s curr=%s", prev_id, f"{user}_{ts}")
+                        logger.info("event=kg_conversation_chain prev=%s curr=%s emotion_shift=%s_to_%s", 
+                                   prev_id, f"{user}_{ts}", prev_emotion, curr_emotion)
                 
                 try:
                     driver.close()
@@ -224,8 +271,11 @@ def store_conversation_as_knowledge_graph(
                 except Exception:
                     pass
                 
-                logger.info("event=kg_neo4j_success user=%s model=%s entities=%s topics=%s", 
-                           user, model, len(entities), len(topics))
+                logger.info("event=kg_neo4j_success user=%s model=%s entities=%s topics=%s emotion=%s intent=%s knowledge=%s", 
+                           user, model, len(entities), len(topics),
+                           deep_analysis.get("emotion", {}).get("primary"),
+                           deep_analysis.get("intent", {}).get("primary"),
+                           deep_analysis.get("meta_level_3_context", {}).get("user_knowledge_level"))
                 return
                 
             except Exception as e:
@@ -250,13 +300,16 @@ def store_conversation_as_knowledge_graph(
             "version": version,
             "ts": ts,
             "entities": entities,
-            "topics": topics
+            "topics": topics,
+            "deep_analysis": deep_analysis
         }
         
         data.append(payload)
         _LOCAL_STORE.write_text(json.dumps(data, indent=2))
         
-        logger.info("event=kg_file_success user=%s model=%s path=%s", user, model, str(_LOCAL_STORE))
+        logger.info("event=kg_file_success user=%s model=%s path=%s emotion=%s", 
+                   user, model, str(_LOCAL_STORE),
+                   deep_analysis.get("emotion", {}).get("primary"))
         
     except Exception as e:
         logger.error("event=kg_file_failed user=%s error=%s", user, str(e))
