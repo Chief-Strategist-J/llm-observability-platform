@@ -34,6 +34,7 @@ from core.services.auth_service import (
 )
 from core.services.collaboration_service import CollaborationService
 from core.services.intelligent_agent import IntelligentAgent
+from core.services.emotional_intelligence_engine import EmotionalIntelligenceEngine
 from core.client.streaming_client import StreamingClient
 from core.client.web_search_tools import WebSearchTools
 import asyncio
@@ -291,14 +292,18 @@ with st.sidebar.expander("🤝 Collaboration"):
             CollaborationService.join_session(join_code, st.session_state.username)
             st.success("Joined session!")
 
-with st.sidebar.expander("🔍 Web Search & Agent"):
-    enable_agent = st.checkbox("Enable Intelligent Agent", value=False)
+with st.sidebar.expander("🔍 Web Search & Real-Time Data"):
+    enable_agent = st.checkbox("Enable Internet Search for Real-Time Data", value=True, 
+                               help="When enabled, chat will search the internet for current information")
     if enable_agent:
         st.session_state.enable_agent = True
-        agent_mode = st.radio("Agent Mode", ["Search", "Research", "Normal"])
+        agent_mode = st.radio("Search Mode", 
+                             ["Search", "Research", "Normal"],
+                             help="Search: Quick web lookup | Research: Deep analysis | Normal: No web search")
         st.session_state.agent_mode = agent_mode
     else:
         st.session_state.enable_agent = False
+        st.session_state.agent_mode = "Normal"
 
 with st.sidebar.expander("⚡ Streaming"):
     enable_streaming = st.checkbox("Enable Streaming Responses", value=False)
@@ -469,19 +474,21 @@ if prompt:
 
     duration = time.time() - start
     
-    # Extract emotional insights from deep analysis
+    # Extract emotional insights using Emotional Intelligence Engine
     emotion = "neutral"
     intensity = 5
     meta_core = "No specific insight"
+    emotional_state = None
     
     if deep_analysis and isinstance(deep_analysis, dict):
-        layer_2 = deep_analysis.get("layer_2_emotional_state", {})
-        emotion = layer_2.get("core_emotion", "neutral")
-        intensity = layer_2.get("intensity", 5)
+        # Use the Emotional Intelligence Engine for deeper analysis
+        emotional_state = EmotionalIntelligenceEngine.extract_emotional_layers(deep_analysis)
         
-        layer_5 = deep_analysis.get("layer_5_meta_questions", {})
-        meta_core = layer_5.get("meta_5", "No specific insight")
+        emotion = emotional_state.get("primary_emotion", "neutral")
+        intensity = emotional_state.get("intensity", 5)
+        meta_core = emotional_state.get("meta_questions", {}).get("meta_5_core", "No specific insight")
         
+        # Log comprehensive emotional analysis
         logger.info(
             "event=app_chat_response model=%s user=%s duration=%.4f success=%s response_len=%s emotion=%s intensity=%s meta_core=%s",
             st.session_state.selected_model,
@@ -492,6 +499,15 @@ if prompt:
             emotion,
             intensity,
             meta_core,
+        )
+        
+        # Log additional emotional intelligence
+        logger.info(
+            "event=app_emotional_intelligence user=%s trauma_present=%s dark_patterns=%s readiness_for_change=%s",
+            st.session_state.username,
+            emotional_state.get("trauma_indicators", {}).get("present", False),
+            any(emotional_state.get("dark_patterns", {}).values()),
+            emotional_state.get("transformation_potential", {}).get("readiness_for_change", 5),
         )
     else:
         logger.info(
