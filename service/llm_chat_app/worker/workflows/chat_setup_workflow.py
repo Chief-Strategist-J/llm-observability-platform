@@ -25,18 +25,18 @@ class ChatSetupWorkflow(BaseWorkflow):
         await workflow.execute_activity(
             "start_neo4j_dependency_activity", p, start_to_close_timeout=timeout, retry_policy=rp
         )
-        await workflow.execute_activity(
-            "verify_cloudflare_dependency_activity", p, start_to_close_timeout=timeout, retry_policy=rp
-        )
-        await workflow.execute_activity(
-            "build_chat_image_activity", p, start_to_close_timeout=timeout, retry_policy=rp
-        )
-        await workflow.execute_activity(
-            "run_chat_container_activity", p, start_to_close_timeout=timeout, retry_policy=rp
-        )
-        await workflow.execute_activity(
-            "check_chat_health_activity", p, start_to_close_timeout=timeout, retry_policy=rp
-        )
+        # await workflow.execute_activity(
+        #     "verify_cloudflare_dependency_activity", p, start_to_close_timeout=timeout, retry_policy=rp
+        # )
+        # await workflow.execute_activity(
+        #     "build_chat_image_activity", p, start_to_close_timeout=timeout, retry_policy=rp
+        # )
+        # await workflow.execute_activity(
+        #     "run_chat_container_activity", p, start_to_close_timeout=timeout, retry_policy=rp
+        # )
+        # await workflow.execute_activity(
+        #     "check_chat_health_activity", p, start_to_close_timeout=timeout, retry_policy=rp
+        # )
 
         logger.info("workflow ChatSetupWorkflow complete")
         return "chat_setup_complete"
