@@ -1,19 +1,13 @@
-"""
-Streaming Response Client
-Provides real-time streaming of AI responses
-"""
-
 import logging
 import asyncio
 import json
+import re
 from typing import AsyncGenerator, Dict, Any, List, Optional
 from core.client.cloudflare_client import run_model
 
 logger = logging.getLogger(__name__)
 
-
 class StreamingClient:
-    """Client for streaming AI responses"""
     
     @staticmethod
     async def stream_response(
@@ -22,33 +16,29 @@ class StreamingClient:
         conversation_history: Optional[List[Dict[str, str]]] = None,
         timeout: int = 30
     ) -> AsyncGenerator[str, None]:
-        """
-        Stream AI response token by token
         
-        Args:
-            prompt: User prompt
-            model: Model to use
-            conversation_history: Previous conversation messages
-            timeout: Request timeout in seconds
-            
-        Yields:
-            Response tokens as they arrive
-        """
+        if not prompt or not isinstance(prompt, str):
+            yield "Error: Invalid prompt"
+            return
+        
+        if not model or not isinstance(model, str):
+            yield "Error: Invalid model"
+            return
+        
         logger.info("event=stream_response_start model=%s prompt_len=%s", model, len(prompt))
         
         try:
-            # Build message history
             messages = []
-            if conversation_history:
-                for msg in conversation_history[-10:]:  # Last 10 messages
-                    messages.append({
-                        "role": msg.get("role", "user"),
-                        "content": msg.get("content", msg.get("text", ""))
-                    })
+            if conversation_history and isinstance(conversation_history, list):
+                for msg in conversation_history[-10:]:
+                    if isinstance(msg, dict):
+                        messages.append({
+                            "role": msg.get("role", "user"),
+                            "content": msg.get("content", msg.get("text", ""))
+                        })
             
             messages.append({"role": "user", "content": prompt})
             
-            # Call model with streaming
             body = {
                 "messages": messages,
                 "stream": True
@@ -56,8 +46,6 @@ class StreamingClient:
             
             logger.info("event=stream_model_call model=%s messages=%s", model, len(messages))
             
-            # Simulate streaming (Cloudflare API may not support true streaming)
-            # In production, use proper streaming implementation
             result = await asyncio.to_thread(
                 run_model,
                 model=model,
@@ -65,9 +53,10 @@ class StreamingClient:
                 timeout=timeout
             )
             
-            if not result.get("success"):
-                logger.error("event=stream_model_failed error=%s", result.get("error"))
-                yield f"Error: {result.get('error', 'Unknown error')}"
+            if not result or not result.get("success"):
+                error_msg = result.get("error", "Unknown error") if result else "No response"
+                logger.error("event=stream_model_failed error=%s", error_msg)
+                yield f"Error: {error_msg}"
                 return
             
             response_text = ""
@@ -83,13 +72,17 @@ class StreamingClient:
                         if isinstance(message, dict):
                             response_text = message.get("content", "")
             
-            # Stream response in chunks
+            if not response_text:
+                logger.warning("event=stream_empty_response")
+                yield "No response generated"
+                return
+            
             chunk_size = 20
             for i in range(0, len(response_text), chunk_size):
                 chunk = response_text[i:i + chunk_size]
                 logger.debug("event=stream_chunk_sent size=%s", len(chunk))
                 yield chunk
-                await asyncio.sleep(0.01)  # Small delay for realistic streaming
+                await asyncio.sleep(0.01)
             
             logger.info("event=stream_response_complete total_len=%s", len(response_text))
             
@@ -108,23 +101,19 @@ class StreamingClient:
         conversation_history: Optional[List[Dict[str, str]]] = None,
         max_iterations: int = 5
     ) -> AsyncGenerator[str, None]:
-        """
-        Stream response with tool usage capability
         
-        Args:
-            prompt: User prompt
-            model: Model to use
-            available_tools: Dictionary of available tools
-            conversation_history: Previous messages
-            max_iterations: Max tool use iterations
-            
-        Yields:
-            Response tokens and tool results
-        """
+        if not prompt or not isinstance(prompt, str):
+            yield "Error: Invalid prompt"
+            return
+        
+        if not available_tools or not isinstance(available_tools, dict):
+            yield "Error: No tools available"
+            return
+        
         logger.info("event=stream_with_tools_start model=%s tools=%s", model, len(available_tools))
         
         messages = []
-        if conversation_history:
+        if conversation_history and isinstance(conversation_history, list):
             messages.extend(conversation_history[-10:])
         
         messages.append({"role": "user", "content": prompt})
@@ -133,10 +122,8 @@ class StreamingClient:
         while iteration < max_iterations:
             iteration += 1
             
-            # Build system prompt with tools
             system_prompt = _build_tool_system_prompt(available_tools)
             
-            # Call model
             body = {
                 "messages": messages,
                 "system": system_prompt
@@ -149,9 +136,10 @@ class StreamingClient:
                 timeout=30
             )
             
-            if not result.get("success"):
-                logger.error("event=stream_tools_failed error=%s", result.get("error"))
-                yield f"Error: {result.get('error')}"
+            if not result or not result.get("success"):
+                error_msg = result.get("error", "Unknown error") if result else "No response"
+                logger.error("event=stream_tools_failed error=%s", error_msg)
+                yield f"Error: {error_msg}"
                 break
             
             response_text = ""
@@ -167,15 +155,15 @@ class StreamingClient:
                         if isinstance(message, dict):
                             response_text = message.get("content", "")
             
-            # Check if response contains tool calls
+            if not response_text:
+                logger.warning("event=stream_tools_empty_response")
+                break
+            
             if "<tool_call>" in response_text:
-                # Extract and execute tool calls
                 tool_results = await _execute_tool_calls(response_text, available_tools)
                 
-                # Add assistant response
                 messages.append({"role": "assistant", "content": response_text})
                 
-                # Add tool results
                 for tool_result in tool_results:
                     messages.append({
                         "role": "user",
@@ -185,7 +173,6 @@ class StreamingClient:
                 
                 continue
             
-            # Stream final response
             chunk_size = 20
             for i in range(0, len(response_text), chunk_size):
                 chunk = response_text[i:i + chunk_size]
@@ -196,18 +183,20 @@ class StreamingClient:
         
         logger.info("event=stream_with_tools_complete iterations=%s", iteration)
 
-
 def _build_tool_system_prompt(available_tools: Dict[str, Any]) -> str:
-    """Build system prompt with tool descriptions"""
+    
+    if not available_tools:
+        return "You are a helpful AI assistant."
     
     tools_desc = "Available tools:\n"
     for tool_name, tool_info in available_tools.items():
-        tools_desc += f"\n- {tool_name}: {tool_info.get('description', '')}\n"
-        params = tool_info.get('params', {})
-        if params:
-            tools_desc += "  Parameters:\n"
-            for param_name, param_desc in params.items():
-                tools_desc += f"    - {param_name}: {param_desc}\n"
+        if isinstance(tool_info, dict):
+            tools_desc += f"\n- {tool_name}: {tool_info.get('description', '')}\n"
+            params = tool_info.get('params', {})
+            if params and isinstance(params, dict):
+                tools_desc += "  Parameters:\n"
+                for param_name, param_desc in params.items():
+                    tools_desc += f"    - {param_name}: {param_desc}\n"
     
     return f"""You are a helpful AI assistant with access to tools.
 When you need to use a tool, format it as:
@@ -222,14 +211,13 @@ When you need to use a tool, format it as:
 
 Always provide helpful responses and use tools when appropriate."""
 
-
 async def _execute_tool_calls(response_text: str, available_tools: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Execute tool calls found in response"""
     
     results = []
     
-    # Extract tool calls from response
-    import re
+    if not response_text or not isinstance(response_text, str):
+        return results
+    
     tool_calls = re.findall(r'<tool_call>(.*?)</tool_call>', response_text, re.DOTALL)
     
     for tool_call_str in tool_calls:
@@ -238,7 +226,7 @@ async def _execute_tool_calls(response_text: str, available_tools: Dict[str, Any
             tool_name = tool_call.get("tool")
             params = tool_call.get("params", {})
             
-            if tool_name not in available_tools:
+            if not tool_name or tool_name not in available_tools:
                 logger.warning("event=unknown_tool tool=%s", tool_name)
                 results.append({
                     "tool": tool_name,
@@ -246,9 +234,16 @@ async def _execute_tool_calls(response_text: str, available_tools: Dict[str, Any
                 })
                 continue
             
-            tool_func = available_tools[tool_name].get("func")
+            tool_info = available_tools[tool_name]
+            if not isinstance(tool_info, dict):
+                logger.warning("event=invalid_tool_info tool=%s", tool_name)
+                continue
             
-            # Execute tool
+            tool_func = tool_info.get("func")
+            if not tool_func or not callable(tool_func):
+                logger.warning("event=tool_not_callable tool=%s", tool_name)
+                continue
+            
             logger.info("event=executing_tool tool=%s params=%s", tool_name, len(params))
             
             if asyncio.iscoroutinefunction(tool_func):
@@ -263,6 +258,8 @@ async def _execute_tool_calls(response_text: str, available_tools: Dict[str, Any
             
         except json.JSONDecodeError as e:
             logger.error("event=tool_call_parse_failed error=%s", str(e))
+        except TypeError as e:
+            logger.error("event=tool_param_error error=%s", str(e))
         except Exception as e:
             logger.error("event=tool_execution_failed error=%s", str(e))
     
