@@ -32,6 +32,11 @@ from core.services.auth_service import (
     change_password,
     get_user_info,
 )
+from core.services.collaboration_service import CollaborationService
+from core.services.intelligent_agent import IntelligentAgent
+from core.client.streaming_client import StreamingClient
+from core.client.web_search_tools import WebSearchTools
+import asyncio
 
 logging.basicConfig(
     level=logging.INFO, format="event=%(levelname)s ts=%(asctime)s msg=%(message)s"
@@ -258,6 +263,49 @@ with st.sidebar.expander("🔒 Change Password"):
 
 st.sidebar.divider()
 
+with st.sidebar.expander("🤝 Collaboration"):
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("➕ New Session"):
+            session = CollaborationService.create_session(
+                name=f"Chat - {st.session_state.username}",
+                created_by=st.session_state.username,
+                settings={"model": st.session_state.selected_model}
+            )
+            st.session_state.collab_session_id = session["session_id"]
+            st.success(f"Session created: {session['session_id'][:8]}...")
+    
+    with col2:
+        if st.button("📋 My Sessions"):
+            sessions = CollaborationService.list_sessions(st.session_state.username)
+            if sessions["sessions"]:
+                for s in sessions["sessions"]:
+                    st.write(f"• {s['name']} ({len(s['participants'])} users)")
+            else:
+                st.info("No sessions yet")
+    
+    if "collab_session_id" in st.session_state:
+        st.write(f"**Active:** {st.session_state.collab_session_id[:8]}...")
+        join_code = st.text_input("Share code with others:")
+        if join_code:
+            CollaborationService.join_session(join_code, st.session_state.username)
+            st.success("Joined session!")
+
+with st.sidebar.expander("🔍 Web Search & Agent"):
+    enable_agent = st.checkbox("Enable Intelligent Agent", value=False)
+    if enable_agent:
+        st.session_state.enable_agent = True
+        agent_mode = st.radio("Agent Mode", ["Search", "Research", "Normal"])
+        st.session_state.agent_mode = agent_mode
+    else:
+        st.session_state.enable_agent = False
+
+with st.sidebar.expander("⚡ Streaming"):
+    enable_streaming = st.checkbox("Enable Streaming Responses", value=False)
+    st.session_state.enable_streaming = enable_streaming
+
+st.sidebar.divider()
+
 if st.sidebar.button("🔄 Refresh Models", help="Fetch latest models from Cloudflare"):
     with st.spinner("Refreshing models..."):
         logger.info("event=app_refresh_models_start")
@@ -351,6 +399,14 @@ if prompt:
     st.chat_message("user").write(prompt)
     st.session_state.messages.append({"role": "user", "text": prompt})
 
+    if "collab_session_id" in st.session_state:
+        CollaborationService.add_message(
+            st.session_state.collab_session_id,
+            st.session_state.username,
+            "user",
+            prompt
+        )
+
     start = time.time()
     logger.info(
         "event=app_chat_request model=%s user=%s category=%s prompt_len=%s",
@@ -365,17 +421,76 @@ if prompt:
         role = "assistant" if msg["role"] == "assistant" else "user"
         conversation_history.append({"role": role, "content": msg["text"]})
 
-    with st.spinner(f"Generating response with {st.session_state.selected_model}..."):
-        res = get_ai_response(
-            prompt,
-            st.session_state.selected_model,
-            conversation_history=conversation_history,
-            enable_deep_analysis=True,
-        )
+    bot_text = ""
+    deep_analysis = None
+    success = False
 
-    bot_text = res.get("text", "")
-    success = res.get("success", False)
-    deep_analysis = res.get("deep_analysis")
+    if st.session_state.get("enable_agent") and st.session_state.get("agent_mode") == "Search":
+        with st.spinner("🔍 Searching web..."):
+            agent_result = IntelligentAgent.process_with_tools(
+                prompt,
+                st.session_state.selected_model,
+                conversation_history=conversation_history,
+                enable_web_search=True,
+                max_iterations=2
+            )
+            if agent_result.get("success"):
+                bot_text = agent_result.get("response", "")
+                success = True
+                if agent_result.get("tool_results"):
+                    st.info(f"Used {len(agent_result['tool_results'])} tools")
+            else:
+                bot_text = f"Error: {agent_result.get('error')}"
+                success = False
+
+    elif st.session_state.get("enable_agent") and st.session_state.get("agent_mode") == "Research":
+        with st.spinner("📚 Researching topic..."):
+            research_result = IntelligentAgent.analyze_with_research(
+                prompt,
+                st.session_state.selected_model,
+                depth="standard"
+            )
+            if research_result.get("success"):
+                bot_text = research_result.get("analysis", "")
+                success = True
+                st.info(f"Sources: {research_result.get('sources', 0)}")
+            else:
+                bot_text = f"Error: {research_result.get('error')}"
+                success = False
+
+    elif st.session_state.get("enable_streaming"):
+        with st.spinner(f"Generating response with {st.session_state.selected_model}..."):
+            placeholder = st.empty()
+            response_container = {"text": ""}
+            try:
+                async def stream_and_display():
+                    async for chunk in StreamingClient.stream_response(
+                        prompt,
+                        st.session_state.selected_model,
+                        conversation_history=conversation_history
+                    ):
+                        response_container["text"] += chunk
+                        placeholder.markdown(response_container["text"] + "▌")
+                    placeholder.markdown(response_container["text"])
+                
+                asyncio.run(stream_and_display())
+                bot_text = response_container["text"]
+                success = True
+            except Exception as e:
+                bot_text = f"Error: {str(e)}"
+                success = False
+
+    else:
+        with st.spinner(f"Generating response with {st.session_state.selected_model}..."):
+            res = get_ai_response(
+                prompt,
+                st.session_state.selected_model,
+                conversation_history=conversation_history,
+                enable_deep_analysis=True,
+            )
+            bot_text = res.get("text", "")
+            success = res.get("success", False)
+            deep_analysis = res.get("deep_analysis")
 
     duration = time.time() - start
 
@@ -405,10 +520,19 @@ if prompt:
             len(bot_text),
         )
 
-    with st.chat_message("assistant"):
-        st.write(bot_text)
+    if not st.session_state.get("enable_streaming"):
+        with st.chat_message("assistant"):
+            st.write(bot_text)
 
     st.session_state.messages.append({"role": "assistant", "text": bot_text})
+
+    if "collab_session_id" in st.session_state:
+        CollaborationService.add_message(
+            st.session_state.collab_session_id,
+            "assistant",
+            "assistant",
+            bot_text
+        )
 
     try:
         store_conversation_as_knowledge_graph(
