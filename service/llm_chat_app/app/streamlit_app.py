@@ -13,16 +13,187 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from core.client.ai_client import get_ai_response
-from core.models.knowledge_graph_store import store_conversation_as_knowledge_graph, get_conversation_context
-from core.services.category_service import get_categories_and_models, get_models_for_category, get_default_model_for_category
+from core.models.knowledge_graph_store import (
+    store_conversation_as_knowledge_graph,
+    get_conversation_context,
+)
+from core.services.category_service import (
+    get_categories_and_models,
+    get_models_for_category,
+    get_default_model_for_category,
+)
+from core.services.auth_service import (
+    sign_in,
+    sign_out,
+    register_user,
+    validate_session,
+    request_password_reset,
+    reset_password,
+    change_password,
+    get_user_info,
+)
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="event=%(levelname)s ts=%(asctime)s msg=%(message)s"
+    level=logging.INFO, format="event=%(levelname)s ts=%(asctime)s msg=%(message)s"
 )
 logger = logging.getLogger(__name__)
 
 st.set_page_config(page_title="LLM Chat", page_icon="💬", layout="wide")
+
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+    st.session_state.session_token = None
+    st.session_state.username = None
+    st.session_state.auth_page = "signin"
+
+def show_signin_page():
+    st.title("🔐 Sign In")
+
+    with st.form("signin_form"):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        submit = st.form_submit_button("Sign In")
+
+        if submit:
+            if not username or not password:
+                st.error("Please enter both username and password")
+            else:
+                result = sign_in(username, password)
+                if result["success"]:
+                    st.session_state.authenticated = True
+                    st.session_state.session_token = result["session_token"]
+                    st.session_state.username = result["username"]
+                    st.success("Sign in successful!")
+                    time.sleep(0.5)
+                    st.rerun()
+                else:
+                    st.error(result["message"])
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Create Account"):
+            st.session_state.auth_page = "signup"
+            st.rerun()
+    with col2:
+        if st.button("Forgot Password?"):
+            st.session_state.auth_page = "forgot"
+            st.rerun()
+
+def show_signup_page():
+    st.title("📝 Create Account")
+
+    with st.form("signup_form"):
+        username = st.text_input("Username (min 3 characters)")
+        email = st.text_input("Email")
+        password = st.text_input("Password (min 6 characters)", type="password")
+        password_confirm = st.text_input("Confirm Password", type="password")
+        submit = st.form_submit_button("Register")
+
+        if submit:
+            if not username or not email or not password:
+                st.error("All fields are required")
+            elif password != password_confirm:
+                st.error("Passwords do not match")
+            else:
+                result = register_user(username, password, email)
+                if result["success"]:
+                    st.success("Registration successful! Please sign in.")
+                    time.sleep(1)
+                    st.session_state.auth_page = "signin"
+                    st.rerun()
+                else:
+                    st.error(result["message"])
+
+    if st.button("← Back to Sign In"):
+        st.session_state.auth_page = "signin"
+        st.rerun()
+
+def show_forgot_password_page():
+    st.title("🔑 Reset Password")
+
+    if "reset_stage" not in st.session_state:
+        st.session_state.reset_stage = "request"
+        st.session_state.reset_token = None
+
+    if st.session_state.reset_stage == "request":
+        st.write("Enter your email to receive a password reset token.")
+
+        with st.form("forgot_password_form"):
+            email = st.text_input("Email")
+            submit = st.form_submit_button("Request Reset Token")
+
+            if submit:
+                if not email:
+                    st.error("Please enter your email")
+                else:
+                    result = request_password_reset(email)
+                    if result["success"]:
+                        st.success("Reset token generated!")
+                        if "reset_token" in result:
+                            st.info(f"**Reset Token:** `{result['reset_token']}`")
+                            st.warning("⚠️ In production, this would be sent to your email. Copy it now!")
+                            st.session_state.reset_token = result["reset_token"]
+                        st.session_state.reset_stage = "reset"
+                    else:
+                        st.error(result["message"])
+
+        if st.button("← Back to Sign In"):
+            st.session_state.auth_page = "signin"
+            st.session_state.reset_stage = "request"
+            st.rerun()
+    else:
+        st.write("Enter your reset token and new password.")
+
+        with st.form("reset_password_form"):
+            token = st.text_input("Reset Token", value=st.session_state.reset_token or "")
+            new_password = st.text_input("New Password (min 6 characters)", type="password")
+            confirm_password = st.text_input("Confirm New Password", type="password")
+            submit = st.form_submit_button("Reset Password")
+
+            if submit:
+                if not token or not new_password:
+                    st.error("All fields are required")
+                elif new_password != confirm_password:
+                    st.error("Passwords do not match")
+                else:
+                    result = reset_password(token, new_password)
+                    if result["success"]:
+                        st.success("Password reset successful! Please sign in.")
+                        time.sleep(1)
+                        st.session_state.auth_page = "signin"
+                        st.session_state.reset_stage = "request"
+                        st.session_state.reset_token = None
+                        st.rerun()
+                    else:
+                        st.error(result["message"])
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("← Request New Token"):
+                st.session_state.reset_stage = "request"
+                st.rerun()
+        with col2:
+            if st.button("← Back to Sign In"):
+                st.session_state.auth_page = "signin"
+                st.session_state.reset_stage = "request"
+                st.rerun()
+
+if not st.session_state.authenticated:
+    if st.session_state.session_token:
+        username = validate_session(st.session_state.session_token)
+        if username:
+            st.session_state.authenticated = True
+            st.session_state.username = username
+
+    if not st.session_state.authenticated:
+        if st.session_state.auth_page == "signin":
+            show_signin_page()
+        elif st.session_state.auth_page == "signup":
+            show_signup_page()
+        elif st.session_state.auth_page == "forgot":
+            show_forgot_password_page()
+        st.stop()
+
 st.title("💬 LLM Chat")
 
 if "categories_loaded" not in st.session_state:
@@ -35,29 +206,70 @@ if not st.session_state.categories_loaded:
     with st.spinner("Loading models from Cloudflare..."):
         logger.info("event=app_loading_categories")
         categories = get_categories_and_models(force_refresh=False)
-        st.session_state.categories = categories
+        st.session_state.categories = categories or {}
         st.session_state.categories_loaded = True
-        
-        if categories:
-            first_category = list(categories.keys())[0]
+
+        if st.session_state.categories:
+            first_category = list(st.session_state.categories.keys())[0]
             st.session_state.selected_category = first_category
             st.session_state.selected_model = get_default_model_for_category(first_category)
-            logger.info("event=app_categories_loaded count=%s default_category=%s", len(categories), first_category)
+            logger.info(
+                "event=app_categories_loaded count=%s default_category=%s",
+                len(st.session_state.categories),
+                first_category,
+            )
 
 st.sidebar.header("Settings")
 
-user_name = st.sidebar.text_input("Name", "guest")
+user_info = get_user_info(st.session_state.username)
+if user_info:
+    st.sidebar.write(f"👤 **{user_info['username']}**")
+    st.sidebar.write(f"📧 {user_info['email']}")
+
+if st.sidebar.button("🚪 Sign Out"):
+    sign_out(st.session_state.session_token)
+    logger.info("event=user_signout username=%s", st.session_state.username)
+    st.session_state.authenticated = False
+    st.session_state.session_token = None
+    st.session_state.username = None
+    st.session_state.messages = []
+    st.rerun()
+
+st.sidebar.divider()
+
+with st.sidebar.expander("🔒 Change Password"):
+    with st.form("change_password_form"):
+        old_pwd = st.text_input("Current Password", type="password", key="old_pwd")
+        new_pwd = st.text_input("New Password", type="password", key="new_pwd")
+        confirm_pwd = st.text_input("Confirm New Password", type="password", key="confirm_pwd")
+        change_submit = st.form_submit_button("Change Password")
+
+        if change_submit:
+            if not old_pwd or not new_pwd:
+                st.error("All fields are required")
+            elif new_pwd != confirm_pwd:
+                st.error("Passwords do not match")
+            else:
+                result = change_password(st.session_state.username, old_pwd, new_pwd)
+                if result["success"]:
+                    st.success(result["message"])
+                else:
+                    st.error(result["message"])
+
+st.sidebar.divider()
 
 if st.sidebar.button("🔄 Refresh Models", help="Fetch latest models from Cloudflare"):
     with st.spinner("Refreshing models..."):
         logger.info("event=app_refresh_models_start")
-        categories = get_categories_and_models(force_refresh=True)
+        categories = get_categories_and_models(force_refresh=True) or {}
         st.session_state.categories = categories
-        if categories:
-            if st.session_state.selected_category not in categories:
-                st.session_state.selected_category = list(categories.keys())[0]
-            st.session_state.selected_model = get_default_model_for_category(st.session_state.selected_category, force_refresh=True)
-        logger.info("event=app_refresh_models_complete count=%s", len(categories))
+        if st.session_state.categories:
+            if st.session_state.selected_category not in st.session_state.categories:
+                st.session_state.selected_category = list(st.session_state.categories.keys())[0]
+            st.session_state.selected_model = get_default_model_for_category(
+                st.session_state.selected_category, force_refresh=True
+            )
+        logger.info("event=app_refresh_models_complete count=%s", len(st.session_state.categories))
         st.rerun()
 
 categories = st.session_state.categories
@@ -75,7 +287,7 @@ selected_category = st.sidebar.selectbox(
     "Category",
     category_list,
     index=category_list.index(st.session_state.selected_category) if st.session_state.selected_category in category_list else 0,
-    key="category_selector"
+    key="category_selector",
 )
 
 if selected_category != st.session_state.selected_category:
@@ -96,7 +308,7 @@ model_choice = st.sidebar.selectbox(
     "Model",
     models_for_category,
     index=models_for_category.index(st.session_state.selected_model) if st.session_state.selected_model in models_for_category else 0,
-    key="model_selector"
+    key="model_selector",
 )
 
 if model_choice != st.session_state.selected_model:
@@ -109,22 +321,22 @@ st.sidebar.markdown(f"**Total Categories:** {len(categories)}")
 if st.sidebar.button("🗑️ Reset Chat"):
     st.session_state.messages = []
     st.session_state._loaded_user = None
-    logger.info("event=app_reset_chat user=%s", user_name)
+    logger.info("event=app_reset_chat user=%s", st.session_state.username)
     st.rerun()
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
     st.session_state._loaded_user = None
 
-if st.session_state.get("_loaded_user") != user_name:
-    logger.info("event=app_loading_history user=%s", user_name)
-    conv = get_conversation_context(user_name, limit=200)
+if st.session_state.get("_loaded_user") != st.session_state.username:
+    logger.info("event=app_loading_history user=%s", st.session_state.username)
+    conv = get_conversation_context(st.session_state.username, limit=200)
     if conv:
         st.session_state.messages = conv
-        logger.info("event=app_history_loaded user=%s count=%s", user_name, len(conv))
+        logger.info("event=app_history_loaded user=%s count=%s", st.session_state.username, len(conv))
     else:
         st.session_state.messages = []
-    st.session_state._loaded_user = user_name
+    st.session_state._loaded_user = st.session_state.username
 
 if not st.session_state.messages:
     st.session_state.messages.append({"role": "assistant", "text": "How can I help you?"})
@@ -140,32 +352,58 @@ if prompt:
     st.session_state.messages.append({"role": "user", "text": prompt})
 
     start = time.time()
-    logger.info("event=app_chat_request model=%s user=%s category=%s prompt_len=%s", model_choice, user_name, selected_category, len(prompt))
+    logger.info(
+        "event=app_chat_request model=%s user=%s category=%s prompt_len=%s",
+        st.session_state.selected_model,
+        st.session_state.username,
+        selected_category,
+        len(prompt),
+    )
 
     conversation_history = []
     for msg in st.session_state.messages[:-1]:
         role = "assistant" if msg["role"] == "assistant" else "user"
         conversation_history.append({"role": role, "content": msg["text"]})
 
-    with st.spinner(f"Generating response with {model_choice}..."):
-        res = get_ai_response(prompt, model_choice, conversation_history=conversation_history, enable_deep_analysis=True)
-    
+    with st.spinner(f"Generating response with {st.session_state.selected_model}..."):
+        res = get_ai_response(
+            prompt,
+            st.session_state.selected_model,
+            conversation_history=conversation_history,
+            enable_deep_analysis=True,
+        )
+
     bot_text = res.get("text", "")
     success = res.get("success", False)
     deep_analysis = res.get("deep_analysis")
-    
+
     duration = time.time() - start
-    
+
     if deep_analysis:
         emotion = deep_analysis.get("layer_2_emotional_state", {}).get("core_emotion", "unknown")
         intensity = deep_analysis.get("layer_2_emotional_state", {}).get("intensity", 0)
         meta_core = deep_analysis.get("layer_5_meta_questions", {}).get("meta_5", "unknown")
-        
-        logger.info("event=app_chat_response model=%s user=%s duration=%.4f success=%s response_len=%s emotion=%s intensity=%s meta_core=%s", 
-                   model_choice, user_name, duration, success, len(bot_text), emotion, intensity, meta_core)
+
+        logger.info(
+            "event=app_chat_response model=%s user=%s duration=%.4f success=%s response_len=%s emotion=%s intensity=%s meta_core=%s",
+            st.session_state.selected_model,
+            st.session_state.username,
+            duration,
+            success,
+            len(bot_text),
+            emotion,
+            intensity,
+            meta_core,
+        )
     else:
-        logger.info("event=app_chat_response model=%s user=%s duration=%.4f success=%s response_len=%s", 
-                   model_choice, user_name, duration, success, len(bot_text))
+        logger.info(
+            "event=app_chat_response model=%s user=%s duration=%.4f success=%s response_len=%s",
+            st.session_state.selected_model,
+            st.session_state.username,
+            duration,
+            success,
+            len(bot_text),
+        )
 
     with st.chat_message("assistant"):
         st.write(bot_text)
@@ -174,14 +412,23 @@ if prompt:
 
     try:
         store_conversation_as_knowledge_graph(
-            user_name, 
-            prompt, 
-            bot_text, 
-            model=model_choice, 
+            st.session_state.username,
+            prompt,
+            bot_text,
+            model=st.session_state.selected_model,
             version="latest",
-            metadata={"deep_analysis": deep_analysis} if deep_analysis else None
+            metadata={"deep_analysis": deep_analysis} if deep_analysis else None,
         )
-        logger.info("event=app_conversation_saved user=%s model=%s has_deep_analysis=%s", 
-                   user_name, model_choice, bool(deep_analysis))
+        logger.info(
+            "event=app_conversation_saved user=%s model=%s has_deep_analysis=%s",
+            st.session_state.username,
+            st.session_state.selected_model,
+            bool(deep_analysis),
+        )
     except Exception as e:
-        logger.error("event=app_conversation_save_failed user=%s model=%s error=%s", user_name, model_choice, str(e))
+        logger.error(
+            "event=app_conversation_save_failed user=%s model=%s error=%s",
+            st.session_state.username,
+            st.session_state.selected_model,
+            str(e),
+        )
