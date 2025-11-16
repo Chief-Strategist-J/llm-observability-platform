@@ -13,7 +13,7 @@ discovery:
   follow_symlinks: false
 labels:
   environment: development
-  source: application_stdout
+  source: logs
   app: application-stdout-ingest
 batch:
   enabled: true

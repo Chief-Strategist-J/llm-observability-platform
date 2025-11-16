@@ -25,7 +25,7 @@ class LogsPipelineWorker(BaseWorker):
     @property
     def workflows(self):
         from infrastructure.orchestrator.workflows.logs_pipeline_workflow import LogsPipelineWorkflow
-        from infrastructure.orchestrator.workflows.application_stdout_ingest_workflow import ApplicationStdoutIngestWorkflow
+        from infrastructure.orchestrator.workflows.logs_ingest_workflow import ApplicationStdoutIngestWorkflow
         return [LogsPipelineWorkflow, ApplicationStdoutIngestWorkflow]
 
     @property
@@ -70,22 +70,22 @@ class LogsPipelineWorker(BaseWorker):
             start_kafka_activity, stop_kafka_activity,
             restart_kafka_activity, delete_kafka_activity,
         )
-        from infrastructure.observability_platform.ingest.application_stdout.activities.discover_log_files_activity import (
+        from infrastructure.observability_platform.ingest.logs.activities.discover_log_files_activity import (
             discover_log_files_activity,
         )
-        from infrastructure.observability_platform.ingest.application_stdout.activities.label_enrichment_activity import (
+        from infrastructure.observability_platform.ingest.logs.activities.label_enrichment_activity import (
             label_enrichment_activity,
         )
-        from infrastructure.observability_platform.ingest.application_stdout.activities.tail_and_ship_logs_activity import (
+        from infrastructure.observability_platform.ingest.logs.activities.tail_and_ship_logs_activity import (
             tail_and_ship_logs_activity,
         )
-        from infrastructure.observability_platform.ingest.application_stdout.activities.application_stdout_configure_activity import (
-            application_stdout_configure_activity,
+        from infrastructure.observability_platform.ingest.logs.activities.logs_configure_activity import (
+            logs_configure_activity,
         )
-        from infrastructure.observability_platform.ingest.application_stdout.activities.add_loki_datasource_activity import (
+        from infrastructure.observability_platform.ingest.logs.activities.add_loki_datasource_activity import (
             add_loki_datasource_activity,
         )
-        from infrastructure.observability_platform.ingest.application_stdout.activities.discover_docker_logs_activity import (
+        from infrastructure.observability_platform.ingest.logs.activities.discover_docker_logs_activity import (
             discover_docker_logs_activity,
         )
 
@@ -113,7 +113,7 @@ class LogsPipelineWorker(BaseWorker):
             discover_log_files_activity,
             label_enrichment_activity,
             tail_and_ship_logs_activity,
-            application_stdout_configure_activity,
+            logs_configure_activity,
             add_loki_datasource_activity,
             discover_docker_logs_activity
         ]
