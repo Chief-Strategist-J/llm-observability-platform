@@ -421,84 +421,67 @@ if prompt:
         role = "assistant" if msg["role"] == "assistant" else "user"
         conversation_history.append({"role": role, "content": msg["text"]})
 
+    # Determine if web search should be enabled
+    enable_web_search = st.session_state.get("enable_agent", False)
+    agent_mode = st.session_state.get("agent_mode", "Normal")
+    
     bot_text = ""
-    deep_analysis = None
     success = False
-
-    if st.session_state.get("enable_agent") and st.session_state.get("agent_mode") == "Search":
-        with st.spinner("🔍 Searching web..."):
+    deep_analysis = None
+    
+    # Process with intelligent agent and web search
+    if enable_web_search and agent_mode in ["Search", "Research"]:
+        with st.spinner("🔍 Searching web for real-time data..."):
+            logger.info("event=agent_mode_activated mode=%s", agent_mode)
             agent_result = IntelligentAgent.process_with_tools(
                 prompt,
                 st.session_state.selected_model,
                 conversation_history=conversation_history,
                 enable_web_search=True,
-                max_iterations=2
+                max_iterations=3
             )
             if agent_result.get("success"):
                 bot_text = agent_result.get("response", "")
                 success = True
                 if agent_result.get("tool_results"):
-                    st.info(f"Used {len(agent_result['tool_results'])} tools")
+                    st.info(f"✅ Used {len(agent_result['tool_results'])} web tools for real-time data")
+                    logger.info("event=agent_tools_used count=%s", len(agent_result['tool_results']))
             else:
                 bot_text = f"Error: {agent_result.get('error')}"
                 success = False
-
-    elif st.session_state.get("enable_agent") and st.session_state.get("agent_mode") == "Research":
-        with st.spinner("📚 Researching topic..."):
-            research_result = IntelligentAgent.analyze_with_research(
-                prompt,
-                st.session_state.selected_model,
-                depth="standard"
-            )
-            if research_result.get("success"):
-                bot_text = research_result.get("analysis", "")
-                success = True
-                st.info(f"Sources: {research_result.get('sources', 0)}")
-            else:
-                bot_text = f"Error: {research_result.get('error')}"
-                success = False
-
-    elif st.session_state.get("enable_streaming"):
-        with st.spinner(f"Generating response with {st.session_state.selected_model}..."):
-            placeholder = st.empty()
-            response_container = {"text": ""}
-            try:
-                async def stream_and_display():
-                    async for chunk in StreamingClient.stream_response(
-                        prompt,
-                        st.session_state.selected_model,
-                        conversation_history=conversation_history
-                    ):
-                        response_container["text"] += chunk
-                        placeholder.markdown(response_container["text"] + "▌")
-                    placeholder.markdown(response_container["text"])
-                
-                asyncio.run(stream_and_display())
-                bot_text = response_container["text"]
-                success = True
-            except Exception as e:
-                bot_text = f"Error: {str(e)}"
-                success = False
-
+                logger.error("event=agent_failed error=%s", agent_result.get('error'))
     else:
-        with st.spinner(f"Generating response with {st.session_state.selected_model}..."):
-            res = get_ai_response(
+        # Standard AI response without web search
+        with st.spinner("💭 Thinking..."):
+            ai_result = get_ai_response(
                 prompt,
                 st.session_state.selected_model,
                 conversation_history=conversation_history,
-                enable_deep_analysis=True,
+                enable_deep_analysis=True
             )
-            bot_text = res.get("text", "")
-            success = res.get("success", False)
-            deep_analysis = res.get("deep_analysis")
+            if ai_result.get("success"):
+                bot_text = ai_result.get("text", "")
+                success = True
+                deep_analysis = ai_result.get("deep_analysis")
+            else:
+                bot_text = ai_result.get("text", "Error generating response")
+                success = False
 
     duration = time.time() - start
-
-    if deep_analysis:
-        emotion = deep_analysis.get("layer_2_emotional_state", {}).get("core_emotion", "unknown")
-        intensity = deep_analysis.get("layer_2_emotional_state", {}).get("intensity", 0)
-        meta_core = deep_analysis.get("layer_5_meta_questions", {}).get("meta_5", "unknown")
-
+    
+    # Extract emotional insights from deep analysis
+    emotion = "neutral"
+    intensity = 5
+    meta_core = "No specific insight"
+    
+    if deep_analysis and isinstance(deep_analysis, dict):
+        layer_2 = deep_analysis.get("layer_2_emotional_state", {})
+        emotion = layer_2.get("core_emotion", "neutral")
+        intensity = layer_2.get("intensity", 5)
+        
+        layer_5 = deep_analysis.get("layer_5_meta_questions", {})
+        meta_core = layer_5.get("meta_5", "No specific insight")
+        
         logger.info(
             "event=app_chat_response model=%s user=%s duration=%.4f success=%s response_len=%s emotion=%s intensity=%s meta_core=%s",
             st.session_state.selected_model,
