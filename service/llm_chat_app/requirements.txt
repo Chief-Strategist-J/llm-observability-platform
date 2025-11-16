@@ -4,7 +4,7 @@ python-dotenv==1.0.1
 neo4j==5.16.0
 beautifulsoup4==4.12.2
 aiohttp==3.9.1
-asyncio-contextmanager==1.0.0
+asyncio-contextmanager==1.0.1
 pyvis==0.3.2
 networkx==3.2.1
 lxml==4.9.3
