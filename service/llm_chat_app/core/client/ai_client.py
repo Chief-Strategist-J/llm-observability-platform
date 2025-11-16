@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Any, List, Optional
 from core.client.cloudflare_client import run_model
-from core.services.deep_psychological_engine import analyze_deep_psychology
+from core.services.enable_deep_analysis import analyze_deep_psychology
 
 logger = logging.getLogger(__name__)
 
