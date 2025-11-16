@@ -56,6 +56,9 @@ def init_session_state():
         st.session_state.show_graph = False
         st.session_state.graph_data = None
         st.session_state.cypher_query = None
+    
+    if "scroll_to_bottom" not in st.session_state:
+        st.session_state.scroll_to_bottom = False
 
 
 def load_models():
@@ -211,7 +214,11 @@ def visualize_knowledge_graph(user_query: str = None):
         graph_data, error = GraphVisualizationService.fetch_graph_data(cypher_query)
         
         if error:
-            st.info("📊 No graph data available yet. Start chatting to build your knowledge graph!")
+            if "Cannot resolve address" in error or "Connection failed" in error:
+                st.warning("⚠️ Cannot connect to Neo4j. Please check if Neo4j is running and connection settings are correct.")
+                st.info("💡 **Connection Issue**: Update your `.env.llm_chat_app` file to use `bolt://localhost:7687` instead of `bolt://neo4j-development:7687`")
+            else:
+                st.error(f"❌ Graph error: {error}")
             logger.warning("event=graph_fetch_failed error=%s", error)
             return
         
@@ -252,13 +259,13 @@ def visualize_knowledge_graph(user_query: str = None):
         with open(file_path, "r", encoding="utf-8") as f:
             html_content = f.read()
         
-        st.components.v1.html(html_content, height=800)
+        st.components.v1.html(html_content, height=800, scrolling=True)
         
         logger.info("event=graph_visualization_success user=%s nodes=%s edges=%s", 
                    st.session_state.username, stats["total_nodes"], stats["total_edges"])
         
     except Exception as e:
-        st.info("📊 Neo4j not connected. Graph will show when Neo4j is available.")
+        st.warning("⚠️ Neo4j connection issue. Please update your `.env.llm_chat_app` file to use `bolt://localhost:7687`")
         logger.warning("event=graph_visualization_exception user=%s error=%s", 
                     st.session_state.username, str(e))
 
@@ -293,17 +300,26 @@ def main():
         st.error("Failed to load models. Check your API credentials.")
         st.stop()
 
+    # Track active tab
+    if "active_tab" not in st.session_state:
+        st.session_state.active_tab = "chat"
+    
     tab_chat, tab_graph = st.tabs(["💬 Chat", "📊 Knowledge Graph"])
     
     with tab_chat:
+        st.session_state.active_tab = "chat"
+        # Display all messages
         for msg in st.session_state.messages:
             with st.chat_message(msg["role"]):
                 st.write(msg["text"])
 
-        prompt = st.chat_input("Type your message...")
-
+    # IMPORTANT: Chat input OUTSIDE the tab context to prevent scrolling
+    # Always show input when on chat tab
+    if st.session_state.active_tab == "chat":
+        prompt = st.chat_input("Type your message here...")
+        
         if prompt:
-            st.chat_message("user").write(prompt)
+            # Add user message
             st.session_state.messages.append({"role": "user", "text": prompt})
 
             start = time.time()
@@ -315,11 +331,13 @@ def main():
                 len(prompt),
             )
 
+            # Build conversation history
             conversation_history = []
             for msg in st.session_state.messages[:-1]:
                 role = "assistant" if msg["role"] == "assistant" else "user"
                 conversation_history.append({"role": role, "content": msg["text"]})
 
+            # Get AI response
             bot_text, success, deep_analysis = process_chat_response(prompt, conversation_history)
             duration = time.time() - start
             
@@ -336,12 +354,10 @@ def main():
                 intensity,
             )
 
-            if not st.session_state.get("enable_streaming"):
-                with st.chat_message("assistant"):
-                    st.write(bot_text)
-
+            # Add bot response
             st.session_state.messages.append({"role": "assistant", "text": bot_text})
 
+            # Save to knowledge graph
             try:
                 store_conversation_as_knowledge_graph(
                     st.session_state.username,
@@ -364,9 +380,11 @@ def main():
                     str(e),
                 )
             
+            # Rerun to display new messages
             st.rerun()
     
     with tab_graph:
+        st.session_state.current_tab = "graph"
         st.subheader("📊 Knowledge Graph")
         with st.spinner("🔄 Loading knowledge graph..."):
             visualize_knowledge_graph()
