@@ -1,8 +1,3 @@
-"""
-Real-time Collaboration Service
-Enables multiple users to share chat sessions and collaborate
-"""
-
 import logging
 import json
 import uuid
@@ -14,18 +9,14 @@ import threading
 
 logger = logging.getLogger(__name__)
 
-# Collaboration data storage
 _COLLAB_DIR = Path.cwd() / "collaboration_sessions"
 _COLLAB_DIR.mkdir(parents=True, exist_ok=True)
 
-# In-memory active sessions (in production, use Redis)
 _ACTIVE_SESSIONS: Dict[str, "CollaborationSession"] = {}
 _SESSION_LOCK = threading.RLock()
 
-
 @dataclass
 class CollaborationMessage:
-    """Represents a message in a collaborative session"""
     id: str
     user: str
     role: str
@@ -36,10 +27,8 @@ class CollaborationMessage:
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
-
 @dataclass
 class CollaborationSession:
-    """Represents a collaborative chat session"""
     session_id: str
     name: str
     created_by: str
@@ -61,9 +50,7 @@ class CollaborationSession:
             "is_active": self.is_active
         }
 
-
 class CollaborationService:
-    """Service for managing collaborative sessions"""
     
     @staticmethod
     def create_session(
@@ -71,17 +58,13 @@ class CollaborationService:
         created_by: str,
         settings: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """
-        Create a new collaborative session
         
-        Args:
-            name: Session name
-            created_by: User creating the session
-            settings: Session settings (model, etc.)
-            
-        Returns:
-            Session information
-        """
+        if not name or not isinstance(name, str):
+            return {"success": False, "error": "Invalid session name"}
+        
+        if not created_by or not isinstance(created_by, str):
+            return {"success": False, "error": "Invalid creator"}
+        
         session_id = str(uuid.uuid4())
         now = datetime.now().timestamp()
         
@@ -112,19 +95,15 @@ class CollaborationService:
     
     @staticmethod
     def join_session(session_id: str, user: str) -> Dict[str, Any]:
-        """
-        Join an existing collaborative session
         
-        Args:
-            session_id: Session to join
-            user: User joining
-            
-        Returns:
-            Session information
-        """
+        if not session_id or not isinstance(session_id, str):
+            return {"success": False, "error": "Invalid session ID"}
+        
+        if not user or not isinstance(user, str):
+            return {"success": False, "error": "Invalid user"}
+        
         with _SESSION_LOCK:
             if session_id not in _ACTIVE_SESSIONS:
-                # Try to load from disk
                 session = _load_session(session_id)
                 if not session:
                     logger.warning("event=collab_session_not_found session_id=%s", session_id)
@@ -159,19 +138,16 @@ class CollaborationService:
         content: str,
         metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """
-        Add a message to a collaborative session
         
-        Args:
-            session_id: Session ID
-            user: User sending message
-            role: Message role (user/assistant)
-            content: Message content
-            metadata: Additional metadata
-            
-        Returns:
-            Message information
-        """
+        if not session_id or not isinstance(session_id, str):
+            return {"success": False, "error": "Invalid session ID"}
+        
+        if not user or not isinstance(user, str):
+            return {"success": False, "error": "Invalid user"}
+        
+        if not content or not isinstance(content, str):
+            return {"success": False, "error": "Invalid content"}
+        
         with _SESSION_LOCK:
             if session_id not in _ACTIVE_SESSIONS:
                 session = _load_session(session_id)
@@ -211,15 +187,10 @@ class CollaborationService:
     
     @staticmethod
     def get_session(session_id: str) -> Dict[str, Any]:
-        """
-        Get session information
         
-        Args:
-            session_id: Session ID
-            
-        Returns:
-            Session information
-        """
+        if not session_id or not isinstance(session_id, str):
+            return {"success": False, "error": "Invalid session ID"}
+        
         with _SESSION_LOCK:
             if session_id not in _ACTIVE_SESSIONS:
                 session = _load_session(session_id)
@@ -237,15 +208,10 @@ class CollaborationService:
     
     @staticmethod
     def list_sessions(user: str) -> Dict[str, Any]:
-        """
-        List all sessions for a user
         
-        Args:
-            user: User to list sessions for
-            
-        Returns:
-            List of sessions
-        """
+        if not user or not isinstance(user, str):
+            return {"success": False, "error": "Invalid user"}
+        
         sessions = []
         
         with _SESSION_LOCK:
@@ -273,16 +239,13 @@ class CollaborationService:
     
     @staticmethod
     def leave_session(session_id: str, user: str) -> Dict[str, Any]:
-        """
-        Leave a collaborative session
         
-        Args:
-            session_id: Session ID
-            user: User leaving
-            
-        Returns:
-            Operation result
-        """
+        if not session_id or not isinstance(session_id, str):
+            return {"success": False, "error": "Invalid session ID"}
+        
+        if not user or not isinstance(user, str):
+            return {"success": False, "error": "Invalid user"}
+        
         with _SESSION_LOCK:
             if session_id not in _ACTIVE_SESSIONS:
                 session = _load_session(session_id)
@@ -313,15 +276,10 @@ class CollaborationService:
     
     @staticmethod
     def get_participants(session_id: str) -> Dict[str, Any]:
-        """
-        Get list of participants in a session
         
-        Args:
-            session_id: Session ID
-            
-        Returns:
-            List of participants
-        """
+        if not session_id or not isinstance(session_id, str):
+            return {"success": False, "error": "Invalid session ID"}
+        
         with _SESSION_LOCK:
             if session_id not in _ACTIVE_SESSIONS:
                 session = _load_session(session_id)
@@ -341,7 +299,10 @@ class CollaborationService:
 
 
 def _save_session(session: CollaborationSession) -> None:
-    """Save session to disk"""
+    
+    if not session:
+        return
+    
     try:
         session_file = _COLLAB_DIR / f"{session.session_id}.json"
         
@@ -364,7 +325,10 @@ def _save_session(session: CollaborationSession) -> None:
 
 
 def _load_session(session_id: str) -> Optional[CollaborationSession]:
-    """Load session from disk"""
+    
+    if not session_id or not isinstance(session_id, str):
+        return None
+    
     try:
         session_file = _COLLAB_DIR / f"{session_id}.json"
         
