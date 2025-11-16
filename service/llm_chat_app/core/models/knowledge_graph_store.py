@@ -97,8 +97,15 @@ def store_conversation_as_knowledge_graph(
                 deep_analysis.get("emotion", {}).get("primary"),
                 deep_analysis.get("intent", {}).get("primary"))
     
+    # Extract entities and topics from deep_analysis
     entities = deep_analysis.get("entities", [])
     topics = deep_analysis.get("topics", [])
+    
+    # Ensure they're lists
+    if not isinstance(entities, list):
+        entities = [entities] if entities else []
+    if not isinstance(topics, list):
+        topics = [topics] if topics else []
     
     logger.info("event=kg_extracted entities=%s topics=%s", len(entities), len(topics))
     
