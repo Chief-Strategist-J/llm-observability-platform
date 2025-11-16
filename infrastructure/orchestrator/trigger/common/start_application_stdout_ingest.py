@@ -12,7 +12,7 @@ if __name__ == "__main__":
 from infrastructure.orchestrator.base.base_pipeline import WorkflowConfig, PipelineExecutor
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
-logger = logging.getLogger("application_stdout_ingest_trigger")
+logger = logging.getLogger("logs_ingest_trigger")
 
 
 class ApplicationStdoutIngestPipeline(PipelineExecutor):

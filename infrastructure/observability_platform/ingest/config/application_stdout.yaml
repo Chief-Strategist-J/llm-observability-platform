@@ -2,7 +2,7 @@ directories:
   - /var/log
 
 labels:
-  service: application_stdout
+  service: logs
 
 ship:
   protocol: loki
