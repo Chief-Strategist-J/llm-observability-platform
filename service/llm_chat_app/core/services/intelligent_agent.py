@@ -49,7 +49,7 @@ class IntelligentAgent:
                 "system": system_prompt
             }
             
-            result = run_model(model=model, body=body, timeout=30)
+            result = run_model(model_name=model, prompt="", params=body, timeout=30)
             
             if not result or not result.get("success"):
                 error_msg = result.get("error", "Unknown error") if result else "No response"
