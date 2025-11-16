@@ -98,7 +98,6 @@ def render_sidebar():
     
     st.sidebar.divider()
     
-    # Graph visualization section
     SidebarUI.graph_visualization_section()
     
     st.sidebar.divider()
@@ -195,11 +194,9 @@ def extract_emotional_state(deep_analysis):
 
 
 def visualize_knowledge_graph(user_query: str = None):
-    """Generate and visualize knowledge graph based on user query."""
     logger.info("event=graph_visualization_start user=%s", st.session_state.username)
     
     try:
-        # Generate Cypher query
         if user_query:
             cypher_query = GraphVisualizationService.generate_cypher_query(user_query)
         else:
@@ -209,7 +206,6 @@ def visualize_knowledge_graph(user_query: str = None):
         
         st.session_state.cypher_query = cypher_query
         
-        # Fetch graph data
         graph_data, error = GraphVisualizationService.fetch_graph_data(cypher_query)
         
         if error:
@@ -223,7 +219,6 @@ def visualize_knowledge_graph(user_query: str = None):
         
         st.session_state.graph_data = graph_data
         
-        # Display graph statistics
         stats = GraphVisualizationService.get_graph_statistics(graph_data)
         
         col1, col2, col3, col4 = st.columns(4)
@@ -236,14 +231,12 @@ def visualize_knowledge_graph(user_query: str = None):
         with col4:
             st.metric("Node Types", len(stats["node_types"]))
         
-        # Display node type breakdown
         st.subheader("Node Types")
         node_type_cols = st.columns(len(stats["node_types"]))
         for idx, (node_type, count) in enumerate(stats["node_types"].items()):
             with node_type_cols[idx % len(node_type_cols)]:
                 st.write(f"**{node_type}**: {count}")
         
-        # Create and display visualization
         output_file = "/tmp/graph_visualization.html"
         file_path, viz_error = GraphVisualizationService.create_visualization(
             graph_data,
@@ -256,13 +249,11 @@ def visualize_knowledge_graph(user_query: str = None):
             logger.error("event=graph_visualization_failed error=%s", viz_error)
             return
         
-        # Display the visualization
         with open(file_path, "r", encoding="utf-8") as f:
             html_content = f.read()
         
         st.components.v1.html(html_content, height=800)
         
-        # Display Cypher query used
         with st.expander("📝 Cypher Query Used"):
             st.code(cypher_query, language="cypher")
         
@@ -305,7 +296,6 @@ def main():
         st.error("Failed to load models. Check your API credentials.")
         st.stop()
     
-    # Display graph visualization if enabled
     if st.session_state.show_graph:
         st.divider()
         st.subheader("📊 Knowledge Graph Visualization")

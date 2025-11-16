@@ -17,27 +17,13 @@ except Exception as e:
 
 
 class GraphVisualizationService:
-    """Service for generating Cypher queries and visualizing Neo4j graphs."""
-    
     @staticmethod
     def generate_cypher_query(user_query: str, query_type: str = "general") -> str:
-        """
-        Generate a Cypher query based on user input.
-        
-        Args:
-            user_query: Natural language query from user
-            query_type: Type of query (general, topic, entity, conversation_chain)
-        
-        Returns:
-            Cypher query string
-        """
         logger.info("event=cypher_generation_start query_type=%s query_len=%s", query_type, len(user_query))
         
         query_lower = user_query.lower()
         
-        # Topic-based queries
         if any(word in query_lower for word in ["topic", "about", "discuss", "related"]):
-            # Extract potential topic from query
             words = user_query.split()
             topic = words[-1].strip('?.,!') if len(words) > 0 else "python"
             cypher = f"""
@@ -51,7 +37,6 @@ class GraphVisualizationService:
             logger.info("event=cypher_topic_query topic=%s", topic)
             return cypher.strip()
         
-        # Entity-based queries
         if any(word in query_lower for word in ["entity", "mention", "what", "who"]):
             cypher = """
             MATCH (c:Conversation)-[:MENTIONS]->(e:Entity)
@@ -63,7 +48,6 @@ class GraphVisualizationService:
             logger.info("event=cypher_entity_query")
             return cypher.strip()
         
-        # Conversation chain queries
         if any(word in query_lower for word in ["chain", "sequence", "flow", "progression", "history"]):
             cypher = """
             MATCH (u:User)-[:ASKED]->(c1:Conversation)
@@ -77,7 +61,6 @@ class GraphVisualizationService:
             logger.info("event=cypher_chain_query")
             return cypher.strip()
         
-        # Emotion-based queries
         if any(word in query_lower for word in ["emotion", "feel", "sentiment", "mood"]):
             cypher = """
             MATCH (c:Conversation)-[:FEELS]->(em:Emotion)
@@ -90,7 +73,6 @@ class GraphVisualizationService:
             logger.info("event=cypher_emotion_query")
             return cypher.strip()
         
-        # Default: comprehensive query
         cypher = """
         MATCH (u:User)-[:ASKED]->(c:Conversation)
         OPTIONAL MATCH (c)-[:ABOUT]->(t:Topic)
@@ -106,15 +88,6 @@ class GraphVisualizationService:
     
     @staticmethod
     def fetch_graph_data(cypher_query: str) -> Tuple[Optional[Dict], Optional[str]]:
-        """
-        Execute Cypher query and fetch graph data from Neo4j.
-        
-        Args:
-            cypher_query: Cypher query to execute
-        
-        Returns:
-            Tuple of (graph_data dict, error message if any)
-        """
         logger.info("event=fetch_graph_data_start query_len=%s", len(cypher_query))
         
         if not _NEO4J_AVAILABLE or not NEO4J_URI:
@@ -144,7 +117,6 @@ class GraphVisualizationService:
                                 continue
                             
                             if hasattr(value, 'id') and hasattr(value, 'labels'):
-                                # It's a node
                                 node_id = str(value.id)
                                 if node_id not in node_ids:
                                     node_ids.add(node_id)
@@ -159,7 +131,6 @@ class GraphVisualizationService:
                                     })
                             
                             elif hasattr(value, 'start_node') and hasattr(value, 'end_node'):
-                                # It's a relationship
                                 start_id = str(value.start_node.id)
                                 end_id = str(value.end_node.id)
                                 rel_type = value.type
@@ -201,25 +172,12 @@ class GraphVisualizationService:
         output_file: str = "graph_visualization.html",
         title: str = "Knowledge Graph Visualization"
     ) -> Tuple[str, Optional[str]]:
-        """
-        Create an interactive PyVis visualization from graph data.
-        
-        Args:
-            graph_data: Graph data with nodes and edges
-            output_file: Output HTML file path
-            title: Title for the visualization
-        
-        Returns:
-            Tuple of (file_path, error message if any)
-        """
         logger.info("event=create_visualization_start nodes=%s edges=%s", 
                    len(graph_data.get("nodes", [])), len(graph_data.get("edges", [])))
         
         try:
-            # Create NetworkX graph
             g = nx.DiGraph()
             
-            # Add nodes with properties
             for node in graph_data.get("nodes", []):
                 node_id = node["id"]
                 label = node.get("label", "Node")
@@ -227,11 +185,9 @@ class GraphVisualizationService:
                 
                 g.add_node(node_id, label=label, title=title)
             
-            # Add edges
             for edge in graph_data.get("edges", []):
                 g.add_edge(edge["from"], edge["to"], label=edge.get("label", ""))
             
-            # Create PyVis network
             net = Network(
                 directed=True,
                 height="750px",
@@ -241,7 +197,6 @@ class GraphVisualizationService:
             
             net.from_nx(g)
             
-            # Customize physics
             net.toggle_physics(True)
             net.set_options("""
             {
@@ -264,7 +219,6 @@ class GraphVisualizationService:
             }
             """)
             
-            # Save visualization
             net.show(output_file)
             
             logger.info("event=create_visualization_success file=%s", output_file)
@@ -277,25 +231,14 @@ class GraphVisualizationService:
     
     @staticmethod
     def get_graph_statistics(graph_data: Dict) -> Dict[str, Any]:
-        """
-        Calculate statistics about the graph.
-        
-        Args:
-            graph_data: Graph data with nodes and edges
-        
-        Returns:
-            Dictionary with graph statistics
-        """
         nodes = graph_data.get("nodes", [])
         edges = graph_data.get("edges", [])
         
-        # Count node types
         node_types = {}
         for node in nodes:
             label = node.get("label", "Unknown")
             node_types[label] = node_types.get(label, 0) + 1
         
-        # Count edge types
         edge_types = {}
         for edge in edges:
             label = edge.get("label", "Unknown")
