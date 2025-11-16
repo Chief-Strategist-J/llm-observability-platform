@@ -197,27 +197,27 @@ def visualize_knowledge_graph(user_query: str = None):
     logger.info("event=graph_visualization_start user=%s", st.session_state.username)
     
     try:
-        if user_query:
-            cypher_query = GraphVisualizationService.generate_cypher_query(user_query)
-        else:
-            cypher_query = GraphVisualizationService.generate_cypher_query(
-                f"Show knowledge graph for {st.session_state.username}"
-            )
-        
-        st.session_state.cypher_query = cypher_query
+        cypher_query = f"""
+        MATCH (u:User {{name: '{st.session_state.username}'}})-[:ASKED]->(c:Conversation)
+        OPTIONAL MATCH (c)-[:ABOUT]->(t:Topic)
+        OPTIONAL MATCH (c)-[:MENTIONS]->(e:Entity)
+        OPTIONAL MATCH (c)-[:FEELS]->(em:Emotion)
+        OPTIONAL MATCH (m:Model)-[:RESPONDED_TO]->(c)
+        RETURN u, c, t, e, em, m
+        ORDER BY c.ts DESC
+        LIMIT 50
+        """
         
         graph_data, error = GraphVisualizationService.fetch_graph_data(cypher_query)
         
         if error:
-            st.warning(f"⚠️ Graph fetch failed: {error}")
+            st.info("📊 No graph data available yet. Start chatting to build your knowledge graph!")
             logger.warning("event=graph_fetch_failed error=%s", error)
             return
         
         if not graph_data or not graph_data.get("nodes"):
-            st.info("📊 No graph data available. Continue chatting to build your knowledge graph!")
+            st.info("📊 No conversations yet. Start chatting to build your knowledge graph!")
             return
-        
-        st.session_state.graph_data = graph_data
         
         stats = GraphVisualizationService.get_graph_statistics(graph_data)
         
@@ -229,10 +229,10 @@ def visualize_knowledge_graph(user_query: str = None):
         with col3:
             st.metric("Density", f"{stats['density']:.3f}")
         with col4:
-            st.metric("Node Types", len(stats["node_types"]))
+            st.metric("Types", len(stats["node_types"]))
         
         st.subheader("Node Types")
-        node_type_cols = st.columns(len(stats["node_types"]))
+        node_type_cols = st.columns(len(stats["node_types"]) if stats["node_types"] else 1)
         for idx, (node_type, count) in enumerate(stats["node_types"].items()):
             with node_type_cols[idx % len(node_type_cols)]:
                 st.write(f"**{node_type}**: {count}")
@@ -254,15 +254,12 @@ def visualize_knowledge_graph(user_query: str = None):
         
         st.components.v1.html(html_content, height=800)
         
-        with st.expander("📝 Cypher Query Used"):
-            st.code(cypher_query, language="cypher")
-        
         logger.info("event=graph_visualization_success user=%s nodes=%s edges=%s", 
                    st.session_state.username, stats["total_nodes"], stats["total_edges"])
         
     except Exception as e:
-        st.error(f"❌ Graph visualization error: {str(e)}")
-        logger.error("event=graph_visualization_exception user=%s error=%s", 
+        st.info("📊 Neo4j not connected. Graph will show when Neo4j is available.")
+        logger.warning("event=graph_visualization_exception user=%s error=%s", 
                     st.session_state.username, str(e))
 
 
@@ -295,81 +292,84 @@ def main():
     if not st.session_state.categories:
         st.error("Failed to load models. Check your API credentials.")
         st.stop()
+
+    tab_chat, tab_graph = st.tabs(["💬 Chat", "📊 Knowledge Graph"])
     
-    if st.session_state.show_graph:
-        st.divider()
-        st.subheader("📊 Knowledge Graph Visualization")
-        with st.spinner("🔄 Generating knowledge graph..."):
-            visualize_knowledge_graph()
-        st.divider()
+    with tab_chat:
+        for msg in st.session_state.messages:
+            with st.chat_message(msg["role"]):
+                st.write(msg["text"])
 
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.write(msg["text"])
+        prompt = st.chat_input("Type your message...")
 
-    prompt = st.chat_input("Type your message...")
+        if prompt:
+            st.chat_message("user").write(prompt)
+            st.session_state.messages.append({"role": "user", "text": prompt})
 
-    if prompt:
-        st.chat_message("user").write(prompt)
-        st.session_state.messages.append({"role": "user", "text": prompt})
-
-        start = time.time()
-        logger.info(
-            "event=app_chat_request model=%s user=%s category=%s prompt_len=%s",
-            st.session_state.selected_model,
-            st.session_state.username,
-            st.session_state.selected_category,
-            len(prompt),
-        )
-
-        conversation_history = []
-        for msg in st.session_state.messages[:-1]:
-            role = "assistant" if msg["role"] == "assistant" else "user"
-            conversation_history.append({"role": role, "content": msg["text"]})
-
-        bot_text, success, deep_analysis = process_chat_response(prompt, conversation_history)
-        duration = time.time() - start
-        
-        emotion, intensity, meta_core = extract_emotional_state(deep_analysis)
-
-        logger.info(
-            "event=app_chat_response model=%s user=%s duration=%.4f success=%s response_len=%s emotion=%s intensity=%s",
-            st.session_state.selected_model,
-            st.session_state.username,
-            duration,
-            success,
-            len(bot_text),
-            emotion,
-            intensity,
-        )
-
-        if not st.session_state.get("enable_streaming"):
-            with st.chat_message("assistant"):
-                st.write(bot_text)
-
-        st.session_state.messages.append({"role": "assistant", "text": bot_text})
-
-        try:
-            store_conversation_as_knowledge_graph(
-                st.session_state.username,
-                prompt,
-                bot_text,
-                model=st.session_state.selected_model,
-                version="latest",
-                metadata={"deep_analysis": deep_analysis} if deep_analysis else None,
-            )
+            start = time.time()
             logger.info(
-                "event=app_conversation_saved user=%s model=%s has_deep_analysis=%s",
-                st.session_state.username,
+                "event=app_chat_request model=%s user=%s category=%s prompt_len=%s",
                 st.session_state.selected_model,
-                bool(deep_analysis),
-            )
-        except Exception as e:
-            logger.error(
-                "event=app_conversation_save_failed user=%s error=%s",
                 st.session_state.username,
-                str(e),
+                st.session_state.selected_category,
+                len(prompt),
             )
+
+            conversation_history = []
+            for msg in st.session_state.messages[:-1]:
+                role = "assistant" if msg["role"] == "assistant" else "user"
+                conversation_history.append({"role": role, "content": msg["text"]})
+
+            bot_text, success, deep_analysis = process_chat_response(prompt, conversation_history)
+            duration = time.time() - start
+            
+            emotion, intensity, meta_core = extract_emotional_state(deep_analysis)
+
+            logger.info(
+                "event=app_chat_response model=%s user=%s duration=%.4f success=%s response_len=%s emotion=%s intensity=%s",
+                st.session_state.selected_model,
+                st.session_state.username,
+                duration,
+                success,
+                len(bot_text),
+                emotion,
+                intensity,
+            )
+
+            if not st.session_state.get("enable_streaming"):
+                with st.chat_message("assistant"):
+                    st.write(bot_text)
+
+            st.session_state.messages.append({"role": "assistant", "text": bot_text})
+
+            try:
+                store_conversation_as_knowledge_graph(
+                    st.session_state.username,
+                    prompt,
+                    bot_text,
+                    model=st.session_state.selected_model,
+                    version="latest",
+                    metadata={"deep_analysis": deep_analysis} if deep_analysis else None,
+                )
+                logger.info(
+                    "event=app_conversation_saved user=%s model=%s has_deep_analysis=%s",
+                    st.session_state.username,
+                    st.session_state.selected_model,
+                    bool(deep_analysis),
+                )
+            except Exception as e:
+                logger.error(
+                    "event=app_conversation_save_failed user=%s error=%s",
+                    st.session_state.username,
+                    str(e),
+                )
+            
+            st.rerun()
+    
+    with tab_graph:
+        st.subheader("📊 Knowledge Graph")
+        with st.spinner("🔄 Loading knowledge graph..."):
+            visualize_knowledge_graph()
 
 
 if __name__ == "__main__":

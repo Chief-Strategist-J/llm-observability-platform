@@ -1,1 +1,176 @@
-[]
+[
+  {
+    "user": "Jaydeep",
+    "prompt": "How can you help me? ",
+    "response": "Error: Empty response",
+    "model": "@cf/meta/llama-3.2-1b-instruct",
+    "version": "latest",
+    "ts": 1763304535,
+    "entities": [
+      "How can you"
+    ],
+    "topics": [
+      "error"
+    ],
+    "deep_analysis": {
+      "emotion": {
+        "primary": "curious",
+        "intensity": 6,
+        "secondary_emotions": [],
+        "emotional_trajectory": "stable"
+      },
+      "intent": {
+        "primary": "understand",
+        "urgency": 5,
+        "specificity": 5,
+        "goals": [
+          "understand"
+        ]
+      },
+      "meta_level_1_surface": {
+        "what_user_asked": "How can you help me? ",
+        "explicit_topic": "error",
+        "keywords": [
+          "error"
+        ]
+      },
+      "meta_level_2_implicit": {
+        "what_user_actually_wants": "understand about error",
+        "hidden_concerns": [],
+        "assumptions": []
+      },
+      "meta_level_3_context": {
+        "user_knowledge_level": "intermediate",
+        "project_phase": "building",
+        "stuck_point": "unknown",
+        "missing_knowledge": []
+      },
+      "meta_level_4_patterns": {
+        "learning_style": "example-driven",
+        "problem_solving_approach": "systematic",
+        "communication_style": "concise",
+        "confidence_level": 5
+      },
+      "meta_level_5_psychological": {
+        "cognitive_load": 5,
+        "frustration_indicators": [],
+        "breakthrough_moments": [],
+        "mental_model": "sequential",
+        "blockers": []
+      },
+      "meta_level_6_strategic": {
+        "long_term_goal": "build working solution",
+        "current_strategy": "asking for help",
+        "strategy_effectiveness": 7,
+        "needed_pivot": "none",
+        "success_criteria": [
+          "working code"
+        ]
+      },
+      "meta_level_7_transformative": {
+        "worldview_shift": "gaining understanding",
+        "capability_gained": "new knowledge",
+        "future_trajectory": "continued learning",
+        "empowerment_level": 6,
+        "autonomy_gained": "can implement solution"
+      },
+      "entities": [
+        "How can you"
+      ],
+      "topics": [
+        "error"
+      ],
+      "concepts": [
+        "error"
+      ],
+      "relationships": []
+    }
+  },
+  {
+    "user": "Jaydeep",
+    "prompt": "tell me about my conditions? ",
+    "response": "This is the beginning of our conversation, and I don't have any information about your conditions. I'm a large language model, I don't have the ability to access your personal data or medical history. If you'd like to share more about your conditions, I'm here to listen and provide general information and support if you'd like.",
+    "model": "@cf/meta/llama-3.2-1b-instruct",
+    "version": "latest",
+    "ts": 1763304563,
+    "entities": [
+      "tell me about"
+    ],
+    "topics": [
+      "ai"
+    ],
+    "deep_analysis": {
+      "emotion": {
+        "primary": "curious",
+        "intensity": 6,
+        "secondary_emotions": [],
+        "emotional_trajectory": "stable"
+      },
+      "intent": {
+        "primary": "understand",
+        "urgency": 5,
+        "specificity": 5,
+        "goals": [
+          "understand"
+        ]
+      },
+      "meta_level_1_surface": {
+        "what_user_asked": "tell me about my conditions? ",
+        "explicit_topic": "ai",
+        "keywords": [
+          "ai"
+        ]
+      },
+      "meta_level_2_implicit": {
+        "what_user_actually_wants": "understand about ai",
+        "hidden_concerns": [],
+        "assumptions": []
+      },
+      "meta_level_3_context": {
+        "user_knowledge_level": "intermediate",
+        "project_phase": "building",
+        "stuck_point": "unknown",
+        "missing_knowledge": []
+      },
+      "meta_level_4_patterns": {
+        "learning_style": "example-driven",
+        "problem_solving_approach": "systematic",
+        "communication_style": "concise",
+        "confidence_level": 5
+      },
+      "meta_level_5_psychological": {
+        "cognitive_load": 5,
+        "frustration_indicators": [],
+        "breakthrough_moments": [],
+        "mental_model": "sequential",
+        "blockers": []
+      },
+      "meta_level_6_strategic": {
+        "long_term_goal": "build working solution",
+        "current_strategy": "asking for help",
+        "strategy_effectiveness": 7,
+        "needed_pivot": "none",
+        "success_criteria": [
+          "working code"
+        ]
+      },
+      "meta_level_7_transformative": {
+        "worldview_shift": "gaining understanding",
+        "capability_gained": "new knowledge",
+        "future_trajectory": "continued learning",
+        "empowerment_level": 6,
+        "autonomy_gained": "can implement solution"
+      },
+      "entities": [
+        "tell me about"
+      ],
+      "topics": [
+        "ai"
+      ],
+      "concepts": [
+        "ai"
+      ],
+      "relationships": []
+    }
+  }
+]
