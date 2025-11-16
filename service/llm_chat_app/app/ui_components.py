@@ -274,3 +274,27 @@ class SidebarUI:
             st.session_state.messages = []
             st.session_state._loaded_user = None
             st.rerun()
+    
+    @staticmethod
+    def graph_visualization_section():
+        """Graph visualization controls in sidebar."""
+        with st.sidebar.expander("📊 Graph Visualization"):
+            st.write("**Visualize your knowledge graph**")
+            
+            query_type = st.radio(
+                "Query Type",
+                ["General", "Topics", "Entities", "Emotions", "Conversation Chain"],
+                key="graph_query_type"
+            )
+            
+            custom_query = st.text_input(
+                "Custom query (optional)",
+                placeholder="e.g., 'Show me conversations about Python'",
+                key="graph_custom_query"
+            )
+            
+            if st.button("Generate Graph", use_container_width=True):
+                st.session_state.show_graph = True
+                st.session_state.graph_query_type = query_type
+                st.session_state.graph_custom_query = custom_query
+                st.rerun()

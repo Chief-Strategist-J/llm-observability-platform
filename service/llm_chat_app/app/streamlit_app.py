@@ -24,6 +24,7 @@ from core.services.category_service import (
 )
 from core.services.intelligent_agent import IntelligentAgent
 from core.services.emotional_intelligence_engine import EmotionalIntelligenceEngine
+from core.services.graph_visualization_service import GraphVisualizationService
 from ui_components import AuthUI, SidebarUI
 
 logging.basicConfig(
@@ -50,6 +51,11 @@ def init_session_state():
     if "messages" not in st.session_state:
         st.session_state.messages = []
         st.session_state._loaded_user = None
+    
+    if "show_graph" not in st.session_state:
+        st.session_state.show_graph = False
+        st.session_state.graph_data = None
+        st.session_state.cypher_query = None
 
 
 def load_models():
@@ -89,6 +95,11 @@ def render_sidebar():
     SidebarUI.collaboration_section()
     SidebarUI.web_search_section()
     SidebarUI.streaming_section()
+    
+    st.sidebar.divider()
+    
+    # Graph visualization section
+    SidebarUI.graph_visualization_section()
     
     st.sidebar.divider()
     
@@ -183,6 +194,87 @@ def extract_emotional_state(deep_analysis):
     return emotion, intensity, meta_core
 
 
+def visualize_knowledge_graph(user_query: str = None):
+    """Generate and visualize knowledge graph based on user query."""
+    logger.info("event=graph_visualization_start user=%s", st.session_state.username)
+    
+    try:
+        # Generate Cypher query
+        if user_query:
+            cypher_query = GraphVisualizationService.generate_cypher_query(user_query)
+        else:
+            cypher_query = GraphVisualizationService.generate_cypher_query(
+                f"Show knowledge graph for {st.session_state.username}"
+            )
+        
+        st.session_state.cypher_query = cypher_query
+        
+        # Fetch graph data
+        graph_data, error = GraphVisualizationService.fetch_graph_data(cypher_query)
+        
+        if error:
+            st.warning(f"⚠️ Graph fetch failed: {error}")
+            logger.warning("event=graph_fetch_failed error=%s", error)
+            return
+        
+        if not graph_data or not graph_data.get("nodes"):
+            st.info("📊 No graph data available. Continue chatting to build your knowledge graph!")
+            return
+        
+        st.session_state.graph_data = graph_data
+        
+        # Display graph statistics
+        stats = GraphVisualizationService.get_graph_statistics(graph_data)
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("📍 Nodes", stats["total_nodes"])
+        with col2:
+            st.metric("🔗 Edges", stats["total_edges"])
+        with col3:
+            st.metric("Density", f"{stats['density']:.3f}")
+        with col4:
+            st.metric("Node Types", len(stats["node_types"]))
+        
+        # Display node type breakdown
+        st.subheader("Node Types")
+        node_type_cols = st.columns(len(stats["node_types"]))
+        for idx, (node_type, count) in enumerate(stats["node_types"].items()):
+            with node_type_cols[idx % len(node_type_cols)]:
+                st.write(f"**{node_type}**: {count}")
+        
+        # Create and display visualization
+        output_file = "/tmp/graph_visualization.html"
+        file_path, viz_error = GraphVisualizationService.create_visualization(
+            graph_data,
+            output_file=output_file,
+            title=f"Knowledge Graph - {st.session_state.username}"
+        )
+        
+        if viz_error:
+            st.error(f"❌ Visualization failed: {viz_error}")
+            logger.error("event=graph_visualization_failed error=%s", viz_error)
+            return
+        
+        # Display the visualization
+        with open(file_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
+        
+        st.components.v1.html(html_content, height=800)
+        
+        # Display Cypher query used
+        with st.expander("📝 Cypher Query Used"):
+            st.code(cypher_query, language="cypher")
+        
+        logger.info("event=graph_visualization_success user=%s nodes=%s edges=%s", 
+                   st.session_state.username, stats["total_nodes"], stats["total_edges"])
+        
+    except Exception as e:
+        st.error(f"❌ Graph visualization error: {str(e)}")
+        logger.error("event=graph_visualization_exception user=%s error=%s", 
+                    st.session_state.username, str(e))
+
+
 def main():
     init_session_state()
     
@@ -212,6 +304,14 @@ def main():
     if not st.session_state.categories:
         st.error("Failed to load models. Check your API credentials.")
         st.stop()
+    
+    # Display graph visualization if enabled
+    if st.session_state.show_graph:
+        st.divider()
+        st.subheader("📊 Knowledge Graph Visualization")
+        with st.spinner("🔄 Generating knowledge graph..."):
+            visualize_knowledge_graph()
+        st.divider()
 
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
