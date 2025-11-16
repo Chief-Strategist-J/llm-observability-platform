@@ -25,7 +25,7 @@ class AuthUI:
                         st.session_state.authenticated = True
                         st.session_state.session_token = result["session_token"]
                         st.session_state.username = result["username"]
-                        st.success("✓ Sign in successful\!")
+                        st.success("✓ Sign in successful!")
                         time.sleep(0.5)
                         st.rerun()
                     else:
@@ -54,12 +54,12 @@ class AuthUI:
             if submit:
                 if not username or not email or not password:
                     st.error("All fields are required")
-                elif password \!= password_confirm:
+                elif password != password_confirm:
                     st.error("Passwords do not match")
                 else:
                     result = register_user(username, password, email)
                     if result["success"]:
-                        st.success("✓ Registration successful\! Please sign in.")
+                        st.success("✓ Registration successful! Please sign in.")
                         time.sleep(1)
                         st.session_state.auth_page = "signin"
                         st.rerun()
@@ -90,7 +90,7 @@ class AuthUI:
                     else:
                         result = request_password_reset(email)
                         if result["success"]:
-                            st.success("✓ Reset token generated\!")
+                            st.success("✓ Reset token generated!")
                             if "reset_token" in result:
                                 st.info(f"**Reset Token:** `{result['reset_token']}`")
                                 st.warning("⚠️ Copy this token now (sent to email in production)")
@@ -114,12 +114,12 @@ class AuthUI:
                 if submit:
                     if not token or not new_password:
                         st.error("All fields are required")
-                    elif new_password \!= confirm_password:
+                    elif new_password != confirm_password:
                         st.error("Passwords do not match")
                     else:
                         result = reset_password(token, new_password)
                         if result["success"]:
-                            st.success("✓ Password reset successful\! Please sign in.")
+                            st.success("✓ Password reset successful! Please sign in.")
                             time.sleep(1)
                             st.session_state.auth_page = "signin"
                             st.session_state.reset_stage = "request"
@@ -170,7 +170,7 @@ class SidebarUI:
                 if change_submit:
                     if not old_pwd or not new_pwd:
                         st.error("All fields are required")
-                    elif new_pwd \!= confirm_pwd:
+                    elif new_pwd != confirm_pwd:
                         st.error("Passwords do not match")
                     else:
                         result = change_password(st.session_state.username, old_pwd, new_pwd)
@@ -244,7 +244,7 @@ class SidebarUI:
             key="category_selector",
         )
 
-        if selected_category \!= st.session_state.selected_category:
+        if selected_category != st.session_state.selected_category:
             st.session_state.selected_category = selected_category
             st.session_state.selected_model = get_default_model_for_category(selected_category)
 
@@ -263,7 +263,7 @@ class SidebarUI:
             key="model_selector",
         )
 
-        if model_choice \!= st.session_state.selected_model:
+        if model_choice != st.session_state.selected_model:
             st.session_state.selected_model = model_choice
 
         st.sidebar.markdown(f"**Models:** {len(models_for_category)} | **Categories:** {len(categories)}")

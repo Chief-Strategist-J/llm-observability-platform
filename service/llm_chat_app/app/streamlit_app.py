@@ -68,7 +68,7 @@ def load_models():
 
 
 def load_conversation_history():
-    if st.session_state.get("_loaded_user") \!= st.session_state.username:
+    if st.session_state.get("_loaded_user") != st.session_state.username:
         logger.info("event=app_loading_history user=%s", st.session_state.username)
         conv = get_conversation_context(st.session_state.username, limit=200)
         st.session_state.messages = conv if conv else []
