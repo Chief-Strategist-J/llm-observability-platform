@@ -207,7 +207,7 @@ class SidebarUI:
                 join_code = st.text_input("Share code:")
                 if join_code:
                     CollaborationService.join_session(join_code, st.session_state.username)
-                    st.success("✓ Joined session\!")
+                    st.success("✓ Joined session!")
 
     @staticmethod
     def web_search_section():
