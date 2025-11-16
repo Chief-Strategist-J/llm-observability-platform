@@ -44,25 +44,25 @@ class PrometheusManager(BaseService):
         super().__init__(config)
 
 
-@activity.defn
+@activity.defn(name="prometheus-development-start")
 async def start_prometheus_activity(params: Dict[str, Any]) -> bool:
     PrometheusManager().run()
     return True
 
 
-@activity.defn
+@activity.defn(name="prometheus-development-stop")
 async def stop_prometheus_activity(params: Dict[str, Any]) -> bool:
     PrometheusManager().stop(timeout=30)
     return True
 
 
-@activity.defn
+@activity.defn(name="prometheus-development-restart")
 async def restart_prometheus_activity(params: Dict[str, Any]) -> bool:
     PrometheusManager().restart()
     return True
 
 
-@activity.defn
+@activity.defn(name="prometheus-development-delete")
 async def delete_prometheus_activity(params: Dict[str, Any]) -> bool:
     PrometheusManager().delete(force=False)
     return True
