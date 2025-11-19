@@ -59,6 +59,25 @@ def init_session_state():
     
     if "scroll_to_bottom" not in st.session_state:
         st.session_state.scroll_to_bottom = False
+    
+    if "graph_view_mode" not in st.session_state:
+        st.session_state.graph_view_mode = "full"
+    
+    if "graph_time_filter" not in st.session_state:
+        st.session_state.graph_time_filter = "all"
+    
+    if "graph_node_filters" not in st.session_state:
+        st.session_state.graph_node_filters = {
+            "User": True,
+            "Conversation": True,
+            "Topic": True,
+            "Entity": True,
+            "Emotion": True,
+            "Model": True
+        }
+    
+    if "selected_node_data" not in st.session_state:
+        st.session_state.selected_node_data = None
 
 
 def load_models():
@@ -196,20 +215,122 @@ def extract_emotional_state(deep_analysis):
     return emotion, intensity, meta_core
 
 
-def visualize_knowledge_graph(user_query: str = None):
-    logger.info("event=graph_visualization_start user=%s", st.session_state.username)
+def render_graph_controls():
+    st.markdown("### 🎛️ Graph Controls")
     
-    try:
-        cypher_query = f"""
-        MATCH (u:User {{name: '{st.session_state.username}'}})-[:ASKED]->(c:Conversation)
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        view_mode = st.selectbox(
+            "View Mode",
+            ["full", "conversation_flow", "topic_map", "entity_network", "emotion_trend"],
+            index=["full", "conversation_flow", "topic_map", "entity_network", "emotion_trend"].index(st.session_state.graph_view_mode),
+            help="Select visualization focus"
+        )
+        if view_mode != st.session_state.graph_view_mode:
+            st.session_state.graph_view_mode = view_mode
+            logger.info("event=graph_view_mode_changed mode=%s user=%s", view_mode, st.session_state.username)
+    
+    with col2:
+        time_filter = st.selectbox(
+            "Time Range",
+            ["all", "24h", "7d", "30d"],
+            index=["all", "24h", "7d", "30d"].index(st.session_state.graph_time_filter),
+            help="Filter by time period"
+        )
+        if time_filter != st.session_state.graph_time_filter:
+            st.session_state.graph_time_filter = time_filter
+            logger.info("event=graph_time_filter_changed filter=%s user=%s", time_filter, st.session_state.username)
+    
+    st.markdown("#### Node Type Filters")
+    filter_cols = st.columns(6)
+    
+    node_types = ["User", "Conversation", "Topic", "Entity", "Emotion", "Model"]
+    for idx, node_type in enumerate(node_types):
+        with filter_cols[idx]:
+            current_value = st.session_state.graph_node_filters.get(node_type, True)
+            new_value = st.checkbox(node_type, value=current_value, key=f"filter_{node_type}")
+            if new_value != current_value:
+                st.session_state.graph_node_filters[node_type] = new_value
+                logger.info("event=graph_node_filter_changed node_type=%s enabled=%s user=%s", 
+                          node_type, new_value, st.session_state.username)
+
+
+def generate_view_specific_query(view_mode: str, time_filter: str, username: str) -> str:
+    logger.info("event=generate_view_query view_mode=%s time_filter=%s user=%s", 
+               view_mode, time_filter, username)
+    
+    time_clause = ""
+    if time_filter == "24h":
+        time_clause = "AND c.ts > datetime() - duration('P1D')"
+    elif time_filter == "7d":
+        time_clause = "AND c.ts > datetime() - duration('P7D')"
+    elif time_filter == "30d":
+        time_clause = "AND c.ts > datetime() - duration('P30D')"
+    
+    if view_mode == "conversation_flow":
+        query = f"""
+        MATCH (u:User {{name: '{username}'}})-[:ASKED]->(c:Conversation)
+        WHERE 1=1 {time_clause}
+        OPTIONAL MATCH (c)-[:FOLLOWED_BY]->(next:Conversation)
+        OPTIONAL MATCH (c)-[:FEELS]->(em:Emotion)
+        RETURN u, c, next, em
+        ORDER BY c.ts DESC
+        LIMIT 100
+        """
+    elif view_mode == "topic_map":
+        query = f"""
+        MATCH (u:User {{name: '{username}'}})-[:ASKED]->(c:Conversation)-[:ABOUT]->(t:Topic)
+        WHERE 1=1 {time_clause}
+        OPTIONAL MATCH (c)-[:MENTIONS]->(e:Entity)
+        RETURN u, c, t, e
+        ORDER BY c.ts DESC
+        LIMIT 100
+        """
+    elif view_mode == "entity_network":
+        query = f"""
+        MATCH (u:User {{name: '{username}'}})-[:ASKED]->(c:Conversation)-[:MENTIONS]->(e:Entity)
+        WHERE 1=1 {time_clause}
+        OPTIONAL MATCH (c)-[:ABOUT]->(t:Topic)
+        RETURN u, c, e, t
+        ORDER BY c.ts DESC
+        LIMIT 100
+        """
+    elif view_mode == "emotion_trend":
+        query = f"""
+        MATCH (u:User {{name: '{username}'}})-[:ASKED]->(c:Conversation)-[:FEELS]->(em:Emotion)
+        WHERE 1=1 {time_clause}
+        OPTIONAL MATCH (c)-[:ABOUT]->(t:Topic)
+        RETURN u, c, em, t
+        ORDER BY c.ts DESC
+        LIMIT 100
+        """
+    else:
+        query = f"""
+        MATCH (u:User {{name: '{username}'}})-[:ASKED]->(c:Conversation)
+        WHERE 1=1 {time_clause}
         OPTIONAL MATCH (c)-[:ABOUT]->(t:Topic)
         OPTIONAL MATCH (c)-[:MENTIONS]->(e:Entity)
         OPTIONAL MATCH (c)-[:FEELS]->(em:Emotion)
         OPTIONAL MATCH (m:Model)-[:RESPONDED_TO]->(c)
         RETURN u, c, t, e, em, m
         ORDER BY c.ts DESC
-        LIMIT 50
+        LIMIT 100
         """
+    
+    return query.strip()
+
+
+def visualize_knowledge_graph(user_query: str = None):
+    logger.info("event=graph_visualization_start user=%s view_mode=%s time_filter=%s", 
+               st.session_state.username, st.session_state.graph_view_mode, st.session_state.graph_time_filter)
+    
+    try:
+        cypher_query = generate_view_specific_query(
+            st.session_state.graph_view_mode,
+            st.session_state.graph_time_filter,
+            st.session_state.username
+        )
         
         graph_data, error = GraphVisualizationService.fetch_graph_data(cypher_query)
         
@@ -219,14 +340,34 @@ def visualize_knowledge_graph(user_query: str = None):
                 st.info("💡 **Connection Issue**: Update your `.env.llm_chat_app` file to use `bolt://localhost:7687` instead of `bolt://neo4j-development:7687`")
             else:
                 st.error(f"❌ Graph error: {error}")
-            logger.warning("event=graph_fetch_failed error=%s", error)
+            logger.warning("event=graph_fetch_failed error=%s user=%s", error, st.session_state.username)
             return
         
         if not graph_data or not graph_data.get("nodes"):
             st.info("📊 No conversations yet. Start chatting to build your knowledge graph!")
             return
         
-        stats = GraphVisualizationService.get_graph_statistics(graph_data)
+        filtered_nodes = [
+            node for node in graph_data["nodes"]
+            if st.session_state.graph_node_filters.get(node.get("label", ""), True)
+        ]
+        
+        filtered_node_ids = {node["id"] for node in filtered_nodes}
+        filtered_edges = [
+            edge for edge in graph_data["edges"]
+            if edge["from"] in filtered_node_ids and edge["to"] in filtered_node_ids
+        ]
+        
+        filtered_graph_data = {
+            "nodes": filtered_nodes,
+            "edges": filtered_edges,
+            "record_count": graph_data.get("record_count", 0)
+        }
+        
+        logger.info("event=graph_data_filtered original_nodes=%s filtered_nodes=%s original_edges=%s filtered_edges=%s", 
+                   len(graph_data["nodes"]), len(filtered_nodes), len(graph_data["edges"]), len(filtered_edges))
+        
+        stats = GraphVisualizationService.get_graph_statistics(filtered_graph_data)
         
         col1, col2, col3, col4 = st.columns(4)
         with col1:
@@ -238,22 +379,24 @@ def visualize_knowledge_graph(user_query: str = None):
         with col4:
             st.metric("Types", len(stats["node_types"]))
         
-        st.subheader("Node Types")
-        node_type_cols = st.columns(len(stats["node_types"]) if stats["node_types"] else 1)
-        for idx, (node_type, count) in enumerate(stats["node_types"].items()):
-            with node_type_cols[idx % len(node_type_cols)]:
-                st.write(f"**{node_type}**: {count}")
+        if stats["node_types"]:
+            st.markdown("#### Node Distribution")
+            node_type_cols = st.columns(len(stats["node_types"]))
+            for idx, (node_type, count) in enumerate(stats["node_types"].items()):
+                with node_type_cols[idx % len(node_type_cols)]:
+                    st.metric(node_type, count)
         
         output_file = "/tmp/graph_visualization.html"
         file_path, viz_error = GraphVisualizationService.create_visualization(
-            graph_data,
+            filtered_graph_data,
             output_file=output_file,
-            title=f"Knowledge Graph - {st.session_state.username}"
+            title=f"Knowledge Graph - {st.session_state.username}",
+            view_mode=st.session_state.graph_view_mode
         )
         
         if viz_error:
             st.error(f"❌ Visualization failed: {viz_error}")
-            logger.error("event=graph_visualization_failed error=%s", viz_error)
+            logger.error("event=graph_visualization_failed error=%s user=%s", viz_error, st.session_state.username)
             return
         
         with open(file_path, "r", encoding="utf-8") as f:
@@ -261,8 +404,23 @@ def visualize_knowledge_graph(user_query: str = None):
         
         st.components.v1.html(html_content, height=800, scrolling=True)
         
-        logger.info("event=graph_visualization_success user=%s nodes=%s edges=%s", 
-                   st.session_state.username, stats["total_nodes"], stats["total_edges"])
+        insights = GraphVisualizationService.generate_ai_insights(filtered_graph_data, st.session_state.username)
+        if insights:
+            st.markdown("### 🧠 AI-Generated Insights")
+            for insight_type, insight_data in insights.items():
+                if insight_data:
+                    with st.expander(f"📊 {insight_type.replace('_', ' ').title()}", expanded=False):
+                        if isinstance(insight_data, list):
+                            for item in insight_data[:5]:
+                                st.markdown(f"- {item}")
+                        elif isinstance(insight_data, dict):
+                            for key, value in list(insight_data.items())[:5]:
+                                st.markdown(f"**{key}**: {value}")
+                        else:
+                            st.write(insight_data)
+        
+        logger.info("event=graph_visualization_success user=%s nodes=%s edges=%s view_mode=%s", 
+                   st.session_state.username, stats["total_nodes"], stats["total_edges"], st.session_state.graph_view_mode)
         
     except Exception as e:
         st.warning("⚠️ Neo4j connection issue. Please update your `.env.llm_chat_app` file to use `bolt://localhost:7687`")
@@ -300,7 +458,6 @@ def main():
         st.error("Failed to load models. Check your API credentials.")
         st.stop()
 
-    # Track active tab
     if "active_tab" not in st.session_state:
         st.session_state.active_tab = "chat"
     
@@ -308,18 +465,14 @@ def main():
     
     with tab_chat:
         st.session_state.active_tab = "chat"
-        # Display all messages
         for msg in st.session_state.messages:
             with st.chat_message(msg["role"]):
                 st.write(msg["text"])
 
-    # IMPORTANT: Chat input OUTSIDE the tab context to prevent scrolling
-    # Always show input when on chat tab
     if st.session_state.active_tab == "chat":
         prompt = st.chat_input("Type your message here...")
         
         if prompt:
-            # Add user message
             st.session_state.messages.append({"role": "user", "text": prompt})
 
             start = time.time()
@@ -331,13 +484,11 @@ def main():
                 len(prompt),
             )
 
-            # Build conversation history
             conversation_history = []
             for msg in st.session_state.messages[:-1]:
                 role = "assistant" if msg["role"] == "assistant" else "user"
                 conversation_history.append({"role": role, "content": msg["text"]})
 
-            # Get AI response
             bot_text, success, deep_analysis = process_chat_response(prompt, conversation_history)
             duration = time.time() - start
             
@@ -354,10 +505,8 @@ def main():
                 intensity,
             )
 
-            # Add bot response
             st.session_state.messages.append({"role": "assistant", "text": bot_text})
 
-            # Save to knowledge graph
             try:
                 store_conversation_as_knowledge_graph(
                     st.session_state.username,
@@ -380,12 +529,15 @@ def main():
                     str(e),
                 )
             
-            # Rerun to display new messages
             st.rerun()
     
     with tab_graph:
-        st.session_state.current_tab = "graph"
-        st.subheader("📊 Knowledge Graph")
+        st.session_state.active_tab = "graph"
+        
+        render_graph_controls()
+        
+        st.divider()
+        
         with st.spinner("🔄 Loading knowledge graph..."):
             visualize_knowledge_graph()
 

@@ -181,10 +181,16 @@ if __name__ == "__main__":
 
 ```bash
 cd infrastructure/orchestrator
+
 docker-compose -f temporal-orchestrator-compose.yaml down -v
+
 docker system prune -f
+
 docker-compose -f temporal-orchestrator-compose.yaml up -d
 cd ../..
+
+source /home/j/live/dinesh/llm-chatbot-python/.venv/bin/activate
+
 ```
 
 ### Verify Services
@@ -195,11 +201,28 @@ curl http://0.0.0.0:8080/namespaces/default/workflows
 docker exec temporal-postgresql psql -U temporal -d temporal -c "SELECT 1;"
 ```
 
-### Start New Worker
+### Start Your Worker
 
 ```bash
 cd workers
 python3 my_new_worker.py
+
+// start workers
+
+source /home/j/live/dinesh/llm-chatbot-python/.venv/bin/activate
+
+
+python infrastructure/orchestrator/workers/logs_pipeline_worker.py 
+
+python infrastructure/orchestrator/workers/database_pipeline_worker.py 
+
+python infrastructure/orchestrator/workers/metrics_pipeline_worker.py 
+
+python infrastructure/orchestrator/workers/tracing_pipeline_worker.py 
+
+python service/llm_chat_app/worker/workers/chat_worker.py 
+
+
 ```
 
 ### Trigger Service Workflow
@@ -207,14 +230,802 @@ python3 my_new_worker.py
 ```bash
 cd trigger/knowledge_graph
 python3 start.py
+
+// Trigger Service Workflow
+
+python infrastructure/orchestrator/trigger/common/logs_pipeline_start.py 
+
+python infrastructure/orchestrator/trigger/common/database_pipeline_start.py 
+
+python infrastructure/orchestrator/trigger/common/metrics_pipeline_start.py 
+
+python infrastructure/orchestrator/trigger/common/tracing_pipeline_start.py 
+
+python infrastructure/orchestrator/trigger/common/run_logs_pipeline_then_stdout_ingest.py
+
+python infrastructure/orchestrator/trigger/common/start_application_stdout_ingest.py
+
 ```
 
-### Stop Service Workflow
+### Logs Pipeline Workflow
 
 ```bash
-cd trigger/knowledge_graph
-python3 stop.py
+START
+ │
+ │── Receive `params`
+ │
+ │── Configure Retry Policy
+ │      • initial_interval = 1s
+ │      • maximum_interval = 10s
+ │      • maximum_attempts = 3
+ │
+ │── Set Activity Timeout
+ │      • start_to_close_timeout = 5 minutes
+ │
+ │
+ ├── Step 1: Stop OpenTelemetry Collector
+ │        Activity: stop_opentelemetry_collector(params)
+ │        Behavior:
+ │           - Retries based on RetryPolicy
+ │           - Fails workflow if all retry attempts fail
+ │
+ ├── Step 2: Delete OpenTelemetry Collector
+ │        Activity: delete_opentelemetry_collector(params)
+ │        Behavior:
+ │           - Same retry/timeout controls
+ │
+ ├── Step 3: Start OpenTelemetry Collector
+ │        Activity: start_opentelemetry_collector(params)
+ │        Behavior:
+ │           - Ensures collector is active again for pipeline
+ │
+ ├── Step 4: Start Loki Service
+ │        Activity: start_loki_activity(params)
+ │        Behavior:
+ │           - Initiates Loki to ingest logs
+ │
+ ├── Step 5: Start Grafana Service
+ │        Activity: start_grafana_activity(params)
+ │        Behavior:
+ │           - Ensures Grafana is up to visualize the logs
+ │
+ │
+ └── END → Return message:
+         "Logs pipeline fully configured"
+
 ```
+
+
+### Database Pipeline Workflow
+
+```bash
+START
+  │
+  ▼
+Receive `service_name`
+  │
+  ▼
+──────────────────────────────────────────────
+Step 1: Start Neo4j Container
+  │     Activity: start_neo4j_container(service_name)
+  │     Behavior:
+  │       - start_to_close_timeout = 5 minutes
+  │       - retry_policy: maximum_attempts = 3
+  ▼
+──────────────────────────────────────────────
+Step 2: Start Qdrant Container
+  │     Activity: start_qdrant_container(service_name)
+  │     Behavior:
+  │       - start_to_close_timeout = 5 minutes
+  │       - retry_policy: maximum_attempts = 3
+  ▼
+──────────────────────────────────────────────
+END → "Database pipeline fully configured: Neo4j + Qdrant"
+
+```
+
+### Metrics Pipeline Workflow
+
+```bash
+START
+  │
+  ▼
+Receive `params`
+  │
+  ▼
+Validate params
+  │      • Must be dict
+  │      • Must contain service_name (string)
+  │
+  ├── If invalid → END → "Error: Invalid params provided"
+  ├── If missing/invalid service_name → END → "Error: service_name is required and must be string"
+  │
+  ▼
+Configure Retry Policy
+  │      • initial_interval = 1s
+  │      • maximum_interval = 10s
+  │      • maximum_attempts = 3
+  │
+  ▼
+Set Activity Timeout
+  │      • start_to_close_timeout = 5 minutes
+  │
+  ▼
+──────────────────────────────────────────────
+Step 1: Start Prometheus Container
+  │     Activity: start_prometheus_container(params)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses timeout
+  │       - Returns truthy if successful
+  │
+  ├── If result is falsy → END → "Error: Failed to start Prometheus container"
+  │
+  ▼
+Sleep 2 seconds
+  │
+  ▼
+──────────────────────────────────────────────
+Step 2: Start Grafana Container
+  │     Activity: start_grafana_container(params)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses timeout
+  │       - Returns truthy if successful
+  │
+  ├── If result is falsy → END → "Error: Failed to start Grafana container"
+  │
+  ▼
+──────────────────────────────────────────────
+END → "Metrics pipeline fully configured: Prometheus + Grafana + Dashboard"
+──────────────────────────────────────────────
+EXCEPTION HANDLING
+  │
+  └── If any exception occurs:
+          END → "Error: Metrics pipeline failed: <error>"
+
+
+```
+
+
+### Tracing Pipeline Workflow
+
+```bash
+START
+  │
+  ▼
+Receive `params`
+  │
+  ▼
+Validate params
+  │      • Must be dict
+  │      • Must contain service_name (string)
+  │
+  ├── If invalid → END → "Error: Invalid params provided"
+  ├── If missing/invalid service_name → END → "Error: service_name is required and must be string"
+  │
+  ▼
+Configure Retry Policy
+  │      • initial_interval = 1s
+  │      • maximum_interval = 10s
+  │      • maximum_attempts = 3
+  │
+  ▼
+Set Activity Timeout
+  │      • start_to_close_timeout = 5 minutes
+  │
+  ▼
+──────────────────────────────────────────────
+Step 1: Start Jaeger Container
+  │     Activity: start_jaeger_container(params)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses timeout
+  │       - Returns truthy if successful
+  │
+  ├── If result is falsy → END → "Error: Failed to start Jaeger container"
+  │
+  ▼
+Sleep 2 seconds
+  │
+  ▼
+──────────────────────────────────────────────
+Step 2: Start Grafana Container
+  │     Activity: start_grafana_container(params)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses timeout
+  │       - Returns truthy if successful
+  │
+  ├── If result is falsy → END → "Error: Failed to start Grafana container"
+  │
+  ▼
+──────────────────────────────────────────────
+END → "Tracing pipeline fully configured: Jaeger + Grafana + Dashboard"
+──────────────────────────────────────────────
+EXCEPTION HANDLING
+  │
+  └── If any exception occurs:
+          END → "Error: Tracing pipeline failed: <error>"
+
+
+```
+
+
+### Application Stdout Ingest Workflow
+
+```bash
+START
+  │
+  ▼
+Receive `params`
+  │
+  ▼
+Configure Retry Policy
+  │      • maximum_attempts = 3
+  │
+  ▼
+Set Timeouts
+  │      • t = 5 minutes
+  │      • some steps = 30 seconds
+  │
+  ▼
+──────────────────────────────────────────────
+Step 1: Configure Application Stdout Pipeline
+  │     Activity: application_stdout_configure_activity(params)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 5-minute timeout
+  │       - Returns configuration object
+  │
+  ├── If conf is falsy → END → "configuration failed"
+  │
+  ▼
+──────────────────────────────────────────────
+Step 2: Add Loki Datasource
+  │     Activity: add_loki_datasource_activity(params)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 30-second timeout
+  ▼
+──────────────────────────────────────────────
+Sleep 5 seconds
+  │
+  ▼
+──────────────────────────────────────────────
+Step 3: Discover Local Log Files
+  │     Activity: discover_log_files_activity(conf)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 5-minute timeout
+  ▼
+──────────────────────────────────────────────
+Step 4: Discover Docker Log Files
+  │     Activity: discover_docker_logs_activity(conf)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 5-minute timeout
+  ▼
+──────────────────────────────────────────────
+Merge Discoveries
+  │      • local_logs + docker_logs
+  │      • Remove duplicates
+  │      • Sort list
+  ▼
+──────────────────────────────────────────────
+Step 5: Enrich Logs With Labels
+  │     Activity: label_enrichment_activity(
+  │         {"files": discovered, "labels": conf.get("labels", {})}
+  │     )
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 5-minute timeout
+  ▼
+──────────────────────────────────────────────
+Build Shipping Parameters
+  │      • files = enriched[].path
+  │      • labels = enriched[0].labels OR conf.labels
+  │      • protocol = otlp
+  │      • endpoint = http://localhost:4318
+  │      • batch_size
+  │      • flush_interval_seconds
+  │      • timeout_seconds = 10
+  ▼
+──────────────────────────────────────────────
+Step 6: Tail and Ship Logs
+  │     Activity: tail_and_ship_logs_activity(ship_params)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 30-second timeout
+  ▼
+──────────────────────────────────────────────
+END → "ingest started: discovered={len(discovered)} enriched={len(enriched)} status={result.status}"
+
+```
+
+
+
+### Container Logs Ingest Workflow
+
+```bash
+START
+  │
+  ▼
+Receive inputs
+  │      • template_path: str
+  │      • log_paths: list
+  │      • service_name: str
+  │      • loki_endpoint: str
+  │
+  ▼
+Configure Retry Policy
+  │      • initial_interval = 1s
+  │      • maximum_interval = 10s
+  │      • maximum_attempts = 3
+  │
+  ▼
+Set Timeout
+  │      • start_to_close_timeout = 5 minutes
+  │
+  ▼
+──────────────────────────────────────────────
+Step 1: Generate and Validate Config
+  │     Activity: generate_and_validate_config_activity(
+  │         template_path,
+  │         log_paths,
+  │         service_name,
+  │         loki_endpoint
+  │     )
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses timeout
+  │       - Returns config_str
+  ▼
+──────────────────────────────────────────────
+Step 2: Push and Reload Configuration
+  │     Activity: push_and_reload_activity(config_str)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses timeout
+  ▼
+──────────────────────────────────────────────
+END → "container_logs ingest configured"
+
+
+```
+
+### OTLP from Apps Ingest Workflow
+
+```bash
+START
+  │
+  ▼
+Receive inputs
+  │      • template_path: str
+  │      • service_name: str
+  │      • otlp_endpoint: str
+  │
+  ▼
+Configure Retry Policy
+  │      • initial_interval = 1s
+  │      • maximum_interval = 10s
+  │      • maximum_attempts = 3
+  │
+  ▼
+Set Timeout
+  │      • start_to_close_timeout = 5 minutes
+  │
+  ▼
+──────────────────────────────────────────────
+Step 1: Enable OTLP Receiver
+  │     Activity: enable_otlp_receiver_activity(
+  │         template_path,
+  │         service_name,
+  │         otlp_endpoint
+  │     )
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses timeout
+  │       - Produces config_path
+  ▼
+──────────────────────────────────────────────
+Step 2: Collect and Route OTLP Traffic
+  │     Activity: collect_and_route_otlp_activity(config_path)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses timeout
+  ▼
+──────────────────────────────────────────────
+END → "otlp_from_apps ingest enabled"
+```
+
+
+### Chat Setup Workflow
+
+```bash
+START
+  │
+  ▼
+Receive `params`
+  │
+  ▼
+Clone params → p
+  │      • p["context"] = "/home/j/live/dinesh/llm-chatbot-python/service/llm_chat_app"
+  │
+  ▼
+Log: "ChatSetupWorkflow start"
+  │
+  ▼
+Configure Retry Policy
+  │      • initial_interval = 2s
+  │      • maximum_interval = 10s
+  │      • maximum_attempts = 3
+  │
+  ▼
+Set Timeout
+  │      • start_to_close_timeout = 10 minutes
+  │
+  ▼
+──────────────────────────────────────────────
+Step 1: Start Neo4j Dependency
+  │     Activity: start_neo4j_dependency_activity(p)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 10-minute timeout
+  ▼
+──────────────────────────────────────────────
+Step 2: Verify Cloudflare Dependency
+  │     Activity: verify_cloudflare_dependency_activity(p)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 10-minute timeout
+  ▼
+──────────────────────────────────────────────
+Step 3: Build Chat Image
+  │     Activity: build_chat_image_activity(p)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 10-minute timeout
+  ▼
+──────────────────────────────────────────────
+Step 4: Run Chat Container
+  │     Activity: run_chat_container_activity(p)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 10-minute timeout
+  ▼
+──────────────────────────────────────────────
+Step 5: Check Chat Health
+  │     Activity: check_chat_health_activity(p)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 10-minute timeout
+  ▼
+──────────────────────────────────────────────
+Log: "ChatSetupWorkflow complete"
+  │
+  ▼
+END → "chat_setup_complete"
+
+```
+
+
+### Chat Cleanup Workflow
+
+```bash
+START
+  │
+  ▼
+Receive `params`
+  │
+  ▼
+Log: "ChatCleanupWorkflow start"
+  │
+  ▼
+Configure Retry Policy
+  │      • initial_interval = 2s
+  │      • maximum_interval = 10s
+  │      • maximum_attempts = 3
+  │
+  ▼
+Set Timeout
+  │      • start_to_close_timeout = 10 minutes
+  │
+  ▼
+──────────────────────────────────────────────
+Step 1: Stop Chat Container
+  │     Activity: stop_chat_container_activity(params)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 10-minute timeout
+  ▼
+──────────────────────────────────────────────
+Step 2: Delete Chat Container
+  │     Activity: delete_chat_container_activity(params)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 10-minute timeout
+  ▼
+──────────────────────────────────────────────
+Step 3: Delete Chat Image
+  │     Activity: delete_chat_image_activity(params)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 10-minute timeout
+  ▼
+──────────────────────────────────────────────
+Step 4: Stop Neo4j Dependency
+  │     Activity: stop_neo4j_dependency_activity(params)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 10-minute timeout
+  ▼
+──────────────────────────────────────────────
+Step 5: Delete Neo4j Dependency
+  │     Activity: delete_neo4j_dependency_activity(params)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 10-minute timeout
+  ▼
+──────────────────────────────────────────────
+Log: "ChatCleanupWorkflow complete"
+  │
+  ▼
+END → "chat_cleanup_complete"
+
+
+```
+
+
+### Flyio Deployment Workflow
+
+```bash
+START
+  │
+  ▼
+Receive `params`
+  │
+  ▼
+Clone params → p
+  │      • p.setdefault("service_name", "flyio-deploy")
+  │
+  ▼
+Log: "FlyioDeploymentWorkflow start"
+  │
+  ▼
+Configure Retry Policy
+  │      • initial_interval = 2s
+  │      • maximum_interval = 10s
+  │      • maximum_attempts = 3
+  │
+  ▼
+Set Timeout
+  │      • start_to_close_timeout = 15 minutes
+  │
+  ▼
+──────────────────────────────────────────────
+Step 1: Generate Deployment Configs
+  │     Activity: generate_deployment_configs_activity(
+  │         {**p, "platforms": ["flyio"]}
+  │     )
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 15-minute timeout
+  ▼
+──────────────────────────────────────────────
+Step 2: Create Fly.io App
+  │     Activity: create_flyio_app_activity(p)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 15-minute timeout
+  ▼
+──────────────────────────────────────────────
+Step 3: Set Fly.io Secrets
+  │     Activity: set_flyio_secrets_activity(p)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 15-minute timeout
+  ▼
+──────────────────────────────────────────────
+Step 4: Deploy to Fly.io
+  │     Activity: deploy_to_flyio_activity(p)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 15-minute timeout
+  │       - Produces deploy_result dict (possibly)
+  ▼
+──────────────────────────────────────────────
+Determine Deployment URL
+  │      • If deploy_result contains "deployment_url" → use it
+  │      • Else fallback: https://{app_name}.fly.dev
+  ▼
+──────────────────────────────────────────────
+Step 5: Check Deployment Health
+  │     Condition: deployment_url is truthy
+  │     Activity: check_deployment_health_activity(
+  │         {**p, "url": deployment_url}
+  │     )
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 15-minute timeout
+  ▼
+──────────────────────────────────────────────
+Log: "FlyioDeploymentWorkflow complete"
+  │
+  ▼
+END → "flyio_deploy_complete"
+
+
+```
+
+
+### Railway Deployment Workflow
+
+```bash
+START
+  │
+  ▼
+Receive `params`
+  │
+  ▼
+Clone params → p
+  │      • p.setdefault("service_name", "railway-deploy")
+  │
+  ▼
+Log: "RailwayDeploymentWorkflow start"
+  │
+  ▼
+Configure Retry Policy
+  │      • initial_interval = 2s
+  │      • maximum_interval = 10s
+  │      • maximum_attempts = 3
+  │
+  ▼
+Set Timeout
+  │      • start_to_close_timeout = 15 minutes
+  │
+  ▼
+──────────────────────────────────────────────
+Step 1: Generate Deployment Configs
+  │     Activity: generate_deployment_configs_activity(
+  │         {**p, "platforms": ["railway"]}
+  │     )
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 15-minute timeout
+  ▼
+──────────────────────────────────────────────
+Step 2: Create Railway Project
+  │     Activity: create_railway_project_activity(p)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 15-minute timeout
+  ▼
+──────────────────────────────────────────────
+Step 3: Set Railway Environment Variables
+  │     Activity: set_railway_env_vars_activity(p)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 15-minute timeout
+  ▼
+──────────────────────────────────────────────
+Step 4: Deploy to Railway
+  │     Activity: deploy_to_railway_activity(p)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 15-minute timeout
+  │       - Produces deploy_result dict (maybe)
+  ▼
+──────────────────────────────────────────────
+Determine Deployment URL
+  │      • If deploy_result is dict → deployment_url = deploy_result["deployment_url"]
+  │      • Else → deployment_url = None
+  ▼
+──────────────────────────────────────────────
+Step 5: Check Deployment Health
+  │     Condition: deployment_url is truthy
+  │     Activity: check_deployment_health_activity(
+  │         {**p, "url": deployment_url}
+  │     )
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 15-minute timeout
+  ▼
+──────────────────────────────────────────────
+Log: "RailwayDeploymentWorkflow complete"
+  │
+  ▼
+END → "railway_deploy_complete"
+
+
+```
+
+
+### Render Deployment Workflow
+
+```bash
+START
+  │
+  ▼
+Receive `params`
+  │
+  ▼
+Clone params → p
+  │      • p.setdefault("service_name", "render-deploy")
+  │
+  ▼
+Log: "RenderDeploymentWorkflow start"
+  │
+  ▼
+Configure Retry Policy
+  │      • initial_interval = 2s
+  │      • maximum_interval = 10s
+  │      • maximum_attempts = 3
+  │
+  ▼
+Set Timeout
+  │      • start_to_close_timeout = 15 minutes
+  │
+  ▼
+──────────────────────────────────────────────
+Step 1: Generate Deployment Configs
+  │     Activity: generate_deployment_configs_activity(
+  │         {**p, "platforms": ["render"]}
+  │     )
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 15-minute timeout
+  ▼
+──────────────────────────────────────────────
+Step 2: Create Render Blueprint
+  │     Activity: create_render_blueprint_activity(p)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 15-minute timeout
+  ▼
+──────────────────────────────────────────────
+Step 3: Push Code to GitHub
+  │     Activity: push_to_github_activity(p)
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 15-minute timeout
+  │       - Produces push_result dict (maybe)
+  ▼
+──────────────────────────────────────────────
+Step 4: Deploy to Render
+  │     Activity: deploy_to_render_activity(
+  │         {**p, **(push_result or {})}
+  │     )
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 15-minute timeout
+  ▼
+──────────────────────────────────────────────
+Determine Deployment URL
+  │      • If push_result contains deployment_url → use it
+  │      • Else fallback to push_result.repo_url
+  │
+  ▼
+──────────────────────────────────────────────
+Step 5: Check Deployment Health
+  │     Condition: deployment_url is truthy
+  │     Activity: check_deployment_health_activity(
+  │         {**p, "url": deployment_url}
+  │     )
+  │     Behavior:
+  │       - Uses retry_policy
+  │       - Uses 15-minute timeout
+  ▼
+──────────────────────────────────────────────
+Log: "workflow RenderDeploymentWorkflow complete"
+  │
+  ▼
+END → "render_deploy_complete"
+
+
+
+```
+
 
 ### Stop Infrastructure
 

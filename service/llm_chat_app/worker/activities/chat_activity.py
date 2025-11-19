@@ -3,6 +3,10 @@ from dotenv import load_dotenv as _load_dotenv
 _load_dotenv(_Path(__file__).resolve().parents[2] / ".env.llm_chat_app", override=True)
 
 import os
+
+os.environ["DOCKER_BUILDKIT"] = "1"
+os.environ["BUILDKIT_PROGRESS"] = "plain"
+
 import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
@@ -67,25 +71,36 @@ class ChatManager(BaseService):
         if LLM_CHAT_SKIP_DOCKER:
             logger.info("build_image: skipped because LLM_CHAT_SKIP_DOCKER=%s", os.environ.get("LLM_CHAT_SKIP_DOCKER"))
             return
+
         ctx = self._find_docker_context(path) or self._resolve_context(path)
         tag = tag or self.config.image
+
         dockerfile1 = ctx / "Dockerfile"
         dockerfile2 = ctx / "dockerfile"
+
         logger.info("build_image start resolved_path=%s tag=%s", str(ctx), tag)
+
         if not dockerfile1.exists() and not dockerfile2.exists():
             logger.error("build_image missing Dockerfile context=%s", str(ctx))
             raise FileNotFoundError(f"Dockerfile not found in {ctx}")
-        import docker
-        client = docker.from_env()
+
+        import subprocess
+
+        cmd = [
+            "docker", "buildx", "build",
+            "--load",
+            "-t", tag,
+            str(ctx)
+        ]
+
+        logger.info("build_image: executing command: %s", " ".join(cmd))
+
         try:
-            image, logs = client.images.build(path=str(ctx), tag=tag, rm=True, pull=False)
-            img_id = getattr(image, "id", None)
-            logger.info("build_image complete tag=%s image_id=%s", tag, img_id)
-            for l in logs:
-                try:
-                    logger.debug("build_image log=%s", l.get("stream") or l.get("status") or l)
-                except Exception:
-                    logger.debug("build_image raw=%s", l)
+            proc = subprocess.run(cmd, capture_output=True, text=True)
+            if proc.returncode != 0:
+                logger.error("build_image failed stderr=%s", proc.stderr)
+                raise RuntimeError(proc.stderr)
+            logger.info("build_image complete tag=%s stdout=%s", tag, proc.stdout)
         except Exception as e:
             logger.exception("build_image failed context=%s tag=%s error=%s", str(ctx), tag, e)
             raise
