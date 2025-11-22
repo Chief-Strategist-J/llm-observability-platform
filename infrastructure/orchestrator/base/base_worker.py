@@ -21,7 +21,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-
 @dataclass(frozen=True)
 class WorkerConfig:
     host: str
@@ -29,7 +28,6 @@ class WorkerConfig:
     port: int | None = None
     namespace: str | None = None
     max_concurrency: int | None = None
-
 
 
 class BaseWorker(ABC):
@@ -107,5 +105,5 @@ class BaseWorker(ABC):
         finally:
             if client:
                 logger.info("service=%s function=%s event=client_closing", svc, fn)
-                await client.close()
+                await client.shutdown()
                 logger.info("service=%s function=%s event=client_closed", svc, fn)

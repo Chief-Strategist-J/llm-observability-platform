@@ -80,6 +80,7 @@ class BaseTrigger(ABC):
                 await self._client.close()
     
     async def trigger_workflow(self, params: Optional[Dict[str, Any]] = None) -> Optional[str]:
+        client = None
         try:
             logger.info(json.dumps({
                 "event": "connect",
@@ -88,7 +89,7 @@ class BaseTrigger(ABC):
                 "ts": int(time.time())
             }))
             
-            self._client = await Client.connect(self.host)
+            client = await Client.connect(self.host)
             
             workflow_id = f"{self.service_name.replace('-', '_')}_{int(time.time())}"
             
@@ -96,7 +97,7 @@ class BaseTrigger(ABC):
             if "service_name" not in workflow_params:
                 workflow_params["service_name"] = self.service_name
             
-            result = await self._client.start_workflow(
+            result = await client.start_workflow(
                 self.workflow_name,
                 workflow_params,
                 id=workflow_id,
@@ -124,8 +125,11 @@ class BaseTrigger(ABC):
             }))
             return None
         finally:
-            if self._client:
-                await self._client.close()
+            if client and hasattr(client, 'close'):
+                try:
+                    await client.close()
+                except Exception as e:
+                    logger.warning(f"Error closing client: {e}")
     
     def run_as_worker(self) -> None:
         asyncio.run(self.run_worker())
