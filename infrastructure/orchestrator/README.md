@@ -245,6 +245,13 @@ python infrastructure/orchestrator/trigger/common/run_logs_pipeline_then_stdout_
 
 python infrastructure/orchestrator/trigger/common/start_application_stdout_ingest.py
 
+python service/llm_chat_app/worker/workflows/chat_setup_workflow.py
+
+python service/llm_chat_app/worker/workflows/chat_cleanup_workflow.py 
+
+
+
+
 ```
 
 ### Logs Pipeline Workflow
@@ -472,7 +479,7 @@ Set Timeouts
   ▼
 ──────────────────────────────────────────────
 Step 1: Configure Application Stdout Pipeline
-  │     Activity: application_stdout_configure_activity(params)
+  │     Activity: logs_configure_activity(params)
   │     Behavior:
   │       - Uses retry_policy
   │       - Uses 5-minute timeout

@@ -107,11 +107,80 @@ class ChatManager(BaseService):
 
     def delete_image(self, force: bool = False) -> None:
         if LLM_CHAT_SKIP_DOCKER:
-            logger.info("delete_image: skipped because LLM_CHAT_SKIP_DOCKER=%s", os.environ.get("LLM_CHAT_SKIP_DOCKER"))
+            logger.info("op=delete_image status=skipped reason=LLM_CHAT_SKIP_DOCKER value=%s", os.environ.get("LLM_CHAT_SKIP_DOCKER"))
             return
+
         client = self.manager.client
-        logger.info("delete_image image=%s force=%s", self.config.image, force)
-        client.images.remove(self.config.image, force=force)
+        image = self.config.image
+        container = self.config.name
+
+        logger.info("op=delete_image phase=start image=%s container=%s force=%s", image, container, force)
+
+        container_exists = False
+        try:
+            client.containers.get(container)
+            container_exists = True
+            logger.info("op=delete_image container_check_exists container=%s exists=true", container)
+        except Exception:
+            logger.info("op=delete_image container_check_exists container=%s exists=false", container)
+
+        if container_exists:
+            try:
+                logger.info("op=delete_image phase=stop_container_start container=%s", container)
+                self.manager.stop(timeout=10)
+                logger.info("op=delete_image phase=stop_container_success container=%s", container)
+            except Exception as e:
+                logger.warning("op=delete_image phase=stop_container_error container=%s error=%s", container, e)
+
+            try:
+                logger.info("op=delete_image phase=remove_container_start container=%s", container)
+                self.manager.remove(force=True)
+                logger.info("op=delete_image phase=remove_container_success container=%s", container)
+            except Exception as e:
+                logger.warning("op=delete_image phase=remove_container_error container=%s error=%s", container, e)
+        else:
+            logger.info("op=delete_image skip_container_operations container=%s reason=container_not_found", container)
+
+        try:
+            logger.info("op=delete_image phase=prune_images_start")
+            client.images.prune()
+            logger.info("op=delete_image phase=prune_images_success")
+        except Exception as e:
+            logger.warning("op=delete_image phase=prune_images_error error=%s", e)
+
+        try:
+            logger.info("op=delete_image phase=prune_volumes_start")
+            client.volumes.prune()
+            logger.info("op=delete_image phase=prune_volumes_success")
+        except Exception as e:
+            logger.warning("op=delete_image phase=prune_volumes_error error=%s", e)
+
+        try:
+            logger.info("op=delete_image phase=prune_build_cache_start")
+            client.api.prune_builds()
+            logger.info("op=delete_image phase=prune_build_cache_success")
+        except Exception as e:
+            logger.warning("op=delete_image phase=prune_build_cache_error error=%s", e)
+
+        image_exists = False
+        try:
+            client.images.get(image)
+            image_exists = True
+            logger.info("op=delete_image image_check_exists image=%s exists=true", image)
+        except Exception:
+            logger.info("op=delete_image image_check_exists image=%s exists=false", image)
+
+        if image_exists:
+            try:
+                logger.info("op=delete_image phase=remove_image_start image=%s force=%s", image, force)
+                client.images.remove(image, force=force)
+                logger.info("op=delete_image phase=remove_image_success image=%s", image)
+            except Exception as e:
+                logger.warning("op=delete_image phase=remove_image_error image=%s error=%s", image, e)
+        else:
+            logger.info("op=delete_image skip_image_removal image=%s reason=image_not_found", image)
+
+        logger.info("op=delete_image phase=complete image=%s container=%s", image, container)
 
 def _manager_name_from_params(params: Optional[Dict[str, Any]]) -> str:
     if not params:
@@ -163,38 +232,6 @@ async def run_chat_container_activity(params: Dict[str, Any]) -> bool:
         return True
     except Exception as e:
         logger.exception("run_chat_container_activity failed name=%s image=%s error=%s", name, image, e)
-        return False
-
-@activity.defn
-async def stop_chat_container_activity(params: Dict[str, Any]) -> bool:
-    if LLM_CHAT_SKIP_DOCKER:
-        logger.info("stop_chat_container_activity: skipped")
-        return True
-    name = _manager_name_from_params(params)
-    timeout = int(params.get("timeout", 30)) if params else 30
-    manager = ChatManager(name=name)
-    try:
-        manager.stop(timeout=timeout)
-        logger.info("stop_chat_container_activity success name=%s timeout=%s", manager.config.name, timeout)
-        return True
-    except Exception as e:
-        logger.exception("stop_chat_container_activity failed name=%s error=%s", name, e)
-        return False
-
-@activity.defn
-async def delete_chat_container_activity(params: Dict[str, Any]) -> bool:
-    if LLM_CHAT_SKIP_DOCKER:
-        logger.info("delete_chat_container_activity: skipped")
-        return True
-    name = _manager_name_from_params(params)
-    force = bool(params.get("force", False)) if params else False
-    manager = ChatManager(name=name)
-    try:
-        manager.delete(force=force)
-        logger.info("delete_chat_container_activity success name=%s force=%s", manager.config.name, force)
-        return True
-    except Exception as e:
-        logger.exception("delete_chat_container_activity failed name=%s error=%s", name, e)
         return False
 
 @activity.defn
@@ -321,3 +358,26 @@ async def check_chat_health_activity(params: Dict[str, Any]) -> bool:
         time.sleep(sleep_for)
     logger.error("check_chat_health_activity failed host=%s after=%d attempts", host, attempts)
     return False
+
+
+@activity.defn
+async def verify_chat_image_deleted_activity(params: Dict[str, Any]) -> bool:
+    if LLM_CHAT_SKIP_DOCKER:
+        logger.info("verify_chat_image_deleted_activity: skipped")
+        return True
+
+    import docker
+    client = docker.from_env()
+
+    tag = params.get("tag", ChatManager.IMAGE)
+
+    logger.info("verify_chat_image_deleted_activity phase=start image=%s", tag)
+
+    try:
+        client.images.get(tag)
+        logger.info("verify_chat_image_deleted_activity image_exists image=%s exists=true", tag)
+        return False
+    except Exception:
+        logger.info("verify_chat_image_deleted_activity image_exists image=%s exists=false", tag)
+        return True
+

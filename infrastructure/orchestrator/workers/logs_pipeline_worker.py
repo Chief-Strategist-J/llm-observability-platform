@@ -1,4 +1,4 @@
-# infrastructure/orchestrator/workers/logs_pipeline_worker.py
+
 from __future__ import annotations
 
 import asyncio
@@ -25,7 +25,7 @@ class LogsPipelineWorker(BaseWorker):
     @property
     def workflows(self):
         from infrastructure.orchestrator.workflows.logs_pipeline_workflow import LogsPipelineWorkflow
-        from infrastructure.orchestrator.workflows.logs_ingest_workflow import ApplicationStdoutIngestWorkflow
+        from infrastructure.orchestrator.workflows.application_stdout_ingest_workflow import ApplicationStdoutIngestWorkflow
         return [LogsPipelineWorkflow, ApplicationStdoutIngestWorkflow]
 
     @property
