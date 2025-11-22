@@ -18,14 +18,13 @@ from infrastructure.orchestrator.base.base_worker import BaseWorker, WorkerConfi
 from worker.activities.chat_activity import (
     build_chat_image_activity,
     run_chat_container_activity,
-    stop_chat_container_activity,
-    delete_chat_container_activity,
     delete_chat_image_activity,
     start_neo4j_dependency_activity,
     stop_neo4j_dependency_activity,
     delete_neo4j_dependency_activity,
     verify_cloudflare_dependency_activity,
     check_chat_health_activity,
+    verify_chat_image_deleted_activity,
 )
 from worker.activities.deploy_activity import (
     check_deployment_health_activity,
@@ -83,8 +82,6 @@ class ChatWorker(BaseWorker):
         return [
             build_chat_image_activity,
             run_chat_container_activity,
-            stop_chat_container_activity,
-            delete_chat_container_activity,
             delete_chat_image_activity,
             start_neo4j_dependency_activity,
             stop_neo4j_dependency_activity,
@@ -103,6 +100,7 @@ class ChatWorker(BaseWorker):
             create_neo4j_aura_instance_activity,
             generate_deployment_configs_activity,
             check_deployment_health_activity,
+            verify_chat_image_deleted_activity,
         ]
 
 
