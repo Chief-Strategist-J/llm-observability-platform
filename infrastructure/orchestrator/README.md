@@ -222,6 +222,9 @@ python infrastructure/orchestrator/workers/tracing_pipeline_worker.py
 
 python service/llm_chat_app/worker/workers/chat_worker.py 
 
+python infrastructure/observability/workers/logs_pipeline_worker.py
+
+
 
 ```
 
