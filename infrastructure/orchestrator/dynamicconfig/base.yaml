@@ -1,7 +1,7 @@
 receivers:
   filelog:
     include:
-    - /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/dynamicconfig/container-logs.log
+    - /etc/otelcol/container-logs.log
     start_at: beginning
     include_file_path: true
     include_file_name: true

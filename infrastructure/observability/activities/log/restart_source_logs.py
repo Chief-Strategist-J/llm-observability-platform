@@ -12,55 +12,59 @@ async def restart_source_logs(params: Dict[str, Any]) -> Dict[str, Any]:
     container_name = params.get("container_name")
     timeout_seconds = int(params.get("timeout_seconds", 60))
     if not container_name:
-        logger.error("missing_container_name")
+        logger.error("restart_source_logs missing_container_name")
         return {"success": False, "data": None, "error": "missing_container_name"}
     try:
         client = docker.from_env()
+        logger.info("restart_source_logs docker client created successfully")
     except Exception as e:
-        logger.error("docker_client_error: %s", str(e))
+        logger.error("restart_source_logs docker_client_error: %s", str(e), exc_info=True)
         return {"success": False, "data": None, "error": "docker_client_error"}
     try:
         container = None
         try:
             container = client.containers.get(container_name)
+            logger.info("restart_source_logs found container by get: %s", container_name)
         except Exception:
+            logger.info("restart_source_logs container.get failed, searching in list")
             for c in client.containers.list(all=True):
                 if c.name == container_name:
                     container = c
+                    logger.info("restart_source_logs found container in list: %s", container_name)
                     break
         if container is None:
-            logger.error("container_not_found: %s", container_name)
+            logger.error("restart_source_logs container_not_found: %s", container_name)
             return {"success": False, "data": None, "error": "container_not_found"}
         
-        logger.info("restarting_container: %s current_status=%s", container_name, container.status)
+        logger.info("restart_source_logs restarting container: %s current_status=%s", container_name, container.status)
         
         try:
             container.restart(timeout=10)
-            logger.info("container_restart_called: %s", container_name)
+            logger.info("restart_source_logs container_restart_called: %s", container_name)
         except Exception as e:
-            logger.warning("container_restart_failed trying stop/start: %s", str(e))
+            logger.warning("restart_source_logs container_restart_failed trying stop/start: %s", str(e))
             try:
                 container.stop(timeout=10)
-                logger.info("container_stopped: %s", container_name)
+                logger.info("restart_source_logs container_stopped: %s", container_name)
             except Exception as e2:
-                logger.warning("container_stop_failed: %s", str(e2))
+                logger.warning("restart_source_logs container_stop_failed: %s", str(e2))
             try:
                 container.start()
-                logger.info("container_started: %s", container_name)
+                logger.info("restart_source_logs container_started: %s", container_name)
             except Exception as e3:
-                logger.error("container_start_failed: %s", str(e3))
+                logger.error("restart_source_logs container_start_failed: %s", str(e3), exc_info=True)
                 return {"success": False, "data": None, "error": "restart_failed"}
         
         start_time = time.time()
         ready = False
         
-        for check_attempt in range(3):
+        for check_attempt in range(5):
             time.sleep(2)
             try:
                 container.reload()
                 status = container.status
                 
-                logger.info("container_status_check: %s status=%s attempt=%d elapsed=%.1fs", 
+                logger.info("restart_source_logs container_status_check: %s status=%s attempt=%d elapsed=%.1fs", 
                           container_name, status, check_attempt + 1, time.time() - start_time)
                 
                 if status == "running":
@@ -69,39 +73,54 @@ async def restart_source_logs(params: Dict[str, Any]) -> Dict[str, Any]:
                     except Exception:
                         health = None
                     
-                    logger.info("container_health_check: %s health=%s", container_name, health)
+                    logger.info("restart_source_logs container_health_check: %s health=%s", container_name, health)
                     
                     if health in (None, "healthy", "starting"):
                         ready = True
+                        logger.info("restart_source_logs container ready: %s", container_name)
                         break
+                else:
+                    logger.warning("restart_source_logs container not running: status=%s", status)
             except Exception as e:
-                logger.warning("container_reload_error: %s", str(e))
+                logger.warning("restart_source_logs container_reload_error: %s", str(e))
                 status = "unknown"
         
         if not ready:
-            logger.error("container_not_ready_after_checks")
+            logger.error("restart_source_logs container_not_ready_after_checks")
         
         try:
-            logs = container.logs(tail=100).decode("utf-8", errors="ignore")
-            logger.info("container_logs_sample: %s\n%s", container_name, logs[-1500:])
+            logs = container.logs(tail=200).decode("utf-8", errors="ignore")
+            logger.info("restart_source_logs container_logs_sample: %s\n%s", container_name, logs[-2000:])
             
             if "invalid keys" in logs.lower() or "cannot unmarshal" in logs.lower():
-                logger.error("config_error_detected - OTel config is invalid")
-                logger.error("config_error_logs: %s", logs[-800:])
+                logger.error("restart_source_logs config_error_detected - OTel config is invalid")
+                logger.error("restart_source_logs config_error_logs: %s", logs[-1000:])
                 return {
                     "success": False, 
                     "data": {
                         "status": "config_invalid", 
                         "error": "otel_config_error", 
-                        "logs": logs[-800:]
+                        "logs": logs[-1000:]
                     }, 
                     "error": "config_error"
                 }
+            
+            if "no such file" in logs.lower() or "permission denied" in logs.lower():
+                logger.error("restart_source_logs file_access_error detected in logs")
+                logger.error("restart_source_logs file_error_logs: %s", logs[-1000:])
+            
+            if "no files match the configured criteria" in logs:
+                logger.error("restart_source_logs CRITICAL: OTel collector cannot find log files!")
+                logger.error("restart_source_logs This is the root cause - file paths in config may be wrong")
+                
+            if "matched files" in logs and " 0 " in logs:
+                logger.error("restart_source_logs CRITICAL: OTel matched 0 files!")
+                
         except Exception as e:
-            logger.warning("failed_to_fetch_logs: %s", str(e))
+            logger.warning("restart_source_logs failed_to_fetch_logs: %s", str(e))
         
-        logger.info("restart_source_logs waiting 8s for full startup")
-        time.sleep(8)
+        logger.info("restart_source_logs waiting 10s for full startup and file discovery")
+        time.sleep(10)
         
         try:
             container.reload()
@@ -109,16 +128,19 @@ async def restart_source_logs(params: Dict[str, Any]) -> Dict[str, Any]:
             logger.info("restart_source_logs final_status=%s", final_status)
             
             if final_status != "running":
+                logger.error("restart_source_logs container not running after restart")
                 return {
                     "success": False,
                     "data": {"status": final_status},
                     "error": "container_not_running"
                 }
         except Exception as e:
-            logger.error("final_status_check_failed: %s", str(e))
+            logger.error("restart_source_logs final_status_check_failed: %s", str(e), exc_info=True)
         
-        return {"success": True, "data": {"status": "running", "elapsed": time.time() - start_time}, "error": None}
+        elapsed = time.time() - start_time
+        logger.info("restart_source_logs completed: status=running elapsed=%.2fs", elapsed)
+        return {"success": True, "data": {"status": "running", "elapsed": elapsed}, "error": None}
         
     except Exception as e:
-        logger.error("restart_source_logs error: %s", str(e))
+        logger.error("restart_source_logs error: %s", str(e), exc_info=True)
         return {"success": False, "data": None, "error": "unexpected_error"}

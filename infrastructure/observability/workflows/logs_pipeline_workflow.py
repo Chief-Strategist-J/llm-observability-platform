@@ -14,7 +14,6 @@ from infrastructure.orchestrator.base.base_workflow import BaseWorkflow
 class LogsPipelineWorkflow(BaseWorkflow):
     @workflow.run
     async def run(self, params: Dict[str, Any]) -> str:
-
         workflow.logger.info({
             "labels": {"pipeline": "logs", "event": "start"},
             "msg": "workflow_start",
@@ -26,45 +25,42 @@ class LogsPipelineWorkflow(BaseWorkflow):
             {},
             start_to_close_timeout=timedelta(seconds=120),
         )
-
-        workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "grafana"},
-            "msg": "grafana_started"
-        })
+        workflow.logger.info({"labels": {"pipeline": "logs", "event": "grafana"}, "msg": "grafana_started"})
 
         await workflow.execute_activity(
             "start_loki_activity",
             {},
             start_to_close_timeout=timedelta(seconds=120),
         )
-
-        workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "loki"},
-            "msg": "loki_started"
-        })
+        workflow.logger.info({"labels": {"pipeline": "logs", "event": "loki"}, "msg": "loki_started"})
 
         await workflow.execute_activity(
             "start_opentelemetry_collector",
             {},
             start_to_close_timeout=timedelta(seconds=120),
         )
-
-        workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "otel"},
-            "msg": "otel_started"
-        })
+        workflow.logger.info({"labels": {"pipeline": "logs", "event": "otel"}, "msg": "otel_started"})
 
         dynamic_dir = params.get("dynamic_dir", "infrastructure/orchestrator/dynamicconfig")
-        loki_push_url = params.get("loki_push_url", "http://localhost:31002/loki/api/v1/push")
-        loki_query_url = params.get("loki_query_url", "http://localhost:31002/loki/api/v1/query")
+
+        loki_push_url = params.get("loki_push_url", "http://loki.local/loki/api/v1/push")
+        loki_query_url = params.get("loki_query_url", "http://loki.local/loki/api/v1/query")
+        grafana_url = params.get("grafana_url", "http://grafana.local")
         otel_container_name = params.get("otel_container_name", "opentelemetry-collector-development")
+
+        workflow.logger.info({
+            "labels": {"pipeline": "logs", "event": "endpoints"},
+            "msg": "using_hostnames",
+            "loki_push_url": loki_push_url,
+            "loki_query_url": loki_query_url,
+            "grafana_url": grafana_url
+        })
 
         gen_res = await workflow.execute_activity(
             "generate_config_logs",
             {"dynamic_dir": dynamic_dir, "loki_push_url": loki_push_url},
             start_to_close_timeout=timedelta(seconds=120),
         )
-
         workflow.logger.info({
             "labels": {"pipeline": "logs", "event": "generate_config"},
             "msg": "generate_config_result",
@@ -81,7 +77,6 @@ class LogsPipelineWorkflow(BaseWorkflow):
             {"config_path": config_path} if config_path else {},
             start_to_close_timeout=timedelta(seconds=60),
         )
-
         workflow.logger.info({
             "labels": {"pipeline": "logs", "event": "configure_paths"},
             "msg": "configure_paths_result",
@@ -93,7 +88,6 @@ class LogsPipelineWorkflow(BaseWorkflow):
             {"config_path": config_path, "dynamic_dir": dynamic_dir} if config_path else {},
             start_to_close_timeout=timedelta(seconds=60),
         )
-
         workflow.logger.info({
             "labels": {"pipeline": "logs", "event": "configure_source"},
             "msg": "configure_source_result",
@@ -108,7 +102,6 @@ class LogsPipelineWorkflow(BaseWorkflow):
             },
             start_to_close_timeout=timedelta(seconds=60),
         )
-
         workflow.logger.info({
             "labels": {"pipeline": "logs", "event": "deploy_processor"},
             "msg": "deploy_processor_result",
@@ -120,7 +113,6 @@ class LogsPipelineWorkflow(BaseWorkflow):
             {"container_name": otel_container_name, "timeout_seconds": 60},
             start_to_close_timeout=timedelta(seconds=120),
         )
-
         workflow.logger.info({
             "labels": {"pipeline": "logs", "event": "restart_source"},
             "msg": "restart_source_result",
@@ -130,28 +122,23 @@ class LogsPipelineWorkflow(BaseWorkflow):
         await workflow.execute_activity(
             "create_grafana_datasource_activity",
             {
-                "grafana_url": params.get("grafana_url", "http://localhost:31001"),
+                "grafana_url": grafana_url,
                 "grafana_user": params.get("grafana_user", "admin"),
                 "grafana_password": params.get("grafana_password", "SuperSecret123!"),
                 "datasource_name": params.get("datasource_name", "loki"),
-                "loki_url": params.get("loki_url", "http://localhost:31002"),
+                "loki_url": params.get("loki_url", loki_push_url.replace("/loki/api/v1/push", "")),
                 "upsert_mode": params.get("upsert_mode", "upsert"),
                 "org_id": params.get("org_id", 1),
             },
             start_to_close_timeout=timedelta(seconds=120),
         )
-
-        workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "grafana_datasource"},
-            "msg": "grafana_datasource_created"
-        })
+        workflow.logger.info({"labels": {"pipeline": "logs", "event": "grafana_datasource"}, "msg": "grafana_datasource_created"})
 
         emit_res = await workflow.execute_activity(
             "emit_test_event_logs",
             {"config_path": config_path},
             start_to_close_timeout=timedelta(seconds=60),
         )
-
         workflow.logger.info({
             "labels": {"pipeline": "logs", "event": "emit_test"},
             "msg": "emit_test_result",
@@ -182,16 +169,12 @@ class LogsPipelineWorkflow(BaseWorkflow):
             {"loki_query_url": loki_query_url, "logql": logql, "timeout_seconds": 60, "poll_interval": 2.0},
             start_to_close_timeout=timedelta(seconds=120),
         )
-
         workflow.logger.info({
             "labels": {"pipeline": "logs", "event": "verify_complete"},
             "msg": "verification_result",
             "result": verify_res
         })
 
-        workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "done"},
-            "msg": "workflow_complete"
-        })
+        workflow.logger.info({"labels": {"pipeline": "logs", "event": "done"}, "msg": "workflow_complete"})
 
         return "logs_pipeline_completed"

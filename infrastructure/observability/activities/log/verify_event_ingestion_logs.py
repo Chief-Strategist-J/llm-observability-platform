@@ -28,23 +28,23 @@ async def verify_event_ingestion_logs(params: Dict[str, Any]) -> Dict[str, Any]:
     logger.info("verify_event_ingestion_logs started with params: %s", params)
 
     logql = params.get("logql", "")
-    loki_query_url = params.get("loki_query_url")
+    loki_query_url = params.get("loki_query_url", "http://loki.local/loki/api/v1/query")
     poll_interval = float(params.get("poll_interval", 2.0))
     timeout_seconds = int(params.get("timeout_seconds", 60))
 
     if not loki_query_url:
-        logger.error("missing_loki_query_url")
+        logger.error("verify_event_ingestion_logs missing_loki_query_url")
         return {"success": False, "data": None, "error": "missing_loki_query_url"}
 
     if not logql:
-        logger.error("missing_logql")
+        logger.error("verify_event_ingestion_logs missing_logql")
         return {"success": False, "data": None, "error": "missing_logql"}
 
     if loki_query_url.endswith("/query"):
         loki_query_url = loki_query_url[: -len("/query")] + "/query_range"
+        logger.info("verify_event_ingestion_logs adjusted url to query_range: %s", loki_query_url)
 
     ready_url = _build_ready_url(loki_query_url)
-    
     logger.info("verify_event_ingestion_logs waiting for loki ready at: %s", ready_url)
 
     start_time = time.time()
@@ -55,17 +55,11 @@ async def verify_event_ingestion_logs(params: Dict[str, Any]) -> Dict[str, Any]:
                 if resp.getcode() == 200:
                     logger.info("verify_event_ingestion_logs loki is ready")
                     break
-        except urllib.error.HTTPError as e:
-            try:
-                body = e.read().decode("utf-8", errors="ignore")
-            except Exception:
-                body = ""
-            logger.info("loki_ready_http_error code=%s body=%s", getattr(e, "code", None), body)
         except Exception as e:
-            logger.info("loki_ready_error: %s", str(e))
+            logger.debug("verify_event_ingestion_logs ready check failed (will retry): %s", e)
         time.sleep(1)
     else:
-        logger.error("loki_not_ready timeout after %s seconds", timeout_seconds)
+        logger.error("verify_event_ingestion_logs loki_not_ready timeout after %s seconds", timeout_seconds)
         return {"success": False, "data": None, "error": "loki_not_ready"}
 
     q_start = time.time()
@@ -76,7 +70,6 @@ async def verify_event_ingestion_logs(params: Dict[str, Any]) -> Dict[str, Any]:
         attempt += 1
         try:
             query = urllib.parse.quote(logql, safe="")
-
             end_ns = int(time.time() * 1e9)
             start_ns = end_ns - int(10 * 60 * 1e9)
 
@@ -94,59 +87,49 @@ async def verify_event_ingestion_logs(params: Dict[str, Any]) -> Dict[str, Any]:
                 )
 
             tried_urls.append(full)
-            
             logger.info("verify_event_ingestion_logs attempt=%d query_url=%s", attempt, full)
 
             req = urllib.request.Request(full, method="GET")
             with urllib.request.urlopen(req, timeout=10) as resp:
                 body = resp.read().decode("utf-8", errors="ignore")
                 code = resp.getcode()
-                
-                logger.info("verify_event_ingestion_logs attempt=%d status=%d body_length=%d", 
-                          attempt, code, len(body))
-                
                 if code == 200 and body:
                     try:
                         result = json.loads(body)
                         data = result.get("data", {})
-                        result_type = data.get("resultType")
                         results = data.get("result", [])
-                        
-                        logger.info("verify_event_ingestion_logs attempt=%d resultType=%s results_count=%d",
-                                  attempt, result_type, len(results))
-                        
                         if results:
-                            for idx, res in enumerate(results[:3]):
-                                stream = res.get("stream", {})
-                                values = res.get("values", [])
-                                logger.info("verify_event_ingestion_logs result[%d] stream=%s values_count=%d",
-                                          idx, stream, len(values))
-                                if values:
-                                    logger.info("verify_event_ingestion_logs result[%d] first_value=%s",
-                                              idx, values[0] if len(values) > 0 else "none")
-                            
-                            logger.info("verify_event_ingestion_logs matched url=%s", full)
-                            return {"success": True, "data": {"url": full, "response": body, "results_count": len(results)}, "error": None}
+                            logger.info("verify_event_ingestion_logs SUCCESS matched results_count=%d", len(results))
+                            return {
+                                "success": True,
+                                "data": {
+                                    "url": full,
+                                    "response": body,
+                                    "results_count": len(results),
+                                    "attempts": attempt,
+                                },
+                                "error": None,
+                            }
                         else:
-                            logger.info("verify_event_ingestion_logs attempt=%d no_results_yet", attempt)
-                    except json.JSONDecodeError as je:
-                        logger.error("verify_event_ingestion_logs json_decode_error: %s", str(je))
+                            logger.debug("verify_event_ingestion_logs attempt=%d no_results_yet", attempt)
+                    except json.JSONDecodeError:
+                        logger.warning("verify_event_ingestion_logs json decode failed on attempt %d", attempt)
 
         except urllib.error.HTTPError as e:
             try:
                 body = e.read().decode("utf-8", errors="ignore")
             except Exception:
                 body = ""
-            logger.info("loki_query_http_error attempt=%d code=%s body=%s", attempt, getattr(e, "code", None), body)
+            logger.debug("verify_event_ingestion_logs http error %s body=%s", getattr(e, "code", None), body)
 
         except Exception as e:
-            logger.info("loki_url_error attempt=%d error=%s", attempt, str(e))
+            logger.debug("verify_event_ingestion_logs general error: %s", e)
 
         time.sleep(poll_interval)
 
-    logger.error(
-        "verify_event_ingestion_logs timeout after %d attempts tried_urls=%s",
-        attempt,
-        tried_urls,
-    )
-    return {"success": False, "data": {"tried_urls": tried_urls, "attempts": attempt}, "error": "timeout_or_no_match"}
+    logger.error("verify_event_ingestion_logs TIMEOUT after %d attempts", attempt)
+    return {
+        "success": False,
+        "data": {"tried_urls": tried_urls[:5], "attempts": attempt, "total_time": time.time() - q_start},
+        "error": "timeout_or_no_match",
+    }

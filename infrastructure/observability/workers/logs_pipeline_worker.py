@@ -11,12 +11,30 @@ from infrastructure.observability.workflows.logs_pipeline_workflow import LogsPi
 
 from infrastructure.orchestrator.activities.configurations_activity.grafana_activity import (
     start_grafana_activity,
+    stop_grafana_activity,
+    restart_grafana_activity,
+    delete_grafana_activity,
 )
+
 from infrastructure.orchestrator.activities.configurations_activity.loki_activity import (
     start_loki_activity,
+    stop_loki_activity,
+    restart_loki_activity,
+    delete_loki_activity,
 )
+
 from infrastructure.orchestrator.activities.configurations_activity.opentelemetry_collector import (
     start_opentelemetry_collector,
+    stop_opentelemetry_collector,
+    restart_opentelemetry_collector,
+    delete_opentelemetry_collector,
+)
+
+from infrastructure.orchestrator.activities.configurations_activity.traefik_activity import (
+    start_traefik_activity,
+    stop_traefik_activity,
+    restart_traefik_activity,
+    delete_traefik_activity,
 )
 
 from infrastructure.observability.activities.log.exporters.loki_exporter_activity import (
@@ -56,6 +74,7 @@ from infrastructure.observability.activities.log.create_grafana_datasource_activ
 
 
 class LogsPipelineWorker(BaseWorker):
+
     @property
     def workflows(self):
         return [LogsPipelineWorkflow]
@@ -63,14 +82,25 @@ class LogsPipelineWorker(BaseWorker):
     @property
     def activities(self):
         return [
+            start_traefik_activity,
+            stop_traefik_activity,
+            restart_traefik_activity,
+            delete_traefik_activity,
             start_grafana_activity,
+            stop_grafana_activity,
+            restart_grafana_activity,
+            delete_grafana_activity,
             start_loki_activity,
+            stop_loki_activity,
+            restart_loki_activity,
+            delete_loki_activity,
             start_opentelemetry_collector,
-
+            stop_opentelemetry_collector,
+            restart_opentelemetry_collector,
+            delete_opentelemetry_collector,
             file_provider_activity,
             json_parser_activity,
             loki_exporter_activity,
-
             generate_config_logs,
             configure_source_paths_logs,
             configure_source_logs,

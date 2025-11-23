@@ -16,11 +16,11 @@ class GrafanaManager(BaseService):
         config = ContainerConfig(
             image="grafana/grafana:latest",
             name="grafana-development",
-            ports={3000: 31001},
-            volumes={"grafana-data": "/var/lib/grafana"},
-            network="monitoring-bridge",
-            memory="256m",
-            memory_reservation="128m",
+            ports={},
+            volumes={"grafana-data": {"bind": "/var/lib/grafana", "mode": "rw"}},
+            network="observability-network",
+            memory="512m",
+            memory_reservation="256m",
             cpus=0.5,
             restart="unless-stopped",
             environment={
@@ -28,22 +28,28 @@ class GrafanaManager(BaseService):
                 "GF_SECURITY_ADMIN_PASSWORD": "SuperSecret123!",
                 "GF_USERS_ALLOW_SIGN_UP": "false",
             },
+            labels={
+                "traefik.enable": "true",
+                "traefik.http.routers.grafana.rule": "Host(`grafana.localhost`)",
+                "traefik.http.routers.grafana.entrypoints": "web",
+                "traefik.http.services.grafana.loadbalancer.server.port": "3000",
+            },
             healthcheck={
                 "test": [
                     "CMD-SHELL",
                     "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"
                 ],
-                "interval": 30000000000,
-                "timeout": 10000000000,
+                "interval": 30_000_000_000,
+                "timeout": 10_000_000_000,
                 "retries": 3,
-                "start_period": 40000000000
+                "start_period": 20_000_000_000
             }
         )
         super().__init__(config)
 
-    def create_datasource(self, name: str, url: str, ds_type: str = "prometheus") -> str:
+    def create_datasource(self, name: str, url: str, ds_type: str = "loki") -> str:
         command = (
-            f'curl -X POST http://localhost:3000/api/datasources '
+            f'curl -s -X POST http://localhost:3000/api/datasources '
             f'-H "Content-Type: application/json" '
             f'-u admin:SuperSecret123! '
             f"-d '{{\"name\":\"{name}\",\"type\":\"{ds_type}\",\"url\":\"{url}\",\"access\":\"proxy\"}}'"
