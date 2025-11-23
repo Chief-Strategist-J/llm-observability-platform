@@ -21,7 +21,7 @@ processors:
       action: upsert
 exporters:
   loki:
-    endpoint: http://localhost:31002/loki/api/v1/push
+    endpoint: http://loki.local/loki/api/v1/push
   logging:
     loglevel: debug
 service:
@@ -37,4 +37,4 @@ service:
       - logging
   telemetry:
     logs:
-      level: debug
+      level: info
