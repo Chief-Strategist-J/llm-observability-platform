@@ -22,8 +22,19 @@ processors:
 exporters:
   loki:
     endpoint: http://localhost:31002/loki/api/v1/push
+<<<<<<< HEAD
   logging:
     loglevel: debug
+=======
+processors:
+  batch:
+    timeout: 10s
+receivers:
+  filelog:
+    include:
+    - infrastructure/orchestrator/dynamicconfig/container-logs.log
+    start_at: beginning
+>>>>>>> dcbfd98fbef16d9d913e8e94ea82905b860c2c85
 service:
   pipelines:
     logs:
@@ -34,7 +45,14 @@ service:
       - batch
       exporters:
       - loki
+<<<<<<< HEAD
       - logging
   telemetry:
     logs:
       level: debug
+=======
+      processors:
+      - batch
+      receivers:
+      - filelog
+>>>>>>> dcbfd98fbef16d9d913e8e94ea82905b860c2c85
