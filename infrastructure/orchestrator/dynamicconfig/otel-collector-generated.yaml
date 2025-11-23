@@ -2,25 +2,13 @@ exporters:
   loki:
     endpoint: http://localhost:31002/loki/api/v1/push
 processors:
-  attributes/container:
-    actions:
-    - action: insert
-      key: container_id
-      value: ${container.id}
-    - action: insert
-      key: container_name
-      value: ${container.name}
-    - action: insert
-      key: container_image
-      value: ${container.image}
   batch:
     timeout: 10s
 receivers:
-  docker_container:
-    endpoint: unix:///var/run/docker.sock
-    exclude_stopped: false
-  docker_stats:
-    endpoint: unix:///var/run/docker.sock
+  filelog:
+    include:
+    - infrastructure/orchestrator/dynamicconfig/container-logs.log
+    start_at: beginning
 service:
   pipelines:
     logs:
@@ -28,6 +16,5 @@ service:
       - loki
       processors:
       - batch
-      - attributes/container
       receivers:
-      - docker_container
+      - filelog

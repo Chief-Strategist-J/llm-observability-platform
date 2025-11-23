@@ -121,7 +121,7 @@ class LogsPipelineWorkflow(BaseWorkflow):
             data = emit_res.get("data") or {}
             token = data.get("token")
 
-        logql = f'{{}} |= "{token}"' if token else params.get("logql", "")
+        logql = f'{{filename=~".+"}} |= "{token}"' if token else params.get("logql", '{filename=~".+"}')
 
         verify_res = await workflow.execute_activity(
             "verify_event_ingestion_logs",

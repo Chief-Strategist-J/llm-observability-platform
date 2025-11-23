@@ -24,25 +24,18 @@ async def generate_config_logs(params: Dict[str, Any]) -> Dict[str, Any]:
         logger.error("docker_client_error: %s", str(e))
         return {"success": False, "data": None, "error": "docker_client_error"}
 
+    log_file = dynamic_dir / "container-logs.log"
+    log_file.touch(exist_ok=True)
+    
     receivers = {
-        "docker_stats": {
-            "endpoint": "unix:///var/run/docker.sock"
-        },
-        "docker_container": {
-            "endpoint": "unix:///var/run/docker.sock",
-            "exclude_stopped": False
+        "filelog": {
+            "include": [str(log_file)],
+            "start_at": "beginning"
         }
     }
 
     processors = {
-        "batch": {"timeout": "10s"},
-        "attributes/container": {
-            "actions": [
-                {"key": "container_id", "action": "insert", "value": "${container.id}"},
-                {"key": "container_name", "action": "insert", "value": "${container.name}"},
-                {"key": "container_image", "action": "insert", "value": "${container.image}"}
-            ]
-        }
+        "batch": {"timeout": "10s"}
     }
 
     exporters = {
@@ -53,8 +46,8 @@ async def generate_config_logs(params: Dict[str, Any]) -> Dict[str, Any]:
 
     service_pipelines = {
         "logs": {
-            "receivers": ["docker_container"],
-            "processors": ["batch", "attributes/container"],
+            "receivers": ["filelog"],
+            "processors": ["batch"],
             "exporters": ["loki"]
         }
     }
