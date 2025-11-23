@@ -1,5 +1,7 @@
 import logging
 import time
+import asyncio
+import socket
 from typing import Dict, Any, List
 from temporalio import activity
 import urllib.request
@@ -9,127 +11,140 @@ import json
 
 logger = logging.getLogger(__name__)
 
-def _build_ready_url(loki_query_url: str) -> str:
+
+def _can_resolve_host(url: str) -> bool:
     try:
-        idx = loki_query_url.find("/loki")
-        if idx != -1:
-            base = loki_query_url[:idx]
-            return base.rstrip("/") + "/ready"
+        parsed = urllib.parse.urlparse(url)
+        if not parsed.hostname:
+            return False
+        socket.getaddrinfo(parsed.hostname, parsed.port or 80)
+        return True
     except Exception:
-        pass
-    if loki_query_url.endswith("/query"):
-        return loki_query_url[: -len("/query")] + "/ready"
-    if loki_query_url.endswith("/query_range"):
-        return loki_query_url[: -len("/query_range")] + "/ready"
-    return loki_query_url.rstrip("/") + "/ready"
+        return False
+
+
+async def _wait_for_dns(url: str, retries: int = 15, delay: float = 1.0) -> bool:
+    for attempt in range(1, retries + 1):
+        if _can_resolve_host(url):
+            logger.info("DNS resolved for %s on attempt=%d", url, attempt)
+            return True
+        logger.warning("DNS not resolved for %s attempt=%d", url, attempt)
+        await asyncio.sleep(delay)
+    return False
+
+
+def _ensure_query_range_url(loki_query_url: str) -> str:
+    parsed = urllib.parse.urlparse(loki_query_url)
+    base = f"{parsed.scheme}://{parsed.netloc}"
+    if parsed.path.endswith("/query_range"):
+        return loki_query_url
+    if parsed.path.endswith("/query"):
+        return urllib.parse.urlunparse(
+            (parsed.scheme, parsed.netloc,
+             parsed.path[:-len("/query")] + "/query_range",
+             "", parsed.query, "")
+        )
+    return f"{base}/loki/api/v1/query_range"
+
+
+def _build_ready_url(loki_query_url: str) -> str:
+    parsed = urllib.parse.urlparse(loki_query_url)
+    base = f"{parsed.scheme}://{parsed.netloc}"
+    return f"{base}/ready"
+
 
 @activity.defn
 async def verify_event_ingestion_logs(params: Dict[str, Any]) -> Dict[str, Any]:
     logger.info("verify_event_ingestion_logs started with params: %s", params)
 
-    logql = params.get("logql", "")
-    loki_query_url = params.get("loki_query_url", "http://loki.local/loki/api/v1/query")
-    poll_interval = float(params.get("poll_interval", 2.0))
+    logql = params.get("logql")
+    loki_query_url = params.get("loki_query_url")
+    poll_interval = float(params.get("poll_interval", 2))
     timeout_seconds = int(params.get("timeout_seconds", 60))
 
-    if not loki_query_url:
-        logger.error("verify_event_ingestion_logs missing_loki_query_url")
-        return {"success": False, "data": None, "error": "missing_loki_query_url"}
-
     if not logql:
-        logger.error("verify_event_ingestion_logs missing_logql")
         return {"success": False, "data": None, "error": "missing_logql"}
 
-    if loki_query_url.endswith("/query"):
-        loki_query_url = loki_query_url[: -len("/query")] + "/query_range"
-        logger.info("verify_event_ingestion_logs adjusted url to query_range: %s", loki_query_url)
+    if not loki_query_url:
+        return {"success": False, "data": None, "error": "missing_loki_query_url"}
 
+    loki_query_url = _ensure_query_range_url(loki_query_url)
     ready_url = _build_ready_url(loki_query_url)
-    logger.info("verify_event_ingestion_logs waiting for loki ready at: %s", ready_url)
 
+    logger.info("Validating DNS for Loki: %s", loki_query_url)
+    dns_ok = await _wait_for_dns(loki_query_url)
+    if not dns_ok:
+        logger.error("verify_event_ingestion_logs loki_dns_unresolved")
+        return {"success": False, "data": {"url": loki_query_url}, "error": "loki_dns_unresolved"}
+
+    logger.info("Checking Loki readiness at %s", ready_url)
     start_time = time.time()
+
     while time.time() - start_time < timeout_seconds:
         try:
             req = urllib.request.Request(ready_url, method="GET")
             with urllib.request.urlopen(req, timeout=5) as resp:
                 if resp.getcode() == 200:
-                    logger.info("verify_event_ingestion_logs loki is ready")
+                    logger.info("Loki ready")
                     break
-        except Exception as e:
-            logger.debug("verify_event_ingestion_logs ready check failed (will retry): %s", e)
-        time.sleep(1)
+        except Exception:
+            pass
+        await asyncio.sleep(1)
     else:
-        logger.error("verify_event_ingestion_logs loki_not_ready timeout after %s seconds", timeout_seconds)
         return {"success": False, "data": None, "error": "loki_not_ready"}
 
-    q_start = time.time()
-    tried_urls: List[str] = []
+    tried_urls = []
     attempt = 0
+    q_start = time.time()
 
     while time.time() - q_start < timeout_seconds:
         attempt += 1
+
         try:
             query = urllib.parse.quote(logql, safe="")
-            end_ns = int(time.time() * 1e9)
-            start_ns = end_ns - int(10 * 60 * 1e9)
+            now = int(time.time() * 1e9)
+            start_ns = now - (10 * 60 * 1e9)
 
-            if "?" in loki_query_url:
-                full = (
-                    f"{loki_query_url}&query={query}"
-                    f"&start={start_ns}&end={end_ns}"
-                    f"&direction=BACKWARD&limit=5000"
-                )
-            else:
-                full = (
-                    f"{loki_query_url}?query={query}"
-                    f"&start={start_ns}&end={end_ns}"
-                    f"&direction=BACKWARD&limit=5000"
-                )
+            full = (
+                f"{loki_query_url}?query={query}"
+                f"&start={start_ns}&end={now}&direction=BACKWARD&limit=5000"
+            )
 
             tried_urls.append(full)
-            logger.info("verify_event_ingestion_logs attempt=%d query_url=%s", attempt, full)
 
             req = urllib.request.Request(full, method="GET")
             with urllib.request.urlopen(req, timeout=10) as resp:
                 body = resp.read().decode("utf-8", errors="ignore")
                 code = resp.getcode()
-                if code == 200 and body:
-                    try:
-                        result = json.loads(body)
-                        data = result.get("data", {})
-                        results = data.get("result", [])
-                        if results:
-                            logger.info("verify_event_ingestion_logs SUCCESS matched results_count=%d", len(results))
-                            return {
-                                "success": True,
-                                "data": {
-                                    "url": full,
-                                    "response": body,
-                                    "results_count": len(results),
-                                    "attempts": attempt,
-                                },
-                                "error": None,
-                            }
-                        else:
-                            logger.debug("verify_event_ingestion_logs attempt=%d no_results_yet", attempt)
-                    except json.JSONDecodeError:
-                        logger.warning("verify_event_ingestion_logs json decode failed on attempt %d", attempt)
 
-        except urllib.error.HTTPError as e:
-            try:
-                body = e.read().decode("utf-8", errors="ignore")
-            except Exception:
-                body = ""
-            logger.debug("verify_event_ingestion_logs http error %s body=%s", getattr(e, "code", None), body)
+                if code == 200:
+                    parsed = json.loads(body)
+                    results = parsed.get("data", {}).get("result", [])
 
-        except Exception as e:
-            logger.debug("verify_event_ingestion_logs general error: %s", e)
+                    if results:
+                        logger.info("Ingestion success; matched %d results", len(results))
+                        return {
+                            "success": True,
+                            "data": {
+                                "results": len(results),
+                                "attempts": attempt,
+                                "url": full,
+                                "response": body,
+                            },
+                            "error": None,
+                        }
 
-        time.sleep(poll_interval)
+        except Exception:
+            pass
 
-    logger.error("verify_event_ingestion_logs TIMEOUT after %d attempts", attempt)
+        await asyncio.sleep(poll_interval)
+
     return {
         "success": False,
-        "data": {"tried_urls": tried_urls[:5], "attempts": attempt, "total_time": time.time() - q_start},
+        "data": {
+            "tried": tried_urls[:5],
+            "attempts": attempt,
+            "elapsed": time.time() - q_start,
+        },
         "error": "timeout_or_no_match",
     }

@@ -121,6 +121,7 @@ class BaseContainerManager(ABC):
 
 
     def _normalize_volumes_for_docker(
+        self,
         volumes: Dict[str, Union[str, Tuple[str, str], List[Any], Dict[str, Any]]]
     ) -> Dict[str, Dict[str, str]]:
 
@@ -210,22 +211,26 @@ class BaseContainerManager(ABC):
 
     def get_docker_client(self):
         logger.debug("docker_client_init_start")
+
         try:
-            import docker  # type: ignore
+            import docker
             client = docker.from_env()
+
             logger.debug("docker_client_init_success")
             return client
+
         except Exception as e:
             logger.exception("docker_client_init_error error=%s", e)
             raise
+
 
 
 class ContainerManager(BaseContainerManager):
     def __init__(self, config: ContainerConfig) -> None:
         self.config = config
         self.config.validate()
-        # create client lazily at runtime
-        self.client = get_docker_client()  # type: ignore
+
+        self.client = self.get_docker_client()
         self.container: Optional["Container"] = None
 
     def _ensure_image_exists(self) -> None:
@@ -378,7 +383,7 @@ class ContainerManager(BaseContainerManager):
 
             add_arg("ports", self.config.ports)
             if self.config.volumes:
-                add_arg("volumes", _normalize_volumes_for_docker(self.config.volumes))
+                add_arg("volumes", self._normalize_volumes_for_docker(self.config.volumes))
             add_arg("environment", self.config.environment)
             add_arg("labels", self.config.labels)
             add_arg("command", self.config.command)
@@ -430,7 +435,7 @@ class ContainerManager(BaseContainerManager):
             if self.config.extra_params:
                 run_args.update(self.config.extra_params)
 
-            _validate_and_normalize_volumes_in_run_args(run_args)
+            self._validate_and_normalize_volumes_in_run_args(run_args)
 
             debug_args = {k: v for k, v in run_args.items() if k not in ("environment", "labels", "volumes")}
             logger.debug("Calling containers.run args: %s", debug_args)
