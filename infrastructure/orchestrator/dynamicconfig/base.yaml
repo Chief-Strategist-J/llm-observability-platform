@@ -1,33 +1,40 @@
+receivers:
+  filelog:
+    include:
+    - /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/dynamicconfig/container-logs.log
+    start_at: beginning
+    include_file_path: true
+    include_file_name: true
+    operators:
+    - type: json_parser
+      id: parser-json
+      parse_from: body
+      parse_to: attributes
+processors:
+  batch:
+    timeout: 10s
+    send_batch_size: 100
+  resource:
+    attributes:
+    - key: service.name
+      value: logs-pipeline
+      action: upsert
 exporters:
   loki:
     endpoint: http://localhost:31002/loki/api/v1/push
-processors:
-  attributes/container:
-    actions:
-    - action: insert
-      key: container_id
-      value: ${container.id}
-    - action: insert
-      key: container_name
-      value: ${container.name}
-    - action: insert
-      key: container_image
-      value: ${container.image}
-  batch:
-    timeout: 10s
-receivers:
-  docker_container:
-    endpoint: unix:///var/run/docker.sock
-    exclude_stopped: false
-  docker_stats:
-    endpoint: unix:///var/run/docker.sock
+  logging:
+    loglevel: debug
 service:
   pipelines:
     logs:
+      receivers:
+      - filelog
+      processors:
+      - resource
+      - batch
       exporters:
       - loki
-      processors:
-      - batch
-      - attributes/container
-      receivers:
-      - docker_container
+      - logging
+  telemetry:
+    logs:
+      level: debug

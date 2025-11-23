@@ -224,6 +224,8 @@ Thumbs.db
 *.swp
 *.swo
 *~
+# FORCE ignore for Loki runtime
+infrastructure/orchestrator/dynamicconfig/loki-data/
 
 # Temporary files
 *.tmp
