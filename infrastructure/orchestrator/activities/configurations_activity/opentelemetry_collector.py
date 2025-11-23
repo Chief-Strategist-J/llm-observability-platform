@@ -7,18 +7,22 @@ from infrastructure.orchestrator.base.base_container_activity import BaseService
 logger = logging.getLogger(__name__)
 
 class OpenTelemetryCollectorManager(BaseService):
+    SERVICE_NAME = "OpenTelemetryCollector"
+    SERVICE_DESCRIPTION = "OTel Collector"
+    DEFAULT_PORT = 8888
+
     def __init__(self):
         dynamic_dir = Path("/home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/dynamicconfig")
         dynamic_dir.mkdir(parents=True, exist_ok=True)
         logs_dir = dynamic_dir / "logs"
         logs_dir.mkdir(parents=True, exist_ok=True)
-        
+
         for d in [dynamic_dir, logs_dir]:
             try:
                 d.chmod(0o777)
             except Exception:
                 pass
-        
+
         log_file = logs_dir / "otel-logs.jsonl"
         if log_file.exists():
             try:
@@ -34,16 +38,22 @@ class OpenTelemetryCollectorManager(BaseService):
         config = ContainerConfig(
             image="otel/opentelemetry-collector-contrib:0.91.0",
             name="opentelemetry-collector-development",
-            ports={4317: 4317, 4318: 4318, 13133: 13133, 8888: 8888},
+            ports={},
             volumes={
                 str(dynamic_dir): {"bind": "/etc/otelcol", "mode": "rw"},
                 str(logs_dir): {"bind": "/var/log/otelcol", "mode": "rw"},
                 "/var/run/docker.sock": {"bind": "/var/run/docker.sock", "mode": "ro"}
             },
-            network="bridge",
+            network="observability-network",
             restart="unless-stopped",
-            command=["--config=/etc/otelcol/base.yaml"],
-            extra_hosts={"host.docker.internal": "host-gateway"}
+            extra_hosts={"host.docker.internal": "host-gateway"},
+            command=["--config=/etc/otelcol/otel-collector-generated.yaml"],
+            labels={
+                "traefik.enable": "true",
+                "traefik.http.routers.otel.rule": "Host(`otel.localhost`)",
+                "traefik.http.routers.otel.entrypoints": "web",
+                "traefik.http.services.otel.loadbalancer.server.port": "8888",
+            }
         )
         super().__init__(config)
 
@@ -62,11 +72,13 @@ class OpenTelemetryCollectorManager(BaseService):
                 pass
             self.run()
 
+
 @activity.defn
 async def start_opentelemetry_collector(params: dict) -> bool:
     mgr = OpenTelemetryCollectorManager()
     mgr.run()
     return True
+
 
 @activity.defn
 async def stop_opentelemetry_collector(params: dict) -> bool:
@@ -77,11 +89,13 @@ async def stop_opentelemetry_collector(params: dict) -> bool:
         pass
     return True
 
+
 @activity.defn
 async def restart_opentelemetry_collector(params: dict) -> bool:
     mgr = OpenTelemetryCollectorManager()
     mgr.safe_restart()
     return True
+
 
 @activity.defn
 async def delete_opentelemetry_collector(params: dict) -> bool:
