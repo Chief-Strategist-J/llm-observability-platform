@@ -9,6 +9,7 @@ import asyncio
 from infrastructure.orchestrator.base.base_worker import BaseWorker, WorkerConfig
 from infrastructure.observability.workflows.logs_pipeline_workflow import LogsPipelineWorkflow
 
+# Container management activities
 from infrastructure.orchestrator.activities.configurations_activity.grafana_activity import (
     start_grafana_activity,
     stop_grafana_activity,
@@ -37,6 +38,7 @@ from infrastructure.orchestrator.activities.configurations_activity.traefik_acti
     delete_traefik_activity,
 )
 
+# Log pipeline activities
 from infrastructure.observability.activities.log.exporters.loki_exporter_activity import (
     loki_exporter_activity,
 )
@@ -82,10 +84,12 @@ class LogsPipelineWorker(BaseWorker):
     @property
     def activities(self):
         return [
+            # Traefik (MUST be first)
             start_traefik_activity,
             stop_traefik_activity,
             restart_traefik_activity,
             delete_traefik_activity,
+            # Observability stack
             start_grafana_activity,
             stop_grafana_activity,
             restart_grafana_activity,
@@ -98,6 +102,7 @@ class LogsPipelineWorker(BaseWorker):
             stop_opentelemetry_collector,
             restart_opentelemetry_collector,
             delete_opentelemetry_collector,
+            # Log pipeline
             file_provider_activity,
             json_parser_activity,
             loki_exporter_activity,

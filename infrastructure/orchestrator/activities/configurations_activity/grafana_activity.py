@@ -9,14 +9,14 @@ logger = logging.getLogger(__name__)
 class GrafanaManager(BaseService):
     SERVICE_NAME = "Grafana"
     SERVICE_DESCRIPTION = "monitoring and visualization dashboard"
-    DEFAULT_PORT = 31001
+    DEFAULT_PORT = 3000
     HEALTH_CHECK_TIMEOUT = 30
 
     def __init__(self):
         config = ContainerConfig(
             image="grafana/grafana:latest",
             name="grafana-development",
-            ports={},
+            ports={},  # No direct ports; access through Traefik only
             volumes={"grafana-data": {"bind": "/var/lib/grafana", "mode": "rw"}},
             network="observability-network",
             memory="512m",
@@ -27,12 +27,22 @@ class GrafanaManager(BaseService):
                 "GF_SECURITY_ADMIN_USER": "admin",
                 "GF_SECURITY_ADMIN_PASSWORD": "SuperSecret123!",
                 "GF_USERS_ALLOW_SIGN_UP": "false",
+                "GF_SERVER_ROOT_URL": "http://localhost:31001",
             },
             labels={
+                # Enable Traefik for this container
                 "traefik.enable": "true",
-                "traefik.http.routers.grafana.rule": "Host(`grafana.localhost`)",
-                "traefik.http.routers.grafana.entrypoints": "web",
+                
+                # HTTP router for Grafana
+                "traefik.http.routers.grafana.rule": "PathPrefix(`/`)",
+                "traefik.http.routers.grafana.entrypoints": "grafana",
+                "traefik.http.routers.grafana.service": "grafana",
+                
+                # Service configuration
                 "traefik.http.services.grafana.loadbalancer.server.port": "3000",
+                
+                # Network
+                "traefik.docker.network": "observability-network",
             },
             healthcheck={
                 "test": [
@@ -48,6 +58,7 @@ class GrafanaManager(BaseService):
         super().__init__(config)
 
     def create_datasource(self, name: str, url: str, ds_type: str = "loki") -> str:
+        # Use internal container name for datasource URL (containers talk directly)
         command = (
             f'curl -s -X POST http://localhost:3000/api/datasources '
             f'-H "Content-Type: application/json" '

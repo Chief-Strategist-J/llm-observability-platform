@@ -15,7 +15,18 @@ async def generate_config_logs(params: Dict[str, Any]) -> Dict[str, Any]:
     dynamic_dir.mkdir(parents=True, exist_ok=True)
 
     config_file = dynamic_dir / "otel-collector-generated.yaml"
-    loki_push_url = params.get("loki_push_url", "http://loki.local/loki/api/v1/push")
+    
+    # OTel container talks directly to Loki container (container-to-container)
+    # Not through Traefik (that's only for external/Python access)
+    loki_push_url = params.get("loki_push_url", "http://localhost:31002/loki/api/v1/push")
+    
+    # Convert external Traefik URL to internal container URL
+    # External: http://localhost:31002/loki/api/v1/push
+    # Internal: http://loki-development:3100/loki/api/v1/push
+    internal_loki_url = "http://loki-development:3100/loki/api/v1/push"
+    
+    logger.info("Using internal Loki URL for OTel: %s", internal_loki_url)
+    
     container_log_path = params.get("container_log_path", "/etc/otelcol/container-logs.log")
 
     host_log_file = dynamic_dir / "container-logs.log"
@@ -57,7 +68,7 @@ async def generate_config_logs(params: Dict[str, Any]) -> Dict[str, Any]:
         },
         "exporters": {
             "loki": {
-                "endpoint": loki_push_url
+                "endpoint": internal_loki_url  # Use internal container URL
             },
             "logging": {
                 "loglevel": "debug"

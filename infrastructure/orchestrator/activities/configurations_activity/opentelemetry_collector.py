@@ -38,7 +38,7 @@ class OpenTelemetryCollectorManager(BaseService):
         config = ContainerConfig(
             image="otel/opentelemetry-collector-contrib:0.91.0",
             name="opentelemetry-collector-development",
-            ports={},
+            ports={},  # No direct ports; access through Traefik only
             volumes={
                 str(dynamic_dir): {"bind": "/etc/otelcol", "mode": "rw"},
                 str(logs_dir): {"bind": "/var/log/otelcol", "mode": "rw"},
@@ -49,10 +49,29 @@ class OpenTelemetryCollectorManager(BaseService):
             extra_hosts={"host.docker.internal": "host-gateway"},
             command=["--config=/etc/otelcol/otel-collector-generated.yaml"],
             labels={
+                # Enable Traefik for this container
                 "traefik.enable": "true",
-                "traefik.http.routers.otel.rule": "Host(`otel.localhost`)",
-                "traefik.http.routers.otel.entrypoints": "web",
+                
+                # HTTP router for OTel metrics endpoint
+                "traefik.http.routers.otel.rule": "PathPrefix(`/`)",
+                "traefik.http.routers.otel.entrypoints": "otel",
+                "traefik.http.routers.otel.service": "otel",
+                
+                # Service configuration (metrics endpoint)
                 "traefik.http.services.otel.loadbalancer.server.port": "8888",
+                
+                # Network
+                "traefik.docker.network": "observability-network",
+            },
+            healthcheck={
+                "test": [
+                    "CMD-SHELL",
+                    "wget --no-verbose --tries=1 --spider http://localhost:8888/metrics || exit 1"
+                ],
+                "interval": 30_000_000_000,
+                "timeout": 10_000_000_000,
+                "retries": 3,
+                "start_period": 30_000_000_000
             }
         )
         super().__init__(config)
