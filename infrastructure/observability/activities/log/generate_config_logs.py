@@ -22,44 +22,10 @@ async def generate_config_logs(params: Dict[str, Any]) -> Dict[str, Any]:
     try:
         log_file.chmod(0o666)
     except Exception as e:
-<<<<<<< HEAD
         logger.warning("generate_config_logs chmod warning: %s", e)
     
     logger.info("generate_config_logs log_file=%s exists=%s", log_file, log_file.exists())
     
-=======
-        logger.error("docker_client_error: %s", str(e))
-        return {"success": False, "data": None, "error": "docker_client_error"}
-
-    log_file = dynamic_dir / "container-logs.log"
-    log_file.touch(exist_ok=True)
-    
-    receivers = {
-        "filelog": {
-            "include": [str(log_file)],
-            "start_at": "beginning"
-        }
-    }
-
-    processors = {
-        "batch": {"timeout": "10s"}
-    }
-
-    exporters = {
-        "loki": {
-            "endpoint": loki_push_url
-        }
-    }
-
-    service_pipelines = {
-        "logs": {
-            "receivers": ["filelog"],
-            "processors": ["batch"],
-            "exporters": ["loki"]
-        }
-    }
-
->>>>>>> dcbfd98fbef16d9d913e8e94ea82905b860c2c85
     config = {
         "receivers": {
             "filelog": {
