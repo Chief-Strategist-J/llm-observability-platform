@@ -17,11 +17,10 @@ class TraefikManager(BaseService):
             image="traefik:v3.5",
             name="traefik-development",
             ports={
-                80: 80,           # HTTP entry point
-                8888: 8888,       # Dashboard (changed from 8080 - Temporal uses that)
-                31001: 31001,     # Grafana proxy
-                31002: 31002,     # Loki proxy
-                31003: 31003,     # OTel proxy
+                80: 80,
+                31001: 31001,
+                31002: 31002,
+                31003: 31003,
             },
             volumes={
                 "/var/run/docker.sock": {"bind": "/var/run/docker.sock", "mode": "ro"},
@@ -43,12 +42,11 @@ class TraefikManager(BaseService):
                 "--entrypoints.loki.address=:31002",
                 "--entrypoints.otel.address=:31003",
                 "--log.level=INFO",
-                "--ping=true",
             ],
             healthcheck={
                 "test": [
                     "CMD-SHELL",
-                    "wget --no-verbose --tries=1 --spider http://localhost:8888/ping || exit 1"
+                    "traefik healthcheck --ping || exit 1"
                 ],
                 "interval": 30_000_000_000,
                 "timeout": 10_000_000_000,
@@ -60,86 +58,85 @@ class TraefikManager(BaseService):
 
     def get_dashboard_status(self) -> str:
         try:
-            cmd = 'wget -qO- "http://localhost:8888/api/rawdata"'
+            cmd = 'wget -qO- "http://localhost:80/api/rawdata"'
             code, output = self.exec(cmd)
             if code != 0:
-                logger.error("Dashboard status query failed: %s", output)
+                logger.error("traefik_dashboard_query_failed output=%s", output)
                 return ""
             return output
         except Exception as e:
-            logger.exception("Error fetching dashboard status: %s", e)
+            logger.exception("traefik_dashboard_error error=%s", e)
             return ""
 
 
 @activity.defn
 async def start_traefik_activity(params: Dict[str, Any]) -> bool:
-    logger.info("Activity: start_traefik_activity called")
+    logger.info("traefik_start_activity_called params=%s", list(params.keys()))
     try:
         manager = TraefikManager()
         
-        # Check if container already exists
         existing = manager.manager._get_existing_container()
         if existing:
-            logger.info("Traefik container already exists")
-            # Check if it's running
+            logger.info("traefik_container_exists status=%s", existing.status)
             existing.reload()
             if existing.status == "running":
-                logger.info("Traefik already running")
+                logger.info("traefik_already_running")
                 return True
             else:
-                logger.info("Starting existing Traefik container")
+                logger.info("traefik_starting_existing")
                 try:
                     existing.start()
-                    logger.info("Traefik started successfully")
+                    logger.info("traefik_started_successfully")
                     return True
                 except Exception as e:
-                    logger.warning("Failed to start existing container, will recreate: %s", e)
-                    # Remove the failed container
+                    logger.warning("traefik_start_failed_recreating error=%s", e)
                     try:
                         existing.remove(force=True)
                     except Exception:
                         pass
         
-        # Start new container
         manager.run()
-        logger.info("Traefik started successfully")
+        logger.info("traefik_created_and_started")
         return True
     except Exception as e:
-        logger.exception("Failed to start Traefik: %s", e)
+        logger.exception("traefik_start_failed error=%s", e)
         return False
 
 
 @activity.defn
 async def stop_traefik_activity(params: Dict[str, Any]) -> bool:
-    logger.info("Activity: stop_traefik_activity called")
+    logger.info("traefik_stop_activity_called")
     try:
         manager = TraefikManager()
         manager.stop(timeout=30)
+        logger.info("traefik_stopped")
         return True
     except Exception as e:
-        logger.exception("Failed to stop Traefik: %s", e)
+        logger.exception("traefik_stop_failed error=%s", e)
         return False
 
 
 @activity.defn
 async def restart_traefik_activity(params: Dict[str, Any]) -> bool:
-    logger.info("Activity: restart_traefik_activity called")
+    logger.info("traefik_restart_activity_called")
     try:
         manager = TraefikManager()
         manager.restart()
+        logger.info("traefik_restarted")
         return True
     except Exception as e:
-        logger.exception("Failed to restart Traefik: %s", e)
+        logger.exception("traefik_restart_failed error=%s", e)
         return False
 
 
 @activity.defn
 async def delete_traefik_activity(params: Dict[str, Any]) -> bool:
-    logger.info("Activity: delete_traefik_activity called")
+    logger.info("traefik_delete_activity_called")
     try:
         manager = TraefikManager()
         manager.delete(force=False)
+        logger.info("traefik_deleted")
         return True
     except Exception as e:
-        logger.exception("Failed to delete Traefik: %s", e)
+        logger.exception("traefik_delete_failed error=%s", e)
         return False
