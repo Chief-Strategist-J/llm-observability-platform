@@ -12,23 +12,29 @@ import json
 logger = logging.getLogger(__name__)
 
 
-def _can_resolve_host(url: str) -> bool:
+def _can_connect(url: str, timeout: float = 5.0) -> bool:
+    """Check if we can connect to the URL"""
     try:
         parsed = urllib.parse.urlparse(url)
-        if not parsed.hostname:
-            return False
-        socket.getaddrinfo(parsed.hostname, parsed.port or 80)
-        return True
-    except Exception:
+        host = parsed.hostname or "localhost"
+        port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(timeout)
+            result = sock.connect_ex((host, port))
+            return result == 0
+    except Exception as e:
+        logger.debug("Connection check failed for %s: %s", url, e)
         return False
 
 
-async def _wait_for_dns(url: str, retries: int = 15, delay: float = 1.0) -> bool:
+async def _wait_for_connection(url: str, retries: int = 15, delay: float = 2.0) -> bool:
+    """Wait for service to be reachable"""
     for attempt in range(1, retries + 1):
-        if _can_resolve_host(url):
-            logger.info("DNS resolved for %s on attempt=%d", url, attempt)
+        if _can_connect(url):
+            logger.info("Service reachable at %s on attempt=%d", url, attempt)
             return True
-        logger.warning("DNS not resolved for %s attempt=%d", url, attempt)
+        logger.warning("Service not reachable at %s attempt=%d", url, attempt)
         await asyncio.sleep(delay)
     return False
 
@@ -71,11 +77,11 @@ async def verify_event_ingestion_logs(params: Dict[str, Any]) -> Dict[str, Any]:
     loki_query_url = _ensure_query_range_url(loki_query_url)
     ready_url = _build_ready_url(loki_query_url)
 
-    logger.info("Validating DNS for Loki: %s", loki_query_url)
-    dns_ok = await _wait_for_dns(loki_query_url)
-    if not dns_ok:
-        logger.error("verify_event_ingestion_logs loki_dns_unresolved")
-        return {"success": False, "data": {"url": loki_query_url}, "error": "loki_dns_unresolved"}
+    logger.info("Validating connectivity to Loki: %s", loki_query_url)
+    conn_ok = await _wait_for_connection(loki_query_url, retries=20, delay=2.0)
+    if not conn_ok:
+        logger.error("verify_event_ingestion_logs loki_unreachable")
+        return {"success": False, "data": {"url": loki_query_url}, "error": "loki_unreachable"}
 
     logger.info("Checking Loki readiness at %s", ready_url)
     start_time = time.time()
@@ -134,8 +140,8 @@ async def verify_event_ingestion_logs(params: Dict[str, Any]) -> Dict[str, Any]:
                             "error": None,
                         }
 
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Query attempt %d failed: %s", attempt, e)
 
         await asyncio.sleep(poll_interval)
 

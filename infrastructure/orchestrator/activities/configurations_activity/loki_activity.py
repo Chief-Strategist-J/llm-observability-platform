@@ -36,6 +36,7 @@ schema_config:
 limits_config:
   allow_structured_metadata: true
   volume_enabled: true
+  retention_period: 744h
 """
 
 class LokiManager(BaseService):
@@ -79,7 +80,7 @@ class LokiManager(BaseService):
         config = ContainerConfig(
             image="grafana/loki:latest",
             name="loki-development",
-            ports={},
+            ports={},  # No direct ports; access through Traefik only
             volumes={
                 str(data_dir.absolute()): {"bind": "/loki", "mode": "rw"},
                 str(config_file.absolute()): {"bind": "/etc/loki/local-config.yaml", "mode": "ro"},
@@ -92,10 +93,19 @@ class LokiManager(BaseService):
             environment={"LOKI_CONFIG_USE_INGRESS": "true"},
             command=["-config.file=/etc/loki/local-config.yaml"],
             labels={
+                # Enable Traefik for this container
                 "traefik.enable": "true",
-                "traefik.http.routers.loki.rule": "Host(`loki.localhost`)",
-                "traefik.http.routers.loki.entrypoints": "web",
+                
+                # HTTP router for Loki
+                "traefik.http.routers.loki.rule": "PathPrefix(`/`)",
+                "traefik.http.routers.loki.entrypoints": "loki",
+                "traefik.http.routers.loki.service": "loki",
+                
+                # Service configuration
                 "traefik.http.services.loki.loadbalancer.server.port": "3100",
+                
+                # Network
+                "traefik.docker.network": "observability-network",
             },
             healthcheck={
                 "test": [

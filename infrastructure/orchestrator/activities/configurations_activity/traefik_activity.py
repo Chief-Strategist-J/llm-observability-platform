@@ -17,9 +17,11 @@ class TraefikManager(BaseService):
             image="traefik:v3.5",
             name="traefik-development",
             ports={
-                80: 80,
-                443: 443,
-                8080: 8080,
+                80: 80,           # HTTP entry point
+                8888: 8888,       # Dashboard (changed from 8080 - Temporal uses that)
+                31001: 31001,     # Grafana proxy
+                31002: 31002,     # Loki proxy
+                31003: 31003,     # OTel proxy
             },
             volumes={
                 "/var/run/docker.sock": {"bind": "/var/run/docker.sock", "mode": "ro"},
@@ -33,15 +35,20 @@ class TraefikManager(BaseService):
                 "--providers.docker=true",
                 "--providers.docker.exposedByDefault=false",
                 "--providers.docker.endpoint=unix:///var/run/docker.sock",
+                "--providers.docker.network=observability-network",
                 "--api.dashboard=true",
+                "--api.insecure=true",
                 "--entrypoints.web.address=:80",
-                "--entrypoints.websecure.address=:443",
+                "--entrypoints.grafana.address=:31001",
+                "--entrypoints.loki.address=:31002",
+                "--entrypoints.otel.address=:31003",
                 "--log.level=INFO",
+                "--ping=true",
             ],
             healthcheck={
                 "test": [
                     "CMD-SHELL",
-                    "wget --no-verbose --tries=1 --spider http://localhost:8080 || exit 1"
+                    "wget --no-verbose --tries=1 --spider http://localhost:8888/ping || exit 1"
                 ],
                 "interval": 30_000_000_000,
                 "timeout": 10_000_000_000,
@@ -53,7 +60,7 @@ class TraefikManager(BaseService):
 
     def get_dashboard_status(self) -> str:
         try:
-            cmd = 'wget -qO- "http://localhost:8080/api/rawdata"'
+            cmd = 'wget -qO- "http://localhost:8888/api/rawdata"'
             code, output = self.exec(cmd)
             if code != 0:
                 logger.error("Dashboard status query failed: %s", output)
@@ -69,7 +76,33 @@ async def start_traefik_activity(params: Dict[str, Any]) -> bool:
     logger.info("Activity: start_traefik_activity called")
     try:
         manager = TraefikManager()
+        
+        # Check if container already exists
+        existing = manager.manager._get_existing_container()
+        if existing:
+            logger.info("Traefik container already exists")
+            # Check if it's running
+            existing.reload()
+            if existing.status == "running":
+                logger.info("Traefik already running")
+                return True
+            else:
+                logger.info("Starting existing Traefik container")
+                try:
+                    existing.start()
+                    logger.info("Traefik started successfully")
+                    return True
+                except Exception as e:
+                    logger.warning("Failed to start existing container, will recreate: %s", e)
+                    # Remove the failed container
+                    try:
+                        existing.remove(force=True)
+                    except Exception:
+                        pass
+        
+        # Start new container
         manager.run()
+        logger.info("Traefik started successfully")
         return True
     except Exception as e:
         logger.exception("Failed to start Traefik: %s", e)

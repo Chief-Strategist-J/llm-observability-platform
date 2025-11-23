@@ -12,24 +12,29 @@ from temporalio import activity
 logger = logging.getLogger(__name__)
 
 
-def _can_resolve_host(url: str) -> bool:
+def _can_connect(url: str, timeout: float = 5.0) -> bool:
+    """Check if we can connect to the URL"""
     try:
         parsed = urllib.parse.urlparse(url)
-        host = parsed.hostname
-        if not host:
-            return False
-        socket.getaddrinfo(host, parsed.port or 80)
-        return True
-    except Exception:
+        host = parsed.hostname or "localhost"
+        port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(timeout)
+            result = sock.connect_ex((host, port))
+            return result == 0
+    except Exception as e:
+        logger.debug("Connection check failed for %s: %s", url, e)
         return False
 
 
-async def _wait_for_dns(url: str, retries: int = 10, delay: float = 1.0) -> bool:
+async def _wait_for_connection(url: str, retries: int = 15, delay: float = 2.0) -> bool:
+    """Wait for service to be reachable"""
     for attempt in range(1, retries + 1):
-        if _can_resolve_host(url):
-            logger.info("DNS resolved for %s on attempt=%d", url, attempt)
+        if _can_connect(url):
+            logger.info("Service reachable at %s on attempt=%d", url, attempt)
             return True
-        logger.warning("DNS not resolved for %s attempt=%d", url, attempt)
+        logger.warning("Service not reachable at %s attempt=%d", url, attempt)
         await asyncio.sleep(delay)
     return False
 
@@ -54,12 +59,13 @@ async def create_grafana_datasource_activity(params: Dict[str, Any]) -> Dict[str
         logger.error("create_grafana_datasource_activity missing_required_fields")
         return {"success": False, "data": None, "error": "missing_required_fields"}
 
-    logger.info("Validating DNS reachability for Grafana URL: %s", grafana_url)
+    logger.info("Validating connectivity to Grafana URL: %s", grafana_url)
 
-    resolved = await _wait_for_dns(grafana_url, retries=15, delay=1.0)
+    # Wait for Grafana to be reachable
+    resolved = await _wait_for_connection(grafana_url, retries=20, delay=2.0)
     if not resolved:
-        logger.error("create_grafana_datasource_activity cannot_resolve_dns")
-        return {"success": False, "data": {"url": grafana_url}, "error": "grafana_dns_unresolved"}
+        logger.error("create_grafana_datasource_activity cannot_connect_to_grafana")
+        return {"success": False, "data": {"url": grafana_url}, "error": "grafana_unreachable"}
 
     try:
         auth_token = base64.b64encode(f"{grafana_user}:{grafana_password}".encode("utf-8")).decode("utf-8")
@@ -75,6 +81,7 @@ async def create_grafana_datasource_activity(params: Dict[str, Any]) -> Dict[str
             "orgId": org_id
         }
 
+        # Check if datasource already exists
         name_endpoint = grafana_url.rstrip("/") + f"/api/datasources/name/{urllib.parse.quote(datasource_name)}"
         get_req = urllib.request.Request(name_endpoint, headers=headers, method="GET")
         ds_id = None
@@ -97,6 +104,7 @@ async def create_grafana_datasource_activity(params: Dict[str, Any]) -> Dict[str
             logger.exception("Grafana unreachable GET: %s", e)
             return {"success": False, "data": None, "error": "grafana_unreachable"}
 
+        # Update existing datasource
         if ds_id and upsert_mode == "upsert":
             update_endpoint = grafana_url.rstrip("/") + f"/api/datasources/{ds_id}"
             payload = json.dumps({**ds_def, "id": ds_id}).encode("utf-8")
@@ -105,6 +113,7 @@ async def create_grafana_datasource_activity(params: Dict[str, Any]) -> Dict[str
             try:
                 with urllib.request.urlopen(put_req, timeout=10) as resp2:
                     body2 = resp2.read().decode("utf-8", errors="ignore")
+                    logger.info("Datasource updated successfully")
                     return {"success": True, "data": {"status": resp2.status, "body": body2}, "error": None}
             except urllib.error.HTTPError as e2:
                 err_body2 = getattr(e2, "read", lambda: b"")().decode("utf-8", errors="ignore")
@@ -114,6 +123,7 @@ async def create_grafana_datasource_activity(params: Dict[str, Any]) -> Dict[str
                 logger.exception("grafana_update_failed: %s", e)
                 return {"success": False, "data": None, "error": "grafana_update_failed"}
 
+        # Create new datasource
         create_endpoint = grafana_url.rstrip("/") + "/api/datasources"
         payload = json.dumps(ds_def).encode("utf-8")
         post_req = urllib.request.Request(create_endpoint, data=payload, headers=headers, method="POST")
@@ -121,6 +131,7 @@ async def create_grafana_datasource_activity(params: Dict[str, Any]) -> Dict[str
         try:
             with urllib.request.urlopen(post_req, timeout=10) as resp3:
                 body3 = resp3.read().decode("utf-8", errors="ignore")
+                logger.info("Datasource created successfully")
                 return {"success": True, "data": {"status": resp3.status, "body": body3}, "error": None}
         except urllib.error.HTTPError as e3:
             err_body3 = getattr(e3, "read", lambda: b"")().decode("utf-8", errors="ignore")
