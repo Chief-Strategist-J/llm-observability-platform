@@ -1,4 +1,3 @@
-# infrastructure/observability/activities/log/emit_test_event_logs.py
 import logging
 import time
 import uuid
@@ -16,16 +15,20 @@ logger = logging.getLogger(__name__)
 @activity.defn
 async def emit_test_event_logs(params: Dict[str, Any]) -> Dict[str, Any]:
     logger.info("emit_test_event_logs started with params: %s", params)
+
     config_path = params.get("config_path")
     message = params.get("message")
     wait_ms = int(params.get("latency_wait_ms", 500))
+
     if not config_path:
         logger.error("missing_config_path")
         return {"success": False, "data": None, "error": "missing_config_path"}
+
     try:
         cfg_text = Path(config_path).read_text(encoding="utf-8")
         cfg = yaml.safe_load(cfg_text) or {}
         receivers = cfg.get("receivers", {})
+
         include_patterns: List[str] = []
         for rcvr in receivers.values():
             filelog_block = rcvr.get("filelog")
@@ -33,61 +36,67 @@ async def emit_test_event_logs(params: Dict[str, Any]) -> Dict[str, Any]:
                 inc = filelog_block.get("include")
                 if isinstance(inc, list):
                     include_patterns.extend(inc)
-        expanded_files: List[str] = []
-        for pattern in include_patterns:
-            for fp in glob.glob(pattern):
-                if os.path.isfile(fp):
-                    expanded_files.append(fp)
+
+        if not include_patterns:
+            return {"success": False, "data": None, "error": "no_include_patterns"}
+
         token = f"SYNTH-{uuid.uuid4().hex}"
         line = message or f'{{"synth_token":"{token}","ts":{int(time.time())}}}'
-        appended_to: List[str] = []
-        if expanded_files:
-            for fp in expanded_files:
-                try:
-                    p = Path(fp)
-                    with p.open("a", encoding="utf-8") as fh:
-                        fh.write(line + "\n")
-                    appended_to.append(fp)
-                    logger.info("emit_test_event_logs appended line to %s", fp)
-                except Exception as e:
-                    logger.error("append_failed %s: %s", fp, str(e))
-            time.sleep(wait_ms / 1000)
-            return {"success": True, "data": {"token": token, "appended_to": appended_to, "count": len(appended_to)}, "error": None}
-        try:
-            client = docker.from_env()
-        except Exception as e:
-            logger.error("docker_client_error: %s", str(e))
-            return {"success": False, "data": None, "error": "docker_client_error"}
-        containers = client.containers.list(all=True)
-        exec_ok: List[str] = []
-        for c in containers:
+
+        docker_client = None
+        if any(p.startswith("docker://") for p in include_patterns):
             try:
-                c.reload()
-                if c.status != "running":
-                    logger.info("skipping_container_not_running: %s", c.id)
-                    continue
-                safe_line = shlex.quote(line)
-                try:
-                    cmd = ["/bin/sh", "-c", f"echo {safe_line} >> /proc/1/fd/1"]
-                    exec_res = c.exec_run(cmd, stdout=True, stderr=True, demux=False, user=None)
-                    exit_code = exec_res.exit_code if hasattr(exec_res, "exit_code") else 0
-                    if exit_code == 0:
-                        exec_ok.append(c.id)
-                        logger.info("emit_test_event_logs exec echo to container %s", c.id)
-                    else:
-                        logger.error("docker_exec_nonzero %s: code=%s", c.id, exit_code)
-                except Exception:
-                    try:
-                        cmd = ["/bin/sh", "-c", f"printf %s\\n {safe_line} >> /proc/1/fd/1"]
-                        c.exec_run(cmd)
-                        exec_ok.append(c.id)
-                        logger.info("emit_test_event_logs exec fallback to container %s", c.id)
-                    except Exception as e:
-                        logger.error("docker_exec_failed %s: %s", c.id, str(e))
+                docker_client = docker.from_env()
             except Exception as e:
-                logger.error("inspect_container_failed %s: %s", getattr(c, "id", "unknown"), str(e))
+                logger.error("docker_client_error %s", str(e))
+                return {"success": False, "data": None, "error": "docker_client_error"}
+
+        appended_to = []
+
+        for pattern in include_patterns:
+            if pattern.startswith("docker://"):
+                raw = pattern[len("docker://"):]
+                parts = raw.split("/", 1)
+                if len(parts) != 2:
+                    continue
+                container_id, path_inside = parts
+                path_inside = "/" + path_inside
+
+                try:
+                    c = docker_client.containers.get(container_id)
+                    c.reload()
+                    if c.status != "running":
+                        continue
+                    safe_line = shlex.quote(line)
+                    cmd = ["/bin/sh", "-c", f"echo {safe_line} >> {path_inside}"]
+                    res = c.exec_run(cmd)
+                    code = res.exit_code
+                    if code == 0:
+                        appended_to.append(f"{container_id}:{path_inside}")
+                        logger.info("emit_test_event_logs appended container %s -> %s", container_id, path_inside)
+                except Exception as e:
+                    logger.error("append_container_failed %s: %s", container_id, str(e))
+
+            else:
+                for fp in glob.glob(pattern):
+                    if os.path.isfile(fp):
+                        try:
+                            p = Path(fp)
+                            with p.open("a", encoding="utf-8") as fh:
+                                fh.write(line + "\n")
+                            appended_to.append(fp)
+                            logger.info("emit_test_event_logs appended host %s", fp)
+                        except Exception as e:
+                            logger.error("append_host_failed %s: %s", fp, str(e))
+
         time.sleep(wait_ms / 1000)
-        return {"success": True, "data": {"token": token, "exec_ok": exec_ok, "count": len(exec_ok)}, "error": None}
+
+        return {
+            "success": True,
+            "data": {"token": token, "appended_to": appended_to, "count": len(appended_to)},
+            "error": None,
+        }
+
     except Exception as e:
         logger.error("emit_test_event_logs error: %s", str(e))
         return {"success": False, "data": None, "error": "emit_failed"}

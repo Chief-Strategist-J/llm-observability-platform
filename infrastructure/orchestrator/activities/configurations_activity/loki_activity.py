@@ -10,46 +10,35 @@ LOKI_CONFIG_TEXT = """auth_enabled: false
 
 server:
   http_listen_port: 3100
-  http_server_read_timeout: 5m
-  http_server_write_timeout: 5m
+  grpc_listen_port: 9096
 
-ingester:
-  lifecycler:
-    address: 127.0.0.1
-    ring:
-      kvstore:
-        store: inmemory
-      replication_factor: 1
-  wal:
-    enabled: true
-    dir: /loki/wal
+common:
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
 
 schema_config:
   configs:
     - from: 2020-10-24
       store: tsdb
       object_store: filesystem
-      schema: v11
+      schema: v13
       index:
         prefix: index_
         period: 24h
 
-storage_config:
-  tsdb:
-    dir: /loki/tsdb
-  boltdb_shipper:
-    active_index_directory: /loki/tsdb/index
-    cache_location: /loki/boltdb-cache
-    shared_store: filesystem
-  filesystem:
-    directory: /loki/tsdb/chunks
+limits_config:
+  allow_structured_metadata: true
+  volume_enabled: true
 
-chunk_store_config:
-  max_look_back_period: 0s
-
-table_manager:
-  retention_deletes_enabled: false
-  retention_period: 0s
+ruler:
+  alertmanager_url: http://localhost:9093
 """
 
 class LokiManager(BaseService):
@@ -63,28 +52,42 @@ class LokiManager(BaseService):
             dynamic_dir = "/home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/dynamicconfig"
         dynamic_dir_path = Path(dynamic_dir)
         dynamic_dir_path.mkdir(parents=True, exist_ok=True)
+        
         data_dir = dynamic_dir_path / "loki-data"
         data_dir.mkdir(parents=True, exist_ok=True)
         try:
             data_dir.chmod(0o777)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Could not set permissions on loki-data: %s", e)
+        
         config_file = dynamic_dir_path / "loki-config.yaml"
-        if config_override:
-            config_text = config_override
-        else:
-            config_text = LOKI_CONFIG_TEXT
+        config_text = config_override if config_override else LOKI_CONFIG_TEXT
+        
         try:
             config_file.write_text(config_text, encoding="utf-8")
-        except Exception:
-            pass
+            config_file.chmod(0o644)
+            logger.info("Loki config written to: %s", config_file)
+            
+            
+            if not config_file.exists():
+                raise RuntimeError(f"Config file was not created: {config_file}")
+            
+
+            test_read = config_file.read_text(encoding="utf-8")
+            if not test_read:
+                raise RuntimeError(f"Config file is empty: {config_file}")
+                
+        except Exception as e:
+            logger.error("Failed to write/verify Loki config: %s", e)
+            raise
+        
         config = ContainerConfig(
             image="grafana/loki:latest",
             name="loki-development",
             ports={3100: 31002},
             volumes={
-                str(data_dir): {"bind": "/loki", "mode": "rw"},
-                str(config_file): {"bind": "/etc/loki/local-config.yaml", "mode": "ro"},
+                str(data_dir.absolute()): {"bind": "/loki", "mode": "rw"},
+                str(config_file.absolute()): {"bind": "/etc/loki/local-config.yaml", "mode": "ro"},
             },
             network="monitoring-bridge",
             memory="512m",
@@ -106,7 +109,8 @@ class LokiManager(BaseService):
         )
         extra_data = {"ingress_enabled": "true", "dynamic_dir": str(dynamic_dir_path)}
         super().__init__(config=config, extra=extra_data)
-        logger.info("LokiManager initialized (dynamic_dir=%s)", str(dynamic_dir_path))
+        logger.info("LokiManager initialized (dynamic_dir=%s, config_file=%s)", 
+                   str(dynamic_dir_path), str(config_file))
 
     def query_logs(self, query: str, limit: int = 100) -> str:
         cmd = f'wget -qO- "http://localhost:3100/loki/api/v1/query?query={query}&limit={limit}"'
