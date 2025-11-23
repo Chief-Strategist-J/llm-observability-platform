@@ -1,4 +1,3 @@
-# infrastructure/observability/activities/log/emit_test_event_logs.py
 import logging
 import time
 import uuid
@@ -6,88 +5,91 @@ from pathlib import Path
 from typing import Dict, Any, List
 from temporalio import activity
 import yaml
-import glob
-import os
-import docker
-import shlex
 
 logger = logging.getLogger(__name__)
 
 @activity.defn
 async def emit_test_event_logs(params: Dict[str, Any]) -> Dict[str, Any]:
     logger.info("emit_test_event_logs started with params: %s", params)
+
     config_path = params.get("config_path")
     message = params.get("message")
     wait_ms = int(params.get("latency_wait_ms", 500))
+
     if not config_path:
         logger.error("missing_config_path")
         return {"success": False, "data": None, "error": "missing_config_path"}
+
     try:
         cfg_text = Path(config_path).read_text(encoding="utf-8")
+        logger.info("emit_test_event_logs config_text length: %d", len(cfg_text))
+        
         cfg = yaml.safe_load(cfg_text) or {}
         receivers = cfg.get("receivers", {})
+        
+        logger.info("emit_test_event_logs receivers keys: %s", list(receivers.keys()))
+
         include_patterns: List[str] = []
-        for rcvr in receivers.values():
-            filelog_block = rcvr.get("filelog")
-            if filelog_block and isinstance(filelog_block, dict):
-                inc = filelog_block.get("include")
+        for rcvr_name, rcvr_config in receivers.items():
+            logger.info("emit_test_event_logs processing receiver: %s type=%s", rcvr_name, type(rcvr_config))
+            
+            if isinstance(rcvr_config, dict):
+                inc = rcvr_config.get("include")
                 if isinstance(inc, list):
                     include_patterns.extend(inc)
-        expanded_files: List[str] = []
-        for pattern in include_patterns:
-            for fp in glob.glob(pattern):
-                if os.path.isfile(fp):
-                    expanded_files.append(fp)
+                    logger.info("emit_test_event_logs found include at top level: %s", inc)
+
+        if not include_patterns:
+            logger.error("no_include_patterns found in config, receivers=%s", receivers)
+            return {"success": False, "data": None, "error": "no_include_patterns"}
+
+        logger.info("emit_test_event_logs found patterns: %s", include_patterns)
+
         token = f"SYNTH-{uuid.uuid4().hex}"
-        line = message or f'{{"synth_token":"{token}","ts":{int(time.time())}}}'
-        appended_to: List[str] = []
-        if expanded_files:
-            for fp in expanded_files:
-                try:
-                    p = Path(fp)
-                    with p.open("a", encoding="utf-8") as fh:
-                        fh.write(line + "\n")
-                    appended_to.append(fp)
-                    logger.info("emit_test_event_logs appended line to %s", fp)
-                except Exception as e:
-                    logger.error("append_failed %s: %s", fp, str(e))
-            time.sleep(wait_ms / 1000)
-            return {"success": True, "data": {"token": token, "appended_to": appended_to, "count": len(appended_to)}, "error": None}
-        try:
-            client = docker.from_env()
-        except Exception as e:
-            logger.error("docker_client_error: %s", str(e))
-            return {"success": False, "data": None, "error": "docker_client_error"}
-        containers = client.containers.list(all=True)
-        exec_ok: List[str] = []
-        for c in containers:
+        line = message or f'{{"synth_token":"{token}","ts":{int(time.time())},"level":"info","service":"test"}}'
+
+        appended_to = []
+
+        for pattern in include_patterns:
+            logger.info("emit_test_event_logs processing pattern: %s", pattern)
+            
             try:
-                c.reload()
-                if c.status != "running":
-                    logger.info("skipping_container_not_running: %s", c.id)
-                    continue
-                safe_line = shlex.quote(line)
-                try:
-                    cmd = ["/bin/sh", "-c", f"echo {safe_line} >> /proc/1/fd/1"]
-                    exec_res = c.exec_run(cmd, stdout=True, stderr=True, demux=False, user=None)
-                    exit_code = exec_res.exit_code if hasattr(exec_res, "exit_code") else 0
-                    if exit_code == 0:
-                        exec_ok.append(c.id)
-                        logger.info("emit_test_event_logs exec echo to container %s", c.id)
-                    else:
-                        logger.error("docker_exec_nonzero %s: code=%s", c.id, exit_code)
-                except Exception:
-                    try:
-                        cmd = ["/bin/sh", "-c", f"printf %s\\n {safe_line} >> /proc/1/fd/1"]
-                        c.exec_run(cmd)
-                        exec_ok.append(c.id)
-                        logger.info("emit_test_event_logs exec fallback to container %s", c.id)
-                    except Exception as e:
-                        logger.error("docker_exec_failed %s: %s", c.id, str(e))
+                target_file = Path(pattern)
+                target_file.parent.mkdir(parents=True, exist_ok=True)
+                
+                if not target_file.exists():
+                    target_file.touch()
+                    logger.info("emit_test_event_logs created file: %s", target_file)
+                
+                with target_file.open("a", encoding="utf-8") as fh:
+                    fh.write(line + "\n")
+                    fh.flush()
+                
+                appended_to.append(str(target_file))
+                logger.info("emit_test_event_logs appended to file: %s", target_file)
+                
+                actual_size = target_file.stat().st_size
+                logger.info("emit_test_event_logs file size after write: %s bytes", actual_size)
+                
             except Exception as e:
-                logger.error("inspect_container_failed %s: %s", getattr(c, "id", "unknown"), str(e))
+                logger.error("emit_test_event_logs failed for pattern %s: %s", pattern, str(e))
+
+        if not appended_to:
+            logger.error("emit_test_event_logs no files written")
+            return {"success": False, "data": None, "error": "no_files_written"}
+
+        logger.info("emit_test_event_logs waiting %dms for ingestion", wait_ms)
         time.sleep(wait_ms / 1000)
-        return {"success": True, "data": {"token": token, "exec_ok": exec_ok, "count": len(exec_ok)}, "error": None}
+        
+        logger.info("emit_test_event_logs additional 3s wait for otel processing")
+        time.sleep(3)
+
+        return {
+            "success": True,
+            "data": {"token": token, "appended_to": appended_to, "count": len(appended_to), "line": line},
+            "error": None,
+        }
+
     except Exception as e:
         logger.error("emit_test_event_logs error: %s", str(e))
         return {"success": False, "data": None, "error": "emit_failed"}

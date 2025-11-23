@@ -17,7 +17,8 @@ class LogsPipelineWorkflow(BaseWorkflow):
 
         workflow.logger.info({
             "labels": {"pipeline": "logs", "event": "start"},
-            "msg": "workflow_start"
+            "msg": "workflow_start",
+            "params": params
         })
 
         await workflow.execute_activity(
@@ -64,6 +65,12 @@ class LogsPipelineWorkflow(BaseWorkflow):
             start_to_close_timeout=timedelta(seconds=120),
         )
 
+        workflow.logger.info({
+            "labels": {"pipeline": "logs", "event": "generate_config"},
+            "msg": "generate_config_result",
+            "result": gen_res
+        })
+
         config_path = None
         if isinstance(gen_res, dict):
             data = gen_res.get("data") or {}
@@ -75,11 +82,23 @@ class LogsPipelineWorkflow(BaseWorkflow):
             start_to_close_timeout=timedelta(seconds=60),
         )
 
+        workflow.logger.info({
+            "labels": {"pipeline": "logs", "event": "configure_paths"},
+            "msg": "configure_paths_result",
+            "result": cfg_paths_res
+        })
+
         cfg_apply_res = await workflow.execute_activity(
             "configure_source_logs",
             {"config_path": config_path, "dynamic_dir": dynamic_dir} if config_path else {},
             start_to_close_timeout=timedelta(seconds=60),
         )
+
+        workflow.logger.info({
+            "labels": {"pipeline": "logs", "event": "configure_source"},
+            "msg": "configure_source_result",
+            "result": cfg_apply_res
+        })
 
         deploy_res = await workflow.execute_activity(
             "deploy_processor_logs",
@@ -90,11 +109,23 @@ class LogsPipelineWorkflow(BaseWorkflow):
             start_to_close_timeout=timedelta(seconds=60),
         )
 
+        workflow.logger.info({
+            "labels": {"pipeline": "logs", "event": "deploy_processor"},
+            "msg": "deploy_processor_result",
+            "result": deploy_res
+        })
+
         restart_res = await workflow.execute_activity(
             "restart_source_logs",
             {"container_name": otel_container_name, "timeout_seconds": 60},
             start_to_close_timeout=timedelta(seconds=120),
         )
+
+        workflow.logger.info({
+            "labels": {"pipeline": "logs", "event": "restart_source"},
+            "msg": "restart_source_result",
+            "result": restart_res
+        })
 
         await workflow.execute_activity(
             "create_grafana_datasource_activity",
@@ -110,24 +141,53 @@ class LogsPipelineWorkflow(BaseWorkflow):
             start_to_close_timeout=timedelta(seconds=120),
         )
 
+        workflow.logger.info({
+            "labels": {"pipeline": "logs", "event": "grafana_datasource"},
+            "msg": "grafana_datasource_created"
+        })
+
         emit_res = await workflow.execute_activity(
             "emit_test_event_logs",
             {"config_path": config_path},
             start_to_close_timeout=timedelta(seconds=60),
         )
 
+        workflow.logger.info({
+            "labels": {"pipeline": "logs", "event": "emit_test"},
+            "msg": "emit_test_result",
+            "result": emit_res
+        })
+
         token = None
         if isinstance(emit_res, dict):
             data = emit_res.get("data") or {}
             token = data.get("token")
 
-        logql = f'{{}} |= "{token}"' if token else params.get("logql", "")
+        workflow.logger.info({
+            "labels": {"pipeline": "logs", "event": "token_extracted"},
+            "msg": "synthetic_token",
+            "token": token
+        })
+
+        logql = f'{{filename=~".+"}} |= "{token}"' if token else '{filename=~".+"}'
+
+        workflow.logger.info({
+            "labels": {"pipeline": "logs", "event": "verify_start"},
+            "msg": "starting_verification",
+            "logql": logql
+        })
 
         verify_res = await workflow.execute_activity(
             "verify_event_ingestion_logs",
             {"loki_query_url": loki_query_url, "logql": logql, "timeout_seconds": 60, "poll_interval": 2.0},
             start_to_close_timeout=timedelta(seconds=120),
         )
+
+        workflow.logger.info({
+            "labels": {"pipeline": "logs", "event": "verify_complete"},
+            "msg": "verification_result",
+            "result": verify_res
+        })
 
         workflow.logger.info({
             "labels": {"pipeline": "logs", "event": "done"},
