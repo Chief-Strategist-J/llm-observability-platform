@@ -264,6 +264,10 @@ infrastructure/kafka/logs/
 infrastructure/redis/data/
 
 # Neo4j
+
+# Next.js
+.next/
+service/llm_chat_web/node_modules/
 infrastructure/databases/neo4j/data/
 infrastructure/databases/neo4j/logs/
 
