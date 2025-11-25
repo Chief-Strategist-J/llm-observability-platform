@@ -1,62 +1,52 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Send } from "lucide-react"
+import { Send, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
-
-interface Message {
-    id: number
-    text: string
-    sender: "me" | "other"
-    time: string
-    author: string
-    avatar: string
-}
-
-const initialMessages: Message[] = [
-    {
-        id: 1,
-        text: "Hey, how are you?",
-        sender: "other",
-        time: "10:30 AM",
-        author: "Jackson Lee",
-        avatar: "/avatars/02.png"
-    },
-    {
-        id: 2,
-        text: "I'm good! Working on the new project.",
-        sender: "me",
-        time: "10:31 AM",
-        author: "You",
-        avatar: "/avatars/01.png"
-    },
-    {
-        id: 3,
-        text: "That sounds exciting! What are you building?",
-        sender: "other",
-        time: "10:32 AM",
-        author: "Jackson Lee",
-        avatar: "/avatars/02.png"
-    },
-    {
-        id: 4,
-        text: "A chat application with React and Next.js",
-        sender: "me",
-        time: "10:33 AM",
-        author: "You",
-        avatar: "/avatars/01.png"
-    },
-]
+import { chatApi, type Message } from "@/utils/api/chat-client"
 
 export default function ChatPage() {
-    const [messages, setMessages] = useState<Message[]>(initialMessages)
+    const [messages, setMessages] = useState<Message[]>([])
     const [newMessage, setNewMessage] = useState("")
+    const [loading, setLoading] = useState(true)
+    const [sending, setSending] = useState(false)
     const scrollAreaRef = useRef<HTMLDivElement>(null)
+
+    // Fetch messages on mount
+    useEffect(() => {
+        const fetchMessages = async () => {
+            try {
+                setLoading(true)
+                const data = await chatApi.getMessages('default')
+
+                if (data.success) {
+                    const mappedMessages = data.messages.map((msg, idx) => ({
+                        id: idx + 1,
+                        _id: msg._id,
+                        text: msg.text,
+                        sender: msg.sender,
+                        time: msg.time,
+                        author: msg.author,
+                        avatar: msg.avatar
+                    }))
+                    setMessages(mappedMessages)
+                } else {
+                    console.error('Failed to load messages')
+                }
+            } catch (error) {
+                console.error('Error fetching messages:', error)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchMessages()
+    }, [])
 
     useEffect(() => {
         if (scrollAreaRef.current) {
@@ -67,30 +57,38 @@ export default function ChatPage() {
         }
     }, [messages])
 
-    const handleSend = () => {
-        if (newMessage.trim()) {
-            const newMsg: Message = {
-                id: messages.length + 1,
-                text: newMessage,
-                sender: "me",
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                author: "You",
-                avatar: "/avatars/01.png"
-            }
-            setMessages([...messages, newMsg])
-            setNewMessage("")
+    const handleSend = async () => {
+        if (newMessage.trim() && !sending) {
+            setSending(true)
+            try {
+                const data = await chatApi.sendMessage({
+                    conversationId: 'default',
+                    text: newMessage,
+                    sender: 'me',
+                    author: 'You',
+                    avatar: '/avatars/01.png'
+                })
 
-            setTimeout(() => {
-                const reply: Message = {
-                    id: messages.length + 2,
-                    text: "Thanks for the message! I'll get back to you soon.",
-                    sender: "other",
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    author: "Jackson Lee",
-                    avatar: "/avatars/02.png"
+                if (data.success) {
+                    const newMsg: Message = {
+                        id: messages.length + 1,
+                        _id: data.message._id,
+                        text: newMessage,
+                        sender: "me",
+                        time: data.message.time,
+                        author: "You",
+                        avatar: "/avatars/01.png"
+                    }
+                    setMessages([...messages, newMsg])
+                    setNewMessage("")
+                } else {
+                    console.error('Failed to send message')
                 }
-                setMessages(prev => [...prev, reply])
-            }, 1000)
+            } catch (error) {
+                console.error('Error sending message:', error)
+            } finally {
+                setSending(false)
+            }
         }
     }
 
@@ -112,40 +110,46 @@ export default function ChatPage() {
             </header>
 
             <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
-                <div className="space-y-4">
-                    {messages.map((message) => (
-                        <div
-                            key={message.id}
-                            className={`flex gap-3 ${message.sender === "me" ? "justify-end" : "justify-start"}`}
-                        >
-                            {message.sender === "other" && (
-                                <Avatar className="h-8 w-8">
-                                    <AvatarImage src={message.avatar} />
-                                    <AvatarFallback>{message.author[0]}</AvatarFallback>
-                                </Avatar>
-                            )}
-                            <div className={`max-w-[70%] ${message.sender === "me" ? "items-end" : "items-start"} flex flex-col`}>
-                                <div
-                                    className={`rounded-lg px-4 py-2 ${message.sender === "me"
+                {loading ? (
+                    <div className="flex items-center justify-center h-full">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {messages.map((message) => (
+                            <div
+                                key={message.id}
+                                className={`flex gap-3 ${message.sender === "me" ? "justify-end" : "justify-start"}`}
+                            >
+                                {message.sender === "other" && (
+                                    <Avatar className="h-8 w-8">
+                                        <AvatarImage src={message.avatar} />
+                                        <AvatarFallback>{message.author[0]}</AvatarFallback>
+                                    </Avatar>
+                                )}
+                                <div className={`max-w-[70%] ${message.sender === "me" ? "items-end" : "items-start"} flex flex-col`}>
+                                    <div
+                                        className={`rounded-lg px-4 py-2 ${message.sender === "me"
                                             ? "bg-primary text-primary-foreground"
                                             : "bg-muted"
-                                        }`}
-                                >
-                                    <p className="text-sm">{message.text}</p>
+                                            }`}
+                                    >
+                                        <p className="text-sm">{message.text}</p>
+                                    </div>
+                                    <p className="text-xs mt-1 text-muted-foreground">
+                                        {message.time}
+                                    </p>
                                 </div>
-                                <p className="text-xs mt-1 text-muted-foreground">
-                                    {message.time}
-                                </p>
+                                {message.sender === "me" && (
+                                    <Avatar className="h-8 w-8">
+                                        <AvatarImage src={message.avatar} />
+                                        <AvatarFallback>{message.author[0]}</AvatarFallback>
+                                    </Avatar>
+                                )}
                             </div>
-                            {message.sender === "me" && (
-                                <Avatar className="h-8 w-8">
-                                    <AvatarImage src={message.avatar} />
-                                    <AvatarFallback>{message.author[0]}</AvatarFallback>
-                                </Avatar>
-                            )}
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
             </ScrollArea>
 
             <div className="border-t p-4">
@@ -160,9 +164,10 @@ export default function ChatPage() {
                                 handleSend()
                             }
                         }}
+                        disabled={sending}
                     />
-                    <Button size="icon" onClick={handleSend}>
-                        <Send className="h-4 w-4" />
+                    <Button size="icon" onClick={handleSend} disabled={sending}>
+                        {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                     </Button>
                 </div>
             </div>

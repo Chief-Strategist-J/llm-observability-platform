@@ -2,6 +2,7 @@ import logging
 from typing import Dict, Any
 from temporalio import activity
 from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
+from infrastructure.orchestrator.base.port_manager import get_port_manager
 
 logger = logging.getLogger(__name__)
 
@@ -12,14 +13,17 @@ class Neo4jManager(BaseService):
     DEFAULT_PORT = 7474
     HEALTH_CHECK_TIMEOUT = 30
 
-    def __init__(self):
-        config = ContainerConfig(
-            image="neo4j:latest",
-            name="neo4j-development",
-            ports={
-                7474: 7474,
-                7687: 7687,
-            },
+    def __init__(self, instance_id: int = 0):
+        pm = get_port_manager()
+            http_port = pm.get_port("neo4j", instance_id, "http_port")
+            bolt_port = pm.get_port("neo4j", instance_id, "bolt_port")
+            config = ContainerConfig(
+                image="neo4j:latest",
+                name="neo4j-development",
+                ports={
+                    7474: http_port,
+                    7687: bolt_port,
+                },
             volumes={
                 "neo4j-data": "/data",
                 "neo4j-logs": "/logs",

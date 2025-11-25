@@ -5,12 +5,11 @@ project_root = Path(__file__).parent.parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-
-
 from datetime import timedelta
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 from infrastructure.orchestrator.base.base_workflow import BaseWorkflow
+
 
 @workflow.defn
 class KafkaMangoDBDatabaseWorkflow(BaseWorkflow):
@@ -23,18 +22,69 @@ class KafkaMangoDBDatabaseWorkflow(BaseWorkflow):
         )
         timeout = timedelta(minutes=5)
 
+        # Stop activities 
         await workflow.execute_activity(
-            "start_kafka_activity",
+            "stop_kafka_activity",
+            params,
+            start_to_close_timeout=timeout,
+            retry_policy=rp,
+        )
+        await workflow.execute_activity(
+            "stop_mongodb_activity",
             params,
             start_to_close_timeout=timeout,
             retry_policy=rp,
         )
         
         await workflow.execute_activity(
-            "start_mongodb_activity",
+            "stop_mongoexpress_activity",
             params,
             start_to_close_timeout=timeout,
             retry_policy=rp,
         )
 
-        return "Kafka and MangoDB database fully configured"
+        
+
+        # Delete activities
+        await workflow.execute_activity(
+            "delete_mongodb_activity",
+            params,
+            start_to_close_timeout=timeout,
+            retry_policy=rp,
+        )
+        await workflow.execute_activity(
+            "delete_kafka_activity",
+            params,
+            start_to_close_timeout=timeout,
+            retry_policy=rp,
+        )
+        
+        await workflow.execute_activity(
+            "delete_mongoexpress_activity",
+            params,
+            start_to_close_timeout=timeout,
+            retry_policy=rp,
+        )
+
+
+        # Start activities 
+        await workflow.execute_activity(
+            "start_kafka_activity",
+            params,
+            start_to_close_timeout=timeout,
+            retry_policy=rp,
+        )
+        await workflow.execute_activity(
+            "start_mongodb_activity",
+            params,
+            start_to_close_timeout=timeout,
+            retry_policy=rp,
+        )
+        await workflow.execute_activity(
+            "start_mongoexpress_activity",
+            params,
+            start_to_close_timeout=timeout,
+            retry_policy=rp,
+        )
+
+        return "Kafka, MongoDB, and MongoExpress fully configured"

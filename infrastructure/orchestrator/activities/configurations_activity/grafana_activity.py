@@ -2,6 +2,8 @@ import logging
 from typing import Dict, Any
 from temporalio import activity
 from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
+from infrastructure.orchestrator.base.port_manager import get_port_manager
+from infrastructure.orchestrator.base.port_manager import get_port_manager
 
 logger = logging.getLogger(__name__)
 
@@ -12,11 +14,13 @@ class GrafanaManager(BaseService):
     DEFAULT_PORT = 3000
     HEALTH_CHECK_TIMEOUT = 30
 
-    def __init__(self):
+    def __init__(self, instance_id: int = 0):
+        pm = get_port_manager()
+        ui_host_port = pm.get_port("grafana", instance_id, "port")
         config = ContainerConfig(
             image="grafana/grafana:latest",
             name="grafana-development",
-            ports={},  # No direct ports; access through Traefik only
+            ports={3000: ui_host_port},  # Map internal Grafana port to dynamic host port
             volumes={"grafana-data": {"bind": "/var/lib/grafana", "mode": "rw"}},
             network="observability-network",
             memory="512m",
@@ -27,7 +31,7 @@ class GrafanaManager(BaseService):
                 "GF_SECURITY_ADMIN_USER": "admin",
                 "GF_SECURITY_ADMIN_PASSWORD": "SuperSecret123!",
                 "GF_USERS_ALLOW_SIGN_UP": "false",
-                "GF_SERVER_ROOT_URL": "http://localhost:31001",
+                f"GF_SERVER_ROOT_URL": f"http://localhost:{ui_host_port}",
             },
             labels={
                 # Enable Traefik for this container
@@ -39,7 +43,7 @@ class GrafanaManager(BaseService):
                 "traefik.http.routers.grafana.service": "grafana",
                 
                 # Service configuration
-                "traefik.http.services.grafana.loadbalancer.server.port": "3000",
+                "traefik.http.services.grafana.loadbalancer.server.port": str(ui_host_port),
                 
                 # Network
                 "traefik.docker.network": "observability-network",
@@ -47,7 +51,7 @@ class GrafanaManager(BaseService):
             healthcheck={
                 "test": [
                     "CMD-SHELL",
-                    "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"
+                    f"wget --no-verbose --tries=1 --spider http://localhost:{ui_host_port}/api/health || exit 1"
                 ],
                 "interval": 30_000_000_000,
                 "timeout": 10_000_000_000,

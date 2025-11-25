@@ -2,9 +2,10 @@ import logging
 from typing import Dict, Any, Optional
 from temporalio import activity
 from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
+from infrastructure.orchestrator.base.port_manager import get_port_manager
+from infrastructure.orchestrator.base.port_manager import get_port_manager
 
 logger = logging.getLogger(__name__)
-
 
 class KafkaManager(BaseService):
     SERVICE_NAME = "Kafka"
@@ -12,32 +13,48 @@ class KafkaManager(BaseService):
     DEFAULT_PORT = 9092
     HEALTH_CHECK_TIMEOUT = 60
 
-    def __init__(self, config: Optional[ContainerConfig] = None) -> None:
-        logger.debug("kafka_manager_init_start config_provided=%s", config is not None)
+    def __init__(self, instance_id: int = 0, config: Optional[ContainerConfig] = None) -> None:
+        self.instance_id = instance_id
+        port_manager = get_port_manager()
+        
+        broker_host_port = port_manager.get_port("kafka", instance_id, "broker_port")
+        controller_host_port = port_manager.get_port("kafka", instance_id, "controller_port")
+        
+        logger.info("kafka_manager_init_start instance=%s config_provided=%s broker_port=%s controller_port=%s", 
+                   instance_id, config is not None, broker_host_port, controller_host_port)
+        
+        # Initialize ports to None, they will be set either from config or dynamically
+        broker_host_port = None
+        controller_host_port = None
+
+        logger.info("kafka_manager_init_start instance=%s config_provided=%s", 
+                   instance_id, config is not None)
         
         if config is None:
-            logger.debug("kafka_manager_creating_default_config")
+            logger.debug("kafka_manager_creating_default_config instance=%s", instance_id)
+            container_name = f"kafka-development-{instance_id}" if instance_id > 0 else "kafka-development"
+            volume_name = f"kafka-data-{instance_id}" if instance_id > 0 else "kafka-data"
+            
+            pm = get_port_manager()
+            broker_host_port = pm.get_port("kafka", instance_id, "broker_port")
+            controller_host_port = pm.get_port("kafka", instance_id, "controller_port")
             config = ContainerConfig(
-                image="apache/kafka:4.0.1",
-                name="kafka-development",
-                ports={
-                    9092: 9092,
-                    9093: 9093,
-                },
-                volumes={
-                    "kafka-data": "/var/lib/kafka/data",
-                    "kafka-logs": "/opt/kafka/logs",
-                },
+                image="apache/kafka:4.1.1",
+                name=f"kafka-development-{instance_id}" if instance_id > 0 else "kafka-development",
+                ports={9092: broker_host_port, 9093: controller_host_port},
+                volumes={volume_name: "/var/lib/kafka/data"},
                 network="data-network",
                 memory="1g",
                 memory_reservation="512m",
                 cpus=1.0,
                 restart="unless-stopped",
+                user="0:0",
                 environment={
+                    "CLUSTER_ID": "MkU3OEVBNTcwNTJENDM2Qk",
                     "KAFKA_PROCESS_ROLES": "broker,controller",
                     "KAFKA_NODE_ID": "1",
-                    "KAFKA_LISTENERS": "PLAINTEXT://:9092,CONTROLLER://:9093",
-                    "KAFKA_ADVERTISED_LISTENERS": "PLAINTEXT://localhost:9092",
+                    "KAFKA_LISTENERS": "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093",
+                    "KAFKA_ADVERTISED_LISTENERS": f"PLAINTEXT://localhost:{broker_host_port}",
                     "KAFKA_CONTROLLER_QUORUM_VOTERS": "1@localhost:9093",
                     "KAFKA_CONTROLLER_LISTENER_NAMES": "CONTROLLER",
                     "KAFKA_LISTENER_SECURITY_PROTOCOL_MAP": "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT",
@@ -45,226 +62,120 @@ class KafkaManager(BaseService):
                     "KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR": "1",
                     "KAFKA_TRANSACTION_STATE_LOG_MIN_ISR": "1",
                     "KAFKA_LOG_DIRS": "/var/lib/kafka/data",
-                    "KAFKA_LOG_RETENTION_HOURS": "168",
-                    "KAFKA_LOG_SEGMENT_BYTES": "1073741824",
-                    "KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS": "300000",
                     "KAFKA_NUM_NETWORK_THREADS": "3",
                     "KAFKA_NUM_IO_THREADS": "8",
-                    "KAFKA_SOCKET_SEND_BUFFER_BYTES": "102400",
-                    "KAFKA_SOCKET_RECEIVE_BUFFER_BYTES": "102400",
-                    "KAFKA_SOCKET_REQUEST_MAX_BYTES": "104857600",
-                    "CLUSTER_ID": "MkU3OEVBNTcwNTJENDM2Qk",
                 },
                 healthcheck={
-                    "test": [
-                        "CMD-SHELL",
-                        "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1"
-                    ],
+                    "test": ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1"],
                     "interval": 30000000000,
                     "timeout": 10000000000,
                     "retries": 5,
-                    "start_period": 60000000000
-                }
+                    "start_period": 60000000000,
+                },
             )
-            logger.debug("kafka_manager_default_config_created")
+            logger.debug("kafka_manager_default_config_created instance=%s container=%s", instance_id, container_name)
         
+        host_broker_port = config.ports.get(9092, broker_host_port)
+        host_controller_port = config.ports.get(9093, controller_host_port)
         extra_data = {
-            "bootstrap_servers": "localhost:9092",
-            "cluster_id": "MkU3OEVBNTcwNTJENDM2Qk"
+            "bootstrap_servers": f"localhost:{host_broker_port}", 
+            "broker_host_port": int(host_broker_port), 
+            "controller_host_port": int(host_controller_port),
+            "instance_id": instance_id
         }
-        logger.debug("kafka_manager_extra_data_set")
-        
+        logger.debug("kafka_manager_extra_data_set instance=%s", instance_id)
         super().__init__(config=config, extra=extra_data)
-        logger.info("kafka_manager_initialized name=%s image=%s", self.config.name, self.config.image)
+        logger.info("kafka_manager_initialized instance=%s name=%s image=%s bootstrap=%s broker_port=%s controller_port=%s", 
+                   instance_id, self.config.name, self.config.image, self.extra.get("bootstrap_servers"), 
+                   host_broker_port, host_controller_port)
 
     def check_broker(self) -> bool:
-        logger.debug("kafka_check_broker_start name=%s", self.config.name)
-        try:
-            cmd = "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092"
-            logger.debug("kafka_check_broker_executing name=%s", self.config.name)
-            
-            code, out = self.exec(cmd)
-            
-            logger.debug("kafka_check_broker_result name=%s exit_code=%s output_length=%s",
-                        self.config.name, code, len(out) if out else 0)
-            
-            result = code == 0
-            logger.info("kafka_check_broker_complete name=%s success=%s", self.config.name, result)
-            return result
-            
-        except Exception as e:
-            logger.exception("kafka_check_broker_error name=%s error=%s", self.config.name, e)
-            return False
+        cmd = "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092"
+        code, out = self.exec(cmd)
+        result = code == 0
+        logger.info("kafka_check_broker_complete name=%s success=%s", self.config.name, result)
+        return result
 
     def list_topics(self) -> str:
-        logger.debug("kafka_list_topics_start name=%s", self.config.name)
-        try:
-            cmd = "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"
-            logger.debug("kafka_list_topics_executing name=%s", self.config.name)
-            
-            code, out = self.exec(cmd)
-            
-            logger.debug("kafka_list_topics_result name=%s exit_code=%s output_length=%s",
-                        self.config.name, code, len(out) if out else 0)
-            
-            if code == 0:
-                logger.info("kafka_list_topics_success name=%s", self.config.name)
-                return out
-            else:
-                logger.warning("kafka_list_topics_failed name=%s exit_code=%s", self.config.name, code)
-                return ""
-                
-        except Exception as e:
-            logger.exception("kafka_list_topics_error name=%s error=%s", self.config.name, e)
-            return ""
-
-    def create_topic(self, topic_name: str, partitions: int = 1, replication_factor: int = 1) -> bool:
-        logger.debug("kafka_create_topic_start name=%s topic=%s partitions=%s replication=%s",
-                    self.config.name, topic_name, partitions, replication_factor)
-        try:
-            cmd = f"/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic {topic_name} --partitions {partitions} --replication-factor {replication_factor}"
-            logger.debug("kafka_create_topic_executing name=%s topic=%s", self.config.name, topic_name)
-            
-            code, out = self.exec(cmd)
-            
-            logger.debug("kafka_create_topic_result name=%s topic=%s exit_code=%s",
-                        self.config.name, topic_name, code)
-            
-            result = code == 0
-            if result:
-                logger.info("kafka_create_topic_success name=%s topic=%s", self.config.name, topic_name)
-            else:
-                logger.warning("kafka_create_topic_failed name=%s topic=%s exit_code=%s output=%s",
-                             self.config.name, topic_name, code, out)
-            
-            return result
-            
-        except Exception as e:
-            logger.exception("kafka_create_topic_error name=%s topic=%s error=%s",
-                           self.config.name, topic_name, e)
-            return False
-
-    def describe_topic(self, topic_name: str) -> str:
-        logger.debug("kafka_describe_topic_start name=%s topic=%s", self.config.name, topic_name)
-        try:
-            cmd = f"/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic {topic_name}"
-            logger.debug("kafka_describe_topic_executing name=%s topic=%s", self.config.name, topic_name)
-            
-            code, out = self.exec(cmd)
-            
-            logger.debug("kafka_describe_topic_result name=%s topic=%s exit_code=%s output_length=%s",
-                        self.config.name, topic_name, code, len(out) if out else 0)
-            
-            if code == 0:
-                logger.info("kafka_describe_topic_success name=%s topic=%s", self.config.name, topic_name)
-                return out
-            else:
-                logger.warning("kafka_describe_topic_failed name=%s topic=%s exit_code=%s",
-                             self.config.name, topic_name, code)
-                return ""
-                
-        except Exception as e:
-            logger.exception("kafka_describe_topic_error name=%s topic=%s error=%s",
-                           self.config.name, topic_name, e)
-            return ""
-
+        cmd = "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"
+        code, out = self.exec(cmd)
+        if code == 0:
+            logger.info("kafka_list_topics_success name=%s", self.config.name)
+            return out
+        logger.warning("kafka_list_topics_failed name=%s exit_code=%s", self.config.name, code)
+        return ""
 
 @activity.defn
 async def start_kafka_activity(params: Dict[str, Any]) -> bool:
-    logger.info("kafka_start_activity_called params_keys=%s", list(params.keys()))
+    instance_id = params.get("instance_id", 0)
+    logger.info("kafka_start_activity_called instance=%s params_keys=%s", instance_id, list(params.keys()))
     try:
-        logger.debug("kafka_start_activity_creating_manager")
-        manager = KafkaManager()
-        
-        logger.debug("kafka_start_activity_checking_existing")
+        manager = KafkaManager(instance_id=instance_id)
         existing = manager.manager._get_existing_container()
-        
         if existing:
-            logger.info("kafka_start_activity_container_exists status=%s", existing.status)
+            logger.info("kafka_start_activity_container_exists instance=%s status=%s", instance_id, existing.status)
             try:
                 existing.reload()
-                logger.debug("kafka_start_activity_container_reloaded status=%s", existing.status)
             except Exception as reload_err:
-                logger.warning("kafka_start_activity_reload_failed error=%s", reload_err)
-            
+                logger.warning("kafka_start_activity_reload_failed instance=%s error=%s", instance_id, reload_err)
             if existing.status == "running":
-                logger.info("kafka_start_activity_already_running")
+                logger.info("kafka_start_activity_already_running instance=%s", instance_id)
                 return True
             else:
-                logger.info("kafka_start_activity_starting_existing_container")
+                logger.info("kafka_start_activity_starting_existing_container instance=%s", instance_id)
                 try:
                     existing.start()
-                    logger.info("kafka_start_activity_started_successfully")
+                    logger.info("kafka_start_activity_started_successfully instance=%s", instance_id)
                     return True
                 except Exception as start_err:
-                    logger.error("kafka_start_activity_start_failed error=%s attempting_recreate=True",
-                               start_err)
+                    logger.error("kafka_start_activity_start_failed instance=%s error=%s attempting_recreate=True", instance_id, start_err)
                     try:
-                        logger.debug("kafka_start_activity_removing_failed_container")
                         existing.remove(force=True)
-                        logger.debug("kafka_start_activity_failed_container_removed")
                     except Exception as remove_err:
-                        logger.warning("kafka_start_activity_remove_failed error=%s", remove_err)
-        
-        logger.info("kafka_start_activity_creating_new_container")
+                        logger.warning("kafka_start_activity_remove_failed instance=%s error=%s", instance_id, remove_err)
+        logger.info("kafka_start_activity_creating_new_container instance=%s", instance_id)
         manager.run()
-        logger.info("kafka_start_activity_created_and_started")
+        logger.info("kafka_start_activity_created_and_started instance=%s bootstrap=%s", instance_id, manager.extra.get("bootstrap_servers"))
         return True
-        
     except Exception as e:
-        logger.exception("kafka_start_activity_failed error=%s", e)
+        logger.exception("kafka_start_activity_failed instance=%s error=%s", instance_id, e)
         return False
-
 
 @activity.defn
 async def stop_kafka_activity(params: Dict[str, Any]) -> bool:
-    logger.info("kafka_stop_activity_called params_keys=%s", list(params.keys()))
+    instance_id = params.get("instance_id", 0)
+    logger.info("kafka_stop_activity_called instance=%s params_keys=%s", instance_id, list(params.keys()))
     try:
-        logger.debug("kafka_stop_activity_creating_manager")
-        manager = KafkaManager()
-        
-        logger.info("kafka_stop_activity_stopping timeout=30")
+        manager = KafkaManager(instance_id=instance_id)
         manager.stop(timeout=30)
-        
-        logger.info("kafka_stop_activity_stopped")
+        logger.info("kafka_stop_activity_stopped instance=%s", instance_id)
         return True
-        
     except Exception as e:
-        logger.exception("kafka_stop_activity_failed error=%s", e)
+        logger.exception("kafka_stop_activity_failed instance=%s error=%s", instance_id, e)
         return False
-
 
 @activity.defn
 async def restart_kafka_activity(params: Dict[str, Any]) -> bool:
-    logger.info("kafka_restart_activity_called params_keys=%s", list(params.keys()))
+    instance_id = params.get("instance_id", 0)
+    logger.info("kafka_restart_activity_called instance=%s params_keys=%s", instance_id, list(params.keys()))
     try:
-        logger.debug("kafka_restart_activity_creating_manager")
-        manager = KafkaManager()
-        
-        logger.info("kafka_restart_activity_restarting")
+        manager = KafkaManager(instance_id=instance_id)
         manager.restart()
-        
-        logger.info("kafka_restart_activity_restarted")
+        logger.info("kafka_restart_activity_restarted instance=%s", instance_id)
         return True
-        
     except Exception as e:
-        logger.exception("kafka_restart_activity_failed error=%s", e)
+        logger.exception("kafka_restart_activity_failed instance=%s error=%s", instance_id, e)
         return False
-
 
 @activity.defn
 async def delete_kafka_activity(params: Dict[str, Any]) -> bool:
-    logger.info("kafka_delete_activity_called params_keys=%s", list(params.keys()))
+    instance_id = params.get("instance_id", 0)
+    logger.info("kafka_delete_activity_called instance=%s params_keys=%s", instance_id, list(params.keys()))
     try:
-        logger.debug("kafka_delete_activity_creating_manager")
-        manager = KafkaManager()
-        
-        logger.info("kafka_delete_activity_deleting force=False")
+        manager = KafkaManager(instance_id=instance_id)
         manager.delete(force=False)
-        
-        logger.info("kafka_delete_activity_deleted")
+        logger.info("kafka_delete_activity_deleted instance=%s", instance_id)
         return True
-        
     except Exception as e:
-        logger.exception("kafka_delete_activity_failed error=%s", e)
+        logger.exception("kafka_delete_activity_failed instance=%s error=%s", instance_id, e)
         return False

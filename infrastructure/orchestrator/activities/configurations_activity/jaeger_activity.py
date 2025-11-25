@@ -2,6 +2,7 @@ import logging
 from typing import Dict, Any
 from temporalio import activity
 from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
+from infrastructure.orchestrator.base.port_manager import get_port_manager
 
 logger = logging.getLogger(__name__)
 
@@ -12,18 +13,20 @@ class JaegerManager(BaseService):
     DEFAULT_PORT = 16686
     HEALTH_CHECK_TIMEOUT = 30
 
-    def __init__(self):
-        config = ContainerConfig(
-            image="jaegertracing/all-in-one:latest",
-            name="jaeger-development",
-            ports={
-                16686: 16686,
-                4317: 4317,
-                4318: 4318,
-                14250: 14250,
-                14268: 14268,
-                9411: 9411,
-            },
+    def __init__(self, instance_id: int = 0):
+        pm = get_port_manager()
+            ports = {
+                16686: pm.get_port("jaeger", instance_id, "http_port"),
+                4317: pm.get_port("jaeger", instance_id, "otlp_grpc_port"),
+                4318: pm.get_port("jaeger", instance_id, "otlp_http_port"),
+                14250: pm.get_port("jaeger", instance_id, "grpc_port"),
+                14268: pm.get_port("jaeger", instance_id, "admin_port"),
+                9411: pm.get_port("jaeger", instance_id, "zipkin_port"),
+            }
+            config = ContainerConfig(
+                image="jaegertracing/all-in-one:latest",
+                name="jaeger-development",
+                ports=ports,
             volumes={"jaeger-data": "/tmp"},
             network="observability-network",
             memory="512m",

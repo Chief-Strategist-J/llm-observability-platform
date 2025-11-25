@@ -3,6 +3,7 @@ import time
 from typing import Dict, Any
 from temporalio import activity
 from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
+from infrastructure.orchestrator.base.port_manager import get_port_manager
 
 logger = logging.getLogger(__name__)
 
@@ -14,14 +15,17 @@ class ArgoCDManager(BaseService):
     DEFAULT_GRPC_PORT = 8083
     HEALTH_CHECK_TIMEOUT = 60
 
-    def __init__(self):
-        config = ContainerConfig(
-            image="argoproj/argocd:latest",
-            name="argocd-server",
-            ports={
-                8080: 31080,  # API Server
-                8083: 31083,  # gRPC
-            },
+    def __init__(self, instance_id: int = 0):
+        pm = get_port_manager()
+            api_port = pm.get_port("argocd", instance_id, "server_port")
+            grpc_port = pm.get_port("argocd", instance_id, "server_port")
+            config = ContainerConfig(
+                image="argoproj/argocd:latest",
+                name="argocd-server",
+                ports={
+                    8080: api_port,  # API Server
+                    8083: grpc_port,  # gRPC
+                },
             volumes={
                 "argocd-data": "/var/argocd",
                 # Mount your Git repo config
