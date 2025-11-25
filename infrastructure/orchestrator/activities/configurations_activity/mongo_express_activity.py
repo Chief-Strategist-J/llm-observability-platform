@@ -17,26 +17,26 @@ logger = logging.getLogger(__name__)
 class MongoExpressManager(BaseService):
     SERVICE_NAME = "MongoExpress"
     SERVICE_DESCRIPTION = "MongoDB web admin UI"
-    DEFAULT_PORT = 8081
     HEALTH_CHECK_TIMEOUT = 30
 
     def __init__(self, instance_id: int = 0, config: Optional[ContainerConfig] = None) -> None:
         self.instance_id = instance_id
-        port_manager = get_port_manager()
-        
-        ui_host_port = port_manager.get_port("mongo_express", instance_id, "port")
-        
-        logger.info("mongoexpress_manager_init_start instance=%s config_provided=%s ui_port=%s", 
-                   instance_id, config is not None, ui_host_port)
-        
+        pm = get_port_manager()
+
+        ui_port = pm.get_port("mongo_express", instance_id, "port")
+
+        logger.info(
+            "event=mongoexpress_manager_init instance=%s config_provided=%s ui_port=%s",
+            instance_id, config is not None, ui_port
+        )
+
         if config is None:
-            logger.debug("mongoexpress_manager_creating_default_config instance=%s", instance_id)
-            container_name = f"mongo-express-ui-{instance_id}" if instance_id > 0 else "mongo-express-ui"
-            
+            container_name = f"mongo-express-{instance_id}"
+
             config = ContainerConfig(
                 image="mongo-express:latest",
                 name=container_name,
-                ports={8081: ui_host_port},
+                ports={ui_port: ui_port},
                 network="data-network",
                 memory="512m",
                 memory_reservation="256m",
@@ -49,98 +49,154 @@ class MongoExpressManager(BaseService):
                     "ME_CONFIG_BASICAUTH_USERNAME": "admin",
                     "ME_CONFIG_BASICAUTH_PASSWORD": "AdminPassword!",
                     "ME_CONFIG_SITE_BASEURL": "/",
-                    "ME_CONFIG_SITE_PORT": "8081",
+                    "ME_CONFIG_SITE_PORT": str(ui_port),
                 },
                 healthcheck={
-                    "test": ["CMD-SHELL", "curl -sSf http://localhost:8081/ || exit 1"],
+                    "test": [
+                        "CMD-SHELL",
+                        f"curl -sSf http://localhost:{ui_port}/ || exit 1"
+                    ],
                     "interval": 30000000000,
                     "timeout": 10000000000,
                     "retries": 5,
                     "start_period": 20000000000,
                 },
             )
-            logger.debug("mongoexpress_manager_default_config_created instance=%s container=%s", instance_id, container_name)
-        
-        extra_data = {"ui_host_port": int(ui_host_port), "instance_id": instance_id}
-        logger.debug("mongoexpress_manager_extra_data_set instance=%s", instance_id)
+
+            logger.info(
+                "event=mongoexpress_manager_default_config_created instance=%s container=%s",
+                instance_id, container_name
+            )
+
+        extra_data = {"ui_host_port": ui_port, "instance_id": instance_id}
+
+        logger.info("event=mongoexpress_manager_extra_data_set instance=%s ui_port=%s", instance_id, ui_port)
+
         super().__init__(config=config, extra=extra_data)
-        logger.info("mongoexpress_manager_initialized instance=%s name=%s image=%s ui_port=%s", 
-                   instance_id, self.config.name, self.config.image, self.extra.get("ui_host_port"))
+
+        logger.info(
+            "event=mongoexpress_manager_initialized instance=%s container=%s image=%s ui_port=%s",
+            instance_id, self.config.name, self.config.image, ui_port
+        )
 
     def get_ui_url(self) -> str:
-        port = int(self.extra.get("ui_host_port", 0))
+        port = self.extra.get("ui_host_port")
         return f"http://localhost:{port}"
+
 
 @activity.defn
 async def start_mongoexpress_activity(params: Dict[str, Any]) -> bool:
     instance_id = params.get("instance_id", 0)
-    logger.info("mongoexpress_start_activity_called instance=%s params_keys=%s", instance_id, list(params.keys()))
+
+    logger.info(
+        "event=mongoexpress_start_activity instance=%s keys=%s",
+        instance_id, list(params.keys())
+    )
+
     try:
         manager = MongoExpressManager(instance_id=instance_id)
         existing = manager.manager._get_existing_container()
+
         if existing:
-            logger.info("mongoexpress_start_activity_container_exists instance=%s status=%s", instance_id, existing.status)
+            logger.info(
+                "event=mongoexpress_container_exists instance=%s status=%s",
+                instance_id, existing.status
+            )
+
             try:
                 existing.reload()
-            except Exception as reload_err:
-                logger.warning("mongoexpress_start_activity_reload_failed instance=%s error=%s", instance_id, reload_err)
+            except Exception as err:
+                logger.warning(
+                    "event=mongoexpress_reload_failed instance=%s error=%s",
+                    instance_id, err
+                )
+
             if existing.status == "running":
-                logger.info("mongoexpress_start_activity_already_running instance=%s ui=%s", instance_id, manager.get_ui_url())
+                logger.info(
+                    "event=mongoexpress_already_running instance=%s url=%s",
+                    instance_id, manager.get_ui_url()
+                )
                 return True
-            else:
+
+            try:
+                existing.start()
+                logger.info(
+                    "event=mongoexpress_existing_started instance=%s url=%s",
+                    instance_id, manager.get_ui_url()
+                )
+                return True
+            except Exception as err:
+                logger.error(
+                    "event=mongoexpress_start_existing_failed instance=%s error=%s removing_container=True",
+                    instance_id, err
+                )
                 try:
-                    existing.start()
-                    logger.info("mongoexpress_start_activity_started_successfully instance=%s ui=%s", instance_id, manager.get_ui_url())
-                    return True
-                except Exception as start_err:
-                    logger.error("mongoexpress_start_activity_start_failed instance=%s error=%s attempting_recreate=True", instance_id, start_err)
-                    try:
-                        existing.remove(force=True)
-                    except Exception as remove_err:
-                        logger.warning("mongoexpress_start_activity_remove_failed instance=%s error=%s", instance_id, remove_err)
-        logger.info("mongoexpress_start_activity_creating_new_container instance=%s", instance_id)
+                    existing.remove(force=True)
+                except Exception as rm_err:
+                    logger.warning(
+                        "event=mongoexpress_remove_failed instance=%s error=%s",
+                        instance_id, rm_err
+                    )
+
+        logger.info("event=mongoexpress_creating_new_container instance=%s", instance_id)
         manager.run()
-        logger.info("mongoexpress_start_activity_created_and_started instance=%s ui=%s", instance_id, manager.get_ui_url())
+
+        logger.info(
+            "event=mongoexpress_started instance=%s url=%s",
+            instance_id, manager.get_ui_url()
+        )
+
         return True
+
     except Exception as e:
-        logger.exception("mongoexpress_start_activity_failed instance=%s error=%s", instance_id, e)
+        logger.exception("event=mongoexpress_start_failed instance=%s error=%s", instance_id, e)
         return False
+
 
 @activity.defn
 async def stop_mongoexpress_activity(params: Dict[str, Any]) -> bool:
     instance_id = params.get("instance_id", 0)
-    logger.info("mongoexpress_stop_activity_called instance=%s params_keys=%s", instance_id, list(params.keys()))
+
+    logger.info("event=mongoexpress_stop_activity instance=%s", instance_id)
+
     try:
         manager = MongoExpressManager(instance_id=instance_id)
         manager.stop(timeout=30)
-        logger.info("mongoexpress_stop_activity_stopped instance=%s", instance_id)
+
+        logger.info("event=mongoexpress_stopped instance=%s", instance_id)
         return True
     except Exception as e:
-        logger.exception("mongoexpress_stop_activity_failed instance=%s error=%s", instance_id, e)
+        logger.exception("event=mongoexpress_stop_failed instance=%s error=%s", instance_id, e)
         return False
+
 
 @activity.defn
 async def restart_mongoexpress_activity(params: Dict[str, Any]) -> bool:
     instance_id = params.get("instance_id", 0)
-    logger.info("mongoexpress_restart_activity_called instance=%s params_keys=%s", instance_id, list(params.keys()))
+
+    logger.info("event=mongoexpress_restart_activity instance=%s", instance_id)
+
     try:
         manager = MongoExpressManager(instance_id=instance_id)
         manager.restart()
-        logger.info("mongoexpress_restart_activity_restarted instance=%s", instance_id)
+        logger.info("event=mongoexpress_restarted instance=%s", instance_id)
         return True
     except Exception as e:
-        logger.exception("mongoexpress_restart_activity_failed instance=%s error=%s", instance_id, e)
+        logger.exception("event=mongoexpress_restart_failed instance=%s error=%s", instance_id, e)
         return False
+
 
 @activity.defn
 async def delete_mongoexpress_activity(params: Dict[str, Any]) -> bool:
     instance_id = params.get("instance_id", 0)
-    logger.info("mongoexpress_delete_activity_called instance=%s params_keys=%s", instance_id, list(params.keys()))
+
+    logger.info("event=mongoexpress_delete_activity instance=%s", instance_id)
+
     try:
         manager = MongoExpressManager(instance_id=instance_id)
         manager.delete(force=False)
-        logger.info("mongoexpress_delete_activity_deleted instance=%s", instance_id)
+        logger.info("event=mongoexpress_deleted instance=%s", instance_id)
         return True
     except Exception as e:
-        logger.exception("mongoexpress_delete_activity_failed instance=%s error=%s", instance_id, e)
+        logger.exception("event=mongoexpress_delete_failed instance=%s error=%s", instance_id, e)
         return False

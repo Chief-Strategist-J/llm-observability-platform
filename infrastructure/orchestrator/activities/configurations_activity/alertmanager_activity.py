@@ -6,23 +6,21 @@ from infrastructure.orchestrator.base.port_manager import get_port_manager
 
 logger = logging.getLogger(__name__)
 
-
 class AlertmanagerManager(BaseService):
     SERVICE_NAME = "Alertmanager"
     SERVICE_DESCRIPTION = "alert routing and management"
-    DEFAULT_PORT = 9093
     HEALTH_CHECK_TIMEOUT = 30
 
     def __init__(self, instance_id: int = 0):
         pm = get_port_manager()
-            broker_host_port = pm.get_port("alertmanager", instance_id, "port")
-            config = ContainerConfig(
-                image="prom/alertmanager:latest",
-                name="alertmanager-development",
-                ports={9093: broker_host_port},
+        alertmanager_port = pm.get_port("alertmanager", instance_id, "port")
+
+        config = ContainerConfig(
+            image="prom/alertmanager:latest",
+            name=f"alertmanager-instance-{instance_id}",
+            ports={alertmanager_port: alertmanager_port},
             volumes={
                 "alertmanager-data": "/alertmanager",
-                # Mount config directory from your project
                 "/home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/alertmanager": "/etc/alertmanager"
             },
             network="monitoring-bridge",
@@ -33,13 +31,13 @@ class AlertmanagerManager(BaseService):
             command=[
                 "--config.file=/etc/alertmanager/alertmanager_config.yaml",
                 "--storage.path=/alertmanager",
-                "--web.external-url=http://localhost:{broker_host_port}",
-                "--cluster.listen-address=",
+                f"--web.external-url=http://localhost:{alertmanager_port}",
+                "--cluster.listen-address="
             ],
             healthcheck={
                 "test": [
                     "CMD-SHELL",
-                    "wget --no-verbose --tries=1 --spider http://localhost:9093/-/healthy || exit 1"
+                    f"wget --no-verbose --tries=1 --spider http://localhost:{alertmanager_port}/-/healthy || exit 1"
                 ],
                 "interval": 30000000000,
                 "timeout": 10000000000,
@@ -47,38 +45,58 @@ class AlertmanagerManager(BaseService):
                 "start_period": 40000000000
             }
         )
+
+        logger.info(
+            "event=alertmanager_manager_init service=alertmanager instance=%s port=%s",
+            instance_id, alertmanager_port
+        )
+
         super().__init__(config)
 
     def reload_config(self) -> bool:
-        """Hot reload Alertmanager config without restart"""
         command = "killall -HUP alertmanager"
         exit_code, output = self.exec(command)
+
         if exit_code != 0:
-            logger.error("Failed to reload Alertmanager config: %s", output)
+            logger.error(
+                "event=alertmanager_reload_failed output=%s exit_code=%s",
+                output, exit_code
+            )
             return False
-        logger.info("Alertmanager config reloaded successfully")
+
+        logger.info("event=alertmanager_reload_success")
         return True
 
     def check_config(self) -> Dict[str, Any]:
-        """Validate Alertmanager configuration"""
         command = "amtool check-config /etc/alertmanager/alertmanager_config.yaml"
         exit_code, output = self.exec(command)
+
+        logger.info(
+            "event=alertmanager_config_validation exit_code=%s",
+            exit_code
+        )
+
         return {
             "valid": exit_code == 0,
             "output": output
         }
 
     def test_slack_webhook(self) -> Dict[str, Any]:
-        """Test Slack webhook by sending test alert"""
         command = (
             'amtool alert add test_alert '
             'alertname="TestAlert" '
             'severity="info" '
             'summary="Test alert from Alertmanager" '
             '--end=5m '
-            '--alertmanager.url=http://localhost:9093'
+            '--alertmanager.url=http://localhost:$(printenv ALERTMANAGER_PORT)'
         )
         exit_code, output = self.exec(command)
+
+        logger.info(
+            "event=alertmanager_slack_test exit_code=%s",
+            exit_code
+        )
+
         return {
             "success": exit_code == 0,
             "output": output
@@ -87,72 +105,67 @@ class AlertmanagerManager(BaseService):
 
 @activity.defn
 async def start_alertmanager_activity(params: Dict[str, Any]) -> bool:
-    """Start Alertmanager container"""
-    logger.info("Starting Alertmanager activity with params: %s", params)
+    logger.info("event=alertmanager_start params=%s", params)
     manager = AlertmanagerManager()
     manager.run()
-    logger.info("Alertmanager container started successfully")
+    logger.info("event=alertmanager_started")
     return True
 
 
 @activity.defn
 async def stop_alertmanager_activity(params: Dict[str, Any]) -> bool:
-    """Stop Alertmanager container"""
-    logger.info("Stopping Alertmanager activity")
+    logger.info("event=alertmanager_stop_begin")
     manager = AlertmanagerManager()
     manager.stop(timeout=30)
-    logger.info("Alertmanager container stopped successfully")
+    logger.info("event=alertmanager_stop_complete")
     return True
 
 
 @activity.defn
 async def restart_alertmanager_activity(params: Dict[str, Any]) -> bool:
-    """Restart Alertmanager container"""
-    logger.info("Restarting Alertmanager activity")
+    logger.info("event=alertmanager_restart_begin")
     manager = AlertmanagerManager()
     manager.restart()
-    logger.info("Alertmanager container restarted successfully")
+    logger.info("event=alertmanager_restart_complete")
     return True
 
 
 @activity.defn
 async def delete_alertmanager_activity(params: Dict[str, Any]) -> bool:
-    """Delete Alertmanager container"""
-    logger.info("Deleting Alertmanager activity")
+    logger.info("event=alertmanager_delete_begin")
     manager = AlertmanagerManager()
     manager.delete(force=False)
-    logger.info("Alertmanager container deleted successfully")
+    logger.info("event=alertmanager_delete_complete")
     return True
 
 
 @activity.defn
 async def reload_alertmanager_config_activity(params: Dict[str, Any]) -> bool:
-    """Hot reload Alertmanager configuration"""
-    logger.info("Reloading Alertmanager config")
+    logger.info("event=alertmanager_reload_activity_begin")
     manager = AlertmanagerManager()
     result = manager.reload_config()
+
     if result:
-        logger.info("Alertmanager config reloaded successfully")
+        logger.info("event=alertmanager_reload_activity_success")
     else:
-        logger.error("Failed to reload Alertmanager config")
+        logger.error("event=alertmanager_reload_activity_failed")
+
     return result
 
 
 @activity.defn
 async def validate_alertmanager_config_activity(params: Dict[str, Any]) -> Dict[str, Any]:
-    """Validate Alertmanager configuration file"""
-    logger.info("Validating Alertmanager config")
+    logger.info("event=alertmanager_validate_config_begin")
     manager = AlertmanagerManager()
     result = manager.check_config()
-    logger.info("Config validation result: %s", result)
+    logger.info("event=alertmanager_validate_config_result valid=%s", result["valid"])
     return result
 
 
 @activity.defn
 async def test_slack_integration_activity(params: Dict[str, Any]) -> Dict[str, Any]:
-    """Send test alert to Slack"""
-    logger.info("Testing Slack integration")
+    logger.info("event=alertmanager_slack_test_begin")
     manager = AlertmanagerManager()
     result = manager.test_slack_webhook()
-    logger.info("Slack test result: %s", result)
+    logger.info("event=alertmanager_slack_test_result success=%s", result["success"])
     return result

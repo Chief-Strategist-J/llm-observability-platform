@@ -2,6 +2,7 @@ import logging
 from typing import Dict, Any, Optional
 from temporalio import activity
 from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
+from infrastructure.orchestrator.base.port_manager import get_port_manager
 
 logger = logging.getLogger(__name__)
 
@@ -9,21 +10,29 @@ logger = logging.getLogger(__name__)
 class MongoDBManager(BaseService):
     SERVICE_NAME = "MongoDB"
     SERVICE_DESCRIPTION = "document database"
-    DEFAULT_PORT = 27017
     HEALTH_CHECK_TIMEOUT = 30
 
-    def __init__(self, config: Optional[ContainerConfig] = None) -> None:
-        logger.debug("mongodb_manager_init_start config_provided=%s", config is not None)
-        
+    def __init__(self, instance_id: int = 0, config: Optional[ContainerConfig] = None) -> None:
+        pm = get_port_manager()
+        mongo_port = pm.get_port("mongodb", instance_id, "port")
+
+        logger.info(
+            "event=mongodb_manager_init instance=%s config_provided=%s port=%s",
+            instance_id, config is not None, mongo_port
+        )
+
         if config is None:
-            logger.debug("mongodb_manager_creating_default_config")
+            container_name = f"mongodb-instance-{instance_id}"
+            volume_data = f"mongodb-data-{instance_id}"
+            volume_cfg = f"mongodb-config-{instance_id}"
+
             config = ContainerConfig(
                 image="mongo:8.0",
-                name="mongodb-development",
-                ports={27017: 27017},
+                name=container_name,
+                ports={mongo_port: mongo_port},
                 volumes={
-                    "mongodb-data": "/data/db",
-                    "mongodb-config": "/data/configdb",
+                    volume_data: "/data/db",
+                    volume_cfg: "/data/configdb"
                 },
                 network="data-network",
                 memory="1g",
@@ -33,21 +42,20 @@ class MongoDBManager(BaseService):
                 environment={
                     "MONGO_INITDB_ROOT_USERNAME": "admin",
                     "MONGO_INITDB_ROOT_PASSWORD": "MongoPassword123!",
-                    "MONGO_INITDB_DATABASE": "admin",
+                    "MONGO_INITDB_DATABASE": "admin"
                 },
                 command=[
                     "mongod",
                     "--auth",
                     "--bind_ip_all",
-                    "--wiredTigerCacheSizeGB", "0.5",
+                    "--wiredTigerCacheSizeGB", "0.5"
                 ],
                 healthcheck={
                     "test": [
-                        "CMD",
-                        "mongosh",
-                        "--quiet",
-                        "--eval",
-                        "db.adminCommand('ping')"
+                        "CMD-SHELL",
+                        f"mongosh --quiet --port {mongo_port} "
+                        "--eval \"db.adminCommand('ping')\" --username admin "
+                        "--password MongoPassword123! --authenticationDatabase admin || exit 1"
                     ],
                     "interval": 30000000000,
                     "timeout": 10000000000,
@@ -55,206 +63,172 @@ class MongoDBManager(BaseService):
                     "start_period": 40000000000
                 }
             )
-            logger.debug("mongodb_manager_default_config_created")
-        
+
         extra_data = {
+            "port": mongo_port,
             "username": "admin",
             "password": "MongoPassword123!",
-            "auth_database": "admin"
+            "auth_database": "admin",
+            "instance_id": instance_id
         }
-        logger.debug("mongodb_manager_extra_data_set")
-        
+
         super().__init__(config=config, extra=extra_data)
-        logger.info("mongodb_manager_initialized name=%s image=%s", self.config.name, self.config.image)
+
+        logger.info(
+            "event=mongodb_manager_initialized instance=%s name=%s port=%s",
+            instance_id, self.config.name, mongo_port
+        )
 
     def ping(self) -> bool:
-        logger.debug("mongodb_ping_start name=%s", self.config.name)
-        try:
-            cmd = 'mongosh --quiet --eval "db.adminCommand(\'ping\')" --username admin --password MongoPassword123! --authenticationDatabase admin'
-            logger.debug("mongodb_ping_executing_cmd name=%s", self.config.name)
-            
-            code, out = self.exec(cmd)
-            
-            logger.debug("mongodb_ping_result name=%s exit_code=%s output_length=%s", 
-                        self.config.name, code, len(out) if out else 0)
-            
-            result = code == 0 and "ok" in out.lower()
-            logger.info("mongodb_ping_complete name=%s success=%s", self.config.name, result)
-            return result
-            
-        except Exception as e:
-            logger.exception("mongodb_ping_error name=%s error=%s", self.config.name, e)
-            return False
+        port = self.extra["port"]
+        cmd = (
+            f"mongosh --quiet --port {port} --eval \"db.adminCommand('ping')\" "
+            "--username admin --password MongoPassword123! --authenticationDatabase admin"
+        )
+        code, out = self.exec(cmd)
+        result = code == 0 and out and "ok" in out.lower()
+
+        logger.info(
+            "event=mongodb_ping instance=%s success=%s port=%s",
+            self.extra["instance_id"], result, port
+        )
+
+        return result
 
     def get_server_status(self) -> str:
-        logger.debug("mongodb_server_status_start name=%s", self.config.name)
-        try:
-            cmd = 'mongosh --quiet --eval "JSON.stringify(db.serverStatus())" --username admin --password MongoPassword123! --authenticationDatabase admin'
-            logger.debug("mongodb_server_status_executing name=%s", self.config.name)
-            
-            code, out = self.exec(cmd)
-            
-            logger.debug("mongodb_server_status_result name=%s exit_code=%s output_length=%s",
-                        self.config.name, code, len(out) if out else 0)
-            
-            if code == 0:
-                logger.info("mongodb_server_status_success name=%s", self.config.name)
-                return out
-            else:
-                logger.warning("mongodb_server_status_failed name=%s exit_code=%s", 
-                             self.config.name, code)
-                return ""
-                
-        except Exception as e:
-            logger.exception("mongodb_server_status_error name=%s error=%s", self.config.name, e)
-            return ""
+        port = self.extra["port"]
+        cmd = (
+            f"mongosh --quiet --port {port} "
+            "--eval \"JSON.stringify(db.serverStatus())\" "
+            "--username admin --password MongoPassword123! --authenticationDatabase admin"
+        )
+
+        code, out = self.exec(cmd)
+        if code == 0:
+            logger.info(
+                "event=mongodb_server_status_success instance=%s port=%s",
+                self.extra["instance_id"], port
+            )
+            return out
+
+        logger.warning(
+            "event=mongodb_server_status_failed instance=%s exit_code=%s port=%s",
+            self.extra["instance_id"], code, port
+        )
+        return ""
 
     def list_databases(self) -> str:
-        logger.debug("mongodb_list_databases_start name=%s", self.config.name)
-        try:
-            cmd = 'mongosh --quiet --eval "db.adminCommand(\'listDatabases\')" --username admin --password MongoPassword123! --authenticationDatabase admin'
-            logger.debug("mongodb_list_databases_executing name=%s", self.config.name)
-            
-            code, out = self.exec(cmd)
-            
-            logger.debug("mongodb_list_databases_result name=%s exit_code=%s output_length=%s",
-                        self.config.name, code, len(out) if out else 0)
-            
-            if code == 0:
-                logger.info("mongodb_list_databases_success name=%s", self.config.name)
-                return out
-            else:
-                logger.warning("mongodb_list_databases_failed name=%s exit_code=%s",
-                             self.config.name, code)
-                return ""
-                
-        except Exception as e:
-            logger.exception("mongodb_list_databases_error name=%s error=%s", self.config.name, e)
-            return ""
+        port = self.extra["port"]
+        cmd = (
+            f"mongosh --quiet --port {port} "
+            "--eval \"db.adminCommand('listDatabases')\" "
+            "--username admin --password MongoPassword123! --authenticationDatabase admin"
+        )
+
+        code, out = self.exec(cmd)
+        if code == 0:
+            logger.info(
+                "event=mongodb_list_databases_success instance=%s port=%s",
+                self.extra["instance_id"], port
+            )
+            return out
+
+        logger.warning(
+            "event=mongodb_list_databases_failed instance=%s exit_code=%s port=%s",
+            self.extra["instance_id"], code, port
+        )
+        return ""
 
     def create_database(self, db_name: str) -> bool:
-        logger.debug("mongodb_create_database_start name=%s db_name=%s", self.config.name, db_name)
-        try:
-            cmd = f'mongosh --quiet --eval "use {db_name}; db.createCollection(\'init\')" --username admin --password MongoPassword123! --authenticationDatabase admin'
-            logger.debug("mongodb_create_database_executing name=%s db_name=%s", self.config.name, db_name)
-            
-            code, out = self.exec(cmd)
-            
-            logger.debug("mongodb_create_database_result name=%s db_name=%s exit_code=%s",
-                        self.config.name, db_name, code)
-            
-            result = code == 0
-            if result:
-                logger.info("mongodb_create_database_success name=%s db_name=%s", 
-                           self.config.name, db_name)
-            else:
-                logger.warning("mongodb_create_database_failed name=%s db_name=%s exit_code=%s",
-                             self.config.name, db_name, code)
-            
-            return result
-            
-        except Exception as e:
-            logger.exception("mongodb_create_database_error name=%s db_name=%s error=%s",
-                           self.config.name, db_name, e)
-            return False
+        port = self.extra["port"]
+        cmd = (
+            f"mongosh --quiet --port {port} "
+            f"--eval \"use {db_name}; db.createCollection('init')\" "
+            "--username admin --password MongoPassword123! --authenticationDatabase admin"
+        )
+
+        code, out = self.exec(cmd)
+        success = code == 0
+
+        logger.info(
+            "event=mongodb_create_database instance=%s db=%s success=%s port=%s",
+            self.extra["instance_id"], db_name, success, port
+        )
+
+        return success
 
 
 @activity.defn
 async def start_mongodb_activity(params: Dict[str, Any]) -> bool:
-    logger.info("mongodb_start_activity_called params_keys=%s", list(params.keys()))
+    instance_id = params.get("instance_id", 0)
+    logger.info("event=mongodb_start_activity instance=%s", instance_id)
+
     try:
-        logger.debug("mongodb_start_activity_creating_manager")
-        manager = MongoDBManager()
-        
-        logger.debug("mongodb_start_activity_checking_existing")
+        manager = MongoDBManager(instance_id=instance_id)
         existing = manager.manager._get_existing_container()
-        
+
         if existing:
-            logger.info("mongodb_start_activity_container_exists status=%s", existing.status)
-            try:
-                existing.reload()
-                logger.debug("mongodb_start_activity_container_reloaded status=%s", existing.status)
-            except Exception as reload_err:
-                logger.warning("mongodb_start_activity_reload_failed error=%s", reload_err)
-            
+            existing.reload()
             if existing.status == "running":
-                logger.info("mongodb_start_activity_already_running")
+                logger.info("event=mongodb_already_running instance=%s", instance_id)
                 return True
-            else:
-                logger.info("mongodb_start_activity_starting_existing_container")
-                try:
-                    existing.start()
-                    logger.info("mongodb_start_activity_started_successfully")
-                    return True
-                except Exception as start_err:
-                    logger.error("mongodb_start_activity_start_failed error=%s attempting_recreate=True", 
-                               start_err)
-                    try:
-                        logger.debug("mongodb_start_activity_removing_failed_container")
-                        existing.remove(force=True)
-                        logger.debug("mongodb_start_activity_failed_container_removed")
-                    except Exception as remove_err:
-                        logger.warning("mongodb_start_activity_remove_failed error=%s", remove_err)
-        
-        logger.info("mongodb_start_activity_creating_new_container")
+
+            try:
+                existing.start()
+                logger.info("event=mongodb_existing_started instance=%s", instance_id)
+                return True
+            except Exception:
+                existing.remove(force=True)
+
         manager.run()
-        logger.info("mongodb_start_activity_created_and_started")
+        logger.info("event=mongodb_started instance=%s", instance_id)
         return True
-        
+
     except Exception as e:
-        logger.exception("mongodb_start_activity_failed error=%s", e)
+        logger.exception("event=mongodb_start_failed instance=%s error=%s", instance_id, e)
         return False
 
 
 @activity.defn
 async def stop_mongodb_activity(params: Dict[str, Any]) -> bool:
-    logger.info("mongodb_stop_activity_called params_keys=%s", list(params.keys()))
+    instance_id = params.get("instance_id", 0)
+    logger.info("event=mongodb_stop_activity instance=%s", instance_id)
+
     try:
-        logger.debug("mongodb_stop_activity_creating_manager")
-        manager = MongoDBManager()
-        
-        logger.info("mongodb_stop_activity_stopping timeout=30")
+        manager = MongoDBManager(instance_id=instance_id)
         manager.stop(timeout=30)
-        
-        logger.info("mongodb_stop_activity_stopped")
+        logger.info("event=mongodb_stopped instance=%s", instance_id)
         return True
-        
     except Exception as e:
-        logger.exception("mongodb_stop_activity_failed error=%s", e)
+        logger.exception("event=mongodb_stop_failed instance=%s error=%s", instance_id, e)
         return False
 
 
 @activity.defn
 async def restart_mongodb_activity(params: Dict[str, Any]) -> bool:
-    logger.info("mongodb_restart_activity_called params_keys=%s", list(params.keys()))
+    instance_id = params.get("instance_id", 0)
+    logger.info("event=mongodb_restart_activity instance=%s", instance_id)
+
     try:
-        logger.debug("mongodb_restart_activity_creating_manager")
-        manager = MongoDBManager()
-        
-        logger.info("mongodb_restart_activity_restarting")
+        manager = MongoDBManager(instance_id=instance_id)
         manager.restart()
-        
-        logger.info("mongodb_restart_activity_restarted")
+        logger.info("event=mongodb_restarted instance=%s", instance_id)
         return True
-        
     except Exception as e:
-        logger.exception("mongodb_restart_activity_failed error=%s", e)
+        logger.exception("event=mongodb_restart_failed instance=%s error=%s", instance_id, e)
         return False
 
 
 @activity.defn
 async def delete_mongodb_activity(params: Dict[str, Any]) -> bool:
-    logger.info("mongodb_delete_activity_called params_keys=%s", list(params.keys()))
+    instance_id = params.get("instance_id", 0)
+    logger.info("event=mongodb_delete_activity instance=%s", instance_id)
+
     try:
-        logger.debug("mongodb_delete_activity_creating_manager")
-        manager = MongoDBManager()
-        
-        logger.info("mongodb_delete_activity_deleting force=False")
+        manager = MongoDBManager(instance_id=instance_id)
         manager.delete(force=False)
-        
-        logger.info("mongodb_delete_activity_deleted")
+        logger.info("event=mongodb_deleted instance=%s", instance_id)
         return True
-        
     except Exception as e:
-        logger.exception("mongodb_delete_activity_failed error=%s", e)
+        logger.exception("event=mongodb_delete_failed instance=%s error=%s", instance_id, e)
         return False
