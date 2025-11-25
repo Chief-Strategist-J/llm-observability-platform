@@ -7,7 +7,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between px-4">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-6 w-6 text-primary" />
             <span className="text-xl font-bold">LLM Chat</span>
@@ -28,7 +28,7 @@ export default function Home() {
       </header>
 
       <main className="flex-1">
-        <section className="container px-4 py-24 md:py-32">
+        <section className="container mx-auto px-4 py-24 md:py-32">
           <div className="mx-auto max-w-3xl text-center">
             <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
               Welcome to Your AI-Powered Dashboard
@@ -53,7 +53,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="container px-4 py-16">
+        <section className="container mx-auto px-4 py-16">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader>
@@ -129,7 +129,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="container px-4 py-16">
+        <section className="container mx-auto px-4 py-16">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold">Ready to get started?</h2>
             <p className="mt-4 text-muted-foreground">
@@ -148,7 +148,7 @@ export default function Home() {
       </main>
 
       <footer className="border-t py-8">
-        <div className="container px-4 text-center text-sm text-muted-foreground">
+        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p>&copy; 2024 LLM Chat. All rights reserved.</p>
         </div>
       </footer>
