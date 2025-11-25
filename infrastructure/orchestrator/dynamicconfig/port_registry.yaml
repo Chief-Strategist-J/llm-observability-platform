@@ -1,0 +1,94 @@
+kafka:
+  broker_port: 9092
+  controller_port: 19093
+  instance_increment: 100
+  max_instances: 10
+  
+mongodb:
+  port: 27017
+  instance_increment: 100
+  max_instances: 10
+
+mongo_express:
+  port: 8081
+  instance_increment: 100
+  max_instances: 10
+
+redis:
+  port: 6379
+  instance_increment: 100
+  max_instances: 10
+
+alertmanager:
+  port: 9093
+  instance_increment: 100
+  max_instances: 5
+
+prometheus:
+  port: 9090
+  instance_increment: 100
+  max_instances: 5
+
+grafana:
+  port: 3000
+  instance_increment: 100
+  max_instances: 5
+
+loki:
+  port: 3100
+  instance_increment: 100
+  max_instances: 5
+
+jaeger:
+  port: 16686
+  instance_increment: 100
+  max_instances: 5
+
+neo4j:
+  http_port: 7474
+  bolt_port: 7687
+  instance_increment: 100
+  max_instances: 5
+
+qdrant:
+  http_port: 6333
+  grpc_port: 6334
+  instance_increment: 100
+  max_instances: 5
+
+traefik:
+  http_port: 80
+  grafana_entrypoint: 31001
+  loki_entrypoint: 31002
+  otel_entrypoint: 31003
+  instance_increment: 100
+  max_instances: 3
+
+promtail:
+  port: 9080
+  instance_increment: 100
+  max_instances: 5
+
+temporal:
+  frontend_port: 7233
+  ui_port: 8080
+  postgres_port: 5432
+  instance_increment: 100
+  max_instances: 3
+
+argocd:
+  server_port: 8080
+  repo_server_port: 8081
+  instance_increment: 100
+  max_instances: 3
+
+_metadata:
+  auto_generated: false
+  version: "1.0.0"
+  description: "Centralized port registry for all orchestrator services. Supports multiple instances per service."
+  port_calculation_formula: "final_port = base_port + (instance_id * instance_increment)"
+  reserved_ports:
+    - 5432
+    - 7233
+    - 8080
+  last_updated: "2025-11-25T14:12:00+05:30"

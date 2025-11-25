@@ -1,4 +1,5 @@
 export interface Comment {
+    _id?: string
     id: number
     author: string
     avatar: string

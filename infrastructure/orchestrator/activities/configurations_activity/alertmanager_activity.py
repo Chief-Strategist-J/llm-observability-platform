@@ -2,6 +2,7 @@ import logging
 from typing import Dict, Any
 from temporalio import activity
 from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
+from infrastructure.orchestrator.base.port_manager import get_port_manager
 
 logger = logging.getLogger(__name__)
 
@@ -12,11 +13,13 @@ class AlertmanagerManager(BaseService):
     DEFAULT_PORT = 9093
     HEALTH_CHECK_TIMEOUT = 30
 
-    def __init__(self):
-        config = ContainerConfig(
-            image="prom/alertmanager:latest",
-            name="alertmanager-development",
-            ports={9093: 9093},
+    def __init__(self, instance_id: int = 0):
+        pm = get_port_manager()
+            broker_host_port = pm.get_port("alertmanager", instance_id, "port")
+            config = ContainerConfig(
+                image="prom/alertmanager:latest",
+                name="alertmanager-development",
+                ports={9093: broker_host_port},
             volumes={
                 "alertmanager-data": "/alertmanager",
                 # Mount config directory from your project
@@ -30,7 +33,7 @@ class AlertmanagerManager(BaseService):
             command=[
                 "--config.file=/etc/alertmanager/alertmanager_config.yaml",
                 "--storage.path=/alertmanager",
-                "--web.external-url=http://localhost:9093",
+                "--web.external-url=http://localhost:{broker_host_port}",
                 "--cluster.listen-address=",
             ],
             healthcheck={

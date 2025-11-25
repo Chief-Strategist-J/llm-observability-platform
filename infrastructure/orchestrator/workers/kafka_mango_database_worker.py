@@ -21,6 +21,12 @@ from infrastructure.orchestrator.activities.configurations_activity.kafka_activi
     restart_kafka_activity,
     delete_kafka_activity,
 )
+from infrastructure.orchestrator.activities.configurations_activity.mongo_express_activity import (
+    start_mongoexpress_activity,
+    stop_mongoexpress_activity,
+    restart_mongoexpress_activity,
+    delete_mongoexpress_activity,
+)
 
 from infrastructure.orchestrator.workflows.kafka_mangodb_database_workflow import (
     KafkaMangoDBDatabaseWorkflow,
@@ -43,6 +49,11 @@ class KafkaMangoDBDatabaseWorker(BaseWorker):
             stop_mongodb_activity,
             restart_mongodb_activity,
             delete_mongodb_activity,
+
+            start_mongoexpress_activity,
+            stop_mongoexpress_activity,
+            restart_mongoexpress_activity,
+            delete_mongoexpress_activity,
         ]
 
 async def main():

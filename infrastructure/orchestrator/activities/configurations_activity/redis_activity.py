@@ -2,6 +2,7 @@ import logging
 from typing import Dict, Any, Optional
 from temporalio import activity
 from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
+from infrastructure.orchestrator.base.port_manager import get_port_manager
 
 logger = logging.getLogger(__name__)
 
@@ -12,12 +13,14 @@ class RedisManager(BaseService):
     DEFAULT_PORT = 6379
     HEALTH_CHECK_TIMEOUT = 30
 
-    def __init__(self, config: Optional[ContainerConfig] = None) -> None:
+    def __init__(self, instance_id: int = 0, config: Optional[ContainerConfig] = None) -> None:
         if config is None:
+            pm = get_port_manager()
+            redis_host_port = pm.get_port("redis", instance_id, "port")
             config = ContainerConfig(
                 image="redis:7-alpine",
                 name="redis-development",
-                ports={6379: 6379},
+                ports={6379: redis_host_port},
                 volumes={"redis-data": "/data"},
                 network="observability-network",
                 memory="256m",

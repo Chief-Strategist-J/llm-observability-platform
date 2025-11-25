@@ -2,6 +2,7 @@ import logging
 from typing import Dict, Any
 from temporalio import activity
 from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
+from infrastructure.orchestrator.base.port_manager import get_port_manager
 
 logger = logging.getLogger(__name__)
 
@@ -12,11 +13,17 @@ class QdrantManager(BaseService):
     DEFAULT_PORT = 6333
     HEALTH_CHECK_TIMEOUT = 30
 
-    def __init__(self):
-        config = ContainerConfig(
-            image="qdrant/qdrant:latest",
-            name="qdrant-development",
-            ports={6333: 6333, 6334: 6334},
+    def __init__(self, instance_id: int = 0):
+        pm = get_port_manager()
+            http_port = pm.get_port("qdrant", instance_id, "http_port")
+            grpc_port = pm.get_port("qdrant", instance_id, "grpc_port")
+            config = ContainerConfig(
+                image="qdrant/qdrant:latest",
+                name="qdrant-development",
+                ports={
+                    6333: http_port,
+                    6334: grpc_port,
+                },
             volumes={
                 "qdrant-storage": "/qdrant/storage",
                 "qdrant-snapshots": "/qdrant/snapshots",
