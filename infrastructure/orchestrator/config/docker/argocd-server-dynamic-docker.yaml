@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  argocd-server:
+    image: argoproj/argocd:latest
+    container_name: argocd-server-instance-${INSTANCE_ID}
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
+      - "${GRPC_PORT}:${GRPC_PORT}"
+    environment:
+      ARGOCD_SERVER_INSECURE: "true"
+      SERVER_PORT: "${SERVER_PORT}"
+      GRPC_PORT: "${GRPC_PORT}"
+      REPO_SERVER_PORT: "${REPO_SERVER_PORT}"
+      INSTANCE_ID: "${INSTANCE_ID}"
+    volumes:
+      - argocd-data-${INSTANCE_ID}:/var/argocd
+      - /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/argocd:/etc/argocd/config
+    networks:
+      - monitoring-bridge
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
+        reservations:
+          memory: 256m
+    restart: unless-stopped
+    command:
+      - "argocd-server"
+      - "--insecure"
+      - "--staticassets"
+      - "/shared/app"
+      - "--repo-server=argocd-repo-server:${REPO_SERVER_PORT}"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${SERVER_PORT}/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  argocd-data-${INSTANCE_ID}:
+
+networks:
+  monitoring-bridge:
+    external: true

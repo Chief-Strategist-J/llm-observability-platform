@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  loki:
+    image: grafana/loki:latest
+    container_name: loki-instance-${INSTANCE_ID}
+    ports:
+      - "${HTTP_PORT}:${HTTP_PORT}"
+      - "${GRPC_PORT}:${GRPC_PORT}"
+    environment:
+      LOKI_CONFIG_USE_INGRESS: "true"
+      HTTP_PORT: "${HTTP_PORT}"
+      GRPC_PORT: "${GRPC_PORT}"
+      INSTANCE_ID: "${INSTANCE_ID}"
+    command:
+      - "-config.file=/etc/loki/local-config.yaml"
+    volumes:
+      - ${DATA_DIR_PATH}:/loki:rw
+      - ${CONFIG_FILE_PATH}:/etc/loki/local-config.yaml:ro
+    networks:
+      - observability-network
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+        reservations:
+          memory: 256m
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.loki.rule: "Host(`loki.local`)"
+      traefik.http.routers.loki.entrypoints: "loki"
+      traefik.http.services.loki.loadbalancer.server.port: "${HTTP_PORT}"
+      traefik.docker.network: "observability-network"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:${HTTP_PORT}/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+networks:
+  observability-network:
+    external: true

@@ -18,7 +18,7 @@ def _can_connect(url: str, timeout: float = 5.0) -> bool:
         parsed = urllib.parse.urlparse(url)
         host = parsed.hostname or "localhost"
         port = parsed.port or (443 if parsed.scheme == "https" else 80)
-        
+
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.settimeout(timeout)
             result = sock.connect_ex((host, port))
@@ -70,7 +70,6 @@ def _build_ready_url(loki_query_url: str) -> str:
     logger.debug("verify_build_ready_url_result url=%s ready_url=%s", loki_query_url, result)
     return result
 
-
 @activity.defn
 async def verify_event_ingestion_logs(params: Dict[str, Any]) -> Dict[str, Any]:
     logger.info("verify_event_ingestion_start params=%s", list(params.keys()))
@@ -104,6 +103,16 @@ async def verify_event_ingestion_logs(params: Dict[str, Any]) -> Dict[str, Any]:
     start_time = time.time()
     ready_checks = 0
 
+    parsed = urllib.parse.urlparse(loki_query_url)
+    host_for_direct = "localhost"
+    candidate_ports = []
+    try:
+        candidate_ports.append(parsed.port) if parsed.port else None
+    except Exception:
+        pass
+    candidate_ports.extend([3100, 3101])
+    candidate_ports = [p for p in candidate_ports if p]
+
     while time.time() - start_time < timeout_seconds:
         ready_checks += 1
         try:
@@ -118,7 +127,26 @@ async def verify_event_ingestion_logs(params: Dict[str, Any]) -> Dict[str, Any]:
             logger.debug("verify_ready_check_http_error attempt=%s code=%s", ready_checks, e.code)
         except Exception as e:
             logger.debug("verify_ready_check_error attempt=%s error=%s", ready_checks, e)
-        await asyncio.sleep(1)
+
+        for port in candidate_ports:
+            try:
+                alt_ready = f"http://{host_for_direct}:{port}/ready"
+                req = urllib.request.Request(alt_ready, method="GET")
+                with urllib.request.urlopen(req, timeout=3) as resp:
+                    code = resp.getcode()
+                    logger.debug("verify_alt_ready_check port=%s attempt=%s code=%s", port, ready_checks, code)
+                    if code == 200:
+                        logger.info("verify_loki_ready_alt port=%s attempt=%s elapsed=%.1f", port, ready_checks, time.time() - start_time)
+                        ready_url = alt_ready
+                        break
+            except urllib.error.HTTPError as e:
+                logger.debug("verify_alt_ready_http_error port=%s attempt=%s code=%s", port, ready_checks, getattr(e, "code", None))
+            except Exception as e:
+                logger.debug("verify_alt_ready_error port=%s attempt=%s error=%s", port, ready_checks, e)
+        else:
+            await asyncio.sleep(1)
+            continue
+        break
     else:
         logger.error("verify_loki_not_ready checks=%s timeout=%s", ready_checks, timeout_seconds)
         return {"success": False, "data": {"ready_checks": ready_checks}, "error": "loki_not_ready"}
@@ -131,7 +159,6 @@ async def verify_event_ingestion_logs(params: Dict[str, Any]) -> Dict[str, Any]:
 
     while time.time() - q_start < timeout_seconds:
         attempt += 1
-
         try:
             query = urllib.parse.quote(logql, safe="")
             now = int(time.time() * 1e9)
@@ -153,14 +180,14 @@ async def verify_event_ingestion_logs(params: Dict[str, Any]) -> Dict[str, Any]:
                 logger.debug("verify_query_response attempt=%s code=%s body_len=%s", attempt, code, len(body))
 
                 if code == 200:
-                    parsed = json.loads(body)
-                    results = parsed.get("data", {}).get("result", [])
+                    parsed_body = json.loads(body)
+                    results = parsed_body.get("data", {}).get("result", [])
 
                     logger.info("verify_query_results attempt=%s results=%s", attempt, len(results))
 
                     if results:
-                        logger.info("verify_ingestion_success results=%s attempts=%s elapsed=%.1f", 
-                                  len(results), attempt, time.time() - q_start)
+                        logger.info("verify_ingestion_success results=%s attempts=%s elapsed=%.1f",
+                                    len(results), attempt, time.time() - q_start)
                         return {
                             "success": True,
                             "data": {

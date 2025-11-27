@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opentelemetry-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opentelemetry-collector
+  template:
+    metadata:
+      labels:
+        app: opentelemetry-collector
+    spec:
+      hostNetwork: false
+      containers:
+        - name: opentelemetry-collector
+          image: otel/opentelemetry-collector-contrib:0.91.0
+          args:
+            - "--config=/etc/otelcol/otel-collector-generated.yaml"
+          ports:
+            - name: metrics
+              containerPort: 8888
+          volumeMounts:
+            - name: otel-config
+              mountPath: /etc/otelcol
+            - name: otel-logs
+              mountPath: /var/log/otelcol
+            - name: docker-sock
+              mountPath: /var/run/docker.sock
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: 8888
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: 8888
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: otel-config
+          persistentVolumeClaim:
+            claimName: otel-config-pvc
+        - name: otel-logs
+          persistentVolumeClaim:
+            claimName: otel-logs-pvc
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket

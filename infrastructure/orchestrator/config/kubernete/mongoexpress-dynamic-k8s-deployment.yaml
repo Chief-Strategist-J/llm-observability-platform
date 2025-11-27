@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-express-instance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo-express-instance
+  template:
+    metadata:
+      labels:
+        app: mongo-express-instance
+    spec:
+      containers:
+        - name: mongo-express
+          image: mongo-express:latest
+          env:
+            - name: ME_CONFIG_MONGODB_SERVER
+              value: "mongodb-development"
+            - name: ME_CONFIG_MONGODB_ADMINUSERNAME
+              value: "admin"
+            - name: ME_CONFIG_MONGODB_ADMINPASSWORD
+              value: "MongoPassword123!"
+            - name: ME_CONFIG_BASICAUTH_USERNAME
+              value: "admin"
+            - name: ME_CONFIG_BASICAUTH_PASSWORD
+              value: "AdminPassword!"
+            - name: ME_CONFIG_SITE_BASEURL
+              value: "/"
+            - name: ME_CONFIG_SITE_PORT
+              value: "{{UI_PORT}}"
+            - name: UI_PORT
+              value: "{{UI_PORT}}"
+            - name: INSTANCE_ID
+              value: "{{INSTANCE_ID}}"
+          ports:
+            - name: http
+              containerPort: {{UI_PORT}}
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+            requests:
+              memory: "256Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{UI_PORT}}
+            initialDelaySeconds: 20
+            timeoutSeconds: 10
+            periodSeconds: 30
+            failureThreshold: 5

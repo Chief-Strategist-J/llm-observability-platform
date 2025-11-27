@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  mongoexpress:
+    image: mongo-express:latest
+    container_name: mongo-express-${INSTANCE_ID}
+    ports:
+      - "${UI_PORT}:${UI_PORT}"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: "mongodb-development"
+      ME_CONFIG_MONGODB_ADMINUSERNAME: "admin"
+      ME_CONFIG_MONGODB_ADMINPASSWORD: "MongoPassword123!"
+      ME_CONFIG_BASICAUTH_USERNAME: "admin"
+      ME_CONFIG_BASICAUTH_PASSWORD: "AdminPassword!"
+      ME_CONFIG_SITE_BASEURL: "/"
+      ME_CONFIG_SITE_PORT: "${UI_PORT}"
+      UI_PORT: "${UI_PORT}"
+      INSTANCE_ID: "${INSTANCE_ID}"
+    networks:
+      - data-network
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+        reservations:
+          memory: 256m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sSf http://localhost:${UI_PORT}/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+networks:
+  data-network:
+    external: true

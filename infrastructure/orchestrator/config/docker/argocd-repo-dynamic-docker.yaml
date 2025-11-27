@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  argocd-repo-server:
+    image: argoproj/argocd:latest
+    container_name: argocd-repo-server-instance-${INSTANCE_ID}
+    ports:
+      - "${REPO_SERVER_PORT}:${REPO_SERVER_PORT}"
+    environment:
+      REPO_SERVER_PORT: "${REPO_SERVER_PORT}"
+      INSTANCE_ID: "${INSTANCE_ID}"
+    volumes:
+      - argocd-repo-data-${INSTANCE_ID}:/var/argocd/repo
+    networks:
+      - monitoring-bridge
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+        reservations:
+          memory: 128m
+    restart: unless-stopped
+    command:
+      - "argocd-repo-server"
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -an | grep ${REPO_SERVER_PORT} || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  argocd-repo-data-${INSTANCE_ID}:
+
+networks:
+  monitoring-bridge:
+    external: true

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: opentelemetry-collector-service
+spec:
+  type: ClusterIP
+  selector:
+    app: opentelemetry-collector
+  ports:
+    - name: metrics
+      port: 8888
+      targetPort: 8888

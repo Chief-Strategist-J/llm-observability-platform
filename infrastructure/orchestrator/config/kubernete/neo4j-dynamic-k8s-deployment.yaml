@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neo4j-instance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: neo4j-instance
+  template:
+    metadata:
+      labels:
+        app: neo4j-instance
+    spec:
+      containers:
+        - name: neo4j
+          image: neo4j:latest
+          env:
+            - name: NEO4J_AUTH
+              value: "neo4j/Neo4jPassword123!"
+            - name: NEO4J_ACCEPT_LICENSE_AGREEMENT
+              value: "yes"
+            - name: NEO4J_dbms_memory_pagecache_size
+              value: "512M"
+            - name: NEO4J_dbms_memory_heap_initial__size
+              value: "512M"
+            - name: NEO4J_dbms_memory_heap_max__size
+              value: "512M"
+            - name: NEO4J_dbms_connector_bolt_listen__address
+              value: "0.0.0.0:{{BOLT_PORT}}"
+            - name: NEO4J_dbms_connector_http_listen__address
+              value: "0.0.0.0:{{HTTP_PORT}}"
+            - name: HTTP_PORT
+              value: "{{HTTP_PORT}}"
+            - name: BOLT_PORT
+              value: "{{BOLT_PORT}}"
+            - name: INSTANCE_ID
+              value: "{{INSTANCE_ID}}"
+          ports:
+            - name: http
+              containerPort: {{HTTP_PORT}}
+            - name: bolt
+              containerPort: {{BOLT_PORT}}
+          volumeMounts:
+            - name: neo4j-data
+              mountPath: /data
+            - name: neo4j-logs
+              mountPath: /logs
+            - name: neo4j-import
+              mountPath: /var/lib/neo4j/import
+            - name: neo4j-plugins
+              mountPath: /plugins
+          resources:
+            limits:
+              memory: "1Gi"
+              cpu: "1"
+            requests:
+              memory: "512Mi"
+              cpu: "1"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{HTTP_PORT}}
+            initialDelaySeconds: 60
+            timeoutSeconds: 10
+            periodSeconds: 30
+            failureThreshold: 3
+      volumes:
+        - name: neo4j-data
+          persistentVolumeClaim:
+            claimName: neo4j-data-pvc
+        - name: neo4j-logs
+          persistentVolumeClaim:
+            claimName: neo4j-logs-pvc
+        - name: neo4j-import
+          persistentVolumeClaim:
+            claimName: neo4j-import-pvc
+        - name: neo4j-plugins
+          persistentVolumeClaim:
+            claimName: neo4j-plugins-pvc

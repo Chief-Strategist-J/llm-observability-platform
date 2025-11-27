@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loki-instance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loki-instance
+  template:
+    metadata:
+      labels:
+        app: loki-instance
+    spec:
+      containers:
+        - name: loki
+          image: grafana/loki:latest
+          env:
+            - name: LOKI_CONFIG_USE_INGRESS
+              value: "true"
+            - name: HTTP_PORT
+              value: "{{HTTP_PORT}}"
+            - name: GRPC_PORT
+              value: "{{GRPC_PORT}}"
+            - name: INSTANCE_ID
+              value: "{{INSTANCE_ID}}"
+          args:
+            - "-config.file=/etc/loki/local-config.yaml"
+          ports:
+            - name: http
+              containerPort: {{HTTP_PORT}}
+            - name: grpc
+              containerPort: {{GRPC_PORT}}
+          volumeMounts:
+            - name: loki-data
+              mountPath: /loki
+            - name: loki-config
+              mountPath: /etc/loki/local-config.yaml
+              subPath: local-config.yaml
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+            requests:
+              memory: "256Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: {{HTTP_PORT}}
+            initialDelaySeconds: 60
+            timeoutSeconds: 10
+            failureThreshold: 5
+            periodSeconds: 30
+      volumes:
+        - name: loki-data
+          persistentVolumeClaim:
+            claimName: loki-pvc
+        - name: loki-config
+          configMap:
+            name: loki-config

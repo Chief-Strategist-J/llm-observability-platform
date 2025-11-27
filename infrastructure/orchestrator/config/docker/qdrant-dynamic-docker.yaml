@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant-instance-${INSTANCE_ID}
+    ports:
+      - "${HTTP_PORT}:${HTTP_PORT}"
+      - "${GRPC_PORT}:${GRPC_PORT}"
+    volumes:
+      - qdrant-storage-${INSTANCE_ID}:/qdrant/storage
+      - qdrant-snapshots-${INSTANCE_ID}:/qdrant/snapshots
+    networks:
+      - data-network
+    environment:
+      INSTANCE_ID: "${INSTANCE_ID}"
+      HTTP_PORT: "${HTTP_PORT}"
+      GRPC_PORT: "${GRPC_PORT}"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+        reservations:
+          memory: 256m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${HTTP_PORT}/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  qdrant-storage-${INSTANCE_ID}:
+  qdrant-snapshots-${INSTANCE_ID}:
+
+networks:
+  data-network:
+    external: true

@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qdrant-instance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qdrant-instance
+  template:
+    metadata:
+      labels:
+        app: qdrant-instance
+    spec:
+      containers:
+        - name: qdrant
+          image: qdrant/qdrant:latest
+          env:
+            - name: INSTANCE_ID
+              value: "{{INSTANCE_ID}}"
+            - name: HTTP_PORT
+              value: "{{HTTP_PORT}}"
+            - name: GRPC_PORT
+              value: "{{GRPC_PORT}}"
+          ports:
+            - name: http
+              containerPort: {{HTTP_PORT}}
+            - name: grpc
+              containerPort: {{GRPC_PORT}}
+          volumeMounts:
+            - name: qdrant-storage
+              mountPath: /qdrant/storage
+            - name: qdrant-snapshots
+              mountPath: /qdrant/snapshots
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+            requests:
+              memory: "256Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{HTTP_PORT}}
+            initialDelaySeconds: 40
+            timeoutSeconds: 10
+            periodSeconds: 30
+            failureThreshold: 3
+      volumes:
+        - name: qdrant-storage
+          persistentVolumeClaim:
+            claimName: qdrant-storage-pvc
+        - name: qdrant-snapshots
+          persistentVolumeClaim:
+            claimName: qdrant-snapshots-pvc
