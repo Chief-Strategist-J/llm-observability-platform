@@ -23,7 +23,7 @@ class MetricsPipelineWorkflow(BaseWorkflow):
         dynamic_dir = params.get("dynamic_dir", "infrastructure/orchestrator/dynamicconfig")
         prometheus_url = params.get("prometheus_url", "http://localhost:9090")
         grafana_url = params.get("grafana_url", "http://localhost:31001")
-        otel_container_name = params.get("otel_container_name", "opentelemetry-collector-development")
+        otel_container_name = params.get("otel_container_name", "opentelemetry-collector")
 
         workflow.logger.info({
             "labels": {"pipeline": "metrics", "event": "endpoints"},

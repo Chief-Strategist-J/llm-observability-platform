@@ -128,7 +128,7 @@ class LokiManager(BaseService):
                 "interval": 30000000000,
                 "timeout": 10000000000,
                 "retries": 3,
-                "start_period": 20000000000
+                "start_period": 40000000000
             }
         )
 

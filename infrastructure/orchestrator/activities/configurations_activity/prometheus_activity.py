@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 class PrometheusManager(BaseService):
     SERVICE_NAME = "Prometheus"
     SERVICE_DESCRIPTION = "metrics collection and monitoring"
+    DEFAULT_PORT = 9090
     HEALTH_CHECK_TIMEOUT = 30
 
     def __init__(self, instance_id: int = 0):
@@ -19,34 +20,29 @@ class PrometheusManager(BaseService):
 
         dynamic_dir = Path("/home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/dynamicconfig")
         dynamic_dir.mkdir(parents=True, exist_ok=True)
-
-        prometheus_config = dynamic_dir / f"prometheus-{instance_id}.yml"
-
+        
+        prometheus_config = dynamic_dir / "prometheus.yml"
         if not prometheus_config.exists():
-            default_config = f"""global:
+            default_config = """global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
 scrape_configs:
   - job_name: 'prometheus'
     static_configs:
-      - targets: ['localhost:{host_port}']
-
+      - targets: ['localhost:9090']
+  
   - job_name: 'otel-collector'
     static_configs:
       - targets: ['opentelemetry-collector-development:8888']
 """
             prometheus_config.write_text(default_config, encoding="utf-8")
-
-            logger.info(
-                "event=prometheus_config_created path=%s instance=%s",
-                prometheus_config, instance_id
-            )
+            logger.info("prometheus_config_created path=%s", prometheus_config)
 
         config = ContainerConfig(
             image="prom/prometheus:latest",
             name=f"prometheus-instance-{instance_id}",
-            ports={host_port: host_port},
+            ports={9090: host_port},
             volumes={
                 "prometheus-data": {"bind": "/prometheus", "mode": "rw"},
                 str(prometheus_config.absolute()): {"bind": "/etc/prometheus/prometheus.yml", "mode": "ro"},
@@ -93,7 +89,8 @@ scrape_configs:
 @activity.defn
 async def start_prometheus_activity(params: Dict[str, Any]) -> bool:
     logger.info("event=prometheus_start params=%s", params)
-    PrometheusManager().run()
+    instance_id = params.get("instance_id", 0)
+    PrometheusManager(instance_id=instance_id).run()
     logger.info("event=prometheus_started")
     return True
 
@@ -101,7 +98,8 @@ async def start_prometheus_activity(params: Dict[str, Any]) -> bool:
 @activity.defn
 async def stop_prometheus_activity(params: Dict[str, Any]) -> bool:
     logger.info("event=prometheus_stop_begin")
-    PrometheusManager().stop(timeout=30)
+    instance_id = params.get("instance_id", 0)
+    PrometheusManager(instance_id=instance_id).stop(timeout=30)
     logger.info("event=prometheus_stop_complete")
     return True
 
@@ -109,7 +107,8 @@ async def stop_prometheus_activity(params: Dict[str, Any]) -> bool:
 @activity.defn
 async def restart_prometheus_activity(params: Dict[str, Any]) -> bool:
     logger.info("event=prometheus_restart_begin")
-    PrometheusManager().restart()
+    instance_id = params.get("instance_id", 0)
+    PrometheusManager(instance_id=instance_id).restart()
     logger.info("event=prometheus_restart_complete")
     return True
 
@@ -117,6 +116,7 @@ async def restart_prometheus_activity(params: Dict[str, Any]) -> bool:
 @activity.defn
 async def delete_prometheus_activity(params: Dict[str, Any]) -> bool:
     logger.info("event=prometheus_delete_begin")
-    PrometheusManager().delete(force=False)
+    instance_id = params.get("instance_id", 0)
+    PrometheusManager(instance_id=instance_id).delete(force=False)
     logger.info("event=prometheus_delete_complete")
     return True

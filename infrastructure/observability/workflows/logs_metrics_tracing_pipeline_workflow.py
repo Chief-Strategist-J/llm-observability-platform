@@ -20,6 +20,7 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
             "params": params
         })
 
+        # Start infrastructure services
         traefik_result = await workflow.execute_activity(
             "start_traefik_activity",
             {},
@@ -40,6 +41,7 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
         )
         workflow.logger.info({"labels": {"pipeline": "observability", "event": "grafana"}, "msg": "grafana_started"})
 
+        # Start backend services
         await workflow.execute_activity(
             "start_loki_activity",
             {},
@@ -55,6 +57,13 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
         workflow.logger.info({"labels": {"pipeline": "observability", "event": "prometheus"}, "msg": "prometheus_started"})
 
         await workflow.execute_activity(
+            "start_tempo_activity",
+            {},
+            start_to_close_timeout=timedelta(seconds=120),
+        )
+        workflow.logger.info({"labels": {"pipeline": "observability", "event": "tempo"}, "msg": "tempo_started"})
+
+        await workflow.execute_activity(
             "start_opentelemetry_collector",
             {},
             start_to_close_timeout=timedelta(seconds=120),
@@ -67,8 +76,10 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
         loki_push_url = params.get("loki_push_url", "http://localhost:31002/loki/api/v1/push")
         loki_query_url = params.get("loki_query_url", "http://localhost:31002/loki/api/v1/query")
         prometheus_url = params.get("prometheus_url", "http://localhost:9090")
+        tempo_query_url = params.get("tempo_query_url", "http://localhost:31003")
         grafana_url = params.get("grafana_url", "http://localhost:31001")
 
+        # ========== LOGS PIPELINE ==========
         workflow.logger.info({
             "labels": {"pipeline": "observability", "event": "logs_pipeline_start"},
             "msg": "starting_logs_pipeline"
@@ -79,15 +90,7 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
             {"dynamic_dir": dynamic_dir, "loki_push_url": loki_push_url},
             start_to_close_timeout=timedelta(seconds=120),
         )
-        workflow.logger.info({
-            "labels": {"pipeline": "observability", "event": "logs_config"},
-            "msg": "logs_config_generated",
-            "result": logs_gen_res
-        })
-
-        logs_config_path = None
-        if isinstance(logs_gen_res, dict):
-            logs_config_path = logs_gen_res.get("data", {}).get("config_path")
+        logs_config_path = logs_gen_res.get("data", {}).get("config_path") if isinstance(logs_gen_res, dict) else None
 
         await workflow.execute_activity(
             "configure_source_paths_logs",
@@ -126,7 +129,6 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
             },
             start_to_close_timeout=timedelta(seconds=120),
         )
-        workflow.logger.info({"labels": {"pipeline": "observability", "event": "logs_datasource"}, "msg": "loki_datasource_created"})
 
         logs_emit_res = await workflow.execute_activity(
             "emit_test_event_logs",
@@ -134,11 +136,9 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
             start_to_close_timeout=timedelta(seconds=60),
         )
 
-        logs_token = None
-        if isinstance(logs_emit_res, dict):
-            logs_token = logs_emit_res.get("data", {}).get("token")
+        logs_token = logs_emit_res.get("data", {}).get("token") if isinstance(logs_emit_res, dict) else None
 
-        logs_verify_res = await workflow.execute_activity(
+        await workflow.execute_activity(
             "verify_event_ingestion_logs",
             {
                 "loki_query_url": loki_query_url,
@@ -148,12 +148,9 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
             },
             start_to_close_timeout=timedelta(seconds=120),
         )
-        workflow.logger.info({
-            "labels": {"pipeline": "observability", "event": "logs_verify"},
-            "msg": "logs_verification_complete",
-            "result": logs_verify_res
-        })
+        workflow.logger.info({"labels": {"pipeline": "observability", "event": "logs_complete"}, "msg": "logs_pipeline_complete"})
 
+        # ========== METRICS PIPELINE ==========
         workflow.logger.info({
             "labels": {"pipeline": "observability", "event": "metrics_pipeline_start"},
             "msg": "starting_metrics_pipeline"
@@ -164,15 +161,7 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
             {"dynamic_dir": dynamic_dir, "prometheus_url": prometheus_url},
             start_to_close_timeout=timedelta(seconds=120),
         )
-        workflow.logger.info({
-            "labels": {"pipeline": "observability", "event": "metrics_config"},
-            "msg": "metrics_config_generated",
-            "result": metrics_gen_res
-        })
-
-        metrics_config_path = None
-        if isinstance(metrics_gen_res, dict):
-            metrics_config_path = metrics_gen_res.get("data", {}).get("config_path")
+        metrics_config_path = metrics_gen_res.get("data", {}).get("config_path") if isinstance(metrics_gen_res, dict) else None
 
         await workflow.execute_activity(
             "configure_source_paths_metrics",
@@ -211,7 +200,6 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
             },
             start_to_close_timeout=timedelta(seconds=120),
         )
-        workflow.logger.info({"labels": {"pipeline": "observability", "event": "metrics_datasource"}, "msg": "prometheus_datasource_created"})
 
         metrics_emit_res = await workflow.execute_activity(
             "emit_test_event_metrics",
@@ -219,14 +207,11 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
             start_to_close_timeout=timedelta(seconds=60),
         )
 
-        metric_name = None
-        metrics_token = None
-        if isinstance(metrics_emit_res, dict):
-            metric_data = metrics_emit_res.get("data", {})
-            metric_name = metric_data.get("metric_name")
-            metrics_token = metric_data.get("token")
+        metric_data = metrics_emit_res.get("data", {}) if isinstance(metrics_emit_res, dict) else {}
+        metric_name = metric_data.get("metric_name")
+        metrics_token = metric_data.get("token")
 
-        metrics_verify_res = await workflow.execute_activity(
+        await workflow.execute_activity(
             "verify_event_ingestion_metrics",
             {
                 "prometheus_query_url": f"{prometheus_url}/api/v1/query",
@@ -236,11 +221,82 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
             },
             start_to_close_timeout=timedelta(seconds=120),
         )
+        workflow.logger.info({"labels": {"pipeline": "observability", "event": "metrics_complete"}, "msg": "metrics_pipeline_complete"})
+
+        # ========== TRACING PIPELINE ==========
         workflow.logger.info({
-            "labels": {"pipeline": "observability", "event": "metrics_verify"},
-            "msg": "metrics_verification_complete",
-            "result": metrics_verify_res
+            "labels": {"pipeline": "observability", "event": "tracing_pipeline_start"},
+            "msg": "starting_tracing_pipeline"
         })
+
+        tracing_gen_res = await workflow.execute_activity(
+            "generate_config_tracings",
+            {"dynamic_dir": dynamic_dir, "internal_tempo_url": "tempo-development:4317"},
+            start_to_close_timeout=timedelta(seconds=120),
+        )
+        tracing_config_path = tracing_gen_res.get("data", {}).get("config_path") if isinstance(tracing_gen_res, dict) else None
+
+        await workflow.execute_activity(
+            "configure_source_paths_tracings",
+            {"config_path": tracing_config_path} if tracing_config_path else {},
+            start_to_close_timeout=timedelta(seconds=60),
+        )
+
+        await workflow.execute_activity(
+            "configure_source_tracings",
+            {"config_path": tracing_config_path, "dynamic_dir": dynamic_dir} if tracing_config_path else {},
+            start_to_close_timeout=timedelta(seconds=60),
+        )
+
+        await workflow.execute_activity(
+            "deploy_processor_tracings",
+            {"dynamic_dir": dynamic_dir, "config_name": "otel-collector-tracings-generated.yaml"},
+            start_to_close_timeout=timedelta(seconds=60),
+        )
+
+        await workflow.execute_activity(
+            "restart_source_tracings",
+            {"container_name": "opentelemetry-collector", "timeout_seconds": 60},
+            start_to_close_timeout=timedelta(seconds=120),
+        )
+
+        await workflow.execute_activity(
+            "create_grafana_datasource_tracings_activity",
+            {
+                "grafana_url": grafana_url,
+                "grafana_user": "admin",
+                "grafana_password": "SuperSecret123!",
+                "datasource_name": "tempo",
+                "tempo_url": "http://tempo-development:3200",
+                "upsert_mode": "upsert",
+                "org_id": 1,
+            },
+            start_to_close_timeout=timedelta(seconds=120),
+        )
+
+        tracing_emit_res = await workflow.execute_activity(
+            "emit_test_event_tracings",
+            {
+                "otlp_endpoint": "http://localhost:4317",
+                "service_name": "test-tracing-service",
+                "span_name": "test-span"
+            },
+            start_to_close_timeout=timedelta(seconds=60),
+        )
+
+        trace_id = tracing_emit_res.get("data", {}).get("token") if isinstance(tracing_emit_res, dict) else None
+
+        await workflow.execute_activity(
+            "verify_event_ingestion_tracings",
+            {
+                "tempo_query_url": tempo_query_url,
+                "trace_id": trace_id if trace_id else "dummy-trace-id",
+                "timeout_seconds": 60,
+                "poll_interval": 2.0
+            },
+            start_to_close_timeout=timedelta(seconds=120),
+        )
+        workflow.logger.info({"labels": {"pipeline": "observability", "event": "tracing_complete"}, "msg": "tracing_pipeline_complete"})
 
         workflow.logger.info({"labels": {"pipeline": "observability", "event": "done"}, "msg": "workflow_complete"})
 

@@ -1,0 +1,36 @@
+{
+    "name": "@yourcompany/observability-sdk",
+    "version": "1.0.0",
+    "description": "Unified observability SDK for logs, metrics, and tracing",
+    "main": "src/index.js",
+    "types": "src/index.d.ts",
+    "scripts": {
+        "test": "jest",
+        "build": "tsc",
+        "lint": "eslint src/"
+    },
+    "keywords": [
+        "observability",
+        "opentelemetry",
+        "logging",
+        "metrics",
+        "tracing"
+    ],
+    "author": "Your Company",
+    "license": "MIT",
+    "dependencies": {
+        "@opentelemetry/sdk-node": "^0.45.0",
+        "@opentelemetry/auto-instrumentations-node": "^0.39.0",
+        "@opentelemetry/exporter-trace-otlp-grpc": "^0.45.0",
+        "@opentelemetry/exporter-metrics-otlp-grpc": "^0.45.0",
+        "@opentelemetry/exporter-logs-otlp-grpc": "^0.45.0"
+    },
+    "devDependencies": {
+        "jest": "^29.0.0",
+        "eslint": "^8.0.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/yourcompany/observability-sdk-js"
+    }
+}
