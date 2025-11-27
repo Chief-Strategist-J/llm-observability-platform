@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: observability-platform
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Chief-Strategist-J/llm-observability-platform
+    targetRevision: HEAD
+    path: deployments/observability
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

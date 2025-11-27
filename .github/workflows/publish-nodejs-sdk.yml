@@ -1,0 +1,45 @@
+name: Publish Node.js SDK
+
+on:
+  push:
+    paths:
+      - 'sdks/nodejs/**'
+      - '.github/workflows/publish-nodejs-sdk.yml'
+    branches:
+      - main
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@chief-strategist-j'
+
+      - name: Install dependencies
+        run: |
+          cd sdks/nodejs
+          npm ci
+
+      - name: Build
+        run: |
+          cd sdks/nodejs
+          npm run build || true
+
+      - name: Publish to GitHub Packages
+        run: |
+          cd sdks/nodejs
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
