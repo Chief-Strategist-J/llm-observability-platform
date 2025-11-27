@@ -1,56 +1,61 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: qdrant-instance
+  name: qdrant-${INSTANCE_ID}
+  labels:
+    app: qdrant
+    instance: "${INSTANCE_ID}"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: qdrant-instance
+      app: qdrant
+      instance: "${INSTANCE_ID}"
   template:
     metadata:
       labels:
-        app: qdrant-instance
+        app: qdrant
+        instance: "${INSTANCE_ID}"
     spec:
       containers:
-        - name: qdrant
-          image: qdrant/qdrant:latest
-          env:
-            - name: INSTANCE_ID
-              value: "{{INSTANCE_ID}}"
-            - name: HTTP_PORT
-              value: "{{HTTP_PORT}}"
-            - name: GRPC_PORT
-              value: "{{GRPC_PORT}}"
-          ports:
-            - name: http
-              containerPort: {{HTTP_PORT}}
-            - name: grpc
-              containerPort: {{GRPC_PORT}}
-          volumeMounts:
-            - name: qdrant-storage
-              mountPath: /qdrant/storage
-            - name: qdrant-snapshots
-              mountPath: /qdrant/snapshots
-          resources:
-            limits:
-              memory: "512Mi"
-              cpu: "500m"
-            requests:
-              memory: "256Mi"
-              cpu: "500m"
-          livenessProbe:
-            httpGet:
-              path: /
-              port: {{HTTP_PORT}}
-            initialDelaySeconds: 40
-            timeoutSeconds: 10
-            periodSeconds: 30
-            failureThreshold: 3
+      - name: qdrant
+        image: qdrant/qdrant:latest
+        ports:
+        - containerPort: 6333
+          name: qdrant
+
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: 500m
+          requests:
+            memory: 256Mi
+            cpu: 250m
+        livenessProbe:
+          exec:
+            command:
+            - wget
+            - --no-verbose
+            - --tries=1
+            - --spider
+            - http://localhost:6333/healthz
+          initialDelaySeconds: 20
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - wget
+            - --no-verbose
+            - --tries=1
+            - --spider
+            - http://localhost:6333/healthz
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        volumeMounts:
+        - name: qdrant-data
+          mountPath: /data
       volumes:
-        - name: qdrant-storage
-          persistentVolumeClaim:
-            claimName: qdrant-storage-pvc
-        - name: qdrant-snapshots
-          persistentVolumeClaim:
-            claimName: qdrant-snapshots-pvc
+      - name: qdrant-data
+        persistentVolumeClaim:
+          claimName: qdrant-pvc-${INSTANCE_ID}

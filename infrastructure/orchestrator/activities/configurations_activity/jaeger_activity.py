@@ -1,112 +1,79 @@
-import logging
 from typing import Dict, Any
+from pathlib import Path
 from temporalio import activity
-from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
+from infrastructure.orchestrator.base.base_container_activity import YAMLBaseService
 from infrastructure.orchestrator.base.port_manager import get_port_manager
+from infrastructure.orchestrator.base.logql_logger import LogQLLogger, trace_operation
 
-logger = logging.getLogger(__name__)
+log = LogQLLogger(__name__)
 
-
-class JaegerManager(BaseService):
+class JaegerManager(YAMLBaseService):
     SERVICE_NAME = "Jaeger"
-    SERVICE_DESCRIPTION = "distributed tracing service"
-    HEALTH_CHECK_TIMEOUT = 30
-
-    def __init__(self, instance_id: int = 0):
+    SERVICE_DESCRIPTION = "jaeger service"
+    
+    _yaml_file_cache = None
+    __slots__ = ('_port', '_instance_id')
+    
+    def __init__(self, instance_id: int = 0) -> None:
+        trace_id = log.set_trace_id()
+        log.debug("manager_init_start", service="jaeger", instance=instance_id, trace_id=trace_id)
+        
         pm = get_port_manager()
-
-        http_port = pm.get_port("jaeger", instance_id, "http_port")
-        otlp_grpc_port = pm.get_port("jaeger", instance_id, "otlp_grpc_port")
-        otlp_http_port = pm.get_port("jaeger", instance_id, "otlp_http_port")
-        grpc_port = pm.get_port("jaeger", instance_id, "grpc_port")
-        admin_port = pm.get_port("jaeger", instance_id, "admin_port")
-        zipkin_port = pm.get_port("jaeger", instance_id, "zipkin_port")
-
-        ports = {
-            http_port: http_port,
-            otlp_grpc_port: otlp_grpc_port,
-            otlp_http_port: otlp_http_port,
-            grpc_port: grpc_port,
-            admin_port: admin_port,
-            zipkin_port: zipkin_port
+        jaeger_port = pm.get_port("jaeger", instance_id, "ui_port")
+        self._port = jaeger_port
+        self._instance_id = instance_id
+        
+        if not JaegerManager._yaml_file_cache:
+            JaegerManager._yaml_file_cache = Path(__file__).parent.parent.parent / "config" / "docker" / "jaeger-dynamic-docker.yaml"
+        
+        env_vars = {
+            "JAEGER_UI_PORT": str(jaeger_port),
+            "INSTANCE_ID": str(instance_id)
         }
-
-        config = ContainerConfig(
-            image="jaegertracing/all-in-one:latest",
-            name=f"jaeger-instance-{instance_id}",
-            ports=ports,
-            volumes={"jaeger-data": "/tmp"},
-            network="observability-network",
-            memory="512m",
-            memory_reservation="256m",
-            cpus=0.5,
-            restart="unless-stopped",
-            environment={
-                "COLLECTOR_OTLP_ENABLED": "true",
-                "COLLECTOR_ZIPKIN_HOST_PORT": f":{zipkin_port}"
-            },
-            healthcheck={
-                "test": [
-                    "CMD-SHELL",
-                    f"wget --no-verbose --tries=1 --spider http://localhost:{http_port}/ || exit 1"
-                ],
-                "interval": 30000000000,
-                "timeout": 10000000000,
-                "retries": 3,
-                "start_period": 40000000000
-            }
+        
+        log.debug("yaml_loading", yaml_file=str(JaegerManager._yaml_file_cache))
+        
+        super().__init__(
+            yaml_file_path=JaegerManager._yaml_file_cache,
+            service_name="jaeger",
+            env_vars=env_vars,
+            instance_id=str(instance_id)
         )
-
-        logger.info(
-            "event=jaeger_manager_init service=jaeger instance=%s http_port=%s grpc_port=%s otlp_grpc=%s otlp_http=%s admin=%s zipkin=%s",
-            instance_id, http_port, grpc_port, otlp_grpc_port, otlp_http_port, admin_port, zipkin_port
-        )
-
-        super().__init__(config)
-
-    def get_services(self) -> str:
-        cmd = 'wget -qO- "http://localhost:$(printenv JAEGER_HTTP_PORT)/api/services"'
-        exit_code, output = self.exec(cmd)
-
-        if exit_code != 0:
-            logger.error("event=jaeger_get_services_failed output=%s", output)
-            return ""
-
-        logger.info("event=jaeger_get_services_success")
-        return output
-
+        
+        log.info("manager_ready", service="jaeger", instance=instance_id, port=jaeger_port, container=self.config.container_name)
 
 @activity.defn
+@trace_operation("start_jaeger")
 async def start_jaeger_activity(params: Dict[str, Any]) -> bool:
-    logger.info("event=jaeger_start params=%s", params)
-    manager = JaegerManager()
-    manager.run()
-    logger.info("event=jaeger_started")
+    instance_id = params.get("instance_id", 0)
+    log.info("activity_start", activity="start_jaeger", instance=instance_id)
+    JaegerManager(instance_id=instance_id).run()
+    log.info("activity_complete", activity="start_jaeger", instance=instance_id)
     return True
 
-
 @activity.defn
+@trace_operation("stop_jaeger")
 async def stop_jaeger_activity(params: Dict[str, Any]) -> bool:
-    logger.info("event=jaeger_stop_begin")
-    manager = JaegerManager()
-    manager.stop(timeout=30)
-    logger.info("event=jaeger_stop_complete")
+    instance_id = params.get("instance_id", 0)
+    log.info("activity_start", activity="stop_jaeger", instance=instance_id)
+    JaegerManager(instance_id=instance_id).stop(timeout=30)
+    log.info("activity_complete", activity="stop_jaeger", instance=instance_id)
     return True
 
-
 @activity.defn
+@trace_operation("restart_jaeger")
 async def restart_jaeger_activity(params: Dict[str, Any]) -> bool:
-    logger.info("event=jaeger_restart_begin")
-    manager = JaegerManager()
-    manager.restart()
-    logger.info("event=jaeger_restart_complete")
+    instance_id = params.get("instance_id", 0)
+    log.info("activity_start", activity="restart_jaeger", instance=instance_id)
+    JaegerManager(instance_id=instance_id).restart()
+    log.info("activity_complete", activity="restart_jaeger", instance=instance_id)
     return True
 
-
 @activity.defn
+@trace_operation("delete_jaeger")
 async def delete_jaeger_activity(params: Dict[str, Any]) -> bool:
-    logger.info("event=jaeger_delete_begin")
-    manager = JaegerManager()
-    manager.delete(force=False)
-    logger.info("event=jaeger_delete_complete")
+    instance_id = params.get("instance_id", 0)
+    log.info("activity_start", activity="delete_jaeger", instance=instance_id)
+    JaegerManager(instance_id=instance_id).delete(force=False)
+    log.info("activity_complete", activity="delete_jaeger", instance=instance_id)
     return True

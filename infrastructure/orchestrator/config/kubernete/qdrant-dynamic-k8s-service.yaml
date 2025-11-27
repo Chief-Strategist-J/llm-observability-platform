@@ -1,15 +1,17 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: qdrant-service
+  name: qdrant-${INSTANCE_ID}
+  labels:
+    app: qdrant
+    instance: "${INSTANCE_ID}"
 spec:
   type: ClusterIP
-  selector:
-    app: qdrant-instance
   ports:
-    - name: http
-      port: {{HTTP_PORT}}
-      targetPort: {{HTTP_PORT}}
-    - name: grpc
-      port: {{GRPC_PORT}}
-      targetPort: {{GRPC_PORT}}
+  - port: 6333
+    targetPort: 6333
+    protocol: TCP
+    name: qdrant
+  selector:
+    app: qdrant
+    instance: "${INSTANCE_ID}"

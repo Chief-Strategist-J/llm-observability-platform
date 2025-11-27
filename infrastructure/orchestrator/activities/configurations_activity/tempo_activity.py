@@ -1,112 +1,79 @@
-import logging
 from typing import Dict, Any
+from pathlib import Path
 from temporalio import activity
-from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
+from infrastructure.orchestrator.base.base_container_activity import YAMLBaseService
 from infrastructure.orchestrator.base.port_manager import get_port_manager
+from infrastructure.orchestrator.base.logql_logger import LogQLLogger, trace_operation
 
-logger = logging.getLogger(__name__)
+log = LogQLLogger(__name__)
 
-
-class TempoManager(BaseService):
+class TempoManager(YAMLBaseService):
     SERVICE_NAME = "Tempo"
-    SERVICE_DESCRIPTION = "distributed tracing backend"
-    HEALTH_CHECK_TIMEOUT = 30
-
-    def __init__(self, instance_id: int = 0):
+    SERVICE_DESCRIPTION = "tempo service"
+    
+    _yaml_file_cache = None
+    __slots__ = ('_port', '_instance_id')
+    
+    def __init__(self, instance_id: int = 0) -> None:
+        trace_id = log.set_trace_id()
+        log.debug("manager_init_start", service="tempo", instance=instance_id, trace_id=trace_id)
+        
         pm = get_port_manager()
-
-        http_port = pm.get_port("tempo", instance_id, "http_port")
-        otlp_grpc_port = pm.get_port("tempo", instance_id, "otlp_grpc_port")
-        otlp_http_port = pm.get_port("tempo", instance_id, "otlp_http_port")
-        grpc_port = pm.get_port("tempo", instance_id, "grpc_port")
-        zipkin_port = pm.get_port("tempo", instance_id, "zipkin_port")
-
-        ports = {
-            http_port: 3200,          # Tempo HTTP API
-            otlp_grpc_port: 4317,     # OTLP gRPC receiver
-            otlp_http_port: 4318,     # OTLP HTTP receiver
-            grpc_port: 9095,          # Tempo gRPC API
-            zipkin_port: 9411         # Zipkin receiver
+        tempo_port = pm.get_port("tempo", instance_id, "http_port")
+        self._port = tempo_port
+        self._instance_id = instance_id
+        
+        if not TempoManager._yaml_file_cache:
+            TempoManager._yaml_file_cache = Path(__file__).parent.parent.parent / "config" / "docker" / "tempo-dynamic-docker.yaml"
+        
+        env_vars = {
+            "TEMPO_PORT": str(tempo_port),
+            "INSTANCE_ID": str(instance_id)
         }
-
-        config = ContainerConfig(
-            image="grafana/tempo:latest",
-            name=f"tempo-instance-{instance_id}",
-            ports=ports,
-            volumes={"tempo-data": "/tmp/tempo"},
-            network="observability-network",
-            memory="512m",
-            memory_reservation="256m",
-            cpus=0.5,
-            restart="unless-stopped",
-            environment={
-                "TEMPO_HTTP_PORT": str(http_port),
-            },
-            command=[
-                "-config.file=/etc/tempo.yaml"
-            ],
-            healthcheck={
-                "test": [
-                    "CMD-SHELL",
-                    f"wget --no-verbose --tries=1 --spider http://localhost:3200/ready || exit 1"
-                ],
-                "interval": 30000000000,
-                "timeout": 10000000000,
-                "retries": 3,
-                "start_period": 40000000000
-            }
+        
+        log.debug("yaml_loading", yaml_file=str(TempoManager._yaml_file_cache))
+        
+        super().__init__(
+            yaml_file_path=TempoManager._yaml_file_cache,
+            service_name="tempo",
+            env_vars=env_vars,
+            instance_id=str(instance_id)
         )
-
-        logger.info(
-            "event=tempo_manager_init service=tempo instance=%s http_port=%s otlp_grpc=%s otlp_http=%s grpc=%s zipkin=%s",
-            instance_id, http_port, otlp_grpc_port, otlp_http_port, grpc_port, zipkin_port
-        )
-
-        super().__init__(config)
-
-    def get_metrics(self) -> str:
-        cmd = 'wget -qO- "http://localhost:3200/metrics"'
-        exit_code, output = self.exec(cmd)
-
-        if exit_code != 0:
-            logger.error("event=tempo_get_metrics_failed output=%s", output)
-            return ""
-
-        logger.info("event=tempo_get_metrics_success")
-        return output
-
+        
+        log.info("manager_ready", service="tempo", instance=instance_id, port=tempo_port, container=self.config.container_name)
 
 @activity.defn
+@trace_operation("start_tempo")
 async def start_tempo_activity(params: Dict[str, Any]) -> bool:
-    logger.info("event=tempo_start params=%s", params)
-    manager = TempoManager()
-    manager.run()
-    logger.info("event=tempo_started")
+    instance_id = params.get("instance_id", 0)
+    log.info("activity_start", activity="start_tempo", instance=instance_id)
+    TempoManager(instance_id=instance_id).run()
+    log.info("activity_complete", activity="start_tempo", instance=instance_id)
     return True
 
-
 @activity.defn
+@trace_operation("stop_tempo")
 async def stop_tempo_activity(params: Dict[str, Any]) -> bool:
-    logger.info("event=tempo_stop_begin")
-    manager = TempoManager()
-    manager.stop(timeout=30)
-    logger.info("event=tempo_stop_complete")
+    instance_id = params.get("instance_id", 0)
+    log.info("activity_start", activity="stop_tempo", instance=instance_id)
+    TempoManager(instance_id=instance_id).stop(timeout=30)
+    log.info("activity_complete", activity="stop_tempo", instance=instance_id)
     return True
 
-
 @activity.defn
+@trace_operation("restart_tempo")
 async def restart_tempo_activity(params: Dict[str, Any]) -> bool:
-    logger.info("event=tempo_restart_begin")
-    manager = TempoManager()
-    manager.restart()
-    logger.info("event=tempo_restart_complete")
+    instance_id = params.get("instance_id", 0)
+    log.info("activity_start", activity="restart_tempo", instance=instance_id)
+    TempoManager(instance_id=instance_id).restart()
+    log.info("activity_complete", activity="restart_tempo", instance=instance_id)
     return True
 
-
 @activity.defn
+@trace_operation("delete_tempo")
 async def delete_tempo_activity(params: Dict[str, Any]) -> bool:
-    logger.info("event=tempo_delete_begin")
-    manager = TempoManager()
-    manager.delete(force=False)
-    logger.info("event=tempo_delete_complete")
+    instance_id = params.get("instance_id", 0)
+    log.info("activity_start", activity="delete_tempo", instance=instance_id)
+    TempoManager(instance_id=instance_id).delete(force=False)
+    log.info("activity_complete", activity="delete_tempo", instance=instance_id)
     return True

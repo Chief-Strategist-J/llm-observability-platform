@@ -1,89 +1,79 @@
-import logging
 from typing import Dict, Any
+from pathlib import Path
 from temporalio import activity
-from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
+from infrastructure.orchestrator.base.base_container_activity import YAMLBaseService
 from infrastructure.orchestrator.base.port_manager import get_port_manager
+from infrastructure.orchestrator.base.logql_logger import LogQLLogger, trace_operation
 
-logger = logging.getLogger(__name__)
+log = LogQLLogger(__name__)
 
-
-class PromtailManager(BaseService):
+class PromtailManager(YAMLBaseService):
     SERVICE_NAME = "Promtail"
-
-    def __init__(self, instance_id: int = 0):
+    SERVICE_DESCRIPTION = "promtail service"
+    
+    _yaml_file_cache = None
+    __slots__ = ('_port', '_instance_id')
+    
+    def __init__(self, instance_id: int = 0) -> None:
+        trace_id = log.set_trace_id()
+        log.debug("manager_init_start", service="promtail", instance=instance_id, trace_id=trace_id)
+        
         pm = get_port_manager()
-
-        port = pm.get_port("promtail", instance_id, "port")
-
-        config = ContainerConfig(
-            image="grafana/promtail:latest",
-            name=f"promtail-instance-{instance_id}",
-            ports={port: port},
-            volumes={
-                "promtail-config": "/etc/promtail",
-                "/var/log": "/var/log:ro",
-                "/var/run/docker.sock": "/var/run/docker.sock:ro"
-            },
-            network="observability-network",
-            memory="128m",
-            cpus=0.25,
-            restart="unless-stopped",
-            environment={},
-            extra_params={
-                "network_driver": "bridge",
-                "start_timeout": 30,
-                "stop_timeout": 30,
-                "health_check_interval": 30,
-                "health_check_timeout": 10,
-                "health_check_retries": 3,
-            },
-            healthcheck={
-                "test": [
-                    "CMD-SHELL",
-                    f"wget --no-verbose --tries=1 --spider http://localhost:{port}/ready || exit 1"
-                ],
-                "interval": 30000000000,
-                "timeout": 10000000000,
-                "retries": 3,
-                "start_period": 20000000000
-            }
+        promtail_port = pm.get_port("promtail", instance_id, "http_port")
+        self._port = promtail_port
+        self._instance_id = instance_id
+        
+        if not PromtailManager._yaml_file_cache:
+            PromtailManager._yaml_file_cache = Path(__file__).parent.parent.parent / "config" / "docker" / "promtail-dynamic-docker.yaml"
+        
+        env_vars = {
+            "PROMTAIL_PORT": str(promtail_port),
+            "INSTANCE_ID": str(instance_id)
+        }
+        
+        log.debug("yaml_loading", yaml_file=str(PromtailManager._yaml_file_cache))
+        
+        super().__init__(
+            yaml_file_path=PromtailManager._yaml_file_cache,
+            service_name="promtail",
+            env_vars=env_vars,
+            instance_id=str(instance_id)
         )
-
-        logger.info(
-            "event=promtail_manager_init service=promtail instance=%s port=%s",
-            instance_id, port
-        )
-
-        super().__init__(config)
-
+        
+        log.info("manager_ready", service="promtail", instance=instance_id, port=promtail_port, container=self.config.container_name)
 
 @activity.defn
+@trace_operation("start_promtail")
 async def start_promtail_activity(params: Dict[str, Any]) -> bool:
-    logger.info("event=promtail_start params=%s", params)
-    PromtailManager().run()
-    logger.info("event=promtail_started")
+    instance_id = params.get("instance_id", 0)
+    log.info("activity_start", activity="start_promtail", instance=instance_id)
+    PromtailManager(instance_id=instance_id).run()
+    log.info("activity_complete", activity="start_promtail", instance=instance_id)
     return True
 
-
 @activity.defn
+@trace_operation("stop_promtail")
 async def stop_promtail_activity(params: Dict[str, Any]) -> bool:
-    logger.info("event=promtail_stop_begin")
-    PromtailManager().stop(timeout=30)
-    logger.info("event=promtail_stop_complete")
+    instance_id = params.get("instance_id", 0)
+    log.info("activity_start", activity="stop_promtail", instance=instance_id)
+    PromtailManager(instance_id=instance_id).stop(timeout=30)
+    log.info("activity_complete", activity="stop_promtail", instance=instance_id)
     return True
 
-
 @activity.defn
+@trace_operation("restart_promtail")
 async def restart_promtail_activity(params: Dict[str, Any]) -> bool:
-    logger.info("event=promtail_restart_begin")
-    PromtailManager().restart()
-    logger.info("event=promtail_restart_complete")
+    instance_id = params.get("instance_id", 0)
+    log.info("activity_start", activity="restart_promtail", instance=instance_id)
+    PromtailManager(instance_id=instance_id).restart()
+    log.info("activity_complete", activity="restart_promtail", instance=instance_id)
     return True
 
-
 @activity.defn
+@trace_operation("delete_promtail")
 async def delete_promtail_activity(params: Dict[str, Any]) -> bool:
-    logger.info("event=promtail_delete_begin")
-    PromtailManager().delete(force=False)
-    logger.info("event=promtail_delete_complete")
+    instance_id = params.get("instance_id", 0)
+    log.info("activity_start", activity="delete_promtail", instance=instance_id)
+    PromtailManager(instance_id=instance_id).delete(force=False)
+    log.info("activity_complete", activity="delete_promtail", instance=instance_id)
     return True

@@ -1,121 +1,79 @@
-import logging
 from typing import Dict, Any
+from pathlib import Path
 from temporalio import activity
-from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
+from infrastructure.orchestrator.base.base_container_activity import YAMLBaseService
 from infrastructure.orchestrator.base.port_manager import get_port_manager
+from infrastructure.orchestrator.base.logql_logger import LogQLLogger, trace_operation
 
-logger = logging.getLogger(__name__)
+log = LogQLLogger(__name__)
 
-
-class GrafanaManager(BaseService):
+class GrafanaManager(YAMLBaseService):
     SERVICE_NAME = "Grafana"
-    SERVICE_DESCRIPTION = "monitoring and visualization dashboard"
-    HEALTH_CHECK_TIMEOUT = 30
-
-    def __init__(self, instance_id: int = 0):
+    SERVICE_DESCRIPTION = "grafana service"
+    
+    _yaml_file_cache = None
+    __slots__ = ('_port', '_instance_id')
+    
+    def __init__(self, instance_id: int = 0) -> None:
+        trace_id = log.set_trace_id()
+        log.debug("manager_init_start", service="grafana", instance=instance_id, trace_id=trace_id)
+        
         pm = get_port_manager()
-        host_port = pm.get_port("grafana", instance_id, "port")
-
-        config = ContainerConfig(
-            image="grafana/grafana:latest",
-            name=f"grafana-instance-{instance_id}",
-            ports={host_port: host_port},
-            volumes={"grafana-data": {"bind": "/var/lib/grafana", "mode": "rw"}},
-            network="observability-network",
-            memory="512m",
-            memory_reservation="256m",
-            cpus=0.5,
-            restart="unless-stopped",
-            environment={
-                "GF_SECURITY_ADMIN_USER": "admin",
-                "GF_SECURITY_ADMIN_PASSWORD": "SuperSecret123!",
-                "GF_USERS_ALLOW_SIGN_UP": "false",
-                "GF_SERVER_HTTP_PORT": "3000",
-                "GF_SERVER_ROOT_URL": f"http://localhost:{host_port}"
-            },
-            labels={
-                "traefik.enable": "true",
-                "traefik.http.routers.grafana.rule": "PathPrefix(`/`)",
-                "traefik.http.routers.grafana.entrypoints": "grafana",
-                "traefik.http.routers.grafana.service": "grafana",
-                "traefik.http.services.grafana.loadbalancer.server.port": "3000",
-                "traefik.docker.network": "observability-network"
-            },
-            healthcheck={
-                "test": [
-                    "CMD-SHELL",
-                    f"wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"
-                ],
-                "interval": 30000000000,
-                "timeout": 10000000000,
-                "retries": 3,
-                "start_period": 20000000000
-            }
+        grafana_port = pm.get_port("grafana", instance_id, "port")
+        self._port = grafana_port
+        self._instance_id = instance_id
+        
+        if not GrafanaManager._yaml_file_cache:
+            GrafanaManager._yaml_file_cache = Path(__file__).parent.parent.parent / "config" / "docker" / "grafana-dynamic-docker.yaml"
+        
+        env_vars = {
+            "GRAFANA_PORT": str(grafana_port),
+            "INSTANCE_ID": str(instance_id)
+        }
+        
+        log.debug("yaml_loading", yaml_file=str(GrafanaManager._yaml_file_cache))
+        
+        super().__init__(
+            yaml_file_path=GrafanaManager._yaml_file_cache,
+            service_name="grafana",
+            env_vars=env_vars,
+            instance_id=str(instance_id)
         )
-
-        logger.info(
-            "event=grafana_manager_init service=grafana instance=%s host_port=%s",
-            instance_id, host_port
-        )
-
-        super().__init__(config)
-
-    def create_datasource(self, name: str, url: str, ds_type: str = "loki") -> str:
-        command = (
-            f'curl -s -X POST http://localhost:3000/api/datasources '
-            f'-H "Content-Type: application/json" '
-            f'-u admin:SuperSecret123! '
-            f"-d '{{\"name\":\"{name}\",\"type\":\"{ds_type}\",\"url\":\"{url}\",\"access\":\"proxy\"}}'"
-        )
-
-        exit_code, output = self.exec(command)
-
-        if exit_code != 0:
-            logger.error(
-                "event=grafana_datasource_create_failed name=%s url=%s output=%s",
-                name, url, output
-            )
-            return ""
-
-        logger.info(
-            "event=grafana_datasource_created name=%s url=%s",
-            name, url
-        )
-
-        return output
-
+        
+        log.info("manager_ready", service="grafana", instance=instance_id, port=grafana_port, container=self.config.container_name)
 
 @activity.defn
+@trace_operation("start_grafana")
 async def start_grafana_activity(params: Dict[str, Any]) -> bool:
-    logger.info("event=grafana_start params=%s", params)
-    manager = GrafanaManager()
-    manager.run()
-    logger.info("event=grafana_started")
+    instance_id = params.get("instance_id", 0)
+    log.info("activity_start", activity="start_grafana", instance=instance_id)
+    GrafanaManager(instance_id=instance_id).run()
+    log.info("activity_complete", activity="start_grafana", instance=instance_id)
     return True
 
-
 @activity.defn
+@trace_operation("stop_grafana")
 async def stop_grafana_activity(params: Dict[str, Any]) -> bool:
-    logger.info("event=grafana_stop_begin")
-    manager = GrafanaManager()
-    manager.stop(timeout=30)
-    logger.info("event=grafana_stop_complete")
+    instance_id = params.get("instance_id", 0)
+    log.info("activity_start", activity="stop_grafana", instance=instance_id)
+    GrafanaManager(instance_id=instance_id).stop(timeout=30)
+    log.info("activity_complete", activity="stop_grafana", instance=instance_id)
     return True
 
-
 @activity.defn
+@trace_operation("restart_grafana")
 async def restart_grafana_activity(params: Dict[str, Any]) -> bool:
-    logger.info("event=grafana_restart_begin")
-    manager = GrafanaManager()
-    manager.restart()
-    logger.info("event=grafana_restart_complete")
+    instance_id = params.get("instance_id", 0)
+    log.info("activity_start", activity="restart_grafana", instance=instance_id)
+    GrafanaManager(instance_id=instance_id).restart()
+    log.info("activity_complete", activity="restart_grafana", instance=instance_id)
     return True
 
-
 @activity.defn
+@trace_operation("delete_grafana")
 async def delete_grafana_activity(params: Dict[str, Any]) -> bool:
-    logger.info("event=grafana_delete_begin")
-    manager = GrafanaManager()
-    manager.delete(force=False)
-    logger.info("event=grafana_delete_complete")
+    instance_id = params.get("instance_id", 0)
+    log.info("activity_start", activity="delete_grafana", instance=instance_id)
+    GrafanaManager(instance_id=instance_id).delete(force=False)
+    log.info("activity_complete", activity="delete_grafana", instance=instance_id)
     return True

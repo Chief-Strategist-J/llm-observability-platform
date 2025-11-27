@@ -1,12 +1,17 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: opentelemetry-collector-service
+  name: otel-collector-${INSTANCE_ID}
+  labels:
+    app: otel-collector
+    instance: "${INSTANCE_ID}"
 spec:
   type: ClusterIP
-  selector:
-    app: opentelemetry-collector
   ports:
-    - name: metrics
-      port: 8888
-      targetPort: 8888
+  - port: 4318
+    targetPort: 4318
+    protocol: TCP
+    name: otel-collector
+  selector:
+    app: otel-collector
+    instance: "${INSTANCE_ID}"
