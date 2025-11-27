@@ -1,54 +1,57 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mongo-express-instance
+  name: mongoexpress-${INSTANCE_ID}
+  labels:
+    app: mongoexpress
+    instance: "${INSTANCE_ID}"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mongo-express-instance
+      app: mongoexpress
+      instance: "${INSTANCE_ID}"
   template:
     metadata:
       labels:
-        app: mongo-express-instance
+        app: mongoexpress
+        instance: "${INSTANCE_ID}"
     spec:
       containers:
-        - name: mongo-express
-          image: mongo-express:latest
-          env:
-            - name: ME_CONFIG_MONGODB_SERVER
-              value: "mongodb-development"
-            - name: ME_CONFIG_MONGODB_ADMINUSERNAME
-              value: "admin"
-            - name: ME_CONFIG_MONGODB_ADMINPASSWORD
-              value: "MongoPassword123!"
-            - name: ME_CONFIG_BASICAUTH_USERNAME
-              value: "admin"
-            - name: ME_CONFIG_BASICAUTH_PASSWORD
-              value: "AdminPassword!"
-            - name: ME_CONFIG_SITE_BASEURL
-              value: "/"
-            - name: ME_CONFIG_SITE_PORT
-              value: "{{UI_PORT}}"
-            - name: UI_PORT
-              value: "{{UI_PORT}}"
-            - name: INSTANCE_ID
-              value: "{{INSTANCE_ID}}"
-          ports:
-            - name: http
-              containerPort: {{UI_PORT}}
-          resources:
-            limits:
-              memory: "512Mi"
-              cpu: "500m"
-            requests:
-              memory: "256Mi"
-              cpu: "500m"
-          livenessProbe:
-            httpGet:
-              path: /
-              port: {{UI_PORT}}
-            initialDelaySeconds: 20
-            timeoutSeconds: 10
-            periodSeconds: 30
-            failureThreshold: 5
+      - name: mongoexpress
+        image: mongo-express:latest
+        ports:
+        - containerPort: 8081
+          name: mongoexpress
+        - name: ME_CONFIG_MONGODB_ADMINUSERNAME
+          value: "admin"
+        - name: ME_CONFIG_MONGODB_ADMINPASSWORD
+          value: "MongoPassword123!"
+        resources:
+          limits:
+            memory: 256Mi
+            cpu: 300m
+          requests:
+            memory: 128Mi
+            cpu: 150m
+        livenessProbe:
+          exec:
+            command:
+            - wget
+            - --no-verbose
+            - --tries=1
+            - --spider
+            - http://localhost:8081
+          initialDelaySeconds: 20
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - wget
+            - --no-verbose
+            - --tries=1
+            - --spider
+            - http://localhost:8081
+          initialDelaySeconds: 10
+          periodSeconds: 10

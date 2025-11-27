@@ -1,71 +1,54 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jaeger-instance
+  name: jaeger-${INSTANCE_ID}
+  labels:
+    app: jaeger
+    instance: "${INSTANCE_ID}"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jaeger-instance
+      app: jaeger
+      instance: "${INSTANCE_ID}"
   template:
     metadata:
       labels:
-        app: jaeger-instance
+        app: jaeger
+        instance: "${INSTANCE_ID}"
     spec:
       containers:
-        - name: jaeger
-          image: jaegertracing/all-in-one:latest
-          env:
-            - name: HTTP_PORT
-              value: "{{HTTP_PORT}}"
-            - name: OTLP_GRPC_PORT
-              value: "{{OTLP_GRPC_PORT}}"
-            - name: OTLP_HTTP_PORT
-              value: "{{OTLP_HTTP_PORT}}"
-            - name: GRPC_PORT
-              value: "{{GRPC_PORT}}"
-            - name: ADMIN_PORT
-              value: "{{ADMIN_PORT}}"
-            - name: ZIPKIN_PORT
-              value: "{{ZIPKIN_PORT}}"
-            - name: INSTANCE_ID
-              value: "{{INSTANCE_ID}}"
-            - name: COLLECTOR_OTLP_ENABLED
-              value: "true"
-            - name: COLLECTOR_ZIPKIN_HOST_PORT
-              value: ":{{ZIPKIN_PORT}}"
-          ports:
-            - name: http
-              containerPort: {{HTTP_PORT}}
-            - name: otlp-grpc
-              containerPort: {{OTLP_GRPC_PORT}}
-            - name: otlp-http
-              containerPort: {{OTLP_HTTP_PORT}}
-            - name: grpc
-              containerPort: {{GRPC_PORT}}
-            - name: admin
-              containerPort: {{ADMIN_PORT}}
-            - name: zipkin
-              containerPort: {{ZIPKIN_PORT}}
-          volumeMounts:
-            - name: jaeger-data
-              mountPath: /tmp
-          resources:
-            limits:
-              memory: "512Mi"
-              cpu: "500m"
-            requests:
-              memory: "256Mi"
-              cpu: "500m"
-          livenessProbe:
-            httpGet:
-              path: /
-              port: {{HTTP_PORT}}
-            initialDelaySeconds: 40
-            timeoutSeconds: 10
-            periodSeconds: 30
-            failureThreshold: 3
-      volumes:
-        - name: jaeger-data
-          persistentVolumeClaim:
-            claimName: jaeger-pvc
+      - name: jaeger
+        image: jaegertracing/all-in-one:latest
+        ports:
+        - containerPort: 16686
+          name: jaeger
+
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: 500m
+          requests:
+            memory: 256Mi
+            cpu: 250m
+        livenessProbe:
+          exec:
+            command:
+            - wget
+            - --no-verbose
+            - --tries=1
+            - --spider
+            - http://localhost:14269
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - wget
+            - --no-verbose
+            - --tries=1
+            - --spider
+            - http://localhost:14269
+          initialDelaySeconds: 15
+          periodSeconds: 10

@@ -1,81 +1,60 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kafka-instance
+  name: kafka-${INSTANCE_ID}
+  labels:
+    app: kafka
+    instance: "${INSTANCE_ID}"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: kafka-instance
+      app: kafka
+      instance: "${INSTANCE_ID}"
   template:
     metadata:
       labels:
-        app: kafka-instance
+        app: kafka
+        instance: "${INSTANCE_ID}"
     spec:
       containers:
-        - name: kafka
-          image: apache/kafka:4.1.1
-          env:
-            - name: CLUSTER_ID
-              value: "MkU3OEVBNTcwNTJENDM2Qk"
-            - name: KAFKA_PROCESS_ROLES
-              value: "broker,controller"
-            - name: KAFKA_NODE_ID
-              value: "{{INSTANCE_ID}}"
-            - name: KAFKA_LISTENERS
-              value: "PLAINTEXT://0.0.0.0:{{BROKER_PORT}},CONTROLLER://0.0.0.0:{{CONTROLLER_PORT}}"
-            - name: KAFKA_ADVERTISED_LISTENERS
-              value: "PLAINTEXT://localhost:{{BROKER_PORT}}"
-            - name: KAFKA_CONTROLLER_QUORUM_VOTERS
-              value: "{{INSTANCE_ID}}@localhost:{{CONTROLLER_PORT}}"
-            - name: KAFKA_CONTROLLER_LISTENER_NAMES
-              value: "CONTROLLER"
-            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
-              value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
-            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
-              value: "1"
-            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
-              value: "1"
-            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
-              value: "1"
-            - name: KAFKA_LOG_DIRS
-              value: "/var/lib/kafka/data"
-            - name: KAFKA_NUM_NETWORK_THREADS
-              value: "3"
-            - name: KAFKA_NUM_IO_THREADS
-              value: "8"
-            - name: BROKER_PORT
-              value: "{{BROKER_PORT}}"
-            - name: CONTROLLER_PORT
-              value: "{{CONTROLLER_PORT}}"
-            - name: INSTANCE_ID
-              value: "{{INSTANCE_ID}}"
-          ports:
-            - name: broker
-              containerPort: {{BROKER_PORT}}
-            - name: controller
-              containerPort: {{CONTROLLER_PORT}}
-          volumeMounts:
-            - name: kafka-data
-              mountPath: /var/lib/kafka/data
-          resources:
-            limits:
-              memory: "1Gi"
-              cpu: "1"
-            requests:
-              memory: "512Mi"
-              cpu: "1"
-          livenessProbe:
-            exec:
-              command:
-                - sh
-                - -c
-                - "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:{{BROKER_PORT}} || exit 1"
-            initialDelaySeconds: 60
-            timeoutSeconds: 10
-            periodSeconds: 30
-            failureThreshold: 5
-      volumes:
+      - name: kafka
+        image: apache/kafka:4.1.1
+        ports:
+        - containerPort: 9092
+          name: kafka
+        - name: KAFKA_PROCESS_ROLES
+          value: "broker,controller"
+        - name: CLUSTER_ID
+          value: "MkU3OEVBNTcwNTJENDM2Qk"
+        resources:
+          limits:
+            memory: 1Gi
+            cpu: 1
+          requests:
+            memory: 512Mi
+            cpu: 500m
+        livenessProbe:
+          exec:
+            command:
+            - /opt/kafka/bin/kafka-broker-api-versions.sh
+            - --bootstrap-server
+            - localhost:9092
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - /opt/kafka/bin/kafka-broker-api-versions.sh
+            - --bootstrap-server
+            - localhost:9092
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        volumeMounts:
         - name: kafka-data
-          persistentVolumeClaim:
-            claimName: kafka-pvc
+          mountPath: /data
+      volumes:
+      - name: kafka-data
+        persistentVolumeClaim:
+          claimName: kafka-pvc-${INSTANCE_ID}

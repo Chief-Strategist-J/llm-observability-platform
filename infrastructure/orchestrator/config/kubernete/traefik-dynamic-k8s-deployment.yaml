@@ -1,73 +1,59 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: traefik-instance
+  name: traefik-${INSTANCE_ID}
+  labels:
+    app: traefik
+    instance: "${INSTANCE_ID}"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: traefik-instance
+      app: traefik
+      instance: "${INSTANCE_ID}"
   template:
     metadata:
       labels:
-        app: traefik-instance
+        app: traefik
+        instance: "${INSTANCE_ID}"
     spec:
       containers:
-        - name: traefik
-          image: traefik:v3.5
-          env:
-            - name: INSTANCE_ID
-              value: "{{INSTANCE_ID}}"
-            - name: HTTP_PORT
-              value: "{{HTTP_PORT}}"
-            - name: GRAFANA_PORT
-              value: "{{GRAFANA_PORT}}"
-            - name: LOKI_PORT
-              value: "{{LOKI_PORT}}"
-            - name: OTEL_PORT
-              value: "{{OTEL_PORT}}"
-          args:
-            - "--providers.docker=true"
-            - "--providers.docker.exposedByDefault=false"
-            - "--providers.docker.endpoint=unix:///var/run/docker.sock"
-            - "--providers.docker.network=observability-network"
-            - "--api.dashboard=true"
-            - "--api.insecure=true"
-            - "--entrypoints.web.address=:{{HTTP_PORT}}"
-            - "--entrypoints.grafana.address=:{{GRAFANA_PORT}}"
-            - "--entrypoints.loki.address=:{{LOKI_PORT}}"
-            - "--entrypoints.otel.address=:{{OTEL_PORT}}"
-            - "--log.level=INFO"
-          ports:
-            - name: web
-              containerPort: {{HTTP_PORT}}
-            - name: grafana
-              containerPort: {{GRAFANA_PORT}}
-            - name: loki
-              containerPort: {{LOKI_PORT}}
-            - name: otel
-              containerPort: {{OTEL_PORT}}
-          volumeMounts:
-            - name: docker-sock
-              mountPath: /var/run/docker.sock
-              readOnly: true
-          resources:
-            limits:
-              memory: "256Mi"
-              cpu: "500m"
-            requests:
-              memory: "128Mi"
-              cpu: "500m"
-          livenessProbe:
-            httpGet:
-              path: /api/overview
-              port: {{HTTP_PORT}}
-            initialDelaySeconds: 20
-            timeoutSeconds: 10
-            periodSeconds: 30
-            failureThreshold: 3
-      volumes:
-        - name: docker-sock
-          hostPath:
-            path: /var/run/docker.sock
-            type: Socket
+      - name: traefik
+        image: traefik:v3.5
+        ports:
+        - containerPort: 80
+          name: traefik
+        command:
+        - --providers.docker=true
+        - --api.dashboard=true
+        - --api.insecure=true
+        - --entrypoints.web.address=:80
+
+        resources:
+          limits:
+            memory: 256Mi
+            cpu: 500m
+          requests:
+            memory: 128Mi
+            cpu: 250m
+        livenessProbe:
+          exec:
+            command:
+            - wget
+            - --no-verbose
+            - --tries=1
+            - --spider
+            - http://localhost:80/api/overview
+          initialDelaySeconds: 20
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - wget
+            - --no-verbose
+            - --tries=1
+            - --spider
+            - http://localhost:80/api/overview
+          initialDelaySeconds: 10
+          periodSeconds: 10

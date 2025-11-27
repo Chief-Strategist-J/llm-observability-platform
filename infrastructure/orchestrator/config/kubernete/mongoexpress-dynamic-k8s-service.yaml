@@ -1,12 +1,17 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: mongo-express-service
+  name: mongoexpress-${INSTANCE_ID}
+  labels:
+    app: mongoexpress
+    instance: "${INSTANCE_ID}"
 spec:
   type: ClusterIP
-  selector:
-    app: mongo-express-instance
   ports:
-    - name: http
-      port: {{UI_PORT}}
-      targetPort: {{UI_PORT}}
+  - port: 8081
+    targetPort: 8081
+    protocol: TCP
+    name: mongoexpress
+  selector:
+    app: mongoexpress
+    instance: "${INSTANCE_ID}"

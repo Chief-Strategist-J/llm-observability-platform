@@ -1,61 +1,56 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: promtail-instance
+  name: promtail-${INSTANCE_ID}
+  labels:
+    app: promtail
+    instance: "${INSTANCE_ID}"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: promtail-instance
+      app: promtail
+      instance: "${INSTANCE_ID}"
   template:
     metadata:
       labels:
-        app: promtail-instance
+        app: promtail
+        instance: "${INSTANCE_ID}"
     spec:
       containers:
-        - name: promtail
-          image: grafana/promtail:latest
-          env:
-            - name: INSTANCE_ID
-              value: "{{INSTANCE_ID}}"
-            - name: PROMTAIL_PORT
-              value: "{{PROMTAIL_PORT}}"
-          ports:
-            - name: http
-              containerPort: {{PROMTAIL_PORT}}
-          volumeMounts:
-            - name: promtail-config
-              mountPath: /etc/promtail
-            - name: host-logs
-              mountPath: /var/log
-              readOnly: true
-            - name: docker-sock
-              mountPath: /var/run/docker.sock
-              readOnly: true
-          resources:
-            limits:
-              memory: "128Mi"
-              cpu: "250m"
-            requests:
-              memory: "128Mi"
-              cpu: "250m"
-          livenessProbe:
-            httpGet:
-              path: /ready
-              port: {{PROMTAIL_PORT}}
-            initialDelaySeconds: 20
-            timeoutSeconds: 10
-            periodSeconds: 30
-            failureThreshold: 3
-      volumes:
-        - name: promtail-config
-          persistentVolumeClaim:
-            claimName: promtail-config-pvc
-        - name: host-logs
-          hostPath:
-            path: /var/log
-            type: Directory
-        - name: docker-sock
-          hostPath:
-            path: /var/run/docker.sock
-            type: Socket
+      - name: promtail
+        image: grafana/promtail:latest
+        ports:
+        - containerPort: 9080
+          name: promtail
+        command:
+        - -config.file=/etc/promtail/config.yml
+
+        resources:
+          limits:
+            memory: 256Mi
+            cpu: 300m
+          requests:
+            memory: 128Mi
+            cpu: 150m
+        livenessProbe:
+          exec:
+            command:
+            - wget
+            - --no-verbose
+            - --tries=1
+            - --spider
+            - http://localhost:9080/ready
+          initialDelaySeconds: 20
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - wget
+            - --no-verbose
+            - --tries=1
+            - --spider
+            - http://localhost:9080/ready
+          initialDelaySeconds: 10
+          periodSeconds: 10

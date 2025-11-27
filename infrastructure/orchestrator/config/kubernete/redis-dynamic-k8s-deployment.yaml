@@ -1,66 +1,73 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: redis-instance
+  name: redis-${INSTANCE_ID}
+  labels:
+    app: redis
+    instance: "${INSTANCE_ID}"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: redis-instance
+      app: redis
+      instance: "${INSTANCE_ID}"
   template:
     metadata:
       labels:
-        app: redis-instance
+        app: redis
+        instance: "${INSTANCE_ID}"
     spec:
       containers:
-        - name: redis
-          image: redis:7-alpine
-          env:
-            - name: REDIS_PASSWORD
-              value: ""
-            - name: REDIS_DATABASES
-              value: "16"
-            - name: REDIS_MAXMEMORY
-              value: "256mb"
-            - name: REDIS_MAXMEMORY_POLICY
-              value: "allkeys-lru"
-            - name: REDIS_PORT
-              value: "{{REDIS_PORT}}"
-          ports:
-            - name: redis
-              containerPort: {{REDIS_PORT}}
-          command:
-            - redis-server
-            - --maxmemory
-            - "256mb"
-            - --maxmemory-policy
-            - allkeys-lru
-            - --databases
-            - "16"
-            - --port
-            - "{{REDIS_PORT}}"
-          volumeMounts:
-            - name: redis-data
-              mountPath: /data
-          resources:
-            limits:
-              memory: "256Mi"
-              cpu: "500m"
-            requests:
-              memory: "128Mi"
-              cpu: "250m"
-          livenessProbe:
-            exec:
-              command:
-                - redis-cli
-                - "-p"
-                - "{{REDIS_PORT}}"
-                - ping
-            initialDelaySeconds: 10
-            timeoutSeconds: 10
-            periodSeconds: 30
-            failureThreshold: 3
-      volumes:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+          name: redis
+        env:
+        - name: REDIS_PORT
+          value: "6379"
+        - name: INSTANCE_ID
+          value: "${INSTANCE_ID}"
+        command:
+        - redis-server
+        - --maxmemory
+        - 256mb
+        - --maxmemory-policy
+        - allkeys-lru
+        - --databases
+        - "16"
+        - --port
+        - "6379"
+        resources:
+          limits:
+            memory: 256Mi
+            cpu: 500m
+          requests:
+            memory: 128Mi
+            cpu: 250m
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - -p
+            - "6379"
+            - ping
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - -p
+            - "6379"
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        volumeMounts:
         - name: redis-data
-          persistentVolumeClaim:
-            claimName: redis-data-pvc
+          mountPath: /data
+      volumes:
+      - name: redis-data
+        persistentVolumeClaim:
+          claimName: redis-pvc-${INSTANCE_ID}
