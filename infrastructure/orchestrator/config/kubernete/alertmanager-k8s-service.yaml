@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager-service
+spec:
+  type: ClusterIP
+  selector:
+    app: alertmanager-instance
+  ports:
+    - name: http
+      port: {{ALERTMANAGER_PORT}}
+      targetPort: {{ALERTMANAGER_PORT}}

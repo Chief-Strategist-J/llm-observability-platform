@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger-instance-${INSTANCE_ID}
+    ports:
+      - "${HTTP_PORT}:${HTTP_PORT}"
+      - "${OTLP_GRPC_PORT}:${OTLP_GRPC_PORT}"
+      - "${OTLP_HTTP_PORT}:${OTLP_HTTP_PORT}"
+      - "${GRPC_PORT}:${GRPC_PORT}"
+      - "${ADMIN_PORT}:${ADMIN_PORT}"
+      - "${ZIPKIN_PORT}:${ZIPKIN_PORT}"
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      COLLECTOR_ZIPKIN_HOST_PORT: ":${ZIPKIN_PORT}"
+      HTTP_PORT: "${HTTP_PORT}"
+      OTLP_GRPC_PORT: "${OTLP_GRPC_PORT}"
+      OTLP_HTTP_PORT: "${OTLP_HTTP_PORT}"
+      GRPC_PORT: "${GRPC_PORT}"
+      ADMIN_PORT: "${ADMIN_PORT}"
+      ZIPKIN_PORT: "${ZIPKIN_PORT}"
+      INSTANCE_ID: "${INSTANCE_ID}"
+    volumes:
+      - jaeger-data-${INSTANCE_ID}:/tmp
+    networks:
+      - observability-network
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+        reservations:
+          memory: 256m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${HTTP_PORT}/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  jaeger-data-${INSTANCE_ID}:
+
+networks:
+  observability-network:
+    external: true

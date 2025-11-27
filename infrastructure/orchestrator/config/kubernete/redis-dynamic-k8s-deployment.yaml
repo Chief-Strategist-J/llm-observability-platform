@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-instance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-instance
+  template:
+    metadata:
+      labels:
+        app: redis-instance
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          env:
+            - name: REDIS_PASSWORD
+              value: ""
+            - name: REDIS_DATABASES
+              value: "16"
+            - name: REDIS_MAXMEMORY
+              value: "256mb"
+            - name: REDIS_MAXMEMORY_POLICY
+              value: "allkeys-lru"
+            - name: REDIS_PORT
+              value: "{{REDIS_PORT}}"
+          ports:
+            - name: redis
+              containerPort: {{REDIS_PORT}}
+          command:
+            - redis-server
+            - --maxmemory
+            - "256mb"
+            - --maxmemory-policy
+            - allkeys-lru
+            - --databases
+            - "16"
+            - --port
+            - "{{REDIS_PORT}}"
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - "-p"
+                - "{{REDIS_PORT}}"
+                - ping
+            initialDelaySeconds: 10
+            timeoutSeconds: 10
+            periodSeconds: 30
+            failureThreshold: 3
+      volumes:
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: redis-data-pvc

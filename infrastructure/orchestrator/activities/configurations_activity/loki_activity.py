@@ -1,12 +1,12 @@
 import logging
 from pathlib import Path
 from typing import Optional, Dict, Any
+import time
 from temporalio import activity
 from infrastructure.orchestrator.base.base_container_activity import BaseService, ContainerConfig
 from infrastructure.orchestrator.base.port_manager import get_port_manager
 
 logger = logging.getLogger(__name__)
-
 
 LOKI_CONFIG_TEMPLATE = """
 auth_enabled: false
@@ -41,8 +41,6 @@ limits_config:
   volume_enabled: true
   retention_period: 744h
 """
-
-
 class LokiManager(BaseService):
     SERVICE_NAME = "Loki"
     SERVICE_DESCRIPTION = "log aggregation service"
@@ -50,7 +48,6 @@ class LokiManager(BaseService):
 
     def __init__(self, dynamic_dir: Optional[str] = None, config_override: Optional[str] = None) -> None:
         pm = get_port_manager()
-
         http_port = pm.get_port("loki", 0, "port")
         grpc_port = pm.get_port("loki", 0, "grpc_port") if "grpc_port" in pm.get_service_info("loki") else http_port + 1
 
@@ -114,21 +111,20 @@ class LokiManager(BaseService):
             command=["-config.file=/etc/loki/local-config.yaml"],
             labels={
                 "traefik.enable": "true",
-                "traefik.http.routers.loki.rule": "PathPrefix(`/`)",
+                "traefik.http.routers.loki.rule": "Host(`loki.local`)",
                 "traefik.http.routers.loki.entrypoints": "loki",
-                "traefik.http.routers.loki.service": "loki",
                 "traefik.http.services.loki.loadbalancer.server.port": str(http_port),
                 "traefik.docker.network": "observability-network",
             },
             healthcheck={
                 "test": [
                     "CMD-SHELL",
-                    f"wget --no-verbose --tries=1 --spider http://localhost:{http_port}/ready || exit 1"
+                    f"wget --no-verbose --tries=1 --spider http://127.0.0.1:{http_port}/ready || exit 1"
                 ],
                 "interval": 30000000000,
                 "timeout": 10000000000,
                 "retries": 5,
-                "start_period": 90000000000
+                "start_period": 60000000000
             }
         )
 
@@ -145,29 +141,51 @@ class LokiManager(BaseService):
             http_port, grpc_port, str(config_file)
         )
 
+    def check_internal_ready(self, retry_seconds: int = 120, poll_interval: float = 2.0) -> bool:
+        http_port = int(self.extra.get("http_port", 3100))
+        deadline = time.time() + float(retry_seconds)
+        last_exc = None
+
+        while time.time() < deadline:
+            try:
+                code, out = self.exec(f'wget -qS --spider http://127.0.0.1:{http_port}/ready || exit 1')
+                try:
+                    exit_code = int(code)
+                except Exception:
+                    exit_code = 1
+                if exit_code == 0:
+                    return True
+            except Exception as e:
+                last_exc = e
+            time.sleep(poll_interval)
+
+        return False
+
     def query_logs(self, query: str, limit: int = 100) -> str:
-        http_port = self.extra.get("http_port")
-        cmd = f'wget -qO- "http://localhost:{http_port}/loki/api/v1/query?query={query}&limit={limit}"'
+        http_port = int(self.extra.get("http_port", 3100))
+        cmd = f'wget -qO- "http://127.0.0.1:{http_port}/loki/api/v1/query?query={query}&limit={limit}"'
         code, out = self.exec(cmd)
-
-        if code != 0:
-            logger.error("event=loki_query_failed error=%s", out)
+        try:
+            exit_code = int(code)
+        except Exception:
+            exit_code = 1
+        if exit_code != 0:
+            logger.error("event=loki_query_failed exit=%s error=%s", exit_code, out)
             return ""
-
-        logger.info("event=loki_query_success limit=%s", limit)
-        return out
+        return out or ""
 
     def get_labels(self) -> str:
-        http_port = self.extra.get("http_port")
-        cmd = f'wget -qO- "http://localhost:{http_port}/loki/api/v1/labels"'
+        http_port = int(self.extra.get("http_port", 3100))
+        cmd = f'wget -qO- "http://127.0.0.1:{http_port}/loki/api/v1/labels"'
         code, out = self.exec(cmd)
-
-        if code != 0:
-            logger.error("event=loki_labels_failed error=%s", out)
+        try:
+            exit_code = int(code)
+        except Exception:
+            exit_code = 1
+        if exit_code != 0:
+            logger.error("event=loki_labels_failed exit=%s error=%s", exit_code, out)
             return ""
-
-        logger.info("event=loki_labels_success")
-        return out
+        return out or ""
 
 
 @activity.defn
@@ -178,7 +196,6 @@ async def start_loki_activity(params: Dict[str, Any]) -> bool:
     logger.info("event=loki_started")
     return True
 
-
 @activity.defn
 async def stop_loki_activity(params: Dict[str, Any]) -> bool:
     logger.info("event=loki_stop params=%s", params)
@@ -187,7 +204,6 @@ async def stop_loki_activity(params: Dict[str, Any]) -> bool:
     logger.info("event=loki_stopped")
     return True
 
-
 @activity.defn
 async def restart_loki_activity(params: Dict[str, Any]) -> bool:
     logger.info("event=loki_restart params=%s", params)
@@ -195,7 +211,6 @@ async def restart_loki_activity(params: Dict[str, Any]) -> bool:
     manager.restart()
     logger.info("event=loki_restarted")
     return True
-
 
 @activity.defn
 async def delete_loki_activity(params: Dict[str, Any]) -> bool:

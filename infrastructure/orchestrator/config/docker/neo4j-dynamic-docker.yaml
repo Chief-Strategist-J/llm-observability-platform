@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  neo4j:
+    image: neo4j:latest
+    container_name: neo4j-instance-${INSTANCE_ID}
+    ports:
+      - "${HTTP_PORT}:${HTTP_PORT}"
+      - "${BOLT_PORT}:${BOLT_PORT}"
+    environment:
+      NEO4J_AUTH: "neo4j/Neo4jPassword123!"
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
+      NEO4J_dbms_memory_pagecache_size: "512M"
+      NEO4J_dbms_memory_heap_initial__size: "512M"
+      NEO4J_dbms_memory_heap_max__size: "512M"
+      NEO4J_dbms_connector_bolt_listen__address: "0.0.0.0:${BOLT_PORT}"
+      NEO4J_dbms_connector_http_listen__address: "0.0.0.0:${HTTP_PORT}"
+      HTTP_PORT: "${HTTP_PORT}"
+      BOLT_PORT: "${BOLT_PORT}"
+      INSTANCE_ID: "${INSTANCE_ID}"
+    volumes:
+      - neo4j-data-${INSTANCE_ID}:/data
+      - neo4j-logs-${INSTANCE_ID}:/logs
+      - neo4j-import-${INSTANCE_ID}:/var/lib/neo4j/import
+      - neo4j-plugins-${INSTANCE_ID}:/plugins
+    networks:
+      - data-network
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+        reservations:
+          memory: 512m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${HTTP_PORT} || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  neo4j-data-${INSTANCE_ID}:
+  neo4j-logs-${INSTANCE_ID}:
+  neo4j-import-${INSTANCE_ID}:
+  neo4j-plugins-${INSTANCE_ID}:
+
+networks:
+  data-network:
+    external: true

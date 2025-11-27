@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager-instance-${INSTANCE_ID}
+    ports:
+      - "${ALERTMANAGER_PORT}:${ALERTMANAGER_PORT}"
+    environment:
+      ALERTMANAGER_PORT: "${ALERTMANAGER_PORT}"
+      INSTANCE_ID: "${INSTANCE_ID}"
+    volumes:
+      - alertmanager-data-${INSTANCE_ID}:/alertmanager
+      - /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/alertmanager:/etc/alertmanager
+    networks:
+      - monitoring-bridge
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.3"
+        reservations:
+          memory: 64m
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager_config.yaml"
+      - "--storage.path=/alertmanager"
+      - "--web.external-url=http://localhost:${ALERTMANAGER_PORT}"
+      - "--cluster.listen-address="
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${ALERTMANAGER_PORT}/-/healthy || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  alertmanager-data-${INSTANCE_ID}:
+
+networks:
+  monitoring-bridge:
+    external: true

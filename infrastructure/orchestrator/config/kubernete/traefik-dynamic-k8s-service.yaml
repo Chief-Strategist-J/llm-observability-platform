@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-service
+spec:
+  type: ClusterIP
+  selector:
+    app: traefik-instance
+  ports:
+    - name: web
+      port: {{HTTP_PORT}}
+      targetPort: {{HTTP_PORT}}
+    - name: grafana
+      port: {{GRAFANA_PORT}}
+      targetPort: {{GRAFANA_PORT}}
+    - name: loki
+      port: {{LOKI_PORT}}
+      targetPort: {{LOKI_PORT}}
+    - name: otel
+      port: {{OTEL_PORT}}
+      targetPort: {{OTEL_PORT}}

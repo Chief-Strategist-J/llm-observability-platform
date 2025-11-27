@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-service
+spec:
+  type: ClusterIP
+  selector:
+    app: kafka-instance
+  ports:
+    - name: broker
+      port: {{BROKER_PORT}}
+      targetPort: {{BROKER_PORT}}
+    - name: controller
+      port: {{CONTROLLER_PORT}}
+      targetPort: {{CONTROLLER_PORT}}

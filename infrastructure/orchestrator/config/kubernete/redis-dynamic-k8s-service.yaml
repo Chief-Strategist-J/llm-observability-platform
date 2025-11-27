@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+spec:
+  type: ClusterIP
+  selector:
+    app: redis-instance
+  ports:
+    - name: redis
+      port: {{REDIS_PORT}}
+      targetPort: {{REDIS_PORT}}

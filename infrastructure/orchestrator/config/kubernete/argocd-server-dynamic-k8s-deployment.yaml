@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-server-instance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: argocd-server-instance
+  template:
+    metadata:
+      labels:
+        app: argocd-server-instance
+    spec:
+      containers:
+        - name: argocd-server
+          image: argoproj/argocd:latest
+          env:
+            - name: SERVER_PORT
+              value: "{{SERVER_PORT}}"
+            - name: GRPC_PORT
+              value: "{{GRPC_PORT}}"
+            - name: REPO_SERVER_PORT
+              value: "{{REPO_SERVER_PORT}}"
+            - name: INSTANCE_ID
+              value: "{{INSTANCE_ID}}"
+            - name: ARGOCD_SERVER_INSECURE
+              value: "true"
+          args:
+            - "argocd-server"
+            - "--insecure"
+            - "--staticassets"
+            - "/shared/app"
+            - "--repo-server=argocd-repo-server:{{REPO_SERVER_PORT}}"
+          ports:
+            - name: http
+              containerPort: {{SERVER_PORT}}
+            - name: grpc
+              containerPort: {{GRPC_PORT}}
+          volumeMounts:
+            - name: argocd-data
+              mountPath: /var/argocd
+            - name: config-volume
+              mountPath: /etc/argocd/config
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "1.0"
+            requests:
+              memory: "256Mi"
+              cpu: "1.0"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{SERVER_PORT}}
+            initialDelaySeconds: 60
+            timeoutSeconds: 10
+            periodSeconds: 30
+            failureThreshold: 5
+      volumes:
+        - name: argocd-data
+          persistentVolumeClaim:
+            claimName: argocd-server-pvc
+        - name: config-volume
+          hostPath:
+            path: /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/argocd
+            type: Directory

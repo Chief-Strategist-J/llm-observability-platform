@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-instance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-instance
+  template:
+    metadata:
+      labels:
+        app: prometheus-instance
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:latest
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus"
+            - "--web.enable-remote-write-receiver"
+            - "--enable-feature=exemplar-storage"
+          env:
+            - name: INSTANCE_ID
+              value: "{{INSTANCE_ID}}"
+            - name: HOST_PORT
+              value: "{{HOST_PORT}}"
+          ports:
+            - name: http
+              containerPort: 9090
+          volumeMounts:
+            - name: prometheus-data
+              mountPath: /prometheus
+            - name: prometheus-config
+              mountPath: /etc/prometheus/prometheus.yml
+              subPath: prometheus.yml
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "1"
+            requests:
+              memory: "256Mi"
+              cpu: "1"
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9090
+            initialDelaySeconds: 40
+            timeoutSeconds: 10
+            periodSeconds: 30
+            failureThreshold: 3
+      volumes:
+        - name: prometheus-data
+          persistentVolumeClaim:
+            claimName: prometheus-data-pvc
+        - name: prometheus-config
+          configMap:
+            name: prometheus-config

@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-instance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana-instance
+  template:
+    metadata:
+      labels:
+        app: grafana-instance
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:latest
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              value: "admin"
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: "SuperSecret123!"
+            - name: GF_USERS_ALLOW_SIGN_UP
+              value: "false"
+            - name: GF_SERVER_HTTP_PORT
+              value: "3000"
+            - name: GRAFANA_PORT
+              value: "{{GRAFANA_PORT}}"
+            - name: INSTANCE_ID
+              value: "{{INSTANCE_ID}}"
+            - name: GF_SERVER_ROOT_URL
+              value: "http://localhost:{{GRAFANA_PORT}}"
+          ports:
+            - name: http
+              containerPort: {{GRAFANA_PORT}}
+          volumeMounts:
+            - name: grafana-data
+              mountPath: /var/lib/grafana
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+            requests:
+              memory: "256Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 20
+            timeoutSeconds: 10
+            periodSeconds: 30
+            failureThreshold: 3
+      volumes:
+        - name: grafana-data
+          persistentVolumeClaim:
+            claimName: grafana-pvc

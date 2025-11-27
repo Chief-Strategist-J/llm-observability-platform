@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  opentelemetry-collector:
+    image: otel/opentelemetry-collector-contrib:0.91.0
+    container_name: opentelemetry-collector
+    volumes:
+      - ${DYNAMIC_DIR}:/etc/otelcol:rw
+      - ${LOGS_DIR}:/var/log/otelcol:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - observability-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command:
+      - "--config=/etc/otelcol/otel-collector-generated.yaml"
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.otel.rule: "PathPrefix(`/`)"
+      traefik.http.routers.otel.entrypoints: "otel"
+      traefik.http.routers.otel.service: "otel"
+      traefik.http.services.otel.loadbalancer.server.port: "8888"
+      traefik.docker.network: "observability-network"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8888/metrics || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  observability-network:
+    external: true

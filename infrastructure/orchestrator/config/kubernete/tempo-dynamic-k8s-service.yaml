@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tempo-service
+spec:
+  type: ClusterIP
+  selector:
+    app: tempo-instance
+  ports:
+    - name: http
+      port: {{HTTP_PORT}}
+      targetPort: 3200
+    - name: otlp-grpc
+      port: {{OTLP_GRPC_PORT}}
+      targetPort: 4317
+    - name: otlp-http
+      port: {{OTLP_HTTP_PORT}}
+      targetPort: 4318
+    - name: grpc
+      port: {{GRPC_PORT}}
+      targetPort: 9095
+    - name: zipkin
+      port: {{ZIPKIN_PORT}}
+      targetPort: 9411

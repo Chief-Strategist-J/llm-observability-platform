@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  traefik:
+    image: traefik:v3.5
+    container_name: traefik-instance-${INSTANCE_ID}
+    ports:
+      - "${HTTP_PORT}:${HTTP_PORT}"
+      - "${GRAFANA_PORT}:${GRAFANA_PORT}"
+      - "${LOKI_PORT}:${LOKI_PORT}"
+      - "${OTEL_PORT}:${OTEL_PORT}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - observability-network
+    environment:
+      INSTANCE_ID: "${INSTANCE_ID}"
+      HTTP_PORT: "${HTTP_PORT}"
+      GRAFANA_PORT: "${GRAFANA_PORT}"
+      LOKI_PORT: "${LOKI_PORT}"
+      OTEL_PORT: "${OTEL_PORT}"
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+        reservations:
+          memory: 128m
+    restart: unless-stopped
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--providers.docker.endpoint=unix:///var/run/docker.sock"
+      - "--providers.docker.network=observability-network"
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--entrypoints.web.address=:${HTTP_PORT}"
+      - "--entrypoints.grafana.address=:${GRAFANA_PORT}"
+      - "--entrypoints.loki.address=:${LOKI_PORT}"
+      - "--entrypoints.otel.address=:${OTEL_PORT}"
+      - "--log.level=INFO"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${HTTP_PORT}/api/overview || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+networks:
+  observability-network:
+    external: true

@@ -502,6 +502,45 @@ class ContainerManager(BaseContainerManager):
             raise
         logger.debug("container_restart_complete name=%s", self.config.name)
 
+    def logs(self, follow: bool = False) -> str:
+        logger.debug("container_logs_fetch_start name=%s follow=%s", self.config.name, follow)
+        try:
+            container = self._get_existing_container()
+            if not container:
+                logger.debug("container_logs_not_found name=%s", self.config.name)
+                return ""
+
+            logs_bytes = container.logs(follow=follow)
+            logger.debug(
+                "container_logs_fetch_complete name=%s type=%s",
+                self.config.name,
+                type(logs_bytes),
+            )
+
+            if isinstance(logs_bytes, (bytes, bytearray)):
+                return logs_bytes.decode("utf-8", errors="ignore")
+
+            return str(logs_bytes)
+
+        except Exception as e:
+            logger.exception("container_logs_error name=%s error=%s", self.config.name, e)
+            raise
+
+
+    def _get_existing_container(self) -> Optional["Container"]:
+        from docker.errors import NotFound  # type: ignore
+        logger.debug("container_lookup_start name=%s", self.config.name)
+        try:
+            container = self.client.containers.get(self.config.name)
+            logger.debug("container_lookup_found name=%s", self.config.name)
+            return container
+        except NotFound:
+            logger.debug("container_lookup_notfound name=%s", self.config.name)
+            return None
+        except Exception as e:
+            logger.exception("container_lookup_error name=%s error=%s", self.config.name, e)
+            raise
+        
     def delete(self, force: bool = False, backup: bool = False) -> None:
         logger.debug(
             "container_delete_start name=%s force=%s backup=%s",
@@ -684,12 +723,30 @@ class ContainerManager(BaseContainerManager):
                 if net_name and net_name not in ("bridge", "host", "none"):
                     try:
                         net = self.client.networks.get(net_name)
-                        net.remove()
-                        logger.info("Network %s removed.", net_name)
+                        containers_attached = net.attrs.get("Containers") or {}
+                        if containers_attached:
+                            try:
+                                target_id = getattr(container, "id", None)
+                                if target_id and target_id in containers_attached:
+                                    try:
+                                        logger.info("Disconnecting target container %s from network %s", target_id, net_name)
+                                        net.disconnect(target_id, force=force)
+                                        logger.info("Disconnected %s from %s", target_id, net_name)
+                                    except Exception as e:
+                                        logger.warning("Failed to disconnect target container %s from %s: %s", target_id, net_name, e)
+                                logger.info("Network %s has active endpoints; skipping removal. endpoints=%s", net_name, list(containers_attached.keys()))
+                            except Exception as e:
+                                logger.debug("Could not process network endpoints for %s: %s", net_name, e)
+                        else:
+                            try:
+                                net.remove()
+                                logger.info("Network %s removed.", net_name)
+                            except Exception as e:
+                                logger.warning("Network %s removal failed (no active endpoints): %s", net_name, e)
                     except NotFound:
                         logger.debug("Network %s not found.", net_name)
                     except Exception as e:
-                        errors.append(f"network {net_name}: {e}")
+                        logger.warning("Network lookup/removal error for %s: %s", net_name, e)
 
                 if errors:
                     msg = "Delete completed with errors: " + "; ".join(errors)
@@ -713,44 +770,6 @@ class ContainerManager(BaseContainerManager):
             backup,
         )
 
-    def logs(self, follow: bool = False) -> str:
-        logger.debug("container_logs_fetch_start name=%s follow=%s", self.config.name, follow)
-        try:
-            container = self._get_existing_container()
-            if not container:
-                logger.debug("container_logs_not_found name=%s", self.config.name)
-                return ""
-
-            logs_bytes = container.logs(follow=follow)
-            logger.debug(
-                "container_logs_fetch_complete name=%s type=%s",
-                self.config.name,
-                type(logs_bytes),
-            )
-
-            if isinstance(logs_bytes, (bytes, bytearray)):
-                return logs_bytes.decode("utf-8", errors="ignore")
-
-            return str(logs_bytes)
-
-        except Exception as e:
-            logger.exception("container_logs_error name=%s error=%s", self.config.name, e)
-            raise
-
-
-    def _get_existing_container(self) -> Optional["Container"]:
-        from docker.errors import NotFound  # type: ignore
-        logger.debug("container_lookup_start name=%s", self.config.name)
-        try:
-            container = self.client.containers.get(self.config.name)
-            logger.debug("container_lookup_found name=%s", self.config.name)
-            return container
-        except NotFound:
-            logger.debug("container_lookup_notfound name=%s", self.config.name)
-            return None
-        except Exception as e:
-            logger.exception("container_lookup_error name=%s error=%s", self.config.name, e)
-            raise
 
 
 class BaseService:

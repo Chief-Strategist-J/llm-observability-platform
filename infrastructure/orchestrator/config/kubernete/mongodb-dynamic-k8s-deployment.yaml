@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb-instance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb-instance
+  template:
+    metadata:
+      labels:
+        app: mongodb-instance
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:8.0
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              value: "admin"
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              value: "MongoPassword123!"
+            - name: MONGO_INITDB_DATABASE
+              value: "admin"
+            - name: MONGO_PORT
+              value: "{{MONGO_PORT}}"
+            - name: INSTANCE_ID
+              value: "{{INSTANCE_ID}}"
+          args:
+            - "mongod"
+            - "--auth"
+            - "--bind_ip_all"
+            - "--wiredTigerCacheSizeGB"
+            - "0.5"
+          ports:
+            - name: db
+              containerPort: {{MONGO_PORT}}
+          volumeMounts:
+            - name: mongodb-data
+              mountPath: /data/db
+            - name: mongodb-config
+              mountPath: /data/configdb
+          resources:
+            limits:
+              memory: "1Gi"
+              cpu: "1"
+            requests:
+              memory: "512Mi"
+              cpu: "1"
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - "mongosh --quiet --port {{MONGO_PORT}} --eval \"db.adminCommand('ping')\" --username admin --password MongoPassword123! --authenticationDatabase admin || exit 1"
+            initialDelaySeconds: 40
+            timeoutSeconds: 10
+            periodSeconds: 30
+            failureThreshold: 3
+      volumes:
+        - name: mongodb-data
+          persistentVolumeClaim:
+            claimName: mongodb-data-pvc
+        - name: mongodb-config
+          persistentVolumeClaim:
+            claimName: mongodb-config-pvc
