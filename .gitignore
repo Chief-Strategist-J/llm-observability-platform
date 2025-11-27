@@ -247,9 +247,9 @@ infrastructure/*/logs/
 infrastructure/*/cache/
 
 # Exception: Track observability platform ingest pipelines
-\!infrastructure/observability_platform/ingest/logs/
-\!infrastructure/observability_platform/ingest/metrics/
-\!infrastructure/observability_platform/ingest/tracing/
+\!infrastructure/observability/ingest/logs/
+\!infrastructure/observability/ingest/metrics/
+\!infrastructure/observability/ingest/tracing/
 # Monitoring
 infrastructure/monitoring/loki/data/
 infrastructure/monitoring/prometheus/data/

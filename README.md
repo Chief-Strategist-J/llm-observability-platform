@@ -25,7 +25,7 @@ llm-chatbot-python/
 │   └── requirements.txt           # Python dependencies
 ├── infrastructure/                # Infrastructure components
 │   ├── orchestrator/              # Container management
-│   └── observability_platform/    # Monitoring and logging
+│   └── observability/    # Monitoring and logging
 ├── deployment/                    # Deployment configurations
 ├── docs/                          # Documentation
 └── shared/                        # Shared utilities
