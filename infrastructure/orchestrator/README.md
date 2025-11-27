@@ -211,9 +211,6 @@ python3 my_new_worker.py
 
 source /home/j/live/dinesh/llm-chatbot-python/.venv/bin/activate
 
-
-python infrastructure/orchestrator/workers/logs_pipeline_worker.py 
-
 python infrastructure/orchestrator/workers/database_pipeline_worker.py 
 
 python infrastructure/orchestrator/workers/metrics_pipeline_worker.py 

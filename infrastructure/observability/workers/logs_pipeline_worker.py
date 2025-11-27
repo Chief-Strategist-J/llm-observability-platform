@@ -1,9 +1,8 @@
 import sys
 from pathlib import Path
 
-project_root = Path(__file__).parent.parent.parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
+root = Path(__file__).resolve().parents[2]
+sys.path.append(str(root))
 
 import asyncio
 from infrastructure.orchestrator.base.base_worker import BaseWorker, WorkerConfig
