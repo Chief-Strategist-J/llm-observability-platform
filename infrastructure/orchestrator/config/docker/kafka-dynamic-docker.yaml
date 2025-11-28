@@ -4,9 +4,7 @@ services:
   kafka:
     image: apache/kafka:4.1.1
     container_name: kafka-instance-${INSTANCE_ID}
-    ports:
-      - "${BROKER_PORT}:${BROKER_PORT}"
-      - "${CONTROLLER_PORT}:${CONTROLLER_PORT}"
+
     environment:
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
       KAFKA_PROCESS_ROLES: "broker,controller"
@@ -28,7 +26,23 @@ services:
     volumes:
       - kafka-data-${INSTANCE_ID}:/var/lib/kafka/data
     networks:
-      - data-network
+      - messaging-network
+
+    # Keep port for internal message streaming
+    ports:
+      - "${BROKER_PORT}:${BROKER_PORT}"
+      - "${CONTROLLER_PORT}:${CONTROLLER_PORT}"
+
+    # NO Traefik labels (internal only)
+    labels:
+      traefik.enable: "false"
+      
+      # Observability only
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "9308"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "kafka-${INSTANCE_ID}"
     deploy:
       resources:
         limits:

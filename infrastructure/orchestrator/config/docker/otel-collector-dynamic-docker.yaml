@@ -8,20 +8,42 @@ services:
       - ${DYNAMIC_DIR}:/etc/otelcol:rw
       - ${LOGS_DIR}:/var/log/otelcol:rw
       - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - observability-network
     extra_hosts:
       - "host.docker.internal:host-gateway"
     command:
       - "--config=/etc/otelcol/otel-collector-generated.yaml"
     restart: unless-stopped
+    networks:
+      - observability-network
+
+    # Keep OTLP ports for data ingestion
+    ports:
+      - "${OTLP_GRPC_PORT:-4317}:4317"
+      - "${OTLP_HTTP_PORT:-4318}:4318"
+
     labels:
       traefik.enable: "true"
-      traefik.http.routers.otel.rule: "PathPrefix(`/`)"
-      traefik.http.routers.otel.entrypoints: "otel"
-      traefik.http.routers.otel.service: "otel"
-      traefik.http.services.otel.loadbalancer.server.port: "8888"
       traefik.docker.network: "observability-network"
+      
+      # Router for metrics endpoint
+      traefik.http.routers.otel-${INSTANCE_ID}.rule: "Host(`otel-${INSTANCE_ID}.localhost`)"
+      traefik.http.routers.otel-${INSTANCE_ID}.entrypoints: "web,websecure"
+      traefik.http.routers.otel-${INSTANCE_ID}.service: "otel-${INSTANCE_ID}"
+      traefik.http.routers.otel-${INSTANCE_ID}.tls: "true"
+      traefik.http.routers.otel-${INSTANCE_ID}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.otel-${INSTANCE_ID}.middlewares: "traefik-auth-${INSTANCE_ID},security-headers-${INSTANCE_ID}"
+      
+      # Service
+      traefik.http.services.otel-${INSTANCE_ID}.loadbalancer.server.port: "8888"
+      traefik.http.services.otel-${INSTANCE_ID}.loadbalancer.healthcheck.path: "/metrics"
+      traefik.http.services.otel-${INSTANCE_ID}.loadbalancer.healthcheck.interval: "30s"
+      
+      # Observability
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "8888"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "otel-collector-${INSTANCE_ID}"
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8888/metrics || exit 1"]
       interval: 30s

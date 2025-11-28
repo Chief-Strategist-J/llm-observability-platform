@@ -4,16 +4,39 @@ services:
   alertmanager:
     image: prom/alertmanager:latest
     container_name: alertmanager-instance-${INSTANCE_ID}
-    ports:
-      - "${ALERTMANAGER_PORT}:${ALERTMANAGER_PORT}"
     environment:
       ALERTMANAGER_PORT: "${ALERTMANAGER_PORT}"
       INSTANCE_ID: "${INSTANCE_ID}"
     volumes:
       - alertmanager-data-${INSTANCE_ID}:/alertmanager
       - /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/alertmanager:/etc/alertmanager
+    
     networks:
-      - monitoring-bridge
+      - observability-network
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "observability-network"
+      
+      # Router
+      traefik.http.routers.alertmanager-${INSTANCE_ID}.rule: "Host(`alertmanager-${INSTANCE_ID}.localhost`)"
+      traefik.http.routers.alertmanager-${INSTANCE_ID}.entrypoints: "web,websecure"
+      traefik.http.routers.alertmanager-${INSTANCE_ID}.service: "alertmanager-${INSTANCE_ID}"
+      traefik.http.routers.alertmanager-${INSTANCE_ID}.tls: "true"
+      traefik.http.routers.alertmanager-${INSTANCE_ID}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.alertmanager-${INSTANCE_ID}.middlewares: "traefik-auth-${INSTANCE_ID},security-headers-${INSTANCE_ID}"
+      
+      # Service
+      traefik.http.services.alertmanager-${INSTANCE_ID}.loadbalancer.server.port: "9093"
+      traefik.http.services.alertmanager-${INSTANCE_ID}.loadbalancer.healthcheck.path: "/-/healthy"
+      traefik.http.services.alertmanager-${INSTANCE_ID}.loadbalancer.healthcheck.interval: "30s"
+      
+      # Observability
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "9093"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "alertmanager-${INSTANCE_ID}"
     deploy:
       resources:
         limits:
@@ -39,4 +62,6 @@ volumes:
 
 networks:
   monitoring-bridge:
+    external: true
+  observability-network:
     external: true

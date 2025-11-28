@@ -17,8 +17,6 @@ services:
     volumes:
       - ${DATA_DIR_PATH}:/loki:rw
       - ${CONFIG_FILE_PATH}:/etc/loki/local-config.yaml:ro
-    networks:
-      - observability-network
     deploy:
       resources:
         limits:
@@ -27,12 +25,24 @@ services:
         reservations:
           memory: 256m
     restart: unless-stopped
+    networks:
+      - observability-network
+
     labels:
       traefik.enable: "true"
-      traefik.http.routers.loki.rule: "Host(`loki.local`)"
-      traefik.http.routers.loki.entrypoints: "loki"
-      traefik.http.services.loki.loadbalancer.server.port: "${HTTP_PORT}"
       traefik.docker.network: "observability-network"
+      
+      traefik.http.routers.loki-${INSTANCE_ID}.rule: "Host(`loki-${INSTANCE_ID}.localhost`)"
+      traefik.http.routers.loki-${INSTANCE_ID}.entrypoints: "web,websecure"
+      traefik.http.routers.loki-${INSTANCE_ID}.service: "loki-${INSTANCE_ID}"
+      traefik.http.routers.loki-${INSTANCE_ID}.tls: "true"
+      traefik.http.routers.loki-${INSTANCE_ID}.middlewares: "auth-basic,security-headers,rate-limit"
+      
+      traefik.http.services.loki-${INSTANCE_ID}.loadbalancer.server.port: "3100"
+      
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "3100"
+      prometheus.io.path: "/metrics"
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:${HTTP_PORT}/ready || exit 1"]
       interval: 30s

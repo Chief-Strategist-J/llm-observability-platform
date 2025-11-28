@@ -4,13 +4,7 @@ services:
   jaeger:
     image: jaegertracing/all-in-one:latest
     container_name: jaeger-instance-${INSTANCE_ID}
-    ports:
-      - "${HTTP_PORT}:${HTTP_PORT}"
-      - "${OTLP_GRPC_PORT}:${OTLP_GRPC_PORT}"
-      - "${OTLP_HTTP_PORT}:${OTLP_HTTP_PORT}"
-      - "${GRPC_PORT}:${GRPC_PORT}"
-      - "${ADMIN_PORT}:${ADMIN_PORT}"
-      - "${ZIPKIN_PORT}:${ZIPKIN_PORT}"
+
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
       COLLECTOR_ZIPKIN_HOST_PORT: ":${ZIPKIN_PORT}"
@@ -25,6 +19,31 @@ services:
       - jaeger-data-${INSTANCE_ID}:/tmp
     networks:
       - observability-network
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "observability-network"
+      
+      # Router for UI
+      traefik.http.routers.jaeger-${INSTANCE_ID}.rule: "Host(`jaeger-${INSTANCE_ID}.localhost`)"
+      traefik.http.routers.jaeger-${INSTANCE_ID}.entrypoints: "web,websecure"
+      traefik.http.routers.jaeger-${INSTANCE_ID}.service: "jaeger-${INSTANCE_ID}"
+      traefik.http.routers.jaeger-${INSTANCE_ID}.tls: "true"
+      traefik.http.routers.jaeger-${INSTANCE_ID}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.jaeger-${INSTANCE_ID}.middlewares: "traefik-auth-${INSTANCE_ID},security-headers-${INSTANCE_ID}"
+      
+      # Service
+      traefik.http.services.jaeger-${INSTANCE_ID}.loadbalancer.server.port: "16686"
+      traefik.http.services.jaeger-${INSTANCE_ID}.loadbalancer.healthcheck.path: "/"
+      traefik.http.services.jaeger-${INSTANCE_ID}.loadbalancer.healthcheck.interval: "30s"
+      
+      # Observability
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "14269"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "jaeger-${INSTANCE_ID}"
+
     deploy:
       resources:
         limits:

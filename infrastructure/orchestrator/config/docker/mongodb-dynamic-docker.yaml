@@ -4,8 +4,6 @@ services:
   mongodb:
     image: mongo:8.0
     container_name: mongodb-instance-${INSTANCE_ID}
-    ports:
-      - "${MONGO_PORT}:${MONGO_PORT}"
     environment:
       MONGO_INITDB_ROOT_USERNAME: "admin"
       MONGO_INITDB_ROOT_PASSWORD: "MongoPassword123!"
@@ -23,6 +21,17 @@ services:
       - mongodb-config-${INSTANCE_ID}:/data/configdb
     networks:
       - data-network
+
+    # NO Traefik labels (internal only)
+    labels:
+      traefik.enable: "false"
+      
+      # Observability only
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "9216"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "mongodb-${INSTANCE_ID}"
     deploy:
       resources:
         limits:

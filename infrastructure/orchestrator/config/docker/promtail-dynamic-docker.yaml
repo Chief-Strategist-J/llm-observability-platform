@@ -4,14 +4,29 @@ services:
   promtail:
     image: grafana/promtail:latest
     container_name: promtail-instance-${INSTANCE_ID}
-    ports:
-      - "${PROMTAIL_PORT}:${PROMTAIL_PORT}"
     volumes:
       - promtail-config-${INSTANCE_ID}:/etc/promtail
       - /var/log:/var/log:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - observability-network
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "observability-network"
+      
+      # Router
+      traefik.http.routers.promtail-${INSTANCE_ID}.rule: "Host(`promtail-${INSTANCE_ID}.localhost`)"
+      traefik.http.routers.promtail-${INSTANCE_ID}.entrypoints: "web,websecure"
+      traefik.http.routers.promtail-${INSTANCE_ID}.service: "promtail-${INSTANCE_ID}"
+      traefik.http.routers.promtail-${INSTANCE_ID}.tls: "true"
+      traefik.http.routers.promtail-${INSTANCE_ID}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.promtail-${INSTANCE_ID}.middlewares: "traefik-auth-${INSTANCE_ID},security-headers-${INSTANCE_ID}"
+      
+      # Service
+      traefik.http.services.promtail-${INSTANCE_ID}.loadbalancer.server.port: "9080"
+      traefik.http.services.promtail-${INSTANCE_ID}.loadbalancer.healthcheck.path: "/ready"
+      traefik.http.services.promtail-${INSTANCE_ID}.loadbalancer.healthcheck.interval: "30s"
     environment:
       INSTANCE_ID: "${INSTANCE_ID}"
       PROMTAIL_PORT: "${PROMTAIL_PORT}"

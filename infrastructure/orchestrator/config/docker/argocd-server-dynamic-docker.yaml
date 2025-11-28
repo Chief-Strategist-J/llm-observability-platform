@@ -4,9 +4,6 @@ services:
   argocd-server:
     image: argoproj/argocd:latest
     container_name: argocd-server-instance-${INSTANCE_ID}
-    ports:
-      - "${SERVER_PORT}:${SERVER_PORT}"
-      - "${GRPC_PORT}:${GRPC_PORT}"
     environment:
       ARGOCD_SERVER_INSECURE: "true"
       SERVER_PORT: "${SERVER_PORT}"
@@ -17,7 +14,32 @@ services:
       - argocd-data-${INSTANCE_ID}:/var/argocd
       - /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/argocd:/etc/argocd/config
     networks:
-      - monitoring-bridge
+      - cicd-network
+      - observability-network  # Bridge for web access
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "observability-network"
+      
+      # Router
+      traefik.http.routers.argocd-${INSTANCE_ID}.rule: "Host(`argocd-${INSTANCE_ID}.localhost`)"
+      traefik.http.routers.argocd-${INSTANCE_ID}.entrypoints: "web,websecure"
+      traefik.http.routers.argocd-${INSTANCE_ID}.service: "argocd-${INSTANCE_ID}"
+      traefik.http.routers.argocd-${INSTANCE_ID}.tls: "true"
+      traefik.http.routers.argocd-${INSTANCE_ID}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.argocd-${INSTANCE_ID}.middlewares: "security-headers-${INSTANCE_ID}"
+      
+      # Service
+      traefik.http.services.argocd-${INSTANCE_ID}.loadbalancer.server.port: "8080"
+      traefik.http.services.argocd-${INSTANCE_ID}.loadbalancer.healthcheck.path: "/healthz"
+      traefik.http.services.argocd-${INSTANCE_ID}.loadbalancer.healthcheck.interval: "30s"
+      
+      # Observability
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "8083"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "argocd-server-${INSTANCE_ID}"
     deploy:
       resources:
         limits:
