@@ -11,7 +11,7 @@ services:
     ports:
       - "${TRAEFIK_HTTP_PORT:-80}:80"
       - "${TRAEFIK_HTTPS_PORT:-443}:443"
-      - "${TRAEFIK_DASHBOARD_PORT:-8080}:8080"  # Dashboard
+      - "${TRAEFIK_DASHBOARD_PORT:-31001}:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-certs-${TRAEFIK_INSTANCE_ID:-0}:/letsencrypt
@@ -33,46 +33,30 @@ services:
     restart: unless-stopped
     
     command:
-      # Docker Provider
       - "--providers.docker=true"
       - "--providers.docker.exposedByDefault=false"
       - "--providers.docker.endpoint=unix:///var/run/docker.sock"
       - "--providers.docker.watch=true"
-      
-      # Entry Points
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      
-      # HTTP to HTTPS Redirect
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
-      
-      # TLS Configuration
       - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@localhost}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
-      # For local development, use staging server
       - "--certificatesresolvers.letsencrypt.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
-      
-      # API and Dashboard
       - "--api.dashboard=true"
       - "--api.insecure=false"
-      
-      # Logging
       - "--log.level=INFO"
       - "--log.format=json"
       - "--accesslog=true"
       - "--accesslog.format=json"
       - "--accesslog.fields.headers.defaultmode=keep"
-      
-      # Metrics
       - "--metrics.prometheus=true"
       - "--metrics.prometheus.addEntryPointsLabels=true"
       - "--metrics.prometheus.addServicesLabels=true"
       - "--metrics.prometheus.addRoutersLabels=true"
-      
-      # Tracing (OTLP)
       - "--tracing.otlp=true"
       - "--tracing.otlp.http.endpoint=http://otel-collector-instance-${OTEL_INSTANCE_ID:-0}:${OTEL_HTTP_PORT:-4318}"
       - "--tracing.otlp.insecure=true"
@@ -80,17 +64,14 @@ services:
     labels:
       traefik.enable: "true"
       
-      # Dashboard Router (Secured)
       traefik.http.routers.traefik-dashboard-${TRAEFIK_INSTANCE_ID:-0}.rule: "Host(`traefik-${TRAEFIK_INSTANCE_ID:-0}.localhost`)"
       traefik.http.routers.traefik-dashboard-${TRAEFIK_INSTANCE_ID:-0}.entrypoints: "websecure"
       traefik.http.routers.traefik-dashboard-${TRAEFIK_INSTANCE_ID:-0}.service: "api@internal"
       traefik.http.routers.traefik-dashboard-${TRAEFIK_INSTANCE_ID:-0}.tls: "true"
       traefik.http.routers.traefik-dashboard-${TRAEFIK_INSTANCE_ID:-0}.middlewares: "traefik-auth-${TRAEFIK_INSTANCE_ID:-0},security-headers-${TRAEFIK_INSTANCE_ID:-0}"
       
-      # Authentication Middleware
       traefik.http.middlewares.traefik-auth-${TRAEFIK_INSTANCE_ID:-0}.basicauth.users: "${TRAEFIK_BASIC_AUTH}"
       
-      # Security Headers Middleware
       traefik.http.middlewares.security-headers-${TRAEFIK_INSTANCE_ID:-0}.headers.framedeny: "true"
       traefik.http.middlewares.security-headers-${TRAEFIK_INSTANCE_ID:-0}.headers.sslredirect: "true"
       traefik.http.middlewares.security-headers-${TRAEFIK_INSTANCE_ID:-0}.headers.stsincludesubdomains: "true"
@@ -103,26 +84,21 @@ services:
       traefik.http.middlewares.security-headers-${TRAEFIK_INSTANCE_ID:-0}.headers.customresponseheaders.X-Powered-By: ""
       traefik.http.middlewares.security-headers-${TRAEFIK_INSTANCE_ID:-0}.headers.customresponseheaders.Server: ""
       
-      # Rate Limiting Middleware
       traefik.http.middlewares.rate-limit-${TRAEFIK_INSTANCE_ID:-0}.ratelimit.average: "${RATE_LIMIT_AVERAGE:-100}"
       traefik.http.middlewares.rate-limit-${TRAEFIK_INSTANCE_ID:-0}.ratelimit.burst: "${RATE_LIMIT_BURST:-50}"
       traefik.http.middlewares.rate-limit-${TRAEFIK_INSTANCE_ID:-0}.ratelimit.period: "${RATE_LIMIT_PERIOD:-1s}"
       
-      # IP Whitelist Middleware (Internal Services)
       traefik.http.middlewares.ip-whitelist-${TRAEFIK_INSTANCE_ID:-0}.ipwhitelist.sourcerange: "${IP_WHITELIST:-127.0.0.1/32,172.20.0.0/16,172.21.0.0/16,172.22.0.0/16,172.23.0.0/16}"
       
-      # Compression
       traefik.http.middlewares.compression-${TRAEFIK_INSTANCE_ID:-0}.compress: "true"
       
-      # CORS (if needed)
       traefik.http.middlewares.cors-${TRAEFIK_INSTANCE_ID:-0}.headers.accesscontrolallowmethods: "GET,POST,PUT,DELETE,OPTIONS"
       traefik.http.middlewares.cors-${TRAEFIK_INSTANCE_ID:-0}.headers.accesscontrolalloworiginlist: "https://*.localhost"
       traefik.http.middlewares.cors-${TRAEFIK_INSTANCE_ID:-0}.headers.accesscontrolmaxage: "100"
       traefik.http.middlewares.cors-${TRAEFIK_INSTANCE_ID:-0}.headers.addvaryheader: "true"
       
-      # Prometheus Metrics
       prometheus.io.scrape: "true"
-      prometheus.io.port: "${TRAEFIK_DASHBOARD_PORT:-8080}"
+      prometheus.io.port: "${TRAEFIK_DASHBOARD_PORT:-31001}"
       prometheus.io.path: "/metrics"
       
     healthcheck:
