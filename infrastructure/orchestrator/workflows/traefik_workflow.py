@@ -32,47 +32,66 @@ class TraefikPipelineWorkflow(BaseWorkflow):
         timeout = timedelta(minutes=5)
 
         try:
-            start_result = await workflow.execute_activity(
-                "start_traefik_activity",
-                params,
-                start_to_close_timeout=timeout,
-                retry_policy=retry_policy,
-            )
-            if not start_result:
-                return "Error: Failed to start Traefik"
-
             await workflow.sleep(2)
 
-            stop_result = await workflow.execute_activity(
+            await workflow.execute_activity(
                 "stop_traefik_activity",
                 params,
                 start_to_close_timeout=timeout,
                 retry_policy=retry_policy,
             )
-            if not stop_result:
-                return "Error: Failed to stop Traefik"
 
             await workflow.sleep(2)
 
-            restart_result = await workflow.execute_activity(
-                "restart_traefik_activity",
-                params,
-                start_to_close_timeout=timeout,
-                retry_policy=retry_policy,
-            )
-            if not restart_result:
-                return "Error: Failed to restart Traefik"
-
-            await workflow.sleep(2)
-
-            delete_result = await workflow.execute_activity(
+            await workflow.execute_activity(
                 "delete_traefik_activity",
                 params,
                 start_to_close_timeout=timeout,
                 retry_policy=retry_policy,
             )
-            if not delete_result:
-                return "Error: Failed to delete Traefik"
+
+            await workflow.sleep(2)
+            
+            await workflow.execute_activity(
+                "start_traefik_activity",
+                params,
+                start_to_close_timeout=timeout,
+                retry_policy=retry_policy,
+            )
+            
+
+            await workflow.sleep(2)
+
+            # stop_result = await workflow.execute_activity(
+            #     "stop_traefik_activity",
+            #     params,
+            #     start_to_close_timeout=timeout,
+            #     retry_policy=retry_policy,
+            # )
+            # if not stop_result:
+            #     return "Error: Failed to stop Traefik"
+
+            # await workflow.sleep(2)
+
+            # restart_result = await workflow.execute_activity(
+            #     "restart_traefik_activity",
+            #     params,
+            #     start_to_close_timeout=timeout,
+            #     retry_policy=retry_policy,
+            # )
+            # if not restart_result:
+            #     return "Error: Failed to restart Traefik"
+
+            # await workflow.sleep(2)
+
+            # delete_result = await workflow.execute_activity(
+            #     "delete_traefik_activity",
+            #     params,
+            #     start_to_close_timeout=timeout,
+            #     retry_policy=retry_policy,
+            # )
+            # if not delete_result:
+            #     return "Error: Failed to delete Traefik"
 
             return "Traefik pipeline executed: start → stop → restart → delete completed"
 

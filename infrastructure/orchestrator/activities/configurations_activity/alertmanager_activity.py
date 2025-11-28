@@ -16,7 +16,8 @@ async def start_alertmanager_activity(params: dict) -> dict:
         "success": success,
         "service": "alertmanager",
         "instance_id": instance_id,
-        "status": manager.get_status().value
+        "status": manager.get_status().value,
+        "url": f"http://scaibu.alertmanager:13101/"
     }
 
 
@@ -87,5 +88,6 @@ async def get_alertmanager_status_activity(params: dict) -> dict:
         "service": "alertmanager",
         "instance_id": instance_id,
         "status": status.value,
-        "is_running": status.value == "running"
+        "is_running": status.value == "running",
+        "url": f"http://scaibu.alertmanager:13101/"
     }

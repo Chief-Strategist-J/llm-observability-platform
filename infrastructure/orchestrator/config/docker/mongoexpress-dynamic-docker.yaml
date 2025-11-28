@@ -31,6 +31,11 @@ services:
       traefik.http.routers.mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
       traefik.http.routers.mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.middlewares: "security-headers-${MONGOEXPRESS_INSTANCE_ID:-0},rate-limit-${MONGOEXPRESS_INSTANCE_ID:-0}"
       
+      traefik.http.routers.mongoexpress-scaibu-${MONGOEXPRESS_INSTANCE_ID:-0}.rule: "Host(`scaibu.mongo-express`)"
+      traefik.http.routers.mongoexpress-scaibu-${MONGOEXPRESS_INSTANCE_ID:-0}.entrypoints: "traefik"
+      traefik.http.routers.mongoexpress-scaibu-${MONGOEXPRESS_INSTANCE_ID:-0}.service: "mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}"
+      traefik.http.routers.mongoexpress-scaibu-${MONGOEXPRESS_INSTANCE_ID:-0}.middlewares: "security-headers-${MONGOEXPRESS_INSTANCE_ID:-0}"
+      
       # Service
       traefik.http.services.mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.loadbalancer.server.port: "${MONGOEXPRESS_PORT:-8081}"
       

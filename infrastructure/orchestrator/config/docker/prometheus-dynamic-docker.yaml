@@ -22,7 +22,12 @@ services:
       traefik.http.routers.prometheus-${PROMETHEUS_INSTANCE_ID:-0}.service: "prometheus-${PROMETHEUS_INSTANCE_ID:-0}"
       traefik.http.routers.prometheus-${PROMETHEUS_INSTANCE_ID:-0}.tls: "true"
       traefik.http.routers.prometheus-${PROMETHEUS_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
-      traefik.http.routers.prometheus-${PROMETHEUS_INSTANCE_ID:-0}.middlewares: "traefik-auth-${PROMETHEUS_INSTANCE_ID:-0},security-headers-${PROMETHEUS_INSTANCE_ID:-0},rate-limit-${PROMETHEUS_INSTANCE_ID:-0}"
+      traefik.http.routers.prometheus-${PROMETHEUS_INSTANCE_ID:-0}.middlewares: "security-headers-${PROMETHEUS_INSTANCE_ID:-0},rate-limit-${PROMETHEUS_INSTANCE_ID:-0}"
+      
+      traefik.http.routers.prometheus-scaibu-${PROMETHEUS_INSTANCE_ID:-0}.rule: "Host(`scaibu.prometheus`)"
+      traefik.http.routers.prometheus-scaibu-${PROMETHEUS_INSTANCE_ID:-0}.entrypoints: "traefik"
+      traefik.http.routers.prometheus-scaibu-${PROMETHEUS_INSTANCE_ID:-0}.service: "prometheus-${PROMETHEUS_INSTANCE_ID:-0}"
+      traefik.http.routers.prometheus-scaibu-${PROMETHEUS_INSTANCE_ID:-0}.middlewares: "security-headers-${PROMETHEUS_INSTANCE_ID:-0}"
       
       # Service
       traefik.http.services.prometheus-${PROMETHEUS_INSTANCE_ID:-0}.loadbalancer.server.port: "${PROMETHEUS_PORT:-9090}"

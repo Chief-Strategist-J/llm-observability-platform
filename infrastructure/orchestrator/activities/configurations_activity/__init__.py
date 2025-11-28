@@ -109,6 +109,11 @@ from .traefik_activity import (
     delete_traefik_activity,
 )
 
+from .service_routing_activity import (
+    discover_service_hostnames_activity,
+    configure_etc_hosts_activity,
+)
+
 __all__ = [
     
     "start_alertmanager_activity",
@@ -190,4 +195,7 @@ __all__ = [
     "stop_traefik_activity",
     "restart_traefik_activity",
     "delete_traefik_activity",
+    
+    "discover_service_hostnames_activity",
+    "configure_etc_hosts_activity",
 ]

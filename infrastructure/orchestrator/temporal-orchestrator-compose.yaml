@@ -59,10 +59,24 @@ services:
       - "8080:8080"
     networks:
       - temporal-network
+    
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "temporal-network"
+      
+      traefik.http.routers.temporal-ui-scaibu.rule: "Host(`scaibu.temporal`)"
+      traefik.http.routers.temporal-ui-scaibu.entrypoints: "traefik"
+      traefik.http.routers.temporal-ui-scaibu.service: "temporal-ui-svc"
+      traefik.http.routers.temporal-ui-scaibu.middlewares: "security-headers"
+      
+      traefik.http.services.temporal-ui-svc.loadbalancer.server.port: "8080"
+      
+      traefik.http.middlewares.security-headers.headers.framedeny: "true"
+      traefik.http.middlewares.security-headers.headers.contenttypenosniff: "true"
 
 volumes:
   temporal_pg_data:
 
 networks:
   temporal-network:
-    driver: bridge
+    external: true

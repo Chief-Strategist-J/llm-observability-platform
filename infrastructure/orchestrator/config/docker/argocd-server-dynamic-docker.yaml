@@ -24,7 +24,12 @@ services:
       traefik.http.routers.argocd-${ARGOCD_INSTANCE_ID:-0}.service: "argocd-${ARGOCD_INSTANCE_ID:-0}"
       traefik.http.routers.argocd-${ARGOCD_INSTANCE_ID:-0}.tls: "true"
       traefik.http.routers.argocd-${ARGOCD_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
-      traefik.http.routers.argocd-${ARGOCD_INSTANCE_ID:-0}.middlewares: "security-headers-${ARGOCD_INSTANCE_ID:-0}"
+      traefik.http.routers.argocd-${ARGOCD_INSTANCE_ID:-0}.middlewares: "security-headers-${ARGOCD_INSTANCE_ID:-0},rate-limit-${ARGOCD_INSTANCE_ID:-0}"
+      
+      traefik.http.routers.argocd-scaibu-${ARGOCD_INSTANCE_ID:-0}.rule: "Host(`scaibu.argocd`)"
+      traefik.http.routers.argocd-scaibu-${ARGOCD_INSTANCE_ID:-0}.entrypoints: "traefik"
+      traefik.http.routers.argocd-scaibu-${ARGOCD_INSTANCE_ID:-0}.service: "argocd-${ARGOCD_INSTANCE_ID:-0}"
+      traefik.http.routers.argocd-scaibu-${ARGOCD_INSTANCE_ID:-0}.middlewares: "security-headers-${ARGOCD_INSTANCE_ID:-0}"
       
       # Service
       traefik.http.services.argocd-${ARGOCD_INSTANCE_ID:-0}.loadbalancer.server.port: "${ARGOCD_SERVER_PORT:-8080}"

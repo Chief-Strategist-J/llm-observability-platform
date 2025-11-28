@@ -21,7 +21,12 @@ services:
       traefik.http.routers.tempo-${TEMPO_INSTANCE_ID:-0}.service: "tempo-${TEMPO_INSTANCE_ID:-0}"
       traefik.http.routers.tempo-${TEMPO_INSTANCE_ID:-0}.tls: "true"
       traefik.http.routers.tempo-${TEMPO_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
-      traefik.http.routers.tempo-${TEMPO_INSTANCE_ID:-0}.middlewares: "traefik-auth-${TEMPO_INSTANCE_ID:-0},security-headers-${TEMPO_INSTANCE_ID:-0}"
+      traefik.http.routers.tempo-${TEMPO_INSTANCE_ID:-0}.middlewares: "security-headers-${TEMPO_INSTANCE_ID:-0},rate-limit-${TEMPO_INSTANCE_ID:-0}"
+      
+      traefik.http.routers.tempo-scaibu-${TEMPO_INSTANCE_ID:-0}.rule: "Host(`scaibu.tempo`)"
+      traefik.http.routers.tempo-scaibu-${TEMPO_INSTANCE_ID:-0}.entrypoints: "traefik"
+      traefik.http.routers.tempo-scaibu-${TEMPO_INSTANCE_ID:-0}.service: "tempo-${TEMPO_INSTANCE_ID:-0}"
+      traefik.http.routers.tempo-scaibu-${TEMPO_INSTANCE_ID:-0}.middlewares: "security-headers-${TEMPO_INSTANCE_ID:-0}"
       
       # Service
       traefik.http.services.tempo-${TEMPO_INSTANCE_ID:-0}.loadbalancer.server.port: "${TEMPO_HTTP_PORT:-3200}"
