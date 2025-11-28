@@ -118,8 +118,15 @@ cd infrastructure/orchestrator
 # Copy environment template
 cp .env.template .env
 
-# Edit configuration
-nano .env
+docker compose -f temporal-orchestrator-compose.yaml up -d
+
+cd ../..
+
+source /home/j/live/dinesh/llm-chatbot-python/.venv/bin/activate
+
+python infrastructure/orchestrator/workers/traefik_pipeline_worker.py
+
+PYTHONPATH=/home/j/live/dinesh/llm-chatbot-python python infrastructure/orchestrator/trigger/common/tracing_pipeline_start.py
 ```
 
 **Critical Variables to Update:**

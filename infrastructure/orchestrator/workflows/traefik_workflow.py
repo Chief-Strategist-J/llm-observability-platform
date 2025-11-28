@@ -4,14 +4,15 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
-    
+
 from datetime import timedelta
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 from infrastructure.orchestrator.base.base_workflow import BaseWorkflow
 
-@workflow.defn
-class TracingPipelineWorkflow(BaseWorkflow):
+
+@workflow.defn(name="TraefikPipelineWorkflow")
+class TraefikPipelineWorkflow(BaseWorkflow):
 
     @workflow.run
     async def run(self, params: dict) -> str:

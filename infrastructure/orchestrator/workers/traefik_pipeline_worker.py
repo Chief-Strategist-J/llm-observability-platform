@@ -14,14 +14,14 @@ from infrastructure.orchestrator.activities.configurations_activity.traefik_acti
     delete_traefik_activity,
 )
 
-from infrastructure.orchestrator.workflows.tracing_pipeline_workflow import (
-    TracingPipelineWorkflow,
+from infrastructure.orchestrator.workflows.traefik_workflow import (
+    TraefikPipelineWorkflow,
 )
 
 class TracingPipelineWorker(BaseWorker):
     @property
     def workflows(self):
-        return [TracingPipelineWorkflow]
+        return [TraefikPipelineWorkflow] 
 
     @property
     def activities(self):
