@@ -25,7 +25,12 @@ services:
       traefik.http.routers.loki-${LOKI_INSTANCE_ID:-0}.service: "loki-${LOKI_INSTANCE_ID:-0}"
       traefik.http.routers.loki-${LOKI_INSTANCE_ID:-0}.tls: "true"
       traefik.http.routers.loki-${LOKI_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
-      traefik.http.routers.loki-${LOKI_INSTANCE_ID:-0}.middlewares: "traefik-auth-${LOKI_INSTANCE_ID:-0},security-headers-${LOKI_INSTANCE_ID:-0},rate-limit-${LOKI_INSTANCE_ID:-0}"
+      traefik.http.routers.loki-${LOKI_INSTANCE_ID:-0}.middlewares: "security-headers-${LOKI_INSTANCE_ID:-0},rate-limit-${LOKI_INSTANCE_ID:-0}"
+      
+      traefik.http.routers.loki-scaibu-${LOKI_INSTANCE_ID:-0}.rule: "Host(`scaibu.loki`)"
+      traefik.http.routers.loki-scaibu-${LOKI_INSTANCE_ID:-0}.entrypoints: "traefik"
+      traefik.http.routers.loki-scaibu-${LOKI_INSTANCE_ID:-0}.service: "loki-${LOKI_INSTANCE_ID:-0}"
+      traefik.http.routers.loki-scaibu-${LOKI_INSTANCE_ID:-0}.middlewares: "security-headers-${LOKI_INSTANCE_ID:-0}"
       
       # Service
       traefik.http.services.loki-${LOKI_INSTANCE_ID:-0}.loadbalancer.server.port: "${LOKI_HTTP_PORT:-3100}"

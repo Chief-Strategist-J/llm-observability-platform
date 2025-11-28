@@ -32,7 +32,12 @@ services:
       traefik.http.routers.otel-${OTEL_INSTANCE_ID:-0}.service: "otel-${OTEL_INSTANCE_ID:-0}"
       traefik.http.routers.otel-${OTEL_INSTANCE_ID:-0}.tls: "true"
       traefik.http.routers.otel-${OTEL_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
-      traefik.http.routers.otel-${OTEL_INSTANCE_ID:-0}.middlewares: "traefik-auth-${OTEL_INSTANCE_ID:-0},security-headers-${OTEL_INSTANCE_ID:-0}"
+      traefik.http.routers.otel-${OTEL_INSTANCE_ID:-0}.middlewares: "security-headers-${OTEL_INSTANCE_ID:-0},rate-limit-${OTEL_INSTANCE_ID:-0}"
+      
+      traefik.http.routers.otel-scaibu-${OTEL_INSTANCE_ID:-0}.rule: "Host(`scaibu.otel`)"
+      traefik.http.routers.otel-scaibu-${OTEL_INSTANCE_ID:-0}.entrypoints: "traefik"
+      traefik.http.routers.otel-scaibu-${OTEL_INSTANCE_ID:-0}.service: "otel-${OTEL_INSTANCE_ID:-0}"
+      traefik.http.routers.otel-scaibu-${OTEL_INSTANCE_ID:-0}.middlewares: "security-headers-${OTEL_INSTANCE_ID:-0}"
       
       # Service (metrics endpoint)
       traefik.http.services.otel-${OTEL_INSTANCE_ID:-0}.loadbalancer.server.port: "${OTEL_METRICS_PORT:-8888}"

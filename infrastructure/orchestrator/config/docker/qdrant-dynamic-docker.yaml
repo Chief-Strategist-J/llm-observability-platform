@@ -28,6 +28,11 @@ services:
       traefik.http.routers.qdrant-${QDRANT_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
       traefik.http.routers.qdrant-${QDRANT_INSTANCE_ID:-0}.middlewares: "security-headers-${QDRANT_INSTANCE_ID:-0},rate-limit-${QDRANT_INSTANCE_ID:-0}"
       
+      traefik.http.routers.qdrant-scaibu-${QDRANT_INSTANCE_ID:-0}.rule: "Host(`scaibu.qdrant`)"
+      traefik.http.routers.qdrant-scaibu-${QDRANT_INSTANCE_ID:-0}.entrypoints: "traefik"
+      traefik.http.routers.qdrant-scaibu-${QDRANT_INSTANCE_ID:-0}.service: "qdrant-${QDRANT_INSTANCE_ID:-0}"
+      traefik.http.routers.qdrant-scaibu-${QDRANT_INSTANCE_ID:-0}.middlewares: "security-headers-${QDRANT_INSTANCE_ID:-0}"
+      
       # Service (HTTP/REST Port)
       traefik.http.services.qdrant-${QDRANT_INSTANCE_ID:-0}.loadbalancer.server.port: "${QDRANT_HTTP_PORT:-6333}"
       traefik.http.services.qdrant-${QDRANT_INSTANCE_ID:-0}.loadbalancer.healthcheck.path: "/health"

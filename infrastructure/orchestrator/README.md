@@ -113,13 +113,13 @@ sudo apt-get install apache2-utils
 
 ```bash
 # Navigate to orchestrator directory
-cd infrastructure/orchestrator
+
 
 # Copy environment template
 cp .env.template .env
 
+cd infrastructure/orchestrator
 docker compose -f temporal-orchestrator-compose.yaml up -d
-
 cd ../..
 
 source /home/j/live/dinesh/llm-chatbot-python/.venv/bin/activate

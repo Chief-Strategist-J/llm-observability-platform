@@ -7,47 +7,48 @@ services:
     environment:
       INSTANCE_ID: "${TRAEFIK_INSTANCE_ID:-0}"
       TRAEFIK_BASIC_AUTH: "${TRAEFIK_BASIC_AUTH}"
-      API_KEY: "${API_KEY}"
+      API_KEY: "${API_KEY:-changeme-secure-api-key-here}"
+      ACME_EMAIL: "${ACME_EMAIL:-admin@localhost}"
     ports:
-      - "${TRAEFIK_HTTP_PORT:-80}:80"
-      - "${TRAEFIK_HTTPS_PORT:-443}:443"
-      - "${TRAEFIK_DASHBOARD_PORT:-31001}:8080"
+      - "${TRAEFIK_HTTP_PORT:-13080}:80"
+      - "${TRAEFIK_HTTPS_PORT:-13443}:443"
+      - "${TRAEFIK_DASHBOARD_PORT:-13101}:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik-certs-${TRAEFIK_INSTANCE_ID:-0}:/letsencrypt
-      - traefik-config-${TRAEFIK_INSTANCE_ID:-0}:/etc/traefik
+      - traefik-certs-0:/letsencrypt
+      - traefik-config-0:/etc/traefik
     networks:
       - ${OBSERVABILITY_NETWORK:-observability-network}
       - ${DATA_NETWORK:-data-network}
       - ${MESSAGING_NETWORK:-messaging-network}
       - ${CICD_NETWORK:-cicd-network}
-    
-    deploy:
-      resources:
-        limits:
-          memory: ${TRAEFIK_MEMORY_LIMIT:-512m}
-          cpus: "${TRAEFIK_CPU_LIMIT:-1.0}"
-        reservations:
-          memory: ${TRAEFIK_MEMORY_RESERVATION:-256m}
-    
+      - ${TEMPORAL_NETWORK:-temporal-network}
     restart: unless-stopped
-    
+
     command:
       - "--providers.docker=true"
       - "--providers.docker.exposedByDefault=false"
       - "--providers.docker.endpoint=unix:///var/run/docker.sock"
       - "--providers.docker.watch=true"
+      # container entrypoints
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.traefik.address=:8080"
+      # redirect HTTP -> HTTPS for normal HTTP entrypoint (web)
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
-      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@localhost}"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
-      - "--certificatesresolvers.letsencrypt.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      # API & Ping (we expose dashboard via 'traefik' entrypoint mapped to host)
       - "--api.dashboard=true"
       - "--api.insecure=false"
+      - "--ping=true"
+      - "--ping.entrypoint=traefik"
+      # Let's Encrypt (staging by default)
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      # logging / metrics
       - "--log.level=INFO"
       - "--log.format=json"
       - "--accesslog=true"
@@ -57,60 +58,58 @@ services:
       - "--metrics.prometheus.addEntryPointsLabels=true"
       - "--metrics.prometheus.addServicesLabels=true"
       - "--metrics.prometheus.addRoutersLabels=true"
-      - "--tracing.otlp=true"
-      - "--tracing.otlp.http.endpoint=http://otel-collector-instance-${OTEL_INSTANCE_ID:-0}:${OTEL_HTTP_PORT:-4318}"
-      - "--tracing.otlp.insecure=true"
-      
+
     labels:
       traefik.enable: "true"
-      
-      traefik.http.routers.traefik-dashboard-${TRAEFIK_INSTANCE_ID:-0}.rule: "Host(`traefik-${TRAEFIK_INSTANCE_ID:-0}.localhost`)"
-      traefik.http.routers.traefik-dashboard-${TRAEFIK_INSTANCE_ID:-0}.entrypoints: "websecure"
-      traefik.http.routers.traefik-dashboard-${TRAEFIK_INSTANCE_ID:-0}.service: "api@internal"
-      traefik.http.routers.traefik-dashboard-${TRAEFIK_INSTANCE_ID:-0}.tls: "true"
-      traefik.http.routers.traefik-dashboard-${TRAEFIK_INSTANCE_ID:-0}.middlewares: "traefik-auth-${TRAEFIK_INSTANCE_ID:-0},security-headers-${TRAEFIK_INSTANCE_ID:-0}"
-      
-      traefik.http.middlewares.traefik-auth-${TRAEFIK_INSTANCE_ID:-0}.basicauth.users: "${TRAEFIK_BASIC_AUTH}"
-      
-      traefik.http.middlewares.security-headers-${TRAEFIK_INSTANCE_ID:-0}.headers.framedeny: "true"
-      traefik.http.middlewares.security-headers-${TRAEFIK_INSTANCE_ID:-0}.headers.sslredirect: "true"
-      traefik.http.middlewares.security-headers-${TRAEFIK_INSTANCE_ID:-0}.headers.stsincludesubdomains: "true"
-      traefik.http.middlewares.security-headers-${TRAEFIK_INSTANCE_ID:-0}.headers.stspreload: "true"
-      traefik.http.middlewares.security-headers-${TRAEFIK_INSTANCE_ID:-0}.headers.stsseconds: "31536000"
-      traefik.http.middlewares.security-headers-${TRAEFIK_INSTANCE_ID:-0}.headers.contenttypenosniff: "true"
-      traefik.http.middlewares.security-headers-${TRAEFIK_INSTANCE_ID:-0}.headers.browserxssfilter: "true"
-      traefik.http.middlewares.security-headers-${TRAEFIK_INSTANCE_ID:-0}.headers.referrerpolicy: "strict-origin-when-cross-origin"
-      traefik.http.middlewares.security-headers-${TRAEFIK_INSTANCE_ID:-0}.headers.permissionspolicy: "geolocation=(), microphone=(), camera=()"
-      traefik.http.middlewares.security-headers-${TRAEFIK_INSTANCE_ID:-0}.headers.customresponseheaders.X-Powered-By: ""
-      traefik.http.middlewares.security-headers-${TRAEFIK_INSTANCE_ID:-0}.headers.customresponseheaders.Server: ""
-      
-      traefik.http.middlewares.rate-limit-${TRAEFIK_INSTANCE_ID:-0}.ratelimit.average: "${RATE_LIMIT_AVERAGE:-100}"
-      traefik.http.middlewares.rate-limit-${TRAEFIK_INSTANCE_ID:-0}.ratelimit.burst: "${RATE_LIMIT_BURST:-50}"
-      traefik.http.middlewares.rate-limit-${TRAEFIK_INSTANCE_ID:-0}.ratelimit.period: "${RATE_LIMIT_PERIOD:-1s}"
-      
-      traefik.http.middlewares.ip-whitelist-${TRAEFIK_INSTANCE_ID:-0}.ipwhitelist.sourcerange: "${IP_WHITELIST:-127.0.0.1/32,172.20.0.0/16,172.21.0.0/16,172.22.0.0/16,172.23.0.0/16}"
-      
-      traefik.http.middlewares.compression-${TRAEFIK_INSTANCE_ID:-0}.compress: "true"
-      
-      traefik.http.middlewares.cors-${TRAEFIK_INSTANCE_ID:-0}.headers.accesscontrolallowmethods: "GET,POST,PUT,DELETE,OPTIONS"
-      traefik.http.middlewares.cors-${TRAEFIK_INSTANCE_ID:-0}.headers.accesscontrolalloworiginlist: "https://*.localhost"
-      traefik.http.middlewares.cors-${TRAEFIK_INSTANCE_ID:-0}.headers.accesscontrolmaxage: "100"
-      traefik.http.middlewares.cors-${TRAEFIK_INSTANCE_ID:-0}.headers.addvaryheader: "true"
-      
-      prometheus.io.scrape: "true"
-      prometheus.io.port: "${TRAEFIK_DASHBOARD_PORT:-31001}"
-      prometheus.io.path: "/metrics"
-      
+
+      # Dashboard routers (host-based). Use the traefik entrypoint (container:8080) to avoid TLS in local dev.
+      # No auth required for local development - access directly without password
+      traefik.http.routers.dashboard-local.rule: "Host(`traefik-0.localhost`)"
+      traefik.http.routers.dashboard-local.entrypoints: "traefik"
+      traefik.http.routers.dashboard-local.service: "api@internal"
+      traefik.http.routers.dashboard-local.middlewares: "security-headers"
+
+      traefik.http.routers.dashboard-domain.rule: "Host(`scaibu.traefik`)"
+      traefik.http.routers.dashboard-domain.entrypoints: "traefik"
+      traefik.http.routers.dashboard-domain.service: "api@internal"
+      traefik.http.routers.dashboard-domain.middlewares: "security-headers"
+
+      # Temporal UI router - route temporal-ui.localhost to temporal-ui container
+      traefik.http.routers.temporal-ui.rule: "Host(`temporal-ui.localhost`)"
+      traefik.http.routers.temporal-ui.entrypoints: "traefik"
+      traefik.http.routers.temporal-ui.service: "temporal-ui-svc"
+      traefik.http.routers.temporal-ui.middlewares: "security-headers"
+
+      # Temporal UI service definition
+      traefik.http.services.temporal-ui-svc.loadbalancer.server.port: "8080"
+
+      # Basic auth middleware (optional - only used if TRAEFIK_BASIC_AUTH is set in .env)
+      # To enable auth, uncomment the middleware in router definitions above and set TRAEFIK_BASIC_AUTH
+      # traefik.http.middlewares.traefik-auth.basicauth.users: "${TRAEFIK_BASIC_AUTH}"
+
+      # Security headers
+      traefik.http.middlewares.security-headers.headers.framedeny: "true"
+      traefik.http.middlewares.security-headers.headers.sslredirect: "false"
+      traefik.http.middlewares.security-headers.headers.stsincludesubdomains: "true"
+      traefik.http.middlewares.security-headers.headers.stspreload: "true"
+      traefik.http.middlewares.security-headers.headers.stsseconds: "31536000"
+      traefik.http.middlewares.security-headers.headers.contenttypenosniff: "true"
+      traefik.http.middlewares.security-headers.headers.browserxssfilter: "true"
+      traefik.http.middlewares.security-headers.headers.referrerpolicy: "strict-origin-when-cross-origin"
+      traefik.http.middlewares.security-headers.headers.permissionspolicy: "geolocation=(), microphone=(), camera=()"
+      traefik.http.middlewares.security-headers.headers.customresponseheaders.X-Powered-By: ""
+      traefik.http.middlewares.security-headers.headers.customresponseheaders.Server: ""
+
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
-      interval: ${HEALTH_CHECK_INTERVAL:-30s}
-      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
-      retries: ${HEALTH_CHECK_RETRIES:-3}
+      interval: 30s
+      timeout: 10s
+      retries: 3
       start_period: 20s
 
 volumes:
-  traefik-certs-${TRAEFIK_INSTANCE_ID:-0}:
-  traefik-config-${TRAEFIK_INSTANCE_ID:-0}:
+  traefik-certs-0:
+  traefik-config-0:
 
 networks:
   observability-network:
@@ -120,4 +119,6 @@ networks:
   messaging-network:
     external: true
   cicd-network:
+    external: true
+  temporal-network:
     external: true

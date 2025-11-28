@@ -36,7 +36,12 @@ services:
       traefik.http.routers.neo4j-${NEO4J_INSTANCE_ID:-0}.service: "neo4j-${NEO4J_INSTANCE_ID:-0}"
       traefik.http.routers.neo4j-${NEO4J_INSTANCE_ID:-0}.tls: "true"
       traefik.http.routers.neo4j-${NEO4J_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
-      traefik.http.routers.neo4j-${NEO4J_INSTANCE_ID:-0}.middlewares: "security-headers-${NEO4J_INSTANCE_ID:-0}"
+      traefik.http.routers.neo4j-${NEO4J_INSTANCE_ID:-0}.middlewares: "security-headers-${NEO4J_INSTANCE_ID:-0},rate-limit-${NEO4J_INSTANCE_ID:-0}"
+      
+      traefik.http.routers.neo4j-scaibu-${NEO4J_INSTANCE_ID:-0}.rule: "Host(`scaibu.neo4j`)"
+      traefik.http.routers.neo4j-scaibu-${NEO4J_INSTANCE_ID:-0}.entrypoints: "traefik"
+      traefik.http.routers.neo4j-scaibu-${NEO4J_INSTANCE_ID:-0}.service: "neo4j-${NEO4J_INSTANCE_ID:-0}"
+      traefik.http.routers.neo4j-scaibu-${NEO4J_INSTANCE_ID:-0}.middlewares: "security-headers-${NEO4J_INSTANCE_ID:-0}"
       
       # Service (HTTP Browser Port)
       traefik.http.services.neo4j-${NEO4J_INSTANCE_ID:-0}.loadbalancer.server.port: "${NEO4J_HTTP_PORT:-7474}"
