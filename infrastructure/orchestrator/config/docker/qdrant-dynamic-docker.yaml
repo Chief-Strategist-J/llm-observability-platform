@@ -4,14 +4,36 @@ services:
   qdrant:
     image: qdrant/qdrant:latest
     container_name: qdrant-instance-${INSTANCE_ID}
-    ports:
-      - "${HTTP_PORT}:${HTTP_PORT}"
-      - "${GRPC_PORT}:${GRPC_PORT}"
     volumes:
       - qdrant-storage-${INSTANCE_ID}:/qdrant/storage
       - qdrant-snapshots-${INSTANCE_ID}:/qdrant/snapshots
     networks:
       - data-network
+      - observability-network  # Bridge for API access
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "observability-network"
+      
+      # Router
+      traefik.http.routers.qdrant-${INSTANCE_ID}.rule: "Host(`qdrant-${INSTANCE_ID}.localhost`)"
+      traefik.http.routers.qdrant-${INSTANCE_ID}.entrypoints: "web,websecure"
+      traefik.http.routers.qdrant-${INSTANCE_ID}.service: "qdrant-${INSTANCE_ID}"
+      traefik.http.routers.qdrant-${INSTANCE_ID}.tls: "true"
+      traefik.http.routers.qdrant-${INSTANCE_ID}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.qdrant-${INSTANCE_ID}.middlewares: "api-key-${INSTANCE_ID},security-headers-${INSTANCE_ID},rate-limit-${INSTANCE_ID}"
+      
+      # Service
+      traefik.http.services.qdrant-${INSTANCE_ID}.loadbalancer.server.port: "6333"
+      traefik.http.services.qdrant-${INSTANCE_ID}.loadbalancer.healthcheck.path: "/healthz"
+      traefik.http.services.qdrant-${INSTANCE_ID}.loadbalancer.healthcheck.interval: "30s"
+      
+      # Observability
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "6333"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "qdrant-${INSTANCE_ID}"
     environment:
       INSTANCE_ID: "${INSTANCE_ID}"
       HTTP_PORT: "${HTTP_PORT}"

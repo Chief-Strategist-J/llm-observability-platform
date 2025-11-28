@@ -4,8 +4,6 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: grafana-instance-${INSTANCE_ID}
-    ports:
-      - "${GRAFANA_PORT}:${GRAFANA_PORT}"
     environment:
       GF_SECURITY_ADMIN_USER: "admin"
       GF_SECURITY_ADMIN_PASSWORD: "SuperSecret123!"
@@ -16,8 +14,6 @@ services:
       INSTANCE_ID: "${INSTANCE_ID}"
     volumes:
       - grafana-data-${INSTANCE_ID}:/var/lib/grafana
-    networks:
-      - observability-network
     deploy:
       resources:
         limits:
@@ -26,13 +22,33 @@ services:
         reservations:
           memory: 256m
     restart: unless-stopped
+    networks:
+      - observability-network
+
     labels:
       traefik.enable: "true"
-      traefik.http.routers.grafana.rule: "PathPrefix(`/`)"
-      traefik.http.routers.grafana.entrypoints: "grafana"
-      traefik.http.routers.grafana.service: "grafana"
-      traefik.http.services.grafana.loadbalancer.server.port: "3000"
       traefik.docker.network: "observability-network"
+      
+      # Router
+      traefik.http.routers.grafana-${INSTANCE_ID}.rule: "Host(`grafana-${INSTANCE_ID}.localhost`)"
+      traefik.http.routers.grafana-${INSTANCE_ID}.entrypoints: "web,websecure"
+      traefik.http.routers.grafana-${INSTANCE_ID}.service: "grafana-${INSTANCE_ID}"
+      traefik.http.routers.grafana-${INSTANCE_ID}.tls: "true"
+      traefik.http.routers.grafana-${INSTANCE_ID}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.grafana-${INSTANCE_ID}.middlewares: "security-headers-${INSTANCE_ID},rate-limit-${INSTANCE_ID},compression-${INSTANCE_ID}"
+      
+      # Service
+      traefik.http.services.grafana-${INSTANCE_ID}.loadbalancer.server.port: "3000"
+      traefik.http.services.grafana-${INSTANCE_ID}.loadbalancer.healthcheck.path: "/api/health"
+      traefik.http.services.grafana-${INSTANCE_ID}.loadbalancer.healthcheck.interval: "30s"
+      
+      # Observability
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "3000"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "grafana-${INSTANCE_ID}"
+
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
       interval: 30s

@@ -4,16 +4,34 @@ services:
   tempo:
     image: grafana/tempo:latest
     container_name: tempo-instance-${INSTANCE_ID}
-    ports:
-      - "${HTTP_PORT}:3200"
-      - "${OTLP_GRPC_PORT}:4317"
-      - "${OTLP_HTTP_PORT}:4318"
-      - "${GRPC_PORT}:9095"
-      - "${ZIPKIN_PORT}:9411"
     volumes:
       - tempo-data-${INSTANCE_ID}:/tmp/tempo
     networks:
       - observability-network
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "observability-network"
+      
+      # Router
+      traefik.http.routers.tempo-${INSTANCE_ID}.rule: "Host(`tempo-${INSTANCE_ID}.localhost`)"
+      traefik.http.routers.tempo-${INSTANCE_ID}.entrypoints: "web,websecure"
+      traefik.http.routers.tempo-${INSTANCE_ID}.service: "tempo-${INSTANCE_ID}"
+      traefik.http.routers.tempo-${INSTANCE_ID}.tls: "true"
+      traefik.http.routers.tempo-${INSTANCE_ID}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.tempo-${INSTANCE_ID}.middlewares: "traefik-auth-${INSTANCE_ID},security-headers-${INSTANCE_ID}"
+      
+      # Service
+      traefik.http.services.tempo-${INSTANCE_ID}.loadbalancer.server.port: "3200"
+      traefik.http.services.tempo-${INSTANCE_ID}.loadbalancer.healthcheck.path: "/ready"
+      traefik.http.services.tempo-${INSTANCE_ID}.loadbalancer.healthcheck.interval: "30s"
+      
+      # Observability
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "3200"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "tempo-${INSTANCE_ID}"
     environment:
       TEMPO_HTTP_PORT: "${HTTP_PORT}"
     deploy:

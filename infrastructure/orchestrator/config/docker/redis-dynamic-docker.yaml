@@ -4,12 +4,25 @@ services:
   redis:
     image: redis:7-alpine
     container_name: redis-instance-${INSTANCE_ID}
-    ports:
-      - "${REDIS_PORT}:${REDIS_PORT}"
     volumes:
       - redis-data-${INSTANCE_ID}:/data
     networks:
-      - observability-network
+      - data-network
+
+    # Keep port for internal access
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+    # NO Traefik labels (internal only)
+    labels:
+      traefik.enable: "false"
+      
+      # Observability only
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "9121"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "redis-${INSTANCE_ID}"
     environment:
       REDIS_PASSWORD: ""
       REDIS_DATABASES: "16"

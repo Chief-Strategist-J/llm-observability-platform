@@ -12,7 +12,18 @@ services:
     volumes:
       - argocd-repo-data-${INSTANCE_ID}:/var/argocd/repo
     networks:
-      - monitoring-bridge
+      - cicd-network
+
+    # NO Traefik labels (internal only)
+    labels:
+      traefik.enable: "false"
+      
+      # Observability only
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "8084"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "argocd-repo-${INSTANCE_ID}"
     deploy:
       resources:
         limits:

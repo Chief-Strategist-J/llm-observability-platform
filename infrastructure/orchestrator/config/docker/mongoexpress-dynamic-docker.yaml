@@ -4,8 +4,6 @@ services:
   mongoexpress:
     image: mongo-express:latest
     container_name: mongo-express-${INSTANCE_ID}
-    ports:
-      - "${UI_PORT}:${UI_PORT}"
     environment:
       ME_CONFIG_MONGODB_SERVER: "mongodb-development"
       ME_CONFIG_MONGODB_ADMINUSERNAME: "admin"
@@ -18,6 +16,26 @@ services:
       INSTANCE_ID: "${INSTANCE_ID}"
     networks:
       - data-network
+      - observability-network  # Bridge to access via Traefik
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "observability-network"
+      
+      # Router
+      traefik.http.routers.mongoexpress-${INSTANCE_ID}.rule: "Host(`mongoexpress-${INSTANCE_ID}.localhost`)"
+      traefik.http.routers.mongoexpress-${INSTANCE_ID}.entrypoints: "web,websecure"
+      traefik.http.routers.mongoexpress-${INSTANCE_ID}.service: "mongoexpress-${INSTANCE_ID}"
+      traefik.http.routers.mongoexpress-${INSTANCE_ID}.tls: "true"
+      traefik.http.routers.mongoexpress-${INSTANCE_ID}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.mongoexpress-${INSTANCE_ID}.middlewares: "traefik-auth-${INSTANCE_ID},security-headers-${INSTANCE_ID},rate-limit-${INSTANCE_ID}"
+      
+      # Service
+      traefik.http.services.mongoexpress-${INSTANCE_ID}.loadbalancer.server.port: "8081"
+      
+      # Observability
+      loki.source: "docker"
+      loki.job: "mongoexpress-${INSTANCE_ID}"
     deploy:
       resources:
         limits:

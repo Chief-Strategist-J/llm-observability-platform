@@ -4,9 +4,6 @@ services:
   neo4j:
     image: neo4j:latest
     container_name: neo4j-instance-${INSTANCE_ID}
-    ports:
-      - "${HTTP_PORT}:${HTTP_PORT}"
-      - "${BOLT_PORT}:${BOLT_PORT}"
     environment:
       NEO4J_AUTH: "neo4j/Neo4jPassword123!"
       NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
@@ -25,6 +22,33 @@ services:
       - neo4j-plugins-${INSTANCE_ID}:/plugins
     networks:
       - data-network
+      - observability-network  # Bridge for browser access
+
+    # Keep Bolt port for internal connections
+    ports:
+      - "${NEO4J_BOLT_PORT:-7687}:7687"
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "observability-network"
+      
+      # Router for Browser UI
+      traefik.http.routers.neo4j-${INSTANCE_ID}.rule: "Host(`neo4j-${INSTANCE_ID}.localhost`)"
+      traefik.http.routers.neo4j-${INSTANCE_ID}.entrypoints: "web,websecure"
+      traefik.http.routers.neo4j-${INSTANCE_ID}.service: "neo4j-${INSTANCE_ID}"
+      traefik.http.routers.neo4j-${INSTANCE_ID}.tls: "true"
+      traefik.http.routers.neo4j-${INSTANCE_ID}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.neo4j-${INSTANCE_ID}.middlewares: "security-headers-${INSTANCE_ID}"
+      
+      # Service
+      traefik.http.services.neo4j-${INSTANCE_ID}.loadbalancer.server.port: "7474"
+      
+      # Observability
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "2004"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "neo4j-${INSTANCE_ID}"
     deploy:
       resources:
         limits:
