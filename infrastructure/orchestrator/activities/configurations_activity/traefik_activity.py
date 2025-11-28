@@ -1,85 +1,91 @@
-from typing import Dict, Any
 from pathlib import Path
 from temporalio import activity
-from infrastructure.orchestrator.base.base_container_activity import YAMLBaseService
-from infrastructure.orchestrator.base.port_manager import get_port_manager
-from infrastructure.orchestrator.base.logql_logger import LogQLLogger, trace_operation
+from infrastructure.orchestrator.base import YAMLContainerManager
 
-log = LogQLLogger(__name__)
+TRAEFIK_YAML = Path(__file__).parent.parent.parent / "config" / "docker" / "traefik-dynamic-docker.yaml"
 
-class TraefikManager(YAMLBaseService):
-    SERVICE_NAME = "Traefik"
-    SERVICE_DESCRIPTION = "traefik service"
+
+@activity.defn(name="start_traefik_activity")
+async def start_traefik_activity(params: dict) -> dict:
+    instance_id = params.get("instance_id", 0)
+    manager = YAMLContainerManager(str(TRAEFIK_YAML), instance_id=instance_id)
     
-    _yaml_file_cache = None
-    __slots__ = ('_port', '_instance_id')
+    success = manager.start(restart_if_running=True)
     
-    def __init__(self, instance_id: int = 0) -> None:
-        trace_id = log.set_trace_id()
-        log.debug("manager_init_start", service="traefik", instance=instance_id, trace_id=trace_id)
-        
-        pm = get_port_manager()
-        traefik_port = pm.get_port("traefik", instance_id, "http_port")
-        grafana_port = pm.get_port("grafana", instance_id, "port")
-        loki_port = pm.get_port("loki", instance_id, "port")
-        otel_port = pm.get_port("otel", instance_id, "port")
-        self._port = traefik_port
-        self._instance_id = instance_id
-        
-        if not TraefikManager._yaml_file_cache:
-            TraefikManager._yaml_file_cache = Path(__file__).parent.parent.parent / "config" / "docker" / "traefik-dynamic-docker.yaml"
-        
-        env_vars = {
-            "HTTP_PORT": str(traefik_port),
-            "GRAFANA_PORT": str(grafana_port),
-            "LOKI_PORT": str(loki_port),
-            "OTEL_PORT": str(otel_port),
-            "INSTANCE_ID": str(instance_id)
-        }
-        
-        log.debug("yaml_loading", yaml_file=str(TraefikManager._yaml_file_cache))
-        
-        super().__init__(
-            yaml_file_path=TraefikManager._yaml_file_cache,
-            service_name="traefik",
-            env_vars=env_vars,
-            instance_id=str(instance_id)
-        )
-        
-        log.info("manager_ready", service="traefik", instance=instance_id, port=traefik_port, container=self.config.container_name)
+    return {
+        "success": success,
+        "service": "traefik",
+        "instance_id": instance_id,
+        "status": manager.get_status().value
+    }
 
-@activity.defn
-@trace_operation("start_traefik")
-async def start_traefik_activity(params: Dict[str, Any]) -> bool:
-    instance_id = params.get("instance_id", 0)
-    log.info("activity_start", activity="start_traefik", instance=instance_id)
-    TraefikManager(instance_id=instance_id).run()
-    log.info("activity_complete", activity="start_traefik", instance=instance_id)
-    return True
 
-@activity.defn
-@trace_operation("stop_traefik")
-async def stop_traefik_activity(params: Dict[str, Any]) -> bool:
+@activity.defn(name="stop_traefik_activity")
+async def stop_traefik_activity(params: dict) -> dict:
     instance_id = params.get("instance_id", 0)
-    log.info("activity_start", activity="stop_traefik", instance=instance_id)
-    TraefikManager(instance_id=instance_id).stop(timeout=30)
-    log.info("activity_complete", activity="stop_traefik", instance=instance_id)
-    return True
+    force = params.get("force", True)
+    manager = YAMLContainerManager(str(TRAEFIK_YAML), instance_id=instance_id)
+    
+    success = manager.stop(force=force)
+    
+    return {
+        "success": success,
+        "service": "traefik",
+        "instance_id": instance_id,
+        "force": force
+    }
 
-@activity.defn
-@trace_operation("restart_traefik")
-async def restart_traefik_activity(params: Dict[str, Any]) -> bool:
-    instance_id = params.get("instance_id", 0)
-    log.info("activity_start", activity="restart_traefik", instance=instance_id)
-    TraefikManager(instance_id=instance_id).restart()
-    log.info("activity_complete", activity="restart_traefik", instance=instance_id)
-    return True
 
-@activity.defn
-@trace_operation("delete_traefik")
-async def delete_traefik_activity(params: Dict[str, Any]) -> bool:
+@activity.defn(name="restart_traefik_activity")
+async def restart_traefik_activity(params: dict) -> dict:
     instance_id = params.get("instance_id", 0)
-    log.info("activity_start", activity="delete_traefik", instance=instance_id)
-    TraefikManager(instance_id=instance_id).delete(force=False)
-    log.info("activity_complete", activity="delete_traefik", instance=instance_id)
-    return True
+    manager = YAMLContainerManager(str(TRAEFIK_YAML), instance_id=instance_id)
+    
+    success = manager.restart()
+    
+    return {
+        "success": success,
+        "service": "traefik",
+        "instance_id": instance_id,
+        "status": manager.get_status().value
+    }
+
+
+@activity.defn(name="delete_traefik_activity")
+async def delete_traefik_activity(params: dict) -> dict:
+    instance_id = params.get("instance_id", 0)
+    remove_volumes = params.get("remove_volumes", True)
+    remove_images = params.get("remove_images", True)
+    remove_networks = params.get("remove_networks", False)
+    
+    manager = YAMLContainerManager(str(TRAEFIK_YAML), instance_id=instance_id)
+    
+    success = manager.delete(
+        remove_volumes=remove_volumes,
+        remove_images=remove_images,
+        remove_networks=remove_networks
+    )
+    
+    return {
+        "success": success,
+        "service": "traefik",
+        "instance_id": instance_id,
+        "volumes_removed": remove_volumes,
+        "images_removed": remove_images,
+        "networks_removed": remove_networks
+    }
+
+
+@activity.defn(name="get_traefik_status_activity")
+async def get_traefik_status_activity(params: dict) -> dict:
+    instance_id = params.get("instance_id", 0)
+    manager = YAMLContainerManager(str(TRAEFIK_YAML), instance_id=instance_id)
+    
+    status = manager.get_status()
+    
+    return {
+        "service": "traefik",
+        "instance_id": instance_id,
+        "status": status.value,
+        "is_running": status.value == "running"
+    }

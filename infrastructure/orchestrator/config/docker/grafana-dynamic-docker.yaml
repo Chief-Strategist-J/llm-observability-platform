@@ -3,61 +3,63 @@ version: "3.9"
 services:
   grafana:
     image: grafana/grafana:latest
-    container_name: grafana-instance-${INSTANCE_ID}
+    container_name: grafana-instance-${GRAFANA_INSTANCE_ID:-0}
     environment:
-      GF_SECURITY_ADMIN_USER: "admin"
-      GF_SECURITY_ADMIN_PASSWORD: "SuperSecret123!"
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-SuperSecret123!}"
       GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_SERVER_HTTP_PORT: "3000"
-      GF_SERVER_ROOT_URL: "http://localhost:${GRAFANA_PORT}"
-      GRAFANA_PORT: "${GRAFANA_PORT}"
-      INSTANCE_ID: "${INSTANCE_ID}"
+      GF_SERVER_HTTP_PORT: "${GRAFANA_PORT:-3000}"
+      GF_SERVER_ROOT_URL: "https://grafana-${GRAFANA_INSTANCE_ID:-0}.localhost"
+      GF_SERVER_DOMAIN: "grafana-${GRAFANA_INSTANCE_ID:-0}.localhost"
+      INSTANCE_ID: "${GRAFANA_INSTANCE_ID:-0}"
     volumes:
-      - grafana-data-${INSTANCE_ID}:/var/lib/grafana
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-          cpus: "0.5"
-        reservations:
-          memory: 256m
-    restart: unless-stopped
+      - grafana-data-${GRAFANA_INSTANCE_ID:-0}:/var/lib/grafana
     networks:
-      - observability-network
+      - ${OBSERVABILITY_NETWORK:-observability-network}
 
     labels:
       traefik.enable: "true"
-      traefik.docker.network: "observability-network"
+      traefik.docker.network: "${OBSERVABILITY_NETWORK:-observability-network}"
       
       # Router
-      traefik.http.routers.grafana-${INSTANCE_ID}.rule: "Host(`grafana-${INSTANCE_ID}.localhost`)"
-      traefik.http.routers.grafana-${INSTANCE_ID}.entrypoints: "web,websecure"
-      traefik.http.routers.grafana-${INSTANCE_ID}.service: "grafana-${INSTANCE_ID}"
-      traefik.http.routers.grafana-${INSTANCE_ID}.tls: "true"
-      traefik.http.routers.grafana-${INSTANCE_ID}.tls.certresolver: "letsencrypt"
-      traefik.http.routers.grafana-${INSTANCE_ID}.middlewares: "security-headers-${INSTANCE_ID},rate-limit-${INSTANCE_ID},compression-${INSTANCE_ID}"
+      traefik.http.routers.grafana-${GRAFANA_INSTANCE_ID:-0}.rule: "Host(`grafana-${GRAFANA_INSTANCE_ID:-0}.localhost`)"
+      traefik.http.routers.grafana-${GRAFANA_INSTANCE_ID:-0}.entrypoints: "web,websecure"
+      traefik.http.routers.grafana-${GRAFANA_INSTANCE_ID:-0}.service: "grafana-${GRAFANA_INSTANCE_ID:-0}"
+      traefik.http.routers.grafana-${GRAFANA_INSTANCE_ID:-0}.tls: "true"
+      traefik.http.routers.grafana-${GRAFANA_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.grafana-${GRAFANA_INSTANCE_ID:-0}.middlewares: "security-headers-${GRAFANA_INSTANCE_ID:-0},rate-limit-${GRAFANA_INSTANCE_ID:-0},compression-${GRAFANA_INSTANCE_ID:-0}"
       
       # Service
-      traefik.http.services.grafana-${INSTANCE_ID}.loadbalancer.server.port: "3000"
-      traefik.http.services.grafana-${INSTANCE_ID}.loadbalancer.healthcheck.path: "/api/health"
-      traefik.http.services.grafana-${INSTANCE_ID}.loadbalancer.healthcheck.interval: "30s"
+      traefik.http.services.grafana-${GRAFANA_INSTANCE_ID:-0}.loadbalancer.server.port: "${GRAFANA_PORT:-3000}"
+      traefik.http.services.grafana-${GRAFANA_INSTANCE_ID:-0}.loadbalancer.healthcheck.path: "/api/health"
+      traefik.http.services.grafana-${GRAFANA_INSTANCE_ID:-0}.loadbalancer.healthcheck.interval: "30s"
       
       # Observability
       prometheus.io.scrape: "true"
-      prometheus.io.port: "3000"
+      prometheus.io.port: "${GRAFANA_PORT:-3000}"
       prometheus.io.path: "/metrics"
       loki.source: "docker"
-      loki.job: "grafana-${INSTANCE_ID}"
-
+      loki.job: "grafana-${GRAFANA_INSTANCE_ID:-0}"
+    
+    deploy:
+      resources:
+        limits:
+          memory: ${GRAFANA_MEMORY_LIMIT:-512m}
+          cpus: "${GRAFANA_CPU_LIMIT:-0.5}"
+        reservations:
+          memory: ${GRAFANA_MEMORY_RESERVATION:-256m}
+    
+    restart: unless-stopped
+    
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${GRAFANA_PORT:-3000}/api/health || exit 1"]
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-3}
       start_period: 20s
 
 volumes:
-  grafana-data-${INSTANCE_ID}:
+  grafana-data-${GRAFANA_INSTANCE_ID:-0}:
 
 networks:
   observability-network:

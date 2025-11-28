@@ -35,12 +35,23 @@ grafana:
   max_instances: 5
 
 loki:
-  port: 3100
+  http_port: 3100
+  grpc_port: 9096
   instance_increment: 100
   max_instances: 5
 
 jaeger:
-  port: 16686
+  ui_port: 16686
+  collector_port: 14268
+  admin_port: 14269
+  instance_increment: 100
+  max_instances: 5
+
+tempo:
+  http_port: 3200
+  grpc_port: 9095
+  otlp_http_port: 4318
+  otlp_grpc_port: 4317
   instance_increment: 100
   max_instances: 5
 
@@ -64,8 +75,16 @@ traefik:
   instance_increment: 100
   max_instances: 3
 
+otel_collector:
+  grpc_port: 4317
+  http_port: 4318
+  metrics_port: 8888
+  health_check_port: 13133
+  instance_increment: 100
+  max_instances: 5
+
 promtail:
-  port: 9080
+  http_port: 9080
   instance_increment: 100
   max_instances: 5
 

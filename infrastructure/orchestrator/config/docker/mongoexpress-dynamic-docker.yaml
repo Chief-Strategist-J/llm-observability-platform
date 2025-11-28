@@ -1,56 +1,62 @@
 version: "3.9"
 
 services:
-  mongoexpress:
+  mongo-express:
     image: mongo-express:latest
-    container_name: mongo-express-${INSTANCE_ID}
+    container_name: mongoexpress-instance-${MONGOEXPRESS_INSTANCE_ID:-0}
     environment:
-      ME_CONFIG_MONGODB_SERVER: "mongodb-development"
-      ME_CONFIG_MONGODB_ADMINUSERNAME: "admin"
-      ME_CONFIG_MONGODB_ADMINPASSWORD: "MongoPassword123!"
-      ME_CONFIG_BASICAUTH_USERNAME: "admin"
-      ME_CONFIG_BASICAUTH_PASSWORD: "AdminPassword!"
-      ME_CONFIG_SITE_BASEURL: "/"
-      ME_CONFIG_SITE_PORT: "${UI_PORT}"
-      UI_PORT: "${UI_PORT}"
-      INSTANCE_ID: "${INSTANCE_ID}"
+      ME_CONFIG_MONGODB_ADMINUSERNAME: "${MONGODB_ROOT_USERNAME:-admin}"
+      ME_CONFIG_MONGODB_ADMINPASSWORD: "${MONGODB_ROOT_PASSWORD:-MongoPassword123!}"
+      ME_CONFIG_MONGODB_SERVER: "mongodb-instance-${MONGODB_INSTANCE_ID:-0}"
+      ME_CONFIG_MONGODB_PORT: "${MONGODB_PORT:-27017}"
+      ME_CONFIG_BASICAUTH_USERNAME: "${MONGOEXPRESS_ADMIN_USERNAME:-admin}"
+      ME_CONFIG_BASICAUTH_PASSWORD: "${MONGOEXPRESS_ADMIN_PASSWORD:-MongoExpressPassword123!}"
+      ME_CONFIG_SITE_BASEURL: "/mongoexpress/"
+      INSTANCE_ID: "${MONGOEXPRESS_INSTANCE_ID:-0}"
     networks:
-      - data-network
-      - observability-network  # Bridge to access via Traefik
+      - ${DATA_NETWORK:-data-network}
+      - ${OBSERVABILITY_NETWORK:-observability-network}
+    depends_on:
+      - mongodb
 
     labels:
       traefik.enable: "true"
-      traefik.docker.network: "observability-network"
+      traefik.docker.network: "${OBSERVABILITY_NETWORK:-observability-network}"
       
       # Router
-      traefik.http.routers.mongoexpress-${INSTANCE_ID}.rule: "Host(`mongoexpress-${INSTANCE_ID}.localhost`)"
-      traefik.http.routers.mongoexpress-${INSTANCE_ID}.entrypoints: "web,websecure"
-      traefik.http.routers.mongoexpress-${INSTANCE_ID}.service: "mongoexpress-${INSTANCE_ID}"
-      traefik.http.routers.mongoexpress-${INSTANCE_ID}.tls: "true"
-      traefik.http.routers.mongoexpress-${INSTANCE_ID}.tls.certresolver: "letsencrypt"
-      traefik.http.routers.mongoexpress-${INSTANCE_ID}.middlewares: "traefik-auth-${INSTANCE_ID},security-headers-${INSTANCE_ID},rate-limit-${INSTANCE_ID}"
+      traefik.http.routers.mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.rule: "Host(`mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.localhost`)"
+      traefik.http.routers.mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.entrypoints: "web,websecure"
+      traefik.http.routers.mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.service: "mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}"
+      traefik.http.routers.mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.tls: "true"
+      traefik.http.routers.mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.middlewares: "security-headers-${MONGOEXPRESS_INSTANCE_ID:-0},rate-limit-${MONGOEXPRESS_INSTANCE_ID:-0}"
       
       # Service
-      traefik.http.services.mongoexpress-${INSTANCE_ID}.loadbalancer.server.port: "8081"
+      traefik.http.services.mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.loadbalancer.server.port: "${MONGOEXPRESS_PORT:-8081}"
       
       # Observability
       loki.source: "docker"
-      loki.job: "mongoexpress-${INSTANCE_ID}"
+      loki.job: "mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}"
+    
     deploy:
       resources:
         limits:
-          memory: 512m
-          cpus: "0.5"
+          memory: ${MONGOEXPRESS_MEMORY_LIMIT:-256m}
+          cpus: "${MONGOEXPRESS_CPU_LIMIT:-0.5}"
         reservations:
-          memory: 256m
+          memory: ${MONGOEXPRESS_MEMORY_RESERVATION:-128m}
+    
     restart: unless-stopped
+    
     healthcheck:
-      test: ["CMD-SHELL", "curl -sSf http://localhost:${UI_PORT}/ || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 20s
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${MONGOEXPRESS_PORT:-8081}/ || exit 1"]
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-3}
+      start_period: 30s
 
 networks:
   data-network:
+    external: true
+  observability-network:
     external: true

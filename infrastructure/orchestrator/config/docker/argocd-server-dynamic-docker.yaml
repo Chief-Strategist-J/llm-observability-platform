@@ -2,68 +2,61 @@ version: "3.9"
 
 services:
   argocd-server:
-    image: argoproj/argocd:latest
-    container_name: argocd-server-instance-${INSTANCE_ID}
+    image: quay.io/argoproj/argocd:latest
+    container_name: argocd-server-instance-${ARGOCD_INSTANCE_ID:-0}
     environment:
-      ARGOCD_SERVER_INSECURE: "true"
-      SERVER_PORT: "${SERVER_PORT}"
-      GRPC_PORT: "${GRPC_PORT}"
-      REPO_SERVER_PORT: "${REPO_SERVER_PORT}"
-      INSTANCE_ID: "${INSTANCE_ID}"
-    volumes:
-      - argocd-data-${INSTANCE_ID}:/var/argocd
-      - /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/argocd:/etc/argocd/config
+      INSTANCE_ID: "${ARGOCD_INSTANCE_ID:-0}"
+      ARGOCD_SERVER_INSECURE: "true"  # TLS handled by Traefik
+    command:
+      - argocd-server
+      - --insecure
     networks:
-      - cicd-network
-      - observability-network  # Bridge for web access
+      - ${CICD_NETWORK:-cicd-network}
+      - ${OBSERVABILITY_NETWORK:-observability-network}
 
     labels:
       traefik.enable: "true"
-      traefik.docker.network: "observability-network"
+      traefik.docker.network: "${OBSERVABILITY_NETWORK:-observability-network}"
       
       # Router
-      traefik.http.routers.argocd-${INSTANCE_ID}.rule: "Host(`argocd-${INSTANCE_ID}.localhost`)"
-      traefik.http.routers.argocd-${INSTANCE_ID}.entrypoints: "web,websecure"
-      traefik.http.routers.argocd-${INSTANCE_ID}.service: "argocd-${INSTANCE_ID}"
-      traefik.http.routers.argocd-${INSTANCE_ID}.tls: "true"
-      traefik.http.routers.argocd-${INSTANCE_ID}.tls.certresolver: "letsencrypt"
-      traefik.http.routers.argocd-${INSTANCE_ID}.middlewares: "security-headers-${INSTANCE_ID}"
+      traefik.http.routers.argocd-${ARGOCD_INSTANCE_ID:-0}.rule: "Host(`argocd-${ARGOCD_INSTANCE_ID:-0}.localhost`)"
+      traefik.http.routers.argocd-${ARGOCD_INSTANCE_ID:-0}.entrypoints: "web,websecure"
+      traefik.http.routers.argocd-${ARGOCD_INSTANCE_ID:-0}.service: "argocd-${ARGOCD_INSTANCE_ID:-0}"
+      traefik.http.routers.argocd-${ARGOCD_INSTANCE_ID:-0}.tls: "true"
+      traefik.http.routers.argocd-${ARGOCD_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.argocd-${ARGOCD_INSTANCE_ID:-0}.middlewares: "security-headers-${ARGOCD_INSTANCE_ID:-0}"
       
       # Service
-      traefik.http.services.argocd-${INSTANCE_ID}.loadbalancer.server.port: "8080"
-      traefik.http.services.argocd-${INSTANCE_ID}.loadbalancer.healthcheck.path: "/healthz"
-      traefik.http.services.argocd-${INSTANCE_ID}.loadbalancer.healthcheck.interval: "30s"
+      traefik.http.services.argocd-${ARGOCD_INSTANCE_ID:-0}.loadbalancer.server.port: "${ARGOCD_SERVER_PORT:-8080}"
+      traefik.http.services.argocd-${ARGOCD_INSTANCE_ID:-0}.loadbalancer.healthcheck.path: "/healthz"
+      traefik.http.services.argocd-${ARGOCD_INSTANCE_ID:-0}.loadbalancer.healthcheck.interval: "30s"
       
       # Observability
       prometheus.io.scrape: "true"
-      prometheus.io.port: "8083"
+      prometheus.io.port: "${ARGOCD_SERVER_PORT:-8080}"
       prometheus.io.path: "/metrics"
       loki.source: "docker"
-      loki.job: "argocd-server-${INSTANCE_ID}"
+      loki.job: "argocd-server-${ARGOCD_INSTANCE_ID:-0}"
+    
     deploy:
       resources:
         limits:
-          memory: 512m
-          cpus: "1.0"
+          memory: ${ARGOCD_SERVER_MEMORY_LIMIT:-512m}
+          cpus: "${ARGOCD_SERVER_CPU_LIMIT:-0.5}"
         reservations:
-          memory: 256m
+          memory: ${ARGOCD_SERVER_MEMORY_RESERVATION:-256m}
+    
     restart: unless-stopped
-    command:
-      - "argocd-server"
-      - "--insecure"
-      - "--staticassets"
-      - "/shared/app"
-      - "--repo-server=argocd-repo-server:${REPO_SERVER_PORT}"
+    
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${SERVER_PORT}/healthz || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-
-volumes:
-  argocd-data-${INSTANCE_ID}:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${ARGOCD_SERVER_PORT:-8080}/healthz || exit 1"]
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-3}
+      start_period: 30s
 
 networks:
-  monitoring-bridge:
+  cicd-network:
+    external: true
+  observability-network:
     external: true

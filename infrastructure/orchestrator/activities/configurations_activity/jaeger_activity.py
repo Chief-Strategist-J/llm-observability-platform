@@ -1,79 +1,91 @@
-from typing import Dict, Any
 from pathlib import Path
 from temporalio import activity
-from infrastructure.orchestrator.base.base_container_activity import YAMLBaseService
-from infrastructure.orchestrator.base.port_manager import get_port_manager
-from infrastructure.orchestrator.base.logql_logger import LogQLLogger, trace_operation
+from infrastructure.orchestrator.base import YAMLContainerManager
 
-log = LogQLLogger(__name__)
+JAEGER_YAML = Path(__file__).parent.parent.parent / "config" / "docker" / "jaeger-dynamic-docker.yaml"
 
-class JaegerManager(YAMLBaseService):
-    SERVICE_NAME = "Jaeger"
-    SERVICE_DESCRIPTION = "jaeger service"
+
+@activity.defn(name="start_jaeger_activity")
+async def start_jaeger_activity(params: dict) -> dict:
+    instance_id = params.get("instance_id", 0)
+    manager = YAMLContainerManager(str(JAEGER_YAML), instance_id=instance_id)
     
-    _yaml_file_cache = None
-    __slots__ = ('_port', '_instance_id')
+    success = manager.start(restart_if_running=True)
     
-    def __init__(self, instance_id: int = 0) -> None:
-        trace_id = log.set_trace_id()
-        log.debug("manager_init_start", service="jaeger", instance=instance_id, trace_id=trace_id)
-        
-        pm = get_port_manager()
-        jaeger_port = pm.get_port("jaeger", instance_id, "ui_port")
-        self._port = jaeger_port
-        self._instance_id = instance_id
-        
-        if not JaegerManager._yaml_file_cache:
-            JaegerManager._yaml_file_cache = Path(__file__).parent.parent.parent / "config" / "docker" / "jaeger-dynamic-docker.yaml"
-        
-        env_vars = {
-            "JAEGER_UI_PORT": str(jaeger_port),
-            "INSTANCE_ID": str(instance_id)
-        }
-        
-        log.debug("yaml_loading", yaml_file=str(JaegerManager._yaml_file_cache))
-        
-        super().__init__(
-            yaml_file_path=JaegerManager._yaml_file_cache,
-            service_name="jaeger",
-            env_vars=env_vars,
-            instance_id=str(instance_id)
-        )
-        
-        log.info("manager_ready", service="jaeger", instance=instance_id, port=jaeger_port, container=self.config.container_name)
+    return {
+        "success": success,
+        "service": "jaeger",
+        "instance_id": instance_id,
+        "status": manager.get_status().value
+    }
 
-@activity.defn
-@trace_operation("start_jaeger")
-async def start_jaeger_activity(params: Dict[str, Any]) -> bool:
-    instance_id = params.get("instance_id", 0)
-    log.info("activity_start", activity="start_jaeger", instance=instance_id)
-    JaegerManager(instance_id=instance_id).run()
-    log.info("activity_complete", activity="start_jaeger", instance=instance_id)
-    return True
 
-@activity.defn
-@trace_operation("stop_jaeger")
-async def stop_jaeger_activity(params: Dict[str, Any]) -> bool:
+@activity.defn(name="stop_jaeger_activity")
+async def stop_jaeger_activity(params: dict) -> dict:
     instance_id = params.get("instance_id", 0)
-    log.info("activity_start", activity="stop_jaeger", instance=instance_id)
-    JaegerManager(instance_id=instance_id).stop(timeout=30)
-    log.info("activity_complete", activity="stop_jaeger", instance=instance_id)
-    return True
+    force = params.get("force", True)
+    manager = YAMLContainerManager(str(JAEGER_YAML), instance_id=instance_id)
+    
+    success = manager.stop(force=force)
+    
+    return {
+        "success": success,
+        "service": "jaeger",
+        "instance_id": instance_id,
+        "force": force
+    }
 
-@activity.defn
-@trace_operation("restart_jaeger")
-async def restart_jaeger_activity(params: Dict[str, Any]) -> bool:
-    instance_id = params.get("instance_id", 0)
-    log.info("activity_start", activity="restart_jaeger", instance=instance_id)
-    JaegerManager(instance_id=instance_id).restart()
-    log.info("activity_complete", activity="restart_jaeger", instance=instance_id)
-    return True
 
-@activity.defn
-@trace_operation("delete_jaeger")
-async def delete_jaeger_activity(params: Dict[str, Any]) -> bool:
+@activity.defn(name="restart_jaeger_activity")
+async def restart_jaeger_activity(params: dict) -> dict:
     instance_id = params.get("instance_id", 0)
-    log.info("activity_start", activity="delete_jaeger", instance=instance_id)
-    JaegerManager(instance_id=instance_id).delete(force=False)
-    log.info("activity_complete", activity="delete_jaeger", instance=instance_id)
-    return True
+    manager = YAMLContainerManager(str(JAEGER_YAML), instance_id=instance_id)
+    
+    success = manager.restart()
+    
+    return {
+        "success": success,
+        "service": "jaeger",
+        "instance_id": instance_id,
+        "status": manager.get_status().value
+    }
+
+
+@activity.defn(name="delete_jaeger_activity")
+async def delete_jaeger_activity(params: dict) -> dict:
+    instance_id = params.get("instance_id", 0)
+    remove_volumes = params.get("remove_volumes", True)
+    remove_images = params.get("remove_images", True)
+    remove_networks = params.get("remove_networks", False)
+    
+    manager = YAMLContainerManager(str(JAEGER_YAML), instance_id=instance_id)
+    
+    success = manager.delete(
+        remove_volumes=remove_volumes,
+        remove_images=remove_images,
+        remove_networks=remove_networks
+    )
+    
+    return {
+        "success": success,
+        "service": "jaeger",
+        "instance_id": instance_id,
+        "volumes_removed": remove_volumes,
+        "images_removed": remove_images,
+        "networks_removed": remove_networks
+    }
+
+
+@activity.defn(name="get_jaeger_status_activity")
+async def get_jaeger_status_activity(params: dict) -> dict:
+    instance_id = params.get("instance_id", 0)
+    manager = YAMLContainerManager(str(JAEGER_YAML), instance_id=instance_id)
+    
+    status = manager.get_status()
+    
+    return {
+        "service": "jaeger",
+        "instance_id": instance_id,
+        "status": status.value,
+        "is_running": status.value == "running"
+    }
