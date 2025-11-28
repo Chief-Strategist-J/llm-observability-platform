@@ -3,50 +3,56 @@ version: "3.9"
 services:
   loki:
     image: grafana/loki:latest
-    container_name: loki-instance-${INSTANCE_ID}
-    ports:
-      - "${HTTP_PORT}:${HTTP_PORT}"
-      - "${GRPC_PORT}:${GRPC_PORT}"
+    container_name: loki-instance-${LOKI_INSTANCE_ID:-0}
     environment:
       LOKI_CONFIG_USE_INGRESS: "true"
-      HTTP_PORT: "${HTTP_PORT}"
-      GRPC_PORT: "${GRPC_PORT}"
-      INSTANCE_ID: "${INSTANCE_ID}"
+      INSTANCE_ID: "${LOKI_INSTANCE_ID:-0}"
     command:
       - "-config.file=/etc/loki/local-config.yaml"
     volumes:
-      - ${DATA_DIR_PATH}:/loki:rw
+      - ${LOKI_DATA_PATH:-./data/loki}:/loki:rw
       - ${CONFIG_FILE_PATH}:/etc/loki/local-config.yaml:ro
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-          cpus: "0.5"
-        reservations:
-          memory: 256m
-    restart: unless-stopped
     networks:
-      - observability-network
+      - ${OBSERVABILITY_NETWORK:-observability-network}
 
     labels:
       traefik.enable: "true"
-      traefik.docker.network: "observability-network"
+      traefik.docker.network: "${OBSERVABILITY_NETWORK:-observability-network}"
       
-      traefik.http.routers.loki-${INSTANCE_ID}.rule: "Host(`loki-${INSTANCE_ID}.localhost`)"
-      traefik.http.routers.loki-${INSTANCE_ID}.entrypoints: "web,websecure"
-      traefik.http.routers.loki-${INSTANCE_ID}.service: "loki-${INSTANCE_ID}"
-      traefik.http.routers.loki-${INSTANCE_ID}.tls: "true"
-      traefik.http.routers.loki-${INSTANCE_ID}.middlewares: "auth-basic,security-headers,rate-limit"
+      # Router
+      traefik.http.routers.loki-${LOKI_INSTANCE_ID:-0}.rule: "Host(`loki-${LOKI_INSTANCE_ID:-0}.localhost`)"
+      traefik.http.routers.loki-${LOKI_INSTANCE_ID:-0}.entrypoints: "web,websecure"
+      traefik.http.routers.loki-${LOKI_INSTANCE_ID:-0}.service: "loki-${LOKI_INSTANCE_ID:-0}"
+      traefik.http.routers.loki-${LOKI_INSTANCE_ID:-0}.tls: "true"
+      traefik.http.routers.loki-${LOKI_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.loki-${LOKI_INSTANCE_ID:-0}.middlewares: "traefik-auth-${LOKI_INSTANCE_ID:-0},security-headers-${LOKI_INSTANCE_ID:-0},rate-limit-${LOKI_INSTANCE_ID:-0}"
       
-      traefik.http.services.loki-${INSTANCE_ID}.loadbalancer.server.port: "3100"
+      # Service
+      traefik.http.services.loki-${LOKI_INSTANCE_ID:-0}.loadbalancer.server.port: "${LOKI_HTTP_PORT:-3100}"
+      traefik.http.services.loki-${LOKI_INSTANCE_ID:-0}.loadbalancer.healthcheck.path: "/ready"
+      traefik.http.services.loki-${LOKI_INSTANCE_ID:-0}.loadbalancer.healthcheck.interval: "30s"
       
+      # Observability
       prometheus.io.scrape: "true"
-      prometheus.io.port: "3100"
+      prometheus.io.port: "${LOKI_HTTP_PORT:-3100}"
       prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "loki-${LOKI_INSTANCE_ID:-0}"
+    
+    deploy:
+      resources:
+        limits:
+          memory: ${LOKI_MEMORY_LIMIT:-512m}
+          cpus: "${LOKI_CPU_LIMIT:-0.5}"
+        reservations:
+          memory: ${LOKI_MEMORY_RESERVATION:-256m}
+    
+    restart: unless-stopped
+    
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:${HTTP_PORT}/ready || exit 1"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:${LOKI_HTTP_PORT:-3100}/ready || exit 1"]
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
       retries: 5
       start_period: 60s
 

@@ -3,65 +3,64 @@ version: "3.9"
 services:
   alertmanager:
     image: prom/alertmanager:latest
-    container_name: alertmanager-instance-${INSTANCE_ID}
+    container_name: alertmanager-instance-${ALERTMANAGER_INSTANCE_ID:-0}
     environment:
-      ALERTMANAGER_PORT: "${ALERTMANAGER_PORT}"
-      INSTANCE_ID: "${INSTANCE_ID}"
+      INSTANCE_ID: "${ALERTMANAGER_INSTANCE_ID:-0}"
     volumes:
-      - alertmanager-data-${INSTANCE_ID}:/alertmanager
-      - /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/alertmanager:/etc/alertmanager
-    
+      - alertmanager-data-${ALERTMANAGER_INSTANCE_ID:-0}:/alertmanager
     networks:
-      - observability-network
-
+      - ${OBSERVABILITY_NETWORK:-observability-network}
+    
     labels:
       traefik.enable: "true"
-      traefik.docker.network: "observability-network"
+      traefik.docker.network: "${OBSERVABILITY_NETWORK:-observability-network}"
       
       # Router
-      traefik.http.routers.alertmanager-${INSTANCE_ID}.rule: "Host(`alertmanager-${INSTANCE_ID}.localhost`)"
-      traefik.http.routers.alertmanager-${INSTANCE_ID}.entrypoints: "web,websecure"
-      traefik.http.routers.alertmanager-${INSTANCE_ID}.service: "alertmanager-${INSTANCE_ID}"
-      traefik.http.routers.alertmanager-${INSTANCE_ID}.tls: "true"
-      traefik.http.routers.alertmanager-${INSTANCE_ID}.tls.certresolver: "letsencrypt"
-      traefik.http.routers.alertmanager-${INSTANCE_ID}.middlewares: "traefik-auth-${INSTANCE_ID},security-headers-${INSTANCE_ID}"
+      traefik.http.routers.alertmanager-${ALERTMANAGER_INSTANCE_ID:-0}.rule: "Host(`alertmanager-${ALERTMANAGER_INSTANCE_ID:-0}.localhost`)"
+      traefik.http.routers.alertmanager-${ALERTMANAGER_INSTANCE_ID:-0}.entrypoints: "web,websecure"
+      traefik.http.routers.alertmanager-${ALERTMANAGER_INSTANCE_ID:-0}.service: "alertmanager-${ALERTMANAGER_INSTANCE_ID:-0}"
+      traefik.http.routers.alertmanager-${ALERTMANAGER_INSTANCE_ID:-0}.tls: "true"
+      traefik.http.routers.alertmanager-${ALERTMANAGER_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.alertmanager-${ALERTMANAGER_INSTANCE_ID:-0}.middlewares: "traefik-auth-${ALERTMANAGER_INSTANCE_ID:-0},security-headers-${ALERTMANAGER_INSTANCE_ID:-0},rate-limit-${ALERTMANAGER_INSTANCE_ID:-0}"
       
       # Service
-      traefik.http.services.alertmanager-${INSTANCE_ID}.loadbalancer.server.port: "9093"
-      traefik.http.services.alertmanager-${INSTANCE_ID}.loadbalancer.healthcheck.path: "/-/healthy"
-      traefik.http.services.alertmanager-${INSTANCE_ID}.loadbalancer.healthcheck.interval: "30s"
+      traefik.http.services.alertmanager-${ALERTMANAGER_INSTANCE_ID:-0}.loadbalancer.server.port: "${ALERTMANAGER_PORT:-9093}"
+      traefik.http.services.alertmanager-${ALERTMANAGER_INSTANCE_ID:-0}.loadbalancer.healthcheck.path: "/-/healthy"
+      traefik.http.services.alertmanager-${ALERTMANAGER_INSTANCE_ID:-0}.loadbalancer.healthcheck.interval: "30s"
       
       # Observability
       prometheus.io.scrape: "true"
-      prometheus.io.port: "9093"
+      prometheus.io.port: "${ALERTMANAGER_PORT:-9093}"
       prometheus.io.path: "/metrics"
       loki.source: "docker"
-      loki.job: "alertmanager-${INSTANCE_ID}"
+      loki.job: "alertmanager-${ALERTMANAGER_INSTANCE_ID:-0}"
+    
     deploy:
       resources:
         limits:
-          memory: 128m
-          cpus: "0.3"
+          memory: ${ALERTMANAGER_MEMORY_LIMIT:-256m}
+          cpus: "${ALERTMANAGER_CPU_LIMIT:-0.5}"
         reservations:
-          memory: 64m
+          memory: ${ALERTMANAGER_MEMORY_RESERVATION:-128m}
+    
     restart: unless-stopped
+    
     command:
-      - "--config.file=/etc/alertmanager/alertmanager_config.yaml"
+      - "--config.file=/etc/alertmanager/config.yml"
       - "--storage.path=/alertmanager"
-      - "--web.external-url=http://localhost:${ALERTMANAGER_PORT}"
-      - "--cluster.listen-address="
+      - "--web.external-url=https://alertmanager-${ALERTMANAGER_INSTANCE_ID:-0}.localhost"
+      - "--cluster.listen-address=0.0.0.0:${ALERTMANAGER_CLUSTER_PORT:-9094}"
+    
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${ALERTMANAGER_PORT}/-/healthy || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${ALERTMANAGER_PORT:-9093}/-/healthy || exit 1"]
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-3}
+      start_period: ${HEALTH_CHECK_START_PERIOD:-20s}
 
 volumes:
-  alertmanager-data-${INSTANCE_ID}:
+  alertmanager-data-${ALERTMANAGER_INSTANCE_ID:-0}:
 
 networks:
-  monitoring-bridge:
-    external: true
   observability-network:
     external: true

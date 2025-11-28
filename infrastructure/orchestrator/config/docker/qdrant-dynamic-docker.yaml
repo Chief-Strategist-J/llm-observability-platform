@@ -3,60 +3,65 @@ version: "3.9"
 services:
   qdrant:
     image: qdrant/qdrant:latest
-    container_name: qdrant-instance-${INSTANCE_ID}
+    container_name: qdrant-instance-${QDRANT_INSTANCE_ID:-0}
+    environment:
+      INSTANCE_ID: "${QDRANT_INSTANCE_ID:-0}"
     volumes:
-      - qdrant-storage-${INSTANCE_ID}:/qdrant/storage
-      - qdrant-snapshots-${INSTANCE_ID}:/qdrant/snapshots
+      - qdrant-storage-${QDRANT_INSTANCE_ID:-0}:/qdrant/storage
     networks:
-      - data-network
-      - observability-network  # Bridge for API access
+      - ${DATA_NETWORK:-data-network}
+      - ${OBSERVABILITY_NETWORK:-observability-network}
+
+    # Keep gRPC port for internal vector search operations
+    ports:
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
 
     labels:
       traefik.enable: "true"
-      traefik.docker.network: "observability-network"
+      traefik.docker.network: "${OBSERVABILITY_NETWORK:-observability-network}"
       
-      # Router
-      traefik.http.routers.qdrant-${INSTANCE_ID}.rule: "Host(`qdrant-${INSTANCE_ID}.localhost`)"
-      traefik.http.routers.qdrant-${INSTANCE_ID}.entrypoints: "web,websecure"
-      traefik.http.routers.qdrant-${INSTANCE_ID}.service: "qdrant-${INSTANCE_ID}"
-      traefik.http.routers.qdrant-${INSTANCE_ID}.tls: "true"
-      traefik.http.routers.qdrant-${INSTANCE_ID}.tls.certresolver: "letsencrypt"
-      traefik.http.routers.qdrant-${INSTANCE_ID}.middlewares: "api-key-${INSTANCE_ID},security-headers-${INSTANCE_ID},rate-limit-${INSTANCE_ID}"
+      # Router for Web UI and REST API
+      traefik.http.routers.qdrant-${QDRANT_INSTANCE_ID:-0}.rule: "Host(`qdrant-${QDRANT_INSTANCE_ID:-0}.localhost`)"
+      traefik.http.routers.qdrant-${QDRANT_INSTANCE_ID:-0}.entrypoints: "web,websecure"
+      traefik.http.routers.qdrant-${QDRANT_INSTANCE_ID:-0}.service: "qdrant-${QDRANT_INSTANCE_ID:-0}"
+      traefik.http.routers.qdrant-${QDRANT_INSTANCE_ID:-0}.tls: "true"
+      traefik.http.routers.qdrant-${QDRANT_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.qdrant-${QDRANT_INSTANCE_ID:-0}.middlewares: "security-headers-${QDRANT_INSTANCE_ID:-0},rate-limit-${QDRANT_INSTANCE_ID:-0}"
       
-      # Service
-      traefik.http.services.qdrant-${INSTANCE_ID}.loadbalancer.server.port: "6333"
-      traefik.http.services.qdrant-${INSTANCE_ID}.loadbalancer.healthcheck.path: "/healthz"
-      traefik.http.services.qdrant-${INSTANCE_ID}.loadbalancer.healthcheck.interval: "30s"
+      # Service (HTTP/REST Port)
+      traefik.http.services.qdrant-${QDRANT_INSTANCE_ID:-0}.loadbalancer.server.port: "${QDRANT_HTTP_PORT:-6333}"
+      traefik.http.services.qdrant-${QDRANT_INSTANCE_ID:-0}.loadbalancer.healthcheck.path: "/health"
+      traefik.http.services.qdrant-${QDRANT_INSTANCE_ID:-0}.loadbalancer.healthcheck.interval: "30s"
       
       # Observability
       prometheus.io.scrape: "true"
-      prometheus.io.port: "6333"
+      prometheus.io.port: "${QDRANT_HTTP_PORT:-6333}"
       prometheus.io.path: "/metrics"
       loki.source: "docker"
-      loki.job: "qdrant-${INSTANCE_ID}"
-    environment:
-      INSTANCE_ID: "${INSTANCE_ID}"
-      HTTP_PORT: "${HTTP_PORT}"
-      GRPC_PORT: "${GRPC_PORT}"
+      loki.job: "qdrant-${QDRANT_INSTANCE_ID:-0}"
+    
     deploy:
       resources:
         limits:
-          memory: 512m
-          cpus: "0.5"
+          memory: ${QDRANT_MEMORY_LIMIT:-512m}
+          cpus: "${QDRANT_CPU_LIMIT:-0.5}"
         reservations:
-          memory: 256m
+          memory: ${QDRANT_MEMORY_RESERVATION:-256m}
+    
     restart: unless-stopped
+    
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${HTTP_PORT}/ || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      test: ["CMD-SHELL", "wget --no-verbose --spider http://localhost:${QDRANT_HTTP_PORT:-6333}/health || exit 1"]
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-3}
+      start_period: 30s
 
 volumes:
-  qdrant-storage-${INSTANCE_ID}:
-  qdrant-snapshots-${INSTANCE_ID}:
+  qdrant-storage-${QDRANT_INSTANCE_ID:-0}:
 
 networks:
   data-network:
+    external: true
+  observability-network:
     external: true

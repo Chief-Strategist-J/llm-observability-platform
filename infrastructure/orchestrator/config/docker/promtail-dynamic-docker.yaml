@@ -3,48 +3,59 @@ version: "3.9"
 services:
   promtail:
     image: grafana/promtail:latest
-    container_name: promtail-instance-${INSTANCE_ID}
+    container_name: promtail-instance-${PROMTAIL_INSTANCE_ID:-0}
+    environment:
+      INSTANCE_ID: "${PROMTAIL_INSTANCE_ID:-0}"
     volumes:
-      - promtail-config-${INSTANCE_ID}:/etc/promtail
       - /var/log:/var/log:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${CONFIG_DIR:-./config}:/etc/promtail:ro
     networks:
-      - observability-network
-
+      - ${OBSERVABILITY_NETWORK:-observability-network}
+    
     labels:
       traefik.enable: "true"
-      traefik.docker.network: "observability-network"
+      traefik.docker.network: "${OBSERVABILITY_NETWORK:-observability-network}"
       
-      # Router
-      traefik.http.routers.promtail-${INSTANCE_ID}.rule: "Host(`promtail-${INSTANCE_ID}.localhost`)"
-      traefik.http.routers.promtail-${INSTANCE_ID}.entrypoints: "web,websecure"
-      traefik.http.routers.promtail-${INSTANCE_ID}.service: "promtail-${INSTANCE_ID}"
-      traefik.http.routers.promtail-${INSTANCE_ID}.tls: "true"
-      traefik.http.routers.promtail-${INSTANCE_ID}.tls.certresolver: "letsencrypt"
-      traefik.http.routers.promtail-${INSTANCE_ID}.middlewares: "traefik-auth-${INSTANCE_ID},security-headers-${INSTANCE_ID}"
+      # Router (for metrics endpoint only)
+      traefik.http.routers.promtail-${PROMTAIL_INSTANCE_ID:-0}.rule: "Host(`promtail-${PROMTAIL_INSTANCE_ID:-0}.localhost`)"
+      traefik.http.routers.promtail-${PROMTAIL_INSTANCE_ID:-0}.entrypoints: "web,websecure"
+      traefik.http.routers.promtail-${PROMTAIL_INSTANCE_ID:-0}.service: "promtail-${PROMTAIL_INSTANCE_ID:-0}"
+      traefik.http.routers.promtail-${PROMTAIL_INSTANCE_ID:-0}.tls: "true"
+      traefik.http.routers.promtail-${PROMTAIL_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.promtail-${PROMTAIL_INSTANCE_ID:-0}.middlewares: "traefik-auth-${PROMTAIL_INSTANCE_ID:-0},security-headers-${PROMTAIL_INSTANCE_ID:-0}"
       
       # Service
-      traefik.http.services.promtail-${INSTANCE_ID}.loadbalancer.server.port: "9080"
-      traefik.http.services.promtail-${INSTANCE_ID}.loadbalancer.healthcheck.path: "/ready"
-      traefik.http.services.promtail-${INSTANCE_ID}.loadbalancer.healthcheck.interval: "30s"
-    environment:
-      INSTANCE_ID: "${INSTANCE_ID}"
-      PROMTAIL_PORT: "${PROMTAIL_PORT}"
+      traefik.http.services.promtail-${PROMTAIL_INSTANCE_ID:-0}.loadbalancer.server.port: "${PROMTAIL_HTTP_PORT:-9080}"
+      traefik.http.services.promtail-${PROMTAIL_INSTANCE_ID:-0}.loadbalancer.healthcheck.path: "/ready"
+      traefik.http.services.promtail-${PROMTAIL_INSTANCE_ID:-0}.loadbalancer.healthcheck.interval: "30s"
+      
+      # Observability
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "${PROMTAIL_HTTP_PORT:-9080}"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "promtail-${PROMTAIL_INSTANCE_ID:-0}"
+    
     deploy:
       resources:
         limits:
-          memory: 128m
-          cpus: "0.25"
+          memory: ${PROMTAIL_MEMORY_LIMIT:-256m}
+          cpus: "${PROMTAIL_CPU_LIMIT:-0.5}"
+        reservations:
+          memory: ${PROMTAIL_MEMORY_RESERVATION:-128m}
+    
     restart: unless-stopped
+    
+    command:
+      - "-config.file=/etc/promtail/promtail-config.yaml"
+    
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${PROMTAIL_PORT}/ready || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${PROMTAIL_HTTP_PORT:-9080}/ready || exit 1"]
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-3}
       start_period: 20s
-
-volumes:
-  promtail-config-${INSTANCE_ID}:
 
 networks:
   observability-network:

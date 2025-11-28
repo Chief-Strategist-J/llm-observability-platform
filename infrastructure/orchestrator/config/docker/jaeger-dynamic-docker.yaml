@@ -3,64 +3,54 @@ version: "3.9"
 services:
   jaeger:
     image: jaegertracing/all-in-one:latest
-    container_name: jaeger-instance-${INSTANCE_ID}
-
+    container_name: jaeger-instance-${JAEGER_INSTANCE_ID:-0}
     environment:
+      COLLECTOR_ZIPKIN_HOST_PORT: ":9411"
       COLLECTOR_OTLP_ENABLED: "true"
-      COLLECTOR_ZIPKIN_HOST_PORT: ":${ZIPKIN_PORT}"
-      HTTP_PORT: "${HTTP_PORT}"
-      OTLP_GRPC_PORT: "${OTLP_GRPC_PORT}"
-      OTLP_HTTP_PORT: "${OTLP_HTTP_PORT}"
-      GRPC_PORT: "${GRPC_PORT}"
-      ADMIN_PORT: "${ADMIN_PORT}"
-      ZIPKIN_PORT: "${ZIPKIN_PORT}"
-      INSTANCE_ID: "${INSTANCE_ID}"
-    volumes:
-      - jaeger-data-${INSTANCE_ID}:/tmp
+      INSTANCE_ID: "${JAEGER_INSTANCE_ID:-0}"
     networks:
-      - observability-network
+      - ${OBSERVABILITY_NETWORK:-observability-network}
 
     labels:
       traefik.enable: "true"
-      traefik.docker.network: "observability-network"
+      traefik.docker.network: "${OBSERVABILITY_NETWORK:-observability-network}"
       
       # Router for UI
-      traefik.http.routers.jaeger-${INSTANCE_ID}.rule: "Host(`jaeger-${INSTANCE_ID}.localhost`)"
-      traefik.http.routers.jaeger-${INSTANCE_ID}.entrypoints: "web,websecure"
-      traefik.http.routers.jaeger-${INSTANCE_ID}.service: "jaeger-${INSTANCE_ID}"
-      traefik.http.routers.jaeger-${INSTANCE_ID}.tls: "true"
-      traefik.http.routers.jaeger-${INSTANCE_ID}.tls.certresolver: "letsencrypt"
-      traefik.http.routers.jaeger-${INSTANCE_ID}.middlewares: "traefik-auth-${INSTANCE_ID},security-headers-${INSTANCE_ID}"
+      traefik.http.routers.jaeger-${JAEGER_INSTANCE_ID:-0}.rule: "Host(`jaeger-${JAEGER_INSTANCE_ID:-0}.localhost`)"
+      traefik.http.routers.jaeger-${JAEGER_INSTANCE_ID:-0}.entrypoints: "web,websecure"
+      traefik.http.routers.jaeger-${JAEGER_INSTANCE_ID:-0}.service: "jaeger-${JAEGER_INSTANCE_ID:-0}"
+      traefik.http.routers.jaeger-${JAEGER_INSTANCE_ID:-0}.tls: "true"
+      traefik.http.routers.jaeger-${JAEGER_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.jaeger-${JAEGER_INSTANCE_ID:-0}.middlewares: "security-headers-${JAEGER_INSTANCE_ID:-0},rate-limit-${JAEGER_INSTANCE_ID:-0}"
       
-      # Service
-      traefik.http.services.jaeger-${INSTANCE_ID}.loadbalancer.server.port: "16686"
-      traefik.http.services.jaeger-${INSTANCE_ID}.loadbalancer.healthcheck.path: "/"
-      traefik.http.services.jaeger-${INSTANCE_ID}.loadbalancer.healthcheck.interval: "30s"
+      # Service (UI Port)
+      traefik.http.services.jaeger-${JAEGER_INSTANCE_ID:-0}.loadbalancer.server.port: "${JAEGER_UI_PORT:-16686}"
+      traefik.http.services.jaeger-${JAEGER_INSTANCE_ID:-0}.loadbalancer.healthcheck.path: "/"
+      traefik.http.services.jaeger-${JAEGER_INSTANCE_ID:-0}.loadbalancer.healthcheck.interval: "30s"
       
       # Observability
       prometheus.io.scrape: "true"
-      prometheus.io.port: "14269"
+      prometheus.io.port: "${JAEGER_ADMIN_PORT:-14269}"
       prometheus.io.path: "/metrics"
       loki.source: "docker"
-      loki.job: "jaeger-${INSTANCE_ID}"
-
+      loki.job: "jaeger-${JAEGER_INSTANCE_ID:-0}"
+    
     deploy:
       resources:
         limits:
-          memory: 512m
-          cpus: "0.5"
+          memory: ${JAEGER_MEMORY_LIMIT:-512m}
+          cpus: "${JAEGER_CPU_LIMIT:-0.5}"
         reservations:
-          memory: 256m
+          memory: ${JAEGER_MEMORY_RESERVATION:-256m}
+    
     restart: unless-stopped
+    
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${HTTP_PORT}/ || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-volumes:
-  jaeger-data-${INSTANCE_ID}:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${JAEGER_ADMIN_PORT:-14269}/ || exit 1"]
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-3}
+      start_period: 30s
 
 networks:
   observability-network:

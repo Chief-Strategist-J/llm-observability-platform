@@ -3,59 +3,62 @@ version: "3.9"
 services:
   prometheus:
     image: prom/prometheus:latest
-    container_name: prometheus-instance-${INSTANCE_ID}
+    container_name: prometheus-instance-${PROMETHEUS_INSTANCE_ID:-0}
     environment:
-      INSTANCE_ID: "${INSTANCE_ID}"
-      HOST_PORT: "${HOST_PORT}"
+      INSTANCE_ID: "${PROMETHEUS_INSTANCE_ID:-0}"
     volumes:
-      - prometheus-data-${INSTANCE_ID}:/prometheus
+      - prometheus-data-${PROMETHEUS_INSTANCE_ID:-0}:/prometheus
       - ${PROM_CONFIG_PATH}:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - ${OBSERVABILITY_NETWORK:-observability-network}
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "${OBSERVABILITY_NETWORK:-observability-network}"
+      
+      # Router
+      traefik.http.routers.prometheus-${PROMETHEUS_INSTANCE_ID:-0}.rule: "Host(`prometheus-${PROMETHEUS_INSTANCE_ID:-0}.localhost`)"
+      traefik.http.routers.prometheus-${PROMETHEUS_INSTANCE_ID:-0}.entrypoints: "web,websecure"
+      traefik.http.routers.prometheus-${PROMETHEUS_INSTANCE_ID:-0}.service: "prometheus-${PROMETHEUS_INSTANCE_ID:-0}"
+      traefik.http.routers.prometheus-${PROMETHEUS_INSTANCE_ID:-0}.tls: "true"
+      traefik.http.routers.prometheus-${PROMETHEUS_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.prometheus-${PROMETHEUS_INSTANCE_ID:-0}.middlewares: "traefik-auth-${PROMETHEUS_INSTANCE_ID:-0},security-headers-${PROMETHEUS_INSTANCE_ID:-0},rate-limit-${PROMETHEUS_INSTANCE_ID:-0}"
+      
+      # Service
+      traefik.http.services.prometheus-${PROMETHEUS_INSTANCE_ID:-0}.loadbalancer.server.port: "${PROMETHEUS_PORT:-9090}"
+      traefik.http.services.prometheus-${PROMETHEUS_INSTANCE_ID:-0}.loadbalancer.healthcheck.path: "/-/healthy"
+      traefik.http.services.prometheus-${PROMETHEUS_INSTANCE_ID:-0}.loadbalancer.healthcheck.interval: "30s"
+      
+      # Observability
+      loki.source: "docker"
+      loki.job: "prometheus-${PROMETHEUS_INSTANCE_ID:-0}"
+    
     deploy:
       resources:
         limits:
-          memory: 512m
-          cpus: "1.0"
+          memory: ${PROMETHEUS_MEMORY_LIMIT:-512m}
+          cpus: "${PROMETHEUS_CPU_LIMIT:-1.0}"
         reservations:
-          memory: 256m
+          memory: ${PROMETHEUS_MEMORY_RESERVATION:-256m}
+    
     restart: unless-stopped
+    
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--web.enable-remote-write-receiver"
       - "--enable-feature=exemplar-storage"
+      - "--web.external-url=https://prometheus-${PROMETHEUS_INSTANCE_ID:-0}.localhost"
     
-    networks:
-      - observability-network
-
-    labels:
-      traefik.enable: "true"
-      traefik.docker.network: "observability-network"
-      
-      # Router
-      traefik.http.routers.prometheus-${INSTANCE_ID}.rule: "Host(`prometheus-${INSTANCE_ID}.localhost`)"
-      traefik.http.routers.prometheus-${INSTANCE_ID}.entrypoints: "web,websecure"
-      traefik.http.routers.prometheus-${INSTANCE_ID}.service: "prometheus-${INSTANCE_ID}"
-      traefik.http.routers.prometheus-${INSTANCE_ID}.tls: "true"
-      traefik.http.routers.prometheus-${INSTANCE_ID}.tls.certresolver: "letsencrypt"
-      traefik.http.routers.prometheus-${INSTANCE_ID}.middlewares: "traefik-auth-${INSTANCE_ID},security-headers-${INSTANCE_ID},rate-limit-${INSTANCE_ID}"
-      
-      # Service
-      traefik.http.services.prometheus-${INSTANCE_ID}.loadbalancer.server.port: "9090"
-      traefik.http.services.prometheus-${INSTANCE_ID}.loadbalancer.healthcheck.path: "/-/healthy"
-      traefik.http.services.prometheus-${INSTANCE_ID}.loadbalancer.healthcheck.interval: "30s"
-      
-      # Observability
-      loki.source: "docker"
-      loki.job: "prometheus-${INSTANCE_ID}"
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${PROMETHEUS_PORT:-9090}/-/healthy || exit 1"]
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-3}
+      start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
 
 volumes:
-  prometheus-data-${INSTANCE_ID}:
+  prometheus-data-${PROMETHEUS_INSTANCE_ID:-0}:
 
 networks:
   observability-network:

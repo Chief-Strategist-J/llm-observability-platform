@@ -1,1200 +1,322 @@
-# **Temporal Orchestrator — README**
+# Centralized Configuration Guide
 
-## 1. Overview
+## Overview
 
-This directory contains a **Temporal.io orchestration system** for managing containerized services in the LLM chatbot infrastructure.
+This guide explains how to use the centralized environment configuration for deploying all infrastructure services with proper port management, security, and network isolation.
 
-**Components:**
+## Quick Start
 
-* **Activities** – Individual operations (e.g., container start/stop, monitoring).
-* **Workflows** – Orchestration logic to coordinate activities.
-* **Workers** – Poll task queues and execute workflows/activities.
-* **Temporal Server** – Manages state and workflow durability.
-* **Trigger / Stop scripts** – Start or terminate workflows, organized per service.
-
----
-
-## 2. Folder Structure
-
-```
-temporal-orchestrator/
-│
-├── activities/
-│   ├── ai_proxy_container_activity.py
-│   ├── my_new_activity.py           # Example new activity
-│   └── common_activity/
-│       ├── start_grafana_activity.py
-│       ├── configure_grafana_activity.py
-│       ├── loki_activity.py
-│       ├── otel_activity.py
-│       ├── promotheus_activity.py
-│       └── promtail_activity.py
-│
-├── dynamicconfig/
-│   └── development-sql.yaml
-│
-├── workflows/
-│   ├── logging_pipeline_workflow.py
-│   └── my_new_workflow.py           # Example new workflow
-│
-├── workers/
-│   ├── logging_pipeline_worker.py
-│   └── my_new_worker.py             # Example new worker
-│
-├── trigger/
-│   └── ai_proxy_container/          # Example service folder
-│       ├── start.py
-│       └── stop.py
-│   └── knowledge_graph/             # Example service folder
-│       ├── start.py
-│       └── stop.py
-│
-├── temporal-orchestrator-compose.yaml
-└── README.md
-```
-
-> **Note:** Each new service gets its own folder under `trigger/` with its `start.py` and `stop.py` scripts.
-
----
-
-## 3. Adding a New Activity
-
-**Path:** `activities/my_new_activity.py`
-
-```python
-from temporalio import activity
-import asyncio
-
-@activity.defn
-async def my_new_activity(arg: str) -> str:
-    """Minimal new activity"""
-    await asyncio.sleep(0.1)
-    return f"done:{arg}"
-```
-
----
-
-## 4. Adding a New Workflow
-
-**Path:** `workflows/my_new_workflow.py`
-
-```python
-from datetime import timedelta
-from temporalio import workflow
-from temporalio.common import RetryPolicy
-
-@workflow.defn
-class MyNewWorkflow:
-    @workflow.run
-    async def run(self, param: str) -> str:
-        from activities.my_new_activity import my_new_activity
-
-        result = await workflow.execute_activity(
-            my_new_activity,
-            param,
-            start_to_close_timeout=timedelta(minutes=2),
-            retry_policy=RetryPolicy(
-                maximum_attempts=3,
-                initial_interval=timedelta(seconds=10),
-            ),
-        )
-        return result
-```
-
----
-
-## 5. Adding a New Worker (Independent)
-
-**Path:** `workers/my_new_worker.py`
-
-```python
-import asyncio
-from temporalio.client import Client
-from temporalio.worker import Worker
-from workflows.my_new_workflow import MyNewWorkflow
-from activities.my_new_activity import my_new_activity
-
-async def main():
-    client = await Client.connect("localhost:7233")
-    worker = Worker(
-        client,
-        task_queue="my-new-task-queue",
-        workflows=[MyNewWorkflow],
-        activities=[my_new_activity]
-    )
-    await worker.run()
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-> No edits to existing workers are required.
-
----
-
-## 6. Trigger Script for a Service
-
-**Path:** `trigger/knowledge_graph/start.py`
-
-```python
-import asyncio
-from temporalio.client import Client
-from workflows.my_new_workflow import MyNewWorkflow
-
-async def main():
-    client = await Client.connect("localhost:7233")
-    result = await client.execute_workflow(
-        MyNewWorkflow.run,
-        "input-value",
-        id="knowledge_graph_1",
-        task_queue="my-new-task-queue",
-    )
-    print(result)
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
----
-
-## 7. Stop Script for a Service
-
-**Path:** `trigger/knowledge_graph/stop.py`
-
-```python
-import asyncio
-from temporalio.client import Client
-
-async def main():
-    client = await Client.connect("localhost:7233")
-    await client.terminate_workflow("knowledge_graph_1", reason="manual stop")
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
----
-
-## 8. Commands
-
-### Start Temporal Infrastructure
+### 1. Setup Environment File
 
 ```bash
+# Copy the template to create your .env file
+cp infrastructure/orchestrator/.env.template infrastructure/orchestrator/.env
+
+# Edit the .env file with your specific configuration
+nano infrastructure/orchestrator/.env
+```
+
+**Important**: Update these values before deployment:
+- `TRAEFIK_BASIC_AUTH`: Generate with `htpasswd -nb admin your_password`
+- `API_KEY`: Generate a secure random string
+- All passwords (MongoDB, Neo4j, Grafana, etc.)
+- `ACME_EMAIL`: Your email for Let's Encrypt certificates
+
+### 2. Create Networks
+
+```bash
+# Create all required Docker networks
 cd infrastructure/orchestrator
-
-docker-compose -f temporal-orchestrator-compose.yaml down -v
-
-docker system prune -f
-
-docker-compose -f temporal-orchestrator-compose.yaml up -d
-cd ../..
-
-source /home/j/live/dinesh/llm-chatbot-python/.venv/bin/activate
-
+bash scripts/create-networks.sh
 ```
 
-### Verify Services
+This creates 4 isolated networks:
+- `observability-network` (172.20.0.0/16)
+- `data-network` (172.21.0.0/16)
+- `messaging-network` (172.22.0.0/16)
+- `cicd-network` (172.23.0.0/16)
+
+### 3. Deploy Services
+
+Start services individually or use docker-compose:
 
 ```bash
-docker ps
-curl http://0.0.0.0:8080/namespaces/default/workflows
-docker exec temporal-postgresql psql -U temporal -d temporal -c "SELECT 1;"
+# Deploy Traefik first (reverse proxy)
+cd infrastructure/orchestrator/config/docker
+docker-compose -f traefik-dynamic-docker.yaml --env-file ../../.env up -d
+
+# Deploy observability stack
+docker-compose -f prometheus-dynamic-docker.yaml --env-file ../../.env up -d
+docker-compose -f grafana-dynamic-docker.yaml --env-file ../../.env up -d
+docker-compose -f loki-dynamic-docker.yaml --env-file ../../.env up -d
+docker-compose -f tempo-dynamic-docker.yaml --env-file ../../.env up -d
+docker-compose -f jaeger-dynamic-docker.yaml --env-file ../../.env up -d
+docker-compose -f otel-collector-dynamic-docker.yaml --env-file ../../.env up -d
+docker-compose -f promtail-dynamic-docker.yaml --env-file ../../.env up -d
+docker-compose -f alertmanager-docker.yaml --env-file ../../.env up -d
+
+# Deploy databases
+docker-compose -f mongodb-dynamic-docker.yaml --env-file ../../.env up -d
+docker-compose -f redis-dynamic-docker.yaml --env-file ../../.env up -d
+docker-compose -f neo4j-dynamic-docker.yaml --env-file ../../.env up -d
+docker-compose -f qdrant-dynamic-docker.yaml --env-file ../../.env up -d
+
+# Deploy messaging
+docker-compose -f kafka-dynamic-docker.yaml --env-file ../../.env up -d
+
+# Deploy admin UIs
+docker-compose -f mongoexpress-dynamic-docker.yaml --env-file ../../.env up -d
+
+# Deploy CI/CD
+docker-compose -f argocd-server-dynamic-docker.yaml --env-file ../../.env up -d
+docker-compose -f argocd-repo-dynamic-docker.yaml --env-file ../../.env up -d
 ```
 
-### Start Your Worker
+### 4. Access Services
+
+All external services are accessible via HTTPS through Traefik at:
+
+| Service | URL | Authentication |
+|---------|-----|----------------|
+| **Traefik Dashboard** | https://traefik-0.localhost | Basic Auth (admin/password) |
+| **Grafana** | https://grafana-0.localhost | Grafana Login |
+| **Prometheus** | https://prometheus-0.localhost | Basic Auth |
+| **Loki** | https://loki-0.localhost | Basic Auth |
+| **Tempo** | https://tempo-0.localhost | Basic Auth |
+| **Jaeger** | https://jaeger-0.localhost | None |
+| **Mongo Express** | https://mongoexpress-0.localhost | Basic Auth |
+| **Neo4j Browser** | https://neo4j-0.localhost | Neo4j Login |
+| **Qdrant UI** | https://qdrant-0.localhost | None |
+| **ArgoCD** | https://argocd-0.localhost | ArgoCD Login |
+| **OTEL Metrics** | https://otel-0.localhost | Basic Auth |
+| **AlertManager** | https://alertmanager-0.localhost | Basic Auth |
+| **Promtail Metrics** | https://promtail-0.localhost | Basic Auth |
+
+**Note**: For localhost development, you may need to accept the self-signed TLS certificates in your browser.
+
+Internal services (direct port access for internal communication):
+- **MongoDB**: `localhost:27017`
+- **Redis**: `localhost:6379`
+- **Kafka Broker**: `localhost:9092`
+- **Neo4j Bolt**: `localhost:7687`
+- **Qdrant gRPC**: `localhost:6334`
+- **OTEL Collector OTLP gRPC**: `localhost:4317`
+- **OTEL Collector OTLP HTTP**: `localhost:4318`
+
+## Environment Variable Reference
+
+### Instance IDs
+Each service has an `INSTANCE_ID` that allows running multiple instances:
+- `INSTANCE_ID=0` (default, first instance)
+- `INSTANCE_ID=1` (second instance, ports auto-incremented)
+
+Port calculation: `final_port = base_port + (instance_id * 100)`
+
+### Network Configuration
+```bash
+OBSERVABILITY_NETWORK=observability-network
+DATA_NETWORK=data-network
+MESSAGING_NETWORK=messaging-network
+CICD_NETWORK=cicd-network
+```
+
+### Security
+```bash
+# Traefik Dashboard Authentication
+TRAEFIK_BASIC_AUTH=admin:$$apr1$$8s7VW3ZZ$$xvtzQGXr5lGhCgHqJz4Kx1
+
+# API Keys
+API_KEY=changeme-secure-api-key-here
+
+# TLS Configuration
+ACME_EMAIL=admin@localhost
+```
+
+Generate htpasswd:
+```bash
+# Install apache2-utils if not available
+sudo apt-get install apache2-utils
+
+# Generate password hash
+htpasswd -nb admin your_password_here
+```
+
+### Service-Specific
+
+See `.env.template` for complete list of variables for each service including:
+- Ports
+- Credentials
+- Resource limits
+- Health check timeouts
+- Paths and directories
+
+## Port Management
+
+All ports are centrally managed in `infrastructure/orchestrator/dynamicconfig/port_registry.yaml`.
+
+To get a port programmatically:
+```python
+from infrastructure.orchestrator.base.port_manager import PortManager
+
+pm = PortManager()
+port = pm.get_port('grafana', instance_id=0, port_type='port')  # Returns 3000
+```
+
+## Network Security
+
+See `config/network-security-policy.md` for detailed security architecture including:
+- Network segmentation strategy
+- Access control matrix
+- TLS configuration
+- Security headers
+- Rate limiting
+- IP whitelisting
+- Production hardening recommendations
+
+## Troubleshooting
+
+### Port Conflicts
+```bash
+# Check if port is in use
+sudo netstat -tulpn | grep :PORT_NUMBER
+
+# Stop conflicting service
+docker ps | grep PORT_NUMBER
+docker stop CONTAINER_ID
+```
+
+### Network Issues
+```bash
+# Recreate networks
+docker network rm observability-network data-network messaging-network cicd-network
+bash scripts/create-networks.sh
+
+# Inspect network
+docker network inspect observability-network
+```
+
+### TLS Certificate Issues
+```bash
+# Check Traefik logs
+docker logs traefik-instance-0
+
+# Clear ACME certificates and restart
+docker volume rm traefik-certs-0
+docker-compose -f traefik-dynamic-docker.yaml --env-file ../../.env up -d --force-recreate
+```
+
+### Health Check Failures
+```bash
+# Check service logs
+docker logs SERVICE-instance-0
+
+# Check health status
+docker inspect SERVICE-instance-0 | grep -A 20 Health
+```
+
+## Multi-Instance Deployment
+
+To run multiple instances (e.g., for testing or HA):
 
 ```bash
-cd workers
-python3 my_new_worker.py
+# Set different instance ID
+export PROMETHEUS_INSTANCE_ID=1
+export PROMETHEUS_PORT=9190  # 9090 + (1 * 100)
 
-// start workers
-
-source /home/j/live/dinesh/llm-chatbot-python/.venv/bin/activate
-
-python infrastructure/orchestrator/workers/database_pipeline_worker.py 
-
-python infrastructure/orchestrator/workers/metrics_pipeline_worker.py 
-
-python infrastructure/orchestrator/workers/tracing_pipeline_worker.py 
-
-python service/llm_chat_app/worker/workers/chat_worker.py 
-
-python infrastructure/observability/workers/logs_pipeline_worker.py
-
-
-
+docker-compose -f prometheus-dynamic-docker.yaml --env-file ../../.env up -d
 ```
 
-### Trigger Service Workflow
+Access at `https://prometheus-1.localhost`
+
+## Production Deployment
+
+### Before Production
+
+1. **Change All Default Passwords**
+   ```bash
+   # Update .env with strong passwords
+   GRAFANA_ADMIN_PASSWORD=$(openssl rand -base64 32)
+   MONGODB_ROOT_PASSWORD=$(openssl rand -base64 32)
+   NEO4J_PASSWORD=$(openssl rand -base64 32)
+   # ... etc
+   ```
+
+2. **Use Production TLS Certificates**
+   ```bash
+   # Remove staging CA server line from traefik-dynamic-docker.yaml
+   # Or use custom certificates
+   ```
+
+3. **Enable Redis Password**
+   ```bash
+   REDIS_PASSWORD=$(openssl rand -base64 32)
+   # Update redis command in yaml file
+   ```
+
+4. **Implement Kafka SASL**
+   - Configure SASL/PLAIN or SASL/SCRAM
+   - Update Kafka environment variables
+
+5. **Restrict IP Whitelist**
+   ```bash
+   # Update in .env
+   IP_WHITELIST=YOUR_OFFICE_IP/32,YOUR_VPN_IP/32
+   ```
+
+6. **Review Security Policy**
+   - Read `config/network-security-policy.md`
+   - Implement recommended hardening
+
+### Kubernetes Deployment
+
+For Kubernetes deployment:
+1. Create ConfigMaps from environment variables (see `config/kubernete/examples/`)
+2. Create Secrets for sensitive data
+3. Apply NetworkPolicies
+4. Deploy services
+5. Configure Ingress with cert-manager
+
+## Monitoring
+
+### Metrics
+- Prometheus scrapes all services (via prometheus.io.* labels)
+- Traefik exposes metrics at `:8080/metrics`
+- View in Grafana dashboards
+
+### Logs
+- All containers log to stdout/stderr
+- Promtail collects Docker logs
+- Loki aggregates logs
+- Query in Grafana or Loki UI
+
+### Traces
+- OTEL Collector receives traces on ports 4317/4318
+- Tempo stores traces
+- View in Jaeger or Grafana
+
+## Backup and Recovery
 
 ```bash
-cd trigger/knowledge_graph
-python3 start.py
+# Backup MongoDB
+docker exec mongodb-instance-0 mongodump --out=/data/backup --username=admin --password=MongoPassword123! --authenticationDatabase=admin
 
-// Trigger Service Workflow
+# Backup Neo4j
+docker exec neo4j-instance-0 neo4j-admin backup --backup-dir=/var/lib/neo4j/backup
 
-python infrastructure/orchestrator/trigger/common/logs_pipeline_start.py 
-
-python infrastructure/orchestrator/trigger/common/database_pipeline_start.py 
-
-python infrastructure/orchestrator/trigger/common/metrics_pipeline_start.py 
-
-python infrastructure/orchestrator/trigger/common/tracing_pipeline_start.py 
-
-python infrastructure/orchestrator/trigger/common/run_logs_pipeline_then_stdout_ingest.py
-
-python infrastructure/orchestrator/trigger/common/start_application_stdout_ingest.py
-
-python service/llm_chat_app/worker/workflows/chat_setup_workflow.py
-
-python service/llm_chat_app/worker/workflows/chat_cleanup_workflow.py 
-
-
-
-
+# Backup configuration
+cp infrastructure/orchestrator/.env infrastructure/orchestrator/.env.backup
 ```
 
-### Logs Pipeline Workflow
-
-```bash
-START
- │
- │── Receive `params`
- │
- │── Configure Retry Policy
- │      • initial_interval = 1s
- │      • maximum_interval = 10s
- │      • maximum_attempts = 3
- │
- │── Set Activity Timeout
- │      • start_to_close_timeout = 5 minutes
- │
- │
- ├── Step 1: Stop OpenTelemetry Collector
- │        Activity: stop_opentelemetry_collector(params)
- │        Behavior:
- │           - Retries based on RetryPolicy
- │           - Fails workflow if all retry attempts fail
- │
- ├── Step 2: Delete OpenTelemetry Collector
- │        Activity: delete_opentelemetry_collector(params)
- │        Behavior:
- │           - Same retry/timeout controls
- │
- ├── Step 3: Start OpenTelemetry Collector
- │        Activity: start_opentelemetry_collector(params)
- │        Behavior:
- │           - Ensures collector is active again for pipeline
- │
- ├── Step 4: Start Loki Service
- │        Activity: start_loki_activity(params)
- │        Behavior:
- │           - Initiates Loki to ingest logs
- │
- ├── Step 5: Start Grafana Service
- │        Activity: start_grafana_activity(params)
- │        Behavior:
- │           - Ensures Grafana is up to visualize the logs
- │
- │
- └── END → Return message:
-         "Logs pipeline fully configured"
-
-```
-
-
-### Database Pipeline Workflow
-
-```bash
-START
-  │
-  ▼
-Receive `service_name`
-  │
-  ▼
-──────────────────────────────────────────────
-Step 1: Start Neo4j Container
-  │     Activity: start_neo4j_container(service_name)
-  │     Behavior:
-  │       - start_to_close_timeout = 5 minutes
-  │       - retry_policy: maximum_attempts = 3
-  ▼
-──────────────────────────────────────────────
-Step 2: Start Qdrant Container
-  │     Activity: start_qdrant_container(service_name)
-  │     Behavior:
-  │       - start_to_close_timeout = 5 minutes
-  │       - retry_policy: maximum_attempts = 3
-  ▼
-──────────────────────────────────────────────
-END → "Database pipeline fully configured: Neo4j + Qdrant"
-
-```
-
-### Metrics Pipeline Workflow
-
-```bash
-START
-  │
-  ▼
-Receive `params`
-  │
-  ▼
-Validate params
-  │      • Must be dict
-  │      • Must contain service_name (string)
-  │
-  ├── If invalid → END → "Error: Invalid params provided"
-  ├── If missing/invalid service_name → END → "Error: service_name is required and must be string"
-  │
-  ▼
-Configure Retry Policy
-  │      • initial_interval = 1s
-  │      • maximum_interval = 10s
-  │      • maximum_attempts = 3
-  │
-  ▼
-Set Activity Timeout
-  │      • start_to_close_timeout = 5 minutes
-  │
-  ▼
-──────────────────────────────────────────────
-Step 1: Start Prometheus Container
-  │     Activity: start_prometheus_container(params)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses timeout
-  │       - Returns truthy if successful
-  │
-  ├── If result is falsy → END → "Error: Failed to start Prometheus container"
-  │
-  ▼
-Sleep 2 seconds
-  │
-  ▼
-──────────────────────────────────────────────
-Step 2: Start Grafana Container
-  │     Activity: start_grafana_container(params)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses timeout
-  │       - Returns truthy if successful
-  │
-  ├── If result is falsy → END → "Error: Failed to start Grafana container"
-  │
-  ▼
-──────────────────────────────────────────────
-END → "Metrics pipeline fully configured: Prometheus + Grafana + Dashboard"
-──────────────────────────────────────────────
-EXCEPTION HANDLING
-  │
-  └── If any exception occurs:
-          END → "Error: Metrics pipeline failed: <error>"
-
-
-```
-
-
-### Tracing Pipeline Workflow
-
-```bash
-START
-  │
-  ▼
-Receive `params`
-  │
-  ▼
-Validate params
-  │      • Must be dict
-  │      • Must contain service_name (string)
-  │
-  ├── If invalid → END → "Error: Invalid params provided"
-  ├── If missing/invalid service_name → END → "Error: service_name is required and must be string"
-  │
-  ▼
-Configure Retry Policy
-  │      • initial_interval = 1s
-  │      • maximum_interval = 10s
-  │      • maximum_attempts = 3
-  │
-  ▼
-Set Activity Timeout
-  │      • start_to_close_timeout = 5 minutes
-  │
-  ▼
-──────────────────────────────────────────────
-Step 1: Start Jaeger Container
-  │     Activity: start_jaeger_container(params)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses timeout
-  │       - Returns truthy if successful
-  │
-  ├── If result is falsy → END → "Error: Failed to start Jaeger container"
-  │
-  ▼
-Sleep 2 seconds
-  │
-  ▼
-──────────────────────────────────────────────
-Step 2: Start Grafana Container
-  │     Activity: start_grafana_container(params)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses timeout
-  │       - Returns truthy if successful
-  │
-  ├── If result is falsy → END → "Error: Failed to start Grafana container"
-  │
-  ▼
-──────────────────────────────────────────────
-END → "Tracing pipeline fully configured: Jaeger + Grafana + Dashboard"
-──────────────────────────────────────────────
-EXCEPTION HANDLING
-  │
-  └── If any exception occurs:
-          END → "Error: Tracing pipeline failed: <error>"
-
-
-```
-
-
-### Application Stdout Ingest Workflow
-
-```bash
-START
-  │
-  ▼
-Receive `params`
-  │
-  ▼
-Configure Retry Policy
-  │      • maximum_attempts = 3
-  │
-  ▼
-Set Timeouts
-  │      • t = 5 minutes
-  │      • some steps = 30 seconds
-  │
-  ▼
-──────────────────────────────────────────────
-Step 1: Configure Application Stdout Pipeline
-  │     Activity: logs_configure_activity(params)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 5-minute timeout
-  │       - Returns configuration object
-  │
-  ├── If conf is falsy → END → "configuration failed"
-  │
-  ▼
-──────────────────────────────────────────────
-Step 2: Add Loki Datasource
-  │     Activity: add_loki_datasource_activity(params)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 30-second timeout
-  ▼
-──────────────────────────────────────────────
-Sleep 5 seconds
-  │
-  ▼
-──────────────────────────────────────────────
-Step 3: Discover Local Log Files
-  │     Activity: discover_log_files_activity(conf)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 5-minute timeout
-  ▼
-──────────────────────────────────────────────
-Step 4: Discover Docker Log Files
-  │     Activity: discover_docker_logs_activity(conf)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 5-minute timeout
-  ▼
-──────────────────────────────────────────────
-Merge Discoveries
-  │      • local_logs + docker_logs
-  │      • Remove duplicates
-  │      • Sort list
-  ▼
-──────────────────────────────────────────────
-Step 5: Enrich Logs With Labels
-  │     Activity: label_enrichment_activity(
-  │         {"files": discovered, "labels": conf.get("labels", {})}
-  │     )
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 5-minute timeout
-  ▼
-──────────────────────────────────────────────
-Build Shipping Parameters
-  │      • files = enriched[].path
-  │      • labels = enriched[0].labels OR conf.labels
-  │      • protocol = otlp
-  │      • endpoint = http://localhost:4318
-  │      • batch_size
-  │      • flush_interval_seconds
-  │      • timeout_seconds = 10
-  ▼
-──────────────────────────────────────────────
-Step 6: Tail and Ship Logs
-  │     Activity: tail_and_ship_logs_activity(ship_params)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 30-second timeout
-  ▼
-──────────────────────────────────────────────
-END → "ingest started: discovered={len(discovered)} enriched={len(enriched)} status={result.status}"
-
-```
-
-
-
-### Container Logs Ingest Workflow
-
-```bash
-START
-  │
-  ▼
-Receive inputs
-  │      • template_path: str
-  │      • log_paths: list
-  │      • service_name: str
-  │      • loki_endpoint: str
-  │
-  ▼
-Configure Retry Policy
-  │      • initial_interval = 1s
-  │      • maximum_interval = 10s
-  │      • maximum_attempts = 3
-  │
-  ▼
-Set Timeout
-  │      • start_to_close_timeout = 5 minutes
-  │
-  ▼
-──────────────────────────────────────────────
-Step 1: Generate and Validate Config
-  │     Activity: generate_and_validate_config_activity(
-  │         template_path,
-  │         log_paths,
-  │         service_name,
-  │         loki_endpoint
-  │     )
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses timeout
-  │       - Returns config_str
-  ▼
-──────────────────────────────────────────────
-Step 2: Push and Reload Configuration
-  │     Activity: push_and_reload_activity(config_str)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses timeout
-  ▼
-──────────────────────────────────────────────
-END → "container_logs ingest configured"
-
-
-```
-
-### OTLP from Apps Ingest Workflow
-
-```bash
-START
-  │
-  ▼
-Receive inputs
-  │      • template_path: str
-  │      • service_name: str
-  │      • otlp_endpoint: str
-  │
-  ▼
-Configure Retry Policy
-  │      • initial_interval = 1s
-  │      • maximum_interval = 10s
-  │      • maximum_attempts = 3
-  │
-  ▼
-Set Timeout
-  │      • start_to_close_timeout = 5 minutes
-  │
-  ▼
-──────────────────────────────────────────────
-Step 1: Enable OTLP Receiver
-  │     Activity: enable_otlp_receiver_activity(
-  │         template_path,
-  │         service_name,
-  │         otlp_endpoint
-  │     )
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses timeout
-  │       - Produces config_path
-  ▼
-──────────────────────────────────────────────
-Step 2: Collect and Route OTLP Traffic
-  │     Activity: collect_and_route_otlp_activity(config_path)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses timeout
-  ▼
-──────────────────────────────────────────────
-END → "otlp_from_apps ingest enabled"
-```
-
-
-### Chat Setup Workflow
-
-```bash
-START
-  │
-  ▼
-Receive `params`
-  │
-  ▼
-Clone params → p
-  │      • p["context"] = "/home/j/live/dinesh/llm-chatbot-python/service/llm_chat_app"
-  │
-  ▼
-Log: "ChatSetupWorkflow start"
-  │
-  ▼
-Configure Retry Policy
-  │      • initial_interval = 2s
-  │      • maximum_interval = 10s
-  │      • maximum_attempts = 3
-  │
-  ▼
-Set Timeout
-  │      • start_to_close_timeout = 10 minutes
-  │
-  ▼
-──────────────────────────────────────────────
-Step 1: Start Neo4j Dependency
-  │     Activity: start_neo4j_dependency_activity(p)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 10-minute timeout
-  ▼
-──────────────────────────────────────────────
-Step 2: Verify Cloudflare Dependency
-  │     Activity: verify_cloudflare_dependency_activity(p)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 10-minute timeout
-  ▼
-──────────────────────────────────────────────
-Step 3: Build Chat Image
-  │     Activity: build_chat_image_activity(p)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 10-minute timeout
-  ▼
-──────────────────────────────────────────────
-Step 4: Run Chat Container
-  │     Activity: run_chat_container_activity(p)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 10-minute timeout
-  ▼
-──────────────────────────────────────────────
-Step 5: Check Chat Health
-  │     Activity: check_chat_health_activity(p)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 10-minute timeout
-  ▼
-──────────────────────────────────────────────
-Log: "ChatSetupWorkflow complete"
-  │
-  ▼
-END → "chat_setup_complete"
-
-```
-
-
-### Chat Cleanup Workflow
-
-```bash
-START
-  │
-  ▼
-Receive `params`
-  │
-  ▼
-Log: "ChatCleanupWorkflow start"
-  │
-  ▼
-Configure Retry Policy
-  │      • initial_interval = 2s
-  │      • maximum_interval = 10s
-  │      • maximum_attempts = 3
-  │
-  ▼
-Set Timeout
-  │      • start_to_close_timeout = 10 minutes
-  │
-  ▼
-──────────────────────────────────────────────
-Step 1: Stop Chat Container
-  │     Activity: stop_chat_container_activity(params)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 10-minute timeout
-  ▼
-──────────────────────────────────────────────
-Step 2: Delete Chat Container
-  │     Activity: delete_chat_container_activity(params)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 10-minute timeout
-  ▼
-──────────────────────────────────────────────
-Step 3: Delete Chat Image
-  │     Activity: delete_chat_image_activity(params)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 10-minute timeout
-  ▼
-──────────────────────────────────────────────
-Step 4: Stop Neo4j Dependency
-  │     Activity: stop_neo4j_dependency_activity(params)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 10-minute timeout
-  ▼
-──────────────────────────────────────────────
-Step 5: Delete Neo4j Dependency
-  │     Activity: delete_neo4j_dependency_activity(params)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 10-minute timeout
-  ▼
-──────────────────────────────────────────────
-Log: "ChatCleanupWorkflow complete"
-  │
-  ▼
-END → "chat_cleanup_complete"
-
-
-```
-
-
-### Flyio Deployment Workflow
-
-```bash
-START
-  │
-  ▼
-Receive `params`
-  │
-  ▼
-Clone params → p
-  │      • p.setdefault("service_name", "flyio-deploy")
-  │
-  ▼
-Log: "FlyioDeploymentWorkflow start"
-  │
-  ▼
-Configure Retry Policy
-  │      • initial_interval = 2s
-  │      • maximum_interval = 10s
-  │      • maximum_attempts = 3
-  │
-  ▼
-Set Timeout
-  │      • start_to_close_timeout = 15 minutes
-  │
-  ▼
-──────────────────────────────────────────────
-Step 1: Generate Deployment Configs
-  │     Activity: generate_deployment_configs_activity(
-  │         {**p, "platforms": ["flyio"]}
-  │     )
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 15-minute timeout
-  ▼
-──────────────────────────────────────────────
-Step 2: Create Fly.io App
-  │     Activity: create_flyio_app_activity(p)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 15-minute timeout
-  ▼
-──────────────────────────────────────────────
-Step 3: Set Fly.io Secrets
-  │     Activity: set_flyio_secrets_activity(p)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 15-minute timeout
-  ▼
-──────────────────────────────────────────────
-Step 4: Deploy to Fly.io
-  │     Activity: deploy_to_flyio_activity(p)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 15-minute timeout
-  │       - Produces deploy_result dict (possibly)
-  ▼
-──────────────────────────────────────────────
-Determine Deployment URL
-  │      • If deploy_result contains "deployment_url" → use it
-  │      • Else fallback: https://{app_name}.fly.dev
-  ▼
-──────────────────────────────────────────────
-Step 5: Check Deployment Health
-  │     Condition: deployment_url is truthy
-  │     Activity: check_deployment_health_activity(
-  │         {**p, "url": deployment_url}
-  │     )
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 15-minute timeout
-  ▼
-──────────────────────────────────────────────
-Log: "FlyioDeploymentWorkflow complete"
-  │
-  ▼
-END → "flyio_deploy_complete"
-
-
-```
-
-
-### Railway Deployment Workflow
-
-```bash
-START
-  │
-  ▼
-Receive `params`
-  │
-  ▼
-Clone params → p
-  │      • p.setdefault("service_name", "railway-deploy")
-  │
-  ▼
-Log: "RailwayDeploymentWorkflow start"
-  │
-  ▼
-Configure Retry Policy
-  │      • initial_interval = 2s
-  │      • maximum_interval = 10s
-  │      • maximum_attempts = 3
-  │
-  ▼
-Set Timeout
-  │      • start_to_close_timeout = 15 minutes
-  │
-  ▼
-──────────────────────────────────────────────
-Step 1: Generate Deployment Configs
-  │     Activity: generate_deployment_configs_activity(
-  │         {**p, "platforms": ["railway"]}
-  │     )
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 15-minute timeout
-  ▼
-──────────────────────────────────────────────
-Step 2: Create Railway Project
-  │     Activity: create_railway_project_activity(p)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 15-minute timeout
-  ▼
-──────────────────────────────────────────────
-Step 3: Set Railway Environment Variables
-  │     Activity: set_railway_env_vars_activity(p)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 15-minute timeout
-  ▼
-──────────────────────────────────────────────
-Step 4: Deploy to Railway
-  │     Activity: deploy_to_railway_activity(p)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 15-minute timeout
-  │       - Produces deploy_result dict (maybe)
-  ▼
-──────────────────────────────────────────────
-Determine Deployment URL
-  │      • If deploy_result is dict → deployment_url = deploy_result["deployment_url"]
-  │      • Else → deployment_url = None
-  ▼
-──────────────────────────────────────────────
-Step 5: Check Deployment Health
-  │     Condition: deployment_url is truthy
-  │     Activity: check_deployment_health_activity(
-  │         {**p, "url": deployment_url}
-  │     )
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 15-minute timeout
-  ▼
-──────────────────────────────────────────────
-Log: "RailwayDeploymentWorkflow complete"
-  │
-  ▼
-END → "railway_deploy_complete"
-
-
-```
-
-
-### Render Deployment Workflow
-
-```bash
-START
-  │
-  ▼
-Receive `params`
-  │
-  ▼
-Clone params → p
-  │      • p.setdefault("service_name", "render-deploy")
-  │
-  ▼
-Log: "RenderDeploymentWorkflow start"
-  │
-  ▼
-Configure Retry Policy
-  │      • initial_interval = 2s
-  │      • maximum_interval = 10s
-  │      • maximum_attempts = 3
-  │
-  ▼
-Set Timeout
-  │      • start_to_close_timeout = 15 minutes
-  │
-  ▼
-──────────────────────────────────────────────
-Step 1: Generate Deployment Configs
-  │     Activity: generate_deployment_configs_activity(
-  │         {**p, "platforms": ["render"]}
-  │     )
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 15-minute timeout
-  ▼
-──────────────────────────────────────────────
-Step 2: Create Render Blueprint
-  │     Activity: create_render_blueprint_activity(p)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 15-minute timeout
-  ▼
-──────────────────────────────────────────────
-Step 3: Push Code to GitHub
-  │     Activity: push_to_github_activity(p)
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 15-minute timeout
-  │       - Produces push_result dict (maybe)
-  ▼
-──────────────────────────────────────────────
-Step 4: Deploy to Render
-  │     Activity: deploy_to_render_activity(
-  │         {**p, **(push_result or {})}
-  │     )
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 15-minute timeout
-  ▼
-──────────────────────────────────────────────
-Determine Deployment URL
-  │      • If push_result contains deployment_url → use it
-  │      • Else fallback to push_result.repo_url
-  │
-  ▼
-──────────────────────────────────────────────
-Step 5: Check Deployment Health
-  │     Condition: deployment_url is truthy
-  │     Activity: check_deployment_health_activity(
-  │         {**p, "url": deployment_url}
-  │     )
-  │     Behavior:
-  │       - Uses retry_policy
-  │       - Uses 15-minute timeout
-  ▼
-──────────────────────────────────────────────
-Log: "workflow RenderDeploymentWorkflow complete"
-  │
-  ▼
-END → "render_deploy_complete"
-
-
-
-```
-
-
-### Stop Infrastructure
-
-```bash
-docker-compose -f temporal-orchestrator-compose.yaml down
-```
-
----
-
-## 9. Visual Pipeline (for Knowledge Graph Service)
-
-```
-[Trigger Script]         trigger/knowledge_graph/start.py
-       │
-       ▼
-[Temporal Server]         localhost:7233
-       │
-       ▼
-[Worker]                  workers/my_new_worker.py
-       │
-       ▼
-[Workflow Execution]      workflows/my_new_workflow.py
-       │
-       └─► calls activities/my_new_activity.py
-       │
-       ▼
-[Results / State]         Temporal DB (Postgres)
-       │
-       ▼
-[Web UI / Logs]           http://localhost:8080
-```
-
-# 🌲 **MASTER EXECUTION + RELATIONSHIP TREE**
-
-```
-PIPELINE_SYSTEM
-│
-├─ CONTROL_PLANE  (META: decisions, identity, routing, meaning)
-│   │
-│   ├─ WorkflowConfig  (meta config)
-│   │     │
-│   │     ├─ service_name        = logical pipeline identity
-│   │     ├─ workflow_name       = workflow class to start
-│   │     ├─ task_queue          = execution route (auto: <service_name>-queue)
-│   │     ├─ temporal_host       = cluster connection target
-│   │     └─ web_ui_url          = observation URL (optional / meta only)
-│   │
-│   ├─ PipelineExecutor  (meta orchestrator)
-│   │     │
-│   │     ├─ reads WorkflowConfig
-│   │     ├─ connects to temporal_host
-│   │     └─ start_workflow(
-│   │           workflow_name,
-│   │           arg = service_name,
-│   │           task_queue = task_queue
-│   │        )
-│   │
-│   └─ Workflow State Machine (meta logic)
-│         │
-│         └─ Describes *order* of operations (not actual work):
-│                start_opentelemetry → start_loki → start_grafana → return result
-│
-└────────────────────→ TRAVEL ACROSS NETWORK
-                            (Temporal API call)
-```
-
----
-
-# 🛰️ **TEMPORAL ROUTING LAYER (Control → Execution Bridge)**
-
-```
-TEMPORAL_SERVER
-│
-├─ Receives workflow start request
-│
-├─ Creates Workflow Execution History (META: deterministic timeline)
-│
-└─ SCHEDULE_WORKFLOW_TASK
-       │
-       └─ Route by queue:
-           task_queue = "<service_name>-queue"
-```
-
-**This is the critical relationship:**
-
-```
-WorkflowConfig.task_queue  MUST MATCH  WorkerConfig.task_queue
-```
-
-This is the **binding point** of the system.
-
----
-
-# ⚙️ **DATA_PLANE (Execution Happens Here)**
-
-```
-DATA_PLANE
-│
-├─ WorkerConfig  (meta execution environment description)
-│   │
-│   ├─ host           = temporal endpoint
-│   ├─ task_queue     = execution queue (same as WorkflowConfig)
-│   ├─ namespace      = logical tenant
-│   └─ max_concurrency  (optional runtime tuning)
-│
-├─ Worker (runtime executor process)
-│   │
-│   ├─ Registers:
-│   │     - Workflows: [LogsPipelineWorkflow]
-│   │     - Activities: [start_loki, start_grafana, etc]
-│   │
-│   └─ Listens on task_queue
-│         │
-│         └─ When workflow tasks arrive → run workflow logic step-by-step
-│
-└─ Activity Executor (real work happens here)
-      │
-      ├─ start_opentelemetry_collector(service_name)
-      ├─ start_loki_activity(service_name)
-      ├─ start_grafana_activity(service_name)
-      └─ etc...
-      │
-      └─ These functions produce **real side-effects**:
-            - Launch containers
-            - Configure services
-            - Apply setup changes
-```
-
----
-
-# 🎛️ **WORKFLOW EXECUTION PLAY-BY-PLAY**
-
-```
-Workflow (META: high-level sequence)
-│
-└─ Step 1: schedule activity: start_opentelemetry_collector
-      │
-      └─ Temporal routes → Worker → Activity executes (real work)
-             │
-             └─ Return OK → Workflow proceeds
-
-└─ Step 2: schedule activity: start_loki_activity
-      │
-      (same dispatch-execute-return pattern)
-
-└─ Step 3: schedule activity: start_grafana_activity
-
-└─ Workflow returns: "Logs pipeline fully configured"
-```
-
----
-
-# ⚡ RELATIONSHIP CLASSIFICATION (Final clarity)
-
-| Relationship                                        | Direction    | Type              | Explanation                                   |
-| --------------------------------------------------- | ------------ | ----------------- | --------------------------------------------- |
-| PipelineExecutor → WorkflowConfig                   | uses         | META              | Executor reads config to know *what to start* |
-| PipelineExecutor → Temporal Server                  | commands     | CONTROL           | Executor tells Temporal to create workflow    |
-| WorkflowConfig.task_queue ↔ WorkerConfig.task_queue | binding link | ROUTING           | Ensures workflow tasks and worker match       |
-| Temporal Server → Worker                            | dispatches   | EXECUTION ROUTING | Server delivers tasks to worker queue         |
-| Worker → Workflow                                   | hosts        | EXECUTION CONTEXT | Worker runs workflow state machine            |
-| Workflow → Activities                               | delegates    | TASK EXECUTION    | Workflow requests work, activities do work    |
-| Activities → External Systems                       | acts         | REAL EFFECT       | System state changes happen here              |
-
----
+## Support
+
+For issues or questions:
+1. Check service logs: `docker logs SERVICE-instance-0`
+2. Review documentation in `config/network-security-policy.md`
+3. Validate configuration: `docker-compose -f SERVICE.yaml --env-file ../../.env config`
+4. Check port registry: `infrastructure/orchestrator/dynamicconfig/port_registry.yaml`
+
+## Related Documentation
+
+- [Network Security Policy](config/network-security-policy.md)
+- [Port Registry](dynamicconfig/port_registry.yaml)
+- [Implementation Plan](../../.gemini/antigravity/brain/.../implementation_plan.md)
