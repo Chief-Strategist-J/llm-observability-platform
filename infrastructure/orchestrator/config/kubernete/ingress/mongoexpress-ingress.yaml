@@ -1,0 +1,42 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: mongoexpress-${INSTANCE_ID}
+  namespace: ${NAMESPACE}
+  labels:
+    app: mongoexpress
+    instance: "${INSTANCE_ID}"
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+  - match: Host(\`mongoexpress-${INSTANCE_ID}.localhost\`)
+    kind: Rule
+    services:
+    - name: mongoexpress-${INSTANCE_ID}
+      port: 8081
+    middlewares:
+    - name: security-headers-${INSTANCE_ID}
+    - name: rate-limit-${INSTANCE_ID}
+    - name: compression-${INSTANCE_ID}
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: mongoexpress-scaibu-${INSTANCE_ID}
+  namespace: ${NAMESPACE}
+  labels:
+    app: mongoexpress
+    instance: "${INSTANCE_ID}"
+spec:
+  entryPoints:
+    - traefik
+  routes:
+  - match: Host(\`scaibu.mongoexpress\`)
+    kind: Rule
+    services:
+    - name: mongoexpress-${INSTANCE_ID}
+      port: 8081
+    middlewares:
+    - name: security-headers-${INSTANCE_ID}

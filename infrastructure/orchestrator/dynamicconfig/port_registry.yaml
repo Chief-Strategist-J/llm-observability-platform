@@ -3,6 +3,11 @@ kafka:
   controller_port: 19093
   instance_increment: 100
   max_instances: 10
+
+kafka_ui:
+  port: 8090
+  instance_increment: 100
+  max_instances: 10
   
 mongodb:
   port: 27017
