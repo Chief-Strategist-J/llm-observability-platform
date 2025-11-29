@@ -1,0 +1,42 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: prometheus-${INSTANCE_ID}
+  namespace: ${NAMESPACE}
+  labels:
+    app: prometheus
+    instance: "${INSTANCE_ID}"
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+  - match: Host(`prometheus-${INSTANCE_ID}.localhost`)
+    kind: Rule
+    services:
+    - name: prometheus-${INSTANCE_ID}
+      port: 9090
+    middlewares:
+    - name: security-headers-${INSTANCE_ID}
+    - name: rate-limit-${INSTANCE_ID}
+    - name: compression-${INSTANCE_ID}
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: prometheus-scaibu-${INSTANCE_ID}
+  namespace: ${NAMESPACE}
+  labels:
+    app: prometheus
+    instance: "${INSTANCE_ID}"
+spec:
+  entryPoints:
+    - traefik
+  routes:
+  - match: Host(`scaibu.prometheus`)
+    kind: Rule
+    services:
+    - name: prometheus-${INSTANCE_ID}
+      port: 9090
+    middlewares:
+    - name: security-headers-${INSTANCE_ID}

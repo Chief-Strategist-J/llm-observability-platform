@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: traefik-${INSTANCE_ID}
+  namespace: ${NAMESPACE}
   labels:
     app: traefik
     instance: "${INSTANCE_ID}"
@@ -17,18 +18,38 @@ spec:
         app: traefik
         instance: "${INSTANCE_ID}"
     spec:
+      serviceAccountName: traefik-${INSTANCE_ID}
       containers:
       - name: traefik
         image: traefik:v3.5
         ports:
         - containerPort: 80
-          name: traefik
+          name: web
+        - containerPort: 443
+          name: websecure
+        - containerPort: 8080
+          name: dashboard
+        env:
+        - name: INSTANCE_ID
+          value: "${INSTANCE_ID}"
         command:
-        - --providers.docker=true
+        - --providers.kubernetesingress=true
+        - --providers.kubernetescrd=true
+        - --providers.kubernetescrd.allowCrossNamespace=true
+        - --entrypoints.web.address=:80
+        - --entrypoints.websecure.address=:443
+        - --entrypoints.traefik.address=:8080
         - --api.dashboard=true
         - --api.insecure=true
-        - --entrypoints.web.address=:80
-
+        - --ping=true
+        - --log.level=INFO
+        - --log.format=json
+        - --accesslog=true
+        - --accesslog.format=json
+        - --metrics.prometheus=true
+        - --metrics.prometheus.addEntryPointsLabels=true
+        - --metrics.prometheus.addServicesLabels=true
+        - --metrics.prometheus.addRoutersLabels=true
         resources:
           limits:
             memory: 256Mi
@@ -37,23 +58,17 @@ spec:
             memory: 128Mi
             cpu: 250m
         livenessProbe:
-          exec:
-            command:
-            - wget
-            - --no-verbose
-            - --tries=1
-            - --spider
-            - http://localhost:80/api/overview
-          initialDelaySeconds: 20
-          periodSeconds: 30
-          timeoutSeconds: 10
-        readinessProbe:
-          exec:
-            command:
-            - wget
-            - --no-verbose
-            - --tries=1
-            - --spider
-            - http://localhost:80/api/overview
+          httpGet:
+            path: /ping
+            port: 8080
           initialDelaySeconds: 10
           periodSeconds: 10
+          timeoutSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /ping
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+

@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: grafana-${INSTANCE_ID}
+  namespace: ${NAMESPACE}
   labels:
     app: grafana
     instance: "${INSTANCE_ID}"
@@ -23,46 +24,46 @@ spec:
         ports:
         - containerPort: 3000
           name: grafana
+        env:
         - name: GF_SECURITY_ADMIN_USER
-          value: "admin"
+          value: "${GRAFANA_ADMIN_USER}"
         - name: GF_SECURITY_ADMIN_PASSWORD
-          value: "SuperSecret123!"
+          value: "${GRAFANA_ADMIN_PASSWORD}"
         - name: GF_USERS_ALLOW_SIGN_UP
           value: "false"
         - name: GF_SERVER_HTTP_PORT
           value: "3000"
+        - name: GF_SERVER_ROOT_URL
+          value: "https://grafana-${INSTANCE_ID}.localhost"
+        - name: GF_SERVER_DOMAIN
+          value: "grafana-${INSTANCE_ID}.localhost"
+        - name: INSTANCE_ID
+          value: "${INSTANCE_ID}"
         resources:
           limits:
-            memory: 512Mi
-            cpu: 500m
+            memory: ${GRAFANA_MEMORY_LIMIT}
+            cpu: "${GRAFANA_CPU_LIMIT}"
           requests:
-            memory: 256Mi
-            cpu: 250m
+            memory: ${GRAFANA_MEMORY_RESERVATION}
+            cpu: "250m"
         livenessProbe:
-          exec:
-            command:
-            - wget
-            - --no-verbose
-            - --tries=1
-            - --spider
-            - http://localhost:3000/api/health
+          httpGet:
+            path: /api/health
+            port: 3000
           initialDelaySeconds: 20
           periodSeconds: 30
           timeoutSeconds: 10
         readinessProbe:
-          exec:
-            command:
-            - wget
-            - --no-verbose
-            - --tries=1
-            - --spider
-            - http://localhost:3000/api/health
+          httpGet:
+            path: /api/health
+            port: 3000
           initialDelaySeconds: 10
           periodSeconds: 10
         volumeMounts:
         - name: grafana-data
-          mountPath: /data
+          mountPath: /var/lib/grafana
       volumes:
       - name: grafana-data
         persistentVolumeClaim:
           claimName: grafana-pvc-${INSTANCE_ID}
+
