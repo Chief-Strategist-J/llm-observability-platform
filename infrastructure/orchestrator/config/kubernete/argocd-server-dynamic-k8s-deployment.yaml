@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: argocd-server-${INSTANCE_ID}
+  namespace: ${NAMESPACE}
   labels:
     app: argocd-server
     instance: "${INSTANCE_ID}"

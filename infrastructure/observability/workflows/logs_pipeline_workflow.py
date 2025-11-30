@@ -95,8 +95,8 @@ class LogsPipelineWorkflow(BaseWorkflow):
 
         dynamic_dir = params.get("dynamic_dir", "infrastructure/orchestrator/dynamicconfig")
 
-        loki_push_url = params.get("loki_push_url", "http://localhost:31002/loki/api/v1/push")
-        loki_query_url = params.get("loki_query_url", "http://localhost:31002/loki/api/v1/query")
+        loki_push_url = params.get("loki_push_url", "http://loki-instance-0:3100/loki/api/v1/push")
+        loki_query_url = params.get("loki_query_url", "http://loki-instance-0:3100/loki/api/v1/query")
         grafana_url = params.get("grafana_url", "http://localhost:31001")
         otel_container_name = params.get("otel_container_name", "opentelemetry-collector")
 
@@ -183,7 +183,7 @@ class LogsPipelineWorkflow(BaseWorkflow):
                 "grafana_user": params.get("grafana_user", "admin"),
                 "grafana_password": params.get("grafana_password", "SuperSecret123!"),
                 "datasource_name": params.get("datasource_name", "loki"),
-                "loki_url": "http://loki-development:3100",
+                "loki_url": "http://loki-instance-0:3100",
                 "upsert_mode": params.get("upsert_mode", "upsert"),
                 "org_id": params.get("org_id", 1)
             },

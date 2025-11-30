@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: qdrant-${INSTANCE_ID}
+  namespace: ${NAMESPACE}
   labels:
     app: qdrant
     instance: "${INSTANCE_ID}"

@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: otel-collector-${INSTANCE_ID}
+  namespace: ${NAMESPACE}
   labels:
     app: otel-collector
     instance: "${INSTANCE_ID}"

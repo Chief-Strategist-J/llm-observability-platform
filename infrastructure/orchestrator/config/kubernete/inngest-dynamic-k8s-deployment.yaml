@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inngest-${INSTANCE_ID}
+  namespace: ${NAMESPACE}
+  labels:
+    app: inngest
+    instance: "${INSTANCE_ID}"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inngest
+      instance: "${INSTANCE_ID}"
+  template:
+    metadata:
+      labels:
+        app: inngest
+        instance: "${INSTANCE_ID}"
+    spec:
+      containers:
+      - name: inngest
+        image: inngest/inngest:latest
+        ports:
+        - containerPort: 8288
+          name: inngest
+        env:
+        - name: INSTANCE_ID
+          value: "${INSTANCE_ID}"
+        - name: INNGEST_PORT
+          value: "8288"
+        - name: INNGEST_SIGNING_KEY
+          valueFrom:
+            secretKeyRef:
+              name: inngest-secret-${INSTANCE_ID}
+              key: INNGEST_SIGNING_KEY
+        - name: INNGEST_EVENT_KEY
+          valueFrom:
+            secretKeyRef:
+              name: inngest-secret-${INSTANCE_ID}
+              key: INNGEST_EVENT_KEY
+        command:
+        - "dev"
+        - "-u"
+        - "http://localhost:8288"
+        resources:
+          limits:
+            memory: ${INNGEST_MEMORY_LIMIT}
+            cpu: "${INNGEST_CPU_LIMIT}"
+          requests:
+            memory: ${INNGEST_MEMORY_RESERVATION}
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8288
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8288
+          initialDelaySeconds: 5
+          periodSeconds: 10

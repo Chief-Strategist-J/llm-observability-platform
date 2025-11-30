@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-pvc-${INSTANCE_ID}
+  namespace: ${NAMESPACE}
+  labels:
+    app: grafana
+    instance: "${INSTANCE_ID}"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
