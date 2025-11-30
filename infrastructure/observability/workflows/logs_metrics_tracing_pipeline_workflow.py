@@ -8,6 +8,7 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 from temporalio import workflow
+from infrastructure.observability.config.constants import OBSERVABILITY_CONFIG
 from infrastructure.orchestrator.base.base_workflow import BaseWorkflow
 
 @workflow.defn
@@ -64,7 +65,7 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
         workflow.logger.info({"labels": {"pipeline": "observability", "event": "tempo"}, "msg": "tempo_started"})
 
         await workflow.execute_activity(
-            "start_opentelemetry_collector",
+            "start_otel_collector_activity",
             {},
             start_to_close_timeout=timedelta(seconds=120),
         )
@@ -73,11 +74,11 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
         await workflow.sleep(10)
 
         dynamic_dir = params.get("dynamic_dir", "infrastructure/orchestrator/dynamicconfig")
-        loki_push_url = params.get("loki_push_url", "http://loki-instance-0:3100/loki/api/v1/push")
-        loki_query_url = params.get("loki_query_url", "http://loki-instance-0:3100/loki/api/v1/query")
-        prometheus_url = params.get("prometheus_url", "http://prometheus-instance-0:9090")
-        tempo_query_url = params.get("tempo_query_url", "http://localhost:31003")
-        grafana_url = params.get("grafana_url", "http://localhost:31001")
+        loki_push_url = params.get("loki_push_url", OBSERVABILITY_CONFIG.LOKI_PUSH_URL)
+        loki_query_url = params.get("loki_query_url", OBSERVABILITY_CONFIG.LOKI_QUERY_URL)
+        prometheus_url = params.get("prometheus_url", OBSERVABILITY_CONFIG.PROMETHEUS_URL)
+        tempo_query_url = params.get("tempo_query_url", OBSERVABILITY_CONFIG.TEMPO_URL)
+        grafana_url = params.get("grafana_url", OBSERVABILITY_CONFIG.GRAFANA_URL)
 
         # ========== LOGS PIPELINE ==========
         workflow.logger.info({
@@ -123,7 +124,7 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
                 "grafana_user": "admin",
                 "grafana_password": "SuperSecret123!",
                 "datasource_name": "loki",
-                "loki_url": "http://loki-instance-0:3100",
+                "loki_url": OBSERVABILITY_CONFIG.LOKI_URL,
                 "upsert_mode": "upsert",
                 "org_id": 1,
             },
@@ -194,7 +195,7 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
                 "grafana_user": "admin",
                 "grafana_password": "SuperSecret123!",
                 "datasource_name": "prometheus",
-                "prometheus_url": "http://prometheus-instance-0:9090",
+                "prometheus_url": OBSERVABILITY_CONFIG.PROMETHEUS_URL,
                 "upsert_mode": "upsert",
                 "org_id": 1,
             },
@@ -231,7 +232,7 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
 
         tracing_gen_res = await workflow.execute_activity(
             "generate_config_tracings",
-            {"dynamic_dir": dynamic_dir, "internal_tempo_url": "tempo-development:4317"},
+            {"dynamic_dir": dynamic_dir, "internal_tempo_url": OBSERVABILITY_CONFIG.TEMPO_GRPC_URL},
             start_to_close_timeout=timedelta(seconds=120),
         )
         tracing_config_path = tracing_gen_res.get("data", {}).get("config_path") if isinstance(tracing_gen_res, dict) else None
@@ -267,7 +268,7 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
                 "grafana_user": "admin",
                 "grafana_password": "SuperSecret123!",
                 "datasource_name": "tempo",
-                "tempo_url": "http://tempo-development:3200",
+                "tempo_url": OBSERVABILITY_CONFIG.TEMPO_URL,
                 "upsert_mode": "upsert",
                 "org_id": 1,
             },

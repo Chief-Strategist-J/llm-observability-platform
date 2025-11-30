@@ -24,10 +24,10 @@ from infrastructure.orchestrator.activities.configurations_activity.tempo_activi
 )
 
 from infrastructure.orchestrator.activities.configurations_activity.opentelemetry_collector import (
-    start_opentelemetry_collector,
-    stop_opentelemetry_collector,
-    restart_opentelemetry_collector,
-    delete_opentelemetry_collector,
+    start_otel_collector_activity,
+    stop_otel_collector_activity,
+    restart_otel_collector_activity,
+    delete_otel_collector_activity,
 )
 
 from infrastructure.orchestrator.activities.configurations_activity.traefik_activity import (
@@ -97,10 +97,10 @@ class TracingPipelineWorker(BaseWorker):
             stop_tempo_activity,
             restart_tempo_activity,
             delete_tempo_activity,
-            start_opentelemetry_collector,
-            stop_opentelemetry_collector,
-            restart_opentelemetry_collector,
-            delete_opentelemetry_collector,
+            start_otel_collector_activity,
+            stop_otel_collector_activity,
+            restart_otel_collector_activity,
+            delete_otel_collector_activity,
             # Tracing pipeline
             otlp_provider_activity,
             span_processor_activity,

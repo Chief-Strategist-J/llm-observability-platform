@@ -1,35 +1,34 @@
-import sys
+from __future__ import annotations
+
 from pathlib import Path
 from datetime import timedelta
 from typing import Dict, Any
 
-project_root = Path(__file__).parent.parent.parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
-
 from temporalio import workflow
+from infrastructure.observability.config.constants import OBSERVABILITY_CONFIG
 from infrastructure.orchestrator.base.base_workflow import BaseWorkflow
+
 
 @workflow.defn
 class LogsPipelineWorkflow(BaseWorkflow):
     @workflow.run
-    async def run(self, params: Dict[str, Any]) -> str:
+    async def run(self, params: Dict[str, Any], config: Dict[str, Any]) -> str:
         workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "start"},
-            "msg": "workflow_start",
+            "pipeline": "logs",
+            "event": "workflow_start",
             "params_keys": list(params.keys())
         })
 
         workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "cleanup"},
-            "msg": "cleanup_existing_containers_start"
+            "pipeline": "logs",
+            "event": "cleanup_start"
         })
 
         cleanup_activities = [
             "stop_loki_activity",
             "delete_loki_activity",
-            "stop_opentelemetry_collector",
-            "delete_opentelemetry_collector",
+            "stop_otel_collector_activity",
+            "delete_otel_collector_activity",
         ]
 
         for act in cleanup_activities:
@@ -39,14 +38,14 @@ class LogsPipelineWorkflow(BaseWorkflow):
                 )
             except Exception:
                 workflow.logger.info({
-                    "labels": {"pipeline": "logs", "event": "cleanup"},
-                    "msg": "activity_cleanup_skipped",
+                    "pipeline": "logs",
+                    "event": "cleanup_skip",
                     "activity": act
                 })
 
         workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "cleanup"},
-            "msg": "cleanup_complete"
+            "pipeline": "logs",
+            "event": "cleanup_complete"
         })
 
         traefik_result = await workflow.execute_activity(
@@ -57,15 +56,16 @@ class LogsPipelineWorkflow(BaseWorkflow):
 
         if not traefik_result:
             workflow.logger.error({
-                "labels": {"pipeline": "logs", "event": "traefik"},
-                "msg": "traefik_start_failed",
-                "error": "port_8888_maybe_taken"
+                "pipeline": "logs",
+                "event": "traefik_start_failed",
+                "port": config["traefik"]["external_port"]
             })
-            raise RuntimeError("Traefik failed to start - check if port 8888 is available")
+            raise RuntimeError(f"Traefik failed to start on port {config['traefik']['external_port']}")
 
         workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "traefik"},
-            "msg": "traefik_started"
+            "pipeline": "logs",
+            "event": "traefik_started",
+            "url": config["traefik"]["external_url"]
         })
 
         await workflow.sleep(5)
@@ -75,49 +75,64 @@ class LogsPipelineWorkflow(BaseWorkflow):
             {},
             start_to_close_timeout=timedelta(seconds=120),
         )
-        workflow.logger.info({"labels": {"pipeline": "logs", "event": "grafana"}, "msg": "grafana_started"})
+        workflow.logger.info({
+            "pipeline": "logs",
+            "event": "grafana_started",
+            "internal_url": config["grafana"]["internal_url"],
+            "external_url": config["grafana"]["external_url"]
+        })
 
         await workflow.execute_activity(
             "start_loki_activity",
             {},
             start_to_close_timeout=timedelta(seconds=120),
         )
-        workflow.logger.info({"labels": {"pipeline": "logs", "event": "loki"}, "msg": "loki_started"})
+        workflow.logger.info({
+            "pipeline": "logs",
+            "event": "loki_started",
+            "internal_url": config["loki"]["internal_url"],
+            "push_url": config["loki_push_url"]
+        })
 
         await workflow.execute_activity(
-            "start_opentelemetry_collector",
+            "start_otel_collector_activity",
             {},
             start_to_close_timeout=timedelta(seconds=120),
         )
-        workflow.logger.info({"labels": {"pipeline": "logs", "event": "otel"}, "msg": "otel_started"})
+        workflow.logger.info({
+            "pipeline": "logs",
+            "event": "otel_started",
+            "container": config["otel_collector"]["container_name"]
+        })
 
         await workflow.sleep(10)
 
-        dynamic_dir = params.get("dynamic_dir", "infrastructure/orchestrator/dynamicconfig")
-
-        loki_push_url = params.get("loki_push_url", "http://loki-instance-0:3100/loki/api/v1/push")
-        loki_query_url = params.get("loki_query_url", "http://loki-instance-0:3100/loki/api/v1/query")
-        grafana_url = params.get("grafana_url", "http://localhost:31001")
-        otel_container_name = params.get("otel_container_name", "opentelemetry-collector")
+        workflow_params = {
+            **config.get("workflow_params", {}),
+            **params
+        }
 
         workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "endpoints"},
-            "msg": "resolved_endpoints",
-            "loki_push_url": loki_push_url,
-            "loki_query_url": loki_query_url,
-            "grafana_url": grafana_url
+            "pipeline": "logs",
+            "event": "endpoints_resolved",
+            "loki_push_url": config["loki_push_url"],
+            "loki_query_url": config["loki_query_url"],
+            "grafana_url": config["grafana"]["external_url"]
         })
 
         gen_res = await workflow.execute_activity(
             "generate_config_logs",
-            {"dynamic_dir": dynamic_dir, "loki_push_url": loki_push_url},
+            {
+                "dynamic_dir": config["dynamic_config_dir"],
+                "loki_push_url": config["loki_push_url"]
+            },
             start_to_close_timeout=timedelta(seconds=120),
         )
 
         workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "generate_config"},
-            "msg": "generate_config_completed",
-            "result": gen_res
+            "pipeline": "logs",
+            "event": "config_generated",
+            "success": gen_res.get("success") if isinstance(gen_res, dict) else False
         })
 
         config_path = None
@@ -132,67 +147,78 @@ class LogsPipelineWorkflow(BaseWorkflow):
         )
 
         workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "configure_paths"},
-            "msg": "configure_paths_completed",
-            "result": cfg_paths_res
+            "pipeline": "logs",
+            "event": "paths_configured",
+            "success": cfg_paths_res.get("success") if isinstance(cfg_paths_res, dict) else False
         })
 
         cfg_apply_res = await workflow.execute_activity(
             "configure_source_logs",
-            {"config_path": config_path, "dynamic_dir": dynamic_dir} if config_path else {},
+            {
+                "config_path": config_path,
+                "dynamic_dir": config["dynamic_config_dir"]
+            } if config_path else {},
             start_to_close_timeout=timedelta(seconds=60),
         )
 
         workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "configure_source"},
-            "msg": "configure_source_completed",
-            "result": cfg_apply_res
+            "pipeline": "logs",
+            "event": "source_configured",
+            "success": cfg_apply_res.get("success") if isinstance(cfg_apply_res, dict) else False
         })
 
         deploy_res = await workflow.execute_activity(
             "deploy_processor_logs",
             {
-                "dynamic_dir": dynamic_dir,
+                "dynamic_dir": config["dynamic_config_dir"],
                 "config_name": Path(config_path).name if config_path else "otel-collector-generated.yaml",
             },
             start_to_close_timeout=timedelta(seconds=60),
         )
 
         workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "deploy_processor"},
-            "msg": "deploy_processor_completed",
-            "result": deploy_res
+            "pipeline": "logs",
+            "event": "processor_deployed",
+            "success": deploy_res.get("success") if isinstance(deploy_res, dict) else False
         })
 
         restart_res = await workflow.execute_activity(
             "restart_source_logs",
-            {"container_name": otel_container_name, "timeout_seconds": 60},
-            start_to_close_timeout=timedelta(seconds=120),
-        )
-
-        workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "restart_source"},
-            "msg": "restart_source_completed",
-            "result": restart_res
-        })
-
-        await workflow.execute_activity(
-            "create_grafana_datasource_activity",
             {
-                "grafana_url": grafana_url,
-                "grafana_user": params.get("grafana_user", "admin"),
-                "grafana_password": params.get("grafana_password", "SuperSecret123!"),
-                "datasource_name": params.get("datasource_name", "loki"),
-                "loki_url": "http://loki-instance-0:3100",
-                "upsert_mode": params.get("upsert_mode", "upsert"),
-                "org_id": params.get("org_id", 1)
+                "container_name": config["otel_collector"]["container_name"],
+                "timeout_seconds": 60
             },
             start_to_close_timeout=timedelta(seconds=120),
         )
 
         workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "grafana_datasource"},
-            "msg": "grafana_datasource_created"
+            "pipeline": "logs",
+            "event": "source_restarted",
+            "success": restart_res.get("success") if isinstance(restart_res, dict) else False
+        })
+
+        loki_push_url = params.get("loki_push_url", OBSERVABILITY_CONFIG.LOKI_PUSH_URL)
+        loki_query_url = params.get("loki_query_url", OBSERVABILITY_CONFIG.LOKI_QUERY_URL)
+        grafana_url = params.get("grafana_url", OBSERVABILITY_CONFIG.GRAFANA_URL)
+
+        await workflow.execute_activity(
+            "create_grafana_datasource_activity",
+            {
+                "grafana_url": grafana_url,
+                "grafana_user": workflow_params.get("grafana_user", "admin"),
+                "grafana_password": workflow_params.get("grafana_password", "SuperSecret123!"),
+                "datasource_name": "loki",
+                "loki_url": OBSERVABILITY_CONFIG.LOKI_URL,
+                "upsert_mode": "upsert",
+                "org_id": 1
+            },
+            start_to_close_timeout=timedelta(seconds=120),
+        )
+
+        workflow.logger.info({
+            "pipeline": "logs",
+            "event": "grafana_datasource_created",
+            "datasource": "loki"
         })
 
         emit_res = await workflow.execute_activity(
@@ -202,9 +228,9 @@ class LogsPipelineWorkflow(BaseWorkflow):
         )
 
         workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "emit_test"},
-            "msg": "emit_test_completed",
-            "result": emit_res
+            "pipeline": "logs",
+            "event": "test_event_emitted",
+            "success": emit_res.get("success") if isinstance(emit_res, dict) else False
         })
 
         token = None
@@ -213,23 +239,23 @@ class LogsPipelineWorkflow(BaseWorkflow):
             token = data.get("token")
 
         workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "token_extracted"},
-            "msg": "token_acquired",
+            "pipeline": "logs",
+            "event": "token_extracted",
             "token": token
         })
 
         logql = f'{{filename=~".+"}} |= "{token}"' if token else '{filename=~".+"}'
 
         workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "verify_start"},
-            "msg": "verification_query_prepared",
+            "pipeline": "logs",
+            "event": "verification_start",
             "logql": logql
         })
 
         verify_res = await workflow.execute_activity(
             "verify_event_ingestion_logs",
             {
-                "loki_query_url": loki_query_url,
+                "loki_query_url": config["loki_query_url"],
                 "logql": logql,
                 "timeout_seconds": 60,
                 "poll_interval": 2.0
@@ -238,14 +264,14 @@ class LogsPipelineWorkflow(BaseWorkflow):
         )
 
         workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "verify_complete"},
-            "msg": "verification_completed",
-            "result": verify_res
+            "pipeline": "logs",
+            "event": "verification_complete",
+            "success": verify_res.get("success") if isinstance(verify_res, dict) else False
         })
 
         workflow.logger.info({
-            "labels": {"pipeline": "logs", "event": "done"},
-            "msg": "workflow_complete"
+            "pipeline": "logs",
+            "event": "workflow_complete"
         })
 
         return "logs_pipeline_completed"

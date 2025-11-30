@@ -24,10 +24,10 @@ from infrastructure.orchestrator.activities.configurations_activity.prometheus_a
 )
 
 from infrastructure.orchestrator.activities.configurations_activity.opentelemetry_collector import (
-    start_opentelemetry_collector,
-    stop_opentelemetry_collector,
-    restart_opentelemetry_collector,
-    delete_opentelemetry_collector,
+    start_otel_collector_activity,
+    stop_otel_collector_activity,
+    restart_otel_collector_activity,
+    delete_otel_collector_activity,
 )
 
 from infrastructure.orchestrator.activities.configurations_activity.traefik_activity import (
@@ -98,10 +98,10 @@ class MetricsPipelineWorker(BaseWorker):
             stop_prometheus_activity,
             restart_prometheus_activity,
             delete_prometheus_activity,
-            start_opentelemetry_collector,
-            stop_opentelemetry_collector,
-            restart_opentelemetry_collector,
-            delete_opentelemetry_collector,
+            start_otel_collector_activity,
+            stop_otel_collector_activity,
+            restart_otel_collector_activity,
+            delete_otel_collector_activity,
             # Metrics pipeline components
             prometheus_provider_activity,
             metrics_processor_activity,

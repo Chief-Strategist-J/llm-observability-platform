@@ -61,8 +61,22 @@ async def create_grafana_datasource_activity(params: Dict[str, Any]) -> Dict[str
 
     logger.info("Validating connectivity to Grafana URL: %s", grafana_url)
 
-    # Wait for Grafana to be reachable
-    resolved = await _wait_for_connection(grafana_url, retries=20, delay=2.0)
+    resolved = await _wait_for_connection(grafana_url, retries=3, delay=2.0)
+    
+    if not resolved:
+        logger.info("Original URL %s unreachable, trying localhost fallback", grafana_url)
+        try:
+            parsed = urllib.parse.urlparse(grafana_url)
+            port = parsed.port or 3000
+            fallback_url = parsed._replace(netloc=f"localhost:{port}").geturl()
+            
+            resolved = await _wait_for_connection(fallback_url, retries=10, delay=2.0)
+            if resolved:
+                logger.info("Localhost fallback successful: %s", fallback_url)
+                grafana_url = fallback_url
+        except Exception as e:
+            logger.warning("Fallback attempt failed: %s", e)
+            
     if not resolved:
         logger.error("create_grafana_datasource_activity cannot_connect_to_grafana")
         return {"success": False, "data": {"url": grafana_url}, "error": "grafana_unreachable"}

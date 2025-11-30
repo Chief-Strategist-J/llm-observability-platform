@@ -5,10 +5,18 @@ from infrastructure.orchestrator.base import YAMLContainerManager
 OTEL_COLLECTOR_YAML = Path(__file__).parent.parent.parent / "config" / "docker" / "otel-collector-dynamic-docker.yaml"
 
 
+def _get_manager(instance_id: int) -> YAMLContainerManager:
+    dynamic_dir = Path(__file__).parent.parent.parent / "dynamicconfig"
+    env_vars = {
+        "OTEL_DYNAMIC_DIR": str(dynamic_dir.resolve())
+    }
+    return YAMLContainerManager(str(OTEL_COLLECTOR_YAML), instance_id=instance_id, env_vars=env_vars)
+
+
 @activity.defn(name="start_otel_collector_activity")
 async def start_otel_collector_activity(params: dict) -> dict:
     instance_id = params.get("instance_id", 0)
-    manager = YAMLContainerManager(str(OTEL_COLLECTOR_YAML), instance_id=instance_id)
+    manager = _get_manager(instance_id)
     
     success = manager.start(restart_if_running=True)
     
@@ -24,7 +32,7 @@ async def start_otel_collector_activity(params: dict) -> dict:
 async def stop_otel_collector_activity(params: dict) -> dict:
     instance_id = params.get("instance_id", 0)
     force = params.get("force", True)
-    manager = YAMLContainerManager(str(OTEL_COLLECTOR_YAML), instance_id=instance_id)
+    manager = _get_manager(instance_id)
     
     success = manager.stop(force=force)
     
@@ -39,7 +47,7 @@ async def stop_otel_collector_activity(params: dict) -> dict:
 @activity.defn(name="restart_otel_collector_activity")
 async def restart_otel_collector_activity(params: dict) -> dict:
     instance_id = params.get("instance_id", 0)
-    manager = YAMLContainerManager(str(OTEL_COLLECTOR_YAML), instance_id=instance_id)
+    manager = _get_manager(instance_id)
     
     success = manager.restart()
     
@@ -58,7 +66,7 @@ async def delete_otel_collector_activity(params: dict) -> dict:
     remove_images = params.get("remove_images", True)
     remove_networks = params.get("remove_networks", False)
     
-    manager = YAMLContainerManager(str(OTEL_COLLECTOR_YAML), instance_id=instance_id)
+    manager = _get_manager(instance_id)
     
     success = manager.delete(
         remove_volumes=remove_volumes,
@@ -79,7 +87,7 @@ async def delete_otel_collector_activity(params: dict) -> dict:
 @activity.defn(name="get_otel_collector_status_activity")
 async def get_otel_collector_status_activity(params: dict) -> dict:
     instance_id = params.get("instance_id", 0)
-    manager = YAMLContainerManager(str(OTEL_COLLECTOR_YAML), instance_id=instance_id)
+    manager = _get_manager(instance_id)
     
     status = manager.get_status()
     

@@ -5,6 +5,7 @@ import urllib.request
 import urllib.error
 from typing import Dict, Any
 from temporalio import activity
+from infrastructure.observability.config.constants import OBSERVABILITY_CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ async def prometheus_exporter_activity(params: Dict[str, Any]) -> Dict[str, Any]
         Dictionary with success status, data, and error info
     """
     logger.info("prometheus_exporter_activity started with params keys: %s", list(params.keys()))
-    prometheus_push_url = params.get("prometheus_push_url", "http://prometheus-instance-0:9090/api/v1/write")
+    prometheus_push_url = params.get("prometheus_push_url", OBSERVABILITY_CONFIG.PROMETHEUS_WRITE_URL)
     raw_metrics = params.get("metrics") or params.get("metric") or []
     if isinstance(raw_metrics, dict):
         raw_metrics = [raw_metrics]

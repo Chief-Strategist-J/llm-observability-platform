@@ -610,13 +610,12 @@ class YAMLContainerManager:
         except Exception as e:
             duration = int((time.time() - start_time) * 1000)
             self.log.exception(
-                "container_start_failed", 
+                "container_start_failed",
+                error=e,
                 service=self.config.service_name, 
                 instance_id=self.instance_id, 
                 duration_ms=duration, 
-                trace_id=self.trace_id, 
-                error_type=type(e).__name__, 
-                error_msg=str(e)
+                trace_id=self.trace_id
             )
             return False
 

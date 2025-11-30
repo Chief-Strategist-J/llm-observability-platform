@@ -9,34 +9,65 @@ infrastructure/observability/
 ├── activities/                    # Temporal activities for each pipeline
 │   ├── log/                      # Log pipeline activities
 │   │   ├── exporters/           # Loki exporter
+│   │   │   ├── loki_exporter_activity.py
+│   │   │   └── __init__.py
 │   │   ├── processors/          # JSON parser
+│   │   │   ├── json_parser_activity.py
+│   │   │   └── __init__.py
 │   │   ├── providers/           # File provider
+│   │   │   ├── file_provider_activity.py
+│   │   │   └── __init__.py
+│   │   ├── __init__.py
 │   │   └── *.py                 # 8 log pipeline activities
 │   ├── metrics/                  # Metrics pipeline activities
 │   │   ├── exporters/           # Prometheus exporter
+│   │   │   ├── prometheus_exporter_activity.py
+│   │   │   └── __init__.py
 │   │   ├── processors/          # Metrics processor
+│   │   │   ├── metrics_processor_activity.py
+│   │   │   └── __init__.py
 │   │   ├── providers/           # Prometheus provider
+│   │   │   ├── prometheus_provider_activity.py
+│   │   │   └── __init__.py
+│   │   ├── __init__.py
 │   │   └── *.py                 # 8 metrics pipeline activities
-│   └── tracing/                  # Tracing pipeline activities
-│       ├── exporters/           # Tempo & Jaeger exporters
-│       ├── processors/          # Span processor
-│       ├── providers/           # OTLP provider
-│       └── *.py                 # 9 tracing pipeline activities
+│   ├── tracing/                  # Tracing pipeline activities
+│   │   ├── exporters/           # Tempo & Jaeger exporters
+│   │   │   ├── tempo_exporter_activity.py
+│   │   │   ├── jaeger_exporter_activity.py
+│   │   │   └── __init__.py
+│   │   ├── processors/          # Span processor
+│   │   │   ├── span_processor_activity.py
+│   │   │   └── __init__.py
+│   │   ├── providers/           # OTLP provider
+│   │   │   ├── otlp_provider_activity.py
+│   │   │   └── __init__.py
+│   │   ├── __init__.py
+│   │   └── *.py                 # 9 tracing pipeline activities
+│   └── __init__.py
+├── config/                       # Configuration
+│   ├── constants.py             # Centralized config (NEW)
+│   ├── observability_config.py  # Legacy config
+│   └── __init__.py
 ├── workflows/                    # Temporal workflows
 │   ├── logs_pipeline_workflow.py
 │   ├── metrics_pipeline_workflow.py
 │   ├── tracing_pipeline_workflow.py
 │   ├── logs_and_metrics_pipeline_workflow.py
-│   └── logs_metrics_tracing_pipeline_workflow.py
+│   ├── logs_metrics_tracing_pipeline_workflow.py
+│   └── __init__.py
 ├── workers/                      # Temporal workers
 │   ├── logs_pipeline_worker.py
 │   ├── metrics_pipeline_worker.py
-│   └── tracing_pipeline_worker.py
+│   ├── tracing_pipeline_worker.py
+│   └── __init__.py
 ├── triggers/                     # Workflow triggers
 │   ├── trigger_logs_pipeline.py
 │   ├── trigger_metrics_pipeline.py
-│   └── trigger_tracing_pipeline.py
-└── docs/                         # Documentation
+│   ├── trigger_tracing_pipeline.py
+│   └── __init__.py
+├── docs/                         # Documentation
+└── README.md                     # This file
 
 ```
 
@@ -83,11 +114,16 @@ Each pipeline follows a consistent pattern:
 
 2. **Observability Stack** (Docker Compose)
    Ensure the following services are running:
-   - Grafana (port 31001)
-   - Loki (port 31002)
-   - Prometheus (port 9090)
-   - Tempo (port 3200)
-   - OpenTelemetry Collector (port 4317/4318)
+   - Grafana (`grafana-instance-0` on port 3000)
+     - Traefik routes: `scaibu.grafana` or `grafana-0.localhost`
+   - Loki (`loki-instance-0` on port 3100)
+     - Traefik routes: `scaibu.loki` or `loki-0.localhost`
+   - Prometheus (`prometheus-instance-0` on port 9090)
+     - Traefik routes: `scaibu.prometheus` or `prometheus-0.localhost`
+   - Tempo (`tempo-instance-0` on port 3200)
+     - Traefik routes: `scaibu.tempo` or `tempo-0.localhost`
+   - OpenTelemetry Collector (`otel-collector-instance-0`)
+     - Traefik routes: `scaibu.otel` or `otel-0.localhost`
    - Traefik (reverse proxy)
 
 ### Running Individual Pipelines
@@ -294,6 +330,34 @@ See [sdks/README.md](../../sdks/README.md) for detailed SDK documentation.
 
 ## ⚙️ Configuration
 
+### Hostname Configuration
+
+All services use **Traefik-routed hostnames** for proper container-to-container communication:
+
+**Internal Container Names** (for Docker network communication):
+```python
+loki_url = "http://loki-instance-0:3100"
+prometheus_url = "http://prometheus-instance-0:9090" 
+tempo_url = "http://tempo-instance-0:3200"
+grafana_url = "http://grafana-instance-0:3000"
+```
+
+**External Access** (via Traefik):
+- Browser/External: `http://scaibu.{service}` (e.g., `http://scaibu.loki`)
+- Or: `http://{service}-0.localhost` (e.g., `http://loki-0.localhost`)
+
+**Centralized Configuration** (Recommended):
+```python
+from infrastructure.observability.config.constants import OBSERVABILITY_CONFIG
+
+loki_url = OBSERVABILITY_CONFIG.LOKI_PUSH_URL
+prometheus_url = OBSERVABILITY_CONFIG.PROMETHEUS_URL
+tempo_url = OBSERVABILITY_CONFIG.TEMPO_URL
+grafana_url = OBSERVABILITY_CONFIG.GRAFANA_URL
+```
+
+Update `config/constants.py` to change URLs everywhere.
+
 ### Worker Configuration
 
 Each worker can be configured via `WorkerConfig`:
@@ -315,11 +379,12 @@ Workflows accept configuration parameters:
 ```python
 params = {
     "dynamic_dir": "infrastructure/orchestrator/dynamicconfig",
-    "loki_push_url": "http://localhost:31002/loki/api/v1/push",
-    "loki_query_url": "http://localhost:31002/loki/api/v1/query",
-    "prometheus_url": "http://localhost:9090",
-    "tempo_push_url": "http://localhost:4318/v1/traces",
-    "grafana_url": "http://localhost:31001",
+    "loki_push_url": "http://loki-instance-0:3100/loki/api/v1/push",
+    "loki_query_url": "http://loki-instance-0:3100/loki/api/v1/query",
+    "prometheus_url": "http://prometheus-instance-0:9090",
+    "tempo_push_url": "http://tempo-instance-0:3200",
+    "tempo_query_url": "http://tempo-instance-0:3200",
+    "grafana_url": "http://grafana-instance-0:3000",
     "grafana_user": "admin",
     "grafana_password": "SuperSecret123!",
 }
@@ -365,7 +430,8 @@ python -c "from infrastructure.observability.triggers.trigger_tracing_pipeline i
    ```
 
 4. **Verify in Grafana**
-   - Open http://localhost:31001 (admin/SuperSecret123!)
+   - Open http://scaibu.grafana or http://grafana-0.localhost
+   - Login: `admin` / `SuperSecret123!`
    - Check datasources: Loki, Prometheus, Tempo
    - Query test data in Explore view
 

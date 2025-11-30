@@ -1,14 +1,19 @@
 import sys
+import os
 from pathlib import Path
 
-root = Path(__file__).resolve().parents[2]
-sys.path.append(str(root))
+
+project_root = Path(__file__).resolve().parents[3]  # Go up 3 levels to reach the project root
+
+
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 import asyncio
 from infrastructure.orchestrator.base.base_worker import BaseWorker, WorkerConfig
 from infrastructure.observability.workflows.logs_pipeline_workflow import LogsPipelineWorkflow
 
-# Container management activities
+
 from infrastructure.orchestrator.activities.configurations_activity.grafana_activity import (
     start_grafana_activity,
     stop_grafana_activity,
@@ -24,10 +29,10 @@ from infrastructure.orchestrator.activities.configurations_activity.loki_activit
 )
 
 from infrastructure.orchestrator.activities.configurations_activity.opentelemetry_collector import (
-    start_opentelemetry_collector,
-    stop_opentelemetry_collector,
-    restart_opentelemetry_collector,
-    delete_opentelemetry_collector,
+    start_otel_collector_activity,
+    stop_otel_collector_activity,
+    restart_otel_collector_activity,
+    delete_otel_collector_activity,
 )
 
 from infrastructure.orchestrator.activities.configurations_activity.traefik_activity import (
@@ -97,10 +102,10 @@ class LogsPipelineWorker(BaseWorker):
             stop_loki_activity,
             restart_loki_activity,
             delete_loki_activity,
-            start_opentelemetry_collector,
-            stop_opentelemetry_collector,
-            restart_opentelemetry_collector,
-            delete_opentelemetry_collector,
+            start_otel_collector_activity,
+            stop_otel_collector_activity,
+            restart_otel_collector_activity,
+            delete_otel_collector_activity,
             # Log pipeline
             file_provider_activity,
             json_parser_activity,
