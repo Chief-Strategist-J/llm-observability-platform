@@ -4,6 +4,7 @@ import uuid
 import asyncio
 from typing import Dict, Any
 from temporalio import activity
+from infrastructure.observability.config.constants import OBSERVABILITY_CONFIG
 import urllib.request
 import urllib.error
 import json
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 async def emit_test_event_metrics(params: Dict[str, Any]) -> Dict[str, Any]:
     logger.info("emit_test_event_metrics_start params=%s", list(params.keys()))
 
-    prometheus_url = params.get("prometheus_url", "http://prometheus-instance-0:9090")
+    prometheus_url = params.get("prometheus_url", OBSERVABILITY_CONFIG.PROMETHEUS_URL)
     wait_ms = int(params.get("latency_wait_ms", 500))
     
     logger.debug("emit_test_event_metrics_params url=%s wait=%s", prometheus_url, wait_ms)

@@ -118,6 +118,17 @@ sudo apt-get install apache2-utils
 # Copy environment template
 cp .env.template .env
 
+# Create required Docker networks (run this first, only once)
+docker network create --driver bridge observability-network || true
+docker network create --driver bridge data-network || true
+docker network create --driver bridge messaging-network || true
+docker network create --driver bridge cicd-network || true
+docker network create --driver bridge temporal-network || true
+
+cd infrastructure/orchestrator/config/docker
+docker compose -f traefik-dynamic-docker.yaml up -d
+cd ../..
+
 cd infrastructure/orchestrator
 docker compose -f temporal-orchestrator-compose.yaml up -d
 cd ../..

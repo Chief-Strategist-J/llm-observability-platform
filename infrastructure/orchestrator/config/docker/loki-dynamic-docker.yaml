@@ -10,8 +10,10 @@ services:
     command:
       - "-config.file=/etc/loki/local-config.yaml"
     volumes:
-      - ${LOKI_DATA_PATH:-./data/loki}:/loki:rw
-      - ${CONFIG_FILE_PATH}:/etc/loki/local-config.yaml:ro
+      - loki-data-${LOKI_INSTANCE_ID:-0}:/loki:rw
+      - ${CONFIG_FILE_PATH:-./config/loki-config.yaml}:/etc/loki/local-config.yaml:ro
+    ports:
+      - "${LOKI_HTTP_PORT:-3100}:3100"
     networks:
       - ${OBSERVABILITY_NETWORK:-observability-network}
 
@@ -64,3 +66,6 @@ services:
 networks:
   observability-network:
     external: true
+
+volumes:
+  loki-data-${LOKI_INSTANCE_ID:-0}:

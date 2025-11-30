@@ -3,12 +3,13 @@ from pathlib import Path
 from typing import Dict, Any
 from temporalio import activity
 import yaml
+from infrastructure.observability.config.constants import OBSERVABILITY_CONFIG
 
 logger = logging.getLogger(__name__)
 
 @activity.defn
 async def generate_config_metrics(params: Dict[str, Any]) -> Dict[str, Any]:
-    logger.info("generate_config_metrics_start params=%s", list(params.keys()))
+    logger.info("generate_config_metrics_start params_keys=%s", list(params.keys()))
 
     dynamic_dir = Path(params.get("dynamic_dir", "/home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/dynamicconfig"))
     dynamic_dir.mkdir(parents=True, exist_ok=True)
@@ -16,15 +17,14 @@ async def generate_config_metrics(params: Dict[str, Any]) -> Dict[str, Any]:
 
     config_file = dynamic_dir / "otel-collector-metrics.yaml"
     
-    prometheus_url = params.get("prometheus_url", "http://prometheus-instance-0:9090")
+    prometheus_url = params.get("prometheus_url", OBSERVABILITY_CONFIG.PROMETHEUS_URL)
     scrape_interval = params.get("scrape_interval", "15s")
     
     logger.info("generate_config_metrics_params prometheus_url=%s scrape_interval=%s", 
                 prometheus_url, scrape_interval)
     
-    # Internal container network URL (used by OTel Collector)
-    internal_prometheus_url = "http://prometheus-instance-0:9090/api/v1/write"
-    logger.info("generate_config_metrics_internal_url url=%s", internal_prometheus_url)
+    internal_prometheus_url = OBSERVABILITY_CONFIG.PROMETHEUS_WRITE_URL
+    logger.info("generate_config_metrics_remote_write_url url=%s", internal_prometheus_url)
     
     config = {
         "receivers": {
@@ -105,7 +105,7 @@ async def generate_config_metrics(params: Dict[str, Any]) -> Dict[str, Any]:
         },
         "exporters": {
             "prometheusremotewrite": {
-                "endpoint": internal_prometheus_url,
+                "endpoint": prometheus_remote_write_url,
                 "tls": {
                     "insecure": True
                 }

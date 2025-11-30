@@ -8,19 +8,23 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 from temporalio import workflow
+from infrastructure.observability.config.constants import OBSERVABILITY_CONFIG
 from infrastructure.orchestrator.base.base_workflow import BaseWorkflow
+from infrastructure.observability.config.observability_config import get_observability_config
+
 
 @workflow.defn
 class TracingPipelineWorkflow(BaseWorkflow):
     @workflow.run
     async def run(self, params: Dict[str, Any]) -> str:
+        config = get_observability_config()
+        
         workflow.logger.info({
-            "labels": {"pipeline": "tracing", "event": "start"},
-            "msg": "workflow_start",
-            "params": params
+            "pipeline": "tracing",
+            "event": "workflow_start",
+            "params_keys": list(params.keys())
         })
 
-        # STEP 1: Start Traefik FIRST (reverse proxy front-door)
         traefik_result = await workflow.execute_activity(
             "start_traefik_activity",
             {},
@@ -28,68 +32,87 @@ class TracingPipelineWorkflow(BaseWorkflow):
         )
         
         if not traefik_result:
-            workflow.logger.error({"labels": {"pipeline": "tracing", "event": "traefik"}, "msg": "traefik_failed_to_start"})
-            raise RuntimeError("Traefik failed to start - check if port 8888 is available")
+            workflow.logger.error({
+                "pipeline": "tracing",
+                "event": "traefik_start_failed",
+                "port": config.traefik.external_port
+            })
+            raise RuntimeError(f"Traefik failed to start on port {config.traefik.external_port}")
         
-        workflow.logger.info({"labels": {"pipeline": "tracing", "event": "traefik"}, "msg": "traefik_started"})
+        workflow.logger.info({
+            "pipeline": "tracing",
+            "event": "traefik_started",
+            "url": config.traefik.external_url
+        })
 
-        # Wait for Traefik to be fully ready
         await workflow.sleep(5)
 
-        # STEP 2: Start Grafana (behind Traefik)
         await workflow.execute_activity(
             "start_grafana_activity",
             {},
             start_to_close_timeout=timedelta(seconds=120),
         )
-        workflow.logger.info({"labels": {"pipeline": "tracing", "event": "grafana"}, "msg": "grafana_started"})
+        workflow.logger.info({
+            "pipeline": "tracing",
+            "event": "grafana_started",
+            "internal_url": config.grafana.internal_url,
+            "external_url": config.grafana.external_url
+        })
 
-        # STEP 3: Start Tempo (behind Traefik)
         await workflow.execute_activity(
             "start_tempo_activity",
             {},
             start_to_close_timeout=timedelta(seconds=120),
         )
-        workflow.logger.info({"labels": {"pipeline": "tracing", "event": "tempo"}, "msg": "tempo_started"})
+        workflow.logger.info({
+            "pipeline": "tracing",
+            "event": "tempo_started",
+            "internal_url": config.tempo.internal_url,
+            "push_url": config.tempo_push_url
+        })
 
-        # STEP 4: Start OTel Collector (behind Traefik)
         await workflow.execute_activity(
-            "start_opentelemetry_collector",
+            "start_otel_collector_activity",
             {},
             start_to_close_timeout=timedelta(seconds=120),
         )
-        workflow.logger.info({"labels": {"pipeline": "tracing", "event": "otel"}, "msg": "otel_started"})
+        workflow.logger.info({
+            "pipeline": "tracing",
+            "event": "otel_started",
+            "container": config.otel_collector.container_name
+        })
 
-        # Wait for all services to be fully ready
         await workflow.sleep(10)
 
-        dynamic_dir = params.get("dynamic_dir", "infrastructure/orchestrator/dynamicconfig")
+        workflow_params = {
+            **config.to_workflow_params(),
+            **params
+        }
 
-        # Use localhost URLs (Traefik proxies these)
-        tempo_query_url = params.get("tempo_query_url", "http://localhost:31003")
-        grafana_url = params.get("grafana_url", "http://localhost:31001")
-        otel_container_name = params.get("otel_container_name", "opentelemetry-collector")
+        tempo_query_url = params.get("tempo_query_url", OBSERVABILITY_CONFIG.TEMPO_URL)
+        grafana_url = params.get("grafana_url", OBSERVABILITY_CONFIG.GRAFANA_URL)
 
         workflow.logger.info({
-            "labels": {"pipeline": "tracing", "event": "endpoints"},
-            "msg": "using_traefik_endpoints",
+            "pipeline": "tracing",
+            "event": "endpoints_resolved",
             "tempo_query_url": tempo_query_url,
+            "tempo_push_url": config.tempo_push_url,
             "grafana_url": grafana_url
         })
 
-        # STEP 5: Generate OTel config with Tempo endpoint
         gen_res = await workflow.execute_activity(
             "generate_config_tracings",
             {
-                "dynamic_dir": dynamic_dir, 
-                "internal_tempo_url": "tempo-development:4317"
+                "dynamic_dir": str(config.dynamic_config_dir),
+                "internal_tempo_url": OBSERVABILITY_CONFIG.TEMPO_GRPC_URL
             },
             start_to_close_timeout=timedelta(seconds=120),
         )
+        
         workflow.logger.info({
-            "labels": {"pipeline": "tracing", "event": "generate_config"},
-            "msg": "generate_config_result",
-            "result": gen_res
+            "pipeline": "tracing",
+            "event": "config_generated",
+            "success": gen_res.get("success") if isinstance(gen_res, dict) else False
         })
 
         config_path = None
@@ -97,88 +120,99 @@ class TracingPipelineWorkflow(BaseWorkflow):
             data = gen_res.get("data") or {}
             config_path = data.get("config_path")
 
-        # STEP 6: Configure source paths
         cfg_paths_res = await workflow.execute_activity(
             "configure_source_paths_tracings",
             {"config_path": config_path} if config_path else {},
             start_to_close_timeout=timedelta(seconds=60),
         )
+        
         workflow.logger.info({
-            "labels": {"pipeline": "tracing", "event": "configure_paths"},
-            "msg": "configure_paths_result",
-            "result": cfg_paths_res
+            "pipeline": "tracing",
+            "event": "paths_configured",
+            "success": cfg_paths_res.get("success") if isinstance(cfg_paths_res, dict) else False
         })
 
-        # STEP 7: Apply configuration
         cfg_apply_res = await workflow.execute_activity(
             "configure_source_tracings",
-            {"config_path": config_path, "dynamic_dir": dynamic_dir} if config_path else {},
+            {
+                "config_path": config_path,
+                "dynamic_dir": str(config.dynamic_config_dir)
+            } if config_path else {},
             start_to_close_timeout=timedelta(seconds=60),
         )
+        
         workflow.logger.info({
-            "labels": {"pipeline": "tracing", "event": "configure_source"},
-            "msg": "configure_source_result",
-            "result": cfg_apply_res
+            "pipeline": "tracing",
+            "event": "source_configured",
+            "success": cfg_apply_res.get("success") if isinstance(cfg_apply_res, dict) else False
         })
 
-        # STEP 8: Deploy processors
         deploy_res = await workflow.execute_activity(
             "deploy_processor_tracings",
             {
-                "dynamic_dir": dynamic_dir,
+                "dynamic_dir": str(config.dynamic_config_dir),
                 "config_name": Path(config_path).name if config_path else "otel-collector-tracings-generated.yaml",
             },
             start_to_close_timeout=timedelta(seconds=60),
         )
+        
         workflow.logger.info({
-            "labels": {"pipeline": "tracing", "event": "deploy_processor"},
-            "msg": "deploy_processor_result",
-            "result": deploy_res
+            "pipeline": "tracing",
+            "event": "processor_deployed",
+            "success": deploy_res.get("success") if isinstance(deploy_res, dict) else False
         })
 
-        # STEP 9: Restart OTel to pick up new config
         restart_res = await workflow.execute_activity(
             "restart_source_tracings",
-            {"container_name": otel_container_name, "timeout_seconds": 60},
-            start_to_close_timeout=timedelta(seconds=120),
-        )
-        workflow.logger.info({
-            "labels": {"pipeline": "tracing", "event": "restart_source"},
-            "msg": "restart_source_result",
-            "result": restart_res
-        })
-
-        # STEP 10: Create Grafana datasource pointing to Tempo
-        # Grafana uses container-to-container communication, so we use the Tempo container name
-        await workflow.execute_activity(
-            "create_grafana_datasource_tracings_activity",
             {
-                "grafana_url": grafana_url,  # Access Grafana through Traefik
-                "grafana_user": params.get("grafana_user", "admin"),
-                "grafana_password": params.get("grafana_password", "SuperSecret123!"),
-                "datasource_name": params.get("datasource_name", "tempo"),
-                "tempo_url": "http://tempo-development:3200",  # Container-to-container URL
-                "upsert_mode": params.get("upsert_mode", "upsert"),
-                "org_id": params.get("org_id", 1),
+                "container_name": config.otel_collector.container_name,
+                "timeout_seconds": 60
             },
             start_to_close_timeout=timedelta(seconds=120),
         )
-        workflow.logger.info({"labels": {"pipeline": "tracing", "event": "grafana_datasource"}, "msg": "grafana_datasource_created"})
+        
+        workflow.logger.info({
+            "pipeline": "tracing",
+            "event": "source_restarted",
+            "success": restart_res.get("success") if isinstance(restart_res, dict) else False
+        })
 
-        # STEP 11: Emit test trace event
+        datasource_config = config.get_grafana_datasource_config("tempo")
+        
+        await workflow.execute_activity(
+            "create_grafana_datasource_tracings_activity",
+            {
+                "grafana_url": config.grafana.external_url,
+                "grafana_user": workflow_params.get("grafana_user", "admin"),
+                "grafana_password": workflow_params.get("grafana_password", "SuperSecret123!"),
+                "datasource_name": datasource_config["name"],
+                "tempo_url": OBSERVABILITY_CONFIG.TEMPO_URL,  # Container-to-container URL
+                "upsert_mode": "upsert",
+                "org_id": 1,
+            },
+            start_to_close_timeout=timedelta(seconds=120),
+        )
+        
+        workflow.logger.info({
+            "pipeline": "tracing",
+            "event": "grafana_datasource_created",
+            "datasource": "tempo"
+        })
+
         emit_res = await workflow.execute_activity(
             "emit_test_event_tracings",
             {
-                "otlp_endpoint": "http://localhost:4317",
+                "otlp_endpoint": config.otlp_grpc_endpoint,
                 "service_name": "test-tracing-service",
                 "span_name": "test-span"
             },
             start_to_close_timeout=timedelta(seconds=60),
         )
+        
         workflow.logger.info({
-            "labels": {"pipeline": "tracing", "event": "emit_test"},
-            "msg": "emit_test_result",
-            "result": emit_res
+            "pipeline": "tracing",
+            "event": "test_event_emitted",
+            "success": emit_res.get("success") if isinstance(emit_res, dict) else False
         })
 
         trace_id = None
@@ -187,28 +221,31 @@ class TracingPipelineWorkflow(BaseWorkflow):
             trace_id = data.get("token")
 
         workflow.logger.info({
-            "labels": {"pipeline": "tracing", "event": "trace_id_extracted"},
-            "msg": "synthetic_trace_id",
+            "pipeline": "tracing",
+            "event": "trace_id_extracted",
             "trace_id": trace_id
         })
 
-        # STEP 12: Verify trace ingestion in Tempo
         verify_res = await workflow.execute_activity(
             "verify_event_ingestion_tracings",
             {
-                "tempo_query_url": tempo_query_url, 
-                "trace_id": trace_id if trace_id else "dummy-trace-id", 
-                "timeout_seconds": 60, 
+                "tempo_query_url": config.tempo_query_url,
+                "trace_id": trace_id if trace_id else "dummy-trace-id",
+                "timeout_seconds": 60,
                 "poll_interval": 2.0
             },
             start_to_close_timeout=timedelta(seconds=120),
         )
+        
         workflow.logger.info({
-            "labels": {"pipeline": "tracing", "event": "verify_complete"},
-            "msg": "verification_result",
-            "result": verify_res
+            "pipeline": "tracing",
+            "event": "verification_complete",
+            "success": verify_res.get("success") if isinstance(verify_res, dict) else False
         })
 
-        workflow.logger.info({"labels": {"pipeline": "tracing", "event": "done"}, "msg": "workflow_complete"})
+        workflow.logger.info({
+            "pipeline": "tracing",
+            "event": "workflow_complete"
+        })
 
         return "tracing_pipeline_completed"

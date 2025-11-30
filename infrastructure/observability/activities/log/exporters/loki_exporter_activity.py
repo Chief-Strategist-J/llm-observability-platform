@@ -5,13 +5,14 @@ import urllib.request
 import urllib.error
 from typing import Dict, Any, List
 from temporalio import activity
+from infrastructure.observability.config.constants import OBSERVABILITY_CONFIG
 
 logger = logging.getLogger(__name__)
 
 @activity.defn
 async def loki_exporter_activity(params: Dict[str, Any]) -> Dict[str, Any]:
     logger.info("loki_exporter_activity started with params keys: %s", list(params.keys()))
-    loki_push_url = params.get("loki_push_url", "http://loki-instance-0:3100/loki/api/v1/push")
+    loki_push_url = params.get("loki_push_url", OBSERVABILITY_CONFIG.LOKI_PUSH_URL)
     raw_lines = params.get("lines") or params.get("line") or []
     if isinstance(raw_lines, str):
         raw_lines = [raw_lines]
