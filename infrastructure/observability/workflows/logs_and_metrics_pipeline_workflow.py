@@ -64,9 +64,9 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
         await workflow.sleep(10)
 
         dynamic_dir = params.get("dynamic_dir", "infrastructure/orchestrator/dynamicconfig")
-        loki_push_url = params.get("loki_push_url", "http://localhost:31002/loki/api/v1/push")
-        loki_query_url = params.get("loki_query_url", "http://localhost:31002/loki/api/v1/query")
-        prometheus_url = params.get("prometheus_url", "http://localhost:9090")
+        loki_push_url = params.get("loki_push_url", "http://loki-instance-0:3100/loki/api/v1/push")
+        loki_query_url = params.get("loki_query_url", "http://loki-instance-0:3100/loki/api/v1/query")
+        prometheus_url = params.get("prometheus_url", "http://prometheus-instance-0:9090")
         grafana_url = params.get("grafana_url", "http://localhost:31001")
 
         workflow.logger.info({
@@ -120,7 +120,7 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
                 "grafana_user": "admin",
                 "grafana_password": "SuperSecret123!",
                 "datasource_name": "loki",
-                "loki_url": "http://loki-development:3100",
+                "loki_url": "http://loki-instance-0:3100",
                 "upsert_mode": "upsert",
                 "org_id": 1,
             },
@@ -205,7 +205,7 @@ class ObservabilityPipelineWorkflow(BaseWorkflow):
                 "grafana_user": "admin",
                 "grafana_password": "SuperSecret123!",
                 "datasource_name": "prometheus",
-                "prometheus_url": "http://prometheus-development:9090",
+                "prometheus_url": "http://prometheus-instance-0:9090",
                 "upsert_mode": "upsert",
                 "org_id": 1,
             },

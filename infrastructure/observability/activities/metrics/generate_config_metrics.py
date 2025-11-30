@@ -16,13 +16,14 @@ async def generate_config_metrics(params: Dict[str, Any]) -> Dict[str, Any]:
 
     config_file = dynamic_dir / "otel-collector-metrics.yaml"
     
-    prometheus_url = params.get("prometheus_url", "http://localhost:9090")
+    prometheus_url = params.get("prometheus_url", "http://prometheus-instance-0:9090")
     scrape_interval = params.get("scrape_interval", "15s")
     
     logger.info("generate_config_metrics_params prometheus_url=%s scrape_interval=%s", 
                 prometheus_url, scrape_interval)
     
-    internal_prometheus_url = "http://prometheus-development:9090/api/v1/write"
+    # Internal container network URL (used by OTel Collector)
+    internal_prometheus_url = "http://prometheus-instance-0:9090/api/v1/write"
     logger.info("generate_config_metrics_internal_url url=%s", internal_prometheus_url)
     
     config = {

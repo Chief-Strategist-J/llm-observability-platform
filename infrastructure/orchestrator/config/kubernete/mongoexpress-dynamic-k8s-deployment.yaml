@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mongoexpress-${INSTANCE_ID}
+  namespace: ${NAMESPACE}
   labels:
     app: mongoexpress
     instance: "${INSTANCE_ID}"

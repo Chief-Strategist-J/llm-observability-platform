@@ -1,0 +1,65 @@
+version: "3.9"
+
+services:
+  inngest:
+    image: inngest/inngest:latest
+    container_name: inngest-instance-${INNGEST_INSTANCE_ID:-0}
+    environment:
+      INSTANCE_ID: "${INNGEST_INSTANCE_ID:-0}"
+      INNGEST_PORT: "${INNGEST_PORT:-8288}"
+      INNGEST_SIGNING_KEY: "${INNGEST_SIGNING_KEY:-local-dev-key-change-in-production}"
+      INNGEST_EVENT_KEY: "${INNGEST_EVENT_KEY:-local-dev-event-key}"
+    command:
+      - "dev"
+      - "-u"
+      - "http://localhost:${INNGEST_PORT}"
+    networks:
+      - ${TEMPORAL_NETWORK:-temporal-network}
+      - ${OBSERVABILITY_NETWORK:-observability-network}
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "${TEMPORAL_NETWORK:-temporal-network}"
+      
+      traefik.http.routers.inngest-${INNGEST_INSTANCE_ID:-0}.rule: "Host(`inngest-${INNGEST_INSTANCE_ID:-0}.localhost`)"
+      traefik.http.routers.inngest-${INNGEST_INSTANCE_ID:-0}.entrypoints: "web,websecure"
+      traefik.http.routers.inngest-${INNGEST_INSTANCE_ID:-0}.service: "inngest-${INNGEST_INSTANCE_ID:-0}"
+      traefik.http.routers.inngest-${INNGEST_INSTANCE_ID:-0}.tls: "true"
+      traefik.http.routers.inngest-${INNGEST_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.inngest-${INNGEST_INSTANCE_ID:-0}.middlewares: "security-headers-${INNGEST_INSTANCE_ID:-0},rate-limit-${INNGEST_INSTANCE_ID:-0},compression-${INNGEST_INSTANCE_ID:-0}"
+      
+      traefik.http.routers.inngest-scaibu-${INNGEST_INSTANCE_ID:-0}.rule: "Host(`scaibu.inngest`)"
+      traefik.http.routers.inngest-scaibu-${INNGEST_INSTANCE_ID:-0}.entrypoints: "traefik"
+      traefik.http.routers.inngest-scaibu-${INNGEST_INSTANCE_ID:-0}.service: "inngest-${INNGEST_INSTANCE_ID:-0}"
+      traefik.http.routers.inngest-scaibu-${INNGEST_INSTANCE_ID:-0}.middlewares: "security-headers-${INNGEST_INSTANCE_ID:-0}"
+      
+      traefik.http.services.inngest-${INNGEST_INSTANCE_ID:-0}.loadbalancer.server.port: "${INNGEST_PORT:-8288}"
+      traefik.http.services.inngest-${INNGEST_INSTANCE_ID:-0}.loadbalancer.healthcheck.path: "/health"
+      traefik.http.services.inngest-${INNGEST_INSTANCE_ID:-0}.loadbalancer.healthcheck.interval: "30s"
+      
+      prometheus.io.scrape: "false"
+      loki.source: "docker"
+      loki.job: "inngest-${INNGEST_INSTANCE_ID:-0}"
+    
+    deploy:
+      resources:
+        limits:
+          memory: ${INNGEST_MEMORY_LIMIT:-512m}
+          cpus: "${INNGEST_CPU_LIMIT:-1.0}"
+        reservations:
+          memory: ${INNGEST_MEMORY_RESERVATION:-256m}
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${INNGEST_PORT:-8288}/health || exit 1"]
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-3}
+      start_period: 10s
+
+networks:
+  temporal-network:
+    external: true
+  observability-network:
+    external: true

@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: prometheus-${INSTANCE_ID}
+  namespace: ${NAMESPACE}
   labels:
     app: prometheus
     instance: "${INSTANCE_ID}"

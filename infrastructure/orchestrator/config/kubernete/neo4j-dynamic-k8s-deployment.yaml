@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: neo4j-${INSTANCE_ID}
+  namespace: ${NAMESPACE}
   labels:
     app: neo4j
     instance: "${INSTANCE_ID}"

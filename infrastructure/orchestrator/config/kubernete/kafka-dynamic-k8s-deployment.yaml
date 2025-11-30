@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kafka-${INSTANCE_ID}
+  namespace: ${NAMESPACE}
   labels:
     app: kafka
     instance: "${INSTANCE_ID}"

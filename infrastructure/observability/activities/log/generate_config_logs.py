@@ -18,12 +18,12 @@ async def generate_config_logs(params: Dict[str, Any]) -> Dict[str, Any]:
     
     # OTel container talks directly to Loki container (container-to-container)
     # Not through Traefik (that's only for external/Python access)
-    loki_push_url = params.get("loki_push_url", "http://localhost:31002/loki/api/v1/push")
+    loki_push_url = params.get("loki_push_url", "http://loki-instance-0:3100/loki/api/v1/push")
     
-    # Convert external Traefik URL to internal container URL
-    # External: http://localhost:31002/loki/api/v1/push
-    # Internal: http://loki-development:3100/loki/api/v1/push
-    internal_loki_url = "http://loki-development:3100/loki/api/v1/push"
+    # Internal container network URL (used by OTel Collector)
+    # External: http://loki-instance-0:3100/loki/api/v1/push (via Traefik: http://scaibu.loki)
+    # Internal: http://loki-instance-0:3100/loki/api/v1/push (direct container access)
+    internal_loki_url = "http://loki-instance-0:3100/loki/api/v1/push"
     
     logger.info("Using internal Loki URL for OTel: %s", internal_loki_url)
     

@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis-${INSTANCE_ID}
+  namespace: ${NAMESPACE}
   labels:
     app: redis
     instance: "${INSTANCE_ID}"

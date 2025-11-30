@@ -21,7 +21,7 @@ class MetricsPipelineWorkflow(BaseWorkflow):
         })
 
         dynamic_dir = params.get("dynamic_dir", "infrastructure/orchestrator/dynamicconfig")
-        prometheus_url = params.get("prometheus_url", "http://localhost:9090")
+        prometheus_url = params.get("prometheus_url", "http://prometheus-instance-0:9090")
         grafana_url = params.get("grafana_url", "http://localhost:31001")
         otel_container_name = params.get("otel_container_name", "opentelemetry-collector")
 
@@ -102,7 +102,7 @@ class MetricsPipelineWorkflow(BaseWorkflow):
                 "grafana_user": params.get("grafana_user", "admin"),
                 "grafana_password": params.get("grafana_password", "SuperSecret123!"),
                 "datasource_name": params.get("datasource_name", "prometheus"),
-                "prometheus_url": "http://prometheus-development:9090",
+                "prometheus_url": "http://prometheus-instance-0:9090",
                 "upsert_mode": params.get("upsert_mode", "upsert"),
                 "org_id": params.get("org_id", 1),
             },

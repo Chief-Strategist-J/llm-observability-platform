@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: loki-${INSTANCE_ID}
+  namespace: ${NAMESPACE}
   labels:
     app: loki
     instance: "${INSTANCE_ID}"
