@@ -78,10 +78,35 @@ async def verify_event_ingestion_tracings(params: Dict[str, Any]) -> Dict[str, A
     ready_url = _build_ready_url(tempo_query_url)
     logger.info("verify_urls tempo_query_url=%s ready_url=%s", tempo_query_url, ready_url)
 
-    conn_ok = await _wait_for_connection(tempo_query_url, retries=20, delay=2.0)
+    # Try initial connection with fewer retries
+    conn_ok = await _wait_for_connection(tempo_query_url, retries=3, delay=2.0)
+    
     if not conn_ok:
-        logger.error("verify_error error=tempo_unreachable url=%s", tempo_query_url)
-        return {"success": False, "data": {"url": tempo_query_url}, "error": "tempo_unreachable"}
+        logger.info("Initial URL %s unreachable, trying fallbacks", tempo_query_url)
+        parsed = urllib.parse.urlparse(tempo_query_url)
+        host_for_direct = "localhost"
+        candidate_ports = [3200, 3201]
+        if parsed.port:
+            candidate_ports.insert(0, parsed.port)
+            
+        found_url = None
+        for port in candidate_ports:
+            # Construct fallback URL preserving path and query
+            fallback_url = parsed._replace(netloc=f"{host_for_direct}:{port}").geturl()
+            logger.debug("Checking fallback url: %s", fallback_url)
+            if await _wait_for_connection(fallback_url, retries=2, delay=1.0):
+                logger.info("Fallback URL reachable: %s", fallback_url)
+                tempo_query_url = fallback_url
+                found_url = fallback_url
+                conn_ok = True
+                break
+                
+        if not found_url:
+            logger.error("verify_error error=tempo_unreachable url=%s", tempo_query_url)
+            return {"success": False, "data": {"url": tempo_query_url}, "error": "tempo_unreachable"}
+            
+        # Update ready_url in case tempo_query_url changed
+        ready_url = _build_ready_url(tempo_query_url)
 
     logger.info("verify_readiness_check_start ready_url=%s", ready_url)
 

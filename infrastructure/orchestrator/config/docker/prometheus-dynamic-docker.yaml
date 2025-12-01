@@ -9,6 +9,8 @@ services:
     volumes:
       - prometheus-data-${PROMETHEUS_INSTANCE_ID:-0}:/prometheus
       - ${PROM_CONFIG_PATH}:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
     networks:
       - ${OBSERVABILITY_NETWORK:-observability-network}
 
@@ -56,7 +58,7 @@ services:
       - "--web.external-url=https://prometheus-${PROMETHEUS_INSTANCE_ID:-0}.localhost"
     
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${PROMETHEUS_PORT:-9090}/-/healthy || exit 1"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
       interval: ${HEALTH_CHECK_INTERVAL:-30s}
       timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
       retries: ${HEALTH_CHECK_RETRIES:-3}

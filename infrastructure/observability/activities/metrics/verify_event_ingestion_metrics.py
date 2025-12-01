@@ -64,10 +64,32 @@ async def verify_event_ingestion_metrics(params: Dict[str, Any]) -> Dict[str, An
         return {"success": False, "data": None, "error": "missing_prometheus_query_url"}
 
     logger.info("verify_metrics_checking_connectivity url=%s", prometheus_query_url)
-    conn_ok = await _wait_for_connection(prometheus_query_url, retries=20, delay=2.0)
+    
+    # Try initial connection with fewer retries
+    conn_ok = await _wait_for_connection(prometheus_query_url, retries=3, delay=2.0)
+    
     if not conn_ok:
-        logger.error("verify_metrics_prometheus_unreachable url=%s", prometheus_query_url)
-        return {"success": False, "data": {"url": prometheus_query_url}, "error": "prometheus_unreachable"}
+        logger.info("Initial URL %s unreachable, trying fallbacks", prometheus_query_url)
+        parsed = urllib.parse.urlparse(prometheus_query_url)
+        host_for_direct = "localhost"
+        candidate_ports = [9090, 9091]
+        if parsed.port:
+            candidate_ports.insert(0, parsed.port)
+            
+        found_url = None
+        for port in candidate_ports:
+            fallback_url = parsed._replace(netloc=f"{host_for_direct}:{port}").geturl()
+            logger.debug("Checking fallback url: %s", fallback_url)
+            if await _wait_for_connection(fallback_url, retries=2, delay=1.0):
+                logger.info("Fallback URL reachable: %s", fallback_url)
+                prometheus_query_url = fallback_url
+                found_url = fallback_url
+                conn_ok = True
+                break
+                
+        if not found_url:
+            logger.error("verify_metrics_prometheus_unreachable url=%s", prometheus_query_url)
+            return {"success": False, "data": {"url": prometheus_query_url}, "error": "prometheus_unreachable"}
 
     ready_url = prometheus_query_url.replace("/api/v1/query", "/-/ready")
     if "/-/ready" not in ready_url:
