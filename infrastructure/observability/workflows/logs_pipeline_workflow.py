@@ -19,35 +19,6 @@ class LogsPipelineWorkflow(BaseWorkflow):
             "params_keys": list(params.keys())
         })
 
-        workflow.logger.info({
-            "pipeline": "logs",
-            "event": "cleanup_start"
-        })
-
-        cleanup_activities = [
-            "stop_loki_activity",
-            "delete_loki_activity",
-            "stop_otel_collector_activity",
-            "delete_otel_collector_activity",
-        ]
-
-        for act in cleanup_activities:
-            try:
-                await workflow.execute_activity(
-                    act, {}, start_to_close_timeout=timedelta(seconds=30)
-                )
-            except Exception:
-                workflow.logger.info({
-                    "pipeline": "logs",
-                    "event": "cleanup_skip",
-                    "activity": act
-                })
-
-        workflow.logger.info({
-            "pipeline": "logs",
-            "event": "cleanup_complete"
-        })
-
         traefik_result = await workflow.execute_activity(
             "start_traefik_activity",
             {},
@@ -267,6 +238,36 @@ class LogsPipelineWorkflow(BaseWorkflow):
             "pipeline": "logs",
             "event": "verification_complete",
             "success": verify_res.get("success") if isinstance(verify_res, dict) else False
+        })
+        
+        # Cleanup at end of workflow
+        workflow.logger.info({
+            "pipeline": "logs",
+            "event": "cleanup_start"
+        })
+
+        cleanup_activities = [
+            "stop_loki_activity",
+            "delete_loki_activity",
+            "stop_otel_collector_activity",
+            "delete_otel_collector_activity",
+        ]
+        
+        for act in cleanup_activities:
+            try:
+                await workflow.execute_activity(
+                    act, {}, start_to_close_timeout=timedelta(seconds=30)
+                )
+            except Exception:
+                workflow.logger.info({
+                    "pipeline": "logs",
+                    "event": "cleanup_skip",
+                    "activity": act
+                })
+
+        workflow.logger.info({
+            "pipeline": "logs",
+            "event": "cleanup_complete"
         })
 
         workflow.logger.info({
