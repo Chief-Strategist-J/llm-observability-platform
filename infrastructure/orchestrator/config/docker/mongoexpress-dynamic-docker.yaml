@@ -5,6 +5,7 @@ services:
     image: mongo-express:latest
     container_name: mongoexpress-instance-${MONGOEXPRESS_INSTANCE_ID:-0}
     environment:
+      ME_CONFIG_MONGODB_URL: "mongodb://${MONGODB_ROOT_USERNAME:-admin}:${MONGODB_ROOT_PASSWORD:-MongoPassword123!}@mongodb-instance-${MONGODB_INSTANCE_ID:-0}:${MONGODB_PORT:-27017}/"
       ME_CONFIG_MONGODB_ADMINUSERNAME: "${MONGODB_ROOT_USERNAME:-admin}"
       ME_CONFIG_MONGODB_ADMINPASSWORD: "${MONGODB_ROOT_PASSWORD:-MongoPassword123!}"
       ME_CONFIG_MONGODB_SERVER: "mongodb-instance-${MONGODB_INSTANCE_ID:-0}"
@@ -16,9 +17,6 @@ services:
     networks:
       - ${DATA_NETWORK:-data-network}
       - ${OBSERVABILITY_NETWORK:-observability-network}
-    depends_on:
-      - mongodb
-
     labels:
       traefik.enable: "true"
       traefik.docker.network: "${OBSERVABILITY_NETWORK:-observability-network}"
@@ -31,7 +29,7 @@ services:
       traefik.http.routers.mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
       traefik.http.routers.mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.middlewares: "security-headers-${MONGOEXPRESS_INSTANCE_ID:-0},rate-limit-${MONGOEXPRESS_INSTANCE_ID:-0}"
       
-      traefik.http.routers.mongoexpress-scaibu-${MONGOEXPRESS_INSTANCE_ID:-0}.rule: "Host(`scaibu.mongo-express`)"
+      traefik.http.routers.mongoexpress-scaibu-${MONGOEXPRESS_INSTANCE_ID:-0}.rule: "Host(`scaibu.mongoexpress`)"
       traefik.http.routers.mongoexpress-scaibu-${MONGOEXPRESS_INSTANCE_ID:-0}.entrypoints: "traefik"
       traefik.http.routers.mongoexpress-scaibu-${MONGOEXPRESS_INSTANCE_ID:-0}.service: "mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}"
       traefik.http.routers.mongoexpress-scaibu-${MONGOEXPRESS_INSTANCE_ID:-0}.middlewares: "security-headers-${MONGOEXPRESS_INSTANCE_ID:-0}"

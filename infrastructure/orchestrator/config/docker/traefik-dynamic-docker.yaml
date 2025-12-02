@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   traefik:
-    image: traefik:v3.5
+    image: traefik:latest
     container_name: traefik-instance-${TRAEFIK_INSTANCE_ID:-0}
     environment:
       INSTANCE_ID: "${TRAEFIK_INSTANCE_ID:-0}"
@@ -15,8 +15,8 @@ services:
       - "${TRAEFIK_DASHBOARD_PORT:-13101}:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik-certs-0:/letsencrypt
-      - traefik-config-0:/etc/traefik
+      - traefik-certs-${TRAEFIK_INSTANCE_ID:-0}:/letsencrypt
+      - traefik-config-${TRAEFIK_INSTANCE_ID:-0}:/etc/traefik
     networks:
       - ${OBSERVABILITY_NETWORK:-observability-network}
       - ${DATA_NETWORK:-data-network}
@@ -30,25 +30,20 @@ services:
       - "--providers.docker.exposedByDefault=false"
       - "--providers.docker.endpoint=unix:///var/run/docker.sock"
       - "--providers.docker.watch=true"
-      # container entrypoints
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.traefik.address=:8080"
-      # redirect HTTP -> HTTPS for normal HTTP entrypoint (web)
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
-      # API & Ping (we expose dashboard via 'traefik' entrypoint mapped to host)
       - "--api.dashboard=true"
       - "--api.insecure=false"
       - "--ping=true"
       - "--ping.entrypoint=traefik"
-      # Let's Encrypt (staging by default)
       - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
-      # logging / metrics
       - "--log.level=INFO"
       - "--log.format=json"
       - "--accesslog=true"
@@ -62,43 +57,29 @@ services:
     labels:
       traefik.enable: "true"
 
-      # Dashboard routers (host-based). Use the traefik entrypoint (container:8080) to avoid TLS in local dev.
-      # No auth required for local development - access directly without password
+      # Dashboard routers - UNIQUE middleware names per container
       traefik.http.routers.dashboard-local.rule: "Host(`traefik-0.localhost`)"
       traefik.http.routers.dashboard-local.entrypoints: "traefik"
       traefik.http.routers.dashboard-local.service: "api@internal"
-      traefik.http.routers.dashboard-local.middlewares: "security-headers"
+      traefik.http.routers.dashboard-local.middlewares: "traefik-security-headers"
 
       traefik.http.routers.dashboard-domain.rule: "Host(`scaibu.traefik`)"
       traefik.http.routers.dashboard-domain.entrypoints: "traefik"
       traefik.http.routers.dashboard-domain.service: "api@internal"
-      traefik.http.routers.dashboard-domain.middlewares: "security-headers"
+      traefik.http.routers.dashboard-domain.middlewares: "traefik-security-headers"
 
-      # Temporal UI router - route temporal-ui.localhost to temporal-ui container
-      traefik.http.routers.temporal-ui.rule: "Host(`temporal-ui.localhost`)"
-      traefik.http.routers.temporal-ui.entrypoints: "traefik"
-      traefik.http.routers.temporal-ui.service: "temporal-ui-svc"
-      traefik.http.routers.temporal-ui.middlewares: "security-headers"
-
-      # Temporal UI service definition
-      traefik.http.services.temporal-ui-svc.loadbalancer.server.port: "8080"
-
-      # Basic auth middleware (optional - only used if TRAEFIK_BASIC_AUTH is set in .env)
-      # To enable auth, uncomment the middleware in router definitions above and set TRAEFIK_BASIC_AUTH
-      # traefik.http.middlewares.traefik-auth.basicauth.users: "${TRAEFIK_BASIC_AUTH}"
-
-      # Security headers
-      traefik.http.middlewares.security-headers.headers.framedeny: "true"
-      traefik.http.middlewares.security-headers.headers.sslredirect: "false"
-      traefik.http.middlewares.security-headers.headers.stsincludesubdomains: "true"
-      traefik.http.middlewares.security-headers.headers.stspreload: "true"
-      traefik.http.middlewares.security-headers.headers.stsseconds: "31536000"
-      traefik.http.middlewares.security-headers.headers.contenttypenosniff: "true"
-      traefik.http.middlewares.security-headers.headers.browserxssfilter: "true"
-      traefik.http.middlewares.security-headers.headers.referrerpolicy: "strict-origin-when-cross-origin"
-      traefik.http.middlewares.security-headers.headers.permissionspolicy: "geolocation=(), microphone=(), camera=()"
-      traefik.http.middlewares.security-headers.headers.customresponseheaders.X-Powered-By: ""
-      traefik.http.middlewares.security-headers.headers.customresponseheaders.Server: ""
+      # Security headers middleware - UNIQUE NAME
+      traefik.http.middlewares.traefik-security-headers.headers.framedeny: "true"
+      traefik.http.middlewares.traefik-security-headers.headers.sslredirect: "false"
+      traefik.http.middlewares.traefik-security-headers.headers.stsincludesubdomains: "true"
+      traefik.http.middlewares.traefik-security-headers.headers.stspreload: "true"
+      traefik.http.middlewares.traefik-security-headers.headers.stsseconds: "31536000"
+      traefik.http.middlewares.traefik-security-headers.headers.contenttypenosniff: "true"
+      traefik.http.middlewares.traefik-security-headers.headers.browserxssfilter: "true"
+      traefik.http.middlewares.traefik-security-headers.headers.referrerpolicy: "strict-origin-when-cross-origin"
+      traefik.http.middlewares.traefik-security-headers.headers.permissionspolicy: "geolocation=(), microphone=(), camera=()"
+      traefik.http.middlewares.traefik-security-headers.headers.customresponseheaders.X-Powered-By: ""
+      traefik.http.middlewares.traefik-security-headers.headers.customresponseheaders.Server: ""
 
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
@@ -108,8 +89,8 @@ services:
       start_period: 20s
 
 volumes:
-  traefik-certs-0:
-  traefik-config-0:
+  traefik-certs-${TRAEFIK_INSTANCE_ID:-0}:
+  traefik-config-${TRAEFIK_INSTANCE_ID:-0}:
 
 networks:
   observability-network:

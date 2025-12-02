@@ -15,6 +15,12 @@ from infrastructure.orchestrator.activities.configurations_activity.mongodb_acti
     restart_mongodb_activity,
     delete_mongodb_activity,
 )
+from infrastructure.orchestrator.activities.configurations_activity.traefik_activity import (
+    start_traefik_activity,
+    stop_traefik_activity,
+    restart_traefik_activity,
+    delete_traefik_activity,
+)
 from infrastructure.orchestrator.activities.configurations_activity.kafka_activity import (
     start_kafka_activity,
     stop_kafka_activity,
@@ -40,16 +46,18 @@ class KafkaMangoDBDatabaseWorker(BaseWorker):
     @property
     def activities(self):
         return [
+            start_traefik_activity,
+            stop_traefik_activity,
+            restart_traefik_activity,
+            delete_traefik_activity,
             start_kafka_activity,
             stop_kafka_activity,
             restart_kafka_activity,
             delete_kafka_activity,
-
             start_mongodb_activity,
             stop_mongodb_activity,
             restart_mongodb_activity,
             delete_mongodb_activity,
-
             start_mongoexpress_activity,
             stop_mongoexpress_activity,
             restart_mongoexpress_activity,

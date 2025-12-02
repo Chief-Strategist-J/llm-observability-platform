@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Loader2 } from "lucide-react"
 import { CommentItem } from "./comment-item"
 import { groupChatApi, type Comment } from "@/utils/api/group-chat-client"
+import { GroupChat3DVisualizer } from "./visualizer-3d"
 
 export default function GroupChatPage() {
     const [discussions, setDiscussions] = useState<Comment[]>([])
@@ -26,7 +27,7 @@ export default function GroupChatPage() {
 
                 if (data.success) {
                     const mappedDiscussions = data.discussions.map((disc) => ({
-                        id: parseInt(disc._id || '') || Date.now(),
+                        id: disc.id || Date.now(),
                         _id: disc._id,
                         author: disc.author,
                         avatar: disc.avatar,
@@ -63,7 +64,7 @@ export default function GroupChatPage() {
 
                 if (data.success) {
                     const newDiscussion: Comment = {
-                        id: Date.now(),
+                        id: data.discussion.id || Date.now(),
                         _id: data.discussion._id,
                         author: "You",
                         avatar: "/avatars/shadcn.jpg",
@@ -212,6 +213,9 @@ export default function GroupChatPage() {
                 <SidebarTrigger className="-ml-1" />
                 <Separator orientation="vertical" className="mr-2 h-4" />
                 <h1 className="text-lg font-semibold">Community Discussions</h1>
+                <div className="ml-auto">
+                    <GroupChat3DVisualizer discussions={discussions} />
+                </div>
             </header>
 
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 overflow-hidden">
