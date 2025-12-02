@@ -63,6 +63,13 @@ class SetupMongoDBWorkflow(BaseWorkflow):
         )
 
         await workflow.execute_activity(
+            "verify_mongodb_activity",
+            params,
+            start_to_close_timeout=timeout,
+            retry_policy=rp,
+        )
+
+        await workflow.execute_activity(
             "stop_mongoexpress_activity",
             params,
             start_to_close_timeout=timeout,

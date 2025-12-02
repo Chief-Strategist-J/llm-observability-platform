@@ -15,29 +15,28 @@ services:
     networks:
       - ${MESSAGING_NETWORK:-messaging-network}
       - ${OBSERVABILITY_NETWORK:-observability-network}
-    depends_on:
-      kafka:
-        condition: service_healthy
+
 
     labels:
       traefik.enable: "true"
       traefik.docker.network: "${OBSERVABILITY_NETWORK:-observability-network}"
       
-      traefik.http.routers.kafka-ui-${KAFKA_UI_INSTANCE_ID:-0}.rule: "Host(`kafka-ui-${KAFKA_UI_INSTANCE_ID:-0}.localhost`)"
-      traefik.http.routers.kafka-ui-${KAFKA_UI_INSTANCE_ID:-0}.entrypoints: "web,websecure"
-      traefik.http.routers.kafka-ui-${KAFKA_UI_INSTANCE_ID:-0}.service: "kafka-ui-${KAFKA_UI_INSTANCE_ID:-0}"
-      traefik.http.routers.kafka-ui-${KAFKA_UI_INSTANCE_ID:-0}.tls: "true"
-      traefik.http.routers.kafka-ui-${KAFKA_UI_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
-      traefik.http.routers.kafka-ui-${KAFKA_UI_INSTANCE_ID:-0}.middlewares: "security-headers-${KAFKA_UI_INSTANCE_ID:-0},rate-limit-${KAFKA_UI_INSTANCE_ID:-0},compression-${KAFKA_UI_INSTANCE_ID:-0}"
+      traefik.http.routers.kafka-ui-0.rule: "Host(`kafka-ui-${KAFKA_UI_INSTANCE_ID:-0}.localhost`)"
+      traefik.http.routers.kafka-ui-0.entrypoints: "web,websecure"
+      traefik.http.routers.kafka-ui-0.service: "kafka-ui-${KAFKA_UI_INSTANCE_ID:-0}"
+      traefik.http.routers.kafka-ui-0.tls: "true"
+      traefik.http.routers.kafka-ui-0.tls.certresolver: "letsencrypt"
+      traefik.http.routers.kafka-ui-0.middlewares: "security-headers-${KAFKA_UI_INSTANCE_ID:-0},rate-limit-${KAFKA_UI_INSTANCE_ID:-0},compression-${KAFKA_UI_INSTANCE_ID:-0}"
       
-      traefik.http.routers.kafka-ui-scaibu-${KAFKA_UI_INSTANCE_ID:-0}.rule: "Host(`scaibu.kafka-ui`)"
-      traefik.http.routers.kafka-ui-scaibu-${KAFKA_UI_INSTANCE_ID:-0}.entrypoints: "traefik"
-      traefik.http.routers.kafka-ui-scaibu-${KAFKA_UI_INSTANCE_ID:-0}.service: "kafka-ui-${KAFKA_UI_INSTANCE_ID:-0}"
-      traefik.http.routers.kafka-ui-scaibu-${KAFKA_UI_INSTANCE_ID:-0}.middlewares: "security-headers-${KAFKA_UI_INSTANCE_ID:-0}"
+      traefik.http.routers.kafka-ui-scaibu-0.rule: "Host(`scaibu.kafka-ui`)"
+      traefik.http.routers.kafka-ui-scaibu-0.entrypoints: "web,websecure"
+      traefik.http.routers.kafka-ui-scaibu-0.service: "kafka-ui-${KAFKA_UI_INSTANCE_ID:-0}"
+      traefik.http.routers.kafka-ui-scaibu-0.tls: "true"
+      traefik.http.routers.kafka-ui-scaibu-0.middlewares: "security-headers-${KAFKA_UI_INSTANCE_ID:-0}"
       
-      traefik.http.services.kafka-ui-${KAFKA_UI_INSTANCE_ID:-0}.loadbalancer.server.port: "${KAFKA_UI_PORT:-8080}"
-      traefik.http.services.kafka-ui-${KAFKA_UI_INSTANCE_ID:-0}.loadbalancer.healthcheck.path: "/actuator/health"
-      traefik.http.services.kafka-ui-${KAFKA_UI_INSTANCE_ID:-0}.loadbalancer.healthcheck.interval: "30s"
+      traefik.http.services.kafka-ui-0.loadbalancer.server.port: "${KAFKA_UI_PORT:-8080}"
+      traefik.http.services.kafka-ui-0.loadbalancer.healthcheck.path: "/actuator/health"
+      traefik.http.services.kafka-ui-0.loadbalancer.healthcheck.interval: "30s"
       
       prometheus.io.scrape: "true"
       prometheus.io.port: "${KAFKA_UI_PORT:-8080}"

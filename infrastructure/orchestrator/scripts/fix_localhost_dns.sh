@@ -12,11 +12,11 @@ COMPOSE_FILE="${COMPOSE_DIR}/traefik-dynamic-docker.yaml"
 ENV_FILE="${ORCHESTRATOR_DIR}/.env"
 HOSTS_FILE="/etc/hosts"
 BACKUP_DIR="/var/backups/traefik-hosts-backups"
-NAMES=( "traefik-0.localhost" "scaibu.traefik" "temporal-ui.localhost" )
+NAMES=( "traefik-0.localhost" "scaibu.traefik" "temporal-ui.localhost" "scaibu.mongoexpress" "scaibu.kafka-ui" )
 
 # Default non-conflicting host ports (can be changed in .env after first run)
-DEFAULT_HTTP_PORT="${TRAEFIK_HTTP_PORT:-13080}"
-DEFAULT_HTTPS_PORT="${TRAEFIK_HTTPS_PORT:-13443}"
+DEFAULT_HTTP_PORT="${TRAEFIK_HTTP_PORT:-80}"
+DEFAULT_HTTPS_PORT="${TRAEFIK_HTTPS_PORT:-443}"
 DEFAULT_DASHBOARD_PORT="${TRAEFIK_DASHBOARD_PORT:-13101}"
 
 echo "== Traefik local setup =="
@@ -114,7 +114,7 @@ else
   exit 2
 fi
 
-echo "Starting Traefik using: ${COMPOSE_CMD} -f ${COMPOSE_FILE} up -d (with env from ${ENV_FILE})"
+echo "Starting Traefik using: ${COMPOSE_CMD}docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" up -d (with env from ${ENV_FILE})"
 ( cd "${COMPOSE_DIR}" && ${COMPOSE_CMD} -f "$(basename "${COMPOSE_FILE}")" --env-file "${ENV_FILE}" up -d )
 
 echo

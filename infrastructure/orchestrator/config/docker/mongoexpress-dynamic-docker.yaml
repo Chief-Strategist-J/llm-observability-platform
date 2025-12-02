@@ -12,7 +12,6 @@ services:
       ME_CONFIG_MONGODB_PORT: "${MONGODB_PORT:-27017}"
       ME_CONFIG_BASICAUTH_USERNAME: "${MONGOEXPRESS_ADMIN_USERNAME:-admin}"
       ME_CONFIG_BASICAUTH_PASSWORD: "${MONGOEXPRESS_ADMIN_PASSWORD:-MongoExpressPassword123!}"
-      ME_CONFIG_SITE_BASEURL: "/mongoexpress/"
       INSTANCE_ID: "${MONGOEXPRESS_INSTANCE_ID:-0}"
     networks:
       - ${DATA_NETWORK:-data-network}
@@ -22,20 +21,21 @@ services:
       traefik.docker.network: "${OBSERVABILITY_NETWORK:-observability-network}"
       
       # Router
-      traefik.http.routers.mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.rule: "Host(`mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.localhost`)"
-      traefik.http.routers.mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.entrypoints: "web,websecure"
-      traefik.http.routers.mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.service: "mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}"
-      traefik.http.routers.mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.tls: "true"
-      traefik.http.routers.mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.tls.certresolver: "letsencrypt"
-      traefik.http.routers.mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.middlewares: "security-headers-${MONGOEXPRESS_INSTANCE_ID:-0},rate-limit-${MONGOEXPRESS_INSTANCE_ID:-0}"
+      traefik.http.routers.mongoexpress-0.rule: "Host(`mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.localhost`)"
+      traefik.http.routers.mongoexpress-0.entrypoints: "web,websecure"
+      traefik.http.routers.mongoexpress-0.service: "mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}"
+      traefik.http.routers.mongoexpress-0.tls: "true"
+      traefik.http.routers.mongoexpress-0.tls.certresolver: "letsencrypt"
+      traefik.http.routers.mongoexpress-0.middlewares: "security-headers-${MONGOEXPRESS_INSTANCE_ID:-0},rate-limit-${MONGOEXPRESS_INSTANCE_ID:-0}"
       
-      traefik.http.routers.mongoexpress-scaibu-${MONGOEXPRESS_INSTANCE_ID:-0}.rule: "Host(`scaibu.mongoexpress`)"
-      traefik.http.routers.mongoexpress-scaibu-${MONGOEXPRESS_INSTANCE_ID:-0}.entrypoints: "traefik"
-      traefik.http.routers.mongoexpress-scaibu-${MONGOEXPRESS_INSTANCE_ID:-0}.service: "mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}"
-      traefik.http.routers.mongoexpress-scaibu-${MONGOEXPRESS_INSTANCE_ID:-0}.middlewares: "security-headers-${MONGOEXPRESS_INSTANCE_ID:-0}"
+      traefik.http.routers.mongoexpress-scaibu-0.rule: "Host(`scaibu.mongoexpress`)"
+      traefik.http.routers.mongoexpress-scaibu-0.entrypoints: "web,websecure"
+      traefik.http.routers.mongoexpress-scaibu-0.service: "mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}"
+      traefik.http.routers.mongoexpress-scaibu-0.tls: "true"
+      traefik.http.routers.mongoexpress-scaibu-0.middlewares: "security-headers-${MONGOEXPRESS_INSTANCE_ID:-0}"
       
       # Service
-      traefik.http.services.mongoexpress-${MONGOEXPRESS_INSTANCE_ID:-0}.loadbalancer.server.port: "${MONGOEXPRESS_PORT:-8081}"
+      traefik.http.services.mongoexpress-0.loadbalancer.server.port: "${MONGOEXPRESS_PORT:-8081}"
       
       # Observability
       loki.source: "docker"
@@ -52,7 +52,7 @@ services:
     restart: unless-stopped
     
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${MONGOEXPRESS_PORT:-8081}/ || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider --user=${MONGOEXPRESS_ADMIN_USERNAME:-admin} --password=${MONGOEXPRESS_ADMIN_PASSWORD:-MongoExpressPassword123!} http://localhost:${MONGOEXPRESS_PORT:-8081}/ || exit 1"]
       interval: ${HEALTH_CHECK_INTERVAL:-30s}
       timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
       retries: ${HEALTH_CHECK_RETRIES:-3}
