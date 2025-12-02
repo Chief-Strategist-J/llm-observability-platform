@@ -22,69 +22,79 @@ class KafkaMangoDBDatabaseWorkflow(BaseWorkflow):
         )
         timeout = timedelta(minutes=5)
 
-        # Stop activities 
         await workflow.execute_activity(
-            "stop_kafka_activity",
+            "stop_traefik_activity",
             params,
             start_to_close_timeout=timeout,
             retry_policy=rp,
         )
         await workflow.execute_activity(
-            "stop_mongodb_activity",
+            "delete_traefik_activity",
             params,
             start_to_close_timeout=timeout,
             retry_policy=rp,
         )
+        await workflow.execute_activity(
+            "start_traefik_activity",
+            params,
+            start_to_close_timeout=timeout,
+            retry_policy=rp,
+        )
+        # await workflow.execute_activity(
+        #     "stop_kafka_activity",
+        #     params,
+        #     start_to_close_timeout=timeout,
+        #     retry_policy=rp,
+        # )
+        # await workflow.execute_activity(
+        #     "stop_mongodb_activity",
+        #     params,
+        #     start_to_close_timeout=timeout,
+        #     retry_policy=rp,
+        # )
+        # await workflow.execute_activity(
+        #     "stop_mongoexpress_activity",
+        #     params,
+        #     start_to_close_timeout=timeout,
+        #     retry_policy=rp,
+        # )
         
-        await workflow.execute_activity(
-            "stop_mongoexpress_activity",
-            params,
-            start_to_close_timeout=timeout,
-            retry_policy=rp,
-        )
-
+        # await workflow.execute_activity(
+        #     "delete_kafka_activity",
+        #     params,
+        #     start_to_close_timeout=timeout,
+        #     retry_policy=rp,
+        # )
+        # await workflow.execute_activity(
+        #     "delete_mongodb_activity",
+        #     params,
+        #     start_to_close_timeout=timeout,
+        #     retry_policy=rp,
+        # )
+        # await workflow.execute_activity(
+        #     "delete_mongoexpress_activity",
+        #     params,
+        #     start_to_close_timeout=timeout,
+        #     retry_policy=rp,
+        # )
         
+        # await workflow.execute_activity(
+        #     "start_mongodb_activity",
+        #     params,
+        #     start_to_close_timeout=timeout,
+        #     retry_policy=rp,
+        # )
+        # await workflow.execute_activity(
+        #     "start_mongoexpress_activity",
+        #     params,
+        #     start_to_close_timeout=timeout,
+        #     retry_policy=rp,
+        # )
+        # await workflow.execute_activity(
+        #     "start_kafka_activity",
+        #     params,
+        #     start_to_close_timeout=timeout,
+        #     retry_policy=rp,
+        # )
 
-        # Delete activities
-        await workflow.execute_activity(
-            "delete_mongodb_activity",
-            params,
-            start_to_close_timeout=timeout,
-            retry_policy=rp,
-        )
-        await workflow.execute_activity(
-            "delete_kafka_activity",
-            params,
-            start_to_close_timeout=timeout,
-            retry_policy=rp,
-        )
-        
-        await workflow.execute_activity(
-            "delete_mongoexpress_activity",
-            params,
-            start_to_close_timeout=timeout,
-            retry_policy=rp,
-        )
-
-
-        # Start activities 
-        await workflow.execute_activity(
-            "start_kafka_activity",
-            params,
-            start_to_close_timeout=timeout,
-            retry_policy=rp,
-        )
-        await workflow.execute_activity(
-            "start_mongodb_activity",
-            params,
-            start_to_close_timeout=timeout,
-            retry_policy=rp,
-        )
-        await workflow.execute_activity(
-            "start_mongoexpress_activity",
-            params,
-            start_to_close_timeout=timeout,
-            retry_policy=rp,
-        )
-
-        return "Kafka, MongoDB, and MongoExpress fully configured"
+        return "Traefik, Kafka, MongoDB, and MongoExpress fully configured"

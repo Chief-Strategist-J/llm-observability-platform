@@ -21,7 +21,10 @@ services:
       - mongodb-data-${MONGODB_INSTANCE_ID:-0}:/data/db
       - mongodb-config-${MONGODB_INSTANCE_ID:-0}:/data/configdb
     networks:
-      - ${DATA_NETWORK:-data-network}
+      ${DATA_NETWORK:-data-network}:
+        aliases:
+          - mongo
+          - mongodb-instance-${MONGODB_INSTANCE_ID:-0}
 
     # Keep port for internal database access (NOT routed through Traefik)
     ports:

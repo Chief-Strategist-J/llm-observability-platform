@@ -283,7 +283,61 @@ This implementation follows the complete Kafka algorithm architecture:
 - **Replication**: Leader-follower protocol, ISR management, high-watermark tracking
 - **Transactions**: Init → Begin → Send → Commit/Abort with exactly-once guarantees
 
+---
+
+## 🚀 Quick Start - Running Tests
+
+### Step 1: Start Temporal Server
+```bash
+temporal server start-dev
+```
+
+### Step 2: Start Kafka Services (Docker)
+```bash
+cd /home/j/live/dinesh/llm-chatbot-python
+
+# Start Kafka broker
+docker-compose -f infrastructure/orchestrator/config/docker/kafka-dynamic-docker.yaml up -d
+
+# Start Kafka UI (optional but recommended)
+docker-compose -f infrastructure/orchestrator/config/docker/kafka-ui-dynamic-docker.yaml up -d
+
+# Verify services are running
+docker ps | grep kafka
+```
+
+### Step 3: Start Kafka Messaging Worker
+```bash
+# Terminal 1
+source .venv/bin/activate
+cd /home/j/live/dinesh/llm-chatbot-python
+
+python infrastructure/orchestrator/workers/kafka_messaging_worker.py
+```
+
+### Step 4: Trigger E2E Test
+```bash
+# Terminal 2
+source .venv/bin/activate
+cd /home/j/live/dinesh/llm-chatbot-python
+
+python infrastructure/orchestrator/trigger/common/kafka_e2e_test_start.py
+```
+
+**Expected Output:**
+- ✅ Topic created with 3 partitions
+- ✅ 10 messages produced and consumed
+- ✅ Consumer group coordination working
+- ✅ Offsets committed successfully
+- ✅ Topic cleanup (if enabled)
+
+### Step 5: View Results in Kafka UI
+Open `http://localhost:8080` or `http://scaibu.kafka-ui`
+
+---
+
 ## Dependencies
+
 
 ```bash
 pip install kafka-python pytest

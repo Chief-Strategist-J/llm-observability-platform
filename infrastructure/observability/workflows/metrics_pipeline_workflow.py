@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 from datetime import timedelta
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 project_root = Path(__file__).parent.parent.parent.parent
 if str(project_root) not in sys.path:
@@ -10,13 +10,14 @@ if str(project_root) not in sys.path:
 from temporalio import workflow
 from infrastructure.observability.config.constants import OBSERVABILITY_CONFIG
 from infrastructure.orchestrator.base.base_workflow import BaseWorkflow
-# Note: get_observability_config is removed - config is passed as parameter
-
 
 @workflow.defn
 class MetricsPipelineWorkflow(BaseWorkflow):
     @workflow.run
-    async def run(self, params: Dict[str, Any], config: Dict[str, Any]) -> str:
+    async def run(self, params: Optional[Dict[str, Any]] = None, config: Optional[Dict[str, Any]] = None) -> str:
+        params = params or {}
+        config = config or {}
+
         workflow.logger.info({
             "pipeline": "metrics",
             "event": "workflow_start",
@@ -24,27 +25,34 @@ class MetricsPipelineWorkflow(BaseWorkflow):
         })
 
         workflow_params = {
-            **config.get("workflow_params", {}),
+            **(config.get("workflow_params", {}) if isinstance(config, dict) else {}),
             **params
         }
+
+        prometheus_internal_url = (
+            (config.get("prometheus") or {}).get("internal_url")
+            or OBSERVABILITY_CONFIG.PROMETHEUS_URL
+        )
+        prometheus_query_url = config.get("prometheus_query_url") or (config.get("prometheus") or {}).get("query_url")
+        grafana_external_url = (config.get("grafana") or {}).get("external_url") or OBSERVABILITY_CONFIG.GRAFANA_URL
 
         workflow.logger.info({
             "pipeline": "metrics",
             "event": "endpoints_resolved",
-            "prometheus_url": config["prometheus"]["internal_url"],
-            "prometheus_query_url": config["prometheus_query_url"],
-            "grafana_url": config["grafana"]["external_url"]
+            "prometheus_url": prometheus_internal_url,
+            "prometheus_query_url": prometheus_query_url,
+            "grafana_url": grafana_external_url
         })
 
         gen_res = await workflow.execute_activity(
             "generate_config_metrics",
             {
-                "dynamic_dir": str(config["dynamic_config_dir"]),
+                "dynamic_dir": str(config.get("dynamic_config_dir") or ""),
                 "prometheus_url": OBSERVABILITY_CONFIG.PROMETHEUS_URL
             },
             start_to_close_timeout=timedelta(seconds=120),
         )
-        
+
         workflow.logger.info({
             "pipeline": "metrics",
             "event": "config_generated",
@@ -61,7 +69,7 @@ class MetricsPipelineWorkflow(BaseWorkflow):
             {"config_path": config_path} if config_path else {},
             start_to_close_timeout=timedelta(seconds=60),
         )
-        
+
         workflow.logger.info({
             "pipeline": "metrics",
             "event": "paths_configured",
@@ -72,11 +80,11 @@ class MetricsPipelineWorkflow(BaseWorkflow):
             "configure_source_metrics",
             {
                 "config_path": config_path,
-                "dynamic_dir": str(config["dynamic_config_dir"])
+                "dynamic_dir": str(config.get("dynamic_config_dir") or "")
             } if config_path else {},
             start_to_close_timeout=timedelta(seconds=60),
         )
-        
+
         workflow.logger.info({
             "pipeline": "metrics",
             "event": "source_configured",
@@ -86,12 +94,12 @@ class MetricsPipelineWorkflow(BaseWorkflow):
         deploy_res = await workflow.execute_activity(
             "deploy_processor_metrics",
             {
-                "dynamic_dir": str(config["dynamic_config_dir"]),
+                "dynamic_dir": str(config.get("dynamic_config_dir") or ""),
                 "config_name": Path(config_path).name if config_path else "otel-collector-metrics.yaml",
             },
             start_to_close_timeout=timedelta(seconds=60),
         )
-        
+
         workflow.logger.info({
             "pipeline": "metrics",
             "event": "processor_deployed",
@@ -101,37 +109,30 @@ class MetricsPipelineWorkflow(BaseWorkflow):
         restart_res = await workflow.execute_activity(
             "restart_source_metrics",
             {
-                "container_name": config["otel_collector"]["container_name"],
+                "container_name": (config.get("otel_collector") or {}).get("container_name"),
                 "timeout_seconds": 60
             },
             start_to_close_timeout=timedelta(seconds=120),
         )
-        
+
         workflow.logger.info({
             "pipeline": "metrics",
             "event": "source_restarted",
             "success": restart_res.get("success") if isinstance(restart_res, dict) else False
         })
 
-        # Use get_grafana_datasource_config logic manually since we have a dict
-        # Or rely on the fact that we can construct it from the dict
-        # The original code called config.get_grafana_datasource_config("prometheus")
-        # But config is now a dict. We need to replicate that logic or pass it from trigger.
-        # Actually, get_grafana_datasource_config is a method on ObservabilityConfig class.
-        # Since we only have a dict, we can't call the method.
-        # We should construct the datasource config here using the dict values.
-        
         datasource_config = {
             "name": "prometheus",
             "type": "prometheus",
-            "url": config["prometheus"]["internal_url"],
+            "url": prometheus_internal_url,
             "access": "proxy",
             "isDefault": False,
             "jsonData": {}
         }
-        
-        prometheus_url = params.get("prometheus_url", OBSERVABILITY_CONFIG.PROMETHEUS_URL)
-        grafana_url = params.get("grafana_url", OBSERVABILITY_CONFIG.GRAFANA_URL)
+
+        prometheus_url = params.get("prometheus_url") or datasource_config["url"] or OBSERVABILITY_CONFIG.PROMETHEUS_URL
+        grafana_url = params.get("grafana_url") or grafana_external_url or OBSERVABILITY_CONFIG.GRAFANA_URL
+
         await workflow.execute_activity(
             "create_grafana_datasource_metrics",
             {
@@ -139,13 +140,13 @@ class MetricsPipelineWorkflow(BaseWorkflow):
                 "grafana_user": workflow_params.get("grafana_user", "admin"),
                 "grafana_password": workflow_params.get("grafana_password", "SuperSecret123!"),
                 "datasource_name": datasource_config["name"],
-                "prometheus_url": datasource_config["url"],
+                "prometheus_url": prometheus_url,
                 "upsert_mode": "upsert",
                 "org_id": 1,
             },
             start_to_close_timeout=timedelta(seconds=120),
         )
-        
+
         workflow.logger.info({
             "pipeline": "metrics",
             "event": "grafana_datasource_created",
@@ -154,10 +155,10 @@ class MetricsPipelineWorkflow(BaseWorkflow):
 
         emit_res = await workflow.execute_activity(
             "emit_test_event_metrics",
-            {"prometheus_url": config["prometheus"]["internal_url"]},
+            {"prometheus_url": prometheus_internal_url},
             start_to_close_timeout=timedelta(seconds=60),
         )
-        
+
         workflow.logger.info({
             "pipeline": "metrics",
             "event": "test_event_emitted",
@@ -189,21 +190,20 @@ class MetricsPipelineWorkflow(BaseWorkflow):
         verify_res = await workflow.execute_activity(
             "verify_event_ingestion_metrics",
             {
-                "prometheus_query_url": config["prometheus_query_url"],
+                "prometheus_query_url": prometheus_query_url,
                 "promql": promql,
                 "timeout_seconds": 60,
                 "poll_interval": 2.0
             },
             start_to_close_timeout=timedelta(seconds=120),
         )
-        
+
         workflow.logger.info({
             "pipeline": "metrics",
             "event": "verification_complete",
             "success": verify_res.get("success") if isinstance(verify_res, dict) else False
         })
-        
-        # Cleanup at end of workflow
+
         workflow.logger.info({
             "pipeline": "metrics",
             "event": "cleanup_start"
@@ -215,7 +215,7 @@ class MetricsPipelineWorkflow(BaseWorkflow):
             "stop_otel_collector_activity",
             "delete_otel_collector_activity",
         ]
-        
+
         for act in cleanup_activities:
             try:
                 await workflow.execute_activity(

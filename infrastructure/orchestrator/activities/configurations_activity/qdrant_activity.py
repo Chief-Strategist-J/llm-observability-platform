@@ -1,3 +1,4 @@
+# infrastructure/orchestrator/activities/configurations_activity/qdrant_activity.py
 from pathlib import Path
 from temporalio import activity
 from infrastructure.orchestrator.base import YAMLContainerManager

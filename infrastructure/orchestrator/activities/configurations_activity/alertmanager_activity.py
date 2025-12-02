@@ -1,3 +1,5 @@
+# infrastructure/orchestrator/activities/configurations_activity/alertmanager_activity.py
+
 from pathlib import Path
 from temporalio import activity
 from infrastructure.orchestrator.base import YAMLContainerManager

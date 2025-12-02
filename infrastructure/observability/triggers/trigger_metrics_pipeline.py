@@ -1,13 +1,15 @@
 import sys
 from pathlib import Path
 
-project_root = Path(__file__).resolve().parent.parent.parent.parent
+project_root = Path(__file__).resolve().parents[3]
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+import asyncio
 import logging
 import time
-import asyncio
+from typing import Optional
+
 from temporalio.client import Client
 from infrastructure.orchestrator.base.base_trigger import BaseTrigger
 from infrastructure.observability.workflows.metrics_pipeline_workflow import MetricsPipelineWorkflow
@@ -31,9 +33,18 @@ class MetricsPipelineTrigger(BaseTrigger):
             if "service_name" not in workflow_params:
                 workflow_params["service_name"] = self.service_name
             config = get_observability_config()
+            if hasattr(config, "to_workflow_params"):
+                cfg_for_workflow = config.to_workflow_params()
+            elif isinstance(config, dict):
+                cfg_for_workflow = config
+            else:
+                try:
+                    cfg_for_workflow = dict(config)
+                except Exception:
+                    cfg_for_workflow = {}
             result = await client.start_workflow(
                 MetricsPipelineWorkflow.run,
-                args=[workflow_params, config.to_workflow_params()],
+                args=[workflow_params, cfg_for_workflow],
                 id=workflow_id,
                 task_queue=self.task_queue,
             )
