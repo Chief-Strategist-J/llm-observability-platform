@@ -15,18 +15,21 @@ from infrastructure.orchestrator.activities.configurations_activity.mongodb_acti
     stop_mongodb_activity,
     restart_mongodb_activity,
     delete_mongodb_activity,
+    verify_mongodb_activity,
 )
 from infrastructure.orchestrator.activities.configurations_activity.traefik_activity import (
     start_traefik_activity,
     stop_traefik_activity,
     restart_traefik_activity,
     delete_traefik_activity,
+    verify_traefik_routing_activity,
 )
 from infrastructure.orchestrator.activities.configurations_activity.kafka_activity import (
     start_kafka_activity,
     stop_kafka_activity,
     restart_kafka_activity,
     delete_kafka_activity,
+    verify_kafka_activity,
 )
 from infrastructure.orchestrator.activities.configurations_activity.mongo_express_activity import (
     start_mongoexpress_activity,
@@ -125,6 +128,18 @@ from infrastructure.orchestrator.activities.configurations_activity.tempo_activi
     delete_tempo_activity,
 )
 
+from infrastructure.orchestrator.activities.configurations_activity.clickhouse_activities import (
+    start_clickhouse_activity,
+    stop_clickhouse_activity,
+    restart_clickhouse_activity,
+    delete_clickhouse_activity,
+)
+from infrastructure.orchestrator.activities.configurations_activity.tempo_activity import (
+    start_tempo_activity,
+    stop_tempo_activity,
+    restart_tempo_activity,
+    delete_tempo_activity,
+)
 
 from infrastructure.orchestrator.workflows.setup_workflow.setup_traefik_workflow import (
     SetupTraefikWorkflow,
@@ -170,6 +185,12 @@ from infrastructure.orchestrator.workflows.setup_workflow.setup_tempo_workflow i
     SetupTempoWorkflow
 )
 
+from infrastructure.orchestrator.workflows.setup_workflow.setup_clickhouse_workflow import (
+    SetupClickHouseWorkflow
+)
+
+
+
 class ServiceSetupWorker(BaseWorker):
     @property
     def workflows(self):
@@ -188,6 +209,7 @@ class ServiceSetupWorker(BaseWorker):
             SetupPromtailWorkflow,
             SetupRedisWorkflow,
             SetupTempoWorkflow,
+            SetupClickHouseWorkflow,
         ]
 
     @property
@@ -277,6 +299,15 @@ class ServiceSetupWorker(BaseWorker):
             stop_tempo_activity,
             restart_tempo_activity,
             delete_tempo_activity,
+
+            start_clickhouse_activity,
+            stop_clickhouse_activity,
+            restart_clickhouse_activity,
+            delete_clickhouse_activity,
+            
+            verify_kafka_activity,
+            verify_mongodb_activity,
+            verify_traefik_routing_activity,
         ]
 
 async def main():

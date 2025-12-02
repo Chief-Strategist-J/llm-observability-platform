@@ -1,4 +1,4 @@
-# infrastructure/orchestrator/workflows/setup_workflow/setup_kafka_workflow.py
+# infrastructure/orchestrator/workflows/setup_workflow/setup_traefik_workflow.py
 import sys
 from pathlib import Path
 
@@ -13,7 +13,7 @@ from infrastructure.orchestrator.base.base_workflow import BaseWorkflow
 
 
 @workflow.defn
-class SetupKafkaWorkflow(BaseWorkflow):
+class SetupClickHouseWorkflow(BaseWorkflow):
     @workflow.run
     async def run(self, params: dict) -> str:
         rp = RetryPolicy(
@@ -29,14 +29,12 @@ class SetupKafkaWorkflow(BaseWorkflow):
             start_to_close_timeout=timeout,
             retry_policy=rp,
         )
-
         await workflow.execute_activity(
             "delete_traefik_activity",
             params,
             start_to_close_timeout=timeout,
             retry_policy=rp,
         )
-
         await workflow.execute_activity(
             "start_traefik_activity",
             params,
@@ -45,48 +43,22 @@ class SetupKafkaWorkflow(BaseWorkflow):
         )
 
         await workflow.execute_activity(
-            "stop_kafka_activity",
+            "stop_clickhouse_activity",
             params,
             start_to_close_timeout=timeout,
             retry_policy=rp,
         )
         await workflow.execute_activity(
-            "delete_kafka_activity",
+            "delete_clickhouse_activity",
             params,
             start_to_close_timeout=timeout,
             retry_policy=rp,
         )
         await workflow.execute_activity(
-            "start_kafka_activity",
+            "start_clickhouse_activity",
             params,
             start_to_close_timeout=timeout,
             retry_policy=rp,
         )
 
-        await workflow.execute_activity(
-            "verify_kafka_activity",
-            params,
-            start_to_close_timeout=timeout,
-            retry_policy=rp,
-        )
-
-        await workflow.execute_activity(
-            "stop_kafka_ui_activity",
-            params,
-            start_to_close_timeout=timeout,
-            retry_policy=rp,
-        )
-        await workflow.execute_activity(
-            "delete_kafka_ui_activity",
-            params,
-            start_to_close_timeout=timeout,
-            retry_policy=rp,
-        )
-        await workflow.execute_activity(
-            "start_kafka_ui_activity",
-            params,
-            start_to_close_timeout=timeout,
-            retry_policy=rp,
-        )
-
-        return "Kafka fully configured"
+        return "Click house fully configured"

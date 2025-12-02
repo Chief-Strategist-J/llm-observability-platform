@@ -175,3 +175,191 @@ async def get_kafka_status_activity(params: dict) -> dict:
         "status": status.value,
         "is_running": status.value == "running"
     }
+
+
+@activity.defn(name="verify_kafka_activity")
+async def verify_kafka_activity(params: dict) -> dict:
+    import socket
+    import subprocess
+    import time
+    import json
+    
+    instance_id = params.get("instance_id", 0)
+    trace_id = params.get("trace_id", "kafka-verify")
+    container_name = f"kafka-instance-{instance_id}"
+    
+    # Dynamic port discovery
+    try:
+        cmd_port = ["docker", "inspect", "--format={{(index (index .NetworkSettings.Ports \"9093/tcp\") 0).HostPort}}", container_name]
+        result_port = subprocess.run(cmd_port, capture_output=True, text=True, timeout=5)
+        if result_port.returncode == 0 and result_port.stdout.strip():
+            broker_port = int(result_port.stdout.strip())
+        else:
+            broker_port = params.get("broker_port", 9093)
+    except Exception:
+        broker_port = params.get("broker_port", 9093)
+
+    start_time = time.time()
+    results = {}
+    all_passed = True
+    
+    logger.info(
+        "event=verification_start trace_id=%s service=kafka instance_id=%d broker_port=%d",
+        trace_id, instance_id, broker_port
+    )
+    
+    try:
+        container_name = f"kafka-instance-{instance_id}"
+        cmd = ["docker", "inspect", "--format={{.State.Health.Status}}", container_name]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        
+        health_status = result.stdout.strip() if result.returncode == 0 else "unknown"
+        results["container_health"] = health_status
+        
+        if health_status != "healthy":
+            all_passed = False
+            logger.warning(
+                "event=health_check_failed trace_id=%s service=kafka instance_id=%d health_status=%s",
+                trace_id, instance_id, health_status
+            )
+        else:
+            logger.info(
+                "event=health_check_passed trace_id=%s service=kafka instance_id=%d health_status=%s",
+                trace_id, instance_id, health_status
+            )
+    except Exception as e:
+        all_passed = False
+        results["container_health"] = "error"
+        logger.error(
+            "event=health_check_error trace_id=%s service=kafka instance_id=%d error=%s",
+            trace_id, instance_id, str(e)
+        )
+    
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5)
+        result = sock.connect_ex(("localhost", broker_port))
+        sock.close()
+        
+        port_open = result == 0
+        results["port_connectivity"] = port_open
+        
+        if not port_open:
+            all_passed = False
+            logger.warning(
+                "event=port_check_failed trace_id=%s service=kafka instance_id=%d port=%d",
+                trace_id, instance_id, broker_port
+            )
+        else:
+            logger.info(
+                "event=port_check_passed trace_id=%s service=kafka instance_id=%d port=%d",
+                trace_id, instance_id, broker_port
+            )
+    except Exception as e:
+        all_passed = False
+        results["port_connectivity"] = False
+        logger.error(
+            "event=port_check_error trace_id=%s service=kafka instance_id=%d port=%d error=%s",
+            trace_id, instance_id, broker_port, str(e)
+        )
+    
+    try:
+        container_name = f"kafka-instance-{instance_id}"
+        cmd = [
+            "docker", "exec", container_name,
+            "/opt/kafka/bin/kafka-broker-api-versions.sh",
+            f"--bootstrap-server=localhost:{broker_port}"
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        
+        broker_api_ok = result.returncode == 0
+        results["broker_api"] = broker_api_ok
+        
+        if not broker_api_ok:
+            all_passed = False
+            logger.warning(
+                "event=broker_api_check_failed trace_id=%s service=kafka instance_id=%d error=%s",
+                trace_id, instance_id, result.stderr[:200]
+            )
+        else:
+            logger.info(
+                "event=broker_api_check_passed trace_id=%s service=kafka instance_id=%d",
+                trace_id, instance_id
+            )
+    except Exception as e:
+        all_passed = False
+        results["broker_api"] = False
+        logger.error(
+            "event=broker_api_check_error trace_id=%s service=kafka instance_id=%d error=%s",
+            trace_id, instance_id, str(e)
+        )
+    
+    try:
+        container_name = f"kafka-instance-{instance_id}"
+        test_topic = f"verification-test-{int(time.time())}"
+        
+        cmd_create = [
+            "docker", "exec", container_name,
+            "/opt/kafka/bin/kafka-topics.sh",
+            f"--bootstrap-server=localhost:{broker_port}",
+            "--create",
+            "--topic", test_topic,
+            "--partitions", "1",
+            "--replication-factor", "1"
+        ]
+        result_create = subprocess.run(cmd_create, capture_output=True, text=True, timeout=30)
+        
+        cmd_list = [
+            "docker", "exec", container_name,
+            "/opt/kafka/bin/kafka-topics.sh",
+            f"--bootstrap-server=localhost:{broker_port}",
+            "--list"
+        ]
+        result_list = subprocess.run(cmd_list, capture_output=True, text=True, timeout=30)
+        
+        topic_test_ok = result_create.returncode == 0 and test_topic in result_list.stdout
+        results["topic_operations"] = topic_test_ok
+        
+        if not topic_test_ok:
+            all_passed = False
+            logger.warning(
+                "event=topic_test_failed trace_id=%s service=kafka instance_id=%d test_topic=%s",
+                trace_id, instance_id, test_topic
+            )
+        else:
+            logger.info(
+                "event=topic_test_passed trace_id=%s service=kafka instance_id=%d test_topic=%s",
+                trace_id, instance_id, test_topic
+            )
+            
+            cmd_delete = [
+                "docker", "exec", container_name,
+                "/opt/kafka/bin/kafka-topics.sh",
+                f"--bootstrap-server=localhost:{broker_port}",
+                "--delete",
+                "--topic", test_topic
+            ]
+            subprocess.run(cmd_delete, capture_output=True, text=True, timeout=30)
+    except Exception as e:
+        all_passed = False
+        results["topic_operations"] = False
+        logger.error(
+            "event=topic_test_error trace_id=%s service=kafka instance_id=%d error=%s",
+            trace_id, instance_id, str(e)
+        )
+    
+    duration_ms = int((time.time() - start_time) * 1000)
+    
+    logger.info(
+        "event=verification_complete trace_id=%s service=kafka instance_id=%d all_passed=%s duration_ms=%d",
+        trace_id, instance_id, all_passed, duration_ms
+    )
+    
+    return {
+        "success": all_passed,
+        "service": "kafka",
+        "instance_id": instance_id,
+        "results": results,
+        "duration_ms": duration_ms,
+        "trace_id": trace_id
+    }

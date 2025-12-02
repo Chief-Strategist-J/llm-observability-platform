@@ -15,8 +15,8 @@ services:
       - "${TRAEFIK_DASHBOARD_PORT:-13101}:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik-certs-${TRAEFIK_INSTANCE_ID:-0}:/letsencrypt
-      - traefik-config-${TRAEFIK_INSTANCE_ID:-0}:/etc/traefik
+      - traefik-certs:/letsencrypt
+      - traefik-config:/etc/traefik
     networks:
       - ${OBSERVABILITY_NETWORK:-observability-network}
       - ${DATA_NETWORK:-data-network}
@@ -89,8 +89,8 @@ services:
       start_period: 20s
 
 volumes:
-  traefik-certs-${TRAEFIK_INSTANCE_ID:-0}:
-  traefik-config-${TRAEFIK_INSTANCE_ID:-0}:
+  traefik-certs:
+  traefik-config:
 
 networks:
   observability-network:

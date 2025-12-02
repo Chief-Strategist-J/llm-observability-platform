@@ -116,3 +116,20 @@ _metadata:
     - 7233
     - 8080
   last_updated: "2025-11-25T14:12:00+05:30"
+
+clickhouse:
+  http_port: 8123
+  tcp_port: 9000
+  instance_increment: 100
+  max_instances: 5
+
+opensearch:
+  http_port: 9200
+  metrics_port: 9600
+  instance_increment: 100
+  max_instances: 5
+
+opensearch_dashboards:
+  http_port: 5601
+  instance_increment: 100
+  max_instances: 5

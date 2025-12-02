@@ -1,0 +1,127 @@
+version: "3.9"
+
+services:
+  opensearch:
+    image: opensearchproject/opensearch:${OPENSEARCH_IMAGE_TAG:-3.3.2}
+    container_name: opensearch-instance-${OPENSEARCH_INSTANCE_ID:-0}
+
+    environment:
+      discovery.type: "single-node"
+      OPENSEARCH_INITIAL_ADMIN_PASSWORD: "${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-OpenSearchAdmin123!}"
+      OPENSEARCH_SECURITY_ENABLED: "${OPENSEARCH_SECURITY_ENABLED:-true}"
+      bootstrap.memory_lock: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms${OPENSEARCH_JAVA_XMS:-512m} -Xmx${OPENSEARCH_JAVA_XMX:-512m}"
+      INSTANCE_ID: "${OPENSEARCH_INSTANCE_ID:-0}"
+
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+
+    volumes:
+      - opensearch-data-${OPENSEARCH_INSTANCE_ID:-0}:/usr/share/opensearch/data
+
+    networks:
+      ${DATA_NETWORK:-data-network}:
+        aliases:
+          - opensearch
+          - opensearch-instance-${OPENSEARCH_INSTANCE_ID:-0}
+
+    ports:
+      - "${OPENSEARCH_HTTP_PORT:-9200}:9200"
+      - "${OPENSEARCH_METRICS_PORT:-9600}:9600"
+
+    labels:
+      traefik.enable: "${OPENSEARCH_TRAEFIK_ENABLED:-true}"
+
+      traefik.http.routers.opensearch-http.rule: "Host(`${OPENSEARCH_HTTP_HOST:-opensearch.local}`)"
+      traefik.http.routers.opensearch-http.entrypoints: "${TRAEFIK_HTTP_ENTRYPOINT:-web}"
+      traefik.http.services.opensearch-http.loadbalancer.server.port: "9200"
+
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "9200"
+      prometheus.io.path: "/_prometheus/metrics"
+      loki.source: "docker"
+      loki.job: "opensearch-${OPENSEARCH_INSTANCE_ID:-0}"
+
+    deploy:
+      resources:
+        limits:
+          memory: ${OPENSEARCH_MEMORY_LIMIT:-4g}
+          cpus: "${OPENSEARCH_CPU_LIMIT:-2.0}"
+        reservations:
+          memory: ${OPENSEARCH_MEMORY_RESERVATION:-2g}
+
+    restart: unless-stopped
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -k -sS https://localhost:9200 -u admin:${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-OpenSearchAdmin123!} | grep -q 'cluster_name' || exit 1"
+        ]
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-5}
+      start_period: ${HEALTH_CHECK_START_PERIOD:-60s}
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:${OPENSEARCH_DASHBOARDS_IMAGE_TAG:-3.3.0}
+    container_name: opensearch-dashboards-instance-${OPENSEARCH_INSTANCE_ID:-0}
+
+    environment:
+      OPENSEARCH_HOSTS: "https://opensearch:9200"
+      OPENSEARCH_USERNAME: "admin"
+      OPENSEARCH_PASSWORD: "${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-OpenSearchAdmin123!}"
+      SERVER_HOST: "0.0.0.0"
+      INSTANCE_ID: "${OPENSEARCH_INSTANCE_ID:-0}"
+
+    depends_on:
+      - opensearch
+
+    networks:
+      ${DATA_NETWORK:-data-network}:
+        aliases:
+          - opensearch-dashboards
+          - opensearch-dashboards-instance-${OPENSEARCH_INSTANCE_ID:-0}
+
+    ports:
+      - "${OPENSEARCH_DASHBOARDS_HTTP_PORT:-5601}:5601"
+
+    labels:
+      traefik.enable: "${OPENSEARCH_DASHBOARDS_TRAEFIK_ENABLED:-true}"
+
+      traefik.http.routers.opensearch-dashboards-http.rule: "Host(`${OPENSEARCH_DASHBOARDS_HTTP_HOST:-osdash.local}`)"
+      traefik.http.routers.opensearch-dashboards-http.entrypoints: "${TRAEFIK_HTTP_ENTRYPOINT:-web}"
+      traefik.http.services.opensearch-dashboards-http.loadbalancer.server.port: "5601"
+
+      prometheus.io.scrape: "false"
+      loki.source: "docker"
+      loki.job: "opensearch-dashboards-${OPENSEARCH_INSTANCE_ID:-0}"
+
+    deploy:
+      resources:
+        limits:
+          memory: ${OPENSEARCH_DASHBOARDS_MEMORY_LIMIT:-2g}
+          cpus: "${OPENSEARCH_DASHBOARDS_CPU_LIMIT:-1.0}"
+        reservations:
+          memory: ${OPENSEARCH_DASHBOARDS_MEMORY_RESERVATION:-1g}
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sS http://localhost:5601/api/status | grep -q 'green' || exit 1"]
+      interval: ${HEALTH_CHECK_INTERVAL:-30s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
+      retries: ${HEALTH_CHECK_RETRIES:-5}
+      start_period: ${HEALTH_CHECK_START_PERIOD:-60s}
+
+volumes:
+  opensearch-data-${OPENSEARCH_INSTANCE_ID:-0}:
+
+networks:
+  data-network:
+    external: true
