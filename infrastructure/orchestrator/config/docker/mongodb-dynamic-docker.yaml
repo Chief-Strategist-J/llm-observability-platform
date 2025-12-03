@@ -18,13 +18,10 @@ services:
       - "--wiredTigerCacheSizeGB"
       - "0.5"
     volumes:
-      - mongodb-data-${MONGODB_INSTANCE_ID:-0}:/data/db
-      - mongodb-config-${MONGODB_INSTANCE_ID:-0}:/data/configdb
+      - mongodb-data-0:/data/db
+      - mongodb-config-0:/data/configdb
     networks:
-      ${DATA_NETWORK:-data-network}:
-        aliases:
-          - mongo
-          - mongodb-instance-${MONGODB_INSTANCE_ID:-0}
+      - data-network
 
     # Keep port for internal database access (NOT routed through Traefik)
     ports:
@@ -59,8 +56,8 @@ services:
       start_period: ${HEALTH_CHECK_START_PERIOD:-40s}
 
 volumes:
-  mongodb-data-${MONGODB_INSTANCE_ID:-0}:
-  mongodb-config-${MONGODB_INSTANCE_ID:-0}:
+  mongodb-data-0:
+  mongodb-config-0:
 
 networks:
   data-network:

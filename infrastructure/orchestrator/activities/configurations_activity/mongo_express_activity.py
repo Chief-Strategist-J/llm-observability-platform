@@ -13,6 +13,8 @@ def _build_env(instance_id: int, params: dict) -> Dict[str, str]:
     mongodb_instance_id = params.get("mongodb_instance_id", params.get("instance_id", instance_id))
     env_overrides.setdefault("MONGODB_INSTANCE_ID", str(mongodb_instance_id))
 
+    env_overrides.setdefault("MONGOEXPRESS_PORT", "8081")
+    
     mappings = {
         "port": "MONGOEXPRESS_PORT",
         "mongodb_port": "MONGODB_PORT",

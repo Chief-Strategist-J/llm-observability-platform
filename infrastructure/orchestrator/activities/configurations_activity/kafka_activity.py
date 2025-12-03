@@ -38,7 +38,8 @@ def _build_env(instance_id: int, params: dict) -> Dict[str, str]:
     pm = PortManager()
 
     requested_broker = params.get("broker_port") or params.get("KAFKA_BROKER_PORT")
-    base_broker = int(requested_broker) if requested_broker else pm.get_port("kafka", instance_id, "broker_port")
+    # Default to 9094 as that's where it binds
+    base_broker = int(requested_broker) if requested_broker else 9094
     broker_port = _find_available_port(pm, base_broker)
     env_overrides["KAFKA_BROKER_PORT"] = str(broker_port)
 
@@ -46,13 +47,11 @@ def _build_env(instance_id: int, params: dict) -> Dict[str, str]:
     base_controller = (
         int(requested_controller) if requested_controller else pm.get_port("kafka", instance_id, "controller_port")
     )
-    controller_port = base_controller if pm.check_port_available(base_controller) else _find_available_port(
-        pm, base_controller
-    )
-    env_overrides["KAFKA_CONTROLLER_PORT"] = str(controller_port)
+    env_overrides["KAFKA_CONTROLLER_PORT"] = str(base_controller)
 
     # Ensure advertised listeners matches broker port (important if we had to relocate)
-    env_overrides.setdefault("KAFKA_ADVERTISED_LISTENERS", f"PLAINTEXT://localhost:{broker_port}")
+    # Note: Kafka binds to IPv6 :::9094 by default in this setup
+    env_overrides.setdefault("KAFKA_ADVERTISED_LISTENERS", f"PLAINTEXT://kafka-instance-{instance_id}:{broker_port}")
 
     optional_mappings = {
         "cluster_id": "KAFKA_CLUSTER_ID",
@@ -195,9 +194,9 @@ async def verify_kafka_activity(params: dict) -> dict:
         if result_port.returncode == 0 and result_port.stdout.strip():
             broker_port = int(result_port.stdout.strip())
         else:
-            broker_port = params.get("broker_port", 9093)
+            broker_port = params.get("broker_port", 9094)
     except Exception:
-        broker_port = params.get("broker_port", 9093)
+        broker_port = params.get("broker_port", 9094)
 
     start_time = time.time()
     results = {}
