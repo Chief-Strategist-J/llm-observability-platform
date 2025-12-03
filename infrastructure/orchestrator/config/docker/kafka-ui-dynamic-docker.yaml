@@ -4,46 +4,48 @@ services:
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui-instance-${KAFKA_UI_INSTANCE_ID:-0}
+
     environment:
       KAFKA_CLUSTERS_0_NAME: "kafka-cluster-${KAFKA_INSTANCE_ID:-0}"
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka-instance-${KAFKA_INSTANCE_ID:-0}:${KAFKA_BROKER_PORT:-9092}"
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka-instance-${KAFKA_INSTANCE_ID:-0}:9094"
       KAFKA_CLUSTERS_0_ZOOKEEPER: ""
-      DYNAMIC_CONFIG_ENABLED: "true"
+      DYNAMIC_CONFIG_ENABLED: "false"
       AUTH_TYPE: "DISABLED"
-      SERVER_PORT: "${KAFKA_UI_PORT:-8080}"
+      SERVER_PORT: "8082"
       INSTANCE_ID: "${KAFKA_UI_INSTANCE_ID:-0}"
+
     networks:
       - ${MESSAGING_NETWORK:-messaging-network}
       - ${OBSERVABILITY_NETWORK:-observability-network}
 
+    ports:
+      - "${KAFKA_UI_PORT:-8082}:${KAFKA_UI_PORT:-8082}"
 
     labels:
       traefik.enable: "true"
       traefik.docker.network: "${OBSERVABILITY_NETWORK:-observability-network}"
-      
+
       traefik.http.routers.kafka-ui-0.rule: "Host(`kafka-ui-${KAFKA_UI_INSTANCE_ID:-0}.localhost`)"
       traefik.http.routers.kafka-ui-0.entrypoints: "web,websecure"
       traefik.http.routers.kafka-ui-0.service: "kafka-ui-${KAFKA_UI_INSTANCE_ID:-0}"
       traefik.http.routers.kafka-ui-0.tls: "true"
       traefik.http.routers.kafka-ui-0.tls.certresolver: "letsencrypt"
-      traefik.http.routers.kafka-ui-0.middlewares: "security-headers-${KAFKA_UI_INSTANCE_ID:-0},rate-limit-${KAFKA_UI_INSTANCE_ID:-0},compression-${KAFKA_UI_INSTANCE_ID:-0}"
-      
+
       traefik.http.routers.kafka-ui-scaibu-0.rule: "Host(`scaibu.kafka-ui`)"
       traefik.http.routers.kafka-ui-scaibu-0.entrypoints: "web,websecure"
       traefik.http.routers.kafka-ui-scaibu-0.service: "kafka-ui-${KAFKA_UI_INSTANCE_ID:-0}"
       traefik.http.routers.kafka-ui-scaibu-0.tls: "true"
-      traefik.http.routers.kafka-ui-scaibu-0.middlewares: "security-headers-${KAFKA_UI_INSTANCE_ID:-0}"
-      
-      traefik.http.services.kafka-ui-0.loadbalancer.server.port: "${KAFKA_UI_PORT:-8080}"
+
+      traefik.http.services.kafka-ui-0.loadbalancer.server.port: "${KAFKA_UI_PORT:-8082}"
       traefik.http.services.kafka-ui-0.loadbalancer.healthcheck.path: "/actuator/health"
       traefik.http.services.kafka-ui-0.loadbalancer.healthcheck.interval: "30s"
-      
+
       prometheus.io.scrape: "true"
-      prometheus.io.port: "${KAFKA_UI_PORT:-8080}"
+      prometheus.io.port: "${KAFKA_UI_PORT:-8082}"
       prometheus.io.path: "/actuator/prometheus"
       loki.source: "docker"
       loki.job: "kafka-ui-${KAFKA_UI_INSTANCE_ID:-0}"
-    
+
     deploy:
       resources:
         limits:
@@ -51,11 +53,11 @@ services:
           cpus: "${KAFKA_UI_CPU_LIMIT:-0.5}"
         reservations:
           memory: ${KAFKA_UI_MEMORY_RESERVATION:-256m}
-    
+
     restart: unless-stopped
-    
+
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${KAFKA_UI_PORT:-8080}/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8082/actuator/health || exit 1"]
       interval: ${HEALTH_CHECK_INTERVAL:-30s}
       timeout: ${HEALTH_CHECK_TIMEOUT:-10s}
       retries: ${HEALTH_CHECK_RETRIES:-3}

@@ -23,22 +23,9 @@ class SetupKafkaWorkflow(BaseWorkflow):
         )
         timeout = timedelta(minutes=5)
 
+        # Restart Traefik to ensure it picks up new configurations
         await workflow.execute_activity(
-            "stop_traefik_activity",
-            params,
-            start_to_close_timeout=timeout,
-            retry_policy=rp,
-        )
-
-        await workflow.execute_activity(
-            "delete_traefik_activity",
-            params,
-            start_to_close_timeout=timeout,
-            retry_policy=rp,
-        )
-
-        await workflow.execute_activity(
-            "start_traefik_activity",
+            "restart_traefik_activity",
             params,
             start_to_close_timeout=timeout,
             retry_policy=rp,
@@ -50,22 +37,21 @@ class SetupKafkaWorkflow(BaseWorkflow):
             start_to_close_timeout=timeout,
             retry_policy=rp,
         )
-        await workflow.execute_activity(
-            "delete_kafka_activity",
-            params,
-            start_to_close_timeout=timeout,
-            retry_policy=rp,
-        )
+        
+        # Ensure we use port 9094 as that's where Kafka binds in this setup
+        kafka_params = dict(params)
+        kafka_params["broker_port"] = 9094
+        
         await workflow.execute_activity(
             "start_kafka_activity",
-            params,
+            kafka_params,
             start_to_close_timeout=timeout,
             retry_policy=rp,
         )
 
         await workflow.execute_activity(
             "verify_kafka_activity",
-            params,
+            kafka_params,
             start_to_close_timeout=timeout,
             retry_policy=rp,
         )
@@ -76,15 +62,15 @@ class SetupKafkaWorkflow(BaseWorkflow):
             start_to_close_timeout=timeout,
             retry_policy=rp,
         )
-        await workflow.execute_activity(
-            "delete_kafka_ui_activity",
-            params,
-            start_to_close_timeout=timeout,
-            retry_policy=rp,
-        )
+        
+        # Ensure Kafka UI uses port 8082
+        ui_params = dict(params)
+        ui_params["env_vars"] = ui_params.get("env_vars", {})
+        ui_params["env_vars"]["SERVER_PORT"] = "8082"
+        
         await workflow.execute_activity(
             "start_kafka_ui_activity",
-            params,
+            ui_params,
             start_to_close_timeout=timeout,
             retry_policy=rp,
         )

@@ -36,9 +36,6 @@ docker network create --driver bridge messaging-network || true
 docker network create --driver bridge cicd-network || true
 docker network create --driver bridge temporal-network || true
 
-cd infrastructure/orchestrator/config/docker
-docker compose -f traefik-dynamic-docker.yaml up -d
-cd ../..
 
 cd infrastructure/orchestrator
 docker compose -f temporal-orchestrator-compose.yaml up -d
@@ -53,6 +50,8 @@ source /home/j/live/dinesh/llm-chatbot-python/.venv/bin/activate
 ## 📍 Access Services
 
 - **Traefik Dashboard**: http://traefik-0.localhost:13101/dashboard/
+- **Kafka UI**: https://scaibu.kafka-ui/
+- **Mongo Express**: https://scaibu.mongoexpress/
 - **Grafana**: https://grafana-0.localhost
 - **Prometheus**: https://prometheus-0.localhost
 - **Loki**: https://loki-0.localhost

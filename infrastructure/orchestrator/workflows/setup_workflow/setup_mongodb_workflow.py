@@ -24,20 +24,9 @@ class SetupMongoDBWorkflow(BaseWorkflow):
         )
         timeout = timedelta(minutes=5)
 
+        # Restart Traefik to ensure it picks up new configurations
         await workflow.execute_activity(
-            "stop_traefik_activity",
-            params,
-            start_to_close_timeout=timeout,
-            retry_policy=rp,
-        )
-        await workflow.execute_activity(
-            "delete_traefik_activity",
-            params,
-            start_to_close_timeout=timeout,
-            retry_policy=rp,
-        )
-        await workflow.execute_activity(
-            "start_traefik_activity",
+            "restart_traefik_activity",
             params,
             start_to_close_timeout=timeout,
             retry_policy=rp,
@@ -76,16 +65,10 @@ class SetupMongoDBWorkflow(BaseWorkflow):
             retry_policy=rp,
         )
         await workflow.execute_activity(
-            "delete_mongoexpress_activity",
-            params,
-            start_to_close_timeout=timeout,
-            retry_policy=rp,
-        )
-        await workflow.execute_activity(
             "start_mongoexpress_activity",
             params,
             start_to_close_timeout=timeout,
             retry_policy=rp,
         )
 
-        return "MongoDB fully configured"
+        return "MongoDB and MongoExpress fully configured"
