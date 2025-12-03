@@ -2,6 +2,9 @@ from pathlib import Path
 from typing import Dict
 from temporalio import activity
 from infrastructure.orchestrator.base import YAMLContainerManager
+from infrastructure.orchestrator.base.logql_logger import LogQLLogger
+
+logger = LogQLLogger(__name__)
 
 MONGODB_YAML = Path(__file__).parent.parent.parent / "config" / "docker" / "mongodb-dynamic-docker.yaml"
 
@@ -166,8 +169,11 @@ async def verify_mongodb_activity(params: dict) -> dict:
     all_passed = True
     
     logger.info(
-        "event=verification_start trace_id=%s service=mongodb instance_id=%d port=%d",
-        trace_id, instance_id, port
+        "verification_start",
+        trace_id=trace_id,
+        service="mongodb",
+        instance_id=instance_id,
+        port=port
     )
     
     try:
@@ -181,20 +187,29 @@ async def verify_mongodb_activity(params: dict) -> dict:
         if health_status != "healthy":
             all_passed = False
             logger.warning(
-                "event=health_check_failed trace_id=%s service=mongodb instance_id=%d health_status=%s",
-                trace_id, instance_id, health_status
+                "health_check_failed",
+                trace_id=trace_id,
+                service="mongodb",
+                instance_id=instance_id,
+                health_status=health_status
             )
         else:
             logger.info(
-                "event=health_check_passed trace_id=%s service=mongodb instance_id=%d health_status=%s",
-                trace_id, instance_id, health_status
+                "health_check_passed",
+                trace_id=trace_id,
+                service="mongodb",
+                instance_id=instance_id,
+                health_status=health_status
             )
     except Exception as e:
         all_passed = False
         results["container_health"] = "error"
         logger.error(
-            "event=health_check_error trace_id=%s service=mongodb instance_id=%d error=%s",
-            trace_id, instance_id, str(e)
+            "health_check_error",
+            error=e,
+            trace_id=trace_id,
+            service="mongodb",
+            instance_id=instance_id
         )
     
     try:
@@ -209,20 +224,30 @@ async def verify_mongodb_activity(params: dict) -> dict:
         if not port_open:
             all_passed = False
             logger.warning(
-                "event=port_check_failed trace_id=%s service=mongodb instance_id=%d port=%d",
-                trace_id, instance_id, port
+                "port_check_failed",
+                trace_id=trace_id,
+                service="mongodb",
+                instance_id=instance_id,
+                port=port
             )
         else:
             logger.info(
-                "event=port_check_passed trace_id=%s service=mongodb instance_id=%d port=%d",
-                trace_id, instance_id, port
+                "port_check_passed",
+                trace_id=trace_id,
+                service="mongodb",
+                instance_id=instance_id,
+                port=port
             )
     except Exception as e:
         all_passed = False
         results["port_connectivity"] = False
         logger.error(
-            "event=port_check_error trace_id=%s service=mongodb instance_id=%d port=%d error=%s",
-            trace_id, instance_id, port, str(e)
+            "port_check_error",
+            error=e,
+            trace_id=trace_id,
+            service="mongodb",
+            instance_id=instance_id,
+            port=port
         )
     
     try:
@@ -245,20 +270,28 @@ async def verify_mongodb_activity(params: dict) -> dict:
         if not ping_ok:
             all_passed = False
             logger.warning(
-                "event=auth_check_failed trace_id=%s service=mongodb instance_id=%d error=%s",
-                trace_id, instance_id, result.stderr[:200]
+                "auth_check_failed",
+                trace_id=trace_id,
+                service="mongodb",
+                instance_id=instance_id,
+                error_output=result.stderr[:200]
             )
         else:
             logger.info(
-                "event=auth_check_passed trace_id=%s service=mongodb instance_id=%d",
-                trace_id, instance_id
+                "auth_check_passed",
+                trace_id=trace_id,
+                service="mongodb",
+                instance_id=instance_id
             )
     except Exception as e:
         all_passed = False
         results["authentication"] = False
         logger.error(
-            "event=auth_check_error trace_id=%s service=mongodb instance_id=%d error=%s",
-            trace_id, instance_id, str(e)
+            "auth_check_error",
+            error=e,
+            trace_id=trace_id,
+            service="mongodb",
+            instance_id=instance_id
         )
     
     try:
@@ -298,13 +331,19 @@ async def verify_mongodb_activity(params: dict) -> dict:
         if not db_ops_ok:
             all_passed = False
             logger.warning(
-                "event=db_ops_check_failed trace_id=%s service=mongodb instance_id=%d test_db=%s",
-                trace_id, instance_id, test_db
+                "db_ops_check_failed",
+                trace_id=trace_id,
+                service="mongodb",
+                instance_id=instance_id,
+                test_db=test_db
             )
         else:
             logger.info(
-                "event=db_ops_check_passed trace_id=%s service=mongodb instance_id=%d test_db=%s",
-                trace_id, instance_id, test_db
+                "db_ops_check_passed",
+                trace_id=trace_id,
+                service="mongodb",
+                instance_id=instance_id,
+                test_db=test_db
             )
             
             drop_cmd = f"use {test_db}; db.{test_collection}.drop()"
@@ -323,15 +362,22 @@ async def verify_mongodb_activity(params: dict) -> dict:
         all_passed = False
         results["database_operations"] = False
         logger.error(
-            "event=db_ops_check_error trace_id=%s service=mongodb instance_id=%d error=%s",
-            trace_id, instance_id, str(e)
+            "db_ops_check_error",
+            error=e,
+            trace_id=trace_id,
+            service="mongodb",
+            instance_id=instance_id
         )
     
     duration_ms = int((time.time() - start_time) * 1000)
     
     logger.info(
-        "event=verification_complete trace_id=%s service=mongodb instance_id=%d all_passed=%s duration_ms=%d",
-        trace_id, instance_id, all_passed, duration_ms
+        "verification_complete",
+        trace_id=trace_id,
+        service="mongodb",
+        instance_id=instance_id,
+        all_passed=all_passed,
+        duration_ms=duration_ms
     )
     
     return {

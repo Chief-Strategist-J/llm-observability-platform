@@ -37,21 +37,30 @@ docker network create --driver bridge cicd-network || true
 docker network create --driver bridge temporal-network || true
 
 
-cd infrastructure/orchestrator
-docker compose -f temporal-orchestrator-compose.yaml up -d
-cd ../..
+cd infrastructure/orchestrator/config/docker/temporal
+docker-compose -f temporal-orchestrator-compose.yaml up -d
+cd ../../../../..
 
 source /home/j/live/dinesh/llm-chatbot-python/.venv/bin/activate
+
+# Setup service worker
+python infrastructure/orchestrator/workers/service_setup_worker.py
+
+python infrastructure/orchestrator/trigger/setup/start_mongodb.py
 
 ```
 
 
 
+- **Mongo Express**: https://scaibu.mongoexpress/
+username: admin
+password: MongoExpressPassword123!
+
 ## 📍 Access Services
 
 - **Traefik Dashboard**: http://traefik-0.localhost:13101/dashboard/
 - **Kafka UI**: https://scaibu.kafka-ui/
-- **Mongo Express**: https://scaibu.mongoexpress/
+
 - **Grafana**: https://grafana-0.localhost
 - **Prometheus**: https://prometheus-0.localhost
 - **Loki**: https://loki-0.localhost
