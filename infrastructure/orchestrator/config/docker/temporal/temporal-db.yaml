@@ -1,69 +1,69 @@
-# Development dynamic configuration for Temporal with SQL persistence
+# Development dynamic configuration for Temporal with PostgreSQL
 
 # Frontend settings
 frontend.enableClientVersionCheck:
   - value: false
+    constraints: {}
 
 # History settings
 history.persistenceMaxQPS:
   - value: 3000
+    constraints: {}
 
 # Matching settings
 matching.persistenceMaxQPS:
   - value: 3000
+    constraints: {}
 
 # Worker settings
 worker.persistenceMaxQPS:
   - value: 3000
+    constraints: {}
 
 # System settings
 system.advancedVisibilityWritingMode:
   - value: "off"
-
-# Namespace defaults
-system.namespaceDefaults.namespace:
-  - value: "default"
-
-# Retention settings
-system.retentionScheduleInterval:
-  - value: "24h"
+    constraints: {}
 
 # Archival settings (disabled for development)
 system.enableArchival:
   - value: false
+    constraints: {}
 
 # Visibility settings
 system.enableReadVisibilityFromES:
   - value: false
+    constraints: {}
 
 # Rate limiting
 frontend.rps:
   - value: 1000
+    constraints: {}
 
 # Queue settings
 matching.numTaskqueueWritePartitions:
   - value: 4
+    constraints: {}
 
 matching.numTaskqueueReadPartitions:
   - value: 4
+    constraints: {}
 
-# Persistence settings
-persistence.defaultStore:
-  - value: "temporal"
+# Workflow execution limits
+limit.maxIDLength:
+  - value: 1000
+    constraints: {}
 
-persistence.additionalStores:
-  - value: {}
+limit.maxNameLength:
+  - value: 1000
+    constraints: {}
 
-# SQL settings
-persistence.sql.persistence:
-  - value:
-      driverName: "postgres"
-      databaseName: "temporal"
-      connectAddr: "postgresql:5432"
-      connectProtocol: "tcp"
-      user: "temporal"
-      password: "temporal"
-      maxConns: 20
-      maxIdleConns: 20
-      maxConnLifetime: "1h"
-      numShards: 1
+# History limits
+history.maxAutoResetPoints:
+  - value: 20
+    constraints: {}
+
+# Retention settings
+system.retentionScheduleInterval:
+  - value: "24h"
+    constraints: {}

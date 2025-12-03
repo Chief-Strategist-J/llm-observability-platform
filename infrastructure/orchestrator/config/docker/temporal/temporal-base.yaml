@@ -1,16 +1,15 @@
-
 receivers:
   filelog:
     include:
-    - /etc/otelcol/container-logs.log
+      - /etc/otelcol/container-logs.log
     start_at: beginning
     include_file_path: true
     include_file_name: true
     operators:
-    - type: json_parser
-      id: parser-json
-      parse_from: body
-      parse_to: attributes
+      - type: json_parser
+        id: parser-json
+        parse_from: body
+        parse_to: attributes
 
 processors:
   batch:
@@ -18,9 +17,9 @@ processors:
     send_batch_size: 100
   resource:
     attributes:
-    - key: service.name
-      value: temporal-logs
-      action: upsert
+      - key: service.name
+        value: temporal-logs
+        action: upsert
 
 exporters:
   logging:
@@ -35,10 +34,3 @@ service:
   telemetry:
     logs:
       level: info
-
-# Temporal specific logging configuration
-temporal:
-  log:
-    stdout: true
-    level: info
-    format: json

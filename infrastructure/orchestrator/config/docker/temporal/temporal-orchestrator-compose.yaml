@@ -14,18 +14,16 @@ services:
     volumes:
       - temporal_pg_data:/var/lib/postgresql/data
     networks:
-      temporal-network:
-        aliases:
-          - postgresql
+      - temporal-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U temporal -d temporal || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   temporal:
     container_name: temporal
-    image: temporalio/auto-setup:1.25
+    image: temporalio/auto-setup:1.25.0
     restart: unless-stopped
     depends_on:
       postgresql:
@@ -36,31 +34,9 @@ services:
       - POSTGRES_USER=temporal
       - POSTGRES_PWD=temporal
       - POSTGRES_SEEDS=postgresql
-      - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/config/dynamicconfig/development-sql.yaml
-      - TEMPORAL_ADDRESS=0.0.0.0:7233
+      - BIND_ON_IP=0.0.0.0
     ports:
       - "7233:7233"
-    volumes:
-      - ./dynamicconfig:/etc/temporal/config/dynamicconfig:ro
-    networks:
-      - temporal-network
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:7233/ || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  temporal-admin-tools:
-    container_name: temporal-admin-tools
-    image: temporalio/admin-tools:1.25
-    restart: unless-stopped
-    depends_on:
-      temporal:
-        condition: service_healthy
-    environment:
-      - TEMPORAL_ADDRESS=temporal:7233
-    stdin_open: true
-    tty: true
     networks:
       - temporal-network
 
@@ -69,24 +45,14 @@ services:
     image: temporalio/ui:2.26.2
     restart: unless-stopped
     depends_on:
-      temporal:
-        condition: service_healthy
+      - temporal
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_CORS_ORIGINS=http://localhost:8080,http://127.0.0.1:8080
-      - TEMPORAL_CSRF_ENABLED=true
-      - TEMPORAL_UI_CONFIG_PATH=/etc/temporal-ui/config.yaml
-    volumes:
-      - ./temporal-ui-config/config.yaml:/etc/temporal-ui/config.yaml:ro
+      - TEMPORAL_CORS_ORIGINS=http://localhost:8080
     ports:
       - "8080:8080"
     networks:
       - temporal-network
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/ || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
 volumes:
   temporal_pg_data:
