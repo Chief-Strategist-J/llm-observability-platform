@@ -6,15 +6,15 @@ A comprehensive Python-based observability platform for Large Language Models (L
 
 Our platform features a modern, responsive web interface for interacting with LLM models. The interface includes advanced visualization and chat capabilities.
 
-### 3D Discussion UI
-
-![3D Discussion UI](./assets/3d-all-descussion-ui.png)
-*Interactive 3D visualization of chat discussions*
-
-### Detailed Chat View
-
-![Chat Discussion Detailed](./assets/chat-discussion-detailed.png)
-*Detailed view of chat conversations with rich formatting*
+<div align="center">
+  <h3>3D Discussion Interface</h3>
+  <img src="./assets/3d-all-descussion-ui.png" alt="3D Discussion Interface" width="800" />
+  <p>Interactive 3D visualization of chat discussions showing conversation flow and relationships</p>
+  
+  <h3>Chat Interface</h3>
+  <img src="./assets/chat-discussion-detailed.png" alt="Chat Interface" width="800" />
+  <p>Feature-rich chat interface with message threading, markdown support, and context-aware suggestions</p>
+</div>
 
 ## Features
 
