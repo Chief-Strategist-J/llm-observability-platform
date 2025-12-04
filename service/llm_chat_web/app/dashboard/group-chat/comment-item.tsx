@@ -64,17 +64,32 @@ export function CommentItem({ comment, depth = 0, onReply, onDelete, onVote }: C
         }
     }
 
+    // Limit visual nesting depth to prevent content from becoming too narrow
+    const MAX_VISUAL_DEPTH = 7
+    const visualDepth = Math.min(depth, MAX_VISUAL_DEPTH)
+    const isDeepNested = depth > MAX_VISUAL_DEPTH
+
     return (
-        <div className={depth > 0 ? "ml-8 border-l-2 border-border pl-4" : ""} id={`comment-${comment.id}`}>
-            <div className="flex gap-3 py-3">
-                <Avatar className="h-8 w-8 flex-shrink-0">
+        <div className={visualDepth > 0 ? "ml-4 sm:ml-6 border-l-2 border-muted pl-3 sm:pl-4" : ""} id={`comment-${comment.id}`}>
+            <div className="flex gap-3 py-3 px-2 rounded-lg hover:bg-muted/30 transition-all duration-200 group">
+                <Avatar className="h-8 w-8 flex-shrink-0 ring-2 ring-transparent group-hover:ring-primary/20 transition-all">
                     <AvatarImage src={comment.avatar} />
-                    <AvatarFallback>{comment.author[0]}</AvatarFallback>
+                    <AvatarFallback className="bg-gradient-to-br from-slate-600 to-slate-700 dark:from-slate-400 dark:to-slate-500 text-white text-xs">{comment.author[0]}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0 space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-sm">{comment.author}</span>
                         <span className="text-xs text-muted-foreground">{comment.time}</span>
+                        {isOwnComment && (
+                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                                You
+                            </span>
+                        )}
+                        {isDeepNested && (
+                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+                                Level {depth}
+                            </span>
+                        )}
                     </div>
                     <div className="break-words whitespace-pre-wrap max-w-full">
                         <p className="text-sm leading-relaxed">{comment.content}</p>

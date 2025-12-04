@@ -1,24 +1,43 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2 } from "lucide-react"
-import { CommentItem } from "./comment-item"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog"
+import { Plus, MessageSquare, TrendingUp, Flame, Clock, Star, Filter, Loader2, Heart, MessageCircle, Share2 } from "lucide-react"
 import { groupChatApi, type Comment } from "@/utils/api/group-chat-client"
-import { GroupChat3DVisualizer } from "./visualizer-3d"
+import GroupChat3DTree from "./visualizer-3d"
+import { EmptyState } from "./components/empty-state"
+import { LoadingState } from "./components/loading-state"
+import { DiscussionCard } from "./components/discussion-card"
 
 export default function GroupChatPage() {
+    const router = useRouter()
     const [discussions, setDiscussions] = useState<Comment[]>([])
-    const [newPost, setNewPost] = useState("")
+    const [newDiscussionTitle, setNewDiscussionTitle] = useState("")
+    const [newDiscussionContent, setNewDiscussionContent] = useState("")
     const [loading, setLoading] = useState(true)
     const [posting, setPosting] = useState(false)
+    const [isNewDiscussionOpen, setIsNewDiscussionOpen] = useState(false)
+    const [activeTab, setActiveTab] = useState("all")
 
-    // Fetch discussions on mount
     useEffect(() => {
         const fetchDiscussions = async () => {
             try {
@@ -33,14 +52,13 @@ export default function GroupChatPage() {
                         avatar: disc.avatar,
                         time: disc.time,
                         content: disc.content,
+                        title: disc.title,
                         upvotes: disc.upvotes,
                         downvotes: disc.downvotes,
                         userVote: disc.userVote,
                         replies: disc.replies || []
                     }))
                     setDiscussions(mappedDiscussions)
-                } else {
-                    console.error('Failed to load discussions')
                 }
             } catch (error) {
                 console.error('Error fetching discussions:', error)
@@ -52,14 +70,15 @@ export default function GroupChatPage() {
         fetchDiscussions()
     }, [])
 
-    const handlePost = async () => {
-        if (newPost.trim() && !posting) {
+    const handleCreateNewDiscussion = async () => {
+        if (newDiscussionContent.trim() && !posting) {
             setPosting(true)
             try {
                 const data = await groupChatApi.createDiscussion({
                     author: 'You',
                     avatar: '/avatars/shadcn.jpg',
-                    content: newPost
+                    content: newDiscussionContent,
+                    title: newDiscussionTitle.trim() || undefined
                 })
 
                 if (data.success) {
@@ -69,16 +88,17 @@ export default function GroupChatPage() {
                         author: "You",
                         avatar: "/avatars/shadcn.jpg",
                         time: "Just now",
-                        content: newPost,
+                        content: newDiscussionContent,
+                        title: data.discussion.title,
                         upvotes: 0,
                         downvotes: 0,
                         userVote: null,
                         replies: []
                     }
                     setDiscussions([newDiscussion, ...discussions])
-                    setNewPost("")
-                } else {
-                    console.error('Failed to create discussion')
+                    setNewDiscussionTitle("")
+                    setNewDiscussionContent("")
+                    setIsNewDiscussionOpen(false)
                 }
             } catch (error) {
                 console.error('Error creating discussion:', error)
@@ -88,205 +108,246 @@ export default function GroupChatPage() {
         }
     }
 
-    const handleReply = async (parentId: number, content: string) => {
-        try {
-            const parent = discussions.find(d => d.id === parentId)
-            if (!parent || !parent._id) return
-
-            const data = await groupChatApi.addReply(parent._id, {
-                author: 'You',
-                avatar: '/avatars/shadcn.jpg',
-                content
-            })
-
-            if (data.success) {
-                const addReplyToComment = (comments: Comment[]): Comment[] => {
-                    return comments.map(comment => {
-                        if (comment.id === parentId) {
-                            const newReply: Comment = {
-                                id: Date.now(),
-                                author: "You",
-                                avatar: "/avatars/shadcn.jpg",
-                                time: "Just now",
-                                content: content,
-                                upvotes: 0,
-                                downvotes: 0,
-                                userVote: null,
-                            }
-                            return {
-                                ...comment,
-                                replies: [...(comment.replies || []), newReply]
-                            }
-                        }
-                        if (comment.replies) {
-                            return {
-                                ...comment,
-                                replies: addReplyToComment(comment.replies)
-                            }
-                        }
-                        return comment
-                    })
-                }
-
-                setDiscussions(addReplyToComment(discussions))
-            } else {
-                console.error('Failed to add reply')
+    const countReplies = (comment: Comment): number => {
+        let count = 0
+        if (comment.replies && comment.replies.length > 0) {
+            for (const reply of comment.replies) {
+                count += 1 + countReplies(reply)
             }
-        } catch (error) {
-            console.error('Error adding reply:', error)
         }
+        return count
     }
 
-    const handleDelete = async (commentId: number) => {
-        try {
-            const comment = discussions.find(d => d.id === commentId)
-            if (!comment || !comment._id) return
-
-            const data = await groupChatApi.deleteDiscussion(comment._id)
-
-            if (data.success) {
-                const deleteComment = (comments: Comment[]): Comment[] => {
-                    return comments.filter(comment => {
-                        if (comment.id === commentId) {
-                            return false
-                        }
-                        if (comment.replies) {
-                            comment.replies = deleteComment(comment.replies)
-                        }
-                        return true
-                    })
-                }
-
-                setDiscussions(deleteComment(discussions))
-            } else {
-                console.error('Failed to delete comment')
-            }
-        } catch (error) {
-            console.error('Error deleting comment:', error)
-        }
+    const navigateToDiscussion = (discussionId: string | number) => {
+        router.push(`/dashboard/group-chat/${discussionId}`)
     }
 
-    const handleVote = async (commentId: number, voteType: 'up' | 'down') => {
-        try {
-            const comment = discussions.find(d => d.id === commentId)
-            if (!comment || !comment._id) return
+    const trendingDiscussions = useMemo(() => {
+        return [...discussions]
+            .map(d => ({
+                ...d,
+                engagement: d.upvotes + d.downvotes + countReplies(d)
+            }))
+            .sort((a, b) => b.engagement - a.engagement)
+            .slice(0, 5)
+    }, [discussions])
 
-            const data = await groupChatApi.voteDiscussion(
-                comment._id,
-                voteType,
-                comment.userVote || null
-            )
+    const recentDiscussions = useMemo(() => {
+        return [...discussions].slice(0, 5)
+    }, [discussions])
 
-            if (data.success && data.discussion) {
-                const updateVote = (comments: Comment[]): Comment[] => {
-                    return comments.map(c => {
-                        if (c.id === commentId) {
-                            return {
-                                ...c,
-                                upvotes: data.discussion.upvotes,
-                                downvotes: data.discussion.downvotes,
-                                userVote: data.discussion.userVote
-                            }
-                        }
-                        if (c.replies) {
-                            return {
-                                ...c,
-                                replies: updateVote(c.replies)
-                            }
-                        }
-                        return c
-                    })
-                }
+    const totalReplies = useMemo(() => {
+        return discussions.reduce((acc, d) => acc + countReplies(d), 0)
+    }, [discussions])
 
-                setDiscussions(updateVote(discussions))
-            } else {
-                console.error('Failed to update vote')
-            }
-        } catch (error) {
-            console.error('Error updating vote:', error)
+    const filteredDiscussions = useMemo(() => {
+        if (activeTab === "trending") {
+            return trendingDiscussions
+        } else if (activeTab === "recent") {
+            return recentDiscussions
         }
-    }
+        return discussions
+    }, [activeTab, discussions, trendingDiscussions, recentDiscussions])
 
     return (
-        <div className="flex flex-1 flex-col h-screen">
-            <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+        <div className="flex flex-1 flex-col h-screen bg-background">
+            <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
                 <SidebarTrigger className="-ml-1" />
                 <Separator orientation="vertical" className="mr-2 h-4" />
-                <h1 className="text-lg font-semibold">Community Discussions</h1>
-                <div className="ml-auto">
-                    <GroupChat3DVisualizer discussions={discussions} />
+                <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary/20 via-primary/10 to-transparent flex items-center justify-center ring-1 ring-primary/10">
+                        <MessageSquare className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                        <h1 className="text-lg font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                            Community Discussions
+                        </h1>
+                        <p className="text-xs text-muted-foreground">
+                            {discussions.length} discussions • {totalReplies} replies
+                        </p>
+                    </div>
+                </div>
+                <div className="ml-auto flex items-center gap-2">
+                    <Dialog open={isNewDiscussionOpen} onOpenChange={setIsNewDiscussionOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="shadow-sm">
+                                <Plus className="h-4 w-4 mr-2" />
+                                New Discussion
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[500px]">
+                            <DialogHeader>
+                                <DialogTitle>Start a New Discussion</DialogTitle>
+                                <DialogDescription>
+                                    Share your thoughts with the community
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                    <label htmlFor="title" className="text-sm font-medium">
+                                        Title (optional)
+                                    </label>
+                                    <Input
+                                        id="title"
+                                        placeholder="Give your discussion a title..."
+                                        value={newDiscussionTitle}
+                                        onChange={(e) => setNewDiscussionTitle(e.target.value)}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <label htmlFor="content" className="text-sm font-medium">
+                                        Content
+                                    </label>
+                                    <Textarea
+                                        id="content"
+                                        placeholder="What's on your mind?"
+                                        value={newDiscussionContent}
+                                        onChange={(e) => setNewDiscussionContent(e.target.value)}
+                                        className="min-h-[120px]"
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setIsNewDiscussionOpen(false)}>
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handleCreateNewDiscussion}
+                                    disabled={!newDiscussionContent.trim() || posting}
+                                >
+                                    {posting ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                            Creating...
+                                        </>
+                                    ) : (
+                                        'Create Discussion'
+                                    )}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                    <GroupChat3DTree discussions={discussions} />
                 </div>
             </header>
 
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 overflow-hidden">
-                <div className="lg:col-span-2 flex flex-col min-h-0">
-                    <Card className="mb-4 p-4 flex-shrink-0">
-                        <Textarea
-                            placeholder="Start a discussion..."
-                            value={newPost}
-                            onChange={(e) => setNewPost(e.target.value)}
-                            className="min-h-[100px] resize-y"
-                            style={{ maxHeight: '300px' }}
-                            disabled={posting}
-                        />
-                        <div className="flex justify-end mt-2">
-                            <Button onClick={handlePost} disabled={posting}>
-                                {posting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Posting...</> : 'Post'}
-                            </Button>
-                        </div>
-                    </Card>
+            <div className="flex-1 flex overflow-hidden">
+                <main className="flex-1 flex flex-col min-h-0">
+                    <div className="border-b bg-muted/20 px-4 py-3">
+                        <Tabs value={activeTab} onValueChange={setActiveTab}>
+                            <TabsList className="bg-muted/50">
+                                <TabsTrigger value="all" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                                    <Filter className="h-3.5 w-3.5" />
+                                    All
+                                </TabsTrigger>
+                                <TabsTrigger value="trending" className="gap-2 data-[state=active]:bg-amber-600 data-[state=active]:text-white">
+                                    <Flame className="h-3.5 w-3.5" />
+                                    Trending
+                                </TabsTrigger>
+                                <TabsTrigger value="recent" className="gap-2 data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
+                                    <Clock className="h-3.5 w-3.5" />
+                                    Recent
+                                </TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+                    </div>
 
                     <ScrollArea className="flex-1">
-                        {loading ? (
-                            <div className="flex items-center justify-center h-full">
-                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                            </div>
-                        ) : (
-                            <Card className="divide-y">
-                                {discussions.map((discussion) => (
-                                    <div key={discussion.id} className="break-inside-avoid">
-                                        <CommentItem
-                                            comment={discussion}
-                                            onReply={handleReply}
-                                            onDelete={handleDelete}
-                                            onVote={handleVote}
-                                        />
-                                    </div>
-                                ))}
-                            </Card>
-                        )}
-                    </ScrollArea>
-                </div>
+                        <div className="max-w-4xl mx-auto p-4">
+                            {loading ? (
+                                <LoadingState message="Loading discussions..." />
+                            ) : filteredDiscussions.length === 0 ? (
+                                <EmptyState
+                                    icon={MessageSquare}
+                                    title="No discussions yet"
+                                    description="Be the first to start a conversation! Share your ideas with the community."
+                                    actionLabel="Start First Discussion"
+                                    onAction={() => setIsNewDiscussionOpen(true)}
+                                />
+                            ) : (
+                                <div className="space-y-3">
+                                    {filteredDiscussions.map((discussion) => {
+                                        const replyCount = countReplies(discussion)
+                                        const totalEngagement = discussion.upvotes + discussion.downvotes + replyCount
+                                        const isTrending = totalEngagement > 5
 
-                <div className="hidden lg:block space-y-4">
-                    <Card className="p-4">
-                        <h3 className="font-semibold mb-3">Trending Topics</h3>
-                        <div className="space-y-2">
-                            <div className="p-2 rounded-lg hover:bg-accent cursor-pointer transition-colors">
-                                <p className="font-medium text-sm">#ReactBestPractices</p>
-                                <p className="text-xs text-muted-foreground">1.2k posts</p>
-                            </div>
-                            <div className="p-2 rounded-lg hover:bg-accent cursor-pointer transition-colors">
-                                <p className="font-medium text-sm">#WebDevelopment</p>
-                                <p className="text-xs text-muted-foreground">856 posts</p>
-                            </div>
-                            <div className="p-2 rounded-lg hover:bg-accent cursor-pointer transition-colors">
-                                <p className="font-medium text-sm">#NextJS</p>
-                                <p className="text-xs text-muted-foreground">643 posts</p>
-                            </div>
+                                        return (
+                                            <DiscussionCard
+                                                key={discussion.id}
+                                                discussion={discussion}
+                                                replyCount={replyCount}
+                                                isTrending={isTrending}
+                                                onClick={() => navigateToDiscussion(discussion._id || discussion.id)}
+                                            />
+                                        )
+                                    })}
+                                </div>
+                            )}
                         </div>
-                    </Card>
+                    </ScrollArea>
+                </main>
 
-                    <Card className="p-4">
-                        <h3 className="font-semibold mb-3">Community Rules</h3>
-                        <ul className="space-y-2 text-sm text-muted-foreground">
-                            <li>1. Be respectful</li>
-                            <li>2. No spam or self-promotion</li>
-                            <li>3. Stay on topic</li>
-                            <li>4. Help others learn</li>
-                        </ul>
-                    </Card>
-                </div>
+                <aside className="hidden xl:flex w-80 flex-col border-l bg-muted/20">
+                    <div className="p-4 border-b">
+                        <h2 className="font-semibold text-sm flex items-center gap-2">
+                            <Star className="h-4 w-4 text-primary" />
+                            Community Stats
+                        </h2>
+                    </div>
+                    <ScrollArea className="flex-1">
+                        <div className="p-4 space-y-4">
+                            <Card>
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-sm font-medium">Overview</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">Discussions</span>
+                                        <span className="font-semibold">{discussions.length}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">Total Replies</span>
+                                        <span className="font-semibold">{totalReplies}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">Active Users</span>
+                                        <span className="font-semibold">{new Set(discussions.map(d => d.author)).size}</span>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {trendingDiscussions.length > 0 && (
+                                <Card>
+                                    <CardHeader className="pb-3">
+                                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                            <TrendingUp className="h-4 w-4" />
+                                            Top Discussions
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3">
+                                        {trendingDiscussions.slice(0, 3).map((disc, idx) => (
+                                            <div
+                                                key={disc.id}
+                                                className="flex gap-2 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors"
+                                                onClick={() => navigateToDiscussion(disc._id || disc.id)}
+                                            >
+                                                <span className="text-lg font-bold text-muted-foreground/50">#{idx + 1}</span>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-medium line-clamp-2">
+                                                        {disc.title || disc.content}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                        {(disc as any).engagement} interactions
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
+                    </ScrollArea>
+                </aside>
             </div>
         </div>
     )

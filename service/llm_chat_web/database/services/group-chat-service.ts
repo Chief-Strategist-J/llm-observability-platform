@@ -10,6 +10,7 @@ export interface Discussion {
     avatar: string
     time: string
     content: string
+    title?: string
     upvotes: number
     downvotes: number
     userVote?: 'up' | 'down' | null
@@ -97,6 +98,7 @@ export const createDiscussion = async (discussion: Omit<Discussion, '_id' | 'cre
         const discussionWithTimestamp = {
             ...discussion,
             id: discussion.id ?? createNumericId(),
+            title: discussion.title || `Discussion by ${discussion.author}`,
             createdAt: new Date()
         }
         const id = await client.insertOne(COLLECTION_NAME, discussionWithTimestamp)
@@ -111,31 +113,63 @@ export const createDiscussion = async (discussion: Omit<Discussion, '_id' | 'cre
     }
 }
 
-export const addReply = async (parentId: string, reply: Omit<Discussion, '_id' | 'createdAt'>): Promise<number> => {
+export const addReply = async (parentId: string, reply: Omit<Discussion, '_id' | 'createdAt'>): Promise<{ count: number; reply: Discussion }> => {
     try {
         log.debug('group_chat_service_add_reply_start', { parentId })
         const client = await getDbClient()
 
-        // Find the parent discussion
-        const parent = await client.findOne(COLLECTION_NAME, { _id: resolveMongoId(parentId) })
-        if (!parent) {
+        let createdReply: Discussion | null = null
+
+        const addReplyToNode = (discussion: any): boolean => {
+            if (discussion._id?.toString() === parentId || discussion._id === parentId) {
+                if (!discussion.replies) discussion.replies = []
+                const replyWithTimestamp = {
+                    ...reply,
+                    _id: new ObjectId().toString(),
+                    id: reply.id ?? createNumericId(),
+                    createdAt: new Date(),
+                    replies: []
+                }
+                discussion.replies.push(replyWithTimestamp)
+                createdReply = replyWithTimestamp
+                return true
+            }
+
+            if (discussion.replies && discussion.replies.length > 0) {
+                for (const nestedReply of discussion.replies) {
+                    if (addReplyToNode(nestedReply)) {
+                        return true
+                    }
+                }
+            }
+
+            return false
+        }
+
+        const discussions = await client.findMany(COLLECTION_NAME, {}, 100)
+        let updated = false
+        let topLevelId: any = null
+
+        for (const discussion of discussions) {
+            const discussionCopy = JSON.parse(JSON.stringify(discussion))
+            if (addReplyToNode(discussionCopy)) {
+                await client.updateOne(
+                    COLLECTION_NAME,
+                    { _id: discussion._id },
+                    { replies: discussionCopy.replies }
+                )
+                updated = true
+                topLevelId = discussion._id
+                break
+            }
+        }
+
+        if (!updated || !createdReply) {
             throw new Error('Parent discussion not found')
         }
 
-        // Add reply with timestamp
-        const replyWithTimestamp = {
-            ...reply,
-            _id: new ObjectId().toString(),
-            id: reply.id ?? createNumericId(),
-            createdAt: new Date()
-        }
-
-        const replies = parent.replies || []
-        replies.push(replyWithTimestamp)
-
-        const count = await client.updateOne(COLLECTION_NAME, { _id: resolveMongoId(parentId) }, { replies })
-        log.info('group_chat_service_add_reply_success', { parentId, count })
-        return count
+        log.info('group_chat_service_add_reply_success', { parentId, topLevelId })
+        return { count: 1, reply: normalizeDiscussion(createdReply) }
     } catch (error) {
         log.error('group_chat_service_add_reply_error', { error: String(error) })
         throw error
@@ -160,51 +194,127 @@ export const voteDiscussion = async (id: string, voteType: 'up' | 'down', curren
         log.debug('group_chat_service_vote_discussion_start', { id, voteType })
         const client = await getDbClient()
 
-        // Find the discussion
-        const discussion = await client.findOne(COLLECTION_NAME, { _id: resolveMongoId(id) })
-        if (!discussion) {
+        const updateVoteInNode = (discussion: any): boolean => {
+            if (discussion._id?.toString() === id || discussion._id === id) {
+                let upvotes = discussion.upvotes || 0
+                let downvotes = discussion.downvotes || 0
+                let userVote: 'up' | 'down' | null = null
+
+                if (currentUserVote === voteType) {
+                    if (voteType === 'up') {
+                        upvotes -= 1
+                    } else {
+                        downvotes -= 1
+                    }
+                    userVote = null
+                } else {
+                    if (currentUserVote === 'up') {
+                        upvotes -= 1
+                    } else if (currentUserVote === 'down') {
+                        downvotes -= 1
+                    }
+
+                    if (voteType === 'up') {
+                        upvotes += 1
+                    } else {
+                        downvotes += 1
+                    }
+                    userVote = voteType
+                }
+
+                discussion.upvotes = upvotes
+                discussion.downvotes = downvotes
+                discussion.userVote = userVote
+                return true
+            }
+
+            if (discussion.replies && discussion.replies.length > 0) {
+                for (const reply of discussion.replies) {
+                    if (updateVoteInNode(reply)) {
+                        return true
+                    }
+                }
+            }
+
+            return false
+        }
+
+        const topLevel = await client.findOne(COLLECTION_NAME, { _id: resolveMongoId(id) })
+
+        if (topLevel) {
+            let upvotes = topLevel.upvotes || 0
+            let downvotes = topLevel.downvotes || 0
+            let userVote: 'up' | 'down' | null = null
+
+            if (currentUserVote === voteType) {
+                if (voteType === 'up') {
+                    upvotes -= 1
+                } else {
+                    downvotes -= 1
+                }
+                userVote = null
+            } else {
+                if (currentUserVote === 'up') {
+                    upvotes -= 1
+                } else if (currentUserVote === 'down') {
+                    downvotes -= 1
+                }
+
+                if (voteType === 'up') {
+                    upvotes += 1
+                } else {
+                    downvotes += 1
+                }
+                userVote = voteType
+            }
+
+            await client.updateOne(COLLECTION_NAME, { _id: resolveMongoId(id) }, { upvotes, downvotes, userVote })
+            log.info('group_chat_service_vote_discussion_success', { id, upvotes, downvotes })
+
+            return normalizeDiscussion({
+                ...topLevel,
+                upvotes,
+                downvotes,
+                userVote,
+                _id: normalizeMongoId(id)
+            } as Discussion)
+        }
+
+        const discussions = await client.findMany(COLLECTION_NAME, {}, 100)
+        let updated = false
+        let updatedDiscussion: any = null
+
+        for (const discussion of discussions) {
+            const discussionCopy = JSON.parse(JSON.stringify(discussion))
+            if (updateVoteInNode(discussionCopy)) {
+                await client.updateOne(
+                    COLLECTION_NAME,
+                    { _id: discussion._id },
+                    { replies: discussionCopy.replies }
+                )
+                updated = true
+
+                const findUpdated = (node: any): any => {
+                    if (node._id?.toString() === id || node._id === id) return node
+                    if (node.replies) {
+                        for (const reply of node.replies) {
+                            const found = findUpdated(reply)
+                            if (found) return found
+                        }
+                    }
+                    return null
+                }
+                updatedDiscussion = findUpdated(discussionCopy)
+                break
+            }
+        }
+
+        if (!updated || !updatedDiscussion) {
             throw new Error('Discussion not found')
         }
 
-        let upvotes = discussion.upvotes || 0
-        let downvotes = discussion.downvotes || 0
-        let userVote: 'up' | 'down' | null = null
-
-        // Handle vote logic
-        if (currentUserVote === voteType) {
-            // Removing vote
-            if (voteType === 'up') {
-                upvotes -= 1
-            } else {
-                downvotes -= 1
-            }
-            userVote = null
-        } else {
-            // Changing or adding vote
-            if (currentUserVote === 'up') {
-                upvotes -= 1
-            } else if (currentUserVote === 'down') {
-                downvotes -= 1
-            }
-
-            if (voteType === 'up') {
-                upvotes += 1
-            } else {
-                downvotes += 1
-            }
-            userVote = voteType
-        }
-
-        await client.updateOne(COLLECTION_NAME, { _id: resolveMongoId(id) }, { upvotes, downvotes, userVote })
-        log.info('group_chat_service_vote_discussion_success', { id, upvotes, downvotes })
-
-        return normalizeDiscussion({
-            ...discussion,
-            upvotes,
-            downvotes,
-            userVote,
-            _id: normalizeMongoId(id)
-        } as Discussion)
+        log.info('group_chat_service_vote_discussion_success', { id, upvotes: updatedDiscussion.upvotes, downvotes: updatedDiscussion.downvotes })
+        return normalizeDiscussion(updatedDiscussion)
     } catch (error) {
         log.error('group_chat_service_vote_discussion_error', { error: String(error) })
         throw error
@@ -215,7 +325,46 @@ export const deleteDiscussion = async (id: string): Promise<number> => {
     try {
         log.debug('group_chat_service_delete_discussion_start', { id })
         const client = await getDbClient()
-        const count = await client.deleteOne(COLLECTION_NAME, { _id: resolveMongoId(id) })
+
+        const topLevelCount = await client.deleteOne(COLLECTION_NAME, { _id: resolveMongoId(id) })
+
+        if (topLevelCount > 0) {
+            log.info('group_chat_service_delete_discussion_success', { id, count: topLevelCount })
+            return topLevelCount
+        }
+
+        const deleteFromNode = (discussion: any): boolean => {
+            if (!discussion.replies || discussion.replies.length === 0) return false
+
+            const initialLength = discussion.replies.length
+            discussion.replies = discussion.replies.filter((reply: any) => {
+                if (reply._id?.toString() === id || reply._id === id) {
+                    return false
+                }
+                deleteFromNode(reply)
+                return true
+            })
+
+            return discussion.replies.length < initialLength
+        }
+
+        const discussions = await client.findMany(COLLECTION_NAME, {}, 100)
+        let deleted = false
+
+        for (const discussion of discussions) {
+            const discussionCopy = JSON.parse(JSON.stringify(discussion))
+            if (deleteFromNode(discussionCopy)) {
+                await client.updateOne(
+                    COLLECTION_NAME,
+                    { _id: discussion._id },
+                    { replies: discussionCopy.replies }
+                )
+                deleted = true
+                break
+            }
+        }
+
+        const count = deleted ? 1 : 0
         log.info('group_chat_service_delete_discussion_success', { id, count })
         return count
     } catch (error) {
