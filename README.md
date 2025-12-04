@@ -2,6 +2,20 @@
 
 A comprehensive Python-based observability platform for Large Language Models (LLMs) with chat interface, container orchestration, monitoring, and advanced analytics capabilities.
 
+## LLM Web Interface
+
+Our platform features a modern, responsive web interface for interacting with LLM models. The interface includes advanced visualization and chat capabilities.
+
+### 3D Discussion UI
+
+![3D Discussion UI](./assets/3d-all-descussion-ui.png)
+*Interactive 3D visualization of chat discussions*
+
+### Detailed Chat View
+
+![Chat Discussion Detailed](./assets/chat-discussion-detailed.png)
+*Detailed view of chat conversations with rich formatting*
+
 ## Features
 
 - **Interactive Chat Interface**: Streamlit-based web UI for chatting with LLM models
