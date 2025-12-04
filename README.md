@@ -12,7 +12,7 @@ Our platform features a modern, responsive web interface for interacting with LL
   <p>Interactive 3D visualization of chat discussions showing conversation flow and relationships</p>
   
   <h3>Chat Interface</h3>
-  <img src="./assets/chat-discussion-detailed.png" alt="Chat Interface" width="800" />
+  <img src="./assets/chat-descussion-detailed.png" alt="Chat Interface" width="800" />
   <p>Feature-rich chat interface with message threading, markdown support, and context-aware suggestions</p>
 </div>
 
