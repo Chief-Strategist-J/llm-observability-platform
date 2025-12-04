@@ -49,9 +49,42 @@ llm-chatbot-python/
 
 ### Prerequisites
 
-- Python 3.12+ with virtual environment
+- Python 3.10+
 - Docker and Docker Compose
-- Access to LLM APIs (Cloudflare Workers AI recommended)
+- MongoDB (see setup below)
+
+### MongoDB Setup
+
+1. **Create Docker Networks** (if they don't exist):
+   ```bash
+   docker network create --driver bridge observability-network || true
+   docker network create --driver bridge data-network || true
+   docker network create --driver bridge messaging-network || true
+   docker network create --driver bridge cicd-network || true
+   docker network create --driver bridge temporal-network || true
+   ```
+
+2. **Copy environment template**:
+   ```bash
+   cp .env.template .env
+   ```
+
+3. **Start MongoDB**:
+   ```bash
+   python infrastructure/orchestrator/trigger/setup/start_mongodb.py
+   ```
+
+4. **Setup Service Worker**:
+   ```bash
+   python infrastructure/orchestrator/workers/service_setup_worker.py
+   ```
+
+5. **Access MongoDB**:
+   - **Mongo Express**: https://scaibu.mongoexpress/
+     - Username: admin
+     - Password: MongoExpressPassword123!
+
+
 
 ### Infrastructure Setup
 
