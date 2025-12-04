@@ -5,6 +5,7 @@ export interface Comment {
     avatar: string
     time: string
     content: string
+    title?: string
     upvotes: number
     downvotes: number
     userVote?: 'up' | 'down' | null
@@ -23,23 +24,25 @@ export interface DiscussionResponse {
     error?: string
 }
 
+export interface ReplyResponse {
+    success: boolean
+    count: number
+    reply?: Comment
+    error?: string
+}
+
 export const groupChatApi = {
-    /**
-     * Fetch all discussions
-     */
     async getDiscussions(): Promise<DiscussionsResponse> {
         const response = await fetch('/api/group-chat')
         return response.json()
     },
 
-    /**
-     * Create a new discussion
-     */
     async createDiscussion(data: {
         author: string
         avatar?: string
         time?: string
         content: string
+        title?: string
     }): Promise<DiscussionResponse> {
         const response = await fetch('/api/group-chat', {
             method: 'POST',
@@ -51,6 +54,7 @@ export const groupChatApi = {
                 avatar: data.avatar || '/avatars/shadcn.jpg',
                 time: data.time || 'Just now',
                 content: data.content,
+                title: data.title,
                 upvotes: 0,
                 downvotes: 0,
                 userVote: null,
@@ -60,15 +64,12 @@ export const groupChatApi = {
         return response.json()
     },
 
-    /**
-     * Add a reply to a discussion
-     */
     async addReply(discussionId: string, data: {
         author: string
         avatar?: string
         time?: string
         content: string
-    }): Promise<{ success: boolean; count: number; error?: string }> {
+    }): Promise<ReplyResponse> {
         const response = await fetch(`/api/group-chat/${discussionId}`, {
             method: 'POST',
             headers: {
@@ -84,9 +85,6 @@ export const groupChatApi = {
         return response.json()
     },
 
-    /**
-     * Vote on a discussion
-     */
     async voteDiscussion(
         discussionId: string,
         voteType: 'up' | 'down',
@@ -105,9 +103,6 @@ export const groupChatApi = {
         return response.json()
     },
 
-    /**
-     * Delete a discussion
-     */
     async deleteDiscussion(discussionId: string): Promise<{ success: boolean; count: number; error?: string }> {
         const response = await fetch(`/api/group-chat/${discussionId}`, {
             method: 'DELETE'

@@ -3,11 +3,11 @@ import { updateDiscussion, deleteDiscussion, addReply, voteDiscussion } from '@/
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const body = await request.json()
-        const { id } = params
+        const { id } = await params
         const { author, avatar, content, time } = body
 
         if (!author || !content) {
@@ -17,7 +17,7 @@ export async function POST(
             )
         }
 
-        const count = await addReply(id, {
+        const result = await addReply(id, {
             author,
             avatar: avatar || '/avatars/shadcn.jpg',
             time: time || 'Just now',
@@ -28,7 +28,7 @@ export async function POST(
             replies: []
         })
 
-        return NextResponse.json({ success: true, count }, { status: 201 })
+        return NextResponse.json({ success: true, ...result }, { status: 201 })
     } catch (error) {
         console.error('POST /api/group-chat/[id] error:', error)
         return NextResponse.json(
@@ -40,11 +40,11 @@ export async function POST(
 
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const body = await request.json()
-        const { id } = params
+        const { id } = await params
         const { voteType, currentUserVote, ...updates } = body
 
         // If it's a vote request
@@ -75,10 +75,10 @@ export async function PUT(
 
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = params
+        const { id } = await params
         const count = await deleteDiscussion(id)
 
         if (count === 0) {

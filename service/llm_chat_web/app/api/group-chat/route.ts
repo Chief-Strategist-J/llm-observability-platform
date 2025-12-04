@@ -17,7 +17,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
-        const { author, avatar, time, content, upvotes = 0, downvotes = 0, userVote = null, replies = [] } = body
+        const { author, avatar, time, content, title, upvotes = 0, downvotes = 0, userVote = null, replies = [] } = body
 
         if (!author || !content) {
             return NextResponse.json(
@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
             avatar: avatar || '/avatars/shadcn.jpg',
             time: time || 'Just now',
             content,
+            title,
             upvotes,
             downvotes,
             userVote,
