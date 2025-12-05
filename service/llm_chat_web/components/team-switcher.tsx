@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { ChevronsUpDown, Plus } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { ChevronsUpDown, Plus, type LucideIcon } from "lucide-react"
 
 import {
     DropdownMenu,
@@ -19,17 +20,28 @@ import {
     useSidebar,
 } from "@/components/ui/sidebar"
 
-export function TeamSwitcher({
-    teams,
-}: {
-    teams: {
-        name: string
-        logo: React.ElementType
-        plan: string
-    }[]
-}) {
+interface Team {
+    name: string
+    logo: LucideIcon
+    plan: string
+}
+
+export function TeamSwitcher({ teams }: { teams: Team[] }) {
+    const router = useRouter()
     const { isMobile } = useSidebar()
-    const [activeTeam, setActiveTeam] = React.useState(teams[0])
+    const [activeTeam, setActiveTeam] = React.useState<Team | null>(teams[0] || null)
+
+    React.useEffect(() => {
+        if (teams.length > 0 && (!activeTeam || teams[0].name !== activeTeam.name)) {
+            setActiveTeam(teams[0])
+        }
+    }, [teams, activeTeam])
+
+    if (!activeTeam) {
+        return null
+    }
+
+    const Logo = activeTeam.logo
 
     return (
         <SidebarMenu>
@@ -39,9 +51,10 @@ export function TeamSwitcher({
                         <SidebarMenuButton
                             size="lg"
                             className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                            suppressHydrationWarning
                         >
                             <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                                <activeTeam.logo className="size-4" />
+                                <Logo className="size-4" />
                             </div>
                             <div className="grid flex-1 text-left text-sm leading-tight">
                                 <span className="truncate font-semibold">
@@ -53,33 +66,39 @@ export function TeamSwitcher({
                         </SidebarMenuButton>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
-                        className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+                        className="min-w-56 rounded-lg bg-slate-900 border-slate-700"
                         align="start"
                         side={isMobile ? "bottom" : "right"}
                         sideOffset={4}
                     >
-                        <DropdownMenuLabel className="text-muted-foreground text-xs">
+                        <DropdownMenuLabel className="text-slate-400 text-xs">
                             Teams
                         </DropdownMenuLabel>
-                        {teams.map((team, index) => (
-                            <DropdownMenuItem
-                                key={team.name}
-                                onClick={() => setActiveTeam(team)}
-                                className="gap-2 p-2"
-                            >
-                                <div className="flex size-6 items-center justify-center rounded-sm border">
-                                    <team.logo className="size-4 shrink-0" />
-                                </div>
-                                {team.name}
-                                <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
-                            </DropdownMenuItem>
-                        ))}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="gap-2 p-2">
-                            <div className="flex size-6 items-center justify-center rounded-md border bg-background">
+                        {teams.map((team, index) => {
+                            const TeamLogo = team.logo
+                            return (
+                                <DropdownMenuItem
+                                    key={team.name}
+                                    onClick={() => setActiveTeam(team)}
+                                    className="gap-2 p-2 cursor-pointer text-slate-300 focus:bg-slate-800 focus:text-white"
+                                >
+                                    <div className="flex size-6 items-center justify-center rounded-sm border border-slate-700 bg-slate-800">
+                                        <TeamLogo className="size-4 shrink-0" />
+                                    </div>
+                                    {team.name}
+                                    <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+                                </DropdownMenuItem>
+                            )
+                        })}
+                        <DropdownMenuSeparator className="bg-slate-700" />
+                        <DropdownMenuItem
+                            onClick={() => router.push('/dashboard/team')}
+                            className="gap-2 p-2 cursor-pointer text-slate-300 focus:bg-slate-800 focus:text-white"
+                        >
+                            <div className="flex size-6 items-center justify-center rounded-md border border-slate-700 bg-slate-800">
                                 <Plus className="size-4" />
                             </div>
-                            <div className="font-medium text-muted-foreground">Add team</div>
+                            <div className="font-medium">Add team</div>
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -87,3 +106,4 @@ export function TeamSwitcher({
         </SidebarMenu>
     )
 }
+

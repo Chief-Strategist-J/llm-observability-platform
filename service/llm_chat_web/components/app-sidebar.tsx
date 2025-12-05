@@ -2,16 +2,12 @@
 
 import * as React from "react"
 import {
-    AudioWaveform,
-    BookOpen,
     Bot,
-    Command,
-    Frame,
+    Building2,
     GalleryVerticalEnd,
-    Map,
     MessageSquare,
-    PieChart,
     SquareTerminal,
+    Users,
 } from "lucide-react"
 
 import {
@@ -22,119 +18,108 @@ import {
     SidebarRail,
 } from "@/components/ui/sidebar"
 import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
 import { TeamSwitcher } from "@/components/team-switcher"
+import { useAuth } from "@/hooks/use-auth"
 
-const data = {
-    user: {
-        name: "shadcn",
-        email: "m@example.com",
-        avatar: "/avatars/shadcn.jpg",
+const navItems = [
+    {
+        title: "Dashboard",
+        url: "/dashboard",
+        icon: SquareTerminal,
+        isActive: true,
+        items: [
+            {
+                title: "Overview",
+                url: "/dashboard",
+            },
+        ],
     },
-    teams: [
-        {
-            name: "Acme Inc",
-            logo: GalleryVerticalEnd,
-            plan: "Enterprise",
-        },
-        {
-            name: "Acme Corp.",
-            logo: AudioWaveform,
-            plan: "Startup",
-        },
-        {
-            name: "Evil Corp.",
-            logo: Command,
-            plan: "Free",
-        },
-    ],
-    navMain: [
-        {
-            title: "Dashboard",
-            url: "/dashboard",
-            icon: SquareTerminal,
-            isActive: true,
-            items: [
-                {
-                    title: "Overview",
-                    url: "/dashboard",
-                },
-            ],
-        },
-        {
-            title: "Chat",
-            url: "/dashboard/chat",
-            icon: MessageSquare,
-            items: [
-                {
-                    title: "Direct Messages",
-                    url: "/dashboard/chat",
-                },
-                {
-                    title: "Group Discussions",
-                    url: "/dashboard/group-chat",
-                },
-            ],
-        },
-        {
-            title: "Activity",
-            url: "/dashboard/activity",
-            icon: Bot,
-            items: [
-                {
-                    title: "Workflow",
-                    url: "/dashboard/activity",
-                },
-                {
-                    title: "History",
-                    url: "/dashboard/history",
-                },
-            ],
-        },
-        {
-            title: "Network",
-            url: "/dashboard/network",
-            icon: BookOpen,
-            items: [
-                {
-                    title: "Overview",
-                    url: "/dashboard/network",
-                },
-            ],
-        },
-    ],
-    projects: [
-        {
-            name: "Chat Application",
-            url: "/dashboard/chat",
-            icon: Frame,
-        },
-        {
-            name: "Analytics",
-            url: "/dashboard",
-            icon: PieChart,
-        },
-        {
-            name: "Network Monitor",
-            url: "/dashboard/network",
-            icon: Map,
-        },
-    ],
-}
+    {
+        title: "Friends",
+        url: "/dashboard/friends",
+        icon: Users,
+        items: [
+            {
+                title: "Discover",
+                url: "/dashboard/friends",
+            },
+        ],
+    },
+    {
+        title: "Chat",
+        url: "/dashboard/chat",
+        icon: MessageSquare,
+        items: [
+            {
+                title: "Direct Messages",
+                url: "/dashboard/chat",
+            },
+            {
+                title: "Group Discussions",
+                url: "/dashboard/group-chat",
+            },
+        ],
+    },
+    {
+        title: "Team",
+        url: "/dashboard/team",
+        icon: Building2,
+        items: [
+            {
+                title: "Manage Teams",
+                url: "/dashboard/team",
+            },
+        ],
+    },
+    {
+        title: "Activity",
+        url: "/dashboard/activity",
+        icon: Bot,
+        items: [
+            {
+                title: "Workflow",
+                url: "/dashboard/activity",
+            },
+        ],
+    },
+]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+    const { user, company } = useAuth()
+
+    const userData = {
+        name: user?.name || "User",
+        email: user?.email || "",
+        avatar: user?.avatar || "",
+    }
+
+    const teams = company
+        ? [
+            {
+                name: company.name,
+                logo: GalleryVerticalEnd,
+                plan: company.plan.charAt(0).toUpperCase() + company.plan.slice(1),
+            },
+        ]
+        : [
+            {
+                name: "Personal",
+                logo: GalleryVerticalEnd,
+                plan: "Free",
+            },
+        ]
+
     return (
         <Sidebar collapsible="icon" {...props}>
             <SidebarHeader>
-                <TeamSwitcher teams={data.teams} />
+                <TeamSwitcher teams={teams} />
             </SidebarHeader>
             <SidebarContent>
-                <NavMain items={data.navMain} />
-                <NavProjects projects={data.projects} />
+                <NavMain items={navItems} />
             </SidebarContent>
             <SidebarFooter>
-                <NavUser user={data.user} />
+                <NavUser user={userData} />
             </SidebarFooter>
             <SidebarRail />
         </Sidebar>

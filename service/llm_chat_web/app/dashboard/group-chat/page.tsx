@@ -150,19 +150,19 @@ export default function GroupChatPage() {
     }, [activeTab, discussions, trendingDiscussions, recentDiscussions])
 
     return (
-        <div className="flex flex-1 flex-col h-screen bg-background">
-            <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
-                <SidebarTrigger className="-ml-1" />
-                <Separator orientation="vertical" className="mr-2 h-4" />
+        <div className="flex flex-1 flex-col h-screen bg-slate-950">
+            <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b border-slate-800 px-4 bg-slate-950/90 backdrop-blur-xl">
+                <SidebarTrigger className="-ml-1 text-slate-400 hover:text-white" />
+                <Separator orientation="vertical" className="mr-2 h-4 bg-slate-700" />
                 <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary/20 via-primary/10 to-transparent flex items-center justify-center ring-1 ring-primary/10">
-                        <MessageSquare className="h-4 w-4 text-primary" />
+                    <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-violet-500/20 to-purple-600/20 flex items-center justify-center ring-1 ring-violet-500/20">
+                        <MessageSquare className="h-4 w-4 text-violet-400" />
                     </div>
                     <div>
-                        <h1 className="text-lg font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                        <h1 className="text-lg font-semibold text-white">
                             Community Discussions
                         </h1>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-slate-400">
                             {discussions.length} discussions • {totalReplies} replies
                         </p>
                     </div>
@@ -170,21 +170,21 @@ export default function GroupChatPage() {
                 <div className="ml-auto flex items-center gap-2">
                     <Dialog open={isNewDiscussionOpen} onOpenChange={setIsNewDiscussionOpen}>
                         <DialogTrigger asChild>
-                            <Button className="shadow-sm">
+                            <Button className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white border-0">
                                 <Plus className="h-4 w-4 mr-2" />
                                 New Discussion
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[500px]">
+                        <DialogContent className="sm:max-w-[500px] bg-slate-900 border-slate-800">
                             <DialogHeader>
-                                <DialogTitle>Start a New Discussion</DialogTitle>
-                                <DialogDescription>
+                                <DialogTitle className="text-white">Start a New Discussion</DialogTitle>
+                                <DialogDescription className="text-slate-400">
                                     Share your thoughts with the community
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
                                 <div className="grid gap-2">
-                                    <label htmlFor="title" className="text-sm font-medium">
+                                    <label htmlFor="title" className="text-sm font-medium text-slate-300">
                                         Title (optional)
                                     </label>
                                     <Input
@@ -192,10 +192,11 @@ export default function GroupChatPage() {
                                         placeholder="Give your discussion a title..."
                                         value={newDiscussionTitle}
                                         onChange={(e) => setNewDiscussionTitle(e.target.value)}
+                                        className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
                                     />
                                 </div>
                                 <div className="grid gap-2">
-                                    <label htmlFor="content" className="text-sm font-medium">
+                                    <label htmlFor="content" className="text-sm font-medium text-slate-300">
                                         Content
                                     </label>
                                     <Textarea
@@ -203,17 +204,18 @@ export default function GroupChatPage() {
                                         placeholder="What's on your mind?"
                                         value={newDiscussionContent}
                                         onChange={(e) => setNewDiscussionContent(e.target.value)}
-                                        className="min-h-[120px]"
+                                        className="min-h-[120px] bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
                                     />
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button variant="outline" onClick={() => setIsNewDiscussionOpen(false)}>
+                                <Button variant="outline" onClick={() => setIsNewDiscussionOpen(false)} className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
                                     Cancel
                                 </Button>
                                 <Button
                                     onClick={handleCreateNewDiscussion}
                                     disabled={!newDiscussionContent.trim() || posting}
+                                    className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white"
                                 >
                                     {posting ? (
                                         <>
@@ -233,18 +235,18 @@ export default function GroupChatPage() {
 
             <div className="flex-1 flex overflow-hidden">
                 <main className="flex-1 flex flex-col min-h-0">
-                    <div className="border-b bg-muted/20 px-4 py-3">
+                    <div className="border-b border-slate-800 bg-slate-900/30 px-4 py-3">
                         <Tabs value={activeTab} onValueChange={setActiveTab}>
-                            <TabsList className="bg-muted/50">
-                                <TabsTrigger value="all" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                            <TabsList className="bg-slate-800/50 border border-slate-700">
+                                <TabsTrigger value="all" className="gap-2 data-[state=active]:bg-slate-700 data-[state=active]:text-white text-slate-400">
                                     <Filter className="h-3.5 w-3.5" />
                                     All
                                 </TabsTrigger>
-                                <TabsTrigger value="trending" className="gap-2 data-[state=active]:bg-amber-600 data-[state=active]:text-white">
+                                <TabsTrigger value="trending" className="gap-2 data-[state=active]:bg-amber-600 data-[state=active]:text-white text-slate-400">
                                     <Flame className="h-3.5 w-3.5" />
                                     Trending
                                 </TabsTrigger>
-                                <TabsTrigger value="recent" className="gap-2 data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
+                                <TabsTrigger value="recent" className="gap-2 data-[state=active]:bg-emerald-600 data-[state=active]:text-white text-slate-400">
                                     <Clock className="h-3.5 w-3.5" />
                                     Recent
                                 </TabsTrigger>
@@ -287,40 +289,40 @@ export default function GroupChatPage() {
                     </ScrollArea>
                 </main>
 
-                <aside className="hidden xl:flex w-80 flex-col border-l bg-muted/20">
-                    <div className="p-4 border-b">
-                        <h2 className="font-semibold text-sm flex items-center gap-2">
-                            <Star className="h-4 w-4 text-primary" />
+                <aside className="hidden xl:flex w-80 flex-col border-l border-slate-800 bg-slate-900/50">
+                    <div className="p-4 border-b border-slate-800">
+                        <h2 className="font-semibold text-sm flex items-center gap-2 text-white">
+                            <Star className="h-4 w-4 text-violet-400" />
                             Community Stats
                         </h2>
                     </div>
                     <ScrollArea className="flex-1">
                         <div className="p-4 space-y-4">
-                            <Card>
+                            <Card className="border-slate-800 bg-slate-800/50">
                                 <CardHeader className="pb-3">
-                                    <CardTitle className="text-sm font-medium">Overview</CardTitle>
+                                    <CardTitle className="text-sm font-medium text-white">Overview</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-2">
                                     <div className="flex justify-between text-sm">
-                                        <span className="text-muted-foreground">Discussions</span>
-                                        <span className="font-semibold">{discussions.length}</span>
+                                        <span className="text-slate-400">Discussions</span>
+                                        <span className="font-semibold text-white">{discussions.length}</span>
                                     </div>
                                     <div className="flex justify-between text-sm">
-                                        <span className="text-muted-foreground">Total Replies</span>
-                                        <span className="font-semibold">{totalReplies}</span>
+                                        <span className="text-slate-400">Total Replies</span>
+                                        <span className="font-semibold text-white">{totalReplies}</span>
                                     </div>
                                     <div className="flex justify-between text-sm">
-                                        <span className="text-muted-foreground">Active Users</span>
-                                        <span className="font-semibold">{new Set(discussions.map(d => d.author)).size}</span>
+                                        <span className="text-slate-400">Active Users</span>
+                                        <span className="font-semibold text-white">{new Set(discussions.map(d => d.author)).size}</span>
                                     </div>
                                 </CardContent>
                             </Card>
 
                             {trendingDiscussions.length > 0 && (
-                                <Card>
+                                <Card className="border-slate-800 bg-slate-800/50">
                                     <CardHeader className="pb-3">
-                                        <CardTitle className="text-sm font-medium flex items-center gap-2">
-                                            <TrendingUp className="h-4 w-4" />
+                                        <CardTitle className="text-sm font-medium flex items-center gap-2 text-white">
+                                            <TrendingUp className="h-4 w-4 text-amber-400" />
                                             Top Discussions
                                         </CardTitle>
                                     </CardHeader>
@@ -328,15 +330,15 @@ export default function GroupChatPage() {
                                         {trendingDiscussions.slice(0, 3).map((disc, idx) => (
                                             <div
                                                 key={disc.id}
-                                                className="flex gap-2 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors"
+                                                className="flex gap-2 cursor-pointer hover:bg-slate-700/50 p-2 rounded-lg transition-colors"
                                                 onClick={() => navigateToDiscussion(disc._id || disc.id)}
                                             >
-                                                <span className="text-lg font-bold text-muted-foreground/50">#{idx + 1}</span>
+                                                <span className="text-lg font-bold text-slate-600">#{idx + 1}</span>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-xs font-medium line-clamp-2">
+                                                    <p className="text-xs font-medium line-clamp-2 text-slate-300">
                                                         {disc.title || disc.content}
                                                     </p>
-                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                    <p className="text-xs text-slate-500 mt-1">
                                                         {(disc as any).engagement} interactions
                                                     </p>
                                                 </div>
@@ -352,3 +354,4 @@ export default function GroupChatPage() {
         </div>
     )
 }
+
