@@ -3,11 +3,11 @@ import { updateMessage, deleteMessage } from '@/database/services/chat-service'
 
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const body = await request.json()
-        const { id } = params
+        const { id } = await params
 
         const count = await updateMessage(id, body)
 
@@ -30,10 +30,10 @@ export async function PUT(
 
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = params
+        const { id } = await params
         const count = await deleteMessage(id)
 
         if (count === 0) {

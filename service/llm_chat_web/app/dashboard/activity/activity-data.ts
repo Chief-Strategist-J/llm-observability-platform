@@ -20,6 +20,17 @@ export interface ActivityComponent {
     description: string
 }
 
+export interface CustomActivity {
+    id: string
+    name: string
+    description: string
+    category: string
+    inputs: { name: string; type: string; description: string; required: boolean }[]
+    outputs: { name: string; type: string; description: string }[]
+    code: string
+    createdAt: string
+}
+
 export const activitySchemas: Record<string, ActivitySchema> = {
     "http-request": {
         inputs: {
@@ -169,4 +180,5 @@ export const categoryColors: Record<string, string> = {
     metrics: "bg-green-500",
     tracing: "bg-yellow-500",
     testing: "bg-pink-500",
+    custom: "bg-emerald-500",
 }
