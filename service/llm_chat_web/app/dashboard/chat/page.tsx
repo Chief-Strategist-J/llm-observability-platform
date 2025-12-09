@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation"
 import {
     Send, Loader2, Bot, Users, Sparkles, Plus, Trash2,
     Edit3, X, Check, MoreVertical, MessageSquare, User,
-    GitBranch, GitGraph
+    GitBranch, GitGraph, Paperclip, Smile
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -646,18 +646,32 @@ export default function ChatPage() {
                                 )}
                             </div>
 
-                            <div className="shrink-0 border-t border-slate-800 p-3 bg-slate-900">
-                                <div className="flex gap-2 items-center">
+                            <div className="shrink-0 p-4 bg-transparent">
+                                <div className="flex items-end gap-2 bg-slate-800/50 p-2 rounded-xl border border-slate-700/50 focus-within:border-slate-600 transition-colors">
+                                    <div className="flex gap-1 pb-1.5 pl-1">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg">
+                                            <Paperclip className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                     <Input
                                         placeholder={`Message ${selectedFriend.name}...`}
                                         value={newMessage}
                                         onChange={(e) => setNewMessage(e.target.value)}
                                         onKeyDown={(e) => { if (e.key === "Enter") handleSendToFriend() }}
-                                        className="h-[44px] bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                                        className="min-h-[44px] border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-2 text-slate-200 placeholder:text-slate-500"
                                     />
-                                    <Button onClick={handleSendToFriend} disabled={!newMessage.trim() || sending} className="h-[44px] px-4 bg-emerald-600 hover:bg-emerald-700 text-white shrink-0">
-                                        {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                                    </Button>
+                                    <div className="flex gap-1 pb-1.5 pr-1">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg">
+                                            <Smile className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            onClick={handleSendToFriend}
+                                            disabled={!newMessage.trim() || sending}
+                                            className="h-8 w-8 p-0 bg-gradient-to-tr from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-lg shadow-emerald-900/20 rounded-lg shrink-0"
+                                        >
+                                            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </>
@@ -783,19 +797,30 @@ export default function ChatPage() {
                         )}
                     </div>
 
-                    <div className="shrink-0 border-t border-slate-800 p-3 bg-slate-900">
-                        <div className="flex gap-2 items-center">
+                    <div className="shrink-0 p-4 bg-transparent">
+                        <div className="flex items-end gap-2 bg-slate-800/50 p-2 rounded-xl border border-slate-700/50 focus-within:border-slate-600 transition-colors">
+                            <div className="flex gap-1 pb-1.5 pl-1">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg">
+                                    <Paperclip className="h-4 w-4" />
+                                </Button>
+                            </div>
                             <Textarea
                                 placeholder="Ask AI..."
                                 value={aiMessage}
                                 onChange={(e) => setAiMessage(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendToAI() } }}
                                 disabled={aiLoading}
-                                className="min-h-[44px] max-h-[100px] resize-none bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 text-sm"
+                                className="min-h-[44px] max-h-[120px] border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-2 py-3 text-slate-200 placeholder:text-slate-500 resize-none"
                             />
-                            <Button onClick={handleSendToAI} disabled={aiLoading || !aiMessage.trim()} className="h-[44px] px-4 bg-purple-600 hover:bg-purple-700 text-white shrink-0">
-                                {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                            </Button>
+                            <div className="flex gap-1 pb-1.5 pr-1">
+                                <Button
+                                    onClick={handleSendToAI}
+                                    disabled={aiLoading || !aiMessage.trim()}
+                                    className="h-8 w-8 p-0 bg-gradient-to-tr from-purple-600 to-indigo-500 hover:from-purple-500 hover:to-indigo-400 text-white shadow-lg shadow-purple-900/20 rounded-lg shrink-0"
+                                >
+                                    {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>
