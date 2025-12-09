@@ -1,13 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -22,75 +21,118 @@ import {
     MessageSquare,
     Sparkles,
     UserCheck,
-    Send
+    Send,
+    Loader2
 } from "lucide-react"
-
-const seedUsers = [
-    { id: "u1", name: "Emma Watson", email: "emma@example.com", avatar: "/avatars/02.png", mutualFriends: 12 },
-    { id: "u2", name: "John Smith", email: "john@example.com", avatar: "/avatars/03.png", mutualFriends: 8 },
-    { id: "u3", name: "Sarah Connor", email: "sarah@example.com", avatar: "/avatars/04.png", mutualFriends: 5 },
-    { id: "u4", name: "Michael Chen", email: "michael@example.com", avatar: "/avatars/05.png", mutualFriends: 3 },
-    { id: "u5", name: "Lisa Park", email: "lisa@example.com", avatar: "/avatars/06.png", mutualFriends: 15 },
-]
-
-const seedFriends = [
-    { id: "f1", name: "Jackson Lee", email: "jackson@example.com", avatar: "/avatars/02.png", status: "online", friendSince: "2024-06-15" },
-    { id: "f2", name: "Sofia Davis", email: "sofia@example.com", avatar: "/avatars/03.png", status: "offline", friendSince: "2024-08-22" },
-    { id: "f3", name: "Isabella Nguyen", email: "isabella@example.com", avatar: "/avatars/04.png", status: "away", friendSince: "2024-10-10" },
-]
-
-const seedPendingRequests = [
-    { id: "r1", name: "Alex Johnson", email: "alex@example.com", avatar: "/avatars/05.png", sentAt: "2 hours ago", type: "received" },
-    { id: "r2", name: "Maria Garcia", email: "maria@example.com", avatar: "/avatars/06.png", sentAt: "1 day ago", type: "received" },
-]
-
-const seedSentRequests = [
-    { id: "s1", name: "David Kim", email: "david@example.com", avatar: "/avatars/07.png", sentAt: "3 hours ago" },
-]
+import {
+    searchUsersAction,
+    getFriendsAction,
+    getPendingRequestsAction,
+    getSentRequestsAction,
+    sendFriendRequestAction,
+    acceptFriendRequestAction,
+    rejectFriendRequestAction
+} from "./actions"
+import { PublicUser, FriendRequestUI } from "@/database/types/user-types"
+import { toast } from "sonner"
 
 export default function FriendsPage() {
     const router = useRouter()
     const [searchQuery, setSearchQuery] = useState("")
-    const [activeTab, setActiveTab] = useState("discover")
-    const [users, setUsers] = useState(seedUsers)
-    const [friends, setFriends] = useState(seedFriends)
-    const [pendingRequests, setPendingRequests] = useState(seedPendingRequests)
-    const [sentRequests, setSentRequests] = useState(seedSentRequests)
-    const [sentToUsers, setSentToUsers] = useState<string[]>([])
+    const [activeTab, setActiveTab] = useState("friends")
+    const [friends, setFriends] = useState<PublicUser[]>([])
+    const [searchResults, setSearchResults] = useState<PublicUser[]>([])
+    const [pendingRequests, setPendingRequests] = useState<FriendRequestUI[]>([])
+    const [sentRequests, setSentRequests] = useState<FriendRequestUI[]>([])
+    const [loading, setLoading] = useState(true)
+    const [searching, setSearching] = useState(false)
 
-    const filteredUsers = users.filter(u =>
-        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-
-    const handleMessageFriend = (friendId: string) => {
-        router.push(`/dashboard/chat?friend=${friendId}`)
-    }
-
-    const handleSendRequest = (userId: string) => {
-        setSentToUsers([...sentToUsers, userId])
-    }
-
-    const handleAcceptRequest = (requestId: string) => {
-        const request = pendingRequests.find(r => r.id === requestId)
-        if (request) {
-            setFriends([...friends, {
-                id: request.id,
-                name: request.name,
-                email: request.email,
-                avatar: request.avatar,
-                status: "online",
-                friendSince: new Date().toISOString().split('T')[0]
-            }])
-            setPendingRequests(pendingRequests.filter(r => r.id !== requestId))
+    const fetchInitialData = async () => {
+        setLoading(true)
+        try {
+            const [friendsData, pendingData, sentData, initialDiscover] = await Promise.all([
+                getFriendsAction(),
+                getPendingRequestsAction(),
+                getSentRequestsAction(),
+                searchUsersAction("")
+            ])
+            setFriends(friendsData)
+            setPendingRequests(pendingData)
+            setSentRequests(sentData)
+            setSearchResults(initialDiscover)
+        } catch (error) {
+            console.error("Failed to fetch friends data", error)
+        } finally {
+            setLoading(false)
         }
     }
 
-    const handleRejectRequest = (requestId: string) => {
-        setPendingRequests(pendingRequests.filter(r => r.id !== requestId))
+    useEffect(() => {
+        fetchInitialData()
+    }, [])
+
+    useEffect(() => {
+        const search = async () => {
+            if (searchQuery.trim().length > 1) {
+                setSearching(true)
+                try {
+                    const results = await searchUsersAction(searchQuery)
+                    setSearchResults(results)
+                } catch (error) {
+                    console.error(error)
+                } finally {
+                    setSearching(false)
+                }
+            } else if (searchQuery.trim().length === 0) {
+                // Reset to initial state or fetch default if needed, currently we handled initial load
+                const results = await searchUsersAction("")
+                setSearchResults(results)
+            } else {
+                setSearchResults([])
+            }
+        }
+
+        const timeout = setTimeout(search, 500)
+        return () => clearTimeout(timeout)
+    }, [searchQuery])
+
+    const handleMessageFriend = (friendId: string) => {
+        router.push(`/dashboard/chat?friendId=${friendId}`)
     }
 
-    const getStatusColor = (status: string) => {
+    const handleSendRequest = async (userId: string) => {
+        const result = await sendFriendRequestAction(userId)
+        if (result.success) {
+            toast.success("Friend Request Sent", { description: "Waiting for them to accept." })
+            const sData = await getSentRequestsAction()
+            setSentRequests(sData)
+            // Remove from search results to give immediate feedback or update button state
+            setSearchResults(prev => prev.filter(u => u.id !== userId))
+        } else {
+            toast.error("Failed", { description: result.message || "Could not send request" })
+        }
+    }
+
+    const handleAcceptRequest = async (requestId: string) => {
+        const result = await acceptFriendRequestAction(requestId)
+        if (result.success) {
+            toast.success("Friend Added", { description: "You can now chat with them." })
+            // Refresh friends and requests
+            const [fData, pData] = await Promise.all([getFriendsAction(), getPendingRequestsAction()])
+            setFriends(fData)
+            setPendingRequests(pData)
+        }
+    }
+
+    const handleRejectRequest = async (requestId: string) => {
+        const result = await rejectFriendRequestAction(requestId)
+        if (result.success) {
+            setPendingRequests(prev => prev.filter(r => r._id?.toString() !== requestId)) // Optimistic update
+        }
+    }
+
+    const getStatusColor = (status: string = "offline") => {
+        // In a real app, this would come from presence service
         switch (status) {
             case "online": return "bg-emerald-500"
             case "away": return "bg-amber-500"
@@ -109,7 +151,7 @@ export default function FriendsPage() {
                     </div>
                     <div>
                         <h1 className="text-lg font-semibold text-white">Friends</h1>
-                        <p className="text-xs text-slate-400">{friends.length} friends • {pendingRequests.length} pending</p>
+                        <p className="text-xs text-slate-400">Manage connections</p>
                     </div>
                 </div>
             </header>
@@ -120,19 +162,21 @@ export default function FriendsPage() {
                         <div className="relative max-w-md">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                             <Input
-                                placeholder="Search users..."
+                                placeholder="Search new people..."
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onChange={(e) => { setSearchQuery(e.target.value); if (activeTab !== 'discover') setActiveTab('discover'); }}
                                 className="pl-9 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:ring-emerald-500"
                             />
+                            {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-emerald-500" />}
                         </div>
                     </div>
 
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
                         <TabsList className="bg-slate-800/50 border border-slate-700 w-fit mb-6">
-                            <TabsTrigger value="discover" className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-green-600 data-[state=active]:text-white text-slate-400">
-                                <Sparkles className="h-3.5 w-3.5" />
-                                Discover
+                            <TabsTrigger value="friends" className="gap-2 data-[state=active]:bg-cyan-600 data-[state=active]:text-white text-slate-400">
+                                <UserCheck className="h-3.5 w-3.5" />
+                                My Friends
+                                <Badge className="ml-1 bg-slate-700 text-white text-xs px-1.5">{friends.length}</Badge>
                             </TabsTrigger>
                             <TabsTrigger value="requests" className="gap-2 data-[state=active]:bg-amber-600 data-[state=active]:text-white text-slate-400">
                                 <Clock className="h-3.5 w-3.5" />
@@ -141,36 +185,34 @@ export default function FriendsPage() {
                                     <Badge className="ml-1 bg-amber-500 text-white text-xs px-1.5">{pendingRequests.length}</Badge>
                                 )}
                             </TabsTrigger>
-                            <TabsTrigger value="friends" className="gap-2 data-[state=active]:bg-cyan-600 data-[state=active]:text-white text-slate-400">
-                                <UserCheck className="h-3.5 w-3.5" />
-                                My Friends
+                            <TabsTrigger value="discover" className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-green-600 data-[state=active]:text-white text-slate-400">
+                                <Sparkles className="h-3.5 w-3.5" />
+                                Discover
                             </TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="discover" className="flex-1 m-0">
                             <ScrollArea className="h-[calc(100vh-280px)]">
-                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                    {filteredUsers.map((user) => (
-                                        <Card key={user.id} className="border-slate-800 bg-slate-900/50 hover:bg-slate-800/50 transition-all">
-                                            <CardContent className="p-4">
-                                                <div className="flex items-center gap-4">
-                                                    <Avatar className="h-12 w-12">
-                                                        <AvatarImage src={user.avatar} />
-                                                        <AvatarFallback className="bg-slate-700 text-white">{user.name[0]}</AvatarFallback>
-                                                    </Avatar>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-medium text-white truncate">{user.name}</p>
-                                                        <p className="text-xs text-slate-400 truncate">{user.email}</p>
-                                                        <p className="text-xs text-slate-500 mt-1">{user.mutualFriends} mutual friends</p>
+                                {searchResults.length === 0 && !searching && searchQuery.trim().length > 0 ? (
+                                    <div className="text-center py-12 text-slate-500">
+                                        <p>No users found matching "{searchQuery}"</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                        {searchResults.map((user) => (
+                                            <Card key={user.id} className="border-slate-800 bg-slate-900/50 hover:bg-slate-800/50 transition-all">
+                                                <CardContent className="p-4">
+                                                    <div className="flex items-center gap-4">
+                                                        <Avatar className="h-12 w-12">
+                                                            <AvatarImage src={user.avatar} />
+                                                            <AvatarFallback className="bg-slate-700 text-white uppercase">{user.name[0]}</AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="font-medium text-white truncate">{user.name}</p>
+                                                            <p className="text-xs text-slate-400 truncate">{user.email}</p>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                <div className="mt-4">
-                                                    {sentToUsers.includes(user.id) ? (
-                                                        <Button disabled className="w-full bg-slate-700 text-slate-400">
-                                                            <Clock className="h-4 w-4 mr-2" />
-                                                            Request Sent
-                                                        </Button>
-                                                    ) : (
+                                                    <div className="mt-4">
                                                         <Button
                                                             onClick={() => handleSendRequest(user.id)}
                                                             className="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white"
@@ -178,12 +220,19 @@ export default function FriendsPage() {
                                                             <UserPlus className="h-4 w-4 mr-2" />
                                                             Add Friend
                                                         </Button>
-                                                    )}
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                </div>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        ))}
+
+                                        {searchResults.length === 0 && !searching && searchQuery.trim().length === 0 && (
+                                            <div className="col-span-full text-center py-8 text-slate-500">
+                                                <Sparkles className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                                                <p>No new people to discover right now.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </ScrollArea>
                         </TabsContent>
 
@@ -198,22 +247,22 @@ export default function FriendsPage() {
                                             </h3>
                                             <div className="space-y-3">
                                                 {pendingRequests.map((request) => (
-                                                    <Card key={request.id} className="border-slate-800 bg-slate-900/50">
+                                                    <Card key={request._id!.toString()} className="border-slate-800 bg-slate-900/50">
                                                         <CardContent className="p-4">
                                                             <div className="flex items-center gap-4">
                                                                 <Avatar className="h-12 w-12">
-                                                                    <AvatarImage src={request.avatar} />
-                                                                    <AvatarFallback className="bg-slate-700 text-white">{request.name[0]}</AvatarFallback>
+                                                                    <AvatarImage src={request.fromUser?.avatar} />
+                                                                    <AvatarFallback className="bg-slate-700 text-white uppercase">{request.fromUser?.name[0]}</AvatarFallback>
                                                                 </Avatar>
                                                                 <div className="flex-1 min-w-0">
-                                                                    <p className="font-medium text-white">{request.name}</p>
-                                                                    <p className="text-xs text-slate-400">{request.email}</p>
-                                                                    <p className="text-xs text-slate-500 mt-1">Sent {request.sentAt}</p>
+                                                                    <p className="font-medium text-white">{request.fromUser?.name}</p>
+                                                                    <p className="text-xs text-slate-400">{request.fromUser?.email}</p>
+                                                                    <p className="text-xs text-slate-500 mt-1">Sent: {new Date(request.createdAt).toLocaleDateString()}</p>
                                                                 </div>
                                                                 <div className="flex gap-2">
                                                                     <Button
                                                                         size="sm"
-                                                                        onClick={() => handleAcceptRequest(request.id)}
+                                                                        onClick={() => handleAcceptRequest(request._id!.toString())}
                                                                         className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white"
                                                                     >
                                                                         <Check className="h-4 w-4" />
@@ -221,7 +270,7 @@ export default function FriendsPage() {
                                                                     <Button
                                                                         size="sm"
                                                                         variant="ghost"
-                                                                        onClick={() => handleRejectRequest(request.id)}
+                                                                        onClick={() => handleRejectRequest(request._id!.toString())}
                                                                         className="text-slate-400 hover:text-white hover:bg-slate-700"
                                                                     >
                                                                         <X className="h-4 w-4" />
@@ -243,17 +292,17 @@ export default function FriendsPage() {
                                             </h3>
                                             <div className="space-y-3">
                                                 {sentRequests.map((request) => (
-                                                    <Card key={request.id} className="border-slate-800 bg-slate-900/50">
+                                                    <Card key={request._id!.toString()} className="border-slate-800 bg-slate-900/50">
                                                         <CardContent className="p-4">
                                                             <div className="flex items-center gap-4">
                                                                 <Avatar className="h-12 w-12">
-                                                                    <AvatarImage src={request.avatar} />
-                                                                    <AvatarFallback className="bg-slate-700 text-white">{request.name[0]}</AvatarFallback>
+                                                                    <AvatarImage src={request.toUser?.avatar} />
+                                                                    <AvatarFallback className="bg-slate-700 text-white uppercase">{request.toUser?.name[0]}</AvatarFallback>
                                                                 </Avatar>
                                                                 <div className="flex-1 min-w-0">
-                                                                    <p className="font-medium text-white">{request.name}</p>
-                                                                    <p className="text-xs text-slate-400">{request.email}</p>
-                                                                    <p className="text-xs text-slate-500 mt-1">Sent {request.sentAt}</p>
+                                                                    <p className="font-medium text-white">{request.toUser?.name}</p>
+                                                                    <p className="text-xs text-slate-400">{request.toUser?.email}</p>
+                                                                    <p className="text-xs text-slate-500 mt-1">Sent: {new Date(request.createdAt).toLocaleDateString()}</p>
                                                                 </div>
                                                                 <Badge variant="outline" className="text-slate-400 border-slate-600">
                                                                     <Clock className="h-3 w-3 mr-1" />
@@ -282,7 +331,11 @@ export default function FriendsPage() {
 
                         <TabsContent value="friends" className="flex-1 m-0">
                             <ScrollArea className="h-[calc(100vh-280px)]">
-                                {friends.length === 0 ? (
+                                {loading ? (
+                                    <div className="flex justify-center p-8">
+                                        <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+                                    </div>
+                                ) : friends.length === 0 ? (
                                     <div className="text-center py-12">
                                         <div className="p-4 bg-slate-800 rounded-full w-fit mx-auto mb-4">
                                             <Users className="h-12 w-12 text-slate-500" />
@@ -306,14 +359,13 @@ export default function FriendsPage() {
                                                         <div className="relative">
                                                             <Avatar className="h-12 w-12">
                                                                 <AvatarImage src={friend.avatar} />
-                                                                <AvatarFallback className="bg-slate-700 text-white">{friend.name[0]}</AvatarFallback>
+                                                                <AvatarFallback className="bg-slate-700 text-white uppercase">{friend.name[0]}</AvatarFallback>
                                                             </Avatar>
-                                                            <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full ${getStatusColor(friend.status)} ring-2 ring-slate-900`} />
+                                                            <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full ${getStatusColor()} ring-2 ring-slate-900`} />
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <p className="font-medium text-white">{friend.name}</p>
                                                             <p className="text-xs text-slate-400">{friend.email}</p>
-                                                            <p className="text-xs text-slate-500 mt-1 capitalize">{friend.status} • Friends since {friend.friendSince}</p>
                                                         </div>
                                                         <Button
                                                             size="sm"

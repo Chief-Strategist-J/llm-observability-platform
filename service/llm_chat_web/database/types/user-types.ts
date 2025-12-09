@@ -10,6 +10,32 @@ export interface User {
     isActive: boolean
     createdAt: Date
     updatedAt: Date
+    friends?: ObjectId[]
+}
+
+export interface FriendRequest {
+    _id?: ObjectId
+    fromUserId: ObjectId
+    toUserId: ObjectId
+    status: 'pending' | 'accepted' | 'rejected'
+    createdAt: Date
+    updatedAt: Date
+}
+
+export interface FriendRequestWithUser extends FriendRequest {
+    fromUser?: PublicUser
+    toUser?: PublicUser
+}
+
+export interface FriendRequestUI {
+    _id: string
+    fromUserId: string
+    toUserId: string
+    status: 'pending' | 'accepted' | 'rejected'
+    createdAt: Date
+    updatedAt: Date
+    fromUser?: PublicUser
+    toUser?: PublicUser
 }
 
 export interface Company {
