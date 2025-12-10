@@ -76,6 +76,13 @@ from infrastructure.observability.activities.metrics.create_grafana_datasource_m
     create_grafana_datasource_metrics,
 )
 
+from infrastructure.orchestrator.activities.common_activities.host_manage_activity import (
+    add_hosts_entries_activity,
+    remove_hosts_entries_activity,
+    verify_hosts_entries_activity,
+    restore_hosts_backup_activity,
+)
+
 
 class MetricsPipelineWorker(BaseWorker):
 
@@ -116,7 +123,12 @@ class MetricsPipelineWorker(BaseWorker):
             restart_source_metrics,
             emit_test_event_metrics,
             verify_event_ingestion_metrics,
-            create_grafana_datasource_metrics
+            create_grafana_datasource_metrics,
+
+            add_hosts_entries_activity,
+            remove_hosts_entries_activity,
+            verify_hosts_entries_activity,
+            restore_hosts_backup_activity,
         ]
 
 

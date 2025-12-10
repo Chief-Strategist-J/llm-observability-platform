@@ -75,6 +75,12 @@ from infrastructure.observability.activities.tracing.create_grafana_datasource_t
     create_grafana_datasource_tracings_activity,
 )
 
+from infrastructure.orchestrator.activities.common_activities.host_manage_activity import (
+    add_hosts_entries_activity,
+    remove_hosts_entries_activity,
+    verify_hosts_entries_activity,
+    restore_hosts_backup_activity,
+)
 
 class TracingPipelineWorker(BaseWorker):
 
@@ -114,7 +120,12 @@ class TracingPipelineWorker(BaseWorker):
             restart_source_tracings,
             emit_test_event_tracings,
             verify_event_ingestion_tracings,
-            create_grafana_datasource_tracings_activity
+            create_grafana_datasource_tracings_activity,
+
+            add_hosts_entries_activity,
+            remove_hosts_entries_activity,
+            verify_hosts_entries_activity,
+            restore_hosts_backup_activity,
         ]
 
 
