@@ -12,6 +12,12 @@ if str(project_root) not in sys.path:
 import asyncio
 from infrastructure.orchestrator.base.base_worker import BaseWorker, WorkerConfig
 from infrastructure.observability.workflows.logs_pipeline_workflow import LogsPipelineWorkflow
+from infrastructure.orchestrator.activities.common_activities.host_manage_activity import (
+    add_hosts_entries_activity,
+    remove_hosts_entries_activity,
+    verify_hosts_entries_activity,
+    restore_hosts_backup_activity,
+)
 
 
 from infrastructure.orchestrator.activities.configurations_activity.grafana_activity import (
@@ -117,7 +123,12 @@ class LogsPipelineWorker(BaseWorker):
             restart_source_logs,
             emit_test_event_logs,
             verify_event_ingestion_logs,
-            create_grafana_datasource_activity
+            create_grafana_datasource_activity,
+
+            add_hosts_entries_activity,
+            remove_hosts_entries_activity,
+            verify_hosts_entries_activity,
+            restore_hosts_backup_activity,
         ]
 
 

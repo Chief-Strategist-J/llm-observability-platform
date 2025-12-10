@@ -3,26 +3,20 @@ version: "3.9"
 services:
   traefik:
     image: traefik:latest
-    container_name: traefik-instance-${TRAEFIK_INSTANCE_ID:-0}
-    environment:
-      INSTANCE_ID: "${TRAEFIK_INSTANCE_ID:-0}"
-      TRAEFIK_BASIC_AUTH: "${TRAEFIK_BASIC_AUTH}"
-      API_KEY: "${API_KEY:-changeme-secure-api-key-here}"
-      ACME_EMAIL: "${ACME_EMAIL:-admin@localhost}"
+    container_name: traefik-scaibu
     ports:
-      - "${TRAEFIK_HTTP_PORT:-13080}:80"
-      - "${TRAEFIK_HTTPS_PORT:-13443}:443"
-      - "${TRAEFIK_DASHBOARD_PORT:-13101}:8080"
+      - "127.0.1.1:80:80"
+      - "127.0.1.1:443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-certs:/letsencrypt
       - traefik-config:/etc/traefik
     networks:
-      - ${OBSERVABILITY_NETWORK:-observability-network}
-      - ${DATA_NETWORK:-data-network}
-      - ${MESSAGING_NETWORK:-messaging-network}
-      - ${CICD_NETWORK:-cicd-network}
-      - ${TEMPORAL_NETWORK:-temporal-network}
+      - observability-network
+      - data-network
+      - messaging-network
+      - cicd-network
+      - temporal-network
     restart: unless-stopped
 
     command:
@@ -32,16 +26,14 @@ services:
       - "--providers.docker.watch=true"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      - "--entrypoints.traefik.address=:8080"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
       - "--api.dashboard=true"
       - "--api.insecure=false"
       - "--ping=true"
-      - "--ping.entrypoint=traefik"
       - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.email=admin@scaibu.local"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
       - "--log.level=INFO"
@@ -57,18 +49,12 @@ services:
     labels:
       traefik.enable: "true"
 
-      # Dashboard routers - UNIQUE middleware names per container
-      traefik.http.routers.dashboard-local.rule: "Host(`traefik-0.localhost`)"
-      traefik.http.routers.dashboard-local.entrypoints: "traefik"
-      traefik.http.routers.dashboard-local.service: "api@internal"
-      traefik.http.routers.dashboard-local.middlewares: "traefik-security-headers"
+      traefik.http.routers.dashboard-secure.rule: "Host(`scaibu.traefik`)"
+      traefik.http.routers.dashboard-secure.entrypoints: "websecure"
+      traefik.http.routers.dashboard-secure.service: "api@internal"
+      traefik.http.routers.dashboard-secure.tls: "true"
+      traefik.http.routers.dashboard-secure.middlewares: "traefik-security-headers"
 
-      traefik.http.routers.dashboard-domain.rule: "Host(`scaibu.traefik`)"
-      traefik.http.routers.dashboard-domain.entrypoints: "traefik"
-      traefik.http.routers.dashboard-domain.service: "api@internal"
-      traefik.http.routers.dashboard-domain.middlewares: "traefik-security-headers"
-
-      # Security headers middleware - UNIQUE NAME
       traefik.http.middlewares.traefik-security-headers.headers.framedeny: "true"
       traefik.http.middlewares.traefik-security-headers.headers.sslredirect: "false"
       traefik.http.middlewares.traefik-security-headers.headers.stsincludesubdomains: "true"
