@@ -11,6 +11,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-certs:/letsencrypt
       - traefik-config:/etc/traefik
+      - ./infrastructure/orchestrator/config/docker/traefik/certs:/certs:ro
+      - ./infrastructure/orchestrator/config/docker/traefik/config/traefik_dynamic_tls.yaml:/etc/traefik/traefik_dynamic_tls.yaml:ro
     networks:
       - observability-network
       - data-network
@@ -24,6 +26,8 @@ services:
       - "--providers.docker.exposedByDefault=false"
       - "--providers.docker.endpoint=unix:///var/run/docker.sock"
       - "--providers.docker.watch=true"
+      - "--providers.file.filename=/etc/traefik/traefik_dynamic_tls.yaml"
+      - "--providers.file.watch=true"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
@@ -32,10 +36,6 @@ services:
       - "--api.dashboard=true"
       - "--api.insecure=false"
       - "--ping=true"
-      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.email=admin@scaibu.local"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
-      - "--certificatesresolvers.letsencrypt.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
       - "--log.level=INFO"
       - "--log.format=json"
       - "--accesslog=true"
@@ -48,7 +48,6 @@ services:
 
     labels:
       traefik.enable: "true"
-
       traefik.http.routers.dashboard-secure.rule: "Host(`scaibu.traefik`)"
       traefik.http.routers.dashboard-secure.entrypoints: "websecure"
       traefik.http.routers.dashboard-secure.service: "api@internal"

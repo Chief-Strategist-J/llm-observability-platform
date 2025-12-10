@@ -1,0 +1,10 @@
+tls:
+  certificates:
+    - certFile: "/certs/scaibu.traefik.pem"
+      keyFile: "/certs/scaibu.traefik-key.pem"
+
+  stores:
+    default:
+      defaultCertificate:
+        certFile: "/certs/scaibu.traefik.pem"
+        keyFile: "/certs/scaibu.traefik-key.pem"
