@@ -1,3 +1,4 @@
+# infrastructure/orchestrator/config/docker/traefik/host_manage_activity.py
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 from temporalio import activity
@@ -316,4 +317,3 @@ async def restore_hosts_backup_activity(params: Dict[str, Any]) -> Dict[str, Any
     except Exception as e:
         logger.error("event=hosts_restore_failed error=%s", str(e))
         return {"success": False, "service": "hosts-manager", "error": str(e), "trace_id": trace_id}
-

@@ -102,12 +102,6 @@ from .tempo_activity import (
     delete_tempo_activity,
 )
 
-from .traefik_activity import (
-    start_traefik_activity,
-    stop_traefik_activity,
-    restart_traefik_activity,
-    delete_traefik_activity,
-)
 
 from .service_routing_activity import (
     discover_service_hostnames_activity,
