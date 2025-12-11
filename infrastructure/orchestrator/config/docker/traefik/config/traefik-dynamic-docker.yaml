@@ -11,8 +11,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-certs:/letsencrypt
       - traefik-config:/etc/traefik
-      - ./infrastructure/orchestrator/config/docker/traefik/certs:/certs:ro
-      - ./infrastructure/orchestrator/config/docker/traefik/config/traefik_dynamic_tls.yaml:/etc/traefik/traefik_dynamic_tls.yaml:ro
+      - /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/certs:/certs:ro
+      - /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/config/traefik_dynamic_tls.yaml:/etc/traefik/traefik_dynamic_tls.yaml:ro
     networks:
       - observability-network
       - data-network
