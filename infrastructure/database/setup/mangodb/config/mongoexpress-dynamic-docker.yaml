@@ -1,0 +1,69 @@
+version: "3.9"
+
+services:
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongoexpress-instance-0
+
+    environment:
+      ME_CONFIG_MONGODB_URL: "mongodb://admin:MongoPassword123!@mongodb-instance-0:27017/?authSource=admin"
+      ME_CONFIG_MONGODB_ADMINUSERNAME: "admin"
+      ME_CONFIG_MONGODB_ADMINPASSWORD: "MongoPassword123!"
+      ME_CONFIG_MONGODB_SERVER: "mongodb-instance-0"
+      ME_CONFIG_MONGODB_PORT: "27017"
+
+      ME_CONFIG_BASICAUTH_USERNAME: "admin"
+      ME_CONFIG_BASICAUTH_PASSWORD: "MongoExpressPassword123!"
+      ME_CONFIG_SITE_BASEURL: "/"
+
+      INSTANCE_ID: "0"
+
+    networks:
+      - data-network
+      - observability-network
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "observability-network"
+
+      traefik.http.routers.mongoexpress-scaibu-0.rule: "Host(`scaibu.mongoexpress`)"
+      traefik.http.routers.mongoexpress-scaibu-0.entrypoints: "web,websecure"
+      traefik.http.routers.mongoexpress-scaibu-0.service: "mongoexpress-0"
+      traefik.http.routers.mongoexpress-scaibu-0.tls: "true"
+
+      traefik.http.routers.mongoexpress-0.rule: "Host(`mongoexpress-0.localhost`)"
+      traefik.http.routers.mongoexpress-0.entrypoints: "web,websecure"
+      traefik.http.routers.mongoexpress-0.service: "mongoexpress-0"
+      traefik.http.routers.mongoexpress-0.tls: "true"
+
+      traefik.http.services.mongoexpress-0.loadbalancer.server.port: "8081"
+
+      loki.source: "docker"
+      loki.job: "mongoexpress-0"
+
+    deploy:
+      resources:
+        limits:
+          memory: "256m"
+          cpus: "0.5"
+        reservations:
+          memory: "128m"
+
+    restart: unless-stopped
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://admin:MongoExpressPassword123!@127.0.0.1:8081/ || exit 1"
+        ]
+      interval: "30s"
+      timeout: "10s"
+      retries: 3
+      start_period: 40s
+
+networks:
+  data-network:
+    external: true
+  observability-network:
+    external: true
