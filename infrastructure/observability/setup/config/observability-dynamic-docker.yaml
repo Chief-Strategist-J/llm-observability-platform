@@ -1,0 +1,291 @@
+version: "3.9"
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.91.0
+    container_name: otel-collector
+    command:
+      - "--config=/etc/otelcol/config.yaml"
+    volumes:
+      - ./otel-config.yaml:/etc/otelcol/config.yaml:ro
+      - otel-logs:/var/log/otelcol
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      observability-network:
+        ipv4_address: 172.20.0.10
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8888/metrics || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+        reservations:
+          memory: 256m
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "observability-network"
+      traefik.http.routers.otel.rule: "Host(`scaibu.otel`)"
+      traefik.http.routers.otel.entrypoints: "websecure"
+      traefik.http.routers.otel.service: "otel"
+      traefik.http.routers.otel.tls: "true"
+      traefik.http.services.otel.loadbalancer.server.port: "8888"
+      traefik.http.services.otel.loadbalancer.healthcheck.path: "/metrics"
+      traefik.http.services.otel.loadbalancer.healthcheck.interval: "30s"
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "8888"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "otel-collector"
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-remote-write-receiver"
+      - "--enable-feature=exemplar-storage"
+      - "--web.external-url=https://scaibu.prometheus"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerting-rules.yml:/etc/prometheus/alerting-rules.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      observability-network:
+        ipv4_address: 172.20.0.20
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
+        reservations:
+          memory: 256m
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "observability-network"
+      traefik.http.routers.prometheus.rule: "Host(`scaibu.prometheus`)"
+      traefik.http.routers.prometheus.entrypoints: "websecure"
+      traefik.http.routers.prometheus.service: "prometheus"
+      traefik.http.routers.prometheus.tls: "true"
+      traefik.http.services.prometheus.loadbalancer.server.port: "9090"
+      traefik.http.services.prometheus.loadbalancer.healthcheck.path: "/-/healthy"
+      traefik.http.services.prometheus.loadbalancer.healthcheck.interval: "30s"
+      loki.source: "docker"
+      loki.job: "prometheus"
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    command:
+      - "-config.file=/etc/loki/config.yaml"
+    volumes:
+      - ./loki-config.yaml:/etc/loki/config.yaml:ro
+      - loki-data:/loki
+    networks:
+      observability-network:
+        ipv4_address: 172.20.0.30
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+        reservations:
+          memory: 256m
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "observability-network"
+      traefik.http.routers.loki.rule: "Host(`scaibu.loki`)"
+      traefik.http.routers.loki.entrypoints: "websecure"
+      traefik.http.routers.loki.service: "loki"
+      traefik.http.routers.loki.tls: "true"
+      traefik.http.services.loki.loadbalancer.server.port: "3100"
+      traefik.http.services.loki.loadbalancer.healthcheck.path: "/ready"
+      traefik.http.services.loki.loadbalancer.healthcheck.interval: "30s"
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "3100"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "loki"
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    environment:
+      COLLECTOR_ZIPKIN_HOST_PORT: ":9411"
+      COLLECTOR_OTLP_ENABLED: "true"
+    networks:
+      observability-network:
+        ipv4_address: 172.20.0.40
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:14269/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+        reservations:
+          memory: 256m
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "observability-network"
+      traefik.http.routers.jaeger.rule: "Host(`scaibu.jaeger`)"
+      traefik.http.routers.jaeger.entrypoints: "websecure"
+      traefik.http.routers.jaeger.service: "jaeger"
+      traefik.http.routers.jaeger.tls: "true"
+      traefik.http.services.jaeger.loadbalancer.server.port: "16686"
+      traefik.http.services.jaeger.loadbalancer.healthcheck.path: "/"
+      traefik.http.services.jaeger.loadbalancer.healthcheck.interval: "30s"
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "14269"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "jaeger"
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/config.yml"
+      - "--storage.path=/alertmanager"
+      - "--web.external-url=https://scaibu.alertmanager"
+      - "--cluster.listen-address=0.0.0.0:9094"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/config.yml:ro
+      - alertmanager-data:/alertmanager
+    networks:
+      observability-network:
+        ipv4_address: 172.20.0.50
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9093/-/healthy || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+        reservations:
+          memory: 128m
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "observability-network"
+      traefik.http.routers.alertmanager.rule: "Host(`scaibu.alertmanager`)"
+      traefik.http.routers.alertmanager.entrypoints: "websecure"
+      traefik.http.routers.alertmanager.service: "alertmanager"
+      traefik.http.routers.alertmanager.tls: "true"
+      traefik.http.services.alertmanager.loadbalancer.server.port: "9093"
+      traefik.http.services.alertmanager.loadbalancer.healthcheck.path: "/-/healthy"
+      traefik.http.services.alertmanager.loadbalancer.healthcheck.interval: "30s"
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "9093"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "alertmanager"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: "admin"
+      GF_SECURITY_ADMIN_PASSWORD: "SuperSecret123!"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_HTTP_PORT: "3000"
+      GF_SERVER_ROOT_URL: "https://scaibu.grafana"
+      GF_SERVER_DOMAIN: "scaibu.grafana"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    networks:
+      observability-network:
+        ipv4_address: 172.20.0.60
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+        reservations:
+          memory: 256m
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "observability-network"
+      traefik.http.routers.grafana.rule: "Host(`scaibu.grafana`)"
+      traefik.http.routers.grafana.entrypoints: "websecure"
+      traefik.http.routers.grafana.service: "grafana"
+      traefik.http.routers.grafana.tls: "true"
+      traefik.http.services.grafana.loadbalancer.server.port: "3000"
+      traefik.http.services.grafana.loadbalancer.healthcheck.path: "/api/health"
+      traefik.http.services.grafana.loadbalancer.healthcheck.interval: "30s"
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "3000"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "grafana"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+      jaeger:
+        condition: service_healthy
+
+volumes:
+  otel-logs:
+  prometheus-data:
+  loki-data:
+  alertmanager-data:
+  grafana-data:
+
+networks:
+  observability-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
