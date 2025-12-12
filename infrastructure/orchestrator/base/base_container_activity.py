@@ -120,6 +120,37 @@ class YAMLContainerManager:
 
         return env
 
+    def _repair_volumes_in_text(self, text: str) -> str:
+
+        lines = text.splitlines()
+        i = 0
+        out_lines: List[str] = []
+        while i < len(lines):
+            line = lines[i]
+            out_lines.append(line)
+            stripped = line.strip()
+            if re.match(r"^volumes:\s*$", stripped):
+                j = i + 1
+                block_lines = []
+                while j < len(lines) and (len(lines[j].strip()) > 0) and (lines[j].startswith(" ") or lines[j].startswith("\t")):
+                    block_lines.append(lines[j])
+                    j += 1
+
+                if block_lines and not any(l.lstrip().startswith("-") for l in block_lines):
+                    joined = " ".join([l.strip() for l in block_lines])
+                    tokens = re.split(r"\s*-\s+", joined)
+                    tokens = [t.strip() for t in tokens if t and t.strip()]
+                    for _ in range(len(block_lines)):
+                        out_lines.pop()
+                    indent = re.match(r"^(\s*)", block_lines[0]).group(1) if block_lines else "  "
+                    for token in tokens:
+                        out_lines.append(f"{indent}- {token}")
+                    i = j - 1
+                else:
+                    i = j - 1
+            i += 1
+        return "\n".join(out_lines) + ("\n" if text.endswith("\n") else "")
+
     def _render_compose_file(self) -> Path:
         with open(self.yaml_path, "r") as f:
             content = f.read()
@@ -150,18 +181,52 @@ class YAMLContainerManager:
 
         rendered = pattern.sub(_repl, content)
 
-        tmp = tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".yaml")
         try:
-            tmp.write(rendered)
-            tmp.flush()
-            tmp.close()
-            return Path(tmp.name)
+            parsed = yaml.safe_load(rendered)
+            normalized = yaml.safe_dump(parsed, sort_keys=False)
+            tmp = tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".yaml")
+            try:
+                tmp.write(normalized)
+                tmp.flush()
+                tmp.close()
+                return Path(tmp.name)
+            except Exception:
+                try:
+                    tmp.close()
+                except Exception:
+                    pass
+                raise
         except Exception:
             try:
-                tmp.close()
-            except Exception:
-                pass
-            raise
+                repaired = self._repair_volumes_in_text(rendered)
+                parsed = yaml.safe_load(repaired)
+                normalized = yaml.safe_dump(parsed, sort_keys=False)
+                tmp = tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".yaml")
+                try:
+                    tmp.write(normalized)
+                    tmp.flush()
+                    tmp.close()
+                    return Path(tmp.name)
+                except Exception:
+                    try:
+                        tmp.close()
+                    except Exception:
+                        pass
+                    raise
+            except Exception as e:
+                self.log.exception("compose_render_and_repair_failed", error=e)
+                tmp = tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".yaml")
+                try:
+                    tmp.write(rendered)
+                    tmp.flush()
+                    tmp.close()
+                    return Path(tmp.name)
+                except Exception:
+                    try:
+                        tmp.close()
+                    except Exception:
+                        pass
+                    raise
 
     def _ensure_external_networks(self, rendered_yaml_path: Path):
         try:

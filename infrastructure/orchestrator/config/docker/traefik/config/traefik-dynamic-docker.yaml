@@ -4,21 +4,25 @@ services:
   traefik:
     image: traefik:latest
     container_name: traefik-scaibu
+
     ports:
       - "127.0.1.1:80:80"
       - "127.0.1.1:443:443"
+
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-certs:/letsencrypt
       - traefik-config:/etc/traefik
       - /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/certs:/certs:ro
-      - /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/config/traefik_dynamic_tls.yaml:/etc/traefik/traefik_dynamic_tls.yaml:ro
+      - /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/config/traefik_dynamic_tls.yaml:/etc/traefik/dynamic/traefik_dynamic_tls.yaml:ro
+
     networks:
       - observability-network
       - data-network
       - messaging-network
       - cicd-network
       - temporal-network
+
     restart: unless-stopped
 
     command:
@@ -26,21 +30,26 @@ services:
       - "--providers.docker.exposedByDefault=false"
       - "--providers.docker.endpoint=unix:///var/run/docker.sock"
       - "--providers.docker.watch=true"
-      - "--providers.file.filename=/etc/traefik/traefik_dynamic_tls.yaml"
+
+      - "--providers.file.filename=/etc/traefik/dynamic/traefik_dynamic_tls.yaml"
       - "--providers.file.watch=true"
+
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+
       - "--api.dashboard=true"
       - "--api.insecure=false"
       - "--ping=true"
+
       - "--log.level=INFO"
       - "--log.format=json"
       - "--accesslog=true"
       - "--accesslog.format=json"
       - "--accesslog.fields.headers.defaultmode=keep"
+
       - "--metrics.prometheus=true"
       - "--metrics.prometheus.addEntryPointsLabels=true"
       - "--metrics.prometheus.addServicesLabels=true"
