@@ -1,0 +1,24 @@
+scaibu.alertmanager:
+  allocated_at: 1765598285.826397
+  hostname: scaibu.alertmanager
+  ip: 172.20.0.50
+scaibu.grafana:
+  allocated_at: 1765598287.4825926
+  hostname: scaibu.grafana
+  ip: 172.20.0.60
+scaibu.jaeger:
+  allocated_at: 1765598285.6286674
+  hostname: scaibu.jaeger
+  ip: 172.20.0.40
+scaibu.loki:
+  allocated_at: 1765598284.063041
+  hostname: scaibu.loki
+  ip: 172.20.0.30
+scaibu.otel:
+  allocated_at: 1765598283.8104253
+  hostname: scaibu.otel
+  ip: 172.20.0.10
+scaibu.prometheus:
+  allocated_at: 1765598283.9348667
+  hostname: scaibu.prometheus
+  ip: 172.20.0.20

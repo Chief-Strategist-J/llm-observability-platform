@@ -1,4 +1,3 @@
-# infrastructure/orchestrator/config/docker/common/host_manage_activity.py
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 from temporalio import activity

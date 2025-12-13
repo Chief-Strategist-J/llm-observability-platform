@@ -6,6 +6,18 @@ receivers:
       http:
         endpoint: 0.0.0.0:4318
   
+  filelog:
+    include: [ /var/lib/docker/containers/*/*.log ]
+    operators:
+      - type: json_parser
+        timestamp:
+          parse_from: body.time
+          layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+      - type: regex_parser
+        regex: '^/(?P<container_id>[0-9a-f]{64})\.log$'
+        parse_from: attributes["log.file.name"]
+    start_at: end
+  
   prometheus:
     config:
       scrape_configs:
@@ -58,15 +70,15 @@ exporters:
     endpoint: "0.0.0.0:8889"
   
   otlp/jaeger:
-    endpoint: 172.20.0.40:4317
+    endpoint: 172.28.0.40:4317
     tls:
       insecure: true
   
   loki:
-    endpoint: http://172.20.0.30:3100/loki/api/v1/push
+    endpoint: http://172.28.0.30:3100/loki/api/v1/push
   
   prometheusremotewrite:
-    endpoint: http://172.20.0.20:9090/api/v1/write
+    endpoint: http://172.28.0.20:9090/api/v1/write
     tls:
       insecure: true
 
@@ -89,6 +101,6 @@ service:
       exporters: [prometheus, prometheusremotewrite]
     
     logs:
-      receivers: [otlp]
+      receivers: [otlp, filelog]
       processors: [memory_limiter, batch, resource]
       exporters: [loki]

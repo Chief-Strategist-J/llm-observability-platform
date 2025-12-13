@@ -28,3 +28,12 @@ groups:
         annotations:
           summary: "High CPU usage on {{ $labels.container_name }}"
           description: "Container {{ $labels.container_name }} CPU usage is above 80%"
+
+      - alert: TestAlert
+        expr: test_gauge > 5
+        for: 10s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Test Alert Triggered"
+          description: "The test gauge value is {{ $value }}, which is > 5"

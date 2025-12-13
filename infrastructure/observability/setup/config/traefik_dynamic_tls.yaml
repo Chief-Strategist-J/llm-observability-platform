@@ -12,8 +12,6 @@ tls:
     keyFile: /certs/scaibu.alertmanager-key.pem
   - certFile: /certs/scaibu.grafana.pem
     keyFile: /certs/scaibu.grafana-key.pem
-  - certFile: /certs/scaibu.traefik.pem
-    keyFile: /certs/scaibu.traefik-key.pem
   stores:
     default:
       defaultCertificate:

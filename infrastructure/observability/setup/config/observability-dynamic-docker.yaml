@@ -4,22 +4,18 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.91.0
     container_name: otel-collector
+    user: "0:0"
     command:
       - "--config=/etc/otelcol/config.yaml"
     volumes:
       - ./otel-config.yaml:/etc/otelcol/config.yaml:ro
       - otel-logs:/var/log/otelcol
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
     networks:
       observability-network:
-        ipv4_address: 172.20.0.10
+        ipv4_address: 172.28.0.10
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8888/metrics || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
     deploy:
       resources:
         limits:
@@ -58,7 +54,7 @@ services:
       - prometheus-data:/prometheus
     networks:
       observability-network:
-        ipv4_address: 172.20.0.20
+        ipv4_address: 172.28.0.20
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
@@ -87,10 +83,10 @@ services:
       loki.job: "prometheus"
     depends_on:
       otel-collector:
-        condition: service_healthy
+        condition: service_started
 
   loki:
-    image: grafana/loki:latest
+    image: grafana/loki:2.9.2
     container_name: loki
     command:
       - "-config.file=/etc/loki/config.yaml"
@@ -99,7 +95,7 @@ services:
       - loki-data:/loki
     networks:
       observability-network:
-        ipv4_address: 172.20.0.30
+        ipv4_address: 172.28.0.30
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/ready"]
@@ -131,7 +127,7 @@ services:
       loki.job: "loki"
     depends_on:
       otel-collector:
-        condition: service_healthy
+        condition: service_started
 
   jaeger:
     image: jaegertracing/all-in-one:latest
@@ -141,7 +137,7 @@ services:
       COLLECTOR_OTLP_ENABLED: "true"
     networks:
       observability-network:
-        ipv4_address: 172.20.0.40
+        ipv4_address: 172.28.0.40
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:14269/"]
@@ -173,7 +169,7 @@ services:
       loki.job: "jaeger"
     depends_on:
       otel-collector:
-        condition: service_healthy
+        condition: service_started
 
   alertmanager:
     image: prom/alertmanager:latest
@@ -188,7 +184,7 @@ services:
       - alertmanager-data:/alertmanager
     networks:
       observability-network:
-        ipv4_address: 172.20.0.50
+        ipv4_address: 172.28.0.50
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9093/-/healthy || exit 1"]
@@ -237,7 +233,7 @@ services:
       - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
     networks:
       observability-network:
-        ipv4_address: 172.20.0.60
+        ipv4_address: 172.28.0.60
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
@@ -284,8 +280,4 @@ volumes:
 
 networks:
   observability-network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
-          gateway: 172.20.0.1
+    external: true

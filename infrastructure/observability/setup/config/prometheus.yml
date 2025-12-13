@@ -9,7 +9,7 @@ alerting:
   alertmanagers:
     - static_configs:
         - targets:
-            - 172.20.0.50:9093
+            - 172.28.0.50:9093
 
 rule_files:
   - /etc/prometheus/alerting-rules.yml
@@ -23,31 +23,37 @@ scrape_configs:
   
   - job_name: 'otel-collector'
     static_configs:
-      - targets: ['172.20.0.10:8888']
+      - targets: ['172.28.0.10:8888']
         labels:
           service: 'otel-collector'
+
+  - job_name: 'otel-collector-apps'
+    static_configs:
+      - targets: ['172.28.0.10:8889']
+        labels:
+          service: 'otel-collector-apps'
   
   - job_name: 'loki'
     static_configs:
-      - targets: ['172.20.0.30:3100']
+      - targets: ['172.28.0.30:3100']
         labels:
           service: 'loki'
   
   - job_name: 'jaeger'
     static_configs:
-      - targets: ['172.20.0.40:14269']
+      - targets: ['172.28.0.40:14269']
         labels:
           service: 'jaeger'
   
   - job_name: 'alertmanager'
     static_configs:
-      - targets: ['172.20.0.50:9093']
+      - targets: ['172.28.0.50:9093']
         labels:
           service: 'alertmanager'
   
   - job_name: 'grafana'
     static_configs:
-      - targets: ['172.20.0.60:3000']
+      - targets: ['172.28.0.60:3000']
         labels:
           service: 'grafana'
   
@@ -75,7 +81,7 @@ scrape_configs:
         target_label: job
 
 remote_write:
-  - url: http://172.20.0.10:8889/api/v1/write
+  - url: http://172.28.0.10:8889/api/v1/write
     queue_config:
       max_samples_per_send: 1000
       batch_send_deadline: 5s
