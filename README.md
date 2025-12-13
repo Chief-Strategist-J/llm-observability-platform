@@ -44,6 +44,15 @@ This guide covers:
 - **How to create Alerts**
 - **Using the Python Client**
 
+## Infrastructure Documentation
+
+For comprehensive details on the underlying infrastructure orchestration:
+
+- **[Orchestrator Quickstart](infrastructure/orchestrator/QUICKSTART.md)** - Getting started with the orchestration layer.
+- **[Orchestrator Architecture](infrastructure/orchestrator/README.md)** - Deep dive into the orchestrator design.
+- **[Setup HTTPS for Traefik](infrastructure/orchestrator/SETUP_HTTPS_FOR_TRAEFIK.md)** - Guide on certificate generation and Traefik TLS.
+- **[Setup Virtual IPs](infrastructure/orchestrator/SETUP_VIRTUAL_IP.md)** - Understanding VIP management and routing.
+
 ## LLM Web Interface
 
 Our platform features a modern, responsive web interface for interacting with LLM models. The interface includes advanced visualization and chat capabilities.
