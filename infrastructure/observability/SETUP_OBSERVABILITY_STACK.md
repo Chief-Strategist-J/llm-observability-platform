@@ -45,7 +45,7 @@ sequenceDiagram
 ## 📸 2. Visualization Gallery
 
 ### Logs & Metrics
-<div align="center">
+
   <img src="../../assets/loki-logs.png" alt="Loki Logs" width="800"/>
   <p><em>Loki Logs Explorer: Showing structured metadata labels.</em></p>
 
@@ -54,16 +54,16 @@ sequenceDiagram
   
   <img src="../../assets/promothes.png" alt="Prometheus" width="800"/>
   <p><em>Prometheus Targets: Green indicates successful scraping.</em></p>
-</div>
+
 
 ### Tracing
-<div align="center">
+
   <img src="../../assets/tracing.png" alt="Tracing" width="800"/>
   <p><em>Jaeger Trace View: Gantt chart of request latency.</em></p>
 
   <img src="../../assets/jaeger-tracing.png" alt="Jaeger UI" width="800"/>
   <p><em>Trace-level detail: Identifies specific function slowdowns.</em></p>
-</div>
+  
 
 ---
 
