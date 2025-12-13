@@ -21,7 +21,7 @@ A comprehensive Python-based observability platform for Large Language Models (L
 
 ### Visualizations
 
-<div align="center">
+
   <h4>Loki Logs Dashboard</h4>
   <img src="assets/loki-logs.png" alt="Loki Logs Dashboard" width="800" />
   
@@ -30,7 +30,7 @@ A comprehensive Python-based observability platform for Large Language Models (L
   
   <h4>Distributed Tracing (Jaeger)</h4>
   <img src="assets/tracing.png" alt="Tracing Dashboard" width="800" />
-</div>
+
 
 ## Observability Setup Guide 🚀
 
