@@ -354,6 +354,31 @@ fly deploy
 - Service dependency mapping
 - Request flow visualization
 
+### Visualizations
+
+<div align="center">
+  <h4>Loki Logs Dashboard</h4>
+  <img src="assets/loki-logs.png" alt="Loki Logs Dashboard" width="800" />
+  
+  <h4>Metrics (Prometheus/Grafana)</h4>
+  <img src="assets/matrices.png" alt="Metrics Dashboard" width="800" />
+  
+  <h4>Distributed Tracing (Jaeger)</h4>
+  <img src="assets/tracing.png" alt="Tracing Dashboard" width="800" />
+</div>
+
+## Observability Setup Guide 🚀
+
+For a step-by-step guide on how to deploy, configure, and use the observability stack (even for non-developers), please refer to our detailed documentation:
+
+👉 **[Setup Observability Stack (Detailed Guide)](infrastructure/observability/SETUP_OBSERVABILITY_STACK.md)**
+
+This guide covers:
+- **One-Command Deployment**
+- **How to view Logs, Metrics, and Traces**
+- **How to create Alerts**
+- **Using the Python Client**
+
 ## Contributing
 
 1. Fork the repository
