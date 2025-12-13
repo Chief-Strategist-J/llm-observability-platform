@@ -1,1 +1,0 @@
-# Log activities package

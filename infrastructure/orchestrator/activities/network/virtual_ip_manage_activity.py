@@ -134,7 +134,6 @@ def _prefix_from_netmask(netmask: str) -> int:
             nm = nm.lstrip("/")
         if nm.isdigit():
             return int(nm)
-        # dotted netmask
         return ipaddress.IPv4Network(f"0.0.0.0/{nm}").prefixlen
     except Exception:
         return 32

@@ -1,0 +1,30 @@
+scaibu.alertmanager:
+  cert_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.alertmanager.pem
+  created_at: 1765598283.5905743
+  hostname: scaibu.alertmanager
+  key_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.alertmanager-key.pem
+scaibu.grafana:
+  cert_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.grafana.pem
+  created_at: 1765598283.7567813
+  hostname: scaibu.grafana
+  key_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.grafana-key.pem
+scaibu.jaeger:
+  cert_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.jaeger.pem
+  created_at: 1765598283.4778764
+  hostname: scaibu.jaeger
+  key_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.jaeger-key.pem
+scaibu.loki:
+  cert_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.loki.pem
+  created_at: 1765598283.2874992
+  hostname: scaibu.loki
+  key_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.loki-key.pem
+scaibu.otel:
+  cert_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.otel.pem
+  created_at: 1765598283.0040069
+  hostname: scaibu.otel
+  key_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.otel-key.pem
+scaibu.prometheus:
+  cert_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.prometheus.pem
+  created_at: 1765598283.1254468
+  hostname: scaibu.prometheus
+  key_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.prometheus-key.pem

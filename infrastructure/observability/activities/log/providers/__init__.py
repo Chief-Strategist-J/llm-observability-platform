@@ -1,1 +1,0 @@
-# Log providers package
