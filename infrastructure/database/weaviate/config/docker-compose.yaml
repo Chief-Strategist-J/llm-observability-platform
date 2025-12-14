@@ -1,0 +1,56 @@
+version: "3.9"
+
+services:
+  weaviate:
+    image: semitechnologies/weaviate:1.21.2
+    container_name: weaviate-instance-0
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      DEFAULT_VECTORIZER_MODULE: "none"
+      ENABLE_MODULES: ""
+      CLUSTER_HOSTNAME: "node1"
+      INSTANCE_ID: "0"
+    volumes:
+      - weaviate-data-0:/var/lib/weaviate
+    networks:
+      database-network:
+        ipv4_address: 172.29.0.110
+    
+    ports:
+      - "8080:8080"
+      - "50051:50051"
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "database-network"
+      
+      traefik.http.routers.weaviate-scaibu.rule: "Host(`scaibu.weaviate`)"
+      traefik.http.routers.weaviate-scaibu.entrypoints: "web,websecure"
+      traefik.http.routers.weaviate-scaibu.service: "weaviate-service"
+      traefik.http.routers.weaviate-scaibu.tls: "true"
+      
+      traefik.http.services.weaviate-service.loadbalancer.server.port: "8080"
+
+    deploy:
+      resources:
+        limits:
+          memory: "2g"
+        reservations:
+          memory: "1g"
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/v1/meta || exit 1"]
+      interval: "10s"
+      timeout: "5s"
+      retries: 5
+
+volumes:
+  weaviate-data-0:
+
+networks:
+  database-network:
+    external: true

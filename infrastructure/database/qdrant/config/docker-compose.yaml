@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant-instance-0
+    environment:
+      QDRANT__SERVICE__HTTP_PORT: "6333"
+      INSTANCE_ID: "0"
+    volumes:
+      - qdrant-storage-0:/qdrant/storage
+    networks:
+      database-network:
+        ipv4_address: 172.29.0.50
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "database-network"
+      
+      traefik.http.routers.qdrant-scaibu.rule: "Host(`scaibu.qdrant`)"
+      traefik.http.routers.qdrant-scaibu.entrypoints: "web,websecure"
+      traefik.http.routers.qdrant-scaibu.service: "qdrant-service"
+      traefik.http.routers.qdrant-scaibu.tls: "true"
+      
+      traefik.http.services.qdrant-service.loadbalancer.server.port: "6333"
+
+    deploy:
+      resources:
+        limits:
+          memory: "1g"
+        reservations:
+          memory: "256m"
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider localhost:6333/healthz || exit 1"]
+      interval: "10s"
+      timeout: "5s"
+      retries: 5
+
+volumes:
+  qdrant-storage-0:
+
+networks:
+  database-network:
+    external: true

@@ -14,11 +14,31 @@ scaibu.loki:
   allocated_at: 1765598284.063041
   hostname: scaibu.loki
   ip: 172.20.0.30
+scaibu.mongodb:
+  allocated_at: 1765694345.9677503
+  hostname: scaibu.mongodb
+  ip: 172.29.0.20
+scaibu.mongoexpress:
+  allocated_at: 1765694347.6012638
+  hostname: scaibu.mongoexpress
+  ip: 172.29.0.21
 scaibu.otel:
   allocated_at: 1765598283.8104253
   hostname: scaibu.otel
   ip: 172.20.0.10
+scaibu.pgadmin:
+  allocated_at: 1765693830.5379481
+  hostname: scaibu.pgadmin
+  ip: 172.29.0.11
+scaibu.postgres:
+  allocated_at: 1765693830.279994
+  hostname: scaibu.postgres
+  ip: 172.29.0.10
 scaibu.prometheus:
   allocated_at: 1765598283.9348667
   hostname: scaibu.prometheus
   ip: 172.20.0.20
+scaibu.redis:
+  allocated_at: 1765694357.6623998
+  hostname: scaibu.redis
+  ip: 172.29.0.31

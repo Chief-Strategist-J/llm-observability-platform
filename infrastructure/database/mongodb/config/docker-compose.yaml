@@ -1,0 +1,74 @@
+version: "3.9"
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb-instance-0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: "${MONGO_ROOT_USER:-admin}"
+      MONGO_INITDB_ROOT_PASSWORD: "${MONGO_ROOT_PASSWORD:-MongoPassword123!}"
+      INSTANCE_ID: "0"
+    volumes:
+      - mongodb-data-0:/data/db
+      - mongodb-config-0:/data/configdb
+    networks:
+      database-network:
+        ipv4_address: 172.29.0.20
+    
+    command: ["mongod", "--bind_ip_all"]
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "database-network"
+      prometheus.io.scrape: "false"
+
+    deploy:
+      resources:
+        limits:
+          memory: "1g"
+        reservations:
+          memory: "512m"
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: "10s"
+      timeout: "5s"
+      retries: 5
+
+  mongoexpress:
+    image: mongo-express:latest
+    container_name: mongoexpress-instance-0
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: "${MONGO_ROOT_USER:-admin}"
+      ME_CONFIG_MONGODB_ADMINPASSWORD: "${MONGO_ROOT_PASSWORD:-MongoPassword123!}"
+      ME_CONFIG_MONGODB_SERVER: "mongodb-instance-0"
+      ME_CONFIG_BASICAUTH_USERNAME: "${MONGOEXPRESS_USER:-admin}"
+      ME_CONFIG_BASICAUTH_PASSWORD: "${MONGOEXPRESS_PASSWORD:-MongoExpressPassword123!}"
+    depends_on:
+      - mongodb
+    networks:
+      database-network:
+        ipv4_address: 172.29.0.21
+    
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "database-network"
+      
+      traefik.http.routers.mongoexpress-scaibu.rule: "Host(`scaibu.mongoexpress`)"
+      traefik.http.routers.mongoexpress-scaibu.entrypoints: "web,websecure"
+      traefik.http.routers.mongoexpress-scaibu.service: "mongoexpress-service"
+      traefik.http.routers.mongoexpress-scaibu.tls: "true"
+      
+      traefik.http.services.mongoexpress-service.loadbalancer.server.port: "8081"
+
+    restart: unless-stopped
+
+volumes:
+  mongodb-data-0:
+  mongodb-config-0:
+
+networks:
+  database-network:
+    external: true

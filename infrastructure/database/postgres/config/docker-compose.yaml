@@ -1,0 +1,80 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: ankane/pgvector:v0.5.1
+    container_name: postgres-instance-0
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:-admin}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-PostgresPassword123!}"
+      POSTGRES_DB: "${POSTGRES_DB:-default}"
+      INSTANCE_ID: "0"
+    volumes:
+      - postgres-data-0:/var/lib/postgresql/data
+    networks:
+      database-network:
+        ipv4_address: 172.29.0.10
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "database-network"
+      
+      # Route for standard postgres port? No, usually unnecessary for Traefik HTTP.
+      # But we will route pgAdmin.
+
+      # Observability (Optional Future Use)
+      prometheus.io.scrape: "false"
+
+    deploy:
+      resources:
+        limits:
+          memory: "1g"
+          cpus: "1.0"
+        reservations:
+          memory: "512m"
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-default}"]
+      interval: "10s"
+      timeout: "5s"
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin-instance-0
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "${PGADMIN_EMAIL:-admin@scaibu.io}"
+      PGADMIN_DEFAULT_PASSWORD: "${PGADMIN_PASSWORD:-PgAdminPassword123!}"
+    depends_on:
+      - postgres
+    networks:
+      database-network:
+        ipv4_address: 172.29.0.11
+    
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "database-network"
+      
+      traefik.http.routers.pgadmin-scaibu.rule: "Host(`scaibu.pgadmin`)"
+      traefik.http.routers.pgadmin-scaibu.entrypoints: "web,websecure"
+      traefik.http.routers.pgadmin-scaibu.service: "pgadmin-service"
+      traefik.http.routers.pgadmin-scaibu.tls: "true"
+      
+      traefik.http.services.pgadmin-service.loadbalancer.server.port: "80"
+
+    deploy:
+      resources:
+        limits:
+          memory: "512m"
+          cpus: "0.5"
+
+    restart: unless-stopped
+
+volumes:
+  postgres-data-0:
+
+networks:
+  database-network:
+    external: true

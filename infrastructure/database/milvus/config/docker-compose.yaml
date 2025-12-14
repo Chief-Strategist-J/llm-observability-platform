@@ -1,0 +1,107 @@
+version: "3.9"
+
+services:
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.5
+    container_name: milvus-etcd-instance-0
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    volumes:
+      - milvus-etcd-data-0:/etcd
+    networks:
+      database-network:
+
+  minio:
+    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+    container_name: milvus-minio-instance-0
+    environment:
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    command: minio server /minio_data
+    volumes:
+      - milvus-minio-data-0:/minio_data
+    networks:
+      database-network:
+
+  milvus:
+    image: milvusdb/milvus:v2.3.0
+    container_name: milvus-instance-0
+    command: ["milvus", "run", "standalone"]
+    environment:
+      ETCD_ENDPOINTS: milvus-etcd-instance-0:2379
+      MINIO_ADDRESS: milvus-minio-instance-0:9000
+      MINIO_ACCESS_KEY_ID: minioadmin
+      MINIO_SECRET_ACCESS_KEY: minioadmin
+    volumes:
+      - milvus-data-0:/var/lib/milvus
+    depends_on:
+      - etcd
+      - minio
+    networks:
+      database-network:
+        ipv4_address: 172.29.0.100
+    
+    ports:
+      - "19530:19530"
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "database-network"
+      
+      traefik.http.routers.milvus-scaibu.rule: "Host(`scaibu.milvus`)"
+      traefik.http.routers.milvus-scaibu.entrypoints: "web,websecure"
+      traefik.http.routers.milvus-scaibu.service: "milvus-service"
+      traefik.http.routers.milvus-scaibu.tls: "true"
+      
+      traefik.http.services.milvus-service.loadbalancer.server.port: "19530"
+
+    deploy:
+      resources:
+        limits:
+          memory: "2g"
+        reservations:
+          memory: "1g"
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: "30s"
+      timeout: "20s"
+      retries: 3
+
+  attu:
+    image: zilliz/attu:v2.3.0
+    container_name: attu-instance-0
+    environment:
+      MILVUS_URL: milvus-instance-0:19530
+    depends_on:
+      - milvus
+    networks:
+      database-network:
+        ipv4_address: 172.29.0.101
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "database-network"
+      
+      traefik.http.routers.attu-scaibu.rule: "Host(`scaibu.attu`)"
+      traefik.http.routers.attu-scaibu.entrypoints: "web,websecure"
+      traefik.http.routers.attu-scaibu.service: "attu-service"
+      traefik.http.routers.attu-scaibu.tls: "true"
+      
+      traefik.http.services.attu-service.loadbalancer.server.port: "3000"
+
+    restart: unless-stopped
+
+volumes:
+  milvus-etcd-data-0:
+  milvus-minio-data-0:
+  milvus-data-0:
+
+networks:
+  database-network:
+    external: true

@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis-instance-0
+    environment:
+      INSTANCE_ID: "0"
+    volumes:
+      - redis-data-0:/data
+    networks:
+      database-network:
+        ipv4_address: 172.29.0.30
+    
+    command: ["redis-server", "--appendonly", "yes"]
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "database-network"
+      prometheus.io.scrape: "false"
+
+    deploy:
+      resources:
+        limits:
+          memory: "512m"
+        reservations:
+          memory: "128m"
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: "10s"
+      timeout: "5s"
+      retries: 5
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: rediscommander-instance-0
+    environment:
+      REDIS_HOSTS: "local:redis-instance-0:6379"
+    depends_on:
+      - redis
+    networks:
+      database-network:
+        ipv4_address: 172.29.0.31
+    
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "database-network"
+      
+      traefik.http.routers.redis-scaibu.rule: "Host(`scaibu.redis`)"
+      traefik.http.routers.redis-scaibu.entrypoints: "web,websecure"
+      traefik.http.routers.redis-scaibu.service: "redis-service"
+      traefik.http.routers.redis-scaibu.tls: "true"
+      
+      traefik.http.services.redis-service.loadbalancer.server.port: "8081"
+
+    restart: unless-stopped
+
+volumes:
+  redis-data-0:
+
+networks:
+  database-network:
+    external: true
