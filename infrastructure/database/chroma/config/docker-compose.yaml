@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: chroma-instance-0
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSISTENT_DIR=/chroma/chroma
+      - INSTANCE_ID=0
+    volumes:
+      - chroma-data-0:/chroma/chroma
+    networks:
+      database-network:
+        ipv4_address: 172.29.0.120
+    
+    ports:
+      - "8000:8000"
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "database-network"
+      
+      traefik.http.routers.chroma-scaibu.rule: "Host(`scaibu.chroma`)"
+      traefik.http.routers.chroma-scaibu.entrypoints: "web,websecure"
+      traefik.http.routers.chroma-scaibu.service: "chroma-service"
+      traefik.http.routers.chroma-scaibu.tls: "true"
+      
+      traefik.http.services.chroma-service.loadbalancer.server.port: "8000"
+
+    deploy:
+      resources:
+        limits:
+          memory: "2g"
+        reservations:
+          memory: "512m"
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: "10s"
+      timeout: "5s"
+      retries: 5
+
+volumes:
+  chroma-data-0:
+
+networks:
+  database-network:
+    external: true

@@ -3,6 +3,31 @@ scaibu.alertmanager:
   created_at: 1765598283.5905743
   hostname: scaibu.alertmanager
   key_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.alertmanager-key.pem
+scaibu.attu:
+  cert_file: /home/j/.certs/scaibu.attu.pem
+  created_at: 1765695094.102058
+  hostname: scaibu.attu
+  key_file: /home/j/.certs/scaibu.attu-key.pem
+scaibu.cassandra-web:
+  cert_file: /home/j/.certs/scaibu.cassandra-web.pem
+  created_at: 1765695093.2149
+  hostname: scaibu.cassandra-web
+  key_file: /home/j/.certs/scaibu.cassandra-web-key.pem
+scaibu.chroma:
+  cert_file: /home/j/.certs/scaibu.chroma.pem
+  created_at: 1765695094.3962622
+  hostname: scaibu.chroma
+  key_file: /home/j/.certs/scaibu.chroma-key.pem
+scaibu.clickhouse:
+  cert_file: /home/j/.certs/scaibu.clickhouse.pem
+  created_at: 1765695093.355961
+  hostname: scaibu.clickhouse
+  key_file: /home/j/.certs/scaibu.clickhouse-key.pem
+scaibu.clickhouse-ui:
+  cert_file: /home/j/.certs/scaibu.clickhouse-ui.pem
+  created_at: 1765695093.7781272
+  hostname: scaibu.clickhouse-ui
+  key_file: /home/j/.certs/scaibu.clickhouse-ui-key.pem
 scaibu.grafana:
   cert_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.grafana.pem
   created_at: 1765598283.7567813
@@ -18,13 +43,68 @@ scaibu.loki:
   created_at: 1765598283.2874992
   hostname: scaibu.loki
   key_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.loki-key.pem
+scaibu.milvus:
+  cert_file: /home/j/.certs/scaibu.milvus.pem
+  created_at: 1765695093.978999
+  hostname: scaibu.milvus
+  key_file: /home/j/.certs/scaibu.milvus-key.pem
+scaibu.minio:
+  cert_file: /home/j/.certs/scaibu.minio.pem
+  created_at: 1765695092.2801936
+  hostname: scaibu.minio
+  key_file: /home/j/.certs/scaibu.minio-key.pem
+scaibu.minio-console:
+  cert_file: /home/j/.certs/scaibu.minio-console.pem
+  created_at: 1765695092.5938396
+  hostname: scaibu.minio-console
+  key_file: /home/j/.certs/scaibu.minio-console-key.pem
+scaibu.mongoexpress:
+  cert_file: /home/j/.certs/scaibu.mongoexpress.pem
+  created_at: 1765694359.5602674
+  hostname: scaibu.mongoexpress
+  key_file: /home/j/.certs/scaibu.mongoexpress-key.pem
+scaibu.neo4j:
+  cert_file: /home/j/.certs/scaibu.neo4j.pem
+  created_at: 1765695091.7624855
+  hostname: scaibu.neo4j
+  key_file: /home/j/.certs/scaibu.neo4j-key.pem
+scaibu.opensearch:
+  cert_file: /home/j/.certs/scaibu.opensearch.pem
+  created_at: 1765695092.867332
+  hostname: scaibu.opensearch
+  key_file: /home/j/.certs/scaibu.opensearch-key.pem
+scaibu.opensearch-dashboards:
+  cert_file: /home/j/.certs/scaibu.opensearch-dashboards.pem
+  created_at: 1765695093.071807
+  hostname: scaibu.opensearch-dashboards
+  key_file: /home/j/.certs/scaibu.opensearch-dashboards-key.pem
 scaibu.otel:
   cert_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.otel.pem
   created_at: 1765598283.0040069
   hostname: scaibu.otel
   key_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.otel-key.pem
+scaibu.pgadmin:
+  cert_file: /home/j/.certs/scaibu.pgadmin.pem
+  created_at: 1765693830.929585
+  hostname: scaibu.pgadmin
+  key_file: /home/j/.certs/scaibu.pgadmin-key.pem
 scaibu.prometheus:
   cert_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.prometheus.pem
   created_at: 1765598283.1254468
   hostname: scaibu.prometheus
   key_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.prometheus-key.pem
+scaibu.qdrant:
+  cert_file: /home/j/.certs/scaibu.qdrant.pem
+  created_at: 1765695091.9640975
+  hostname: scaibu.qdrant
+  key_file: /home/j/.certs/scaibu.qdrant-key.pem
+scaibu.redis:
+  cert_file: /home/j/.certs/scaibu.redis.pem
+  created_at: 1765694359.7135186
+  hostname: scaibu.redis
+  key_file: /home/j/.certs/scaibu.redis-key.pem
+scaibu.weaviate:
+  cert_file: /home/j/.certs/scaibu.weaviate.pem
+  created_at: 1765695094.2584758
+  hostname: scaibu.weaviate
+  key_file: /home/j/.certs/scaibu.weaviate-key.pem

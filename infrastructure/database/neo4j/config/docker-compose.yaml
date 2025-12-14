@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  neo4j:
+    image: neo4j:5.12.0
+    container_name: neo4j-instance-0
+    environment:
+      NEO4J_AUTH: "${NEO4J_AUTH:-neo4j/Neo4jPassword123!}"
+      NEO4J_server_memory_pagecache_size: "512M"
+      NEO4J_server_memory_heap_initial__size: "512M"
+      NEO4J_server_memory_heap_max__size: "1G"
+      INSTANCE_ID: "0"
+    volumes:
+      - neo4j-data-0:/data
+      - neo4j-logs-0:/logs
+      - neo4j-plugins-0:/plugins
+    networks:
+      database-network:
+        ipv4_address: 172.29.0.40
+    
+    ports:
+      - "7474:7474" # HTTP
+      - "7687:7687" # Bolt
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "database-network"
+      
+      traefik.http.routers.neo4j-scaibu.rule: "Host(`scaibu.neo4j`)"
+      traefik.http.routers.neo4j-scaibu.entrypoints: "web,websecure"
+      traefik.http.routers.neo4j-scaibu.service: "neo4j-service"
+      traefik.http.routers.neo4j-scaibu.tls: "true"
+      
+      traefik.http.services.neo4j-service.loadbalancer.server.port: "7474"
+
+    deploy:
+      resources:
+        limits:
+          memory: "2g"
+        reservations:
+          memory: "1g"
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider localhost:7474 || exit 1"]
+      interval: "10s"
+      timeout: "5s"
+      retries: 5
+
+volumes:
+  neo4j-data-0:
+  neo4j-logs-0:
+  neo4j-plugins-0:
+
+networks:
+  database-network:
+    external: true
