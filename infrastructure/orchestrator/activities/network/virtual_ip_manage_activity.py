@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class VirtualIPConfig:
     interface: str = "lo"
-    ip_base: str = "127.0.1"
+    ip_base: str = "127.0.2"
     ip_start: int = 1
     ip_end: int = 254
     netmask: str = "255.255.255.0"

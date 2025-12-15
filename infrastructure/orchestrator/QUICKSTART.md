@@ -38,8 +38,17 @@ docker network create --driver bridge temporal-network || true
 
 
 cd infrastructure/orchestrator/config/docker/temporal
+
 docker-compose -f temporal-orchestrator-compose.yaml up -d
+
 cd ../../../../..
+
+
+cd infrastructure/orchestrator/config/docker/traefik/config
+
+docker-compose -f traefik-dynamic-docker.yaml up -d
+
+cd ../../../../../..
 
 source /home/j/live/dinesh/llm-chatbot-python/.venv/bin/activate
 

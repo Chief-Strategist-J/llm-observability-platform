@@ -41,6 +41,10 @@ from infrastructure.orchestrator.activities.network.certificate_manage_activity 
     generate_traefik_tls_config_activity,
 )
 
+from infrastructure.orchestrator.config.docker.traefik.traefik_activity import (
+    start_traefik_activity,
+)
+
 
 class ObservabilityStackSetupWorker(BaseWorker):
 
@@ -71,6 +75,7 @@ class ObservabilityStackSetupWorker(BaseWorker):
             verify_certificates_activity,
             list_certificates_activity,
             generate_traefik_tls_config_activity,
+            start_traefik_activity,
         ]
 
 

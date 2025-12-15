@@ -42,6 +42,41 @@ sequenceDiagram
 
 ---
 
+## 📸 1.2. Setup command
+
+```bash
+docker network create --driver bridge observability-network || true
+docker network create --driver bridge data-network || true
+docker network create --driver bridge messaging-network || true
+docker network create --driver bridge cicd-network || true
+docker network create --driver bridge temporal-network || true
+
+
+cd infrastructure/orchestrator/config/docker/temporal
+
+docker-compose -f temporal-orchestrator-compose.yaml up -d
+
+cd ../../../../..
+
+
+cd infrastructure/orchestrator/config/docker/traefik/config
+
+docker-compose -f traefik-dynamic-docker.yaml up -d
+
+cd ../../../../../..
+
+source /home/j/live/dinesh/llm-chatbot-python/.venv/bin/activate
+
+python infrastructure/observability/setup/observability_stack_setup_worker.py
+
+python infrastructure/observability/setup/trigger_observability_stack_setup.py setup
+
+# to cleaning it 
+python infrastructure/observability/setup/trigger_observability_stack_setup.py teardown
+
+```
+
+
 ## 📸 2. Visualization Gallery
 
 ### Logs & Metrics

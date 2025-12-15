@@ -37,11 +37,42 @@ OBSERVABILITY_SERVICES = {
 }
 
 
-def run_command(cmd: List[str], check: bool = False) -> subprocess.CompletedProcess:
+def _truncate_output(text: str, max_length: int = 4000) -> str:
+    if len(text) <= max_length:
+        return text
+    head_length = max_length // 2
+    tail_length = max_length - head_length
+    return f"{text[:head_length]}\n...\n{text[-tail_length:]}"
+
+
+def run_command(
+    cmd: List[str],
+    check: bool = False,
+    timeout: int = 60,
+) -> subprocess.CompletedProcess:
     try:
-        return subprocess.run(cmd, check=check, capture_output=True, text=True, timeout=60)
+        completed_process = subprocess.run(
+            cmd,
+            check=check,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        logger.debug(
+            "command_succeeded",
+            command=" ".join(cmd),
+            timeout_seconds=timeout,
+            stdout=_truncate_output(completed_process.stdout or ""),
+            stderr=_truncate_output(completed_process.stderr or ""),
+        )
+        return completed_process
     except subprocess.TimeoutExpired as e:
-        logger.error("command_timeout", command=" ".join(cmd), error=e)
+        logger.error(
+            "command_timeout",
+            command=" ".join(cmd),
+            timeout_seconds=timeout,
+            error=e,
+        )
         return subprocess.CompletedProcess(cmd, 1, "", str(e))
     except Exception as e:
         logger.error("command_failed", command=" ".join(cmd), error=e)
@@ -147,6 +178,7 @@ async def create_observability_network_activity(params: Dict[str, Any]) -> Dict[
 async def start_observability_stack_activity(params: Dict[str, Any]) -> Dict[str, Any]:
     trace_id = params.get("trace_id", "obs-stack-start")
     compose_file = Path(params.get("compose_file", str(COMPOSE_FILE)))
+    timeout_seconds = params.get("timeout_seconds", 300)
     
     start_time = time.time()
     
@@ -164,15 +196,32 @@ async def start_observability_stack_activity(params: Dict[str, Any]) -> Dict[str
             }
         
         cmd = ["docker-compose", "-f", str(compose_file), "up", "-d"]
-        result = run_command(cmd, check=False)
-        
+        logger.info(
+            "stack_start_invoking",
+            compose_file=str(compose_file),
+            timeout_seconds=timeout_seconds,
+        )
+        result = run_command(cmd, check=False, timeout=timeout_seconds)
+
         if result.returncode == 0:
             logger.info("stack_started", compose_file=str(compose_file))
-            
             time.sleep(5)
-            
-            ps_result = run_command(["docker-compose", "-f", str(compose_file), "ps"], check=False)
-            
+
+            ps_cmd = ["docker-compose", "-f", str(compose_file), "ps"]
+            ps_result = run_command(ps_cmd, check=False)
+            if ps_result.returncode == 0:
+                logger.info(
+                    "stack_containers_status",
+                    compose_file=str(compose_file),
+                    status=_truncate_output(ps_result.stdout or ""),
+                )
+            else:
+                logger.warning(
+                    "stack_containers_status_failed",
+                    compose_file=str(compose_file),
+                    stderr=_truncate_output(ps_result.stderr or ""),
+                )
+
             duration_ms = int((time.time() - start_time) * 1000)
             return {
                 "success": True,
@@ -182,7 +231,27 @@ async def start_observability_stack_activity(params: Dict[str, Any]) -> Dict[str
                 "trace_id": trace_id
             }
         else:
-            logger.error("stack_start_failed", error=result.stderr)
+            logger.error(
+                "stack_start_failed",
+                compose_file=str(compose_file),
+                stdout=_truncate_output(result.stdout or ""),
+                stderr=_truncate_output(result.stderr or ""),
+            )
+            logs_cmd = [
+                "docker-compose",
+                "-f",
+                str(compose_file),
+                "logs",
+                "--tail",
+                "100",
+            ]
+            logs_result = run_command(logs_cmd, check=False, timeout=60)
+            if logs_result.stdout:
+                logger.error(
+                    "stack_recent_logs",
+                    compose_file=str(compose_file),
+                    logs=_truncate_output(logs_result.stdout),
+                )
             duration_ms = int((time.time() - start_time) * 1000)
             return {
                 "success": False,
