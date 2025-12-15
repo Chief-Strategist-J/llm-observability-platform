@@ -6,8 +6,8 @@ services:
     container_name: traefik-scaibu
 
     ports:
-      - "127.0.1.1:80:80"
-      - "127.0.1.1:443:443"
+      - "127.0.2.1:80:80"
+      - "127.0.2.1:443:443"
 
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
