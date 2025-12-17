@@ -20,6 +20,8 @@ class VirtualIPConfig:
     ip_start: int = 1
     ip_end: int = 254
     netmask: str = "255.255.255.0"
+    expected_hostname_ip: Optional[str] = None
+    hostname_resolution_overrides: Dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def from_yaml(cls, config_dir: Path) -> "VirtualIPConfig":
@@ -60,6 +62,19 @@ class VirtualIPManager:
         self.config_dir = config_dir
         self.allocations_file = config_dir / "virtual_ip_allocations.yaml"
         self.allocations: Dict[str, IPAllocation] = self.load_allocations()
+
+    def get_expected_hostname_ips(self, hostname: str) -> List[str]:
+        expected_ips: List[str] = []
+        overrides = self.config.hostname_resolution_overrides or {}
+        override = overrides.get(hostname)
+        if override:
+            expected_ips.append(str(override))
+
+        fallback = self.config.expected_hostname_ip
+        if fallback and fallback not in expected_ips:
+            expected_ips.append(str(fallback))
+
+        return expected_ips
 
     def load_allocations(self) -> Dict[str, IPAllocation]:
         if not self.allocations_file.exists():
@@ -218,17 +233,28 @@ def remove_virtual_ip(interface: str, ip: str, netmask: str) -> bool:
         return False
 
 
-def verify_ip_connectivity(ip: str, hostname: str) -> bool:
+def verify_ip_connectivity(ip: str, hostname: str, extra_ips: Optional[List[str]] = None) -> bool:
+    accepted_ips = {ip}
+    if extra_ips:
+        accepted_ips.update(str(candidate) for candidate in extra_ips if candidate)
+
     try:
         ai = socket.getaddrinfo(hostname, None)
         if not ai:
             return False
         for entry in ai:
-            if entry[4][0] == ip:
+            resolved_ip = entry[4][0]
+            if resolved_ip in accepted_ips:
                 return True
         return False
     except Exception as e:
-        logger.debug("event=verify_connectivity_failed ip=%s hostname=%s error=%s", ip, hostname, str(e))
+        logger.debug(
+            "event=verify_connectivity_failed ip=%s hostname=%s accepted=%s error=%s",
+            ip,
+            hostname,
+            list(accepted_ips),
+            str(e),
+        )
         return False
 
 
@@ -260,7 +286,8 @@ async def allocate_virtual_ips_activity(params: Dict[str, Any]) -> Dict[str, Any
         if ip:
             ip_added = add_virtual_ip(config.interface, ip, config.netmask)
             if ip_added:
-                connectivity_ok = verify_ip_connectivity(ip, hostname)
+                alternate_ips = manager.get_expected_hostname_ips(hostname)
+                connectivity_ok = verify_ip_connectivity(ip, hostname, alternate_ips)
                 results[hostname] = {
                     "ip": ip,
                     "allocated": True,
@@ -440,7 +467,8 @@ async def verify_virtual_ips_activity(params: Dict[str, Any]) -> Dict[str, Any]:
 
         ip = allocation.ip
         ip_exists = check_ip_exists(config.interface, ip)
-        connectivity_ok = verify_ip_connectivity(ip, hostname) if ip_exists else False
+        alternate_ips = manager.get_expected_hostname_ips(hostname)
+        connectivity_ok = verify_ip_connectivity(ip, hostname, alternate_ips) if ip_exists else False
         verified = ip_exists and connectivity_ok
 
         results[hostname] = {
