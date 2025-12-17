@@ -5,6 +5,7 @@ import time
 import subprocess
 from dataclasses import dataclass
 import sys
+import json
 
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
@@ -117,20 +118,65 @@ async def create_observability_network_activity(params: Dict[str, Any]) -> Dict[
     
     try:
         inspect_result = run_command(["docker", "network", "inspect", network_name], check=False)
-        
+        recreate_network = False
+
         if inspect_result.returncode == 0:
-            logger.info("network_exists", network=network_name)
-            duration_ms = int((time.time() - start_time) * 1000)
-            return {
-                "success": True,
-                "service": "network-manager",
-                "network_name": network_name,
-                "created": False,
-                "exists": True,
-                "duration_ms": duration_ms,
-                "trace_id": trace_id
-            }
-        
+            existing_subnet = None
+            existing_gateway = None
+            try:
+                inspect_data = json.loads(inspect_result.stdout or "[]")
+                if inspect_data:
+                    config_entries = inspect_data[0].get("IPAM", {}).get("Config", [])
+                    if config_entries:
+                        existing_subnet = config_entries[0].get("Subnet")
+                        existing_gateway = config_entries[0].get("Gateway")
+            except json.JSONDecodeError as exc:
+                logger.warning(
+                    "network_inspect_parse_failed",
+                    network=network_name,
+                    error=str(exc),
+                )
+
+            if existing_subnet == subnet and (not gateway or existing_gateway == gateway):
+                logger.info("network_exists", network=network_name)
+                duration_ms = int((time.time() - start_time) * 1000)
+                return {
+                    "success": True,
+                    "service": "network-manager",
+                    "network_name": network_name,
+                    "created": False,
+                    "exists": True,
+                    "duration_ms": duration_ms,
+                    "trace_id": trace_id
+                }
+
+            logger.warning(
+                "network_config_mismatch",
+                network=network_name,
+                existing_subnet=existing_subnet,
+                existing_gateway=existing_gateway,
+                expected_subnet=subnet,
+                expected_gateway=gateway,
+            )
+
+            rm_result = run_command(["docker", "network", "rm", network_name], check=False)
+            if rm_result.returncode != 0:
+                duration_ms = int((time.time() - start_time) * 1000)
+                logger.error(
+                    "network_remove_failed",
+                    network=network_name,
+                    stderr=_truncate_output(rm_result.stderr or ""),
+                )
+                return {
+                    "success": False,
+                    "service": "network-manager",
+                    "network_name": network_name,
+                    "error": rm_result.stderr,
+                    "duration_ms": duration_ms,
+                    "trace_id": trace_id,
+                }
+            recreate_network = True
+
         create_cmd = [
             "docker", "network", "create",
             "--driver", "bridge",
@@ -141,7 +187,11 @@ async def create_observability_network_activity(params: Dict[str, Any]) -> Dict[
         create_result = run_command(create_cmd, check=False)
         
         if create_result.returncode == 0:
-            logger.info("network_created", network=network_name)
+            logger.info(
+                "network_created",
+                network=network_name,
+                recreated=recreate_network,
+            )
             duration_ms = int((time.time() - start_time) * 1000)
             return {
                 "success": True,
