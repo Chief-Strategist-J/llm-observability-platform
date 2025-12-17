@@ -18,7 +18,7 @@ BASE_DIR = Path(__file__).parent
 CONFIG_DIR = BASE_DIR / "config"
 CERTS_DIR = BASE_DIR / "certs"
 COMPOSE_FILE = CONFIG_DIR / "observability-dynamic-docker.yaml"
-                                                
+
 
 @dataclass
 class ServiceConfig:
@@ -80,6 +80,132 @@ def run_command(
         return subprocess.CompletedProcess(cmd, 1, "", str(e))
 
 
+def get_network_containers(network_name: str) -> List[Dict[str, str]]:
+    """Get all containers connected to a network."""
+    try:
+        inspect_result = run_command(["docker", "network", "inspect", network_name], check=False)
+        if inspect_result.returncode != 0:
+            return []
+        
+        data = json.loads(inspect_result.stdout or "[]")
+        if not data:
+            return []
+        
+        containers = []
+        network_data = data[0]
+        containers_dict = network_data.get("Containers", {})
+        
+        for container_id, container_info in containers_dict.items():
+            containers.append({
+                "id": container_id,
+                "name": container_info.get("Name", ""),
+                "ipv4": container_info.get("IPv4Address", ""),
+            })
+        
+        return containers
+    except Exception as e:
+        logger.error("get_network_containers_failed", network=network_name, error=str(e))
+        return []
+
+
+def disconnect_container_from_network(container_id: str, network_name: str, force: bool = True) -> bool:
+    """Disconnect a container from a network."""
+    try:
+        cmd = ["docker", "network", "disconnect"]
+        if force:
+            cmd.append("-f")
+        cmd.extend([network_name, container_id])
+        
+        result = run_command(cmd, check=False)
+        if result.returncode == 0:
+            logger.info("container_disconnected", container_id=container_id, network=network_name)
+            return True
+        else:
+            logger.warning(
+                "container_disconnect_failed",
+                container_id=container_id,
+                network=network_name,
+                stderr=result.stderr,
+            )
+            return False
+    except Exception as e:
+        logger.error(
+            "disconnect_container_exception",
+            container_id=container_id,
+            network=network_name,
+            error=str(e),
+        )
+        return False
+
+
+def stop_container(container_id: str) -> bool:
+    """Stop a container."""
+    try:
+        result = run_command(["docker", "stop", container_id], check=False, timeout=30)
+        if result.returncode == 0:
+            logger.info("container_stopped", container_id=container_id)
+            return True
+        else:
+            logger.warning("container_stop_failed", container_id=container_id, stderr=result.stderr)
+            return False
+    except Exception as e:
+        logger.error("stop_container_exception", container_id=container_id, error=str(e))
+        return False
+
+
+def remove_network_with_cleanup(network_name: str) -> bool:
+    """Remove a network, handling active endpoints."""
+    try:
+        # Get all containers on the network
+        containers = get_network_containers(network_name)
+        
+        if containers:
+            logger.info(
+                "network_has_active_endpoints",
+                network=network_name,
+                container_count=len(containers),
+                containers=[c["name"] for c in containers],
+            )
+            
+            # Try to disconnect containers
+            for container in containers:
+                container_id = container["id"]
+                container_name = container["name"]
+                
+                logger.info(
+                    "disconnecting_container_from_network",
+                    container_id=container_id,
+                    container_name=container_name,
+                    network=network_name,
+                )
+                
+                # First try graceful disconnect
+                if not disconnect_container_from_network(container_id, network_name, force=False):
+                    # If that fails, try force disconnect
+                    logger.warning(
+                        "retrying_disconnect_with_force",
+                        container_id=container_id,
+                        network=network_name,
+                    )
+                    disconnect_container_from_network(container_id, network_name, force=True)
+            
+            # Wait a bit for disconnections to complete
+            time.sleep(2)
+        
+        # Now try to remove the network
+        result = run_command(["docker", "network", "rm", network_name], check=False)
+        if result.returncode == 0:
+            logger.info("network_removed", network=network_name)
+            return True
+        else:
+            logger.error("network_remove_failed", network=network_name, stderr=result.stderr)
+            return False
+            
+    except Exception as e:
+        logger.error("remove_network_with_cleanup_failed", network=network_name, error=str(e))
+        return False
+
+
 def get_service_hostnames() -> List[str]:
     return [svc.hostname for svc in OBSERVABILITY_SERVICES.values()]
 
@@ -138,7 +264,7 @@ async def create_observability_network_activity(params: Dict[str, Any]) -> Dict[
                 )
 
             if existing_subnet == subnet and (not gateway or existing_gateway == gateway):
-                logger.info("network_exists", network=network_name)
+                logger.info("network_exists_with_correct_config", network=network_name)
                 duration_ms = int((time.time() - start_time) * 1000)
                 return {
                     "success": True,
@@ -151,7 +277,7 @@ async def create_observability_network_activity(params: Dict[str, Any]) -> Dict[
                 }
 
             logger.warning(
-                "network_config_mismatch",
+                "network_config_mismatch_recreating",
                 network=network_name,
                 existing_subnet=existing_subnet,
                 existing_gateway=existing_gateway,
@@ -159,24 +285,22 @@ async def create_observability_network_activity(params: Dict[str, Any]) -> Dict[
                 expected_gateway=gateway,
             )
 
-            rm_result = run_command(["docker", "network", "rm", network_name], check=False)
-            if rm_result.returncode != 0:
+            # Remove network with proper cleanup
+            if not remove_network_with_cleanup(network_name):
                 duration_ms = int((time.time() - start_time) * 1000)
-                logger.error(
-                    "network_remove_failed",
-                    network=network_name,
-                    stderr=_truncate_output(rm_result.stderr or ""),
-                )
                 return {
                     "success": False,
                     "service": "network-manager",
                     "network_name": network_name,
-                    "error": rm_result.stderr,
+                    "error": "Failed to remove existing network with mismatched config",
                     "duration_ms": duration_ms,
                     "trace_id": trace_id,
                 }
+            
             recreate_network = True
+            time.sleep(2)  # Give Docker time to fully clean up
 
+        # Create the network
         create_cmd = [
             "docker", "network", "create",
             "--driver", "bridge",
@@ -191,6 +315,8 @@ async def create_observability_network_activity(params: Dict[str, Any]) -> Dict[
                 "network_created",
                 network=network_name,
                 recreated=recreate_network,
+                subnet=subnet,
+                gateway=gateway,
             )
             duration_ms = int((time.time() - start_time) * 1000)
             return {
@@ -198,6 +324,7 @@ async def create_observability_network_activity(params: Dict[str, Any]) -> Dict[
                 "service": "network-manager",
                 "network_name": network_name,
                 "created": True,
+                "recreated": recreate_network,
                 "duration_ms": duration_ms,
                 "trace_id": trace_id
             }

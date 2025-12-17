@@ -65,11 +65,45 @@ class ObservabilityStackSetupWorkflow:
                 "failed_step": step,
             }
 
+        # STEP 0: Stop Traefik if it's running to avoid network conflicts
+        log_info("observability_step_start", step="traefik_pre_stop", trace_id=trace_id)
+        try:
+            traefik_pre_stop_result = await workflow.execute_activity(
+                "stop_traefik_activity",
+                {"trace_id": trace_id, "force": True},
+                start_to_close_timeout=timedelta(seconds=60),
+                retry_policy=RetryPolicy(
+                    initial_interval=timedelta(seconds=1),
+                    maximum_interval=timedelta(seconds=5),
+                    maximum_attempts=1,
+                    backoff_coefficient=1.0,
+                ),
+            )
+            results["traefik_pre_stop"] = traefik_pre_stop_result
+            log_info(
+                "observability_step_complete",
+                step="traefik_pre_stop",
+                trace_id=trace_id,
+                success=traefik_pre_stop_result.get("success"),
+            )
+        except Exception as e:
+            log_warning(
+                "traefik_pre_stop_skipped",
+                trace_id=trace_id,
+                reason="not_critical",
+                error=str(e),
+            )
+            results["traefik_pre_stop"] = {"success": False, "skipped": True, "error": str(e)}
+        
+        # Give Docker time to clean up
+        await workflow.sleep(3)
+
+        # STEP 1: Create network
         log_info("observability_step_start", step="network", trace_id=trace_id)
         network_result = await workflow.execute_activity(
             "create_observability_network_activity",
             {"trace_id": trace_id, "network_name": "observability-network"},
-            start_to_close_timeout=timedelta(seconds=30),
+            start_to_close_timeout=timedelta(seconds=60),
             retry_policy=retry_policy,
         )
         results["network"] = network_result
@@ -80,8 +114,10 @@ class ObservabilityStackSetupWorkflow:
             step="network",
             trace_id=trace_id,
             created=network_result.get("created"),
+            recreated=network_result.get("recreated", False),
         )
         
+        # STEP 2: Generate certificates
         service_hostnames = [
             "scaibu.otel", "scaibu.prometheus", "scaibu.loki",
             "scaibu.jaeger", "scaibu.alertmanager", "scaibu.grafana",
@@ -102,11 +138,15 @@ class ObservabilityStackSetupWorkflow:
         results["certificates"] = certs_result
         if not certs_result.get("success"):
             return _step_failure("certificates", "certificate_generation_failed")
-        logger.info(
-            f"observability_step_complete step=certificates trace_id={trace_id} generated={sum(1 for details in (certs_result.get('results') or {}).values() if details.get('generated'))}"
+        log_info(
+            "observability_step_complete",
+            step="certificates",
+            trace_id=trace_id,
+            generated=sum(1 for details in (certs_result.get('results') or {}).values() if details.get('generated')),
         )
         
-        logger.info(f"observability_step_start step=traefik_config trace_id={trace_id}")
+        # STEP 3: Generate Traefik TLS config
+        log_info("observability_step_start", step="traefik_config", trace_id=trace_id)
         traefik_config_result = await workflow.execute_activity(
             "generate_traefik_tls_config_activity",
             {
@@ -128,6 +168,7 @@ class ObservabilityStackSetupWorkflow:
             certificates_count=traefik_config_result.get("certificates_count"),
         )
         
+        # STEP 4: Allocate virtual IPs
         service_ips = {
             "scaibu.otel": "172.28.0.10",
             "scaibu.prometheus": "172.28.0.20",
@@ -167,17 +208,26 @@ class ObservabilityStackSetupWorkflow:
             if not details.get("ip_added")
         ]
         if missing_vips:
-            logger.warning(
-                f"observability_virtual_ip_warn trace_id={trace_id} missing_hosts={missing_vips}"
+            log_warning(
+                "observability_virtual_ip_warn",
+                trace_id=trace_id,
+                missing_hosts=missing_vips,
             )
 
-        logger.info(
-            f"observability_step_complete step=virtual_ips trace_id={trace_id} allocated={len(vip_result.get('results', {}))}"
+        log_info(
+            "observability_step_complete",
+            step="virtual_ips",
+            trace_id=trace_id,
+            allocated=len(vip_result.get('results', {})),
         )
         
+        # STEP 5: Update /etc/hosts
         hosts_entries = [{"hostname": hostname, "ip": host_loopback_ip} for hostname in service_ips.keys()]
-        logger.info(
-            f"observability_step_start step=hosts trace_id={trace_id} entries={len(hosts_entries)}"
+        log_info(
+            "observability_step_start",
+            step="hosts",
+            trace_id=trace_id,
+            entries=len(hosts_entries),
         )
         hosts_result = await workflow.execute_activity(
             "add_hosts_entries_activity",
@@ -195,6 +245,7 @@ class ObservabilityStackSetupWorkflow:
             backup_path=hosts_result.get("backup_path"),
         )
 
+        # STEP 6: Start Traefik
         log_info("observability_step_start", step="traefik", trace_id=trace_id)
         traefik_result = await workflow.execute_activity(
             "start_traefik_activity",
@@ -212,6 +263,10 @@ class ObservabilityStackSetupWorkflow:
             status=traefik_result.get("status"),
         )
 
+        # Give Traefik time to fully start
+        await workflow.sleep(5)
+
+        # STEP 7: Start observability stack
         log_info("observability_step_start", step="stack_start", trace_id=trace_id)
         stack_result = await workflow.execute_activity(
             "start_observability_stack_activity",
@@ -232,8 +287,10 @@ class ObservabilityStackSetupWorkflow:
             trace_id=trace_id,
         )
         
+        # Give containers time to stabilize
         await workflow.sleep(10)
         
+        # STEP 8: Verify stack
         log_info("observability_step_start", step="verification", trace_id=trace_id)
         verify_result = await workflow.execute_activity(
             "verify_observability_stack_activity",
@@ -282,6 +339,18 @@ class ObservabilityStackTeardownWorkflow:
     async def run(self, params: dict) -> dict:
         trace_id = f"obs-teardown-{workflow.uuid4()}"
         certs_dir = params.get("certs_dir", str(Path(__file__).parent / "certs"))
+        logger = workflow.logger
+        
+        def _format_fields(**fields: object) -> str:
+            if not fields:
+                return ""
+            parts = [f"{key}={fields[key]}" for key in sorted(fields)]
+            return " " + " ".join(parts)
+
+        def log_info(message: str, **fields: object) -> None:
+            logger.info(f"{message}{_format_fields(**fields)}")
+
+        log_info("observability_teardown_start", trace_id=trace_id)
         
         workflow_start = workflow.now()
         results = {}
@@ -293,6 +362,8 @@ class ObservabilityStackTeardownWorkflow:
             backoff_coefficient=2.0,
         )
         
+        # STEP 1: Stop observability stack
+        log_info("observability_teardown_step", step="stack_stop", trace_id=trace_id)
         stack_result = await workflow.execute_activity(
             "stop_observability_stack_activity",
             {"trace_id": trace_id},
@@ -301,11 +372,26 @@ class ObservabilityStackTeardownWorkflow:
         )
         results["stack"] = stack_result
         
+        # STEP 2: Stop Traefik
+        log_info("observability_teardown_step", step="traefik_stop", trace_id=trace_id)
+        traefik_stop_result = await workflow.execute_activity(
+            "stop_traefik_activity",
+            {"trace_id": trace_id, "force": True},
+            start_to_close_timeout=timedelta(seconds=60),
+            retry_policy=retry_policy,
+        )
+        results["traefik"] = traefik_stop_result
+        
+        # Give Docker time to clean up
+        await workflow.sleep(3)
+        
+        # STEP 3: Deallocate virtual IPs
         service_hostnames = [
             "scaibu.otel", "scaibu.prometheus", "scaibu.loki",
             "scaibu.jaeger", "scaibu.alertmanager", "scaibu.grafana"
         ]
         
+        log_info("observability_teardown_step", step="virtual_ips", trace_id=trace_id)
         vip_result = await workflow.execute_activity(
             "deallocate_virtual_ips_activity",
             {"trace_id": trace_id, "hostnames": service_hostnames, "remove_ip": True},
@@ -314,6 +400,8 @@ class ObservabilityStackTeardownWorkflow:
         )
         results["virtual_ips"] = vip_result
         
+        # STEP 4: Remove /etc/hosts entries
+        log_info("observability_teardown_step", step="hosts", trace_id=trace_id)
         hosts_result = await workflow.execute_activity(
             "remove_hosts_entries_activity",
             {"trace_id": trace_id, "hostnames": service_hostnames},
@@ -322,6 +410,8 @@ class ObservabilityStackTeardownWorkflow:
         )
         results["hosts"] = hosts_result
         
+        # STEP 5: Delete certificates
+        log_info("observability_teardown_step", step="certificates", trace_id=trace_id)
         certs_result = await workflow.execute_activity(
             "delete_certificates_activity",
             {"trace_id": trace_id, "hostnames": service_hostnames, "certs_dir": certs_dir},
@@ -332,6 +422,13 @@ class ObservabilityStackTeardownWorkflow:
         
         duration = workflow.now() - workflow_start
         duration_ms = int(duration.total_seconds() * 1000)
+        
+        log_info(
+            "observability_teardown_complete",
+            trace_id=trace_id,
+            duration_ms=duration_ms,
+            success=stack_result.get("success", False),
+        )
         
         return {
             "success": stack_result.get("success", False),
