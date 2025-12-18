@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 _logger = logging.getLogger("ObservabilityClient")
 
 class ObservabilityClient:
-    def __init__(self, endpoint: str = "http://172.28.0.10:4317", service_name: str = "observability-client"):
+    def __init__(self, endpoint: str = "http://172.28.0.10:4317", service_name: str = "observability-test"):
         self.endpoint = endpoint
         self.service_name = service_name
         self.resource = Resource.create({"service.name": service_name})
