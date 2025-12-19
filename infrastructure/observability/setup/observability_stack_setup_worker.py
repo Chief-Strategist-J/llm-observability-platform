@@ -43,6 +43,10 @@ from infrastructure.orchestrator.activities.network.certificate_manage_activity 
 
 from infrastructure.orchestrator.config.docker.traefik.traefik_activity import (
     start_traefik_activity,
+    stop_traefik_activity,  # ADDED: This was missing!
+    restart_traefik_activity,
+    delete_traefik_activity,
+    get_traefik_status_activity,
 )
 
 
@@ -58,24 +62,37 @@ class ObservabilityStackSetupWorker(BaseWorker):
     @property
     def activities(self):
         return [
+            # Observability stack activities
             create_observability_network_activity,
             start_observability_stack_activity,
             stop_observability_stack_activity,
             verify_observability_stack_activity,
+            
+            # Host management activities
             add_hosts_entries_activity,
             remove_hosts_entries_activity,
             verify_hosts_entries_activity,
             restore_hosts_backup_activity,
+            
+            # Virtual IP activities
             allocate_virtual_ips_activity,
             deallocate_virtual_ips_activity,
             list_virtual_ip_allocations_activity,
             verify_virtual_ips_activity,
+            
+            # Certificate activities
             generate_certificates_activity,
             delete_certificates_activity,
             verify_certificates_activity,
             list_certificates_activity,
             generate_traefik_tls_config_activity,
+            
+            # Traefik activities - ALL of them now registered
             start_traefik_activity,
+            stop_traefik_activity,  # ADDED: This was missing!
+            restart_traefik_activity,
+            delete_traefik_activity,
+            get_traefik_status_activity,
         ]
 
 

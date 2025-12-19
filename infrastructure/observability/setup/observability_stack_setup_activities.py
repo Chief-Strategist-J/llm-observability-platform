@@ -138,25 +138,9 @@ def disconnect_container_from_network(container_id: str, network_name: str, forc
         return False
 
 
-def stop_container(container_id: str) -> bool:
-    """Stop a container."""
-    try:
-        result = run_command(["docker", "stop", container_id], check=False, timeout=30)
-        if result.returncode == 0:
-            logger.info("container_stopped", container_id=container_id)
-            return True
-        else:
-            logger.warning("container_stop_failed", container_id=container_id, stderr=result.stderr)
-            return False
-    except Exception as e:
-        logger.error("stop_container_exception", container_id=container_id, error=str(e))
-        return False
-
-
 def remove_network_with_cleanup(network_name: str) -> bool:
     """Remove a network, handling active endpoints."""
     try:
-        # Get all containers on the network
         containers = get_network_containers(network_name)
         
         if containers:
@@ -167,7 +151,6 @@ def remove_network_with_cleanup(network_name: str) -> bool:
                 containers=[c["name"] for c in containers],
             )
             
-            # Try to disconnect containers
             for container in containers:
                 container_id = container["id"]
                 container_name = container["name"]
@@ -179,9 +162,7 @@ def remove_network_with_cleanup(network_name: str) -> bool:
                     network=network_name,
                 )
                 
-                # First try graceful disconnect
                 if not disconnect_container_from_network(container_id, network_name, force=False):
-                    # If that fails, try force disconnect
                     logger.warning(
                         "retrying_disconnect_with_force",
                         container_id=container_id,
@@ -189,10 +170,8 @@ def remove_network_with_cleanup(network_name: str) -> bool:
                     )
                     disconnect_container_from_network(container_id, network_name, force=True)
             
-            # Wait a bit for disconnections to complete
             time.sleep(2)
         
-        # Now try to remove the network
         result = run_command(["docker", "network", "rm", network_name], check=False)
         if result.returncode == 0:
             logger.info("network_removed", network=network_name)
@@ -206,30 +185,6 @@ def remove_network_with_cleanup(network_name: str) -> bool:
         return False
 
 
-def get_service_hostnames() -> List[str]:
-    return [svc.hostname for svc in OBSERVABILITY_SERVICES.values()]
-
-
-def get_service_entries() -> List[Dict[str, str]]:
-    return [{"hostname": svc.hostname, "ip": svc.ip} for svc in OBSERVABILITY_SERVICES.values()]
-
-
-def get_service_ips() -> Dict[str, str]:
-    return {svc.hostname: svc.ip for svc in OBSERVABILITY_SERVICES.values()}
-
-
-def get_certs_dir() -> Path:
-    return CERTS_DIR
-
-
-def get_config_dir() -> Path:
-    return CONFIG_DIR
-
-
-def get_compose_file() -> Path:
-    return COMPOSE_FILE
-
-
 @activity.defn(name="create_observability_network_activity")
 async def create_observability_network_activity(params: Dict[str, Any]) -> Dict[str, Any]:
     trace_id = params.get("trace_id", "obs-network-create")
@@ -240,11 +195,10 @@ async def create_observability_network_activity(params: Dict[str, Any]) -> Dict[
     start_time = time.time()
     
     logger.set_trace_id(trace_id)
-    logger.info("create_observability_network_start", network=network_name)
+    logger.info("create_observability_network_start", network=network_name, subnet=subnet, gateway=gateway)
     
     try:
         inspect_result = run_command(["docker", "network", "inspect", network_name], check=False)
-        recreate_network = False
 
         if inspect_result.returncode == 0:
             existing_subnet = None
@@ -257,14 +211,10 @@ async def create_observability_network_activity(params: Dict[str, Any]) -> Dict[
                         existing_subnet = config_entries[0].get("Subnet")
                         existing_gateway = config_entries[0].get("Gateway")
             except json.JSONDecodeError as exc:
-                logger.warning(
-                    "network_inspect_parse_failed",
-                    network=network_name,
-                    error=str(exc),
-                )
+                logger.warning("network_inspect_parse_failed", network=network_name, error=str(exc))
 
             if existing_subnet == subnet and (not gateway or existing_gateway == gateway):
-                logger.info("network_exists_with_correct_config", network=network_name)
+                logger.info("network_exists_with_correct_config", network=network_name, subnet=existing_subnet)
                 duration_ms = int((time.time() - start_time) * 1000)
                 return {
                     "success": True,
@@ -285,7 +235,6 @@ async def create_observability_network_activity(params: Dict[str, Any]) -> Dict[
                 expected_gateway=gateway,
             )
 
-            # Remove network with proper cleanup
             if not remove_network_with_cleanup(network_name):
                 duration_ms = int((time.time() - start_time) * 1000)
                 return {
@@ -297,10 +246,8 @@ async def create_observability_network_activity(params: Dict[str, Any]) -> Dict[
                     "trace_id": trace_id,
                 }
             
-            recreate_network = True
-            time.sleep(2)  # Give Docker time to fully clean up
+            time.sleep(3)
 
-        # Create the network
         create_cmd = [
             "docker", "network", "create",
             "--driver", "bridge",
@@ -311,20 +258,13 @@ async def create_observability_network_activity(params: Dict[str, Any]) -> Dict[
         create_result = run_command(create_cmd, check=False)
         
         if create_result.returncode == 0:
-            logger.info(
-                "network_created",
-                network=network_name,
-                recreated=recreate_network,
-                subnet=subnet,
-                gateway=gateway,
-            )
+            logger.info("network_created", network=network_name, subnet=subnet, gateway=gateway)
             duration_ms = int((time.time() - start_time) * 1000)
             return {
                 "success": True,
                 "service": "network-manager",
                 "network_name": network_name,
                 "created": True,
-                "recreated": recreate_network,
                 "duration_ms": duration_ms,
                 "trace_id": trace_id
             }
@@ -355,12 +295,13 @@ async def create_observability_network_activity(params: Dict[str, Any]) -> Dict[
 async def start_observability_stack_activity(params: Dict[str, Any]) -> Dict[str, Any]:
     trace_id = params.get("trace_id", "obs-stack-start")
     compose_file = Path(params.get("compose_file", str(COMPOSE_FILE)))
-    timeout_seconds = params.get("timeout_seconds", 300)
+    # INCREASED timeout from 300 to 600 seconds (10 minutes)
+    timeout_seconds = params.get("timeout_seconds", 600)
     
     start_time = time.time()
     
     logger.set_trace_id(trace_id)
-    logger.info("start_observability_stack_begin", compose_file=str(compose_file))
+    logger.info("start_observability_stack_begin", compose_file=str(compose_file), timeout=timeout_seconds)
     
     try:
         if not compose_file.exists():
@@ -372,32 +313,28 @@ async def start_observability_stack_activity(params: Dict[str, Any]) -> Dict[str
                 "trace_id": trace_id
             }
         
+        # Check if images are already pulled to estimate time
+        logger.info("checking_existing_images")
+        images_cmd = ["docker", "images", "--format", "{{.Repository}}:{{.Tag}}"]
+        images_result = run_command(images_cmd, check=False, timeout=10)
+        existing_images = images_result.stdout.strip().split('\n') if images_result.returncode == 0 else []
+        logger.info("existing_images_count", count=len(existing_images))
+        
         cmd = ["docker-compose", "-f", str(compose_file), "up", "-d"]
-        logger.info(
-            "stack_start_invoking",
-            compose_file=str(compose_file),
-            timeout_seconds=timeout_seconds,
-        )
+        logger.info("stack_start_invoking", compose_file=str(compose_file), timeout_seconds=timeout_seconds)
+        
         result = run_command(cmd, check=False, timeout=timeout_seconds)
 
         if result.returncode == 0:
-            logger.info("stack_started", compose_file=str(compose_file))
+            logger.info("stack_started_successfully", compose_file=str(compose_file))
             time.sleep(5)
 
             ps_cmd = ["docker-compose", "-f", str(compose_file), "ps"]
             ps_result = run_command(ps_cmd, check=False)
             if ps_result.returncode == 0:
-                logger.info(
-                    "stack_containers_status",
-                    compose_file=str(compose_file),
-                    status=_truncate_output(ps_result.stdout or ""),
-                )
+                logger.info("stack_containers_status", status=_truncate_output(ps_result.stdout or ""))
             else:
-                logger.warning(
-                    "stack_containers_status_failed",
-                    compose_file=str(compose_file),
-                    stderr=_truncate_output(ps_result.stderr or ""),
-                )
+                logger.warning("stack_containers_status_failed", stderr=_truncate_output(ps_result.stderr or ""))
 
             duration_ms = int((time.time() - start_time) * 1000)
             return {
@@ -413,22 +350,14 @@ async def start_observability_stack_activity(params: Dict[str, Any]) -> Dict[str
                 compose_file=str(compose_file),
                 stdout=_truncate_output(result.stdout or ""),
                 stderr=_truncate_output(result.stderr or ""),
+                return_code=result.returncode,
             )
-            logs_cmd = [
-                "docker-compose",
-                "-f",
-                str(compose_file),
-                "logs",
-                "--tail",
-                "100",
-            ]
+            
+            logs_cmd = ["docker-compose", "-f", str(compose_file), "logs", "--tail", "100"]
             logs_result = run_command(logs_cmd, check=False, timeout=60)
             if logs_result.stdout:
-                logger.error(
-                    "stack_recent_logs",
-                    compose_file=str(compose_file),
-                    logs=_truncate_output(logs_result.stdout),
-                )
+                logger.error("stack_recent_logs", logs=_truncate_output(logs_result.stdout))
+            
             duration_ms = int((time.time() - start_time) * 1000)
             return {
                 "success": False,
@@ -439,7 +368,7 @@ async def start_observability_stack_activity(params: Dict[str, Any]) -> Dict[str
             }
     except Exception as e:
         duration_ms = int((time.time() - start_time) * 1000)
-        logger.error("start_observability_stack_failed", error=e)
+        logger.error("start_observability_stack_failed", error=e, duration_ms=duration_ms)
         return {
             "success": False,
             "service": "stack-manager",
@@ -470,12 +399,12 @@ async def stop_observability_stack_activity(params: Dict[str, Any]) -> Dict[str,
             }
         
         cmd = ["docker-compose", "-f", str(compose_file), "down"]
-        result = run_command(cmd, check=False)
+        result = run_command(cmd, check=False, timeout=120)
         
         duration_ms = int((time.time() - start_time) * 1000)
         
         if result.returncode == 0:
-            logger.info("stack_stopped", compose_file=str(compose_file))
+            logger.info("stack_stopped", compose_file=str(compose_file), duration_ms=duration_ms)
             return {
                 "success": True,
                 "service": "stack-manager",
@@ -483,7 +412,7 @@ async def stop_observability_stack_activity(params: Dict[str, Any]) -> Dict[str,
                 "trace_id": trace_id
             }
         else:
-            logger.error("stack_stop_failed", error=result.stderr)
+            logger.error("stack_stop_failed", error=result.stderr, duration_ms=duration_ms)
             return {
                 "success": False,
                 "service": "stack-manager",
@@ -493,7 +422,7 @@ async def stop_observability_stack_activity(params: Dict[str, Any]) -> Dict[str,
             }
     except Exception as e:
         duration_ms = int((time.time() - start_time) * 1000)
-        logger.error("stop_observability_stack_failed", error=e)
+        logger.error("stop_observability_stack_failed", error=e, duration_ms=duration_ms)
         return {
             "success": False,
             "service": "stack-manager",
@@ -526,7 +455,7 @@ async def verify_observability_stack_activity(params: Dict[str, Any]) -> Dict[st
             logger.debug("verifying_container", container=container_name)
             
             inspect_cmd = ["docker", "inspect", "-f", "{{.State.Status}}", container_name]
-            result = run_command(inspect_cmd, check=False)
+            result = run_command(inspect_cmd, check=False, timeout=10)
             
             if result.returncode == 0:
                 status = result.stdout.strip()
@@ -545,7 +474,7 @@ async def verify_observability_stack_activity(params: Dict[str, Any]) -> Dict[st
                     all_healthy = False
                     logger.warning("container_not_running", container=container_name, status=status)
                 else:
-                    logger.info("container_running", container=container_name)
+                    logger.info("container_verified_running", container=container_name)
             else:
                 all_healthy = False
                 results[service_key] = {
@@ -567,11 +496,11 @@ async def verify_observability_stack_activity(params: Dict[str, Any]) -> Dict[st
         }
     except Exception as e:
         duration_ms = int((time.time() - start_time) * 1000)
-        logger.error("verify_observability_stack_failed", error=e)
+        logger.error("verify_observability_stack_failed", error=e, duration_ms=duration_ms)
         return {
             "success": False,
             "service": "stack-verifier",
             "error": str(e),
             "duration_ms": duration_ms,
             "trace_id": trace_id
-        }
+        }   
