@@ -169,6 +169,7 @@ All services are exposed securely via **Traefik** on `https://scaibu.<service>`.
 | `/targets` | GET | List all scrape targets and their health. |
 | `/rules` | GET | List alerting and recording rules. |
 | `/alerts` | GET | List all active alerts. |
+| `/alertmanagers` | GET | List active Alertmanagers. |
 | `/series` | GET/POST | Find series by label matchers (`match[]=<selector>`). |
 | `/labels` | GET/POST | List all label names. |
 | `/label/<name>/values` | GET | List all values for a label. |
@@ -275,3 +276,98 @@ curl -k "https://scaibu.jaeger/api/traces?service=observability-client"
 
 - **`observability_stack_setup_workflow.py`**: Full lifecycle orchestration.
 - **`observability_stack_setup_activities.py`**: Atomic operations (Network, Docker, Certs).
+
+---
+
+## 🌐 Network Configuration Guide
+
+### 1) Immediate, minimal fix (fast, non-persistent)
+
+Run these three commands to add the hostname and ensure the loopback address exists now:
+
+```bash
+# 1) backup current hosts
+sudo cp /etc/hosts /etc/hosts.pre-$(date +%F_%T)
+
+# 2) add the traefik host mapping
+echo "127.0.2.1 scaibu.traefik" | sudo tee -a /etc/hosts
+
+# 3) ensure the loopback alias exists (ephemeral until reboot)
+sudo ip addr add 127.0.2.1/32 dev lo || true
+
+# Verify
+getent hosts scaibu.traefik
+ping -c1 scaibu.traefik
+curl -Ik -H "Host: scaibu.traefik" https://127.0.2.1 --insecure -v
+```
+
+**Expected results**
+- `getent hosts scaibu.traefik` returns `127.0.2.1 scaibu.traefik`.
+- `ping` succeeds (or at least resolves).
+- `curl` returns Traefik's HTTP headers (or an HTTPS cert mismatch, which `--insecure` suppresses).
+
+### 2) Persistent loopback alias (survives reboot)
+
+Create a small systemd service so 127.0.2.1 is added on boot:
+
+```bash
+sudo tee /etc/systemd/system/loopback-127-0-2-1.service > /dev/null <<'EOF'
+[Unit]
+Description=Add loopback alias 127.0.2.1
+After=network-pre.target
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/ip addr add 127.0.2.1/32 dev lo
+ExecStop=/sbin/ip addr del 127.0.2.1/32 dev lo
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now loopback-127-0-2-1.service
+```
+
+### 3) Persistent /etc/hosts entry
+
+Appending to `/etc/hosts` is persistent across reboots. To group all scaibu.* names on one line:
+
+```bash
+sudo sed -i '/scaibu.traefik/d' /etc/hosts
+echo "127.0.2.1 scaibu.traefik scaibu.otel scaibu.prometheus scaibu.loki scaibu.jaeger scaibu.alertmanager scaibu.grafana" | sudo tee -a /etc/hosts
+```
+
+### 4) Quick rollback (if needed)
+
+```bash
+# remove the host entry
+sudo sed -i '/scaibu.traefik/d' /etc/hosts
+
+# remove loopback alias now
+sudo ip addr del 127.0.2.1/32 dev lo || true
+
+# if you enabled the systemd service:
+sudo systemctl disable --now loopback-127-0-2-1.service || true
+sudo rm -f /etc/systemd/system/loopback-127-0-2-1.service
+sudo systemctl daemon-reload
+```
+
+### 5) Troubleshooting
+
+- If you see browser NXDOMAIN after making changes:
+  - Clear the browser DNS cache (close/reopen the browser)
+  - Verify with `getent hosts scaibu.traefik` on the host
+  - If using WSL/VM/containers, update `/etc/hosts` in the environment where the browser runs
+
+- Check if the service is listening:
+  ```bash
+  sudo ss -ltnp | grep 127.0.2.1
+  ```
+
+- Verify name resolution:
+  ```bash
+  getent hosts scaibu.traefik
+  dig @127.0.0.1 scaibu.traefik  # Only works if you have a local DNS server
+  ```
