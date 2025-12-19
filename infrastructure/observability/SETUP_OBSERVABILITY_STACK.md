@@ -371,3 +371,193 @@ sudo systemctl daemon-reload
   getent hosts scaibu.traefik
   dig @127.0.0.1 scaibu.traefik  # Only works if you have a local DNS server
   ```
+
+## 🔍 Comprehensive Troubleshooting Guide
+
+### Diagnostic Commands
+
+Run these commands on the host machine to diagnose issues:
+
+#### 1. Hosts and Resolution
+```bash
+# Check current hosts file
+sudo cat /etc/hosts
+
+# Look for scaibu/traefik entries
+grep -nE "scaibu|traefik" /etc/hosts || true
+
+# Verify hostname resolution
+getent hosts scaibu.traefik || true
+```
+
+#### 2. Network Interface & Loopback
+```bash
+# Show loopback interface details
+ip addr show lo | sed -n '1,20p'
+
+# Check for 127.* aliases
+ip addr | grep -n "127\." -n || true
+```
+
+#### 3. DNS Resolution
+```bash
+# Check name service switch configuration
+cat /etc/nsswitch.conf
+
+# Check systemd-resolved status
+systemctl status systemd-resolved --no-pager || true
+
+# Check DNS resolution
+resolvectl status || nmcli dev show | grep DNS || true
+```
+
+#### 4. Listening Sockets
+```bash
+# Check for services on ports 80/443
+sudo ss -ltnp | egrep ':80|:443' || true
+
+# Check for services on 127.0.2.1
+sudo ss -ltnp | grep 127.0.2.1 || true
+```
+
+#### 5. Direct HTTP Test
+```bash
+# Test direct HTTP access with host header
+curl -Ik -H "Host: scaibu.traefik" https://127.0.2.1 --insecure -v
+```
+
+#### 6. Docker & Traefik Checks
+```bash
+# Check Traefik container status
+docker ps --filter name=traefik-scaibu -a
+
+# Check exposed ports
+docker port traefik-scaibu || true
+
+# Inspect network settings
+docker inspect traefik-scaibu --format '{{json .NetworkSettings}}' | jq . || docker inspect traefik-scaibu
+
+# Check network configuration
+docker network inspect cicd-network | jq .
+```
+
+#### 7. Check Hosts Backups
+```bash
+# List host file backups
+ls -l /home/j/.hosts_backups/ || true
+
+# View backup contents
+sudo sed -n '1,200p' /home/j/.hosts_backups/hosts.backup.20251218_120735 || true
+```
+
+### Common Issues and Solutions
+
+#### 1. Host Resolution Failure
+**Symptom**: `curl: (6) Could not resolve host: scaibu.traefik`
+**Cause**: DNS name not resolving on the client
+**Fixes**:
+- Verify `/etc/hosts` contains the correct entry
+- Check `nsswitch.conf` order (should have `files` before `dns`)
+- Clear DNS cache if applicable
+
+#### 2. Service Not Reachable
+**Symptom**: Connection refused or timeout when accessing service
+**Checks**:
+- Verify service is running: `docker ps | grep traefik`
+- Check service logs: `docker logs traefik-scaibu`
+- Verify port binding: `ss -tuln | grep 443`
+
+#### 3. Browser Shows NXDOMAIN
+**Symptom**: Browser shows "This site can't be reached" with NXDOMAIN
+**Solutions**:
+- Clear browser DNS cache
+- Verify system DNS resolution: `dig +short scaibu.traefik`
+- Check if host entry exists: `grep scaibu.traefik /etc/hosts`
+- Try accessing via IP: `curl -k https://127.0.2.1 -H "Host: scaibu.traefik"`
+
+#### 4. Loopback Alias Missing
+**Symptom**: Can't bind to 127.0.2.1
+**Fix**:
+```bash
+# Add loopback alias (temporary)
+sudo ip addr add 127.0.2.1/32 dev lo
+
+# Or make it persistent with systemd (see section 2 above)
+```
+
+### Quick Fixes
+
+#### 1. Reset Hosts File
+```bash
+# Backup current hosts
+sudo cp /etc/hosts /etc/hosts.backup.$(date +%Y%m%d_%H%M%S)
+
+# Add all scaibu entries
+echo "127.0.2.1 scaibu.traefik scaibu.prometheus scaibu.loki scaibu.jaeger scaibu.alertmanager scaibu.grafana scaibu.otel" | sudo tee -a /etc/hosts
+```
+
+#### 2. Alternative Port Binding
+If using Docker, modify `docker-compose.yml` to bind to different ports:
+```yaml
+ports:
+  - "127.0.0.1:8080:80"
+  - "127.0.0.1:8443:443"
+```
+
+#### 3. Check Service Logs
+```bash
+# View Traefik logs
+docker logs traefik-scaibu
+
+# View container logs with timestamps
+docker logs --tail 100 -f traefik-scaibu
+```
+
+### Debugging Network Issues
+
+1. **Verify Network Connectivity**
+   ```bash
+   # Test connectivity to Traefik
+   curl -v -H "Host: scaibu.traefik" http://127.0.2.1
+   
+   # Test with IP only
+   curl -k https://127.0.2.1
+   ```
+
+2. **Check Firewall Rules**
+   ```bash
+   # Check iptables rules
+   sudo iptables -L -n -v
+   
+   # Check for DOCKER chain
+   sudo iptables -t nat -L -n -v
+   ```
+
+3. **Inspect Docker Network**
+   ```bash
+   # List all networks
+   docker network ls
+   
+   # Inspect network
+   docker network inspect cicd-network
+   ```
+
+### Final Verification
+
+After applying fixes, verify everything works:
+
+```bash
+# Check hosts file
+grep scaibu /etc/hosts
+
+# Test DNS resolution
+getent hosts scaibu.traefik
+
+# Test HTTP access
+curl -Ik -H "Host: scaibu.traefik" https://127.0.2.1 --insecure
+
+# Check container status
+docker ps | grep -E 'traefik|prometheus|loki|jaeger|grafana'
+```
+
+If issues persist, check the logs of individual containers and verify network connectivity between them.
