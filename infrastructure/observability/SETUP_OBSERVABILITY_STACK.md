@@ -6,10 +6,10 @@ This comprehensive technical guide details the design, configuration, mechanics,
 
 ## 🏗️ 1. Architecture Overview & Data Flow
 
-### 🧠 System Data Flow (Mermaid Config)
+### 1.1 System Data Flow
 
-#### 1.1 Logs Pipeline (Loki)
-**Flow**: App -> OTEL Collector (Batching) -> Loki (Indexing) -> Grafana (Query).
+#### 1.1.1 Logs Pipeline (Loki)
+**Flow**: App → OTEL Collector (Batching) → Loki (Indexing) → Grafana (Query).
 
 ```mermaid
 sequenceDiagram
@@ -24,8 +24,8 @@ sequenceDiagram
     Loki-->>Grafana: Stream chunks
 ```
 
-#### 1.2 Metrics Pipeline (Prometheus)
-**Flow**: App -> OTEL -> Prometheus (Remote Write).
+#### 1.1.2 Metrics Pipeline (Prometheus)
+**Flow**: App → OTEL → Prometheus (Remote Write).
 
 ```mermaid
 sequenceDiagram
@@ -40,46 +40,48 @@ sequenceDiagram
     Prom-->>Grafana: TimeSeries Data
 ```
 
----
+### 1.2 Setup Commands
 
-## 📸 1.2. Setup command
-
+#### 1.2.1 Network Setup
 ```bash
+# Create required Docker networks
 docker network create --driver bridge observability-network || true
 docker network create --driver bridge data-network || true
 docker network create --driver bridge messaging-network || true
 docker network create --driver bridge cicd-network || true
 docker network create --driver bridge temporal-network || true
+```
 
-
+#### 1.2.2 Start Temporal Services
+```bash
 cd infrastructure/orchestrator/config/docker/temporal
-
 docker-compose -f temporal-orchestrator-compose.yaml up -d
-
 cd ../../../../..
+```
 
-
+#### 1.2.3 Start Traefik
+```bash
 cd infrastructure/orchestrator/config/docker/traefik/config
-
 docker-compose -f traefik-dynamic-docker.yaml up -d
-
 cd ../../../../../..
+```
 
+#### 1.2.4 Run Setup Scripts
+```bash
 source /home/j/live/dinesh/llm-chatbot-python/.venv/bin/activate
-
 python infrastructure/observability/setup/observability_stack_setup_worker.py
-
 python infrastructure/observability/setup/trigger_observability_stack_setup.py setup
 
-# to cleaning it 
-python infrastructure/observability/setup/trigger_observability_stack_setup.py teardown
+# To clean up:
+# python infrastructure/observability/setup/trigger_observability_stack_setup.py teardown
+```
 
-## 🔗 Service Access
+### 1.3 Service Access
 
 Access the following services after successful setup:
 
-| Service | URL | Credentials (if any) |
-|---------|-----|----------------------|
+| Service | URL | Credentials |
+|---------|-----|-------------|
 | **Traefik Dashboard** | [https://scaibu.traefik/dashboard/](https://scaibu.traefik/dashboard/) | - |
 | **Grafana** | [https://scaibu.grafana/login](https://scaibu.grafana/login) | `admin` / `SuperSecret123!` |
 | **Jaeger UI** | [https://scaibu.jaeger/search](https://scaibu.jaeger/search) | - |
@@ -88,9 +90,9 @@ Access the following services after successful setup:
 | **Alertmanager** | [https://scaibu.alertmanager/#/alerts](https://scaibu.alertmanager/#/alerts) | - |
 | **OTEL Collector** | [https://scaibu.otel/](https://scaibu.otel/) | - |
 
-> **Note**: Ensure you have the proper `/etc/hosts` entries or DNS resolution configured as mentioned in the [Network Configuration Guide](#-network-configuration-guide) section.
+> **Note**: Ensure proper `/etc/hosts` entries or DNS resolution is configured as mentioned in the [Network Configuration Guide](#5-network-configuration) section.
 
-## 📸 2. Visualization Gallery
+## � 2. Visualization Gallery
 
 ### Logs & Metrics
 
@@ -103,99 +105,162 @@ Access the following services after successful setup:
   <img src="../../assets/promothes.png" alt="Prometheus" width="800"/>
   <p><em>Prometheus Targets: Green indicates successful scraping.</em></p>
 
-
-### Tracing
+### 2.2 Distributed Tracing
 
   <img src="../../assets/tracing.png" alt="Tracing" width="800"/>
-  <p><em>Jaeger Trace View: Gantt chart of request latency.</em></p>
+  <p><em>Figure 2.1: Jaeger Trace View showing request latency across services</em></p>
 
   <img src="../../assets/jaeger-tracing.png" alt="Jaeger UI" width="800"/>
-  <p><em>Trace-level detail: Identifies specific function slowdowns.</em></p>
-  
+  <p><em>Figure 2.2: Detailed trace view with timing breakdown</em></p>
 
----
-
-## 💻 3. How to Collect Telemetry (Code & Raw API)
-
-You have two options: High-level Python Client (Recommended) or Raw HTTP API.
+## 💻 3. Telemetry Collection
 
 ### 3.1 Using Python Client (Recommended)
-This handles `trace_id` injection, batching, and error handling automatically.
+
+The Python client provides a high-level interface that handles `trace_id` injection, batching, and error handling automatically.
 
 ```python
 from observability_client import ObservabilityClient
-client = ObservabilityClient()
 
-# 1. Logs
-client.log_info("User login", {"user": "admin"})
+# Initialize client
+client = ObservabilityClient(
+    service_name="your-service-name",
+    environment="production"
+)
 
-# 2. Metrics
-client.increment_counter(1, {"route": "/login"})
+# 1. Structured Logging
+client.log_info(
+    "User login",
+    attributes={
+        "user": "admin",
+        "ip": "192.168.1.1",
+        "status": "success"
+    }
+)
 
-# 3. Tracing
-with client.tracer.start_as_current_span("login_flow"):
-    # actual business logic
-    pass
+# 2. Metrics Collection
+client.increment_counter(
+    value=1,
+    name="http_requests_total",
+    attributes={
+        "route": "/login",
+        "method": "POST",
+        "status_code": 200
+    }
+)
+
+# 3. Distributed Tracing
+with client.tracer.start_as_current_span("login_flow") as span:
+    # Business logic here
+    span.set_attribute("user.id", "user123")
+    # Nested spans for more detailed tracing
+    with client.tracer.start_as_current_span("db_query"):
+        # Database operations
+        pass
 ```
 
-### 3.2 Using Raw HTTP (Advanced)
-If you cannot use the Python SDK, you can push directly to **OTEL Collector**.
+### 3.2 Using Raw HTTP API (Advanced)
 
-**Push Logs (HTTP/JSON)**
-*Endpoint*: `http://scaibu.otel:4318/v1/logs` (Internal)
+For environments where the Python client isn't available, you can use the raw HTTP API to send telemetry data directly to the OTEL Collector.
+
+#### Push Logs (HTTP/JSON)
+
+**Endpoint**: `http://scaibu.otel:4318/v1/logs`
+
 ```bash
 curl -X POST http://localhost:4318/v1/logs \
   -H "Content-Type: application/json" \
   -d '{
     "resourceLogs": [{
-      "resource": { "attributes": [{ "key": "service.name", "value": "manual-curl" }] },
+      "resource": { 
+        "attributes": [
+          { "key": "service.name", "value": "manual-curl" },
+          { "key": "environment", "value": "development" }
+        ]
+      },
       "scopeLogs": [{
+        "scope": {},
         "logRecords": [{
-          "timeUnixNano": "1700000000000000000",
+          "timeUnixNano": "'$(date +%s000000000)'",
           "severityText": "INFO",
-          "body": { "stringValue": "Manual log via Curl" },
-          "attributes": [{ "key": "http.method", "value": "POST" }]
+          "body": { "stringValue": "Manual log entry via HTTP API" },
+          "attributes": [
+            { "key": "http.method", "value": "POST" },
+            { "key": "endpoint", "value": "/api/v1/logs" }
+          ]
         }]
       }]
     }]
   }'
-```
 
 ---
 
-## 📚 4. Comprehensive API Reference
+## 📚 4. API Reference
 
-All services are exposed securely via **Traefik** on `https://scaibu.<service>`.
-*Note: Ensure `127.0.1.1 scaibu.prometheus scaibu.loki scaibu.jaeger` is in your `/etc/hosts`.*
+### 4.1 API Access
 
-### 4.1 Prometheus API (`https://scaibu.prometheus`)
+All observability services are exposed through **Traefik** reverse proxy with the following base URL pattern:
+
+```
+https://scaibu.<service-name>
+```
+
+**Prerequisites**:
+- Ensure proper hostname resolution by adding this line to your `/etc/hosts` file:
+  ```
+  127.0.1.1 scaibu.traefik scaibu.prometheus scaibu.loki scaibu.jaeger scaibu.grafana scaibu.alertmanager scaibu.otel
+  ```
+- For local development, you may need to use self-signed certificates. Use `-k` or `--insecure` flag with `curl` to bypass certificate validation.
+
+### 4.2 Prometheus API
 
 **Base URL**: `https://scaibu.prometheus/api/v1`
 
+#### Query API
+
+| Endpoint | Method | Description | Parameters |
+|----------|--------|-------------|------------|
+| **Instant Query** | | Query metrics at a single point in time | |
+| `/query` | GET/POST | Execute PromQL query | `query=<string>`, `time=<rfc3339|unix_timestamp>`, `timeout=<duration>` |
+| **Range Query** | | Query metrics over a time range | |
+| `/query_range` | GET/POST | Execute PromQL query over time range | `query=<string>`, `start=<rfc3339|unix_timestamp>`, `end=<rfc3339|unix_timestamp>`, `step=<duration>`, `timeout=<duration>` |
+
+#### Metadata API
+
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| **Instant Queries** || Evaluate query at a single point in time. |
-| `/query` | GET/POST | `query=<promql>&time=<ts>` |
-| **Range Queries** || Evaluate query over a range of time. |
-| `/query_range` | GET/POST | `query=<promql>&start=<ts>&end=<ts>&step=<sec>` |
-| **Metadata** || |
-| `/targets` | GET | List all scrape targets and their health. |
-| `/rules` | GET | List alerting and recording rules. |
-| `/alerts` | GET | List all active alerts. |
-| `/alertmanagers` | GET | List active Alertmanagers. |
-| `/series` | GET/POST | Find series by label matchers (`match[]=<selector>`). |
-| `/labels` | GET/POST | List all label names. |
-| `/label/<name>/values` | GET | List all values for a label. |
-| `/targets/metadata` | GET | Get metric metadata from targets. |
-| **Status** || |
-| `/status/buildinfo` | GET | Prometheus version info. |
-| `/status/tsdb` | GET | TSDB cardinality stats. |
-| `/status/config` | GET | Current loaded configuration (YAML). |
-| `/status/flags` | GET | Command-line flags. |
-| **Admin** || *(Requires Admin API enabled)* |
-| `/admin/tsdb/snapshot` | POST | Create data snapshot. |
-| `/admin/tsdb/delete_series` | POST | Delete series. |
-| `/admin/tsdb/clean_tombstones` | POST | Clean deleted data from disk. |
+| **Targets** | | Monitor scrape targets |
+| `/targets` | GET | List all configured targets |
+| `/targets/metadata` | GET | Get target metadata |
+| **Rules & Alerts** | | Manage alerting and recording rules |
+| `/rules` | GET | List all rules |
+| `/alerts` | GET | List all active alerts |
+| `/alertmanagers` | GET | List active Alertmanagers |
+| **Metadata** | | Explore metric metadata |
+| `/series` | GET/POST | Find series by label matchers |
+| `/labels` | GET/POST | List all label names |
+| `/label/<name>/values` | GET | List values for a label |
+| **Status** | | System status and configuration |
+| `/status/config` | GET | Current configuration |
+| `/status/flags` | GET | Command-line flags |
+| `/status/runtimeinfo` | GET | Runtime information |
+| `/status/buildinfo` | GET | Build information |
+| `/status/tsdb` | GET | TSDB statistics |
+
+#### Example Usage
+
+```bash
+# Get current CPU usage
+curl -k "https://scaibu.prometheus/api/v1/query?query=100%20-%20(avg%20by%20(instance)%20(irate(node_cpu_seconds_total{mode="idle"}[5m]))%20*%20100)"
+
+# Get memory usage over time (1h range with 1m steps)
+curl -k "https://scaibu.prometheus/api/v1/query_range?query=node_memory_MemTotal_bytes%20-%20node_memory_MemAvailable_bytes&start=$(date -d '1 hour ago' +%s)&end=$(date +%s)&step=1m"
+
+# List all active alerts
+curl -k "https://scaibu.prometheus/api/v1/alerts"
+```
+
+> **Note**: For production use, consider using the official [Prometheus Python client](https://github.com/prometheus/client_python) or [PromQL HTTP API client](https://prometheus.io/docs/prometheus/latest/querying/api/) for better integration and error handling.
 
 **Example: Query Metric**
 ```bash
@@ -207,54 +272,96 @@ curl -k "https://scaibu.prometheus/api/v1/query?query=up"
 curl -k "https://scaibu.prometheus/api/v1/targets"
 ```
 
-### 4.2 Loki API (`https://scaibu.loki`)
+### 4.3 Loki API
 
 **Base URL**: `https://scaibu.loki/loki/api/v1`
 
+Loki is the logging component of the observability stack, providing a powerful query language called LogQL for log aggregation and analysis.
+
+#### Query API
+
+| Endpoint | Method | Description | Parameters |
+|----------|--------|-------------|------------|
+| **Log Queries** | | Query logs using LogQL | |
+| `/query_range` | GET | Query logs over a range of time | `query=<logql>`, `start=<unix_epoch>`, `end=<unix_epoch>`, `limit=<number>`, `direction=<forward|backward>` |
+| `/query` | GET | Query logs at a single point in time | `query=<logql>`, `limit=<number>`, `time=<unix_epoch>` |
+| **Log Streaming** | | Stream logs in real-time | |
+| `/tail` | GET | Stream logs (WebSocket) | `query=<logql>`, `delay_for=<seconds>` |
+
+#### Metadata API
+
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| **Ingestion** || |
-| `/push` | POST | Ingest logs (Protobuf/JSON). |
-| **Querying** || |
-| `/query` | GET | Instant LogQL query. |
-| `/query_range` | GET | LogQL query over time range. |
-| `/tail` | GET | Stream logs in real-time (WebSocket/HTTP). |
-| **Metadata** || |
-| `/labels` | GET | List label names. |
-| `/label/<name>/values` | GET | List label values. |
-| `/series` | GET | Find log streams. |
-| `/index/stats` | GET | Index statistics. |
-| **Rules (Ruler)** || |
-| `/rules` | GET | List alerting rules. |
-| `/rules/{namespace}` | GET/POST | Manage rules per namespace. |
-| **Status/Admin** || |
-| `/delete` | POST | Delete logs (requires configuration). |
-| `/status/buildinfo` | GET | Loki version info. |
-| `/ready` | GET | Readiness probe. |
-| `/flush` | POST | Flush chunks to storage. |
+| **Labels** | | Explore log labels |
+| `/labels` | GET | List all available label names |
+| `/label/<name>/values` | GET | List values for a specific label |
+| **Series** | | Discover log streams |
+| `/series` | GET | Find log streams by label matchers |
+| **Status** | | System information |
+| `/status/buildinfo` | GET | Loki version information |
+| `/ready` | GET | Health check endpoint |
+| `/flush` | POST | Flush in-memory chunks to storage |
 
-**Example: Range Query**
+#### Example Usage
+
 ```bash
+# Query logs from the last hour
 curl -k -G "https://scaibu.loki/loki/api/v1/query_range" \
-  --data-urlencode 'query={job="otel-collector"}' \
-  --data-urlencode 'limit=10'
+  --data-urlencode 'query={job="otel-collector"} |~ "error" | json | level="error"' \
+  --data-urlencode "start=$(date -d '1 hour ago' +%s)000000000" \
+  --data-urlencode "end=$(date +%s)000000000" \
+  --data-urlencode 'limit=50' \
+  --data-urlencode 'direction=backward'
+
+# Get label values for 'container_name'
+curl -k "https://scaibu.loki/loki/api/v1/label/container_name/values"
+
+# Stream logs in real-time (WebSocket)
+wscat -c "wss://scaibu.loki/loki/api/v1/tail?query={job=\"otel-collector\"}"
 ```
 
-### 4.3 Jaeger API (`https://scaibu.jaeger`)
+### 4.4 Jaeger API
 
 **Base URL**: `https://scaibu.jaeger/api`
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/traces` | GET | Find traces (`service=<name>`). |
-| `/traces/{traceID}` | GET | Get single trace details. |
-| `/services` | GET | List all services. |
-| `/dependencies` | GET | Service dependency graph. |
+Jaeger provides distributed tracing capabilities, allowing you to monitor and troubleshoot transactions in complex distributed systems.
 
-**Example: Find Traces**
+#### Trace API
+
+| Endpoint | Method | Description | Parameters |
+|----------|--------|-------------|------------|
+| **Trace Search** | | Find traces | |
+| `/traces` | GET | Search for traces | `service=<name>`, `operation=<operation>`, `tags=<json>`, `start=<timestamp>`, `end=<timestamp>`, `minDuration=<duration>`, `limit=<number>` |
+| **Trace Details** | | Get trace details | |
+| `/traces/{traceId}` | GET | Get a single trace by ID | - |
+| **Services** | | Service discovery | |
+| `/services` | GET | List all services | - |
+| `/services/{service}/operations` | GET | List operations for a service | - |
+| **Dependencies** | | Service dependencies | |
+| `/dependencies` | GET | Get service dependencies | `endTs=<timestamp>`, `lookback=<duration>` |
+
+#### Example Usage
+
 ```bash
-curl -k "https://scaibu.jaeger/api/traces?service=observability-client"
+# Find recent traces for a specific service
+curl -k "https://scaibu.jaeger/api/traces?service=observability-client&limit=10"
+
+# Get details for a specific trace
+TRACE_ID="1a2b3c4d5e6f7g8h"
+curl -k "https://scaibu.jaeger/api/traces/${TRACE_ID}"
+
+# List all services
+curl -k "https://scaibu.jaeger/api/services"
+
+# Get service operations
+curl -k "https://scaibu.jaeger/api/services/observability-client/operations"
+
+# Get service dependencies (last hour)
+END_TS=$(date +%s000000)
+curl -k "https://scaibu.jaeger/api/dependencies?endTs=${END_TS}&lookback=3600000000000"
 ```
+
+> **Note**: When working with timestamps in the API, they should be in microseconds since Unix epoch. For example, use `date +%s000000` to get the current time in microseconds.
 
 ---
 
