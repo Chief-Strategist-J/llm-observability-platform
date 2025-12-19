@@ -74,8 +74,21 @@ python infrastructure/observability/setup/trigger_observability_stack_setup.py s
 # to cleaning it 
 python infrastructure/observability/setup/trigger_observability_stack_setup.py teardown
 
-```
+## 🔗 Service Access
 
+Access the following services after successful setup:
+
+| Service | URL | Credentials (if any) |
+|---------|-----|----------------------|
+| **Traefik Dashboard** | [https://scaibu.traefik/dashboard/](https://scaibu.traefik/dashboard/) | - |
+| **Grafana** | [https://scaibu.grafana/login](https://scaibu.grafana/login) | `admin` / `SuperSecret123!` |
+| **Jaeger UI** | [https://scaibu.jaeger/search](https://scaibu.jaeger/search) | - |
+| **Prometheus** | [https://scaibu.prometheus/query](https://scaibu.prometheus/query) | - |
+| **Loki** | [https://scaibu.loki/ready](https://scaibu.loki/ready) | - |
+| **Alertmanager** | [https://scaibu.alertmanager/#/alerts](https://scaibu.alertmanager/#/alerts) | - |
+| **OTEL Collector** | [https://scaibu.otel/](https://scaibu.otel/) | - |
+
+> **Note**: Ensure you have the proper `/etc/hosts` entries or DNS resolution configured as mentioned in the [Network Configuration Guide](#-network-configuration-guide) section.
 
 ## 📸 2. Visualization Gallery
 
