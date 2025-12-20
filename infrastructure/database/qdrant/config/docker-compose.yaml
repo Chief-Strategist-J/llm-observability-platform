@@ -16,12 +16,12 @@ services:
     labels:
       traefik.enable: "true"
       traefik.docker.network: "database-network"
-      
+
       traefik.http.routers.qdrant-scaibu.rule: "Host(`scaibu.qdrant`)"
       traefik.http.routers.qdrant-scaibu.entrypoints: "web,websecure"
       traefik.http.routers.qdrant-scaibu.service: "qdrant-service"
       traefik.http.routers.qdrant-scaibu.tls: "true"
-      
+
       traefik.http.services.qdrant-service.loadbalancer.server.port: "6333"
 
     deploy:
@@ -30,9 +30,9 @@ services:
           memory: "1g"
         reservations:
           memory: "256m"
-    
+
     restart: unless-stopped
-    
+
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider localhost:6333/healthz || exit 1"]
       interval: "10s"

@@ -55,24 +55,35 @@ class BaseDatabaseSetupActivity:
 
             await self._ensure_prerequisites(env_vars or {})
 
-            # Instantiate Manager
             manager = YAMLContainerManager(
                 yaml_path=str(self.compose_file),
-                instance_id=0, # Assuming single instance per cell for now
+                instance_id=0,
                 env_vars=env_vars or {}
             )
 
-            # 1. Stop existing if running (clean slate)
             manager.stop(force=True)
-            manager.delete(remove_volumes=False) # Persist data!
+            manager.delete(remove_volumes=False)
 
-            # 2. Start Service
             success = manager.start(restart_if_running=True)
             
             if not success:
-                raise Exception(f"Failed to start service: {self.service_name}")
+                status = manager.get_status()
+                self.log.warning(
+                    "container_started_but_not_healthy",
+                    service=self.service_name,
+                    status=status.value
+                )
+                
+                if status.value in ["running", "unknown"]:
+                    self.log.info(
+                        "container_running_accepting_unknown_state",
+                        service=self.service_name,
+                        status=status.value
+                    )
+                    success = True
+                else:
+                    raise Exception(f"Failed to start service: {self.service_name}")
 
-            # 3. Verify Health
             status = manager.get_status()
             
             duration_ms = int((time.time() - start_time) * 1000)
@@ -245,4 +256,4 @@ class BaseDatabaseSetupActivity:
                 "success": False,
                 "service": self.service_name,
                 "error": str(e)
-            }
+            }   

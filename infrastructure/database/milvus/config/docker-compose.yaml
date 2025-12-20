@@ -43,19 +43,19 @@ services:
     networks:
       database-network:
         ipv4_address: 172.29.0.100
-    
+
     ports:
       - "19530:19530"
 
     labels:
       traefik.enable: "true"
       traefik.docker.network: "database-network"
-      
+
       traefik.http.routers.milvus-scaibu.rule: "Host(`scaibu.milvus`)"
       traefik.http.routers.milvus-scaibu.entrypoints: "web,websecure"
       traefik.http.routers.milvus-scaibu.service: "milvus-service"
       traefik.http.routers.milvus-scaibu.tls: "true"
-      
+
       traefik.http.services.milvus-service.loadbalancer.server.port: "19530"
 
     deploy:
@@ -64,9 +64,9 @@ services:
           memory: "2g"
         reservations:
           memory: "1g"
-    
+
     restart: unless-stopped
-    
+
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
       interval: "30s"
@@ -87,12 +87,12 @@ services:
     labels:
       traefik.enable: "true"
       traefik.docker.network: "database-network"
-      
+
       traefik.http.routers.attu-scaibu.rule: "Host(`scaibu.attu`)"
       traefik.http.routers.attu-scaibu.entrypoints: "web,websecure"
       traefik.http.routers.attu-scaibu.service: "attu-service"
       traefik.http.routers.attu-scaibu.tls: "true"
-      
+
       traefik.http.services.attu-service.loadbalancer.server.port: "3000"
 
     restart: unless-stopped

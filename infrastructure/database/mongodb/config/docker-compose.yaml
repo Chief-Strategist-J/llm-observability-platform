@@ -5,8 +5,8 @@ services:
     image: mongo:latest
     container_name: mongodb-instance-0
     environment:
-      MONGO_INITDB_ROOT_USERNAME: "${MONGO_ROOT_USER:-admin}"
-      MONGO_INITDB_ROOT_PASSWORD: "${MONGO_ROOT_PASSWORD:-MongoPassword123!}"
+      MONGO_INITDB_ROOT_USERNAME: "admin"
+      MONGO_INITDB_ROOT_PASSWORD: "MongoPassword123!"
       INSTANCE_ID: "0"
     volumes:
       - mongodb-data-0:/data/db
@@ -14,7 +14,7 @@ services:
     networks:
       database-network:
         ipv4_address: 172.29.0.20
-    
+
     command: ["mongod", "--bind_ip_all"]
 
     labels:
@@ -28,9 +28,9 @@ services:
           memory: "1g"
         reservations:
           memory: "512m"
-    
+
     restart: unless-stopped
-    
+
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: "10s"
@@ -41,26 +41,26 @@ services:
     image: mongo-express:latest
     container_name: mongoexpress-instance-0
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: "${MONGO_ROOT_USER:-admin}"
-      ME_CONFIG_MONGODB_ADMINPASSWORD: "${MONGO_ROOT_PASSWORD:-MongoPassword123!}"
+      ME_CONFIG_MONGODB_ADMINUSERNAME: "admin"
+      ME_CONFIG_MONGODB_ADMINPASSWORD: "MongoPassword123!"
       ME_CONFIG_MONGODB_SERVER: "mongodb-instance-0"
-      ME_CONFIG_BASICAUTH_USERNAME: "${MONGOEXPRESS_USER:-admin}"
-      ME_CONFIG_BASICAUTH_PASSWORD: "${MONGOEXPRESS_PASSWORD:-MongoExpressPassword123!}"
+      ME_CONFIG_BASICAUTH_USERNAME: "admin"
+      ME_CONFIG_BASICAUTH_PASSWORD: "MongoExpressPassword123!"
     depends_on:
       - mongodb
     networks:
       database-network:
         ipv4_address: 172.29.0.21
-    
+
     labels:
       traefik.enable: "true"
       traefik.docker.network: "database-network"
-      
+
       traefik.http.routers.mongoexpress-scaibu.rule: "Host(`scaibu.mongoexpress`)"
       traefik.http.routers.mongoexpress-scaibu.entrypoints: "web,websecure"
       traefik.http.routers.mongoexpress-scaibu.service: "mongoexpress-service"
       traefik.http.routers.mongoexpress-scaibu.tls: "true"
-      
+
       traefik.http.services.mongoexpress-service.loadbalancer.server.port: "8081"
 
     restart: unless-stopped
