@@ -3,7 +3,13 @@ import logging
 import argparse
 import uuid
 from temporalio.client import Client
+from pathlib import Path
+import sys
 
+project_root = Path(__file__).resolve().parents[2]  # llm-chatbot-python
+
+if project_root.as_posix() not in sys.path:
+    sys.path.insert(0, project_root.as_posix())
 # Workflows
 from infrastructure.database.postgres.setup.postgres_setup_workflow import PostgresSetupWorkflow
 from infrastructure.database.mongodb.setup.mongodb_setup_workflow import MongodbSetupWorkflow
