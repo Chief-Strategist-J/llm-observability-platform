@@ -5,16 +5,16 @@ services:
     image: cassandra:4.1
     container_name: cassandra-instance-0
     environment:
-      - CASSANDRA_CLUSTER_NAME=Test Cluster
-      - CASSANDRA_DC=datacenter1
-      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
-      - INSTANCE_ID=0
+      CASSANDRA_CLUSTER_NAME: "Test Cluster"
+      CASSANDRA_DC: "datacenter1"
+      CASSANDRA_ENDPOINT_SNITCH: "GossipingPropertyFileSnitch"
+      INSTANCE_ID: "0"
     volumes:
       - cassandra-data-0:/var/lib/cassandra
     networks:
       database-network:
         ipv4_address: 172.29.0.90
-    
+
     ports:
       - "9042:9042" # CQL
 
@@ -29,11 +29,11 @@ services:
           memory: "2g"
         reservations:
           memory: "1g"
-    
+
     restart: unless-stopped
-    
+
     healthcheck:
-      test: ["CMD-SHELL", "cqlsh -e 'describe cluster' || exit 1"]
+      test: ["CMD-SHELL", "cqlsh -e \"describe cluster\" || exit 1"]
       interval: "10s"
       timeout: "5s"
       retries: 5
@@ -53,12 +53,12 @@ services:
     labels:
       traefik.enable: "true"
       traefik.docker.network: "database-network"
-      
+
       traefik.http.routers.cassandra-web-scaibu.rule: "Host(`scaibu.cassandra-web`)"
       traefik.http.routers.cassandra-web-scaibu.entrypoints: "web,websecure"
       traefik.http.routers.cassandra-web-scaibu.service: "cassandra-web-service"
       traefik.http.routers.cassandra-web-scaibu.tls: "true"
-      
+
       traefik.http.services.cassandra-web-service.loadbalancer.server.port: "3000"
 
     restart: unless-stopped

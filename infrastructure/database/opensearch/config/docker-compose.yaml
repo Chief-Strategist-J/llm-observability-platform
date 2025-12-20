@@ -7,17 +7,17 @@ services:
     environment:
       - discovery.type=single-node
       - bootstrap.memory_lock=true
-      - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-OpenSearchPassword123!}"
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=OpenSearchPassword123!
       - INSTANCE_ID=0
     volumes:
       - opensearch-data-0:/usr/share/opensearch/data
     networks:
       database-network:
         ipv4_address: 172.29.0.80
-    
+
     ports:
       - "9200:9200"
-      - "9600:9600" # Performance Analyzer
+      - "9600:9600"
 
     ulimits:
       memlock:
@@ -30,15 +30,14 @@ services:
     labels:
       traefik.enable: "true"
       traefik.docker.network: "database-network"
-      
+
       traefik.http.routers.opensearch-scaibu.rule: "Host(`scaibu.opensearch`)"
       traefik.http.routers.opensearch-scaibu.entrypoints: "web,websecure"
       traefik.http.routers.opensearch-scaibu.service: "opensearch-service"
       traefik.http.routers.opensearch-scaibu.tls: "true"
-      
+
       traefik.http.services.opensearch-service.loadbalancer.server.port: "9200"
-      # IMPORTANT: OpenSearch uses HTTPS internally by default. Traefik might need insecureSkipVerify if not configured specifically.
-      # For now, we assume standard setup.
+
 
     deploy:
       resources:
@@ -46,11 +45,11 @@ services:
           memory: "2g"
         reservations:
           memory: "1g"
-    
+
     restart: unless-stopped
-    
+
     healthcheck:
-      test: ["CMD-SHELL", "curl -k -u admin:${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-OpenSearchPassword123!} https://localhost:9200/_cluster/health || exit 1"]
+      test: ["CMD-SHELL", "curl -k -u admin:OpenSearchPassword123! https://localhost:9200/_cluster/health || exit 1"]
       interval: "10s"
       timeout: "5s"
       retries: 5
@@ -69,19 +68,19 @@ services:
     labels:
       traefik.enable: "true"
       traefik.docker.network: "database-network"
-      
+
       traefik.http.routers.opensearch-dashboards-scaibu.rule: "Host(`scaibu.opensearch-dashboards`)"
       traefik.http.routers.opensearch-dashboards-scaibu.entrypoints: "web,websecure"
       traefik.http.routers.opensearch-dashboards-scaibu.service: "opensearch-dashboards-service"
       traefik.http.routers.opensearch-dashboards-scaibu.tls: "true"
-      
+
       traefik.http.services.opensearch-dashboards-service.loadbalancer.server.port: "5601"
 
     deploy:
       resources:
         limits:
           memory: "1g"
-    
+
     restart: unless-stopped
 
 volumes:

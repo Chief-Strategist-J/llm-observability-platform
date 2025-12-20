@@ -11,7 +11,7 @@ services:
     networks:
       database-network:
         ipv4_address: 172.29.0.30
-    
+
     command: ["redis-server", "--appendonly", "yes"]
 
     labels:
@@ -25,9 +25,9 @@ services:
           memory: "512m"
         reservations:
           memory: "128m"
-    
+
     restart: unless-stopped
-    
+
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: "10s"
@@ -44,16 +44,16 @@ services:
     networks:
       database-network:
         ipv4_address: 172.29.0.31
-    
+
     labels:
       traefik.enable: "true"
       traefik.docker.network: "database-network"
-      
+
       traefik.http.routers.redis-scaibu.rule: "Host(`scaibu.redis`)"
       traefik.http.routers.redis-scaibu.entrypoints: "web,websecure"
       traefik.http.routers.redis-scaibu.service: "redis-service"
       traefik.http.routers.redis-scaibu.tls: "true"
-      
+
       traefik.http.services.redis-service.loadbalancer.server.port: "8081"
 
     restart: unless-stopped
