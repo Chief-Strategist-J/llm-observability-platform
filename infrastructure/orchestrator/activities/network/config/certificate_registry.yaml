@@ -58,6 +58,11 @@ scaibu.minio-console:
   created_at: 1765695092.5938396
   hostname: scaibu.minio-console
   key_file: /home/j/.certs/scaibu.minio-console-key.pem
+scaibu.mongodb:
+  cert_file: /home/j/.certs/scaibu.mongodb.pem
+  created_at: 1766135015.102882
+  hostname: scaibu.mongodb
+  key_file: /home/j/.certs/scaibu.mongodb-key.pem
 scaibu.mongoexpress:
   cert_file: /home/j/.certs/scaibu.mongoexpress.pem
   created_at: 1765694359.5602674

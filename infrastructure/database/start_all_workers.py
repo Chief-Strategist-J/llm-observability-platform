@@ -1,12 +1,25 @@
+import os
+import sys
 import asyncio
 import logging
+from pathlib import Path
+
+
+project_root = Path(__file__).resolve().parents[2]
+
+if project_root.as_posix() not in sys.path:
+    sys.path.insert(0, project_root.as_posix())
+
 from temporalio.client import Client
 from temporalio.worker import Worker
 
-# Network Activities
+# Absolute imports with full path
 from infrastructure.orchestrator.activities.network.certificate_manage_activity import generate_certificates_activity
 from infrastructure.orchestrator.activities.network.host_manage_activity import add_hosts_entries_activity
 from infrastructure.orchestrator.activities.network.virtual_ip_manage_activity import allocate_virtual_ips_activity
+
+# Database activities
+from infrastructure.database.shared.create_database_network_activity import create_database_network_activity
 
 # Postgres
 from infrastructure.database.postgres.setup.postgres_setup_activity import setup_postgres_activity, teardown_postgres_activity
@@ -58,6 +71,10 @@ from infrastructure.database.chroma.setup.chroma_setup_workflow import ChromaSet
 
 async def main():
     logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    
+    logger.info("event=worker_startup queue=database-setup-queue")
+    
     client = await Client.connect("localhost:7233", namespace="default")
     
     worker = Worker(
@@ -78,6 +95,8 @@ async def main():
             ChromaSetupWorkflow
         ],
         activities=[
+            create_database_network_activity,
+            
             allocate_virtual_ips_activity,
             generate_certificates_activity,
             add_hosts_entries_activity,
@@ -120,6 +139,7 @@ async def main():
         ]
     )
     
+    logger.info("event=worker_started queue=database-setup-queue workflows=12 activities=27")
     print("Unified Database Stack Worker started on queue 'database-setup-queue'")
     await worker.run()
 
