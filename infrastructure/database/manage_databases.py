@@ -6,11 +6,11 @@ from temporalio.client import Client
 from pathlib import Path
 import sys
 
-project_root = Path(__file__).resolve().parents[2]  # llm-chatbot-python
+project_root = Path(__file__).resolve().parents[2]
 
 if project_root.as_posix() not in sys.path:
     sys.path.insert(0, project_root.as_posix())
-# Workflows
+
 from infrastructure.database.postgres.setup.postgres_setup_workflow import PostgresSetupWorkflow
 from infrastructure.database.mongodb.setup.mongodb_setup_workflow import MongodbSetupWorkflow
 from infrastructure.database.redis.setup.redis_setup_workflow import RedisSetupWorkflow
@@ -33,35 +33,28 @@ async def main():
         "postgres", "mongodb", "redis", "neo4j", "qdrant", "minio",
         "clickhouse", "opensearch", "cassandra", "milvus", "weaviate", "chroma"
     ]
-    parser.add_argument("--enable", nargs="+", choices=available_services, help="Enable specific services")
-    parser.add_argument("--all", action="store_true", help="Enable all services")
+    parser.add_argument("--enable", nargs="+", choices=available_services + ["all"], help="Enable specific services or all")
     args = parser.parse_args()
 
     services_to_enable = []
-    if args.all:
-        services_to_enable = available_services
-    elif args.enable:
-        # Flatten list if nargs='+' returns a list of lists or just use it directly
-        services_to_enable = args.enable
-        # If user passed "mongodb neo4j", argparse gives ['mongodb', 'neo4j'] which is correct.
-        # But if they did something like --enable="mongodb neo4j", we might need splitting.
-        # For safety, if any entry has spaces, split it.
-        start_list = []
-        for s in services_to_enable:
-            start_list.extend(s.split())
-        services_to_enable = start_list
+    if args.enable:
+        if "all" in args.enable:
+            services_to_enable = available_services
+        else:
+            start_list = []
+            for s in args.enable:
+                start_list.extend(s.split())
+            services_to_enable = start_list
 
     if not services_to_enable:
-        print(f"No services selected. Use --enable [service...] or --all. Available: {available_services}")
+        print(f"No services selected. Use --enable [service...] or --enable all. Available: {available_services}")
         return
 
     client = await Client.connect("localhost:7233", namespace="default")
 
-    # Helper to trigger workflow
     async def trigger(name, workflow_cls, base_id):
         if name in services_to_enable:
             logger.info(f"Triggering {name.capitalize()} Setup...")
-            # Append UUID to ensure unique workflow ID for every run
             run_id = str(uuid.uuid4())[:8]
             workflow_id = f"{base_id}-{run_id}"
             try:
@@ -75,7 +68,6 @@ async def main():
             except Exception as e:
                 print(f"Failed to start {name}: {e}")
 
-    # Trigger all enabled
     await trigger("postgres", PostgresSetupWorkflow, "postgres-setup-workflow")
     await trigger("mongodb", MongodbSetupWorkflow, "mongodb-setup-workflow")
     await trigger("redis", RedisSetupWorkflow, "redis-setup-workflow")
