@@ -6,7 +6,7 @@ import datetime
 from bson import ObjectId, Binary
 import infrastructure.database.mongodb.client.mongodb_algorithms as algo
 
-app = FastAPI(title="Scaibu MongoDB High-Fidelity Algorithms API")
+app = FastAPI(title="Scaibu MongoDB Hyper-Fidelity Algorithms API")
 
 def bson_encoder(obj):
     if isinstance(obj, (datetime.datetime, datetime.date)):
