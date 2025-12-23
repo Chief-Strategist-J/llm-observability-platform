@@ -1,0 +1,11 @@
+tls:
+  certificates:
+  - certFile: /certs/scaibu.mongodb.pem
+    keyFile: /certs/scaibu.mongodb-key.pem
+  - certFile: /certs/scaibu.mongoexpress.pem
+    keyFile: /certs/scaibu.mongoexpress-key.pem
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /certs/scaibu.mongodb.pem
+        keyFile: /certs/scaibu.mongodb-key.pem

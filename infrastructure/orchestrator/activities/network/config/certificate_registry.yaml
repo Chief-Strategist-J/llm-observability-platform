@@ -59,15 +59,15 @@ scaibu.minio-console:
   hostname: scaibu.minio-console
   key_file: /home/j/.certs/scaibu.minio-console-key.pem
 scaibu.mongodb:
-  cert_file: /home/j/.certs/scaibu.mongodb.pem
-  created_at: 1766135015.102882
+  cert_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/certs/scaibu.mongodb.pem
+  created_at: 1766211015.9009094
   hostname: scaibu.mongodb
-  key_file: /home/j/.certs/scaibu.mongodb-key.pem
+  key_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/certs/scaibu.mongodb-key.pem
 scaibu.mongoexpress:
-  cert_file: /home/j/.certs/scaibu.mongoexpress.pem
-  created_at: 1765694359.5602674
+  cert_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/certs/scaibu.mongoexpress.pem
+  created_at: 1766211016.2620232
   hostname: scaibu.mongoexpress
-  key_file: /home/j/.certs/scaibu.mongoexpress-key.pem
+  key_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/certs/scaibu.mongoexpress-key.pem
 scaibu.neo4j:
   cert_file: /home/j/.certs/scaibu.neo4j.pem
   created_at: 1765695091.7624855

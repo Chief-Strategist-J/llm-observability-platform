@@ -3,16 +3,19 @@ from temporalio import activity
 from typing import Dict, Any
 
 from infrastructure.database.shared.base_database_setup import BaseDatabaseSetupActivity
+from infrastructure.database.shared.database_definitions import DATABASE_CONFIG
 
 
 class MongodbSetupActivity(BaseDatabaseSetupActivity):
     def __init__(self):
+        config = DATABASE_CONFIG.get("mongodb", {})
         super().__init__(
             service_name="mongodb",
             compose_file=str(Path(__file__).parent.parent / "config" / "docker-compose.yaml"),
-            hostname="scaibu.mongodb",
-            ip="172.29.0.20"
+            hostname=config.get("ui_hostname", "scaibu.mongoexpress"),
+            ip=config.get("container_ip", "172.29.0.20")
         )
+
 
 @activity.defn(name="setup_mongodb_activity")
 async def setup_mongodb_activity(params: Dict[str, Any]) -> Dict[str, Any]:

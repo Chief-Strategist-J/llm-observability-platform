@@ -41,7 +41,15 @@ async def main():
     if args.all:
         services_to_enable = available_services
     elif args.enable:
+        # Flatten list if nargs='+' returns a list of lists or just use it directly
         services_to_enable = args.enable
+        # If user passed "mongodb neo4j", argparse gives ['mongodb', 'neo4j'] which is correct.
+        # But if they did something like --enable="mongodb neo4j", we might need splitting.
+        # For safety, if any entry has spaces, split it.
+        start_list = []
+        for s in services_to_enable:
+            start_list.extend(s.split())
+        services_to_enable = start_list
 
     if not services_to_enable:
         print(f"No services selected. Use --enable [service...] or --all. Available: {available_services}")

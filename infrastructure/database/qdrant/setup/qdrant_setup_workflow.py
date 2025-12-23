@@ -2,46 +2,55 @@ from datetime import timedelta
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 
+from infrastructure.database.shared.database_definitions import (
+    get_host_entries,
+    get_all_hostnames,
+)
+
+
 @workflow.defn(name="QdrantSetupWorkflow")
 class QdrantSetupWorkflow:
     @workflow.run
     async def run(self, params: dict) -> dict:
         trace_id = params.get("trace_id", "qdrant-setup")
+        service_name = "qdrant"
         
-        # 1. VIP [SKIPPED]
-
-        # 2. Certs
+        hostnames = get_all_hostnames(service_name)
+        host_entries = get_host_entries(service_name)
+        
         await workflow.execute_activity(
             "generate_certificates_activity",
-            {
-                "hostnames": ["scaibu.qdrant"], 
-                "trace_id": trace_id
-            },
+            {"hostnames": hostnames, "trace_id": trace_id},
             start_to_close_timeout=timedelta(minutes=2),
             retry_policy=RetryPolicy(maximum_attempts=3)
         )
 
-        # 3. Hosts
         await workflow.execute_activity(
             "add_hosts_entries_activity",
-            {
-                "entries": [
-                    {"hostname": "scaibu.qdrant", "ip": "127.0.0.1"}
-                ],
-                "force_replace": True,
-                "trace_id": trace_id
-            },
+            {"entries": host_entries, "force_replace": True, "trace_id": trace_id},
             start_to_close_timeout=timedelta(minutes=1),
             retry_policy=RetryPolicy(maximum_attempts=3)
         )
 
-        # 4. Docker
         result = await workflow.execute_activity(
             "setup_qdrant_activity",
-            {
-                "env_vars": params.get("env_vars", {}),
-                "trace_id": trace_id
-            },
+            {"env_vars": params.get("env_vars", {}), "trace_id": trace_id},
+            start_to_close_timeout=timedelta(minutes=5),
+            retry_policy=RetryPolicy(maximum_attempts=3)
+        )
+        
+        return result
+
+
+@workflow.defn(name="QdrantTeardownWorkflow")
+class QdrantTeardownWorkflow:
+    @workflow.run
+    async def run(self, params: dict) -> dict:
+        trace_id = params.get("trace_id", "qdrant-teardown")
+        
+        result = await workflow.execute_activity(
+            "teardown_qdrant_activity",
+            {"trace_id": trace_id},
             start_to_close_timeout=timedelta(minutes=5),
             retry_policy=RetryPolicy(maximum_attempts=3)
         )
