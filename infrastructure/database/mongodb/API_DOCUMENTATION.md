@@ -33,6 +33,7 @@ sequenceDiagram
 ### 2.1 Database & Collection Management
 
 #### api_list_databases
+- **Endpoint**: `GET /databases`
 - **Action**: Polls cluster for active DB namespaces.
 ```mermaid
 sequenceDiagram
@@ -43,6 +44,7 @@ sequenceDiagram
 ```
 
 #### api_drop_database
+- **Endpoint**: `DELETE /databases/{db_name}`
 - **Action**: Permanently removes an entire database.
 ```mermaid
 sequenceDiagram
@@ -53,6 +55,7 @@ sequenceDiagram
 ```
 
 #### api_list_collections
+- **Endpoint**: `GET /databases/{db_name}/collections`
 - **Action**: Enumerates all collections in a DB.
 ```mermaid
 sequenceDiagram
@@ -63,6 +66,7 @@ sequenceDiagram
 ```
 
 #### api_drop_collection
+- **Endpoint**: `DELETE /databases/{db_name}/collections/{coll_name}`
 - **Action**: Removes a specific collection namespace.
 ```mermaid
 sequenceDiagram
@@ -73,6 +77,7 @@ sequenceDiagram
 ```
 
 #### api_rename_collection
+- **Endpoint**: `POST /databases/{db_name}/collections/{coll_name}/rename`
 - **Action**: Atomic collection rename operation.
 ```mermaid
 sequenceDiagram
@@ -83,6 +88,7 @@ sequenceDiagram
 ```
 
 #### api_copy_collection
+- **Endpoint**: `POST /databases/{db_name}/collections/{coll_name}/copy`
 - **Action**: Orchestrated duplication via aggregation `$out`.
 ```mermaid
 sequenceDiagram
@@ -95,6 +101,7 @@ sequenceDiagram
 ### 2.2 CRUD & Query Portfolio
 
 #### api_create_document
+- **Endpoint**: `POST /databases/{db_name}/collections/{coll_name}/documents`
 - **Action**: Simple document insertion.
 ```mermaid
 sequenceDiagram
@@ -105,6 +112,7 @@ sequenceDiagram
 ```
 
 #### api_get_document
+- **Endpoint**: `GET /databases/{db_name}/collections/{coll_name}/documents/{doc_id}`
 - **Action**: Point lookup via `_id`.
 ```mermaid
 sequenceDiagram
@@ -115,6 +123,7 @@ sequenceDiagram
 ```
 
 #### api_update_document
+- **Endpoint**: `PUT /databases/{db_name}/collections/{coll_name}/documents/{doc_id}`
 - **Action**: Single document field mutation.
 ```mermaid
 sequenceDiagram
@@ -125,6 +134,7 @@ sequenceDiagram
 ```
 
 #### api_delete_document
+- **Endpoint**: `DELETE /databases/{db_name}/collections/{coll_name}/documents/{doc_id}`
 - **Action**: Point record removal.
 ```mermaid
 sequenceDiagram
@@ -135,6 +145,7 @@ sequenceDiagram
 ```
 
 #### api_bulk_insert
+- **Endpoint**: `POST /databases/{db_name}/collections/{coll_name}/bulk-insert`
 - **Action**: Array-based high-throughput loading.
 ```mermaid
 sequenceDiagram
@@ -145,6 +156,7 @@ sequenceDiagram
 ```
 
 #### api_bulk_upsert
+- **Endpoint**: `POST /databases/{db_name}/collections/{coll_name}/bulk-upsert`
 - **Action**: Key-based merge-or-insert.
 ```mermaid
 sequenceDiagram
@@ -155,6 +167,7 @@ sequenceDiagram
 ```
 
 #### api_bulk_write
+- **Endpoint**: `POST /databases/{db_name}/collections/{coll_name}/bulk-write`
 - **Action**: Atomic batch of disparate CRUD ops.
 ```mermaid
 sequenceDiagram
@@ -165,6 +178,7 @@ sequenceDiagram
 ```
 
 #### api_find_one
+- **Endpoint**: `POST /databases/{db_name}/collections/{coll_name}/find-one`
 - **Action**: Predicate-matching single retrieval.
 ```mermaid
 sequenceDiagram
@@ -175,6 +189,7 @@ sequenceDiagram
 ```
 
 #### api_find_many
+- **Endpoint**: `POST /databases/{db_name}/collections/{coll_name}/find-many`
 - **Action**: Set-based document retrieval.
 ```mermaid
 sequenceDiagram
@@ -185,6 +200,7 @@ sequenceDiagram
 ```
 
 #### api_query_documents
+- **Endpoint**: `GET /databases/{db_name}/collections/{coll_name}/query`
 - **Action**: Multi-param paginated engine filter.
 ```mermaid
 sequenceDiagram
@@ -196,6 +212,7 @@ sequenceDiagram
 ```
 
 #### api_aggregate
+- **Endpoint**: `POST /databases/{db_name}/collections/{coll_name}/aggregate`
 - **Action**: Multi-stage data transformation pipelines.
 ```mermaid
 sequenceDiagram
@@ -206,6 +223,7 @@ sequenceDiagram
 ```
 
 #### api_distinct
+- **Endpoint**: `GET /databases/{db_name}/collections/{coll_name}/distinct/{key}`
 - **Action**: Logic for unique value extraction.
 ```mermaid
 sequenceDiagram
@@ -216,6 +234,7 @@ sequenceDiagram
 ```
 
 #### api_count_documents
+- **Endpoint**: `GET /databases/{db_name}/collections/{coll_name}/count`
 - **Action**: Logic-based record counting.
 ```mermaid
 sequenceDiagram
@@ -226,6 +245,7 @@ sequenceDiagram
 ```
 
 #### api_estimated_document_count
+- **Endpoint**: `GET /databases/{db_name}/collections/{coll_name}/estimated-count`
 - **Action**: Metadata-based fast count.
 ```mermaid
 sequenceDiagram
@@ -236,6 +256,7 @@ sequenceDiagram
 ```
 
 #### api_exists
+- **Endpoint**: `GET /databases/{db_name}/collections/{coll_name}/exists`
 - **Action**: Fast boolean document check.
 ```mermaid
 sequenceDiagram
@@ -248,6 +269,7 @@ sequenceDiagram
 ### 2.3 Index Management Portfolio
 
 #### api_list_indexes
+- **Endpoint**: `GET /databases/{db_name}/collections/{coll_name}/indexes`
 - **Action**: Enumerates all collection indexes.
 ```mermaid
 sequenceDiagram
@@ -258,6 +280,7 @@ sequenceDiagram
 ```
 
 #### api_create_index
+- **Endpoint**: `POST /databases/{db_name}/collections/{coll_name}/indexes`
 - **Action**: Simple index construction.
 ```mermaid
 sequenceDiagram
@@ -268,6 +291,7 @@ sequenceDiagram
 ```
 
 #### api_create_ttl_index
+- **Endpoint**: `POST /databases/{db_name}/collections/{coll_name}/indexes/ttl`
 - **Action**: Auto-eviction index construction.
 ```mermaid
 sequenceDiagram
@@ -278,6 +302,7 @@ sequenceDiagram
 ```
 
 #### api_drop_index
+- **Endpoint**: `DELETE /databases/{db_name}/collections/{coll_name}/indexes/{index_name}`
 - **Action**: Permanent index removal.
 ```mermaid
 sequenceDiagram
@@ -294,6 +319,7 @@ sequenceDiagram
 ### 3.1 Transactions Portfolio
 
 #### api_transactional_insert
+- **Endpoint**: `POST /transactions/insert-many`
 - **Action**: ACID multi-insert.
 ```mermaid
 sequenceDiagram
@@ -305,6 +331,7 @@ sequenceDiagram
 ```
 
 #### api_transactional_bulk_write
+- **Endpoint**: `POST /transactions/bulk-write`
 - **Action**: ACID batch execution.
 ```mermaid
 sequenceDiagram
@@ -316,6 +343,7 @@ sequenceDiagram
 ```
 
 #### api_transactional_update_many
+- **Endpoint**: `POST /transactions/update-many`
 - **Action**: ACID-safe mass update.
 ```mermaid
 sequenceDiagram
@@ -327,6 +355,7 @@ sequenceDiagram
 ```
 
 #### api_transactional_delete_many
+- **Endpoint**: `POST /transactions/delete-many`
 - **Action**: ACID-safe mass deletion.
 ```mermaid
 sequenceDiagram
@@ -338,6 +367,7 @@ sequenceDiagram
 ```
 
 #### api_transactional_find_and_modify
+- **Endpoint**: `POST /transactions/find-and-modify`
 - **Action**: ACID-safe atomic update/return.
 ```mermaid
 sequenceDiagram
@@ -351,6 +381,7 @@ sequenceDiagram
 ### 3.2 Relational Portfolio
 
 #### api_one_to_one
+- **Endpoint**: `POST /relationships/one-to-one`
 - **Action**: FK link resolution.
 ```mermaid
 sequenceDiagram
@@ -361,6 +392,7 @@ sequenceDiagram
 ```
 
 #### api_one_to_many
+- **Endpoint**: `POST /relationships/one-to-many`
 - **Action**: Related set collection.
 ```mermaid
 sequenceDiagram
@@ -371,6 +403,7 @@ sequenceDiagram
 ```
 
 #### api_many_to_many
+- **Endpoint**: `POST /relationships/many-to-many`
 - **Action**: Junction-based resolution.
 ```mermaid
 sequenceDiagram
@@ -381,6 +414,7 @@ sequenceDiagram
 ```
 
 #### api_has_one_through
+- **Endpoint**: `POST /relationships/has-one-through`
 - **Action**: Indirect link resolution.
 ```mermaid
 sequenceDiagram
@@ -391,6 +425,7 @@ sequenceDiagram
 ```
 
 #### api_has_many_through
+- **Endpoint**: `POST /relationships/has-many-through`
 - **Action**: Indirect set collection.
 ```mermaid
 sequenceDiagram
@@ -401,6 +436,7 @@ sequenceDiagram
 ```
 
 #### api_one_to_one_polymorphic
+- **Endpoint**: `POST /relationships/polymorphic-one-to-one`
 - **Action**: Type-aware dynamic resolution.
 ```mermaid
 sequenceDiagram
@@ -411,6 +447,28 @@ sequenceDiagram
     API-->>Client: {owner, relation: target}
 ```
 
+#### api_polymorphic_one_to_many
+- **Endpoint**: `POST /relationships/polymorphic-one-to-many`
+- **Action**: Polymorphic 1:N resolution.
+```mermaid
+sequenceDiagram
+    Client->>API: POST /relationships/polymorphic-one-to-many
+    API->>DB: owner = collO.find_one(id)
+    API->>DB: targets = map[type].find({fk: id})
+    API-->>Client: {owner, relations: [...]}
+```
+
+#### api_many_to_many_polymorphic
+- **Endpoint**: `POST /relationships/polymorphic-many-to-many`
+- **Action**: Polymorphic N:N resolution.
+```mermaid
+sequenceDiagram
+    Client->>API: POST /relationships/polymorphic-many-to-many
+    API->>DB: junction = collJ.find({lk: id})
+    API->>DB: resolvedTargets = map[type].find({_id: rk})
+    API-->>Client: [resolvedTargets]
+```
+
 ---
 
 ## 4. Part III: Hyper-Fidelity Algorithm Engine (Port 8001)
@@ -418,8 +476,8 @@ sequenceDiagram
 ### 4.1 Indexing & Storage Engine
 
 #### api_btree_index
+- **Endpoint**: `POST /algo/btree-index`
 - **Definition**: B-Tree Index Algorithm.
-- **Protocol**: Insert(1k) -> CreateIndex -> Validate(treeDepth).
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/btree-index
@@ -432,8 +490,8 @@ sequenceDiagram
 ```
 
 #### api_compound_index
+- **Endpoint**: `POST /algo/compound-index`
 - **Definition**: Compound Index Ordering.
-- **Protocol**: CreateIndex([A,B]) -> Explain(Find(A).Sort(B)).
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/compound-index
@@ -445,8 +503,8 @@ sequenceDiagram
 ```
 
 #### api_partial_index
+- **Endpoint**: `POST /algo/partial-index`
 - **Definition**: Partial Index Selection.
-- **Protocol**: CreateIndex(filter) -> Explain(Query(matching filter)).
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/partial-index
@@ -458,8 +516,8 @@ sequenceDiagram
 ```
 
 #### api_sparse_index
+- **Endpoint**: `POST /algo/sparse-index`
 - **Definition**: Sparse Index Evaluation.
-- **Protocol**: CreateIndex(sparse) -> collStats(indexEntries vs docCount).
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/sparse-index
@@ -471,8 +529,8 @@ sequenceDiagram
 ```
 
 #### api_hashed_index
+- **Endpoint**: `POST /algo/hashed-index`
 - **Definition**: Hashed Index Algorithm.
-- **Protocol**: CreateIndex(hashed) -> Explain(Query(Equality)).
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/hashed-index
@@ -483,11 +541,35 @@ sequenceDiagram
     Algo-->>Client: {hashed: True}
 ```
 
+#### api_bg_index
+- **Endpoint**: `POST /algo/bg-index`
+- **Definition**: Background Index Build.
+```mermaid
+sequenceDiagram
+    Client->>API: POST /algo/bg-index
+    API->>Algo: exec(field)
+    Algo->>DB: create_index(field, background=True)
+    DB-->>Algo: index_name
+    Algo-->>Client: {bg: True, idx: name}
+```
+
+#### api_commit_quorum
+- **Endpoint**: `POST /algo/commit-quorum`
+- **Definition**: Index Build Commit Quorum.
+```mermaid
+sequenceDiagram
+    Client->>API: POST /algo/commit-quorum
+    API->>Algo: exec(field, quorum)
+    Algo->>DB: create_index(field, commitQuorum=Q)
+    DB-->>Algo: index_name
+    Algo-->>Client: {quorum: Q, idx: name}
+```
+
 ### 4.2 Sharding & Distribution Engine
 
 #### api_hash_sharding
+- **Endpoint**: `POST /algo/hash-sharding`
 - **Definition**: Hash-Based Sharding.
-- **Protocol**: admin.enableSharding -> admin.shardCollection(hashed).
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/hash-sharding
@@ -499,8 +581,8 @@ sequenceDiagram
 ```
 
 #### api_range_sharding
+- **Endpoint**: `POST /algo/range-sharding`
 - **Definition**: Range-Based Sharding.
-- **Protocol**: admin.enableSharding -> admin.shardCollection(1).
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/range-sharding
@@ -512,8 +594,8 @@ sequenceDiagram
 ```
 
 #### api_shard_cardinality
+- **Endpoint**: `POST /algo/shard-key-cardinality`
 - **Definition**: Shard Key Cardinality.
-- **Protocol**: distinct(key).count / estimated_document_count().
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/shard-key-cardinality
@@ -524,8 +606,8 @@ sequenceDiagram
 ```
 
 #### api_chunk_split
+- **Endpoint**: `POST /algo/chunk-split`
 - **Definition**: Chunk Split Algorithm.
-- **Protocol**: admin.command(split, midpoint).
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/chunk-split
@@ -536,8 +618,8 @@ sequenceDiagram
 ```
 
 #### api_chunk_migration
+- **Endpoint**: `POST /algo/chunk-migration`
 - **Definition**: Chunk Migration Algorithm.
-- **Protocol**: admin.command(moveChunk).
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/chunk-migration
@@ -548,8 +630,8 @@ sequenceDiagram
 ```
 
 #### api_balancer_status
+- **Endpoint**: `POST /algo/balancer-status`
 - **Definition**: Balancer Load Equalization.
-- **Protocol**: admin.command(balancerStatus).
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/balancer-status
@@ -562,8 +644,8 @@ sequenceDiagram
 ### 4.3 Query & Optimization Engineering
 
 #### api_query_plan
+- **Endpoint**: `POST /algo/query-plan`
 - **Definition**: Query Planner CBO Optimizer.
-- **Protocol**: explain(verbosity="allPlansExecution") -> planner metadata.
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/query-plan
@@ -574,8 +656,8 @@ sequenceDiagram
 ```
 
 #### api_index_intersection
+- **Endpoint**: `POST /algo/index-intersection`
 - **Definition**: Index Intersection Algorithm.
-- **Protocol**: explain() -> detect stage "AND_SORTED".
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/index-intersection
@@ -586,8 +668,8 @@ sequenceDiagram
 ```
 
 #### api_covered_query
+- **Endpoint**: `POST /algo/covered-query`
 - **Definition**: Covered Query Optimization.
-- **Protocol**: explain() -> check "totalDocsExamined" == 0.
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/covered-query
@@ -598,8 +680,8 @@ sequenceDiagram
 ```
 
 #### api_agg_optimize
+- **Endpoint**: `POST /algo/agg-optimize`
 - **Definition**: Aggregation Pipeline Optimization.
-- **Protocol**: aggregate(explain=True) -> audit stage reordering.
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/agg-optimize
@@ -610,8 +692,8 @@ sequenceDiagram
 ```
 
 #### api_pushdown_optimize
+- **Endpoint**: `POST /algo/pushdown-optimize`
 - **Definition**: Match/Project Pushdown.
-- **Protocol**: Audit project/match folding into earlier stages.
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/pushdown-optimize
@@ -622,8 +704,8 @@ sequenceDiagram
 ```
 
 #### api_group_hash
+- **Endpoint**: `POST /algo/group-hash`
 - **Definition**: Group Hash Aggregation.
-- **Protocol**: group(pipe) -> size(aggregate_result).
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/group-hash
@@ -634,8 +716,8 @@ sequenceDiagram
 ```
 
 #### api_external_sort
+- **Endpoint**: `POST /algo/external-sort`
 - **Definition**: External Merge Sort.
-- **Protocol**: explain(sort) -> check sort stage type.
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/external-sort
@@ -646,8 +728,8 @@ sequenceDiagram
 ```
 
 #### api_lookup_join
+- **Endpoint**: `POST /algo/lookup-join`
 - **Definition**: Lookup Indexed Nested Loop (INLJ).
-- **Protocol**: create_index(foreign) -> aggregate($lookup) -> INLJ detection.
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/lookup-join
@@ -659,8 +741,8 @@ sequenceDiagram
 ```
 
 #### api_facet_parallel
+- **Endpoint**: `POST /algo/facet-parallel`
 - **Definition**: Facet Parallel Execution.
-- **Protocol**: aggregate($facet) -> key mapping.
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/facet-parallel
@@ -671,8 +753,8 @@ sequenceDiagram
 ```
 
 #### api_graph_lookup
+- **Endpoint**: `POST /algo/graph-lookup`
 - **Definition**: Graph Lookup Traversal.
-- **Protocol**: aggregate($graphLookup) -> Recursive depth extraction.
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/graph-lookup
@@ -682,11 +764,22 @@ sequenceDiagram
     Algo-->>Client: {traversed: N, engine: "Recursive"}
 ```
 
+#### api_cursor_batch
+- **Endpoint**: `POST /algo/cursor-batch`
+- **Definition**: Query Cursor Batching.
+```mermaid
+sequenceDiagram
+    Client->>API: POST /algo/cursor-batch
+    API->>Algo: exec(size)
+    Algo->>DB: find().batch_size(size)
+    Algo-->>Client: {batch: size, cursor: True}
+```
+
 ### 4.4 Storage Engine & Internals
 
 #### api_wt_mvcc
+- **Endpoint**: `POST /algo/wt-mvcc`
 - **Definition**: WiredTiger MVCC Concurrency.
-- **Protocol**: Session1(Txn Start/Write) -> Session2(Read Old) -> Commit.
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/wt-mvcc
@@ -700,8 +793,8 @@ sequenceDiagram
 ```
 
 #### api_doc_lock
+- **Endpoint**: `POST /algo/doc-lock`
 - **Definition**: Document Level Locking.
-- **Protocol**: Atomic update execution with modified count check.
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/doc-lock
@@ -712,8 +805,8 @@ sequenceDiagram
 ```
 
 #### api_2pc_coordinator
+- **Endpoint**: `POST /algo/2pc-coordinator`
 - **Definition**: Two-Phase Commit Coordinator.
-- **Protocol**: Insert(PREPARE) -> Update(COMMIT) -> Update(DONE).
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/2pc-coordinator
@@ -725,8 +818,8 @@ sequenceDiagram
 ```
 
 #### api_oplog
+- **Endpoint**: `POST /algo/oplog`
 - **Definition**: Oplog Replication Algorithm.
-- **Protocol**: tail local.oplog.rs -> extract latest op.
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/oplog
@@ -737,8 +830,8 @@ sequenceDiagram
 ```
 
 #### api_causal_consistency
+- **Endpoint**: `POST /algo/causal-consistency`
 - **Definition**: Causal Consistency Algorithm.
-- **Protocol**: session(causal:True) -> extract cluster_time.
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/causal-consistency
@@ -749,8 +842,8 @@ sequenceDiagram
 ```
 
 #### api_raft_election
+- **Endpoint**: `POST /algo/raft-election`
 - **Definition**: Raft Election Algorithm.
-- **Protocol**: command(replSetGetStatus) -> extract term/role.
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/raft-election
@@ -761,8 +854,8 @@ sequenceDiagram
 ```
 
 #### api_rollback_recovery
+- **Endpoint**: `POST /algo/rollback-recovery`
 - **Definition**: Rollback Recovery Algorithm.
-- **Protocol**: command(serverStatus) -> extract repl.rbid.
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/rollback-recovery
@@ -773,8 +866,8 @@ sequenceDiagram
 ```
 
 #### api_journal_wal
+- **Endpoint**: `POST /algo/journal-wal`
 - **Definition**: Journaling WAL Algorithm.
-- **Protocol**: command(serverStatus) -> extract dur.journaledMB.
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/journal-wal
@@ -785,8 +878,8 @@ sequenceDiagram
 ```
 
 #### api_checkpoint
+- **Endpoint**: `POST /algo/checkpoint`
 - **Definition**: Checkpointing Algorithm.
-- **Protocol**: command(serverStatus) -> extract wiredTiger.checkpoints.
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/checkpoint
@@ -797,8 +890,8 @@ sequenceDiagram
 ```
 
 #### api_coll_stats
+- **Endpoint**: `POST /algo/coll-stats`
 - **Definition**: Compression Audit.
-- **Protocol**: insert(data) -> command(collStats) -> calc compression.
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/coll-stats
@@ -810,8 +903,8 @@ sequenceDiagram
 ```
 
 #### api_cache_stats
+- **Endpoint**: `POST /algo/cache-stats`
 - **Definition**: Memory Eviction LRU.
-- **Protocol**: command(serverStatus) -> extract wiredTiger.cache.dirty.
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/cache-stats
@@ -822,8 +915,8 @@ sequenceDiagram
 ```
 
 #### api_page_faults
+- **Endpoint**: `POST /algo/page-faults`
 - **Definition**: Page Fault Handling.
-- **Protocol**: command(serverStatus) -> extract extra_info.page_faults.
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/page-faults
@@ -836,8 +929,8 @@ sequenceDiagram
 ### 4.5 Operational Lifecycle Engine
 
 #### api_read_pref_route
+- **Endpoint**: `POST /algo/read-pref-route`
 - **Definition**: Read Preference Routing.
-- **Protocol**: get_collection(read_pref=P) -> find().
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/read-pref-route
@@ -848,8 +941,8 @@ sequenceDiagram
 ```
 
 #### api_wc_ack
+- **Endpoint**: `POST /algo/wc-ack`
 - **Definition**: Write Concern Acknowledgment.
-- **Protocol**: with_options(write_concern=W) -> insert_one().
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/wc-ack
@@ -861,8 +954,8 @@ sequenceDiagram
 ```
 
 #### api_rc_consistency
+- **Endpoint**: `POST /algo/rc-consistency`
 - **Definition**: Read Concern Consistency.
-- **Protocol**: with_options(read_concern=L) -> find().
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/rc-consistency
@@ -873,8 +966,8 @@ sequenceDiagram
 ```
 
 #### api_resume_token
+- **Endpoint**: `POST /algo/resume-token`
 - **Definition**: Change Stream Resume Token.
-- **Protocol**: watch() -> insert_one() -> next(stream).
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/resume-token
@@ -886,8 +979,8 @@ sequenceDiagram
 ```
 
 #### api_retryable_write
+- **Endpoint**: `POST /algo/retryable-write`
 - **Definition**: Idempotent Retryable Writes.
-- **Protocol**: client(retry_writes=True) -> insert_one().
 ```mermaid
 sequenceDiagram
     Client->>API: POST /algo/retryable-write
@@ -897,39 +990,26 @@ sequenceDiagram
     Algo-->>Client: {id, retriable: True}
 ```
 
-#### api_bg_index
-- **Definition**: Background Index Build.
-- **Protocol**: create_index(background:True).
+#### api_timeseries_bucket
+- **Endpoint**: `POST /algo/timeseries-bucket`
+- **Definition**: Time-Series Bucketization.
 ```mermaid
 sequenceDiagram
-    Client->>API: POST /algo/bg-index
-    API->>Algo: exec(field)
-    Algo->>DB: create_index(field, background=True)
-    DB-->>Algo: index_name
-    Algo-->>Client: {bg: True, idx: name}
+    Client->>API: POST /algo/timeseries-bucket
+    Algo->>DB: create_collection(timeseries={...})
+    DB-->>Algo: ok: 1
+    Algo-->>Client: {storage: "bucketed", ok: True}
 ```
 
-#### api_commit_quorum
-- **Definition**: Index Build Commit Quorum.
-- **Protocol**: create_index(commitQuorum=Q).
+#### api_ttl_expiration
+- **Endpoint**: `POST /algo/ttl-expiration`
+- **Definition**: TTL Auto-Eviction.
 ```mermaid
 sequenceDiagram
-    Client->>API: POST /algo/commit-quorum
-    API->>Algo: exec(field, quorum)
-    Algo->>DB: create_index(field, commitQuorum=Q)
+    Client->>API: POST /algo/ttl-expiration
+    Algo->>DB: create_index(expireAfterSeconds=N)
     DB-->>Algo: index_name
-    Algo-->>Client: {quorum: Q, idx: name}
-```
-
-#### api_cursor_batch
-- **Definition**: Query Cursor Batching.
-- **Protocol**: find().batch_size(S).
-```mermaid
-sequenceDiagram
-    Client->>API: POST /algo/cursor-batch
-    API->>Algo: exec(size)
-    Algo->>DB: find().batch_size(size)
-    Algo-->>Client: {batch: size, cursor: True}
+    Algo-->>Client: {ttl_seconds: N, index: name}
 ```
 
 ---
