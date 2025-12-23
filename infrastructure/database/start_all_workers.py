@@ -8,6 +8,9 @@ project_root = Path(__file__).resolve().parents[2]
 if project_root.as_posix() not in sys.path:
     sys.path.insert(0, project_root.as_posix())
 
+import logging
+logging.basicConfig(level=logging.INFO)
+
 from temporalio.client import Client
 from temporalio.worker import Worker
 

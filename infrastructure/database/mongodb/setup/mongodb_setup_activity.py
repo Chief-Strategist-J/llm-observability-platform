@@ -1,6 +1,7 @@
 from pathlib import Path
 from temporalio import activity
 from typing import Dict, Any
+import time
 
 from infrastructure.database.shared.base_database_setup import BaseDatabaseSetupActivity
 from infrastructure.database.shared.database_definitions import DATABASE_CONFIG

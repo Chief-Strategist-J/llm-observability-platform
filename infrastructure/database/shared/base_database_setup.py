@@ -2,6 +2,7 @@ import time
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+import json
 
 import yaml
 from opentelemetry import trace
@@ -23,6 +24,7 @@ from infrastructure.database.shared.database_definitions import (
     get_host_entries,
     get_all_hostnames,
 )
+from infrastructure.orchestrator.base.logql_logger import LogQLLogger
 
 
 tracer = trace.get_tracer(__name__)
@@ -40,6 +42,13 @@ def run_docker_command(cmd: List[str], timeout: int = 60) -> subprocess.Complete
 def get_container_logs(container_name: str, tail: int = 100) -> str:
     result = run_docker_command(["docker", "logs", "--tail", str(tail), container_name])
     return result.stdout + result.stderr
+
+
+def get_container_health(container_name: str) -> str:
+    result = run_docker_command(["docker", "inspect", "--format", "{{.State.Health.Status}}", container_name])
+    if result.returncode == 0:
+        return result.stdout.strip()
+    return "none"
 
 
 def connect_traefik_to_network(network_name: str = "database-network") -> bool:
@@ -80,9 +89,12 @@ class BaseDatabaseSetupActivity:
         self.config = DATABASE_CONFIG.get(service_name, {})
         self.hostnames = self.config.get("hostnames", [hostname])
         self.trace_id = f"{service_name}-{int(time.time())}"
+        self.log = LogQLLogger(f"{__name__}.{service_name}")
 
     async def setup_service(self, env_vars: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         start_time = time.time()
+        
+        self.log.set_trace_id(self.trace_id)
         
         with tracer.start_as_current_span(f"setup_{self.service_name}") as span:
             span.set_attribute("service.name", self.service_name)
@@ -92,11 +104,17 @@ class BaseDatabaseSetupActivity:
             try:
                 if not self.compose_file.exists():
                     span.set_attribute("error", "compose_file_not_found")
+                    self.log.error(
+                        "compose_file_not_found",
+                        service=self.service_name,
+                        path=str(self.compose_file)
+                    )
                     raise FileNotFoundError(f"Compose file not found: {self.compose_file}")
 
                 with tracer.start_as_current_span("ensure_network"):
                     if not ensure_database_network_exists():
                         span.set_attribute("error", "network_creation_failed")
+                        self.log.error("network_creation_failed", service=self.service_name)
                         raise RuntimeError("Failed to create database network")
 
                 with tracer.start_as_current_span("connect_traefik"):
@@ -104,6 +122,9 @@ class BaseDatabaseSetupActivity:
 
                 with tracer.start_as_current_span("ensure_prerequisites"):
                     await self._ensure_prerequisites(env_vars or {})
+
+                with tracer.start_as_current_span("pre_pull_images"):
+                    self._pre_pull_images()
 
                 with tracer.start_as_current_span("container_lifecycle"):
                     manager = YAMLContainerManager(
@@ -121,11 +142,29 @@ class BaseDatabaseSetupActivity:
                         status = manager.get_status()
                         span.set_attribute("container_status", status.value)
                         
-                        if status.value in ["running", "unknown"]:
+                        logs = self._get_all_container_logs()
+                        span.set_attribute("container_logs", logs[:5000])
+                        
+                        self.log.warning(
+                            "container_start_returned_false_checking_health",
+                            service=self.service_name,
+                            status=status.value
+                        )
+                        
+                        time.sleep(10)
+                        
+                        if self._wait_for_containers_ready(timeout=180):
                             success = True
+                            self.log.info(
+                                "containers_became_healthy_after_wait",
+                                service=self.service_name
+                            )
                         else:
-                            logs = self._get_all_container_logs()
-                            span.set_attribute("container_logs", logs[:5000])
+                            self.log.error(
+                                "containers_failed_health_checks",
+                                service=self.service_name,
+                                logs=logs[:1000]
+                            )
                             raise Exception(f"Failed to start {self.service_name}: {logs[:500]}")
 
                     status = manager.get_status()
@@ -133,6 +172,14 @@ class BaseDatabaseSetupActivity:
                 duration_ms = int((time.time() - start_time) * 1000)
                 span.set_attribute("duration_ms", duration_ms)
                 span.set_attribute("success", True)
+
+                self.log.info(
+                    "setup_complete",
+                    service=self.service_name,
+                    success=True,
+                    duration_ms=duration_ms,
+                    status=status.value
+                )
 
                 return {
                     "success": True,
@@ -153,6 +200,14 @@ class BaseDatabaseSetupActivity:
                 
                 logs = self._get_all_container_logs()
                 
+                self.log.error(
+                    "setup_failed",
+                    error=e,
+                    service=self.service_name,
+                    duration_ms=duration_ms,
+                    logs=logs[:1000]
+                )
+                
                 return {
                     "success": False,
                     "service": self.service_name,
@@ -161,6 +216,152 @@ class BaseDatabaseSetupActivity:
                     "duration_ms": duration_ms,
                     "trace_id": self.trace_id,
                 }
+
+    def _pre_pull_images(self) -> bool:
+        with open(self.compose_file, "r") as f:
+            config = yaml.safe_load(f)
+        
+        services = config.get("services", {})
+        images = []
+        
+        for service_config in services.values():
+            if isinstance(service_config, dict) and "image" in service_config:
+                images.append(service_config["image"])
+        
+        self.log.info(
+            "pre_pulling_images",
+            service=self.service_name,
+            images=images
+        )
+        
+        for image in images:
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    self.log.info(
+                        "pulling_image",
+                        service=self.service_name,
+                        image=image,
+                        attempt=attempt + 1
+                    )
+                    
+                    result = subprocess.run(
+                        ["docker", "pull", image],
+                        capture_output=True,
+                        text=True,
+                        timeout=300,
+                        check=False
+                    )
+                    
+                    if result.returncode == 0:
+                        self.log.info(
+                            "image_pulled",
+                            service=self.service_name,
+                            image=image
+                        )
+                        break
+                    else:
+                        self.log.warning(
+                            "image_pull_failed",
+                            service=self.service_name,
+                            image=image,
+                            attempt=attempt + 1,
+                            stderr=result.stderr[:200]
+                        )
+                        if attempt < max_retries - 1:
+                            time.sleep(5)
+                        
+                except subprocess.TimeoutExpired:
+                    self.log.error(
+                        "image_pull_timeout",
+                        service=self.service_name,
+                        image=image,
+                        attempt=attempt + 1
+                    )
+                    if attempt < max_retries - 1:
+                        time.sleep(5)
+                except Exception as e:
+                    self.log.error(
+                        "image_pull_exception",
+                        error=e,
+                        service=self.service_name,
+                        image=image
+                    )
+                    if attempt < max_retries - 1:
+                        time.sleep(5)
+        
+        return True
+
+    def _wait_for_containers_ready(self, timeout: int = 180) -> bool:
+        with open(self.compose_file, "r") as f:
+            config = yaml.safe_load(f)
+        
+        services = config.get("services", {})
+        container_names = []
+        
+        for service_config in services.values():
+            if isinstance(service_config, dict) and "container_name" in service_config:
+                container_names.append(service_config["container_name"])
+        
+        self.log.info(
+            "waiting_for_containers_ready",
+            service=self.service_name,
+            containers=container_names,
+            timeout=timeout
+        )
+        
+        start_time = time.time()
+        check_interval = 10
+        
+        while time.time() - start_time < timeout:
+            all_ready = True
+            
+            for container_name in container_names:
+                inspect = run_docker_command([
+                    "docker", "inspect", "--format",
+                    "{{.State.Status}}:{{.State.Health.Status}}",
+                    container_name
+                ])
+                
+                if inspect.returncode == 0:
+                    status_parts = inspect.stdout.strip().split(":")
+                    container_status = status_parts[0] if len(status_parts) > 0 else "unknown"
+                    health_status = status_parts[1] if len(status_parts) > 1 else "none"
+                    
+                    self.log.info(
+                        "container_status_check",
+                        service=self.service_name,
+                        container=container_name,
+                        status=container_status,
+                        health=health_status
+                    )
+                    
+                    if container_status != "running":
+                        all_ready = False
+                        break
+                    
+                    if health_status not in ("none", "healthy", ""):
+                        all_ready = False
+                else:
+                    all_ready = False
+                    break
+            
+            if all_ready:
+                self.log.info(
+                    "containers_ready",
+                    service=self.service_name,
+                    duration=int(time.time() - start_time)
+                )
+                return True
+            
+            time.sleep(check_interval)
+        
+        self.log.warning(
+            "containers_ready_timeout",
+            service=self.service_name,
+            timeout=timeout
+        )
+        return False
 
     def _get_all_container_logs(self) -> str:
         logs = []
@@ -280,6 +481,8 @@ class BaseDatabaseSetupActivity:
     async def teardown_service(self) -> Dict[str, Any]:
         start_time = time.time()
         
+        self.log.set_trace_id(self.trace_id)
+        
         with tracer.start_as_current_span(f"teardown_{self.service_name}") as span:
             span.set_attribute("service.name", self.service_name)
             span.set_attribute("trace_id", self.trace_id)
@@ -303,6 +506,13 @@ class BaseDatabaseSetupActivity:
                 span.set_attribute("success", success)
                 span.set_attribute("duration_ms", duration_ms)
                 
+                self.log.info(
+                    "teardown_complete",
+                    service=self.service_name,
+                    success=success,
+                    duration_ms=duration_ms
+                )
+                
                 return {
                     "success": success,
                     "service": self.service_name,
@@ -316,6 +526,13 @@ class BaseDatabaseSetupActivity:
                 duration_ms = int((time.time() - start_time) * 1000)
                 span.set_attribute("error", str(e))
                 span.set_attribute("success", False)
+                
+                self.log.error(
+                    "teardown_failed",
+                    error=e,
+                    service=self.service_name,
+                    duration_ms=duration_ms
+                )
                 
                 return {
                     "success": False,
