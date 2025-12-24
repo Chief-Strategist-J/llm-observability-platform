@@ -11,6 +11,7 @@ from temporalio import activity
 from infrastructure.orchestrator.activities.network.certificate_manage_activity import (
     generate_certificates_activity,
     verify_certificates_activity,
+    generate_traefik_tls_config_activity,
 )
 from infrastructure.orchestrator.activities.network.host_manage_activity import (
     add_hosts_entries_activity,
@@ -249,7 +250,7 @@ class BaseDatabaseSetupActivity:
                         ["docker", "pull", image],
                         capture_output=True,
                         text=True,
-                        timeout=300,
+                        timeout=180,
                         check=False
                     )
                     
@@ -388,8 +389,11 @@ class BaseDatabaseSetupActivity:
 
     async def _ensure_prerequisites(self, env_vars: Dict[str, str]) -> None:
         with tracer.start_as_current_span("ensure_certificates"):
-            await self._ensure_certificates(env_vars)
+            certs_dir = await self._ensure_certificates(env_vars)
         
+        with tracer.start_as_current_span("ensure_traefik_tls_config"):
+            await self._ensure_traefik_tls_config(certs_dir)
+            
         with tracer.start_as_current_span("ensure_host_entries"):
             await self._ensure_host_entries()
 
@@ -398,30 +402,15 @@ class BaseDatabaseSetupActivity:
         if env_value:
             return Path(env_value).expanduser()
 
-        registry_path = (
-            Path(__file__).resolve().parents[2]
-            / "orchestrator"
-            / "activities"
-            / "network"
-            / "config"
-            / "certificate_registry.yaml"
-        )
-
-        if registry_path.exists():
-            try:
-                with registry_path.open("r", encoding="utf-8") as registry_file:
-                    registry_data = yaml.safe_load(registry_file) or {}
-                cert_entry = registry_data.get(self.hostname)
-                if isinstance(cert_entry, dict):
-                    cert_file = cert_entry.get("cert_file")
-                    if cert_file:
-                        return Path(cert_file).expanduser().parent
-            except (OSError, yaml.YAMLError):
-                pass
+        # Try to find Traefik certs directory in the project
+        project_root = Path(__file__).resolve().parents[2]
+        traefik_certs_dir = project_root / "orchestrator" / "config" / "docker" / "traefik" / "certs"
+        if traefik_certs_dir.exists():
+            return traefik_certs_dir
 
         return Path.home() / ".certs"
 
-    async def _ensure_certificates(self, env_vars: Dict[str, str]) -> None:
+    async def _ensure_certificates(self, env_vars: Dict[str, str]) -> Path:
         certs_dir = self._resolve_certs_dir(env_vars)
         params: Dict[str, Any] = {
             "hostnames": self.hostnames,
@@ -446,6 +435,24 @@ class BaseDatabaseSetupActivity:
             raise RuntimeError(
                 f"Certificate verification failed for: {failed_hosts or self.hostnames}"
             )
+        return certs_dir
+
+    async def _ensure_traefik_tls_config(self, certs_dir: Path) -> None:
+        project_root = Path(__file__).resolve().parents[2]
+        tls_config_dir = project_root / "orchestrator" / "config" / "docker" / "traefik" / "config" / "tls"
+        
+        # We assume Traefik mounts /certs from the same volume/path if it's centralized
+        # but the activity expects the relative path inside Traefik container
+        params = {
+            "hostnames": self.hostnames,
+            "certs_dir": "/certs",
+            "output_file": str(tls_config_dir / f"{self.service_name}_tls.yaml"),
+            "trace_id": self.trace_id
+        }
+        
+        result = await generate_traefik_tls_config_activity(params)
+        if not result.get("success"):
+            raise RuntimeError(f"Traefik TLS config generation failed for {self.service_name}: {result.get('error')}")
 
     async def _ensure_host_entries(self) -> None:
         entries = get_host_entries(self.service_name)
