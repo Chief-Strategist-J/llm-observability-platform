@@ -69,10 +69,10 @@ scaibu.mongoexpress:
   hostname: scaibu.mongoexpress
   key_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/certs/scaibu.mongoexpress-key.pem
 scaibu.neo4j:
-  cert_file: /home/j/.certs/scaibu.neo4j.pem
-  created_at: 1765695091.7624855
+  cert_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/certs/scaibu.neo4j.pem
+  created_at: 1766591308.9416468
   hostname: scaibu.neo4j
-  key_file: /home/j/.certs/scaibu.neo4j-key.pem
+  key_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/certs/scaibu.neo4j-key.pem
 scaibu.opensearch:
   cert_file: /home/j/.certs/scaibu.opensearch.pem
   created_at: 1765695092.867332
