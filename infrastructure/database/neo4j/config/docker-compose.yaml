@@ -33,6 +33,13 @@ services:
 
       traefik.http.services.neo4j-service.loadbalancer.server.port: "7474"
 
+      traefik.tcp.routers.neo4j-bolt-scaibu.rule: "HostSNI(`scaibu.neo4j-bolt`)"
+      traefik.tcp.routers.neo4j-bolt-scaibu.entrypoints: "websecure"
+      traefik.tcp.routers.neo4j-bolt-scaibu.service: "neo4j-bolt-service"
+      traefik.tcp.routers.neo4j-bolt-scaibu.tls: "true"
+
+      traefik.tcp.services.neo4j-bolt-service.loadbalancer.server.port: "7687"
+
     deploy:
       resources:
         limits:

@@ -540,7 +540,7 @@ class BaseDatabaseSetupActivity:
                     service=self.service_name,
                     duration_ms=duration_ms
                 )
-                
+                    
                 return {
                     "success": False,
                     "service": self.service_name,
