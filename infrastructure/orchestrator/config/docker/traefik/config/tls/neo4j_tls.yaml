@@ -2,6 +2,8 @@ tls:
   certificates:
   - certFile: /certs/scaibu.neo4j.pem
     keyFile: /certs/scaibu.neo4j-key.pem
+  - certFile: /certs/scaibu.neo4j-bolt.pem
+    keyFile: /certs/scaibu.neo4j-bolt-key.pem
   stores:
     default:
       defaultCertificate:
