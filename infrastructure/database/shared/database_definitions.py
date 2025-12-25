@@ -42,7 +42,7 @@ DATABASE_CONFIG = {
         "ui_hostname": "scaibu.redis",
     },
     "neo4j": {
-        "hostnames": ["scaibu.neo4j"],
+        "hostnames": ["scaibu.neo4j", "scaibu.neo4j-bolt"],
         "container_ip": "172.29.0.40",
         "ui_hostname": "scaibu.neo4j",
     },
