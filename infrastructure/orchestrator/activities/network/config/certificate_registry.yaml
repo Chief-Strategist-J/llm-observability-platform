@@ -73,6 +73,11 @@ scaibu.neo4j:
   created_at: 1766591308.9416468
   hostname: scaibu.neo4j
   key_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/certs/scaibu.neo4j-key.pem
+scaibu.neo4j-bolt:
+  cert_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/certs/scaibu.neo4j-bolt.pem
+  created_at: 1766646613.7633219
+  hostname: scaibu.neo4j-bolt
+  key_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/certs/scaibu.neo4j-bolt-key.pem
 scaibu.opensearch:
   cert_file: /home/j/.certs/scaibu.opensearch.pem
   created_at: 1765695092.867332
