@@ -104,10 +104,10 @@ scaibu.prometheus:
   hostname: scaibu.prometheus
   key_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/observability/setup/certs/scaibu.prometheus-key.pem
 scaibu.qdrant:
-  cert_file: /home/j/.certs/scaibu.qdrant.pem
-  created_at: 1765695091.9640975
+  cert_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/certs/scaibu.qdrant.pem
+  created_at: 1766649508.0384943
   hostname: scaibu.qdrant
-  key_file: /home/j/.certs/scaibu.qdrant-key.pem
+  key_file: /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/certs/scaibu.qdrant-key.pem
 scaibu.redis:
   cert_file: /home/j/.certs/scaibu.redis.pem
   created_at: 1765694359.7135186
