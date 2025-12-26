@@ -1,488 +1,550 @@
-# infrastructure/database/shared/base_database_setup.py
 import time
-import logging
-from pathlib import Path
-from typing import Dict, Any, Optional
 import subprocess
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+import json
 
-from infrastructure.orchestrator.base import YAMLContainerManager, ContainerState
-from infrastructure.orchestrator.activities.network import (
+import yaml
+from opentelemetry import trace
+from temporalio import activity
+
+from infrastructure.orchestrator.activities.network.certificate_manage_activity import (
     generate_certificates_activity,
     verify_certificates_activity,
     generate_traefik_tls_config_activity,
+)
+from infrastructure.orchestrator.activities.network.host_manage_activity import (
     add_hosts_entries_activity,
     verify_hosts_entries_activity,
 )
+from infrastructure.orchestrator.base.base_container_activity import YAMLContainerManager, ContainerState
+from infrastructure.database.shared.database_definitions import (
+    TRAEFIK_HOST_IP,
+    DATABASE_CONFIG,
+    DatabaseNetwork,
+    get_host_entries,
+    get_all_hostnames,
+)
+from infrastructure.orchestrator.base.logql_logger import LogQLLogger
 
-logger = logging.getLogger(__name__)
+
+tracer = trace.get_tracer(__name__)
+
+
+def run_docker_command(cmd: List[str], timeout: int = 60) -> subprocess.CompletedProcess:
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired as e:
+        return subprocess.CompletedProcess(cmd, 1, "", f"Timeout: {e}")
+    except Exception as e:
+        return subprocess.CompletedProcess(cmd, 1, "", str(e))
+
+
+def get_container_logs(container_name: str, tail: int = 100) -> str:
+    result = run_docker_command(["docker", "logs", "--tail", str(tail), container_name])
+    return result.stdout + result.stderr
+
+
+def get_container_health(container_name: str) -> str:
+    result = run_docker_command(["docker", "inspect", "--format", "{{.State.Health.Status}}", container_name])
+    if result.returncode == 0:
+        return result.stdout.strip()
+    return "none"
+
+
+def connect_traefik_to_network(network_name: str = "database-network") -> bool:
+    check_result = run_docker_command([
+        "docker", "network", "inspect", network_name,
+        "--format", "{{range .Containers}}{{.Name}}{{end}}"
+    ])
+    if "traefik-scaibu" in check_result.stdout:
+        return True
+    
+    connect_result = run_docker_command([
+        "docker", "network", "connect", network_name, "traefik-scaibu"
+    ])
+    return connect_result.returncode == 0
+
+
+def ensure_database_network_exists() -> bool:
+    check_result = run_docker_command(["docker", "network", "inspect", DatabaseNetwork.NAME.value])
+    if check_result.returncode == 0:
+        return True
+    
+    create_result = run_docker_command([
+        "docker", "network", "create",
+        "--driver", "bridge",
+        "--subnet", DatabaseNetwork.SUBNET.value,
+        "--gateway", DatabaseNetwork.GATEWAY.value,
+        DatabaseNetwork.NAME.value
+    ])
+    return create_result.returncode == 0
 
 
 class BaseDatabaseSetupActivity:
-    """Base class for database setup activities with built-in network setup"""
-    
-    def __init__(
-        self,
-        service_name: str,
-        compose_file: str,
-        hostname: str,
-        ip: str,
-        certs_dir: Optional[str] = None,
-        skip_certificates: bool = False,
-        skip_hosts: bool = False,
-        max_startup_wait: int = 60,
-        health_check_interval: int = 5,
-    ):
+    def __init__(self, service_name: str, compose_file: str, hostname: str, ip: str):
         self.service_name = service_name
         self.compose_file = Path(compose_file)
         self.hostname = hostname
         self.ip = ip
-        self.certs_dir = Path(certs_dir) if certs_dir else Path(__file__).parent.parent.parent / "orchestrator" / "config" / "docker" / "traefik" / "certs"
-        self.skip_certificates = skip_certificates
-        self.skip_hosts = skip_hosts
-        self.max_startup_wait = max_startup_wait
-        self.health_check_interval = health_check_interval
-        
-        logger.info(
-            f"event=base_database_setup_init service={service_name} "
-            f"compose_file={compose_file} hostname={hostname} ip={ip}"
-        )
+        self.config = DATABASE_CONFIG.get(service_name, {})
+        self.hostnames = self.config.get("hostnames", [hostname])
+        self.trace_id = f"{service_name}-{int(time.time())}"
+        self.log = LogQLLogger(f"{__name__}.{service_name}")
 
-    async def _ensure_network(self, network_name: str = "database-network") -> bool:
-        """Ensure the required Docker network exists"""
-        try:
-            result = subprocess.run(
-                ["docker", "network", "inspect", network_name],
-                capture_output=True,
-                text=True,
-                check=False
-            )
-            
-            if result.returncode != 0:
-                logger.info(f"event=creating_network service={self.service_name} network={network_name}")
-                create_result = subprocess.run(
-                    ["docker", "network", "create", network_name],
-                    capture_output=True,
-                    text=True,
-                    check=False
+    async def setup_service(self, env_vars: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+        start_time = time.time()
+        
+        self.log.set_trace_id(self.trace_id)
+        
+        with tracer.start_as_current_span(f"setup_{self.service_name}") as span:
+            span.set_attribute("service.name", self.service_name)
+            span.set_attribute("trace_id", self.trace_id)
+            span.set_attribute("hostnames", str(self.hostnames))
+
+            try:
+                if not self.compose_file.exists():
+                    span.set_attribute("error", "compose_file_not_found")
+                    self.log.error(
+                        "compose_file_not_found",
+                        service=self.service_name,
+                        path=str(self.compose_file)
+                    )
+                    raise FileNotFoundError(f"Compose file not found: {self.compose_file}")
+
+                with tracer.start_as_current_span("ensure_network"):
+                    if not ensure_database_network_exists():
+                        span.set_attribute("error", "network_creation_failed")
+                        self.log.error("network_creation_failed", service=self.service_name)
+                        raise RuntimeError("Failed to create database network")
+
+                with tracer.start_as_current_span("connect_traefik"):
+                    connect_traefik_to_network(DatabaseNetwork.NAME.value)
+
+                with tracer.start_as_current_span("ensure_prerequisites"):
+                    await self._ensure_prerequisites(env_vars or {})
+
+                with tracer.start_as_current_span("pre_pull_images"):
+                    self._pre_pull_images()
+
+                with tracer.start_as_current_span("container_lifecycle"):
+                    manager = YAMLContainerManager(
+                        yaml_path=str(self.compose_file),
+                        instance_id=0,
+                        env_vars=env_vars or {}
+                    )
+
+                    manager.stop(force=True)
+                    manager.delete(remove_volumes=False)
+
+                    success = manager.start(restart_if_running=True)
+                    
+                    if not success:
+                        status = manager.get_status()
+                        span.set_attribute("container_status", status.value)
+                        
+                        logs = self._get_all_container_logs()
+                        span.set_attribute("container_logs", logs[:5000])
+                        
+                        self.log.warning(
+                            "container_start_returned_false_checking_health",
+                            service=self.service_name,
+                            status=status.value
+                        )
+                        
+                        time.sleep(10)
+                        
+                        if self._wait_for_containers_ready(timeout=180):
+                            success = True
+                            self.log.info(
+                                "containers_became_healthy_after_wait",
+                                service=self.service_name
+                            )
+                        else:
+                            self.log.error(
+                                "containers_failed_health_checks",
+                                service=self.service_name,
+                                logs=logs[:1000]
+                            )
+                            raise Exception(f"Failed to start {self.service_name}: {logs[:500]}")
+
+                    status = manager.get_status()
+
+                duration_ms = int((time.time() - start_time) * 1000)
+                span.set_attribute("duration_ms", duration_ms)
+                span.set_attribute("success", True)
+
+                self.log.info(
+                    "setup_complete",
+                    service=self.service_name,
+                    success=True,
+                    duration_ms=duration_ms,
+                    status=status.value
+                )
+
+                return {
+                    "success": True,
+                    "service": self.service_name,
+                    "hostname": self.hostname,
+                    "hostnames": self.hostnames,
+                    "ip": self.ip,
+                    "status": status.value,
+                    "duration_ms": duration_ms,
+                    "trace_id": self.trace_id,
+                }
+
+            except Exception as e:
+                duration_ms = int((time.time() - start_time) * 1000)
+                span.set_attribute("error", str(e))
+                span.set_attribute("duration_ms", duration_ms)
+                span.set_attribute("success", False)
+                
+                logs = self._get_all_container_logs()
+                
+                self.log.error(
+                    "setup_failed",
+                    error=e,
+                    service=self.service_name,
+                    duration_ms=duration_ms,
+                    logs=logs[:1000]
                 )
                 
-                if create_result.returncode == 0:
-                    logger.info(f"event=network_created service={self.service_name} network={network_name}")
-                    return True
-                else:
-                    logger.error(
-                        f"event=network_create_failed service={self.service_name} "
-                        f"network={network_name} error={create_result.stderr}"
-                    )
-                    return False
-            
-            logger.info(f"event=network_exists service={self.service_name} network={network_name}")
-            return True
-            
-        except Exception as e:
-            logger.exception(f"event=network_check_failed service={self.service_name} error={e}")
-            return False
+                return {
+                    "success": False,
+                    "service": self.service_name,
+                    "error": str(e),
+                    "container_logs": logs[:5000],
+                    "duration_ms": duration_ms,
+                    "trace_id": self.trace_id,
+                }
 
-    async def _setup_certificates(self, trace_id: str) -> bool:
-        """Setup TLS certificates for the service"""
-        if self.skip_certificates:
-            logger.info(f"event=certificates_skipped service={self.service_name} trace_id={trace_id}")
-            return True
+    def _pre_pull_images(self) -> bool:
+        with open(self.compose_file, "r") as f:
+            config = yaml.safe_load(f)
         
-        try:
-            # Generate certificates
-            cert_result = await generate_certificates_activity({
-                "hostnames": [self.hostname],
-                "certs_dir": str(self.certs_dir),
-                "trace_id": trace_id,
-                "use_mkcert": True,
-                "validity_days": 365,
-            })
-            
-            if not cert_result.get("success"):
-                logger.error(
-                    f"event=certificate_generation_failed service={self.service_name} "
-                    f"trace_id={trace_id} result={cert_result}"
-                )
-                return False
-            
-            # Verify certificates
-            verify_result = await verify_certificates_activity({
-                "hostnames": [self.hostname],
-                "certs_dir": str(self.certs_dir),
-                "trace_id": trace_id,
-            })
-            
-            if not verify_result.get("success"):
-                logger.error(
-                    f"event=certificate_verification_failed service={self.service_name} "
-                    f"trace_id={trace_id} result={verify_result}"
-                )
-                return False
-            
-            # Generate Traefik TLS config
-            tls_config_path = self.certs_dir.parent / "config" / "tls" / f"{self.service_name}_tls.yaml"
-            tls_result = await generate_traefik_tls_config_activity({
-                "hostnames": [self.hostname],
-                "certs_dir": "/certs",  # Path inside Traefik container
-                "output_file": str(tls_config_path),
-                "trace_id": trace_id,
-            })
-            
-            if not tls_result.get("success"):
-                logger.error(
-                    f"event=traefik_tls_config_failed service={self.service_name} "
-                    f"trace_id={trace_id} result={tls_result}"
-                )
-                return False
-            
-            logger.info(f"event=certificates_setup_complete service={self.service_name} trace_id={trace_id}")
-            return True
-            
-        except Exception as e:
-            logger.exception(
-                f"event=certificate_setup_failed service={self.service_name} "
-                f"trace_id={trace_id} error={e}"
-            )
-            return False
-
-    async def _setup_hosts(self, trace_id: str) -> bool:
-        """Setup /etc/hosts entries for the service"""
-        if self.skip_hosts:
-            logger.info(f"event=hosts_setup_skipped service={self.service_name} trace_id={trace_id}")
-            return True
+        services = config.get("services", {})
+        images = []
         
-        try:
-            # Add hosts entry
-            hosts_result = await add_hosts_entries_activity({
-                "entries": [{"ip": self.ip, "hostname": self.hostname}],
-                "trace_id": trace_id,
-                "force_replace": True,
-            })
-            
-            if not hosts_result.get("success"):
-                logger.error(
-                    f"event=hosts_add_failed service={self.service_name} "
-                    f"trace_id={trace_id} result={hosts_result}"
-                )
-                return False
-            
-            # Verify hosts entry
-            verify_result = await verify_hosts_entries_activity({
-                "hostnames": [self.hostname],
-                "trace_id": trace_id,
-            })
-            
-            if not verify_result.get("success"):
-                logger.error(
-                    f"event=hosts_verification_failed service={self.service_name} "
-                    f"trace_id={trace_id} result={verify_result}"
-                )
-                return False
-            
-            logger.info(f"event=hosts_setup_complete service={self.service_name} trace_id={trace_id}")
-            return True
-            
-        except Exception as e:
-            logger.exception(
-                f"event=hosts_setup_failed service={self.service_name} "
-                f"trace_id={trace_id} error={e}"
-            )
-            return False
-
-    async def _pre_pull_images(self, trace_id: str) -> bool:
-        """Pre-pull Docker images to avoid timeout during startup"""
-        try:
-            # Extract image from compose file
-            import yaml
-            with open(self.compose_file, 'r') as f:
-                compose_config = yaml.safe_load(f)
-            
-            services = compose_config.get('services', {})
-            images = []
-            
-            for service_name, service_config in services.items():
-                if 'image' in service_config:
-                    images.append(service_config['image'])
-            
-            if not images:
-                logger.warning(f"event=no_images_found service={self.service_name} trace_id={trace_id}")
-                return True
-            
-            logger.info(
-                f"event=pre_pulling_images trace_id={trace_id} "
-                f"service={self.service_name} images={images}"
-            )
-            
-            for image in images:
-                for attempt in range(3):
-                    logger.info(
-                        f"event=pulling_image trace_id={trace_id} "
-                        f"service={self.service_name} image={image} attempt={attempt + 1}"
+        for service_config in services.values():
+            if isinstance(service_config, dict) and "image" in service_config:
+                images.append(service_config["image"])
+        
+        self.log.info(
+            "pre_pulling_images",
+            service=self.service_name,
+            images=images
+        )
+        
+        for image in images:
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    self.log.info(
+                        "pulling_image",
+                        service=self.service_name,
+                        image=image,
+                        attempt=attempt + 1
                     )
                     
                     result = subprocess.run(
                         ["docker", "pull", image],
                         capture_output=True,
                         text=True,
-                        timeout=300
+                        timeout=180,
+                        check=False
                     )
                     
                     if result.returncode == 0:
-                        logger.info(
-                            f"event=image_pulled trace_id={trace_id} "
-                            f"service={self.service_name} image={image}"
+                        self.log.info(
+                            "image_pulled",
+                            service=self.service_name,
+                            image=image
                         )
                         break
                     else:
-                        if attempt == 2:
-                            logger.error(
-                                f"event=image_pull_failed trace_id={trace_id} "
-                                f"service={self.service_name} image={image} error={result.stderr}"
-                            )
-                            return False
-                        time.sleep(5)
-            
-            return True
-            
-        except Exception as e:
-            logger.exception(
-                f"event=pre_pull_failed service={self.service_name} "
-                f"trace_id={trace_id} error={e}"
-            )
-            return False
-
-    async def _wait_for_healthy(
-        self,
-        manager: YAMLContainerManager,
-        trace_id: str
-    ) -> bool:
-        """Wait for container to become healthy with proper status checks"""
-        waited = 0
-        
-        while waited < self.max_startup_wait:
-            status = manager.get_status()
-            
-            logger.debug(
-                f"event=health_check service={self.service_name} "
-                f"trace_id={trace_id} status={status.value} waited={waited}"
-            )
-            
-            if status == ContainerState.RUNNING:
-                # Additional verification: check if service is actually responding
-                if await self._verify_service_responsive(trace_id):
-                    logger.info(
-                        f"event=service_healthy service={self.service_name} "
-                        f"trace_id={trace_id} waited={waited}"
+                        self.log.warning(
+                            "image_pull_failed",
+                            service=self.service_name,
+                            image=image,
+                            attempt=attempt + 1,
+                            stderr=result.stderr[:200]
+                        )
+                        if attempt < max_retries - 1:
+                            time.sleep(5)
+                        
+                except subprocess.TimeoutExpired:
+                    self.log.error(
+                        "image_pull_timeout",
+                        service=self.service_name,
+                        image=image,
+                        attempt=attempt + 1
                     )
-                    return True
-            elif status in [ContainerState.EXITED, ContainerState.DEAD]:
-                logger.error(
-                    f"event=service_failed service={self.service_name} "
-                    f"trace_id={trace_id} status={status.value}"
-                )
-                return False
-            
-            time.sleep(self.health_check_interval)
-            waited += self.health_check_interval
+                    if attempt < max_retries - 1:
+                        time.sleep(5)
+                except Exception as e:
+                    self.log.error(
+                        "image_pull_exception",
+                        error=e,
+                        service=self.service_name,
+                        image=image
+                    )
+                    if attempt < max_retries - 1:
+                        time.sleep(5)
         
-        logger.error(
-            f"event=health_check_timeout service={self.service_name} "
-            f"trace_id={trace_id} waited={waited}"
+        return True
+
+    def _wait_for_containers_ready(self, timeout: int = 180) -> bool:
+        with open(self.compose_file, "r") as f:
+            config = yaml.safe_load(f)
+        
+        services = config.get("services", {})
+        container_names = []
+        
+        for service_config in services.values():
+            if isinstance(service_config, dict) and "container_name" in service_config:
+                container_names.append(service_config["container_name"])
+        
+        self.log.info(
+            "waiting_for_containers_ready",
+            service=self.service_name,
+            containers=container_names,
+            timeout=timeout
+        )
+        
+        start_time = time.time()
+        check_interval = 10
+        
+        while time.time() - start_time < timeout:
+            all_ready = True
+            
+            for container_name in container_names:
+                inspect = run_docker_command([
+                    "docker", "inspect", "--format",
+                    "{{.State.Status}}:{{.State.Health.Status}}",
+                    container_name
+                ])
+                
+                if inspect.returncode == 0:
+                    status_parts = inspect.stdout.strip().split(":")
+                    container_status = status_parts[0] if len(status_parts) > 0 else "unknown"
+                    health_status = status_parts[1] if len(status_parts) > 1 else "none"
+                    
+                    self.log.info(
+                        "container_status_check",
+                        service=self.service_name,
+                        container=container_name,
+                        status=container_status,
+                        health=health_status
+                    )
+                    
+                    if container_status != "running":
+                        all_ready = False
+                        break
+                    
+                    if health_status not in ("none", "healthy", ""):
+                        all_ready = False
+                else:
+                    all_ready = False
+                    break
+            
+            if all_ready:
+                self.log.info(
+                    "containers_ready",
+                    service=self.service_name,
+                    duration=int(time.time() - start_time)
+                )
+                return True
+            
+            time.sleep(check_interval)
+        
+        self.log.warning(
+            "containers_ready_timeout",
+            service=self.service_name,
+            timeout=timeout
         )
         return False
 
-    async def _verify_service_responsive(self, trace_id: str) -> bool:
-
-        try:
-
-            result = subprocess.run(
-                ["docker", "exec", f"{self.service_name}-instance-0", "sh", "-c", 
-                 "wget -q -O- http://localhost:6333/healthz || curl -f http://localhost:6333/healthz"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-                check=False
-            )
-            
-            is_responsive = result.returncode == 0
-            logger.info(
-                f"event=service_responsiveness_check service={self.service_name} "
-                f"trace_id={trace_id} responsive={is_responsive}"
-            )
-            return is_responsive
-            
-        except Exception as e:
-            logger.warning(
-                f"event=responsiveness_check_failed service={self.service_name} "
-                f"trace_id={trace_id} error={e}"
-            )
-            return False
-
-    async def setup_service(self, env_vars: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Main setup method that orchestrates all setup steps"""
-        start_time = time.time()
-        trace_id = f"{self.service_name}-{int(time.time())}"
+    def _get_all_container_logs(self) -> str:
+        logs = []
+        container_names = [f"{self.service_name}-instance-0"]
         
-        logger.info(
-            f"event=setup_start trace_id={trace_id} service={self.service_name} "
-            f"hostname={self.hostname} ip={self.ip}"
+        with open(self.compose_file, "r") as f:
+            try:
+                config = yaml.safe_load(f)
+                services = config.get("services", {})
+                for svc_name, svc_config in services.items():
+                    if isinstance(svc_config, dict):
+                        container_name = svc_config.get("container_name")
+                        if container_name:
+                            container_names.append(container_name)
+            except Exception:
+                pass
+        
+        for name in set(container_names):
+            container_log = get_container_logs(name, tail=50)
+            if container_log.strip():
+                logs.append(f"=== {name} ===\n{container_log}")
+        
+        return "\n".join(logs)
+
+    async def _ensure_prerequisites(self, env_vars: Dict[str, str]) -> None:
+        with tracer.start_as_current_span("ensure_certificates"):
+            certs_dir = await self._ensure_certificates(env_vars)
+        
+        with tracer.start_as_current_span("ensure_traefik_tls_config"):
+            await self._ensure_traefik_tls_config(certs_dir)
+            
+        with tracer.start_as_current_span("ensure_host_entries"):
+            await self._ensure_host_entries()
+
+    def _resolve_certs_dir(self, env_vars: Dict[str, str]) -> Path:
+        env_value = (env_vars.get("CERTS_DIR") or "").strip()
+        if env_value:
+            return Path(env_value).expanduser()
+
+        # Try to find Traefik certs directory in the project
+        project_root = Path(__file__).resolve().parents[2]
+        traefik_certs_dir = project_root / "orchestrator" / "config" / "docker" / "traefik" / "certs"
+        if traefik_certs_dir.exists():
+            return traefik_certs_dir
+
+        return Path.home() / ".certs"
+
+    async def _ensure_certificates(self, env_vars: Dict[str, str]) -> Path:
+        certs_dir = self._resolve_certs_dir(env_vars)
+        params: Dict[str, Any] = {
+            "hostnames": self.hostnames,
+            "trace_id": self.trace_id,
+            "certs_dir": str(certs_dir),
+        }
+
+        generate_result = await generate_certificates_activity(params)
+        if not generate_result.get("success"):
+            raise RuntimeError(
+                f"Certificate generation failed for {self.hostnames}: {generate_result.get('error') or generate_result.get('results')}"
+            )
+
+        verify_params = params.copy()
+        verify_result = await verify_certificates_activity(verify_params)
+
+        failed_hosts = [
+            host for host, details in verify_result.get("results", {}).items()
+            if not details.get("verified")
+        ]
+        if failed_hosts or not verify_result.get("success"):
+            raise RuntimeError(
+                f"Certificate verification failed for: {failed_hosts or self.hostnames}"
+            )
+        return certs_dir
+
+    async def _ensure_traefik_tls_config(self, certs_dir: Path) -> None:
+        project_root = Path(__file__).resolve().parents[2]
+        tls_config_dir = project_root / "orchestrator" / "config" / "docker" / "traefik" / "config" / "tls"
+        
+        # We assume Traefik mounts /certs from the same volume/path if it's centralized
+        # but the activity expects the relative path inside Traefik container
+        params = {
+            "hostnames": self.hostnames,
+            "certs_dir": "/certs",
+            "output_file": str(tls_config_dir / f"{self.service_name}_tls.yaml"),
+            "trace_id": self.trace_id
+        }
+        
+        result = await generate_traefik_tls_config_activity(params)
+        if not result.get("success"):
+            raise RuntimeError(f"Traefik TLS config generation failed for {self.service_name}: {result.get('error')}")
+
+    async def _ensure_host_entries(self) -> None:
+        entries = get_host_entries(self.service_name)
+        if not entries:
+            entries = [{"hostname": self.hostname, "ip": TRAEFIK_HOST_IP}]
+        
+        params: Dict[str, Any] = {
+            "entries": entries,
+            "force_replace": True,
+            "trace_id": self.trace_id,
+        }
+
+        add_result = await add_hosts_entries_activity(params)
+        if not add_result.get("success"):
+            raise RuntimeError(
+                f"Host allocation failed for {self.service_name}: {add_result.get('results')}"
+            )
+
+        hostnames_to_verify = [e["hostname"] for e in entries]
+        verify_result = await verify_hosts_entries_activity(
+            {"hostnames": hostnames_to_verify, "trace_id": self.trace_id}
         )
-        
-        try:
-            # Step 1: Ensure network exists
-            if not await self._ensure_network():
-                return {
-                    "success": False,
-                    "service": self.service_name,
-                    "error": "Failed to create/verify network",
-                    "trace_id": trace_id,
-                }
-            
-            # Step 2: Pre-pull images
-            if not await self._pre_pull_images(trace_id):
-                logger.warning(
-                    f"event=image_pull_warning service={self.service_name} "
-                    f"trace_id={trace_id} message=continuing_despite_pull_failure"
-                )
-            
-            # Step 3: Setup certificates
-            if not await self._setup_certificates(trace_id):
-                return {
-                    "success": False,
-                    "service": self.service_name,
-                    "error": "Certificate setup failed",
-                    "trace_id": trace_id,
-                }
-            
-            # Step 4: Setup hosts
-            if not await self._setup_hosts(trace_id):
-                return {
-                    "success": False,
-                    "service": self.service_name,
-                    "error": "Hosts setup failed",
-                    "trace_id": trace_id,
-                }
-            
-            # Step 5: Start container
-            manager = YAMLContainerManager(
-                str(self.compose_file),
-                instance_id=0,
-                env_vars=env_vars or {}
+
+        failed_hosts = [
+            host for host, details in verify_result.get("results", {}).items()
+            if not details.get("verified")
+        ]
+        if failed_hosts or not verify_result.get("success"):
+            raise RuntimeError(
+                f"Host verification failed for: {failed_hosts or hostnames_to_verify}"
             )
-            
-            # Stop and clean up existing container if any
-            current_status = manager.get_status()
-            if current_status != ContainerState.NOT_FOUND:
-                logger.info(
-                    f"event=cleanup_existing service={self.service_name} "
-                    f"trace_id={trace_id} current_status={current_status.value}"
-                )
-                manager.stop(force=True)
-                manager.delete(remove_volumes=False, remove_images=True, remove_networks=False)
-            
-            # Start the container
-            if not manager.start(restart_if_running=True):
-                return {
-                    "success": False,
-                    "service": self.service_name,
-                    "error": "Container start failed",
-                    "trace_id": trace_id,
-                    "status": manager.get_status().value,
-                }
-            
-            # Step 6: Wait for healthy state
-            if not await self._wait_for_healthy(manager, trace_id):
-                return {
-                    "success": False,
-                    "service": self.service_name,
-                    "error": "Service did not become healthy",
-                    "trace_id": trace_id,
-                    "status": manager.get_status().value,
-                }
-            
-            # Success
-            duration_ms = int((time.time() - start_time) * 1000)
-            final_status = manager.get_status()
-            
-            logger.info(
-                f"event=setup_complete trace_id={trace_id} service={self.service_name} "
-                f"success=True duration_ms={duration_ms} status={final_status.value}"
-            )
-            
-            return {
-                "success": True,
-                "service": self.service_name,
-                "trace_id": trace_id,
-                "hostname": self.hostname,
-                "ip": self.ip,
-                "status": final_status.value,
-                "duration_ms": duration_ms,
-                "url": f"https://{self.hostname}",
-            }
-            
-        except Exception as e:
-            duration_ms = int((time.time() - start_time) * 1000)
-            logger.exception(
-                f"event=setup_failed service={self.service_name} "
-                f"trace_id={trace_id} error={e} duration_ms={duration_ms}"
-            )
-            
-            return {
-                "success": False,
-                "service": self.service_name,
-                "error": str(e),
-                "trace_id": trace_id,
-                "duration_ms": duration_ms,
-            }
 
     async def teardown_service(self) -> Dict[str, Any]:
-        """Teardown the service and clean up resources"""
         start_time = time.time()
-        trace_id = f"{self.service_name}-teardown-{int(time.time())}"
         
-        logger.info(
-            f"event=teardown_start trace_id={trace_id} service={self.service_name}"
-        )
+        self.log.set_trace_id(self.trace_id)
         
-        try:
-            manager = YAMLContainerManager(str(self.compose_file), instance_id=0)
-            
-            # Stop container
-            manager.stop(force=True)
-            
-            # Delete container and resources
-            success = manager.delete(
-                remove_volumes=True,
-                remove_images=True,
-                remove_networks=False
-            )
-            
-            duration_ms = int((time.time() - start_time) * 1000)
-            
-            logger.info(
-                f"event=teardown_complete trace_id={trace_id} service={self.service_name} "
-                f"success={success} duration_ms={duration_ms}"
-            )
-            
-            return {
-                "success": success,
-                "service": self.service_name,
-                "trace_id": trace_id,
-                "duration_ms": duration_ms,
-            }
-            
-        except Exception as e:
-            duration_ms = int((time.time() - start_time) * 1000)
-            logger.exception(
-                f"event=teardown_failed service={self.service_name} "
-                f"trace_id={trace_id} error={e} duration_ms={duration_ms}"
-            )
-            
-            return {
-                "success": False,
-                "service": self.service_name,
-                "error": str(e),
-                "trace_id": trace_id,
-                "duration_ms": duration_ms,
-            }
+        with tracer.start_as_current_span(f"teardown_{self.service_name}") as span:
+            span.set_attribute("service.name", self.service_name)
+            span.set_attribute("trace_id", self.trace_id)
+
+            try:
+                manager = YAMLContainerManager(
+                    yaml_path=str(self.compose_file),
+                    instance_id=0
+                )
+                
+                logs = self._get_all_container_logs()
+                
+                stopped = manager.stop(force=True)
+                deleted = manager.delete(remove_volumes=False)
+                
+                duration_ms = int((time.time() - start_time) * 1000)
+                success = stopped and deleted
+                
+                span.set_attribute("stopped", stopped)
+                span.set_attribute("deleted", deleted)
+                span.set_attribute("success", success)
+                span.set_attribute("duration_ms", duration_ms)
+                
+                self.log.info(
+                    "teardown_complete",
+                    service=self.service_name,
+                    success=success,
+                    duration_ms=duration_ms
+                )
+                
+                return {
+                    "success": success,
+                    "service": self.service_name,
+                    "stopped": stopped,
+                    "deleted": deleted,
+                    "container_logs": logs[:5000],
+                    "duration_ms": duration_ms,
+                    "trace_id": self.trace_id,
+                }
+            except Exception as e:
+                duration_ms = int((time.time() - start_time) * 1000)
+                span.set_attribute("error", str(e))
+                span.set_attribute("success", False)
+                
+                self.log.error(
+                    "teardown_failed",
+                    error=e,
+                    service=self.service_name,
+                    duration_ms=duration_ms
+                )
+                    
+                return {
+                    "success": False,
+                    "service": self.service_name,
+                    "error": str(e),
+                    "duration_ms": duration_ms,
+                    "trace_id": self.trace_id,
+                }
