@@ -1,12 +1,18 @@
+
 version: "3.9"
 
 services:
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:v1.16.3
     container_name: qdrant-instance-0
     environment:
       QDRANT__SERVICE__HTTP_PORT: "6333"
+      QDRANT__SERVICE__GRPC_PORT: "6334"
       INSTANCE_ID: "0"
+    ports:
+      # Expose ports for direct access (debugging)
+      - "6333:6333"
+      - "6334:6334"
     volumes:
       - qdrant-storage-0:/qdrant/storage
     networks:
@@ -17,12 +23,23 @@ services:
       traefik.enable: "true"
       traefik.docker.network: "database-network"
 
+      # HTTP Router
       traefik.http.routers.qdrant-scaibu.rule: "Host(`scaibu.qdrant`)"
       traefik.http.routers.qdrant-scaibu.entrypoints: "web,websecure"
       traefik.http.routers.qdrant-scaibu.service: "qdrant-service"
       traefik.http.routers.qdrant-scaibu.tls: "true"
+      
+      # Explicit priority to avoid conflicts
+      traefik.http.routers.qdrant-scaibu.priority: "100"
 
+      # Service configuration - CRITICAL: Use the internal port
       traefik.http.services.qdrant-service.loadbalancer.server.port: "6333"
+      traefik.http.services.qdrant-service.loadbalancer.server.scheme: "http"
+      
+      # Health check configuration
+      traefik.http.services.qdrant-service.loadbalancer.healthcheck.path: "/healthz"
+      traefik.http.services.qdrant-service.loadbalancer.healthcheck.interval: "10s"
+      traefik.http.services.qdrant-service.loadbalancer.healthcheck.timeout: "5s"
 
     deploy:
       resources:
@@ -34,13 +51,15 @@ services:
     restart: unless-stopped
 
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider localhost:6333/healthz || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:6333/healthz || exit 1"]
       interval: "10s"
       timeout: "5s"
       retries: 5
+      start_period: "30s"
 
 volumes:
   qdrant-storage-0:
+    name: qdrant-storage-0
 
 networks:
   database-network:
