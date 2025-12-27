@@ -1,4 +1,0 @@
-# Port Registry
-# Used by PortManager to track port allocations
-registry: {}
-reserved_ports: []
