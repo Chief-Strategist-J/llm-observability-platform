@@ -1,78 +1,69 @@
-version: "3.9"
-
+version: '3.9'
 services:
   clickhouse:
     image: clickhouse/clickhouse-server:latest
     container_name: clickhouse-instance-0
     environment:
-      CLICKHOUSE_USER: "admin"
-      CLICKHOUSE_PASSWORD: "ClickHousePassword123!"
-      CLICKHOUSE_DB: "default"
-      INSTANCE_ID: "0"
+      CLICKHOUSE_USER: admin
+      CLICKHOUSE_PASSWORD: ClickHousePassword123!
+      CLICKHOUSE_DB: default
+      INSTANCE_ID: '0'
     volumes:
-      - clickhouse-data-0:/var/lib/clickhouse
-      - clickhouse-logs-0:/var/log/clickhouse-server
+    - clickhouse-data-0:/var/lib/clickhouse
+    - clickhouse-logs-0:/var/log/clickhouse-server
     networks:
       database-network:
         ipv4_address: 172.29.0.70
-
     ulimits:
       nofile:
         soft: 262144
         hard: 262144
-
     labels:
-      traefik.enable: "true"
-      traefik.docker.network: "database-network"
-
-      traefik.http.routers.clickhouse-scaibu.rule: "Host(`scaibu.clickhouse`)"
-      traefik.http.routers.clickhouse-scaibu.entrypoints: "web,websecure"
-      traefik.http.routers.clickhouse-scaibu.service: "clickhouse-service"
-      traefik.http.routers.clickhouse-scaibu.tls: "true"
-
-      traefik.http.services.clickhouse-service.loadbalancer.server.port: "8123"
-
+      traefik.enable: 'true'
+      traefik.docker.network: database-network
+      traefik.http.routers.clickhouse-scaibu.rule: Host(`scaibu.clickhouse`)
+      traefik.http.routers.clickhouse-scaibu.entrypoints: web,websecure
+      traefik.http.routers.clickhouse-scaibu.service: clickhouse-service
+      traefik.http.routers.clickhouse-scaibu.tls: 'true'
+      traefik.http.services.clickhouse-service.loadbalancer.server.port: '8123'
     deploy:
       resources:
         limits:
-          memory: "2g"
+          memory: 2g
         reservations:
-          memory: "1g"
-
+          memory: 1g
     restart: unless-stopped
-
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "localhost:8123/ping"]
-      interval: "10s"
-      timeout: "5s"
+      test:
+      - CMD
+      - wget
+      - --spider
+      - -q
+      - localhost:8123/ping
+      interval: 10s
+      timeout: 5s
       retries: 5
-
   clickhouse-ui:
-    image: ghcr.io/caiocloud/clickhouse-overview:latest
+    image: spoonest/clickhouse-tabix-web-client:latest
     container_name: clickhouse-ui-instance-0
     depends_on:
-      - clickhouse
+    - clickhouse
     networks:
       database-network:
         ipv4_address: 172.29.0.71
-
     labels:
-      traefik.enable: "true"
-      traefik.docker.network: "database-network"
-
-      traefik.http.routers.clickhouse-ui-scaibu.rule: "Host(`scaibu.clickhouse-ui`)"
-      traefik.http.routers.clickhouse-ui-scaibu.entrypoints: "web,websecure"
-      traefik.http.routers.clickhouse-ui-scaibu.service: "clickhouse-ui-service"
-      traefik.http.routers.clickhouse-ui-scaibu.tls: "true"
-
-      traefik.http.services.clickhouse-ui-service.loadbalancer.server.port: "80"
+      traefik.enable: 'true'
+      traefik.docker.network: database-network
+      traefik.http.routers.clickhouse-ui-scaibu.rule: Host(`scaibu.clickhouse-ui`)
+      traefik.http.routers.clickhouse-ui-scaibu.entrypoints: web,websecure
+      traefik.http.routers.clickhouse-ui-scaibu.service: clickhouse-ui-service
+      traefik.http.routers.clickhouse-ui-scaibu.tls: 'true'
+      traefik.http.services.clickhouse-ui-service.loadbalancer.server.port: '80'
 
     restart: unless-stopped
-
 volumes:
-  clickhouse-data-0:
-  clickhouse-logs-0:
-
+  clickhouse-data-0: null
+  clickhouse-logs-0: null
 networks:
   database-network:
     external: true

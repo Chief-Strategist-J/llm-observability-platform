@@ -61,3 +61,16 @@ async def pull_image_activity(params: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as e:
         logger.error("event=pull_image_failed error=%s", str(e))
         return {"success": False, "error": str(e)}
+
+
+@activity.defn(name="remove_image_activity")
+async def remove_image_activity(params: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        image_name: str = params["image_name"]
+        logger.info("event=remove_image_start image=%s", image_name)
+        result = run_command(["docker", "rmi", image_name])
+        logger.info("event=remove_image_complete image=%s success=%s", image_name, result["success"])
+        return {"success": result["success"], "image_name": image_name}
+    except Exception as e:
+        logger.error("event=remove_image_failed error=%s", str(e))
+        return {"success": False, "error": str(e)}

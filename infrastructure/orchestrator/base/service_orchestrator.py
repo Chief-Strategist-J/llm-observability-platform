@@ -33,6 +33,9 @@ class ServiceConfig:
     ])
     target_service_for_labels: Optional[str] = None
     tls_strategy: str = "local"  # "local" or "acme"
+    additional_hostnames: List[str] = field(default_factory=list)
+    expected_container_name: Optional[str] = None
+    image_name: Optional[str] = None
 
 
 class ServiceOrchestrator:
@@ -67,8 +70,14 @@ class ServiceOrchestrator:
                 "certs_dir": self.config.certs_dir,
                 "additional_networks": self.config.additional_networks,
                 "target_service": self.config.target_service_for_labels,
-                "tls_strategy": self.config.tls_strategy
+                "tls_strategy": self.config.tls_strategy,
+                "additional_hostnames": self.config.additional_hostnames,
+                "expected_container_name": self.config.expected_container_name,
+                "image_name": self.config.image_name
             }
+            
+            self._ensure_host_entries()
+            
             from infrastructure.orchestrator.base.workflows import ServiceSetupWorkflow
             result = await client.start_workflow(
                 ServiceSetupWorkflow.run,
@@ -81,6 +90,29 @@ class ServiceOrchestrator:
         except Exception as e:
             logger.error("event=service_orchestrator_setup_failed service=%s error=%s", self.config.service_name, str(e))
             return {"success": False, "error": str(e)}
+
+    def _ensure_host_entries(self) -> None:
+        import subprocess
+        hostnames = [self.config.hostname] + self.config.additional_hostnames
+        target_ip = "127.0.2.1"
+        
+        needed_updates = []
+        for host in hostnames:
+            try:
+                check_cmd = f"grep -E '^[[:space:]]*{target_ip}[[:space:]]+{host}([[:space:]]|$)' /etc/hosts"
+                subprocess.check_call(check_cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except subprocess.CalledProcessError:
+                needed_updates.append(host)
+        
+        if needed_updates:
+            logger.info("event=updating_etc_hosts hosts=%s message='Sudo password may be required'", needed_updates)
+            for host in needed_updates:
+                try:
+                    cmd = f"sudo sed -i '/{host}/d' /etc/hosts && echo '{target_ip} {host}' | sudo tee -a /etc/hosts > /dev/null"
+                    subprocess.check_call(cmd, shell=True)
+                    logger.info("event=host_entry_updated hostname=%s target=%s", host, target_ip)
+                except subprocess.CalledProcessError as e:
+                    logger.error("event=host_entry_update_failed hostname=%s error=%s", host, str(e))
     
     async def teardown(self) -> Dict[str, Any]:
         try:
@@ -89,7 +121,9 @@ class ServiceOrchestrator:
             workflow_id = f"service_teardown_{self.config.service_name}_{int(time.time())}"
             workflow_params = {
                 "compose_file": self.config.compose_file,
-                "service_name": self.config.service_name
+                "service_name": self.config.service_name,
+                "container_name": self.config.expected_container_name,
+                "image_name": self.config.image_name
             }
             from infrastructure.orchestrator.base.workflows import ServiceTeardownWorkflow
             result = await client.start_workflow(

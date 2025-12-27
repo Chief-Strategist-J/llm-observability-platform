@@ -61,6 +61,7 @@ class ServiceSetupWorkflow:
         certs_dir: str = params.get("certs_dir", "infrastructure/orchestrator/config/docker/traefik/certs")
         additional_networks: List[str] = params.get("additional_networks", [])
         target_service: str = params.get("target_service", None)
+        image_name: Optional[str] = params.get("image_name", None)
         retry_policy = RetryPolicy(maximum_attempts=3, initial_interval=timedelta(seconds=2), maximum_interval=timedelta(seconds=30), backoff_coefficient=2.0)
         try:
             workflow.logger.info("event=step_additional_networks_setup_start count=%d", len(additional_networks))
@@ -104,16 +105,18 @@ class ServiceSetupWorkflow:
             await workflow.execute_activity(diagnostic_network_inspect_activity, {"network_name": network_name}, start_to_close_timeout=timedelta(seconds=30), retry_policy=retry_policy)
             
             tls_strategy = params.get("tls_strategy", "local")
-            workflow.logger.info("event=step_tls_setup_start hostname=%s strategy=%s", hostname, tls_strategy)
+            hostnames = [hostname] + params.get("additional_hostnames", [])
+            workflow.logger.info("event=step_tls_setup_start hostnames=%s strategy=%s", hostnames, tls_strategy)
             
             if tls_strategy == "local":
                 await workflow.execute_activity(create_tls_directories_activity, {"tls_config_dir": tls_config_dir, "certs_dir": certs_dir}, start_to_close_timeout=timedelta(seconds=30), retry_policy=retry_policy)
                 await workflow.execute_activity(create_root_ca_activity, {"certs_dir": certs_dir}, start_to_close_timeout=timedelta(seconds=60), retry_policy=retry_policy)
                 await workflow.execute_activity(install_root_ca_activity, {"certs_dir": certs_dir}, start_to_close_timeout=timedelta(seconds=60), retry_policy=retry_policy)
-                await workflow.execute_activity(generate_certificate_activity, {"hostname": hostname, "certs_dir": certs_dir}, start_to_close_timeout=timedelta(seconds=60), retry_policy=retry_policy)
-                await workflow.execute_activity(create_tls_configuration_activity, {"hostname": hostname, "tls_config_dir": tls_config_dir}, start_to_close_timeout=timedelta(seconds=30), retry_policy=retry_policy)
+                for h in hostnames:
+                    await workflow.execute_activity(generate_certificate_activity, {"hostname": h, "certs_dir": certs_dir}, start_to_close_timeout=timedelta(seconds=60), retry_policy=retry_policy)
+                    await workflow.execute_activity(create_tls_configuration_activity, {"hostname": h, "tls_config_dir": tls_config_dir}, start_to_close_timeout=timedelta(seconds=30), retry_policy=retry_policy)
             
-            workflow.logger.info("event=tls_setup_complete hostname=%s", hostname)
+            workflow.logger.info("event=tls_setup_complete hostnames=%s", hostnames)
             await workflow.execute_activity(diagnostic_host_configuration_activity, {"hostname": hostname}, start_to_close_timeout=timedelta(seconds=30), retry_policy=retry_policy)
             workflow.logger.info("event=step_labels_setup_start compose=%s target_service=%s", compose_file, target_service)
             await workflow.execute_activity(add_labels_to_compose_activity, {"compose_path": compose_file, "hostname": hostname, "network_name": network_name, "ip_address": ip_address, "port": port, "service_name": service_name, "target_service": target_service, "tls_strategy": tls_strategy}, start_to_close_timeout=timedelta(seconds=30), retry_policy=retry_policy)
@@ -121,20 +124,28 @@ class ServiceSetupWorkflow:
             await workflow.execute_activity(diagnostic_container_inspect_activity, {"container_name": "traefik-scaibu"}, start_to_close_timeout=timedelta(seconds=30), retry_policy=retry_policy)
             workflow.logger.info("event=step_service_deploy_start service=%s", service_name)
             await workflow.execute_activity(start_compose_activity, {"compose_path": compose_file, "project_name": service_name}, start_to_close_timeout=timedelta(seconds=300), retry_policy=retry_policy)
-            service_container = f"{service_name}-instance-0"
+            
+            service_container = params.get("expected_container_name") or f"{service_name}-instance-0"
+            
             container_check = await workflow.execute_activity(check_container_exists_activity, {"container_name": service_container}, start_to_close_timeout=timedelta(seconds=30), retry_policy=retry_policy)
             if container_check.get("exists"):
                 await workflow.execute_activity(restart_container_activity, {"container_name": service_container}, start_to_close_timeout=timedelta(seconds=60), retry_policy=retry_policy)
             service_running = await workflow.execute_activity(verify_container_running_activity, {"container_name": service_container, "max_retries": 10, "retry_delay": 5}, start_to_close_timeout=timedelta(seconds=120), retry_policy=retry_policy)
             if not service_running.get("running"):
-                return {"success": False, "error": f"Service {service_name} failed to start", "step": "service_deploy"}
-            workflow.logger.info("event=service_deploy_complete service=%s", service_name)
+                return {"success": False, "error": f"Service {service_name} failed to start (container: {service_container})", "step": "service_deploy"}
+            workflow.logger.info("event=service_deploy_complete service=%s container=%s", service_name, service_container)
             await workflow.execute_activity(diagnostic_container_inspect_activity, {"container_name": service_container}, start_to_close_timeout=timedelta(seconds=30), retry_policy=retry_policy)
             workflow.logger.info("event=step_network_attach_start container=%s network=%s", service_container, network_name)
             attach_result = await workflow.execute_activity(attach_container_to_network_activity, {"container_name": service_container, "network_name": network_name, "ip_address": ip_address}, start_to_close_timeout=timedelta(seconds=30), retry_policy=retry_policy)
             verify_attach = await workflow.execute_activity(verify_network_attachment_activity, {"container_name": service_container, "network_name": network_name}, start_to_close_timeout=timedelta(seconds=30), retry_policy=retry_policy)
             if not verify_attach.get("attached"):
                 workflow.logger.info("event=network_attach_warning message=container_may_already_be_attached")
+            
+            # Ensure Traefik is attached to the service network to route traffic
+            traefik_check = await workflow.execute_activity(check_container_exists_activity, {"container_name": traefik_container}, start_to_close_timeout=timedelta(seconds=30), retry_policy=retry_policy)
+            if traefik_check.get("exists"):
+                 await workflow.execute_activity(attach_container_to_network_activity, {"container_name": traefik_container, "network_name": network_name}, start_to_close_timeout=timedelta(seconds=30), retry_policy=retry_policy)
+
             workflow.logger.info("event=network_attach_complete")
             await workflow.execute_activity(diagnostic_network_inspect_activity, {"network_name": network_name}, start_to_close_timeout=timedelta(seconds=30), retry_policy=retry_policy)
             workflow.logger.info("event=step_restart_services")
@@ -163,9 +174,25 @@ class ServiceTeardownWorkflow:
         workflow.logger.info("event=service_teardown_workflow_start service=%s", params.get("service_name"))
         compose_file: str = params["compose_file"]
         service_name: str = params["service_name"]
+        container_name: Optional[str] = params.get("container_name")
+        image_name: Optional[str] = params.get("image_name")
         retry_policy = RetryPolicy(maximum_attempts=3, initial_interval=timedelta(seconds=2), maximum_interval=timedelta(seconds=30), backoff_coefficient=2.0)
         try:
+            workflow.logger.info("event=step_stop_compose_start")
             await workflow.execute_activity(stop_compose_activity, {"compose_path": compose_file, "project_name": service_name}, start_to_close_timeout=timedelta(seconds=120), retry_policy=retry_policy)
+            
+            # Additional cleanup as requested: ensure container and undefined images are gone
+            container_name = container_name or f"{service_name}-instance-0"
+            workflow.logger.info("event=step_cleanup_container_start container=%s", container_name)
+            await workflow.execute_activity(remove_container_activity, {"container_name": container_name}, start_to_close_timeout=timedelta(seconds=30), retry_policy=retry_policy)
+            
+            # Attempt to remove image if provided
+            image_name = params.get("image_name")
+            if image_name:
+                workflow.logger.info("event=step_remove_image_start image=%s", image_name)
+                # We use check first or just try remove. remove_image_activity handles errors.
+                await workflow.execute_activity(remove_image_activity, {"image_name": image_name}, start_to_close_timeout=timedelta(seconds=60), retry_policy=retry_policy)
+            
             workflow.logger.info("event=service_teardown_workflow_complete service=%s", service_name)
             return {"success": True, "service_name": service_name}
         except Exception as e:

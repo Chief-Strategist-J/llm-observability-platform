@@ -1,4 +1,4 @@
-from .image_activities import check_image_exists_activity, pull_image_activity
+from .image_activities import check_image_exists_activity, pull_image_activity, remove_image_activity
 from .container_activities import (
     check_container_exists_activity,
     stop_container_activity,

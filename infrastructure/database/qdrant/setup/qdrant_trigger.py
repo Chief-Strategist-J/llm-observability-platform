@@ -20,8 +20,12 @@ qdrant_config = ServiceConfig(
     subnet="172.29.0.0/16",
     gateway="172.29.0.1",
     health_check_command=["curl", "-f", "http://localhost:6333/healthz"],
-    target_service_for_labels="qdrant",
-    env_vars={}
+    env_vars={
+        "QDRANT__SERVICE__HTTP_PORT": "6333"
+    },
+    target_service_for_labels="qdrant-service",
+    expected_container_name="qdrant-instance-0",
+    image_name="qdrant/qdrant:latest"
 )
 
 

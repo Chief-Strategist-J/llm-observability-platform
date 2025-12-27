@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 from infrastructure.orchestrator.base.activities import (
     check_image_exists_activity,
     pull_image_activity,
+    remove_image_activity,
     check_container_exists_activity,
     stop_container_activity,
     remove_container_activity,
@@ -53,6 +54,7 @@ from infrastructure.orchestrator.base.workflows import (
 ACTIVITIES: List[Any] = [
     check_image_exists_activity,
     pull_image_activity,
+    remove_image_activity,
     check_container_exists_activity,
     stop_container_activity,
     remove_container_activity,

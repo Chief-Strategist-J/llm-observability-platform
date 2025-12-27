@@ -1,0 +1,4 @@
+tls:
+  certificates:
+  - certFile: /certs/scaibu.opensearch-dashboards.pem
+    keyFile: /certs/scaibu.opensearch-dashboards-key.pem
