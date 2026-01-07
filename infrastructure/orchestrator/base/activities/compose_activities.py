@@ -37,7 +37,7 @@ async def start_compose_activity(params: Dict[str, Any]) -> Dict[str, Any]:
         compose_path: str = params["compose_path"]
         project_name: str = params.get("project_name", "")
         logger.info("event=start_compose_start compose_path=%s project=%s", compose_path, project_name)
-        cmd: List[str] = ["docker-compose", "-f", compose_path]
+        cmd: List[str] = ["docker", "compose", "-f", compose_path]
         if project_name:
             cmd.extend(["-p", project_name])
         cmd.extend(["up", "-d"])
@@ -60,7 +60,7 @@ async def stop_compose_activity(params: Dict[str, Any]) -> Dict[str, Any]:
         compose_path: str = params["compose_path"]
         project_name: str = params.get("project_name", "")
         logger.info("event=stop_compose_start compose_path=%s project=%s", compose_path, project_name)
-        cmd: List[str] = ["docker-compose", "-f", compose_path]
+        cmd: List[str] = ["docker", "compose", "-f", compose_path]
         if project_name:
             cmd.extend(["-p", project_name])
         cmd.append("down")
