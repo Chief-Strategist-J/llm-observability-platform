@@ -1,0 +1,4 @@
+tls:
+  certificates:
+  - certFile: /certs/scaibu.loki.pem
+    keyFile: /certs/scaibu.loki-key.pem

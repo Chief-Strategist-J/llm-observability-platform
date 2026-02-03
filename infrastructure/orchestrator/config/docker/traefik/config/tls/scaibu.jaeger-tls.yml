@@ -1,0 +1,4 @@
+tls:
+  certificates:
+  - certFile: /certs/scaibu.jaeger.pem
+    keyFile: /certs/scaibu.jaeger-key.pem

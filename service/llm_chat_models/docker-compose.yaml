@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  llm_model_service:
+    build:
+      context: ../../
+      dockerfile: service/llm_chat_models/Dockerfile
+    container_name: llm_model_service
+    ports:
+      - "8100:8100"
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - SERVICE_NAME=llm-model-service
+      - OTLP_ENDPOINT=http://observability:4317
+    depends_on:
+      - ollama
+    networks:
+      - database-network
+      - observability-network
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    volumes:
+      - ollama_models:/root/.ollama
+    ports:
+      - "11434:11434"
+    networks:
+      - database-network
+      - observability-network
+    restart: unless-stopped
+
+networks:
+  database-network:
+    external: true
+  observability-network:
+    external: true
+
+volumes:
+  ollama_models:

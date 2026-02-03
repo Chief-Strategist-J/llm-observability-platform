@@ -1,102 +1,91 @@
-version: "3.9"
-
-services:
-  traefik:
-    image: traefik:latest
-    container_name: traefik-scaibu
-
-    ports:
-      - "127.0.2.1:80:80"
-      - "127.0.2.1:443:443"
-
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik-certs:/letsencrypt
-      - traefik-config:/etc/traefik
-      - /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/certs:/certs:ro
-      - /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/config/tls:/etc/traefik/dynamic:ro
-
-    networks:
-      - observability-network
-      - data-network
-      - messaging-network
-      - cicd-network
-      - temporal-network
-      - database-network
-
-    restart: unless-stopped
-
-    command:
-      - "--providers.docker=true"
-      - "--providers.docker.exposedByDefault=false"
-      - "--providers.docker.endpoint=unix:///var/run/docker.sock"
-      - "--providers.docker.watch=true"
-
-      - "--providers.file.directory=/etc/traefik/dynamic"
-      - "--providers.file.watch=true"
-
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
-
-      - "--api.dashboard=true"
-      - "--api.insecure=false"
-      - "--ping=true"
-
-      - "--log.level=INFO"
-      - "--log.format=json"
-      - "--accesslog=true"
-      - "--accesslog.format=json"
-      - "--accesslog.fields.headers.defaultmode=keep"
-
-      - "--metrics.prometheus=true"
-      - "--metrics.prometheus.addEntryPointsLabels=true"
-      - "--metrics.prometheus.addServicesLabels=true"
-      - "--metrics.prometheus.addRoutersLabels=true"
-
-    labels:
-      traefik.enable: "true"
-      traefik.http.routers.dashboard-secure.rule: "Host(`scaibu.traefik`)"
-      traefik.http.routers.dashboard-secure.entrypoints: "websecure"
-      traefik.http.routers.dashboard-secure.service: "api@internal"
-      traefik.http.routers.dashboard-secure.tls: "true"
-      traefik.http.routers.dashboard-secure.middlewares: "traefik-security-headers"
-
-      traefik.http.middlewares.traefik-security-headers.headers.framedeny: "true"
-      traefik.http.middlewares.traefik-security-headers.headers.sslredirect: "false"
-      traefik.http.middlewares.traefik-security-headers.headers.stsincludesubdomains: "true"
-      traefik.http.middlewares.traefik-security-headers.headers.stspreload: "true"
-      traefik.http.middlewares.traefik-security-headers.headers.stsseconds: "31536000"
-      traefik.http.middlewares.traefik-security-headers.headers.contenttypenosniff: "true"
-      traefik.http.middlewares.traefik-security-headers.headers.browserxssfilter: "true"
-      traefik.http.middlewares.traefik-security-headers.headers.referrerpolicy: "strict-origin-when-cross-origin"
-      traefik.http.middlewares.traefik-security-headers.headers.permissionspolicy: "geolocation=(), microphone=(), camera=()"
-      traefik.http.middlewares.traefik-security-headers.headers.customresponseheaders.X-Powered-By: ""
-      traefik.http.middlewares.traefik-security-headers.headers.customresponseheaders.Server: ""
-
-    healthcheck:
-      test: ["CMD", "traefik", "healthcheck", "--ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
-
-volumes:
-  traefik-certs:
-  traefik-config:
-
 networks:
-  observability-network:
+  cicd-network:
     external: true
   data-network:
     external: true
+  database-network:
+    external: true
   messaging-network:
     external: true
-  cicd-network:
+  observability-network:
     external: true
   temporal-network:
     external: true
-  database-network:
-    external: true
+services:
+  traefik:
+    command:
+    - --providers.docker=true
+    - --providers.docker.exposedByDefault=false
+    - --providers.docker.endpoint=unix:///var/run/docker.sock
+    - --providers.docker.watch=true
+    - --providers.file.directory=/etc/traefik/dynamic
+    - --providers.file.watch=true
+    - --entrypoints.web.address=:80
+    - --entrypoints.websecure.address=:443
+    - --entrypoints.web.http.redirections.entrypoint.to=websecure
+    - --entrypoints.web.http.redirections.entrypoint.scheme=https
+    - --entrypoints.web.http.redirections.entrypoint.permanent=true
+    - --api.dashboard=true
+    - --api.insecure=false
+    - --ping=true
+    - --log.level=INFO
+    - --log.format=json
+    - --accesslog=true
+    - --accesslog.format=json
+    - --accesslog.fields.headers.defaultmode=keep
+    - --metrics.prometheus=true
+    - --metrics.prometheus.addEntryPointsLabels=true
+    - --metrics.prometheus.addServicesLabels=true
+    - --metrics.prometheus.addRoutersLabels=true
+    container_name: traefik-scaibu
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 20s
+      test:
+      - CMD
+      - traefik
+      - healthcheck
+      - --ping
+      timeout: 10s
+    image: traefik:latest
+    labels:
+      traefik.enable: 'true'
+      traefik.http.middlewares.traefik-security-headers.headers.browserxssfilter: 'true'
+      traefik.http.middlewares.traefik-security-headers.headers.contenttypenosniff: 'true'
+      traefik.http.middlewares.traefik-security-headers.headers.customresponseheaders.Server: ''
+      traefik.http.middlewares.traefik-security-headers.headers.customresponseheaders.X-Powered-By: ''
+      traefik.http.middlewares.traefik-security-headers.headers.framedeny: 'true'
+      traefik.http.middlewares.traefik-security-headers.headers.permissionspolicy: geolocation=(),
+        microphone=(), camera=()
+      traefik.http.middlewares.traefik-security-headers.headers.referrerpolicy: strict-origin-when-cross-origin
+      traefik.http.middlewares.traefik-security-headers.headers.sslredirect: 'false'
+      traefik.http.middlewares.traefik-security-headers.headers.stsincludesubdomains: 'true'
+      traefik.http.middlewares.traefik-security-headers.headers.stspreload: 'true'
+      traefik.http.middlewares.traefik-security-headers.headers.stsseconds: '31536000'
+      traefik.http.routers.dashboard-secure.entrypoints: websecure
+      traefik.http.routers.dashboard-secure.middlewares: traefik-security-headers
+      traefik.http.routers.dashboard-secure.rule: Host(`scaibu.traefik`)
+      traefik.http.routers.dashboard-secure.service: api@internal
+      traefik.http.routers.dashboard-secure.tls: 'true'
+    networks:
+    - observability-network
+    - data-network
+    - messaging-network
+    - cicd-network
+    - temporal-network
+    - database-network
+    ports:
+    - 127.0.2.1:80:80
+    - 127.0.2.1:443:443
+    restart: unless-stopped
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - traefik-certs:/letsencrypt
+    - traefik-config:/etc/traefik
+    - /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/certs:/certs:ro
+    - /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/config/tls:/etc/traefik/dynamic:ro
+version: '3.9'
+volumes:
+  traefik-certs: null
+  traefik-config: null
