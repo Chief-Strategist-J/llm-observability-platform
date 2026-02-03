@@ -1,40 +1,84 @@
-"""Orchestrator base package.
-
-This package contains the core components for container orchestration,
-including protocols, base classes, and common utilities.
-"""
-
-"""
-Base container management classes for orchestration.
-Supports both legacy ContainerConfig and new YAML-based configuration.
-"""
-
-from .base_container_activity import (
-    YAMLBaseService,
-    YAMLContainerConfig,
-    YAMLContainerManager,
-    YAMLConfigLoader,
-    ContainerState,
-    BaseContainerManager,
-)
-
 from .logql_logger import (
     LogQLLogger,
     trace_operation,
 )
 
+from .service_orchestrator import (
+    ServiceConfig,
+    ServiceOrchestrator,
+)
+
+from .activities import (
+    check_image_exists_activity,
+    pull_image_activity,
+    check_container_exists_activity,
+    stop_container_activity,
+    remove_container_activity,
+    restart_container_activity,
+    verify_container_running_activity,
+    inspect_container_activity,
+    start_compose_activity,
+    stop_compose_activity,
+    get_container_logs_activity,
+    check_network_exists_activity,
+    delete_network_activity,
+    create_network_activity,
+    inspect_network_activity,
+    attach_container_to_network_activity,
+    verify_network_attachment_activity,
+    create_tls_directories_activity,
+    generate_certificate_activity,
+    create_tls_configuration_activity,
+    add_labels_to_compose_activity,
+    health_check_activity,
+    diagnostic_service_inspect_activity,
+    diagnostic_container_inspect_activity,
+    diagnostic_network_inspect_activity,
+    diagnostic_image_inspect_activity,
+    diagnostic_host_configuration_activity,
+    diagnostic_listening_ports_activity,
+    diagnostic_full_inspection_activity,
+)
+
+from .workflows import (
+    ServiceSetupWorkflow,
+    ServiceTeardownWorkflow,
+)
+
 __all__ = [
-    "YAMLBaseService",
-    "YAMLContainerConfig",
-    "YAMLContainerManager",
-    "YAMLConfigLoader",
-    "ContainerState",
-    "BaseContainerManager",
-    "KubernetesBaseService",
-    "KubernetesConfig",
-    "KubernetesManager",
-    "BaseKubernetesManager",
     "LogQLLogger",
     "trace_operation",
+    "ServiceConfig",
+    "ServiceOrchestrator",
+    "ServiceSetupWorkflow",
+    "ServiceTeardownWorkflow",
+    "check_image_exists_activity",
+    "pull_image_activity",
+    "check_container_exists_activity",
+    "stop_container_activity",
+    "remove_container_activity",
+    "restart_container_activity",
+    "verify_container_running_activity",
+    "inspect_container_activity",
+    "start_compose_activity",
+    "stop_compose_activity",
+    "get_container_logs_activity",
+    "check_network_exists_activity",
+    "delete_network_activity",
+    "create_network_activity",
+    "inspect_network_activity",
+    "attach_container_to_network_activity",
+    "verify_network_attachment_activity",
+    "create_tls_directories_activity",
+    "generate_certificate_activity",
+    "create_tls_configuration_activity",
+    "add_labels_to_compose_activity",
+    "health_check_activity",
+    "diagnostic_service_inspect_activity",
+    "diagnostic_container_inspect_activity",
+    "diagnostic_network_inspect_activity",
+    "diagnostic_image_inspect_activity",
+    "diagnostic_host_configuration_activity",
+    "diagnostic_listening_ports_activity",
+    "diagnostic_full_inspection_activity",
 ]
-

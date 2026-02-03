@@ -1,0 +1,4 @@
+tls:
+  certificates:
+  - certFile: /certs/scaibu.clickhouse-ui.pem
+    keyFile: /certs/scaibu.clickhouse-ui-key.pem

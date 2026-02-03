@@ -17,6 +17,68 @@ from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 from opentelemetry.instrumentation.pymongo import PymongoInstrumentor
+import inspect
+import functools
+import json
+
+def trace_with_details(tracer, name_override=None):
+    """
+    Decorator to provide deep tracing including file path, line number, arguments, 
+    and detailed exception capturing.
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        async def async_wrapper(*args, **kwargs):
+            span_name = name_override or func.__name__
+            with tracer.start_as_current_span(span_name) as span:
+                _capture_details(span, func, args, kwargs)
+                try:
+                    return await func(*args, **kwargs)
+                except Exception as e:
+                    _record_exception_details(span, e)
+                    raise
+
+        @functools.wraps(func)
+        def sync_wrapper(*args, **kwargs):
+            span_name = name_override or func.__name__
+            with tracer.start_as_current_span(span_name) as span:
+                _capture_details(span, func, args, kwargs)
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    _record_exception_details(span, e)
+                    raise
+
+        if inspect.iscoroutinefunction(func):
+            return async_wrapper
+        return sync_wrapper
+    return decorator
+
+def _capture_details(span, func, args, kwargs):
+    try:
+        file_name = inspect.getsourcefile(func) or "unknown"
+        lines = inspect.getsourcelines(func)
+        line_no = lines[1] if lines else 0
+        
+        span.set_attribute("code.filepath", file_name)
+        span.set_attribute("code.lineno", line_no)
+        span.set_attribute("code.function", func.__name__)
+        
+        # safely capture args
+        safe_args = [str(a)[:500] for a in args]
+        safe_kwargs = {k: str(v)[:500] for k, v in kwargs.items()}
+        span.set_attribute("fn.args", str(safe_args))
+        span.set_attribute("fn.kwargs", str(safe_kwargs))
+    except Exception as e:
+        span.set_attribute("trace.meta.error", str(e))
+
+def _record_exception_details(span, e):
+    span.record_exception(e)
+    span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
+    # Inspect usage stack 
+    frame = inspect.currentframe()
+    if frame and frame.f_back:
+        span.set_attribute("error.caught_at_lineno", frame.f_back.f_lineno)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 _logger = logging.getLogger("ObservabilityClient")

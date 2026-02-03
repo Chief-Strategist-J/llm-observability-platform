@@ -1,78 +1,75 @@
-version: "3.9"
-
+version: '3.9'
 services:
   mongodb:
     image: mongo:7.0
     container_name: mongodb-instance-0
     environment:
-      MONGO_INITDB_ROOT_USERNAME: "admin"
-      MONGO_INITDB_ROOT_PASSWORD: "MongoPassword123!"
-      INSTANCE_ID: "0"
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: MongoPassword123!
+      INSTANCE_ID: '0'
+    ports:
+    - "27017:27017"
     volumes:
-      - mongodb-data-0:/data/db
-      - mongodb-config-0:/data/configdb
+    - mongodb-data-0:/data/db
+    - mongodb-config-0:/data/configdb
     networks:
       database-network:
-        ipv4_address: 172.29.0.20
-
-    command: ["mongod", "--bind_ip_all"]
-
+        ipv4_address: 172.30.0.20
+    command:
+    - mongod
+    - --bind_ip_all
     labels:
-      traefik.enable: "true"
-      traefik.docker.network: "database-network"
-      prometheus.io.scrape: "false"
-
+      traefik.enable: 'false'
+      prometheus.io.scrape: 'false'
     deploy:
       resources:
         limits:
-          memory: "1g"
+          memory: 1g
         reservations:
-          memory: "512m"
-
+          memory: 512m
     restart: unless-stopped
-
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --eval 'db.adminCommand(\"ping\")' || exit 1"]
+      test:
+      - CMD-SHELL
+      - mongosh --eval 'db.adminCommand("ping")' || exit 1
       interval: 15s
       timeout: 10s
       retries: 12
       start_period: 120s
-
   mongoexpress:
     image: mongo-express:1.0-20-alpine3.19
     container_name: mongoexpress-instance-0
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: "admin"
-      ME_CONFIG_MONGODB_ADMINPASSWORD: "MongoPassword123!"
-      ME_CONFIG_MONGODB_SERVER: "mongodb-instance-0"
-      ME_CONFIG_BASICAUTH_USERNAME: "admin"
-      ME_CONFIG_BASICAUTH_PASSWORD: "MongoExpressPassword123!"
-      ME_CONFIG_MONGODB_ENABLE_ADMIN: "true"
-      ME_CONFIG_MONGODB_URL: "mongodb://admin:MongoPassword123!@mongodb-instance-0:27017/"
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: MongoPassword123!
+      ME_CONFIG_MONGODB_SERVER: mongodb-instance-0
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: MongoExpressPassword123!
+      ME_CONFIG_MONGODB_ENABLE_ADMIN: 'true'
+      ME_CONFIG_MONGODB_URL: mongodb://admin:MongoPassword123!@mongodb-instance-0:27017/
     depends_on:
       mongodb:
         condition: service_healthy
     networks:
       database-network:
-        ipv4_address: 172.29.0.21
-
+        ipv4_address: 172.30.0.21
     labels:
-      traefik.enable: "true"
-      traefik.docker.network: "database-network"
-
-      traefik.http.routers.mongoexpress-scaibu.rule: "Host(`scaibu.mongoexpress`)"
-      traefik.http.routers.mongoexpress-scaibu.entrypoints: "web,websecure"
-      traefik.http.routers.mongoexpress-scaibu.service: "mongoexpress-service"
-      traefik.http.routers.mongoexpress-scaibu.tls: "true"
-
-      traefik.http.services.mongoexpress-service.loadbalancer.server.port: "8081"
-
+      traefik.enable: 'true'
+      traefik.docker.network: database-network
+      traefik.http.routers.mongoexpress-scaibu.rule: Host(`scaibu.mongoexpress`)
+      traefik.http.routers.mongoexpress-scaibu.entrypoints: web,websecure
+      traefik.http.routers.mongoexpress-scaibu.service: mongoexpress-service
+      traefik.http.routers.mongoexpress-scaibu.tls: 'true'
+      traefik.http.services.mongoexpress-service.loadbalancer.server.port: '8081'
+      traefik.http.routers.mongodb-scaibu.rule: Host(`scaibu.mongoexpress`)
+      traefik.http.routers.mongodb-scaibu.entrypoints: web,websecure
+      traefik.http.routers.mongodb-scaibu.service: mongodb-service
+      traefik.http.routers.mongodb-scaibu.tls: 'true'
+      traefik.http.services.mongodb-service.loadbalancer.server.port: '8081'
     restart: unless-stopped
-
 volumes:
-  mongodb-data-0:
-  mongodb-config-0:
-
+  mongodb-data-0: null
+  mongodb-config-0: null
 networks:
   database-network:
     external: true

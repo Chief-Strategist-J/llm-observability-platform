@@ -1,0 +1,43 @@
+version: '3.9'
+
+services:
+  apicurio-registry:
+    image: apicurio/apicurio-registry-mem:2.5.8.Final
+    container_name: apicurio-registry-instance-0
+    environment:
+      REGISTRY_AUTH_ANONYMOUS_READ_ACCESS_ENABLED: "true"
+      QUARKUS_HTTP_PORT: "8080"
+      QUARKUS_HTTP_HOST: "0.0.0.0"
+      LOG_LEVEL: "INFO"
+    networks:
+      database-network:
+        ipv4_address: 172.29.0.50
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "database-network"
+      traefik.http.routers.apicurio-scaibu.rule: "Host(`scaibu.apicurio`)"
+      traefik.http.routers.apicurio-scaibu.entrypoints: "web,websecure"
+      traefik.http.routers.apicurio-scaibu.service: "apicurio-service"
+      traefik.http.routers.apicurio-scaibu.tls: "true"
+      traefik.http.services.apicurio-service.loadbalancer.server.port: "8080"
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "8080"
+      prometheus.io.path: "/q/metrics"
+    deploy:
+      resources:
+        limits:
+          memory: "1g"
+          cpus: "1.0"
+        reservations:
+          memory: "512m"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health/ready || exit 1"]
+      interval: "15s"
+      timeout: "10s"
+      retries: 5
+      start_period: "30s"
+
+networks:
+  database-network:
+    external: true
