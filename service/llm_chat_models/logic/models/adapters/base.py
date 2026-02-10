@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import AsyncGenerator, Dict, Any
 
-
 class BaseModelAdapter(ABC):
+
     @abstractmethod
     async def download_model(self, model_name: str) -> bool:
         pass
@@ -12,15 +12,11 @@ class BaseModelAdapter(ABC):
         pass
 
     @abstractmethod
-    async def generate_response(
-        self, model_name: str, prompt: str, **kwargs
-    ) -> Dict[str, Any]:
+    async def generate_response(self, model_name: str, prompt: str, **kwargs) -> Dict[str, Any]:
         pass
 
     @abstractmethod
-    async def generate_stream(
-        self, model_name: str, prompt: str, **kwargs
-    ) -> AsyncGenerator[str, None]:
+    async def generate_stream(self, model_name: str, prompt: str, **kwargs) -> AsyncGenerator[str, None]:
         pass
 
     @abstractmethod
