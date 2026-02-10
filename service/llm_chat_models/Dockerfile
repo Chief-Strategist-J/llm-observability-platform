@@ -16,4 +16,4 @@ ENV PYTHONPATH=/app
 
 WORKDIR /app/service/llm_chat_models
 
-CMD ["python", "-m", "application.main"]
+CMD ["python", "run.py"]

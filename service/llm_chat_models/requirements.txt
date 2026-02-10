@@ -9,6 +9,7 @@ opentelemetry-instrumentation-fastapi
 opentelemetry-instrumentation-pymongo
 pymongo
 requests
+websockets
 streamlit==1.31.0
 watchdog
 
