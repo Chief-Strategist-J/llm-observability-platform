@@ -1,0 +1,2 @@
+#!/bin/bash
+git diff --cached --name-only | grep -q "^infrastructure/observability/" && ! grep -q "\[OBSERVABILITY\]" "$1" && sed -i "1s/^/[OBSERVABILITY] /" "$1"

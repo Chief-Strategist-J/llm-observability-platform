@@ -83,8 +83,8 @@ services:
     - /var/run/docker.sock:/var/run/docker.sock:ro
     - traefik-certs:/letsencrypt
     - traefik-config:/etc/traefik
-    - /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/certs:/certs:ro
-    - /home/j/live/dinesh/llm-chatbot-python/infrastructure/orchestrator/config/docker/traefik/config/tls:/etc/traefik/dynamic:ro
+    - ./certs:/certs:ro
+    - ./tls:/etc/traefik/dynamic:ro
 version: '3.9'
 volumes:
   traefik-certs: null

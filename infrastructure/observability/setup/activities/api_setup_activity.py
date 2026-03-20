@@ -2,6 +2,7 @@ import asyncio
 import logging
 import subprocess
 import time
+import socket
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -49,18 +50,36 @@ def ensure_networks() -> bool:
             subprocess.run(["docker", "network", "create", "--subnet", subnet, network])
     return True
 
+def check_hostnames() -> bool:
+    hostnames = ["scaibu.temporal", "scaibu.otel", "scaibu.observability-api", "scaibu.grafana"]
+    missing = []
+    for host in hostnames:
+        try:
+            socket.gethostbyname(host)
+        except socket.gaierror:
+            missing.append(host)
+    
+    if missing:
+        logger.warning(f"!!! HOSTNAME RESOLUTION FAILED for: {', '.join(missing)} !!!")
+        logger.warning("Please run: sudo ./infrastructure/observability/dependencies/configure_hosts.sh --apply")
+        return False
+    return True
+
 def start_infra_component(compose_rel_path: str) -> bool:
     compose_path = PROJECT_ROOT / compose_rel_path
     result = subprocess.run(
         ["docker", "compose", "-f", str(compose_path), "up", "-d"],
         capture_output=True,
         text=True,
-        cwd=str(PROJECT_ROOT)
+        cwd=str(compose_path.parent)
     )
+    if result.returncode != 0:
+        logger.error(f"Docker Compose failed for {compose_rel_path}: {result.stderr}")
     return result.returncode == 0
 
 async def setup_observability_api(params: Dict[str, Any]) -> Dict[str, Any]:
     start_time = time.time()
+    check_hostnames()
     ensure_networks()
     
     start_infra_component("infrastructure/orchestrator/config/docker/temporal/temporal-orchestrator-compose.yaml")
@@ -77,7 +96,7 @@ async def setup_observability_api(params: Dict[str, Any]) -> Dict[str, Any]:
     
     orchestrator = ServiceOrchestrator(
         config=observability_config,
-        temporal_host="localhost:7233",
+        temporal_host="scaibu.temporal:7233",
         task_queue="docker-orchestrator-queue"
     )
     
@@ -95,7 +114,7 @@ async def teardown_observability_api(params: Dict[str, Any]) -> Dict[str, Any]:
     start_time = time.time()
     orchestrator = ServiceOrchestrator(
         config=observability_config,
-        temporal_host="localhost:7233",
+        temporal_host="scaibu.temporal:7233",
         task_queue="docker-orchestrator-queue"
     )
     result = await orchestrator.teardown()

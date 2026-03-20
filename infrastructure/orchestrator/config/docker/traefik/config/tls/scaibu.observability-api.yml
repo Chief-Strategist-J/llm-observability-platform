@@ -1,0 +1,10 @@
+http:
+  routers:
+    observability-api:
+      rule: "Host(`scaibu.observability-api`)"
+      service: observability-api-service
+      entryPoints: [web]
+  services:
+    observability-api-service:
+      loadBalancer:
+        servers: [{url: "http://172.28.0.1:8103"}]

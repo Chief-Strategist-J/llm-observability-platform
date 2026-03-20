@@ -1,0 +1,2 @@
+#!/bin/bash
+git diff --name-only origin/main -- infrastructure/observability/ | xargs grep -lE "TODO|FIXME" && echo "[ERROR] Cannot push with TODO/FIXME in observability module." && exit 1

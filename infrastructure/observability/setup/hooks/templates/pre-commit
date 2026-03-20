@@ -1,0 +1,2 @@
+#!/bin/bash
+git diff --cached --name-only | grep -q "^infrastructure/observability/" && python3 -m flake8 infrastructure/observability

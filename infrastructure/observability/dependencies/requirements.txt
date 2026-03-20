@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+temporalio
+pydantic
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp-proto-grpc
+opentelemetry-instrumentation-pymongo
+requests
+urllib3
+pyyaml
+docker
+flake8
