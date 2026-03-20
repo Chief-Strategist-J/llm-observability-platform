@@ -1,0 +1,2 @@
+#!/bin/bash
+git diff --cached --name-only | grep -q "^infrastructure/observability/" && ! grep -q "\[OBSERVABILITY\]" "$1" && echo "[ERROR] Commit includes observability changes but lacks [OBSERVABILITY] tag." && exit 1
