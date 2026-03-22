@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-secondary-fixed": "#141c25",
+                        "tertiary-fixed": "#dee3eb",
+                        "on-primary-container": "#003210",
+                        "on-background": "#dee3eb",
+                        "on-secondary": "#29313a",
+                        "tertiary": "#c2c7cf",
+                        "secondary-container": "#414a53",
+                        "on-error-container": "#ffdad6",
+                        "on-primary": "#003913",
+                        "tertiary-fixed-dim": "#c2c7cf",
+                        "surface-container-low": "#171c22",
+                        "on-tertiary-container": "#252a30",
+                        "primary-fixed": "#88fb99",
+                        "primary-fixed-dim": "#6bde80",
+                        "on-error": "#690005",
+                        "error": "#ffb4ab",
+                        "secondary": "#bec7d2",
+                        "on-tertiary-fixed-variant": "#42474e",
+                        "surface": "#0f1419",
+                        "surface-dim": "#0f1419",
+                        "inverse-primary": "#006e2c",
+                        "on-surface": "#dee3eb",
+                        "inverse-on-surface": "#2c3137",
+                        "on-secondary-fixed-variant": "#3f4851",
+                        "surface-tint": "#6bde80",
+                        "on-primary-fixed": "#002108",
+                        "surface-container": "#1b2026",
+                        "primary": "#6bde80",
+                        "error-container": "#93000a",
+                        "surface-container-lowest": "#0a0f14",
+                        "secondary-fixed-dim": "#bec7d2",
+                        "on-surface-variant": "#bdcaba",
+                        "on-primary-fixed-variant": "#00531f",
+                        "background": "#0f1419",
+                        "surface-bright": "#353a40",
+                        "surface-container-high": "#252a30",
+                        "outline-variant": "#3e4a3d",
+                        "secondary-fixed": "#dae3ef",
+                        "on-secondary-container": "#b0b9c4",
+                        "tertiary-container": "#8c9198",
+                        "surface-container-highest": "#30353b",
+                        "on-tertiary-fixed": "#171c22",
+                        "surface-variant": "#30353b",
+                        "primary-container": "#2fa54f",
+                        "inverse-surface": "#dee3eb",
+                        "on-tertiary": "#2c3137",
+                        "outline": "#889485"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #3e4a3d; border-radius: 2px; }
+        .glass-panel {
+            background: rgba(27, 32, 38, 0.6);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30">
+<!-- SideNavBar Shell -->
+<aside class="h-screen w-64 fixed left-0 top-0 flex flex-col py-6 bg-[#171c22] z-50">
+<div class="px-6 mb-8">
+<h1 class="text-[#6bde80] font-bold text-xl tracking-tighter font-headline">The Obsidian Lens</h1>
+<p class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant/50 mt-1">LLM Infrastructure</p>
+</div>
+<nav class="flex-1 space-y-1 px-3">
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] opacity-70 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined text-xl">terminal</span>
+<span class="font-medium text-sm">Command Center</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] opacity-70 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined text-xl">account_tree</span>
+<span class="font-medium text-sm">Data Lineage</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] opacity-70 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined text-xl">payments</span>
+<span class="font-medium text-sm">Cost Attribution</span>
+</a>
+<!-- Active Navigation: Remediation -->
+<a class="flex items-center gap-3 px-3 py-2 bg-[#1b2026] text-[#6bde80] border-l-2 border-[#6bde80] transition-all duration-200 group scale-95" href="#">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">auto_fix_high</span>
+<span class="font-medium text-sm">Remediation</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] opacity-70 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined text-xl">analytics</span>
+<span class="font-medium text-sm">Observability</span>
+</a>
+</nav>
+<div class="px-3 mt-auto space-y-1">
+<button class="w-full mb-6 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold py-2.5 rounded-sm flex items-center justify-center gap-2 active:scale-95 transition-transform text-sm">
+<span class="material-symbols-outlined text-lg">add_circle</span>
+                New Trace
+            </button>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] opacity-70 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-xl">settings</span>
+<span class="font-medium text-sm">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] opacity-70 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-xl">help</span>
+<span class="font-medium text-sm">Support</span>
+</a>
+</div>
+</aside>
+<!-- TopNavBar Shell -->
+<header class="fixed top-0 right-0 w-[calc(100%-16rem)] h-16 z-40 flex items-center justify-between px-8 bg-[#0f1419]/80 backdrop-blur-xl bg-gradient-to-b from-[#1b2026] to-transparent">
+<div class="flex items-center gap-8">
+<nav class="flex items-center gap-6">
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors font-medium text-sm" href="#">Cluster Status</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors font-medium text-sm" href="#">Model Health</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors font-medium text-sm" href="#">Edge Nodes</a>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative group">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant text-sm">search</span>
+<input class="bg-surface-container-lowest border-none ring-1 ring-outline-variant/20 focus:ring-primary/30 w-64 pl-10 pr-4 py-1.5 text-xs rounded-sm transition-all" placeholder="Search self-healing logs..." type="text"/>
+</div>
+<div class="flex items-center gap-4 border-l border-outline-variant/20 pl-6">
+<button class="text-[#bdcaba] hover:text-primary transition-colors"><span class="material-symbols-outlined">notifications</span></button>
+<button class="text-[#bdcaba] hover:text-primary transition-colors"><span class="material-symbols-outlined">history</span></button>
+<button class="bg-primary/10 text-primary border border-primary/20 px-4 py-1.5 text-xs font-bold hover:bg-primary/20 transition-all">Deploy Update</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/40">
+<img alt="Administrator Avatar" class="w-full h-full object-cover" data-alt="Cyberpunk style professional male portrait avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCGpcBqJSpp-PkH6MY5rzDnTWw5Vm7mKOtdBG0Dz7uC9QY5zPQy05mAOrZenfWieRukXy1vcGpuWVrmcglE_Ipk12wMpY4KTWrf4qZC81Ee9jZjGOUxG_SO1NcVPPlHTEFYHgNjpTYzuADhQYeQ-4lR2a3J4Hng_ChvP5Fhuzoic6SuyKFd244_XQDRVSs64N0dk8HT_lUS1QDUNRPtZplyF17UQZgwuQhO1MdzJrjJ3_5waubvzh1Xue-bB73rOAIeUREETv6-M-M"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-24 px-8 pb-12 min-h-screen max-w-[1600px]">
+<!-- Hero Metrics -->
+<header class="mb-10 flex items-end justify-between">
+<div>
+<h2 class="text-4xl font-headline font-bold text-on-surface tracking-tight mb-2">Automated Remediation <span class="text-primary/50">Hub</span></h2>
+<p class="text-on-surface-variant max-w-xl">Autonomous protocol management for LLM clusters. Rules are executed when inference latency or token costs exceed defined safety thresholds.</p>
+</div>
+<div class="flex gap-4">
+<div class="bg-surface-container-low p-4 min-w-[140px]">
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant mb-1">Success Rate</p>
+<p class="text-3xl font-headline font-bold text-primary">99.2%</p>
+</div>
+<div class="bg-surface-container-low p-4 min-w-[140px]">
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant mb-1">Active Rules</p>
+<p class="text-3xl font-headline font-bold text-on-surface">14</p>
+</div>
+</div>
+</header>
+<!-- Bento Grid: Rules and Analytics -->
+<div class="grid grid-cols-12 gap-6 mb-12">
+<!-- Active Rule Builder/Cards (8 Cols) -->
+<section class="col-span-8 grid grid-cols-2 gap-6">
+<!-- Rule Card 1 -->
+<div class="bg-surface-container-low p-6 group hover:bg-surface-container transition-all duration-300 relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary/40 group-hover:bg-primary transition-colors"></div>
+<div class="flex justify-between items-start mb-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Protocol L-9</span>
+</div>
+<span class="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-sm font-bold uppercase">Active</span>
+</div>
+<h3 class="text-xl font-headline font-bold mb-4">Latency Auto-Scale</h3>
+<div class="space-y-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-sm bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-sm text-on-surface-variant">input</span>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase">Trigger</p>
+<p class="text-xs font-mono">latency &gt; 450ms (p99)</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-sm bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-sm text-primary">settings_backup_restore</span>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase">Action</p>
+<p class="text-xs font-mono">Scale Cluster: +2 H100 Nodes</p>
+</div>
+</div>
+</div>
+<div class="mt-8 pt-6 border-t border-outline-variant/10 flex justify-between items-center">
+<span class="text-[10px] text-on-surface-variant">Last run: 14m ago</span>
+<button class="text-primary text-[10px] font-bold uppercase tracking-widest hover:underline">Edit Protocol</button>
+</div>
+</div>
+<!-- Rule Card 2 -->
+<div class="bg-surface-container-low p-6 group hover:bg-surface-container transition-all duration-300 relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-error/40 group-hover:bg-error transition-colors"></div>
+<div class="flex justify-between items-start mb-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-error text-sm" style="font-variation-settings: 'FILL' 1;">security</span>
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Protocol S-4</span>
+</div>
+<span class="text-[10px] bg-error/10 text-error px-2 py-0.5 rounded-sm font-bold uppercase">Critical</span>
+</div>
+<h3 class="text-xl font-headline font-bold mb-4">Toxic Output Guard</h3>
+<div class="space-y-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-sm bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-sm text-on-surface-variant">warning</span>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase">Trigger</p>
+<p class="text-xs font-mono">safety_score &lt; 0.82</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-sm bg-error/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-sm text-error">dangerous</span>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase">Action</p>
+<p class="text-xs font-mono">Terminate Instance &amp; Re-route</p>
+</div>
+</div>
+</div>
+<div class="mt-8 pt-6 border-t border-outline-variant/10 flex justify-between items-center">
+<span class="text-[10px] text-on-surface-variant">Last run: 2h ago</span>
+<button class="text-primary text-[10px] font-bold uppercase tracking-widest hover:underline">Edit Protocol</button>
+</div>
+</div>
+<!-- Add New Rule -->
+<button class="col-span-2 border-2 border-dashed border-outline-variant/20 py-8 group hover:border-primary/40 hover:bg-primary/5 transition-all">
+<span class="material-symbols-outlined text-3xl text-on-surface-variant group-hover:text-primary mb-2">add</span>
+<p class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant group-hover:text-primary">Create New Self-Healing Logic</p>
+</button>
+</section>
+<!-- Success Velocity Chart (4 Cols) -->
+<section class="col-span-4 bg-surface-container p-6 relative">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline font-bold">Fix Velocity</h3>
+<span class="material-symbols-outlined text-on-surface-variant">more_vert</span>
+</div>
+<div class="h-48 flex items-end gap-1.5 mb-6">
+<div class="flex-1 bg-primary/20 h-[40%] hover:bg-primary/40 transition-colors"></div>
+<div class="flex-1 bg-primary/20 h-[55%] hover:bg-primary/40 transition-colors"></div>
+<div class="flex-1 bg-primary/20 h-[30%] hover:bg-primary/40 transition-colors"></div>
+<div class="flex-1 bg-primary/20 h-[85%] hover:bg-primary/40 transition-colors"></div>
+<div class="flex-1 bg-primary/20 h-[65%] hover:bg-primary/40 transition-colors"></div>
+<div class="flex-1 bg-primary/20 h-[90%] hover:bg-primary/40 transition-colors"></div>
+<div class="flex-1 bg-primary/20 h-[45%] hover:bg-primary/40 transition-colors"></div>
+<div class="flex-1 bg-primary/20 h-[70%] hover:bg-primary/40 transition-colors"></div>
+<div class="flex-1 bg-primary/20 h-[50%] hover:bg-primary/40 transition-colors"></div>
+<div class="flex-1 bg-primary/20 h-[60%] hover:bg-primary/40 transition-colors"></div>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between text-xs">
+<span class="text-on-surface-variant">Automated Fixes (24h)</span>
+<span class="font-mono text-primary">+128</span>
+</div>
+<div class="flex justify-between text-xs">
+<span class="text-on-surface-variant">Manual Interventions</span>
+<span class="font-mono text-error">03</span>
+</div>
+<div class="flex justify-between text-xs">
+<span class="text-on-surface-variant">Compute Saved</span>
+<span class="font-mono text-primary">$1,204.00</span>
+</div>
+</div>
+</section>
+</div>
+<!-- History Table Section -->
+<section class="bg-surface-container-low">
+<div class="px-8 py-6 border-b border-outline-variant/10 flex justify-between items-center">
+<h3 class="font-headline font-bold text-lg">Remediation History</h3>
+<div class="flex gap-4">
+<button class="flex items-center gap-2 px-3 py-1.5 bg-surface-container text-xs border border-outline-variant/20 hover:border-primary/40 transition-colors">
+<span class="material-symbols-outlined text-sm">filter_list</span> Filter
+                    </button>
+<button class="flex items-center gap-2 px-3 py-1.5 bg-surface-container text-xs border border-outline-variant/20 hover:border-primary/40 transition-colors">
+<span class="material-symbols-outlined text-sm">download</span> Export JSON
+                    </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-surface-container-highest/10 border-b border-outline-variant/5">
+<th class="px-8 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Execution ID</th>
+<th class="px-8 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Protocol</th>
+<th class="px-8 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Trigger Event</th>
+<th class="px-8 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Resulting Action</th>
+<th class="px-8 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Timestamp</th>
+<th class="px-8 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/5">
+<tr class="hover:bg-surface-container/50 transition-colors group">
+<td class="px-8 py-4 font-mono text-xs text-primary/80">#FIX-A8921</td>
+<td class="px-8 py-4 text-sm font-medium">Latency Auto-Scale</td>
+<td class="px-8 py-4 text-xs text-on-surface-variant italic">Latency spike 540ms on Node-A4</td>
+<td class="px-8 py-4 text-xs font-mono">K8S:Scale_Up(+2)</td>
+<td class="px-8 py-4 text-xs text-on-surface-variant">14m 22s ago</td>
+<td class="px-8 py-4">
+<span class="flex items-center gap-1.5 text-[10px] text-primary font-bold uppercase tracking-wider">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> Success
+                                </span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container/50 transition-colors group">
+<td class="px-8 py-4 font-mono text-xs text-primary/80">#FIX-B1104</td>
+<td class="px-8 py-4 text-sm font-medium">Toxic Output Guard</td>
+<td class="px-8 py-4 text-xs text-on-surface-variant italic">N-Safety Violation (ID:992)</td>
+<td class="px-8 py-4 text-xs font-mono">SHUTDOWN_POD</td>
+<td class="px-8 py-4 text-xs text-on-surface-variant">2h 11m ago</td>
+<td class="px-8 py-4">
+<span class="flex items-center gap-1.5 text-[10px] text-primary font-bold uppercase tracking-wider">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Success
+                                </span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container/50 transition-colors group">
+<td class="px-8 py-4 font-mono text-xs text-primary/80">#FIX-C4431</td>
+<td class="px-8 py-4 text-sm font-medium">Memory Leak Recovery</td>
+<td class="px-8 py-4 text-xs text-on-surface-variant italic">Mem usage &gt; 92% (Node-L2)</td>
+<td class="px-8 py-4 text-xs font-mono">RESTART_CONTAINER</td>
+<td class="px-8 py-4 text-xs text-on-surface-variant">4h 45m ago</td>
+<td class="px-8 py-4">
+<span class="flex items-center gap-1.5 text-[10px] text-error font-bold uppercase tracking-wider">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span> Failed
+                                </span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container/50 transition-colors group">
+<td class="px-8 py-4 font-mono text-xs text-primary/80">#FIX-D5590</td>
+<td class="px-8 py-4 text-sm font-medium">Token Throttling</td>
+<td class="px-8 py-4 text-xs text-on-surface-variant italic">API Quota Exceeded (User:29)</td>
+<td class="px-8 py-4 text-xs font-mono">LIMIT_RATE(50%)</td>
+<td class="px-8 py-4 text-xs text-on-surface-variant">6h 02m ago</td>
+<td class="px-8 py-4">
+<span class="flex items-center gap-1.5 text-[10px] text-primary font-bold uppercase tracking-wider">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Success
+                                </span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container/50 transition-colors group">
+<td class="px-8 py-4 font-mono text-xs text-primary/80">#FIX-E7712</td>
+<td class="px-8 py-4 text-sm font-medium">Context Overflow Clean</td>
+<td class="px-8 py-4 text-xs text-on-surface-variant italic">KV Cache Saturated (Edge-01)</td>
+<td class="px-8 py-4 text-xs font-mono">FLUSH_CACHE</td>
+<td class="px-8 py-4 text-xs text-on-surface-variant">Yesterday</td>
+<td class="px-8 py-4">
+<span class="flex items-center gap-1.5 text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">
+<span class="w-1.5 h-1.5 rounded-full bg-on-surface-variant"></span> Skipped
+                                </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<footer class="px-8 py-4 border-t border-outline-variant/10 flex justify-between items-center bg-surface-container-lowest/50">
+<span class="text-[10px] text-on-surface-variant uppercase font-bold tracking-widest">Showing 5 of 1,244 remediations</span>
+<div class="flex gap-2">
+<button class="p-1 hover:text-primary transition-colors disabled:opacity-30" disabled=""><span class="material-symbols-outlined">chevron_left</span></button>
+<button class="p-1 hover:text-primary transition-colors"><span class="material-symbols-outlined">chevron_right</span></button>
+</div>
+</footer>
+</section>
+</main>
+<!-- Contextual Trace Visual Tooltip (Hover Simulation) -->
+<div class="fixed bottom-8 right-8 w-80 glass-panel p-5 border border-primary/10 rounded-sm shadow-2xl z-50">
+<div class="flex items-center justify-between mb-4">
+<h4 class="text-xs font-bold uppercase tracking-tighter text-primary">Live Trace Analytics</h4>
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+</div>
+<div class="h-20 flex items-center justify-center gap-1 mb-4">
+<!-- Latency Waterfall Simulation -->
+<div class="h-8 w-1/4 bg-primary/40 rounded-sm"></div>
+<div class="h-8 w-2/4 bg-primary rounded-sm"></div>
+<div class="h-8 w-1/4 bg-primary-container rounded-sm"></div>
+</div>
+<p class="text-[10px] text-on-surface-variant font-mono mb-2">Cluster ID: h100-prod-west-2</p>
+<p class="text-[10px] text-on-surface-variant font-mono">Avg Latency: <span class="text-primary">142ms</span></p>
+</div>
+</body></html>

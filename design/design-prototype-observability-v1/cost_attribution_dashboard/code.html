@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cost Attribution Dashboard | Obsidian Lens</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-secondary-fixed": "#141c25",
+              "tertiary-fixed": "#dee3eb",
+              "on-primary-container": "#003210",
+              "on-background": "#dee3eb",
+              "on-secondary": "#29313a",
+              "tertiary": "#c2c7cf",
+              "secondary-container": "#414a53",
+              "on-error-container": "#ffdad6",
+              "on-primary": "#003913",
+              "tertiary-fixed-dim": "#c2c7cf",
+              "surface-container-low": "#171c22",
+              "on-tertiary-container": "#252a30",
+              "primary-fixed": "#88fb99",
+              "primary-fixed-dim": "#6bde80",
+              "on-error": "#690005",
+              "error": "#ffb4ab",
+              "secondary": "#bec7d2",
+              "on-tertiary-fixed-variant": "#42474e",
+              "surface": "#0f1419",
+              "surface-dim": "#0f1419",
+              "inverse-primary": "#006e2c",
+              "on-surface": "#dee3eb",
+              "inverse-on-surface": "#2c3137",
+              "on-secondary-fixed-variant": "#3f4851",
+              "surface-tint": "#6bde80",
+              "on-primary-fixed": "#002108",
+              "surface-container": "#1b2026",
+              "primary": "#6bde80",
+              "error-container": "#93000a",
+              "surface-container-lowest": "#0a0f14",
+              "secondary-fixed-dim": "#bec7d2",
+              "on-surface-variant": "#bdcaba",
+              "on-primary-fixed-variant": "#00531f",
+              "background": "#0f1419",
+              "surface-bright": "#353a40",
+              "surface-container-high": "#252a30",
+              "outline-variant": "#3e4a3d",
+              "secondary-fixed": "#dae3ef",
+              "on-secondary-container": "#b0b9c4",
+              "tertiary-container": "#8c9198",
+              "surface-container-highest": "#30353b",
+              "on-tertiary-fixed": "#171c22",
+              "surface-variant": "#30353b",
+              "primary-container": "#2fa54f",
+              "inverse-surface": "#dee3eb",
+              "on-tertiary": "#2c3137",
+              "outline": "#889485"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"],
+              "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      .glass-panel {
+        background: rgba(27, 32, 38, 0.6);
+        backdrop-filter: blur(12px);
+      }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary selection:text-on-primary">
+<!-- Shared SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-[#171c22] flex flex-col py-6 z-[60]">
+<div class="px-6 mb-10">
+<h1 class="text-[#6bde80] font-bold text-xl tracking-tighter font-headline">The Obsidian Lens</h1>
+<p class="text-[#bdcaba] text-[10px] tracking-widest opacity-50 font-medium">LLM INFRASTRUCTURE</p>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<a class="flex items-center px-3 py-3 rounded-sm text-[#bdcaba] opacity-70 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined mr-3 text-xl group-hover:text-primary">terminal</span>
+<span class="font-medium font-label">Command Center</span>
+</a>
+<a class="flex items-center px-3 py-3 rounded-sm text-[#bdcaba] opacity-70 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined mr-3 text-xl group-hover:text-primary">account_tree</span>
+<span class="font-medium font-label">Data Lineage</span>
+</a>
+<a class="flex items-center px-3 py-3 rounded-sm bg-[#1b2026] text-[#6bde80] border-l-2 border-[#6bde80] transition-all duration-200" href="#">
+<span class="material-symbols-outlined mr-3 text-xl">payments</span>
+<span class="font-medium font-label">Cost Attribution</span>
+</a>
+<a class="flex items-center px-3 py-3 rounded-sm text-[#bdcaba] opacity-70 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined mr-3 text-xl group-hover:text-primary">auto_fix_high</span>
+<span class="font-medium font-label">Remediation</span>
+</a>
+<a class="flex items-center px-3 py-3 rounded-sm text-[#bdcaba] opacity-70 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined mr-3 text-xl group-hover:text-primary">analytics</span>
+<span class="font-medium font-label">Observability</span>
+</a>
+</nav>
+<div class="px-6 mt-auto">
+<button class="w-full py-2.5 px-4 bg-gradient-to-br from-primary to-primary-container text-on-primary-container font-bold rounded-sm scale-95 active:scale-90 transition-transform text-sm">
+                New Trace
+            </button>
+<div class="mt-8 space-y-4">
+<a class="flex items-center text-xs text-[#bdcaba] opacity-70 hover:opacity-100 transition-opacity" href="#">
+<span class="material-symbols-outlined mr-2 text-lg">settings</span> Settings
+                </a>
+<a class="flex items-center text-xs text-[#bdcaba] opacity-70 hover:opacity-100 transition-opacity" href="#">
+<span class="material-symbols-outlined mr-2 text-lg">help</span> Support
+                </a>
+</div>
+</div>
+</aside>
+<!-- Shared TopNavBar -->
+<header class="fixed top-0 right-0 w-[calc(100%-16rem)] h-16 z-50 bg-[#0f1419]/80 backdrop-blur-xl flex items-center justify-between px-8">
+<div class="flex items-center space-x-8">
+<nav class="flex items-center space-x-6 text-sm font-medium">
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors" href="#">Cluster Status</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors" href="#">Model Health</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors" href="#">Edge Nodes</a>
+</nav>
+</div>
+<div class="flex items-center space-x-6">
+<div class="flex items-center space-x-4">
+<span class="material-symbols-outlined text-[#bdcaba] cursor-pointer hover:text-primary transition-colors">notifications</span>
+<span class="material-symbols-outlined text-[#bdcaba] cursor-pointer hover:text-primary transition-colors">history</span>
+<span class="material-symbols-outlined text-[#bdcaba] cursor-pointer hover:text-primary transition-colors">cloud_sync</span>
+</div>
+<div class="h-8 w-[1px] bg-outline-variant opacity-20"></div>
+<button class="text-xs font-bold text-primary border border-primary/20 px-4 py-1.5 rounded-sm hover:bg-primary/5 transition-colors">
+                Deploy Update
+            </button>
+<img alt="Admin" class="w-8 h-8 rounded-full border border-outline-variant/30" data-alt="Close up of professional developer profile picture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBMfiM5yW7sJB-MtKW21c3w915DgMytZ3AgAmzQx6lUAOMVfhUemFoUs-kRvdkgBYiVTFXuFZN-77BmgzzQY_0IKp1hAHgY3hYK4o2ph1tnVG0hGFaiN9o-7lsZ-hRMn6AuMbXjcenfJfi4uHcqeK0lOuvA9CinQ-oc-DBqGJtlomSGvBrO4s-eFgbI_bSE4bqF3E9_uQ1KVOjBzMeE5usAda0DS1Ss_tl52ymUvqtFk_YhAl8JpLbamuqh_nrDILs7MAJJ0e9qdTI"/>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-20 p-8 min-h-screen">
+<!-- Header Section with Key Metrics -->
+<section class="mb-10">
+<div class="flex items-end justify-between mb-8">
+<div>
+<h2 class="text-4xl font-bold font-headline tracking-tight text-on-surface">Cost Attribution</h2>
+<p class="text-on-surface-variant text-sm mt-1">Granular financial insights across the infrastructure stack.</p>
+</div>
+<div class="flex items-center space-x-3">
+<div class="bg-surface-container-low px-4 py-2 flex items-center space-x-4">
+<div class="text-right">
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">Month-to-Date Burn</p>
+<p class="text-xl font-headline font-bold text-primary">$42,891.12</p>
+</div>
+<div class="w-10 h-10 bg-primary/10 flex items-center justify-center rounded-sm">
+<span class="material-symbols-outlined text-primary">trending_up</span>
+</div>
+</div>
+<div class="bg-surface-container-low px-4 py-2 flex items-center space-x-4">
+<div class="text-right">
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">Projected ROI</p>
+<p class="text-xl font-headline font-bold text-[#88fb99]">3.2x</p>
+</div>
+<div class="w-10 h-10 bg-primary/10 flex items-center justify-center rounded-sm">
+<span class="material-symbols-outlined text-primary">rocket_launch</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bento Grid of Cost Insights -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Large Burn Chart (Simulated with layout) -->
+<div class="col-span-8 bg-surface-container-low p-6 rounded-sm relative overflow-hidden group">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h3 class="font-headline font-bold text-lg">Infrastructure Burn Velocity</h3>
+<p class="text-xs text-on-surface-variant">Daily aggregate across GPT-4, Claude 3, and Local Llama 3</p>
+</div>
+<div class="flex space-x-2">
+<span class="px-2 py-1 text-[10px] bg-surface-container-highest text-on-surface-variant font-bold rounded-sm">7D</span>
+<span class="px-2 py-1 text-[10px] bg-primary/20 text-primary font-bold rounded-sm">30D</span>
+<span class="px-2 py-1 text-[10px] bg-surface-container-highest text-on-surface-variant font-bold rounded-sm">90D</span>
+</div>
+</div>
+<div class="h-64 flex items-end justify-between space-x-2 px-2">
+<!-- Simulated Chart Bars with Tonal Depth -->
+<div class="w-full bg-primary/10 h-24 rounded-t-sm hover:bg-primary/30 transition-colors relative group/bar">
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-surface-container-highest text-[10px] px-2 py-1 opacity-0 group-hover/bar:opacity-100 transition-opacity">$1.2k</div>
+</div>
+<div class="w-full bg-primary/20 h-32 rounded-t-sm hover:bg-primary/40 transition-colors"></div>
+<div class="w-full bg-primary/15 h-28 rounded-t-sm hover:bg-primary/40 transition-colors"></div>
+<div class="w-full bg-primary/25 h-44 rounded-t-sm hover:bg-primary/40 transition-colors"></div>
+<div class="w-full bg-primary/40 h-56 rounded-t-sm hover:bg-primary/60 transition-colors"></div>
+<div class="w-full bg-primary-container/60 h-48 rounded-t-sm hover:bg-primary/60 transition-colors"></div>
+<div class="w-full bg-primary/30 h-40 rounded-t-sm hover:bg-primary/50 transition-colors"></div>
+<div class="w-full bg-primary/20 h-36 rounded-t-sm hover:bg-primary/40 transition-colors"></div>
+<div class="w-full bg-error/40 h-64 rounded-t-sm hover:bg-error/60 transition-colors border-t-2 border-error animate-pulse"></div>
+<div class="w-full bg-primary/50 h-52 rounded-t-sm hover:bg-primary/70 transition-colors"></div>
+<div class="w-full bg-primary/35 h-46 rounded-t-sm hover:bg-primary/60 transition-colors"></div>
+<div class="w-full bg-primary/25 h-38 rounded-t-sm hover:bg-primary/50 transition-colors"></div>
+</div>
+<!-- Labeling -->
+<div class="flex justify-between mt-4 text-[10px] text-on-surface-variant font-mono uppercase tracking-widest px-2">
+<span>May 01</span>
+<span>May 15</span>
+<span class="text-error font-bold">Anomaly Detected (May 23)</span>
+<span>May 30</span>
+</div>
+</div>
+<!-- Anomaly Alert Panel -->
+<div class="col-span-4 bg-error-container/10 p-6 rounded-sm border border-error/20 flex flex-col justify-between">
+<div>
+<div class="flex items-center space-x-2 text-error mb-4">
+<span class="material-symbols-outlined">warning</span>
+<span class="font-headline font-bold uppercase tracking-widest text-xs">Critical Cost Anomaly</span>
+</div>
+<h4 class="text-xl font-bold mb-2">Unauthorized Token Surge</h4>
+<p class="text-sm text-on-surface-variant leading-relaxed">
+                            Tenant <span class="text-on-surface font-mono">T-4882-OMEGA</span> spiked 420% above 24h baseline on model <span class="text-on-surface font-mono">gpt-4-turbo</span>.
+                        </p>
+</div>
+<div class="mt-6 space-y-3">
+<div class="flex justify-between items-center text-sm p-3 bg-surface-container-lowest rounded-sm">
+<span class="text-on-surface-variant">Current Cost</span>
+<span class="font-mono font-bold text-error">+$412.80/hr</span>
+</div>
+<button class="w-full py-2 bg-error text-on-error font-bold rounded-sm text-xs transition-transform active:scale-95">
+                            KILL PROCESS T-4882
+                        </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Attribution Breakdown Section -->
+<section class="grid grid-cols-12 gap-8">
+<!-- Per-Tenant Granularity -->
+<div class="col-span-7">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline font-bold text-xl">Tenant Attribution</h3>
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">filter_list</span>
+<span class="text-xs text-on-surface-variant font-bold uppercase tracking-widest">Filter by Usage</span>
+</div>
+</div>
+<div class="space-y-2">
+<!-- Tenant Row -->
+<div class="group flex items-center justify-between p-4 bg-surface-container-low hover:bg-surface-container transition-colors rounded-sm cursor-pointer">
+<div class="flex items-center space-x-4">
+<div class="w-10 h-10 bg-surface-container-highest flex items-center justify-center font-bold text-xs">AC</div>
+<div>
+<h5 class="text-sm font-bold">Acme Corp Global</h5>
+<p class="text-[10px] text-on-surface-variant font-mono">ID: TEN-0091-ACME</p>
+</div>
+</div>
+<div class="flex-1 px-12">
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 78%"></div>
+</div>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold font-mono">$18,402.10</p>
+<p class="text-[10px] text-primary font-bold">+12% MoM</p>
+</div>
+</div>
+<!-- Tenant Row -->
+<div class="group flex items-center justify-between p-4 bg-surface-container-low hover:bg-surface-container transition-colors rounded-sm cursor-pointer">
+<div class="flex items-center space-x-4">
+<div class="w-10 h-10 bg-surface-container-highest flex items-center justify-center font-bold text-xs">ST</div>
+<div>
+<h5 class="text-sm font-bold">Starlight Industries</h5>
+<p class="text-[10px] text-on-surface-variant font-mono">ID: TEN-4421-STAR</p>
+</div>
+</div>
+<div class="flex-1 px-12">
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 42%"></div>
+</div>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold font-mono">$9,211.50</p>
+<p class="text-[10px] text-on-surface-variant font-bold">-4% MoM</p>
+</div>
+</div>
+<!-- Tenant Row -->
+<div class="group flex items-center justify-between p-4 bg-surface-container-low hover:bg-surface-container transition-colors rounded-sm cursor-pointer">
+<div class="flex items-center space-x-4">
+<div class="w-10 h-10 bg-surface-container-highest flex items-center justify-center font-bold text-xs">NV</div>
+<div>
+<h5 class="text-sm font-bold">Nova Analytics</h5>
+<p class="text-[10px] text-on-surface-variant font-mono">ID: TEN-1102-NOVA</p>
+</div>
+</div>
+<div class="flex-1 px-12">
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 25%"></div>
+</div>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold font-mono">$4,882.00</p>
+<p class="text-[10px] text-error font-bold">+118% MoM</p>
+</div>
+</div>
+</div>
+</div>
+<!-- ROI Projection & Budget Thresholds -->
+<div class="col-span-5 space-y-8">
+<div>
+<h3 class="font-headline font-bold text-xl mb-6">Budget Thresholds</h3>
+<div class="bg-surface-container-low p-6 rounded-sm space-y-6">
+<div>
+<div class="flex justify-between text-xs mb-2">
+<span class="font-bold uppercase tracking-widest">Global Compute Cap</span>
+<span class="font-mono text-on-surface-variant">$42,891 / $50,000</span>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full">
+<div class="h-full bg-primary-container rounded-full" style="width: 85%"></div>
+</div>
+<p class="text-[10px] text-on-surface-variant mt-2">Predicted breach in <span class="text-primary font-bold">4 days</span></p>
+</div>
+<div>
+<div class="flex justify-between text-xs mb-2">
+<span class="font-bold uppercase tracking-widest">External API Tokens</span>
+<span class="font-mono text-on-surface-variant">$12,100 / $25,000</span>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full">
+<div class="h-full bg-primary rounded-full" style="width: 48%"></div>
+</div>
+</div>
+</div>
+</div>
+<div>
+<h3 class="font-headline font-bold text-xl mb-6">ROI Projection (6M)</h3>
+<div class="bg-surface-container-low p-6 rounded-sm relative h-48 flex items-end justify-between overflow-hidden">
+<!-- Abstract Gradient Pattern for ROI -->
+<div class="absolute inset-0 opacity-10 pointer-events-none">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 400 200">
+<path d="M0 200 C 50 180, 100 150, 150 140 S 250 100, 300 60 S 400 0, 400 0 V 200 H 0 Z" fill="url(#roi-grad)"></path>
+<defs>
+<lineargradient id="roi-grad" x1="0" x2="1" y1="0" y2="1">
+<stop offset="0%" stop-color="#6bde80"></stop>
+<stop offset="100%" stop-color="#2fa54f"></stop>
+</lineargradient>
+</defs>
+</svg>
+</div>
+<div class="relative z-10 w-full flex flex-col justify-between h-full">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-[10px] font-bold uppercase tracking-widest text-primary">Efficiency Gain</p>
+<h4 class="text-3xl font-headline font-bold">+$242k</h4>
+</div>
+<div class="text-right">
+<p class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Cost Reduction</p>
+<h4 class="text-xl font-headline font-bold">18.4%</h4>
+</div>
+</div>
+<p class="text-[11px] text-on-surface-variant max-w-[200px]">Projected savings based on model quantization and prompt caching optimizations.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Feature-Level breakdown table -->
+<section class="mt-12">
+<h3 class="font-headline font-bold text-xl mb-6">Feature Cost Breakdown</h3>
+<div class="overflow-hidden bg-surface-container-low rounded-sm">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+<th class="px-6 py-4">Feature Name</th>
+<th class="px-6 py-4">Primary Model</th>
+<th class="px-6 py-4">Avg Latency</th>
+<th class="px-6 py-4">Throughput</th>
+<th class="px-6 py-4 text-right">Burn Rate (Hourly)</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container">
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center space-x-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-sm font-bold">Smart Search RAG</span>
+</div>
+</td>
+<td class="px-6 py-4 font-mono text-xs text-on-surface-variant">gpt-4-0613</td>
+<td class="px-6 py-4 font-mono text-xs">842ms</td>
+<td class="px-6 py-4 font-mono text-xs text-on-surface-variant">1.2k req/m</td>
+<td class="px-6 py-4 text-right font-mono text-sm font-bold text-primary">$14.20</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center space-x-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-sm font-bold">Auto-Doc Synthesis</span>
+</div>
+</td>
+<td class="px-6 py-4 font-mono text-xs text-on-surface-variant">claude-3-opus</td>
+<td class="px-6 py-4 font-mono text-xs">2,140ms</td>
+<td class="px-6 py-4 font-mono text-xs text-on-surface-variant">450 req/m</td>
+<td class="px-6 py-4 text-right font-mono text-sm font-bold text-primary">$28.90</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center space-x-2">
+<span class="w-2 h-2 rounded-full bg-primary-container"></span>
+<span class="text-sm font-bold">Query Translation</span>
+</div>
+</td>
+<td class="px-6 py-4 font-mono text-xs text-on-surface-variant">llama-3-70b</td>
+<td class="px-6 py-4 font-mono text-xs">124ms</td>
+<td class="px-6 py-4 font-mono text-xs text-on-surface-variant">12.5k req/m</td>
+<td class="px-6 py-4 text-right font-mono text-sm font-bold text-primary">$2.10</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center space-x-2">
+<span class="w-2 h-2 rounded-full bg-error"></span>
+<span class="text-sm font-bold">Lead Generation Bot</span>
+</div>
+</td>
+<td class="px-6 py-4 font-mono text-xs text-on-surface-variant">gpt-4-turbo</td>
+<td class="px-6 py-4 font-mono text-xs">950ms</td>
+<td class="px-6 py-4 font-mono text-xs text-on-surface-variant">8.9k req/m</td>
+<td class="px-6 py-4 text-right font-mono text-sm font-bold text-error">$62.40</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</main>
+<!-- Floating Legend / Info for financial precision -->
+<div class="fixed bottom-6 right-6 flex space-x-2 z-40">
+<div class="glass-panel px-4 py-2 flex items-center space-x-3 rounded-sm border border-outline-variant/20">
+<div class="flex items-center space-x-1">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="text-[10px] font-bold text-on-surface-variant">LLM API</span>
+</div>
+<div class="flex items-center space-x-1">
+<div class="w-2 h-2 rounded-full bg-primary-container"></div>
+<span class="text-[10px] font-bold text-on-surface-variant">GPU COMPUTE</span>
+</div>
+<div class="flex items-center space-x-1">
+<div class="w-2 h-2 rounded-full bg-surface-container-highest"></div>
+<span class="text-[10px] font-bold text-on-surface-variant">STORAGE/IO</span>
+</div>
+</div>
+</div>
+</body></html>

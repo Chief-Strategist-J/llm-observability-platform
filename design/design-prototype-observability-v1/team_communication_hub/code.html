@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Team Communication | Obsidian Lens</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container": "#1b2026",
+                        "tertiary-fixed-dim": "#c2c7cf",
+                        "on-primary": "#003913",
+                        "secondary-container": "#414a53",
+                        "on-secondary-fixed-variant": "#3f4851",
+                        "surface": "#0f1419",
+                        "secondary-fixed": "#dae3ef",
+                        "surface-container-highest": "#30353b",
+                        "on-secondary-fixed": "#141c25",
+                        "tertiary-fixed": "#dee3eb",
+                        "on-tertiary-fixed": "#171c22",
+                        "surface-container-lowest": "#0a0f14",
+                        "on-surface": "#dee3eb",
+                        "on-surface-variant": "#bdcaba",
+                        "secondary-fixed-dim": "#bec7d2",
+                        "outline": "#889485",
+                        "surface-container-high": "#252a30",
+                        "primary-fixed-dim": "#6bde80",
+                        "on-error": "#690005",
+                        "inverse-on-surface": "#2c3137",
+                        "surface-variant": "#30353b",
+                        "tertiary-container": "#8c9198",
+                        "on-tertiary": "#2c3137",
+                        "on-secondary": "#29313a",
+                        "on-primary-fixed-variant": "#00531f",
+                        "on-primary-container": "#003210",
+                        "error": "#ffb4ab",
+                        "outline-variant": "#3e4a3d",
+                        "background": "#0f1419",
+                        "surface-tint": "#6bde80",
+                        "surface-bright": "#353a40",
+                        "on-secondary-container": "#b0b9c4",
+                        "tertiary": "#c2c7cf",
+                        "surface-dim": "#0f1419",
+                        "on-tertiary-container": "#252a30",
+                        "error-container": "#93000a",
+                        "primary": "#6bde80",
+                        "surface-container-low": "#171c22",
+                        "on-primary-fixed": "#002108",
+                        "inverse-surface": "#dee3eb",
+                        "on-background": "#dee3eb",
+                        "inverse-primary": "#006e2c",
+                        "secondary": "#bec7d2",
+                        "primary-fixed": "#88fb99",
+                        "on-error-container": "#ffdad6",
+                        "primary-container": "#2fa54f",
+                        "on-tertiary-fixed-variant": "#42474e"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        .font-headline { font-family: 'Space Grotesk', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopNavBar (Shared Component) -->
+<nav class="fixed top-0 w-full z-50 bg-[#171c22]/80 backdrop-blur-md shadow-2xl shadow-black/40 flex items-center justify-between px-6 h-16 w-full">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tighter text-[#dee3eb] font-headline">Obsidian Lens</span>
+<div class="hidden md:flex items-center gap-6 font-['Space_Grotesk'] font-medium tracking-tight">
+<a class="text-[#bdcaba] hover:text-[#6bde80] transition-colors duration-200" href="#">Docs</a>
+<a class="text-[#bdcaba] hover:text-[#6bde80] transition-colors duration-200" href="#">API Reference</a>
+<a class="text-[#bdcaba] hover:text-[#6bde80] transition-colors duration-200" href="#">Support</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-[#bdcaba] hover:text-[#6bde80] active:scale-95 duration-100 transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-[#bdcaba] hover:text-[#6bde80] active:scale-95 duration-100 transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-surface-container-highest flex items-center justify-center overflow-hidden border border-outline-variant/30">
+<img alt="User profile avatar" class="w-full h-full object-cover" data-alt="Portrait of a smiling professional male developer" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCD8oqbFEMWolsSIVskat72qwmajDSiGonscgeoa36NkAd3nh_L5xrWaXcpH5ZYlryyJWJ9xyDzQdV1CLrlTGMTZxjYyBa7LN5AjeUxHiLinwE8ntgMahxNAZ5wP6Fn_SM1_YW6BWHE73BGiawI3VtxfoUBeyuL_YQ2G3KKXLzFX8luYD15TwAvVLU1K2DPZNGvA4dIpiGnLA2uSTsh8yfUZPu-BH-oK-OeUmsj7px02VQ3jgaCgm7A2GEq3CTt2yJU2qbMU12QlZE"/>
+</div>
+</div>
+</nav>
+<!-- SideNavBar (Shared Component) -->
+<aside class="h-screen w-64 fixed left-0 top-0 z-40 bg-[#171c22] flex flex-col pt-20 pb-6 hidden lg:flex">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3 mb-1">
+<span class="font-bold text-[#6bde80] font-headline">System Core</span>
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">v2.4.0</span>
+</div>
+<p class="text-[10px] text-on-surface-variant tracking-widest uppercase opacity-60">Observability Hub</p>
+</div>
+<nav class="flex-1 px-2 space-y-1">
+<div class="text-[#bdcaba] py-3 px-4 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all cursor-pointer font-['Space_Grotesk'] text-sm uppercase tracking-widest flex items-center gap-3">
+<span class="material-symbols-outlined">dashboard</span> Dashboard
+            </div>
+<div class="text-[#bdcaba] py-3 px-4 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all cursor-pointer font-['Space_Grotesk'] text-sm uppercase tracking-widest flex items-center gap-3">
+<span class="material-symbols-outlined">account_tree</span> Orchestration
+            </div>
+<div class="text-[#bdcaba] py-3 px-4 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all cursor-pointer font-['Space_Grotesk'] text-sm uppercase tracking-widest flex items-center gap-3">
+<span class="material-symbols-outlined">dns</span> Infrastructure
+            </div>
+<div class="bg-[#30353b] text-[#6bde80] border-l-2 border-[#6bde80] py-3 px-4 transition-all cursor-pointer font-['Space_Grotesk'] text-sm uppercase tracking-widest flex items-center gap-3">
+<span class="material-symbols-outlined">workspaces</span> Workspace
+            </div>
+<div class="text-[#bdcaba] py-3 px-4 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all cursor-pointer font-['Space_Grotesk'] text-sm uppercase tracking-widest flex items-center gap-3">
+<span class="material-symbols-outlined">monitoring</span> Analytics
+            </div>
+<div class="text-[#bdcaba] py-3 px-4 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all cursor-pointer font-['Space_Grotesk'] text-sm uppercase tracking-widest flex items-center gap-3">
+<span class="material-symbols-outlined">tune</span> Settings
+            </div>
+</nav>
+<div class="px-4 mt-auto space-y-4">
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary py-3 rounded-sm font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+<span class="material-symbols-outlined text-sm">add</span> New Trace
+            </button>
+<div class="pt-4 border-t border-outline-variant/10">
+<div class="text-[#bdcaba] py-2 px-4 hover:text-[#6bde80] transition-all cursor-pointer text-xs flex items-center gap-3">
+<span class="material-symbols-outlined text-base">description</span> Documentation
+                </div>
+<div class="text-[#bdcaba] py-2 px-4 hover:text-[#6bde80] transition-all cursor-pointer text-xs flex items-center gap-3">
+<span class="material-symbols-outlined text-base">terminal</span> Terminal
+                </div>
+</div>
+</div>
+</aside>
+<!-- Main Workspace -->
+<main class="lg:ml-64 pt-16 h-screen flex flex-col bg-surface">
+<!-- Messaging Header -->
+<header class="h-14 flex items-center justify-between px-6 bg-surface-container-low/50 backdrop-blur-sm">
+<div class="flex items-center gap-4">
+<h1 class="font-headline font-bold text-lg text-on-surface">Team Communication</h1>
+<div class="h-4 w-[1px] bg-outline-variant/30"></div>
+<div class="flex items-center gap-2">
+<span class="text-primary text-xs font-mono">#traces</span>
+<span class="material-symbols-outlined text-on-surface-variant text-base">expand_more</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex -space-x-2">
+<img alt="Avatar 1" class="w-7 h-7 rounded-full border-2 border-surface object-cover" data-alt="Female developer profile photo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_nutae1fxZwjj6IuVnZwXGazD2a9rZuBE2B0Yt7EWsPNPwKYkkwUj3p0bIHciwwIQ-q-G8DzztNAUGDrdgknBCtMbiQRH3d8MB5_sHlOyRpjOyNaT5DuEXKaEgXbKkzpTOgEBBfT3GDK08tAnSj3LhFt2FOFGwnReK6BgKcjR0zeM3M6KBiepSgoAySVp9UgSXiRlFuMwXw95t8rs50bWNJqCRLtfNG2Gxqvey3UvQSxnKaZYipGPjs21vonTwLkzs2ompIo-xug"/>
+<img alt="Avatar 2" class="w-7 h-7 rounded-full border-2 border-surface object-cover" data-alt="Male engineer profile photo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4fQYNM2UHOZ-t6gd6V3b-F9ePmSL3vW1RmDyPeo63nSDDw9fs8bpug55mDzQ-YSOjbiBvz2-xdT7gizZUVcUZ5YFIaB9ZMEmLvrJHaL8h17-Hmg2QPoHn-jkKk1cNpAvDGjcS071zM0SEXuYDPGRjHN3ZbAdPk2zRouzaut95cwH11ApO5n7vBrU7harkf62isw2NcwV0BkHotgvTYfBHvhQQQhD3i7PLtAAxT6dw-8W8-kUP6zuWfVOBjcJ_cJ3_p6vvlw_loGU"/>
+<img alt="Avatar 3" class="w-7 h-7 rounded-full border-2 border-surface object-cover" data-alt="Female software architect profile photo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCcpTUG0gmrBjolU-CJ_tZjKWZ846GAJMbqhbxq_dY0CmEqND5cMwYvKPN49jW9Y_T_9qpUeRb7pRAFbj-uaDWpiUKDRgqDJ1l0SR52P2R6sN_q1uzkLh4MlwQuiCeXJzZd5DfULNIgDTWR97LitelcJLOgEVc7_CZp6CqPFGx4Lz8Nf0PrUiuSzgo6R_mF1A_yei70AYcSpMBsnfDFtnvWXh6NIDnKfspyKQAvRdduua8bx0rytArVhp7BapIMWP6UfBKcy6ghD3c"/>
+<div class="w-7 h-7 rounded-full border-2 border-surface bg-surface-container-highest text-[10px] flex items-center justify-center font-bold text-on-surface-variant">+12</div>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">person_add</span>
+</button>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- Channel Navigation (Left Pane) -->
+<nav class="w-60 bg-surface-container-lowest flex flex-col border-r border-outline-variant/5">
+<div class="p-4 space-y-6 overflow-y-auto no-scrollbar">
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.2em] mb-4">Channels</p>
+<ul class="space-y-1">
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded bg-surface-container-highest/40 text-primary font-medium text-sm" href="#">
+<span class="text-primary opacity-60">#</span> traces
+                                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded hover:bg-surface-container-high transition-colors text-on-surface-variant text-sm" href="#">
+<span class="opacity-40">#</span> infra-alerts
+                                    <span class="ml-auto bg-error text-on-error text-[10px] font-bold px-1.5 rounded-full">3</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded hover:bg-surface-container-high transition-colors text-on-surface-variant text-sm" href="#">
+<span class="opacity-40">#</span> general
+                                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded hover:bg-surface-container-high transition-colors text-on-surface-variant text-sm" href="#">
+<span class="opacity-40">#</span> deployments
+                                </a>
+</li>
+</ul>
+</div>
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.2em] mb-4">Active Users</p>
+<ul class="space-y-3">
+<li class="flex items-center gap-3 px-3">
+<div class="relative">
+<img alt="Active user" class="w-8 h-8 rounded object-cover" data-alt="Developer portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuARFiPwx8hdsg-Ib7PE6xgdXzUBYgy0c0J2cuDusiwdZicNFJokvBnr6J19tsyh5s3vOwg1H6v9USjn10_nxo7-6vqSOaaggRP12ic4sio_vS2gAzurzFbiN8Rg16KR65gAJLXX7oOlLowX07PxhR6Ogx_zOdsyNljeLrtPByV8m3vI8hMj-dKlZq3_G9hXE9RXmxhViEwgCQFObQKIQdMfpaC5KQovNLgIPL92L2NrHBSPsTqcobCnTs_s0Ft8lfR3xHq25_UOuNQ"/>
+<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-primary rounded-full border-2 border-surface-container-lowest"></span>
+</div>
+<div>
+<p class="text-xs font-semibold text-on-surface">Alex River</p>
+<p class="text-[10px] text-on-surface-variant">Debugging Trace #4402</p>
+</div>
+</li>
+<li class="flex items-center gap-3 px-3">
+<div class="relative">
+<img alt="Active user" class="w-8 h-8 rounded object-cover" data-alt="Developer portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAYYwZj2fJFPwpTzFdQ5wMvHdggk72sGbYWlD6HfILtNUgufU6KNzDcGwVuy2Oz1AG-OmaRxCtlyTdmHdoECBeaWsKpamV6SBIttDLTkUajBuXAGrF3-IOdXtSM4wKOEGbZ-BJdX7Hkx3kl_OF88Gj_IcdChdMwVairpMfo_aolgAgJH43KlrM2eF6ev9be2Il_Euup1QnsSgqrHfLe8Fw7qZED00kkcVoczRhXl5OGf78wjoYjiWeJhs4aMY21fNNcl4cbiqYHNW4"/>
+<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-primary rounded-full border-2 border-surface-container-lowest"></span>
+</div>
+<div>
+<p class="text-xs font-semibold text-on-surface">Jordan Smith</p>
+<p class="text-[10px] text-on-surface-variant">Active now</p>
+</div>
+</li>
+<li class="flex items-center gap-3 px-3 opacity-60">
+<div class="relative">
+<img alt="Inactive user" class="w-8 h-8 rounded object-cover grayscale" data-alt="Developer portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAo1SXcj5kBBf2rZsAw7UQEuoXCou8IDHRCjMWBci0w9NB9kkQYcFoxWJ36eqqRzdl78uIpfRstxUw_0ClwKpuYkp0Xj_oQLU6gsRTvN6_CXxDi7EZ0OA85IP3IueqHtIlsEd1i8RCvioTPS3bdDnQ71MoEyfPHNPxZvstdhzS5yZEJZsp6Qz76BM-_IlB4I6Vrlw_2wTBdBF2uuXHzrBaienKbgE4LQ0TyYeWskOsS6MJ89Wl-IuKY0GRQYUIHKSmJYNZ3ywCt9Og"/>
+<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-surface-container-highest rounded-full border-2 border-surface-container-lowest"></span>
+</div>
+<div>
+<p class="text-xs font-semibold text-on-surface">Morgan Lee</p>
+<p class="text-[10px] text-on-surface-variant">Away</p>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="mt-auto p-4 border-t border-outline-variant/5">
+<div class="bg-surface-container p-3 rounded flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">wifi_tethering</span>
+<span class="text-[10px] font-bold text-primary uppercase tracking-widest">Live Feed</span>
+</div>
+<span class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></span>
+</div>
+</div>
+</nav>
+<!-- Chat History (Center Pane) -->
+<section class="flex-1 flex flex-col bg-surface relative">
+<div class="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar">
+<!-- Message Block -->
+<div class="flex gap-4 group">
+<img alt="User" class="w-10 h-10 rounded shadow-lg object-cover" data-alt="Alex River" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAiwEVdRqpbLC6iHq6wbrfR3acQr4EYkG6C9OTBN77TyBl5CViyLr81NetR84cx39AeDYMOy-YxCnc3XktYthd2TyvtPycyvm9pdod4bZen1SGFxp1sGfRcN-T_MEbmiodjig3HB-L3zncC0ii1ulf-q4_SnTtSwI0jnfDMUtjwHP4YuSeO2oQD8EKJiJGkaR66cvcKLmbBoEA0Sdbut1CLg06S75GkOasfzQwdENr5fx2xYBUydkCAess9X3-GNwhnzE3eVKgVFKo"/>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline gap-3 mb-1">
+<span class="font-bold text-on-surface">Alex River</span>
+<span class="text-[10px] text-on-surface-variant font-mono">14:22:05</span>
+</div>
+<div class="text-sm text-on-surface-variant leading-relaxed">
+                                Identified a latency spike in the <span class="text-primary font-mono">auth-provider-v2</span> microservice. Looking at the trace now. It seems related to the token validation loop.
+                            </div>
+<!-- Trace Attachment -->
+<div class="mt-4 bg-surface-container-low rounded p-4 border border-outline-variant/10 max-w-xl group-hover:border-primary/30 transition-colors">
+<div class="flex items-center justify-between mb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">analytics</span>
+<span class="text-xs font-bold uppercase tracking-wider text-on-surface">Trace #AX-8820</span>
+</div>
+<span class="text-[10px] px-2 py-0.5 rounded bg-error-container text-on-error-container font-bold uppercase">Latency 840ms</span>
+</div>
+<div class="flex gap-1 h-2 rounded-full overflow-hidden bg-surface-container mb-3">
+<div class="w-1/4 bg-primary/40"></div>
+<div class="w-1/2 bg-primary"></div>
+<div class="w-1/4 bg-error"></div>
+</div>
+<button class="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all">
+                                    View Full Waterfall <span class="material-symbols-outlined text-xs">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- System Divider -->
+<div class="flex items-center gap-4 py-4">
+<div class="h-[1px] flex-1 bg-outline-variant/10"></div>
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest bg-surface px-2">Deployment Event</span>
+<div class="h-[1px] flex-1 bg-outline-variant/10"></div>
+</div>
+<!-- Message Block -->
+<div class="flex gap-4 group">
+<img alt="User" class="w-10 h-10 rounded shadow-lg object-cover" data-alt="Jordan Smith" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDh9PGyBEm70WmZcdStWT0dLKexrld-Kc_--E7QsQEw5c7Fx7IKUqSxb9L0Q_4tMGhHWwNTpw8pVCdD7BX0EHlacZqPVdma4jewhoQUS2cFKr-P4W4L_n0wDJVPlUNzcGbyl7ByL7r5N6cLaiMqGYW20xe5YDCyMKcFAKSKhdor2RsWXYQ2O1Io79WfQv-5DUidJHfJ1sPYuz0swj8I__iyFxTaQPiuGuVcfGDYBwo8hmzqDsBrMWBkmB0DEJiBLXPeRlyU0EWwGBM"/>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline gap-3 mb-1">
+<span class="font-bold text-on-surface">Jordan Smith</span>
+<span class="text-[10px] text-on-surface-variant font-mono">14:45:12</span>
+</div>
+<div class="text-sm text-on-surface-variant leading-relaxed">
+                                @Alex River, check this snippet from the logs. It matches the pattern we saw during the canary rollout last Tuesday.
+                            </div>
+<!-- Code Block Attachment -->
+<div class="mt-4 bg-surface-container-lowest rounded overflow-hidden border border-outline-variant/20 font-mono text-xs max-w-2xl">
+<div class="bg-surface-container-high px-4 py-2 flex items-center justify-between border-b border-outline-variant/10">
+<span class="text-[10px] text-on-surface-variant">auth_service.py</span>
+<span class="material-symbols-outlined text-sm text-on-surface-variant">content_copy</span>
+</div>
+<div class="p-4 text-primary-fixed-dim bg-[#0a0f14]">
+<pre><code>def validate_session(token: str):
+    # Potential recursion limit hit here
+    session = cache.get(f"session:{token}")
+    if not session:
+        return revalidate_against_db(token) # BUG?
+    return session</code></pre>
+</div>
+</div>
+</div>
+</div>
+<!-- Message Block -->
+<div class="flex gap-4 group">
+<img alt="User" class="w-10 h-10 rounded shadow-lg object-cover" data-alt="Alex River" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-nU4VEOGDWk_cfwo0jYS0tWbeoWLuH6HzZ3U9YHsFv3NPsV0HAK3S4AppmDZD9QpfcJjrdvG5e-RmqF86E0cBnLLxBbRYlIAh77-cuPhjGp2HZIlGtrMM_J4WqY8w5ZjA_4Qda2xc8PnNUJY-Ujtqk6gR8b2mdstkuSeGAMXs0qrKAB1I6F3JLzRa70bHZrSYKgavyEXyCmaPTQvyBxUom7ZCD6dFrvOX3ZTtpFo-8MMb36xvq8p-bfbIptG5l_i7JcEh9IOOaPM"/>
+<div class="flex-1 min-w-0">
+<div class="flex items-baseline gap-3 mb-1">
+<span class="font-bold text-on-surface">Alex River</span>
+<span class="text-[10px] text-on-surface-variant font-mono">14:48:30</span>
+</div>
+<div class="text-sm text-on-surface-variant leading-relaxed">
+                                That's exactly it. The <span class="italic">revalidate_against_db</span> isn't checking the TTL, causing a stampede on the SQL layer. I'll push a fix to the hotfix branch.
+                            </div>
+</div>
+</div>
+</div>
+<!-- Input Area -->
+<div class="p-6 pt-0">
+<div class="bg-surface-container-low border border-outline-variant/20 rounded focus-within:border-primary transition-colors flex flex-col p-2">
+<textarea class="bg-transparent border-none focus:ring-0 text-sm text-on-surface resize-none p-2 h-12 no-scrollbar" placeholder="Message #traces..."></textarea>
+<div class="flex items-center justify-between px-2 py-1">
+<div class="flex items-center gap-3">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xl">alternate_email</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xl">code</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xl">attach_file</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">mood</span>
+</button>
+</div>
+<button class="bg-primary text-on-primary rounded-sm p-1.5 flex items-center justify-center hover:bg-primary-container transition-colors">
+<span class="material-symbols-outlined text-xl">send</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Contextual Sidebar (Right Pane) -->
+<aside class="w-80 bg-surface-container-lowest border-l border-outline-variant/5 hidden xl:flex flex-col">
+<div class="p-6 border-b border-outline-variant/5">
+<h3 class="font-headline font-bold text-sm text-on-surface mb-4">Related Traces</h3>
+<div class="space-y-4">
+<div class="group cursor-pointer">
+<div class="flex items-center justify-between mb-1">
+<span class="text-[10px] font-mono text-primary">#AX-8820</span>
+<span class="text-[10px] text-on-surface-variant">2m ago</span>
+</div>
+<p class="text-xs text-on-surface line-clamp-1 group-hover:text-primary transition-colors">Auth Provider Latency Spike</p>
+<div class="mt-2 h-1 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-error w-4/5"></div>
+</div>
+</div>
+<div class="group cursor-pointer">
+<div class="flex items-center justify-between mb-1">
+<span class="text-[10px] font-mono text-on-surface-variant">#AX-8818</span>
+<span class="text-[10px] text-on-surface-variant">15m ago</span>
+</div>
+<p class="text-xs text-on-surface line-clamp-1 group-hover:text-primary transition-colors">Successful Login Stream</p>
+<div class="mt-2 h-1 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary w-full"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="p-6 flex-1 flex flex-col">
+<h3 class="font-headline font-bold text-sm text-on-surface mb-4">Shared Assets</h3>
+<div class="grid grid-cols-2 gap-3">
+<div class="aspect-square bg-surface-container-high rounded border border-outline-variant/10 flex flex-col items-center justify-center gap-2 group cursor-pointer hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-primary text-3xl group-hover:scale-110 transition-transform">insights</span>
+<span class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant">Metrics</span>
+</div>
+<div class="aspect-square bg-surface-container-high rounded border border-outline-variant/10 flex flex-col items-center justify-center gap-2 group cursor-pointer hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-primary text-3xl group-hover:scale-110 transition-transform">description</span>
+<span class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant">Reports</span>
+</div>
+<div class="aspect-square bg-surface-container-high rounded border border-outline-variant/10 flex flex-col items-center justify-center gap-2 group cursor-pointer hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-primary text-3xl group-hover:scale-110 transition-transform">table_chart</span>
+<span class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant">CSV Logs</span>
+</div>
+<div class="aspect-square bg-surface-container-high rounded border border-outline-variant/10 flex flex-col items-center justify-center gap-2 group cursor-pointer hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-primary text-3xl group-hover:scale-110 transition-transform">api</span>
+<span class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant">Endpoints</span>
+</div>
+</div>
+<div class="mt-auto pt-6">
+<div class="bg-surface-container-high/40 rounded-lg p-4 border border-outline-variant/5">
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Team Efficiency</p>
+<div class="flex items-end gap-2">
+<span class="text-2xl font-headline font-bold text-primary">94%</span>
+<span class="text-[10px] text-primary mb-1">+2.4% vs last week</span>
+</div>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</main>
+<!-- Contextual FAB (Suppressed based on rules for focused communication screen) -->
+</body></html>

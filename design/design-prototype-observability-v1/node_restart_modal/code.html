@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-tertiary-container": "#252a30",
+                        "tertiary": "#c2c7cf",
+                        "inverse-primary": "#006e2c",
+                        "surface": "#0f1419",
+                        "tertiary-container": "#8c9198",
+                        "on-surface-variant": "#bdcaba",
+                        "on-error": "#690005",
+                        "on-tertiary-fixed": "#171c22",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-highest": "#30353b",
+                        "error-container": "#93000a",
+                        "tertiary-fixed-dim": "#c2c7cf",
+                        "surface-container-high": "#252a30",
+                        "surface-container": "#1b2026",
+                        "error": "#ffb4ab",
+                        "on-tertiary-fixed-variant": "#42474e",
+                        "on-primary-fixed-variant": "#00531f",
+                        "outline-variant": "#3e4a3d",
+                        "on-secondary-fixed": "#141c25",
+                        "surface-tint": "#6bde80",
+                        "on-tertiary": "#2c3137",
+                        "on-secondary-container": "#b0b9c4",
+                        "inverse-surface": "#dee3eb",
+                        "secondary-container": "#414a53",
+                        "surface-variant": "#30353b",
+                        "on-primary": "#003913",
+                        "surface-container-low": "#171c22",
+                        "surface-bright": "#353a40",
+                        "primary-fixed-dim": "#6bde80",
+                        "secondary": "#bec7d2",
+                        "primary-fixed": "#88fb99",
+                        "on-surface": "#dee3eb",
+                        "surface-dim": "#0f1419",
+                        "outline": "#889485",
+                        "on-primary-fixed": "#002108",
+                        "on-primary-container": "#003210",
+                        "on-background": "#dee3eb",
+                        "primary-container": "#2fa54f",
+                        "on-secondary": "#29313a",
+                        "inverse-on-surface": "#2c3137",
+                        "background": "#0f1419",
+                        "surface-container-lowest": "#0a0f14",
+                        "secondary-fixed-dim": "#bec7d2",
+                        "secondary-fixed": "#dae3ef",
+                        "primary": "#6bde80",
+                        "on-secondary-fixed-variant": "#3f4851",
+                        "tertiary-fixed": "#dee3eb"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body overflow-hidden">
+<!-- Background Layer: Node Health Dashboard (Blurred) -->
+<div class="fixed inset-0 z-0 flex flex-col filter blur-md grayscale-[0.2] opacity-40">
+<!-- TopAppBar -->
+<nav class="fixed top-0 w-full z-50 bg-[#0f1419]/80 backdrop-blur-xl flex justify-between items-center px-6 h-16 w-full">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold text-[#dee3eb] tracking-tighter font-headline">Obsidian Lens</span>
+<div class="hidden md:flex gap-6">
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors font-headline font-bold" href="#">Cluster</a>
+<a class="text-[#6bde80] font-bold font-headline" href="#">Nodes</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors font-headline font-bold" href="#">Traces</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors font-headline font-bold" href="#">Logs</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#bdcaba]">notifications</span>
+<span class="material-symbols-outlined text-[#bdcaba]">settings</span>
+<div class="h-8 w-8 rounded-full bg-surface-container-highest border border-outline-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-xs">person</span>
+</div>
+</div>
+</nav>
+<!-- Main Content Area with SideNav -->
+<div class="flex flex-1 pt-16 h-screen">
+<!-- SideNavBar -->
+<aside class="bg-[#171c22] fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 flex flex-col py-6 px-4 gap-2">
+<div class="px-2 mb-4">
+<div class="flex items-center gap-3">
+<div class="h-2 w-2 rounded-full bg-error"></div>
+<div>
+<p class="text-xs font-headline font-bold text-on-surface">Cluster-01</p>
+<p class="text-[10px] text-on-surface-variant">Region: us-east-1</p>
+</div>
+</div>
+</div>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all font-medium text-sm" href="#">
+<span class="material-symbols-outlined text-sm">dashboard</span> Overview
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#6bde80] bg-[#30353b]/30 rounded-sm font-medium text-sm" href="#">
+<span class="material-symbols-outlined text-sm">monitor_heart</span> Node Health
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all font-medium text-sm" href="#">
+<span class="material-symbols-outlined text-sm">memory</span> Model Performance
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all font-medium text-sm" href="#">
+<span class="material-symbols-outlined text-sm">speed</span> Resource Usage
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all font-medium text-sm" href="#">
+<span class="material-symbols-outlined text-sm">history</span> Alert History
+                </a>
+<div class="mt-auto flex flex-col gap-2 pt-4 border-t border-outline-variant/20">
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] text-xs" href="#">
+<span class="material-symbols-outlined text-sm">menu_book</span> Documentation
+                    </a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] text-xs" href="#">
+<span class="material-symbols-outlined text-sm">contact_support</span> Support
+                    </a>
+</div>
+</aside>
+<!-- Dashboard Content -->
+<main class="ml-64 flex-1 p-8 space-y-8 overflow-y-auto">
+<header class="flex justify-between items-end">
+<div>
+<h1 class="text-3xl font-headline font-bold tracking-tight text-on-surface">Node Health</h1>
+<p class="text-on-surface-variant font-body">Real-time telemetry and resource allocation for Cluster-01.</p>
+</div>
+<button class="bg-primary text-on-primary font-bold px-4 py-2 rounded-sm text-sm">Deploy New Node</button>
+</header>
+<!-- Mock Dashboard Cards -->
+<div class="grid grid-cols-12 gap-6">
+<div class="col-span-12 lg:col-span-8 bg-surface-container rounded-sm p-6 border-l-4 border-error">
+<div class="flex justify-between mb-4">
+<span class="font-mono text-sm text-on-surface-variant">NODE_ID: nw-node-9104</span>
+<span class="px-2 py-1 bg-error/10 text-error text-[10px] font-bold rounded-sm uppercase tracking-wider">Degraded</span>
+</div>
+<div class="h-48 bg-surface-container-low rounded-sm"></div>
+</div>
+<div class="col-span-12 lg:col-span-4 bg-surface-container rounded-sm p-6">
+<h3 class="font-headline font-bold text-lg mb-4">Resource Saturation</h3>
+<div class="space-y-4">
+<div class="h-2 bg-surface-container-high rounded-full overflow-hidden"><div class="h-full bg-error w-[92%]"></div></div>
+<div class="h-2 bg-surface-container-high rounded-full overflow-hidden"><div class="h-full bg-primary w-[45%]"></div></div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+<!-- Modal Overlay Layer -->
+<div class="fixed inset-0 z-[100] flex items-center justify-center bg-surface/60 backdrop-blur-sm px-6">
+<!-- Confirmation Modal -->
+<div class="w-full max-w-lg bg-surface-container-lowest border border-outline-variant shadow-2xl rounded-sm overflow-hidden flex flex-col">
+<!-- Modal Header -->
+<div class="p-6 flex items-start gap-4 border-b border-outline-variant/30">
+<div class="bg-error/10 p-3 rounded-full flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-error text-2xl">warning</span>
+</div>
+<div class="flex-1">
+<h2 class="text-xl font-headline font-bold text-on-surface tracking-tight">Confirm Node Restart</h2>
+<p class="text-sm text-on-surface-variant mt-1">Surgical action required for operational stability.</p>
+</div>
+</div>
+<!-- Modal Content -->
+<div class="p-6 space-y-6">
+<!-- Node Metadata -->
+<div class="bg-surface-container-low p-4 rounded-sm grid grid-cols-2 gap-4">
+<div>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">Node ID</p>
+<p class="font-mono text-sm text-on-surface">nw-node-9104</p>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">Status</p>
+<div class="flex items-center gap-2">
+<div class="h-1.5 w-1.5 rounded-full bg-error"></div>
+<p class="text-xs font-bold text-error">DEGRADED</p>
+</div>
+</div>
+</div>
+<!-- Warning Message Section -->
+<div class="space-y-3">
+<p class="text-sm text-on-surface-variant leading-relaxed">
+                        Restarting this node will temporarily interrupt inference tasks currently being processed. Estimated downtime is <span class="text-on-surface font-semibold">45-60 seconds</span>.
+                    </p>
+<div class="flex items-center gap-3 py-3 px-4 bg-surface-container rounded-sm border-l border-primary-container">
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">info</span>
+<p class="text-xs text-on-surface/80">
+<span class="font-bold text-primary">Impact assessment:</span> 3 active traces may be impacted.
+                        </p>
+</div>
+</div>
+</div>
+<!-- Modal Actions -->
+<div class="p-6 bg-surface-container-low flex items-center justify-end gap-3">
+<button class="px-5 py-2.5 text-xs font-bold text-on-surface-variant hover:text-on-surface transition-colors">
+                    Cancel
+                </button>
+<button class="bg-gradient-to-br from-primary to-primary-container text-on-primary px-6 py-2.5 rounded-sm text-sm font-bold shadow-lg shadow-primary/10 hover:opacity-90 transition-all active:scale-[0.98]">
+                    Restart Node
+                </button>
+</div>
+</div>
+</div>
+</body></html>

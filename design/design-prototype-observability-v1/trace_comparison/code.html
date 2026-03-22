@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Obsidian Lens | Multi-Model Trace Comparison</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "inverse-surface": "#dee3eb",
+                        "on-tertiary": "#2c3137",
+                        "on-background": "#dee3eb",
+                        "on-tertiary-container": "#252a30",
+                        "secondary-container": "#414a53",
+                        "on-surface-variant": "#bdcaba",
+                        "on-secondary": "#29313a",
+                        "primary-fixed-dim": "#6bde80",
+                        "outline-variant": "#3e4a3d",
+                        "surface-container-lowest": "#0a0f14",
+                        "surface-container": "#1b2026",
+                        "tertiary-fixed-dim": "#c2c7cf",
+                        "tertiary-fixed": "#dee3eb",
+                        "on-secondary-container": "#b0b9c4",
+                        "on-error": "#690005",
+                        "secondary-fixed-dim": "#bec7d2",
+                        "secondary": "#bec7d2",
+                        "on-error-container": "#ffdad6",
+                        "surface-bright": "#353a40",
+                        "error": "#ffb4ab",
+                        "on-surface": "#dee3eb",
+                        "surface-dim": "#0f1419",
+                        "on-tertiary-fixed-variant": "#42474e",
+                        "secondary-fixed": "#dae3ef",
+                        "tertiary": "#c2c7cf",
+                        "surface-container-high": "#252a30",
+                        "surface-tint": "#6bde80",
+                        "outline": "#889485",
+                        "surface-variant": "#30353b",
+                        "on-primary-fixed": "#002108",
+                        "on-primary": "#003913",
+                        "primary": "#6bde80",
+                        "inverse-on-surface": "#2c3137",
+                        "surface-container-highest": "#30353b",
+                        "background": "#0f1419",
+                        "surface-container-low": "#171c22",
+                        "primary-fixed": "#88fb99",
+                        "on-primary-container": "#003210",
+                        "on-secondary-fixed-variant": "#3f4851",
+                        "primary-container": "#2fa54f",
+                        "on-secondary-fixed": "#141c25",
+                        "inverse-primary": "#006e2c",
+                        "error-container": "#93000a",
+                        "tertiary-container": "#8c9198",
+                        "on-primary-fixed-variant": "#00531f",
+                        "surface": "#0f1419",
+                        "on-tertiary-fixed": "#171c22"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #0f1419; }
+        ::-webkit-scrollbar-thumb { background: #30353b; border-radius: 10px; }
+        .glass-panel {
+            background: rgba(48, 53, 59, 0.6);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary/30">
+<!-- SideNavBar (Shared Component) -->
+<aside class="h-screen w-64 fixed left-0 top-0 flex flex-col bg-[#171c22] border-r border-[#30353b]/15 font-['Space_Grotesk'] tracking-tight z-50">
+<div class="flex flex-col h-full py-6">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container" style="font-variation-settings: 'FILL' 1;">lens</span>
+</div>
+<div>
+<h1 class="text-[#6bde80] font-bold text-xl leading-none">Obsidian Lens</h1>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-[0.2em] mt-1">LLM Observability</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] transition-colors duration-200 rounded" href="#">
+<span class="material-symbols-outlined" data-icon="account_tree">account_tree</span>
+<span class="text-sm">Knowledge Graph</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] transition-colors duration-200 rounded" href="#">
+<span class="material-symbols-outlined" data-icon="manage_search">manage_search</span>
+<span class="text-sm">Trace Search</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] transition-colors duration-200 rounded" href="#">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+<span class="text-sm">Log Stream</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] transition-colors duration-200 rounded" href="#">
+<span class="material-symbols-outlined" data-icon="query_stats">query_stats</span>
+<span class="text-sm">Latency</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#6bde80] bg-[#30353b]/30 font-bold border-r-2 border-[#6bde80] rounded-l" href="#">
+<span class="material-symbols-outlined" data-icon="compare_arrows">compare_arrows</span>
+<span class="text-sm">Comparison</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] transition-colors duration-200 rounded" href="#">
+<span class="material-symbols-outlined" data-icon="bug_report">bug_report</span>
+<span class="text-sm">Errors</span>
+</a>
+</nav>
+<div class="mt-auto px-6 mb-4">
+<button class="w-full py-2.5 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold text-xs rounded-sm uppercase tracking-wider flex items-center justify-center gap-2 scale-95 active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-sm">add</span>
+                    New Trace
+                </button>
+</div>
+<div class="px-3 space-y-1 border-t border-outline-variant/15 pt-4">
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] transition-colors duration-200 rounded" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="text-sm">Docs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] transition-colors duration-200 rounded" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-sm">Settings</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- TopNavBar (Shared Component) -->
+<header class="fixed top-0 right-0 left-64 h-16 z-40 bg-[#0f1419]/80 backdrop-blur-xl border-b border-[#30353b]/10 flex justify-between items-center px-8 w-auto">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-6">
+<a class="text-[#bdcaba] hover:text-[#6bde80] transition-opacity text-sm font-medium" href="#">Dashboard</a>
+<a class="text-[#bdcaba] hover:text-[#6bde80] transition-opacity text-sm font-medium" href="#">Workspaces</a>
+<a class="text-[#bdcaba] hover:text-[#6bde80] transition-opacity text-sm font-medium" href="#">Clusters</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden lg:block">
+<input class="bg-surface-container-lowest border border-outline-variant/20 rounded-sm px-4 py-1.5 text-xs w-64 focus:outline-none focus:border-primary/50 transition-all" placeholder="Search traces, models..." type="text"/>
+<span class="material-symbols-outlined absolute right-3 top-1.5 text-on-surface-variant text-sm">search</span>
+</div>
+<div class="flex items-center gap-2 border-l border-outline-variant/20 pl-4">
+<button class="text-[#bdcaba] hover:text-[#6bde80] transition-all p-1">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-[#bdcaba] hover:text-[#6bde80] transition-all p-1">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/30 ml-2">
+<img class="w-full h-full object-cover" data-alt="Tech Lead User Profile Avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDFgB4_NWKRFgMw7KUEv_BcEIW1aXRZZnm3QB4haz7uFlAwgDGTCqgQblb2ykiEYC3hyleFEs_ynp2F_DGNkqcbzJgfDrfssh4SR7ZUnWyHYWkBGlGMNgKn6bTDOW1ZuC4XPn9xe6hfvfm1HMeWgwdcNY1J7nexyfWTv5HtWCpUCuX0PJSDb5t8UTcCyNrv93ZKnGPd_Rsfteanv27Hor4ASK3f42m6acOnKQVte02JmyE5d0E_rSdXZO0nha5d5VKG4xu5GAagIi0"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-16 min-h-screen bg-background p-8">
+<!-- Comparison Header Hero -->
+<section class="mb-10 flex items-end justify-between">
+<div class="space-y-2">
+<div class="flex items-center gap-3 mb-2">
+<span class="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-sm font-bold tracking-widest uppercase">Trace Comparison</span>
+<span class="text-on-surface-variant/40 text-xs">ID: trc_88294_af92</span>
+</div>
+<h2 class="text-4xl font-headline font-bold text-on-surface tracking-tight">Systematic Reasoning Benchmark</h2>
+<p class="text-on-surface-variant max-w-2xl font-light">Comparing multi-step logical deduction for prompt: <span class="text-primary-fixed-dim font-mono italic">"Explain the paradox of Fermi as if you were a quantum physicist."</span></p>
+</div>
+<div class="flex gap-4">
+<div class="flex flex-col items-end">
+<span class="text-[10px] text-on-surface-variant uppercase tracking-tighter">Delta Latency</span>
+<span class="text-2xl font-headline font-bold text-error">+420ms</span>
+</div>
+<div class="h-10 w-px bg-outline-variant/20 mx-2"></div>
+<div class="flex flex-col items-end">
+<span class="text-[10px] text-on-surface-variant uppercase tracking-tighter">Cost Variance</span>
+<span class="text-2xl font-headline font-bold text-primary">-$0.012</span>
+</div>
+</div>
+</section>
+<!-- Bento Grid Layout for Trace Overview -->
+<div class="grid grid-cols-12 gap-6 mb-8">
+<!-- Trace A: GPT-4o -->
+<div class="col-span-6 space-y-4">
+<div class="bg-surface-container-low p-6 rounded-lg border border-transparent hover:border-primary/20 transition-all">
+<div class="flex justify-between items-start mb-6">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-[#1b2026] flex items-center justify-center rounded-sm">
+<span class="material-symbols-outlined text-primary">psychology</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-lg text-on-surface">GPT-4o (Omni)</h3>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold tracking-widest">Model Alpha</p>
+</div>
+</div>
+<div class="text-right">
+<span class="text-xs text-on-surface-variant">Tokens: <span class="text-on-surface font-mono">1,024</span></span>
+<div class="text-xl font-headline font-bold text-on-surface">1.2s <span class="text-xs font-normal text-on-surface-variant">total</span></div>
+</div>
+</div>
+<!-- Simplified Waterfall Segment -->
+<div class="space-y-3">
+<div class="flex items-center gap-4 text-[10px] font-mono text-on-surface-variant">
+<div class="w-24 text-right">System Prompt</div>
+<div class="flex-1 h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[15%]"></div>
+</div>
+<div class="w-12 text-on-surface">180ms</div>
+</div>
+<div class="flex items-center gap-4 text-[10px] font-mono text-on-surface-variant">
+<div class="w-24 text-right">Thought Engine</div>
+<div class="flex-1 h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[65%] ml-[15%]"></div>
+</div>
+<div class="w-12 text-on-surface">780ms</div>
+</div>
+<div class="flex items-center gap-4 text-[10px] font-mono text-on-surface-variant">
+<div class="w-24 text-right">Response Gen</div>
+<div class="flex-1 h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary-fixed-dim w-[20%] ml-[80%]"></div>
+</div>
+<div class="w-12 text-on-surface">240ms</div>
+</div>
+</div>
+</div>
+<!-- Model A Response Text (The Lens) -->
+<div class="bg-surface-container p-6 rounded-lg border border-primary/10 min-h-[400px]">
+<div class="flex items-center justify-between mb-4 border-b border-outline-variant/10 pb-3">
+<span class="text-[10px] text-primary font-bold uppercase tracking-widest">Output Vector</span>
+<span class="material-symbols-outlined text-sm text-on-surface-variant">unfold_more</span>
+</div>
+<div class="font-body text-sm leading-relaxed text-on-surface-variant space-y-4">
+<p><span class="bg-primary/5 text-primary-fixed-dim px-1">"The Great Silence isn't just a biological question, it's an entropic one."</span> GPT-4o starts with a strong focus on thermodynamic constraints. It posits that information propagation across the galaxy is limited by the decoherence of signals over cosmological distances.</p>
+<p>Through the lens of quantum mechanics, any sufficiently advanced civilization would realize that broad-spectrum radio emissions are computationally expensive and easily detectable by adversaries—hence, the universe remains <span class="border-b border-dashed border-primary">locally coherent</span> but globally silent.</p>
+</div>
+</div>
+</div>
+<!-- Trace B: Claude 3.5 Sonnet -->
+<div class="col-span-6 space-y-4">
+<div class="bg-surface-container-low p-6 rounded-lg border border-transparent hover:border-tertiary/20 transition-all">
+<div class="flex justify-between items-start mb-6">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-[#1b2026] flex items-center justify-center rounded-sm">
+<span class="material-symbols-outlined text-tertiary">architecture</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-lg text-on-surface">Claude 3.5 Sonnet</h3>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold tracking-widest">Model Beta</p>
+</div>
+</div>
+<div class="text-right">
+<span class="text-xs text-on-surface-variant">Tokens: <span class="text-on-surface font-mono">1,112</span></span>
+<div class="text-xl font-headline font-bold text-on-surface">1.62s <span class="text-xs font-normal text-on-surface-variant">total</span></div>
+</div>
+</div>
+<!-- Simplified Waterfall Segment (Synchronized Scales) -->
+<div class="space-y-3">
+<div class="flex items-center gap-4 text-[10px] font-mono text-on-surface-variant">
+<div class="w-24 text-right">System Prompt</div>
+<div class="flex-1 h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-tertiary-container w-[10%]"></div>
+</div>
+<div class="w-12 text-on-surface">160ms</div>
+</div>
+<div class="flex items-center gap-4 text-[10px] font-mono text-on-surface-variant">
+<div class="w-24 text-right">Thought Engine</div>
+<div class="flex-1 h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-tertiary w-[75%] ml-[10%]"></div>
+</div>
+<div class="w-12 text-on-surface">1.2s</div>
+</div>
+<div class="flex items-center gap-4 text-[10px] font-mono text-on-surface-variant">
+<div class="w-24 text-right">Response Gen</div>
+<div class="flex-1 h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-tertiary-fixed-dim w-[15%] ml-[85%]"></div>
+</div>
+<div class="w-12 text-on-surface">260ms</div>
+</div>
+</div>
+</div>
+<!-- Model B Response Text (The Lens) -->
+<div class="bg-surface-container p-6 rounded-lg border border-tertiary/10 min-h-[400px] relative">
+<div class="absolute inset-0 bg-tertiary/5 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+<button class="bg-surface-bright px-4 py-2 rounded font-bold text-xs flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">auto_fix</span>
+                            Analyze Difference
+                        </button>
+</div>
+<div class="flex items-center justify-between mb-4 border-b border-outline-variant/10 pb-3">
+<span class="text-[10px] text-tertiary font-bold uppercase tracking-widest">Output Vector</span>
+<span class="material-symbols-outlined text-sm text-on-surface-variant">unfold_more</span>
+</div>
+<div class="font-body text-sm leading-relaxed text-on-surface-variant space-y-4">
+<p><span class="bg-error/10 text-error px-1">"The Universe is a wave function awaiting a macroscopic observer."</span> Claude takes a more conceptual approach, focusing on the Observer Effect. It suggests that alien civilizations may exist in a state of superposition—unobserved and therefore non-manifest in our cosmic neighborhood.</p>
+<p>Until a civilization achieves a certain <span class="bg-primary/10 text-primary px-1">computational complexity threshold</span>, it cannot act as a 'universal observer.' The Fermi paradox is solved by the fact that we are simply too 'cold' as observers to collapse their wave functions into our reality.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Latency Heatmap Comparison -->
+<section class="bg-surface-container-low rounded-lg p-6 mb-8 overflow-hidden">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h3 class="font-headline font-bold text-xl text-on-surface">Token Throughput Heatmap</h3>
+<p class="text-xs text-on-surface-variant mt-1">Real-time sampling of execution stability across 100 iterations</p>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-primary"></div>
+<span class="text-[10px] text-on-surface-variant">Model Alpha</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-tertiary"></div>
+<span class="text-[10px] text-on-surface-variant">Model Beta</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-24 gap-1 h-32 items-end">
+<!-- Mock bars generated to represent high-end data visualization -->
+<div class="h-[60%] bg-primary/40 rounded-t-sm"></div>
+<div class="h-[45%] bg-tertiary/40 rounded-t-sm"></div>
+<div class="h-[75%] bg-primary/40 rounded-t-sm"></div>
+<div class="h-[80%] bg-tertiary/40 rounded-t-sm"></div>
+<div class="h-[65%] bg-primary/40 rounded-t-sm"></div>
+<div class="h-[90%] bg-tertiary/40 rounded-t-sm"></div>
+<div class="h-[55%] bg-primary/40 rounded-t-sm"></div>
+<div class="h-[40%] bg-tertiary/40 rounded-t-sm"></div>
+<div class="h-[95%] bg-primary rounded-t-sm"></div> <!-- Spike -->
+<div class="h-[70%] bg-tertiary/40 rounded-t-sm"></div>
+<div class="h-[50%] bg-primary/40 rounded-t-sm"></div>
+<div class="h-[60%] bg-tertiary/40 rounded-t-sm"></div>
+<div class="h-[45%] bg-primary/40 rounded-t-sm"></div>
+<div class="h-[85%] bg-tertiary rounded-t-sm"></div> <!-- Spike -->
+<div class="h-[65%] bg-primary/40 rounded-t-sm"></div>
+<div class="h-[55%] bg-tertiary/40 rounded-t-sm"></div>
+<div class="h-[75%] bg-primary/40 rounded-t-sm"></div>
+<div class="h-[40%] bg-tertiary/40 rounded-t-sm"></div>
+<div class="h-[60%] bg-primary/40 rounded-t-sm"></div>
+<div class="h-[50%] bg-tertiary/40 rounded-t-sm"></div>
+<div class="h-[80%] bg-primary/40 rounded-t-sm"></div>
+<div class="h-[65%] bg-tertiary/40 rounded-t-sm"></div>
+<div class="h-[90%] bg-primary/40 rounded-t-sm"></div>
+<div class="h-[70%] bg-tertiary/40 rounded-t-sm"></div>
+</div>
+<div class="mt-4 flex justify-between text-[10px] font-mono text-on-surface-variant/40 border-t border-outline-variant/10 pt-2">
+<span>0ms</span>
+<span>250ms</span>
+<span>500ms</span>
+<span>750ms</span>
+<span>1000ms</span>
+<span>1250ms</span>
+<span>1500ms</span>
+</div>
+</section>
+<!-- Detailed Comparison List -->
+<section class="space-y-4">
+<h4 class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Metric Divergence</h4>
+<div class="bg-surface-container rounded-lg overflow-hidden">
+<table class="w-full text-left text-sm">
+<thead class="bg-surface-container-high text-xs text-on-surface uppercase tracking-tight font-headline">
+<tr>
+<th class="px-6 py-4 font-semibold">Factor</th>
+<th class="px-6 py-4 font-semibold">Model Alpha (GPT)</th>
+<th class="px-6 py-4 font-semibold">Model Beta (Claude)</th>
+<th class="px-6 py-4 font-semibold text-right">Delta</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<tr class="hover:bg-surface-bright/5 transition-colors">
+<td class="px-6 py-4 text-on-surface font-medium">Logical Consistency</td>
+<td class="px-6 py-4 text-on-surface-variant">9.8/10</td>
+<td class="px-6 py-4 text-on-surface-variant">9.4/10</td>
+<td class="px-6 py-4 text-right text-error">-0.4</td>
+</tr>
+<tr class="hover:bg-surface-bright/5 transition-colors">
+<td class="px-6 py-4 text-on-surface font-medium">Domain Specificity</td>
+<td class="px-6 py-4 text-on-surface-variant">High (Physics focused)</td>
+<td class="px-6 py-4 text-on-surface-variant">Extreme (Abstract focus)</td>
+<td class="px-6 py-4 text-right text-primary">+12%</td>
+</tr>
+<tr class="hover:bg-surface-bright/5 transition-colors">
+<td class="px-6 py-4 text-on-surface font-medium">Reasoning Depth</td>
+<td class="px-6 py-4 text-on-surface-variant">4 Chains</td>
+<td class="px-6 py-4 text-on-surface-variant">7 Chains</td>
+<td class="px-6 py-4 text-right text-primary">+3</td>
+</tr>
+<tr class="hover:bg-surface-bright/5 transition-colors">
+<td class="px-6 py-4 text-on-surface font-medium">Hallucination Risk</td>
+<td class="px-6 py-4 text-on-surface-variant">0.02%</td>
+<td class="px-6 py-4 text-on-surface-variant">0.05%</td>
+<td class="px-6 py-4 text-right text-error">+0.03%</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</main>
+<!-- Floating Quick Actions (Contextual FAB) -->
+<div class="fixed bottom-8 right-8 flex flex-col gap-3">
+<button class="w-12 h-12 rounded-lg bg-surface-container-highest flex items-center justify-center text-primary shadow-2xl border border-outline-variant/20 hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" data-icon="share">share</span>
+</button>
+<button class="w-12 h-12 rounded-lg bg-primary flex items-center justify-center text-on-primary shadow-2xl hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+</button>
+</div>
+</body></html>

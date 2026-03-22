@@ -804,3 +804,11 @@ node_modules/zustand/umd/vanilla/shallow.development.js
 node_modules/zustand/umd/vanilla/shallow.production.js
 node_modules/zustand/vanilla/shallow.d.ts
 node_modules/zustand/vanilla/shallow.js
+venv/
+**/venv/
+__pycache__/
+*.pyc
+venv/
+**/venv/
+__pycache__/
+*.pyc

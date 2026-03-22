@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cluster Management | Obsidian Lens</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(27, 32, 38, 0.6);
+            backdrop-filter: blur(12px);
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        body {
+            background-color: #0f1419;
+            color: #dee3eb;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "on-tertiary-fixed-variant": "#42474e",
+                "on-error-container": "#ffdad6",
+                "primary-container": "#2fa54f",
+                "primary-fixed": "#88fb99",
+                "on-background": "#dee3eb",
+                "inverse-primary": "#006e2c",
+                "secondary": "#bec7d2",
+                "surface-container-low": "#171c22",
+                "on-primary-fixed": "#002108",
+                "inverse-surface": "#dee3eb",
+                "on-tertiary-container": "#252a30",
+                "error-container": "#93000a",
+                "primary": "#6bde80",
+                "tertiary": "#c2c7cf",
+                "surface-dim": "#0f1419",
+                "on-secondary-container": "#b0b9c4",
+                "surface-bright": "#353a40",
+                "surface-tint": "#6bde80",
+                "background": "#0f1419",
+                "outline-variant": "#3e4a3d",
+                "tertiary-container": "#8c9198",
+                "on-tertiary": "#2c3137",
+                "on-secondary": "#29313a",
+                "on-primary-fixed-variant": "#00531f",
+                "on-primary-container": "#003210",
+                "error": "#ffb4ab",
+                "on-error": "#690005",
+                "inverse-on-surface": "#2c3137",
+                "surface-variant": "#30353b",
+                "surface-container-high": "#252a30",
+                "primary-fixed-dim": "#6bde80",
+                "outline": "#889485",
+                "on-surface-variant": "#bdcaba",
+                "secondary-fixed-dim": "#bec7d2",
+                "surface-container-lowest": "#0a0f14",
+                "on-surface": "#dee3eb",
+                "tertiary-fixed": "#dee3eb",
+                "on-tertiary-fixed": "#171c22",
+                "on-secondary-fixed": "#141c25",
+                "surface-container-highest": "#30353b",
+                "secondary-container": "#414a53",
+                "on-secondary-fixed-variant": "#3f4851",
+                "surface": "#0f1419",
+                "secondary-fixed": "#dae3ef",
+                "tertiary-fixed-dim": "#c2c7cf",
+                "on-primary": "#003913",
+                "surface-container": "#1b2026"
+              },
+              fontFamily: {
+                "headline": ["Space Grotesk"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+              },
+              borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+            },
+          },
+        }
+      </script>
+</head>
+<body class="font-body selection:bg-primary selection:text-on-primary">
+<!-- SideNavBar Shell -->
+<aside class="bg-[#171c22] border-r border-[#30353b]/15 h-screen w-64 fixed left-0 top-0 overflow-y-auto flex flex-col py-6 px-4 z-50">
+<div class="mb-10 px-2">
+<h1 class="text-[#6bde80] font-bold text-xl uppercase tracking-widest font-['Space_Grotesk']">Obsidian Lens</h1>
+<p class="text-[10px] text-on-surface-variant tracking-[0.2em] mt-1 uppercase">LLM Observability</p>
+</div>
+<button class="mb-8 w-full bg-gradient-to-br from-primary to-primary-container text-on-primary-container font-bold py-2 px-4 rounded-sm flex items-center justify-center gap-2 transition-transform active:scale-[0.98]">
+<span class="material-symbols-outlined text-sm">add</span>
+<span class="text-sm font-headline tracking-tight">New Project</span>
+</button>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026]/50 transition-all duration-200 ease-in-out rounded-sm group" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-['Space_Grotesk'] tracking-tight">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026]/50 transition-all duration-200 ease-in-out rounded-sm group" href="#">
+<span class="material-symbols-outlined">query_stats</span>
+<span class="text-sm font-['Space_Grotesk'] tracking-tight">Traces</span>
+</a>
+<!-- Active State: Infrastructure -->
+<a class="bg-[#1b2026] text-[#6bde80] font-semibold border-l-4 border-[#6bde80] flex items-center gap-3 px-3 py-2.5 transition-all duration-200 ease-in-out rounded-r-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">hub</span>
+<span class="text-sm font-['Space_Grotesk'] tracking-tight">Infrastructure</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026]/50 transition-all duration-200 ease-in-out rounded-sm group" href="#">
+<span class="material-symbols-outlined">compare_arrows</span>
+<span class="text-sm font-['Space_Grotesk'] tracking-tight">Evaluations</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026]/50 transition-all duration-200 ease-in-out rounded-sm group" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-['Space_Grotesk'] tracking-tight">Settings</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-[#30353b]/15 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] transition-colors" href="#">
+<span class="material-symbols-outlined text-xl">description</span>
+<span class="text-xs font-['Space_Grotesk']">Docs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] transition-colors" href="#">
+<span class="material-symbols-outlined text-xl">help</span>
+<span class="text-xs font-['Space_Grotesk']">Support</span>
+</a>
+<div class="mt-4 px-3 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center border border-outline-variant/20 overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="User profile avatar circle" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6BtSqiz8Xw3R7sgA-STEyMC3RlfjrLUJ6iZNhfQz4HVWiXN-Pun3-WZcw_M2x3zMnEomvJ_LO2H8ltbhPqkICJUi0jvCvUVq76P5Rn6q7Bm3IG69lxyuA7ndQ9fSAJQMvw4-M52PnxEMY-yh99aSFE6lDbWVzITJiV9OiZDxNwuw_5zv33uwffiq13CoKEaGEJXXzm2opBdKHMIqAxDsm6hzD2bjh0z1MaGwswQi_Tn2hfng9drR_080wX1dkmFGIf5XLQJY-NUE"/>
+</div>
+<div class="flex flex-col">
+<span class="text-xs font-bold text-on-surface">Admin User</span>
+<span class="text-[10px] text-on-surface-variant">Pro Plan</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- TopNavBar Shell -->
+<header class="fixed top-0 right-0 left-64 h-16 z-40 bg-[#0f1419]/80 backdrop-blur-xl border-b border-[#30353b]/15 flex items-center justify-between px-8">
+<div class="flex items-center gap-8">
+<span class="text-on-surface font-headline font-bold text-lg tracking-tight">Cluster Management</span>
+<nav class="flex items-center gap-6">
+<a class="text-[#bdcaba] hover:text-[#dee3eb] font-['Inter'] text-sm font-medium transition-colors duration-200" href="#">Projects</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] font-['Inter'] text-sm font-medium transition-colors duration-200" href="#">Models</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] font-['Inter'] text-sm font-medium transition-colors duration-200" href="#">Datasets</a>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-on-surface-variant text-sm">search</span>
+<input class="bg-surface-container-lowest border border-outline-variant/15 rounded-sm py-1.5 pl-9 pr-4 text-xs w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-on-surface-variant/50" placeholder="Search clusters..." type="text"/>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant">
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">notifications</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">terminal</span>
+</div>
+<button class="bg-surface-container-high text-primary-fixed-dim text-sm font-medium px-4 py-1.5 rounded-sm border border-outline-variant/20 hover:bg-surface-container-highest transition-colors">
+                Deploy Model
+            </button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="ml-64 pt-16 min-h-screen">
+<div class="p-8 space-y-8">
+<!-- Section 1: Overview Stats -->
+<section class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<div class="bg-surface-container-low p-6 rounded-sm border-l-2 border-primary">
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-medium mb-1">Active Clusters</p>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-headline font-bold text-on-surface">12</span>
+<span class="text-xs text-primary flex items-center gap-0.5"><span class="material-symbols-outlined text-[14px]">arrow_upward</span>8%</span>
+</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-sm">
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-medium mb-1">Total CPU Utilization</p>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-headline font-bold text-on-surface">64.2%</span>
+<div class="flex-1 h-1 bg-surface-container-highest rounded-full overflow-hidden ml-4">
+<div class="h-full bg-primary" style="width: 64.2%"></div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-sm">
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-medium mb-1">GPU Compute Load</p>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-headline font-bold text-primary">88.1%</span>
+<div class="flex-1 h-1 bg-surface-container-highest rounded-full overflow-hidden ml-4">
+<div class="h-full bg-primary" style="width: 88.1%"></div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-sm">
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-medium mb-1">Memory Usage</p>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-headline font-bold text-on-surface">1.2 TB</span>
+<span class="text-[10px] text-on-surface-variant ml-auto">/ 2.0 TB</span>
+</div>
+</div>
+</section>
+<!-- Section 2: Active Clusters Grid -->
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h2 class="font-headline font-bold text-lg tracking-tight">Active Infrastructure</h2>
+<div class="flex gap-2">
+<button class="bg-surface-container text-xs px-3 py-1.5 border border-outline-variant/15 hover:border-primary/50 transition-colors">Filter By Provider</button>
+<button class="bg-surface-container text-xs px-3 py-1.5 border border-outline-variant/15 hover:border-primary/50 transition-colors">Sort: Status</button>
+</div>
+</div>
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+<!-- Cluster Card 1 -->
+<div class="bg-surface-container p-5 rounded-sm border border-transparent hover:border-outline-variant/30 transition-all flex flex-col gap-4">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="p-2 bg-surface-container-low rounded-sm">
+<img alt="AWS" class="w-6 h-6 grayscale opacity-80" data-alt="AWS cloud provider logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZw7Jq55asljw2LvP9_nRoS6-PZgAGIT3VuiaNsggYhNz0TBAoggvdxKKe07wL3FplOqOPvhYZRdHWQJSS93gPQHiGigrS6oa_zlFqnUhwsa17RQ3JI39yJb3q2gOhX3ekgMQrqawDZiIZ40cIE_cI131QohkqRDLhEHqkQYk-cUrqmAQdTuJGM5CUEgQrnWH42tR7vyIY1E-EwZHdNR9bIeDVGczQLLSMJt8p9eUTtFwTds2S7BsFMMzC9waYcUzoBVkO8QQuYZM"/>
+</div>
+<div>
+<h3 class="font-headline font-bold text-on-surface">production-us-east-1</h3>
+<p class="text-[10px] font-mono text-on-surface-variant uppercase">ID: cluster-7821-ax</p>
+</div>
+</div>
+<div class="flex items-center gap-2 px-2 py-1 bg-primary/10 rounded-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+<span class="text-[10px] font-bold text-primary uppercase tracking-wider">Healthy</span>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-4 pt-2 border-t border-outline-variant/10">
+<div>
+<p class="text-[10px] text-on-surface-variant mb-1">Nodes</p>
+<p class="text-sm font-bold">24 Active</p>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant mb-1">Region</p>
+<p class="text-sm font-bold">Virginia</p>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant mb-1">Workload</p>
+<p class="text-sm font-bold text-primary">High Intensity</p>
+</div>
+</div>
+<div class="h-12 w-full bg-surface-container-low flex items-end gap-1 px-2 py-1">
+<div class="flex-1 bg-primary/20 h-1/2 rounded-t-sm"></div>
+<div class="flex-1 bg-primary/30 h-3/4 rounded-t-sm"></div>
+<div class="flex-1 bg-primary/40 h-2/3 rounded-t-sm"></div>
+<div class="flex-1 bg-primary h-full rounded-t-sm"></div>
+<div class="flex-1 bg-primary/80 h-4/5 rounded-t-sm"></div>
+<div class="flex-1 bg-primary/60 h-2/3 rounded-t-sm"></div>
+<div class="flex-1 bg-primary/40 h-1/2 rounded-t-sm"></div>
+</div>
+</div>
+<!-- Cluster Card 2 -->
+<div class="bg-surface-container p-5 rounded-sm border border-transparent hover:border-outline-variant/30 transition-all flex flex-col gap-4">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="p-2 bg-surface-container-low rounded-sm">
+<img alt="GCP" class="w-6 h-6 grayscale opacity-80" data-alt="Google Cloud platform logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuACCLPd5TDKQZibxJPFK8rONXyZMvqIYO1TYS9ajUGF3MJLUWV6PU-RluQSVgfbCjwqrChzuM4v87xmGWB2VnMRNQNglhQpLLuHeF5RVfKIOCOFQBLoaVXbJOz3tIj0DTxBqbE2tRnKFl6uE1M2QtPKe8_lPbuWiM3-PFsQPVPNsAjWAWwITEMDMML6KhRXSKflS7f1b9Jc5xQBA05W3HtJrVCEWzasXWWCu2xQiShZQ3D2FuEoY_JoLbwzEUV5XJXY7UO6OOBH6kA"/>
+</div>
+<div>
+<h3 class="font-headline font-bold text-on-surface">inference-eu-west-1</h3>
+<p class="text-[10px] font-mono text-on-surface-variant uppercase">ID: cluster-4412-bb</p>
+</div>
+</div>
+<div class="flex items-center gap-2 px-2 py-1 bg-primary-container/20 rounded-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+<span class="text-[10px] font-bold text-primary-fixed-dim uppercase tracking-wider">Scaling</span>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-4 pt-2 border-t border-outline-variant/10">
+<div>
+<p class="text-[10px] text-on-surface-variant mb-1">Nodes</p>
+<p class="text-sm font-bold">12 (+4)</p>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant mb-1">Region</p>
+<p class="text-sm font-bold">Belgium</p>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant mb-1">Workload</p>
+<p class="text-sm font-bold">Batch Processing</p>
+</div>
+</div>
+<div class="h-12 w-full bg-surface-container-low flex items-end gap-1 px-2 py-1">
+<div class="flex-1 bg-primary-container/20 h-1/4 rounded-t-sm"></div>
+<div class="flex-1 bg-primary-container/20 h-1/4 rounded-t-sm"></div>
+<div class="flex-1 bg-primary-container/20 h-1/3 rounded-t-sm"></div>
+<div class="flex-1 bg-primary-container/40 h-1/2 rounded-t-sm"></div>
+<div class="flex-1 bg-primary-container/60 h-2/3 rounded-t-sm"></div>
+<div class="flex-1 bg-primary-container/80 h-3/4 rounded-t-sm"></div>
+<div class="flex-1 bg-primary-container h-full rounded-t-sm"></div>
+</div>
+</div>
+<!-- Cluster Card 3 -->
+<div class="bg-surface-container p-5 rounded-sm border border-transparent hover:border-outline-variant/30 transition-all flex flex-col gap-4">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="p-2 bg-surface-container-low rounded-sm">
+<img alt="Azure" class="w-6 h-6 grayscale opacity-80" data-alt="Microsoft Azure logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvpR6nnLZcVxAnnNSm8Sw4yths2damgaY95jlO2jP-WEIb-PW5p958EEI2fXRRZfQshxRgIgJO9WZ2HfY8uUlWEzq28yjdNH4A-zMh8o6CBVhjrtyk1rH_ls_cRhfFECE0rPqnA2r3lN9RKomfFtIAC9VAf3SK7B5iQR1A0QEVPj4a6b205A3Fxc9xfeoLsKNMUiAWxU5dbpFmUNSLqjJP2252lnrFF_7-ALoJELSCzfZfWtj2mRvx5T3TsyTsJRIt1EgwLhqrjsc"/>
+</div>
+<div>
+<h3 class="font-headline font-bold text-on-surface">staging-us-west-2</h3>
+<p class="text-[10px] font-mono text-on-surface-variant uppercase">ID: cluster-0912-cc</p>
+</div>
+</div>
+<div class="flex items-center gap-2 px-2 py-1 bg-error/10 rounded-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+<span class="text-[10px] font-bold text-error uppercase tracking-wider">Warning</span>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-4 pt-2 border-t border-outline-variant/10">
+<div>
+<p class="text-[10px] text-on-surface-variant mb-1">Nodes</p>
+<p class="text-sm font-bold">2 Active</p>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant mb-1">Region</p>
+<p class="text-sm font-bold">Oregon</p>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant mb-1">Workload</p>
+<p class="text-sm font-bold text-error">Memory Pressure</p>
+</div>
+</div>
+<div class="h-12 w-full bg-surface-container-low flex items-end gap-1 px-2 py-1">
+<div class="flex-1 bg-error/40 h-full rounded-t-sm"></div>
+<div class="flex-1 bg-error/60 h-4/5 rounded-t-sm"></div>
+<div class="flex-1 bg-error/40 h-2/3 rounded-t-sm"></div>
+<div class="flex-1 bg-error/80 h-full rounded-t-sm"></div>
+<div class="flex-1 bg-error h-4/5 rounded-t-sm"></div>
+<div class="flex-1 bg-error/60 h-2/3 rounded-t-sm"></div>
+<div class="flex-1 bg-error/40 h-1/2 rounded-t-sm"></div>
+</div>
+</div>
+<!-- Cluster Card 4 -->
+<div class="bg-surface-container p-5 rounded-sm border border-transparent hover:border-outline-variant/30 transition-all flex flex-col gap-4">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="p-2 bg-surface-container-low rounded-sm">
+<img alt="AWS" class="w-6 h-6 grayscale opacity-80" data-alt="AWS cloud provider logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAswt6sScH91roMBv6avuIThLXfCO3h08Fs0I0hzfVEdM12_GEvAFGD5p9tQLeOxVy3McNGt_mvPyeVNdpTnFflc7PlgsuUTcTaZdIzWc8NawVtDTIw9KPK4aOPq1wzJKLvoMqSQtcVPjy-fm1nIIUXkSSYJHZPn91LnTKMyjgv-02XwzCijQtyqYaXBfRxTJRJkxrXDIWHX2M9lxcCPNX9z6sVuLg-Tr9kSAATQt-iurgMeGXSlLwbPl3J0czVWZXGcWVeL85VdYE"/>
+</div>
+<div>
+<h3 class="font-headline font-bold text-on-surface">eval-engine-global</h3>
+<p class="text-[10px] font-mono text-on-surface-variant uppercase">ID: cluster-1190-fg</p>
+</div>
+</div>
+<div class="flex items-center gap-2 px-2 py-1 bg-primary/10 rounded-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+<span class="text-[10px] font-bold text-primary uppercase tracking-wider">Healthy</span>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-4 pt-2 border-t border-outline-variant/10">
+<div>
+<p class="text-[10px] text-on-surface-variant mb-1">Nodes</p>
+<p class="text-sm font-bold">8 Active</p>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant mb-1">Region</p>
+<p class="text-sm font-bold">Global-Edge</p>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant mb-1">Workload</p>
+<p class="text-sm font-bold">Low Latency</p>
+</div>
+</div>
+<div class="h-12 w-full bg-surface-container-low flex items-end gap-1 px-2 py-1">
+<div class="flex-1 bg-primary/10 h-1/4 rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-1/3 rounded-t-sm"></div>
+<div class="flex-1 bg-primary/10 h-1/4 rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-1/3 rounded-t-sm"></div>
+<div class="flex-1 bg-primary/10 h-1/4 rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-1/3 rounded-t-sm"></div>
+<div class="flex-1 bg-primary/10 h-1/4 rounded-t-sm"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 3: Scaling Events Log -->
+<section class="space-y-4">
+<h2 class="font-headline font-bold text-lg tracking-tight">Scaling Events</h2>
+<div class="bg-surface-container rounded-sm overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low text-[10px] uppercase tracking-widest text-on-surface-variant">
+<tr>
+<th class="px-6 py-4 font-semibold">Timestamp</th>
+<th class="px-6 py-4 font-semibold">Cluster</th>
+<th class="px-6 py-4 font-semibold">Action</th>
+<th class="px-6 py-4 font-semibold">Nodes</th>
+<th class="px-6 py-4 font-semibold">Trigger</th>
+<th class="px-6 py-4 font-semibold">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10 font-mono text-xs">
+<tr class="hover:bg-surface-container-high transition-colors">
+<td class="px-6 py-4 text-on-surface-variant">2023-11-24 14:22:01</td>
+<td class="px-6 py-4 text-on-surface font-semibold">inference-eu-west-1</td>
+<td class="px-6 py-4 text-primary">SCALE_UP</td>
+<td class="px-6 py-4">12 → 16</td>
+<td class="px-6 py-4">CPU_THR_85</td>
+<td class="px-6 py-4">
+<span class="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-[10px] font-bold">COMPLETED</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-high transition-colors">
+<td class="px-6 py-4 text-on-surface-variant">2023-11-24 13:45:12</td>
+<td class="px-6 py-4 text-on-surface font-semibold">production-us-east-1</td>
+<td class="px-6 py-4 text-primary-container">NODE_RECOVERY</td>
+<td class="px-6 py-4">24 → 24</td>
+<td class="px-6 py-4">UNHEALTHY_NODE</td>
+<td class="px-6 py-4">
+<span class="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-[10px] font-bold">COMPLETED</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-high transition-colors">
+<td class="px-6 py-4 text-on-surface-variant">2023-11-24 12:10:05</td>
+<td class="px-6 py-4 text-on-surface font-semibold">staging-us-west-2</td>
+<td class="px-6 py-4 text-on-tertiary-container">SCALE_DOWN</td>
+<td class="px-6 py-4">4 → 2</td>
+<td class="px-6 py-4">IDLE_RESOURCES</td>
+<td class="px-6 py-4">
+<span class="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-[10px] font-bold">COMPLETED</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-high transition-colors">
+<td class="px-6 py-4 text-on-surface-variant">2023-11-24 11:55:30</td>
+<td class="px-6 py-4 text-on-surface font-semibold">inference-eu-west-1</td>
+<td class="px-6 py-4 text-error">SCALE_UP_FAILED</td>
+<td class="px-6 py-4">12 → 16</td>
+<td class="px-6 py-4">QUOTA_EXCEEDED</td>
+<td class="px-6 py-4">
+<span class="bg-error/10 text-error px-2 py-0.5 rounded-full text-[10px] font-bold">FAILED</span>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="p-4 bg-surface-container-low flex justify-center">
+<button class="text-[10px] uppercase font-bold text-primary tracking-widest flex items-center gap-2 hover:opacity-80 transition-opacity">
+                            View Full Logs <span class="material-symbols-outlined text-sm">open_in_new</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Floating Tooltip Example (Glassmorphism) -->
+<div class="fixed bottom-8 right-8 glass-panel border border-outline-variant/30 rounded-sm p-4 shadow-2xl max-w-xs z-50">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-primary">bolt</span>
+<span class="text-xs font-bold font-headline uppercase tracking-widest">System Advisory</span>
+</div>
+<p class="text-[11px] text-on-surface-variant leading-relaxed">
+            Infrastructure auto-scaling is active globally. Estimated savings in current period: <span class="text-primary font-bold">$1,240.00</span>.
+        </p>
+</div>
+</body></html>

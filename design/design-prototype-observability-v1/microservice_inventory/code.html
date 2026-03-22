@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Service Inventory | Obsidian Lens</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container": "#1b2026",
+                        "tertiary-fixed-dim": "#c2c7cf",
+                        "on-primary": "#003913",
+                        "secondary-container": "#414a53",
+                        "on-secondary-fixed-variant": "#3f4851",
+                        "surface": "#0f1419",
+                        "secondary-fixed": "#dae3ef",
+                        "surface-container-highest": "#30353b",
+                        "on-secondary-fixed": "#141c25",
+                        "tertiary-fixed": "#dee3eb",
+                        "on-tertiary-fixed": "#171c22",
+                        "surface-container-lowest": "#0a0f14",
+                        "on-surface": "#dee3eb",
+                        "on-surface-variant": "#bdcaba",
+                        "secondary-fixed-dim": "#bec7d2",
+                        "outline": "#889485",
+                        "surface-container-high": "#252a30",
+                        "primary-fixed-dim": "#6bde80",
+                        "on-error": "#690005",
+                        "inverse-on-surface": "#2c3137",
+                        "surface-variant": "#30353b",
+                        "tertiary-container": "#8c9198",
+                        "on-tertiary": "#2c3137",
+                        "on-secondary": "#29313a",
+                        "on-primary-fixed-variant": "#00531f",
+                        "on-primary-container": "#003210",
+                        "error": "#ffb4ab",
+                        "outline-variant": "#3e4a3d",
+                        "background": "#0f1419",
+                        "surface-tint": "#6bde80",
+                        "surface-bright": "#353a40",
+                        "on-secondary-container": "#b0b9c4",
+                        "tertiary": "#c2c7cf",
+                        "surface-dim": "#0f1419",
+                        "on-tertiary-container": "#252a30",
+                        "error-container": "#93000a",
+                        "primary": "#6bde80",
+                        "surface-container-low": "#171c22",
+                        "on-primary-fixed": "#002108",
+                        "inverse-surface": "#dee3eb",
+                        "on-background": "#dee3eb",
+                        "inverse-primary": "#006e2c",
+                        "secondary": "#bec7d2",
+                        "primary-fixed": "#88fb99",
+                        "on-error-container": "#ffdad6",
+                        "primary-container": "#2fa54f",
+                        "on-tertiary-fixed-variant": "#42474e"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .glass-panel { background: rgba(53, 58, 64, 0.6); backdrop-filter: blur(12px); }
+        .sparkline-svg { stroke-dasharray: 1000; stroke-dashoffset: 0; }
+        .status-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary/30 selection:text-primary min-h-screen">
+<!-- TopNavBar (Shared Component) -->
+<nav class="fixed top-0 w-full z-50 bg-[#171c22]/80 backdrop-blur-md flex items-center justify-between px-6 h-16 w-full shadow-2xl shadow-black/40">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tighter text-[#dee3eb] font-['Space_Grotesk']">Obsidian Lens</span>
+<div class="hidden md:flex gap-6">
+<a class="text-[#bdcaba] font-['Space_Grotesk'] font-medium tracking-tight hover:text-[#6bde80] transition-colors duration-200" href="#">Docs</a>
+<a class="text-[#bdcaba] font-['Space_Grotesk'] font-medium tracking-tight hover:text-[#6bde80] transition-colors duration-200" href="#">API Reference</a>
+<a class="text-[#bdcaba] font-['Space_Grotesk'] font-medium tracking-tight hover:text-[#6bde80] transition-colors duration-200" href="#">Support</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group">
+<span class="material-symbols-outlined text-[#bdcaba] cursor-pointer hover:text-[#6bde80]">notifications</span>
+<span class="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full"></span>
+</div>
+<span class="material-symbols-outlined text-[#bdcaba] cursor-pointer hover:text-[#6bde80]">settings</span>
+<span class="material-symbols-outlined text-[#bdcaba] cursor-pointer hover:text-[#6bde80]">help_outline</span>
+<div class="h-8 w-8 rounded-full bg-surface-container-highest border border-outline-variant overflow-hidden">
+<img alt="User profile avatar" data-alt="Cyberpunk style user profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCk4bIng0VNKKfMXd76r44gBleZF8-yCZazmcxYwhBIzk6ovsWvN4DjE79Xth_Rs7Qf4Hey1tyAA3XKRS2BBKTBSV7If33KahRwNE0thQFLF9W6AKB6m2Sg78DluAqN966wwcJiX2znnlEaLzzBPzt5sAEmFwfcSVSgFGJkphI9_iMFOngh_lWfJZpV6z1wsJRYmicRRSDaS-J8fUUPpF198hY2bMT6-zeTrxzJUyVcYUBza8DTpsOMC4rPJWGPmFhXgxuy7W2PZlM"/>
+</div>
+</div>
+</nav>
+<!-- SideNavBar (Shared Component) -->
+<aside class="h-screen w-64 fixed left-0 top-0 z-40 bg-[#171c22] flex flex-col h-full pt-20 pb-6 hidden lg:flex">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-surface-container rounded border border-outline-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">account_tree</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-primary text-sm tracking-tight">System Core</h3>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest">v2.4.0-stable</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<div class="text-[#bdcaba] py-3 px-6 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all cursor-pointer flex items-center gap-4 font-['Space_Grotesk'] text-sm uppercase tracking-widest">
+<span class="material-symbols-outlined">dashboard</span> Dashboard
+            </div>
+<div class="text-[#bdcaba] py-3 px-6 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all cursor-pointer flex items-center gap-4 font-['Space_Grotesk'] text-sm uppercase tracking-widest">
+<span class="material-symbols-outlined">account_tree</span> Orchestration
+            </div>
+<div class="bg-[#30353b] text-[#6bde80] border-l-2 border-[#6bde80] py-3 px-6 cursor-pointer flex items-center gap-4 font-['Space_Grotesk'] text-sm uppercase tracking-widest">
+<span class="material-symbols-outlined">dns</span> Infrastructure
+            </div>
+<div class="text-[#bdcaba] py-3 px-6 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all cursor-pointer flex items-center gap-4 font-['Space_Grotesk'] text-sm uppercase tracking-widest">
+<span class="material-symbols-outlined">workspaces</span> Workspace
+            </div>
+<div class="text-[#bdcaba] py-3 px-6 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all cursor-pointer flex items-center gap-4 font-['Space_Grotesk'] text-sm uppercase tracking-widest">
+<span class="material-symbols-outlined">monitoring</span> Analytics
+            </div>
+<div class="text-[#bdcaba] py-3 px-6 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all cursor-pointer flex items-center gap-4 font-['Space_Grotesk'] text-sm uppercase tracking-widest">
+<span class="material-symbols-outlined">tune</span> Settings
+            </div>
+</nav>
+<div class="px-4 mt-auto">
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary font-headline font-bold py-3 rounded-sm active:scale-95 transition-all shadow-lg shadow-primary/10 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">add</span> New Trace
+            </button>
+<div class="mt-6 flex flex-col gap-2">
+<div class="flex items-center gap-3 text-on-surface-variant hover:text-primary cursor-pointer px-2 transition-colors">
+<span class="material-symbols-outlined text-sm">description</span>
+<span class="text-[10px] uppercase tracking-widest">Documentation</span>
+</div>
+<div class="flex items-center gap-3 text-on-surface-variant hover:text-primary cursor-pointer px-2 transition-colors">
+<span class="material-symbols-outlined text-sm">terminal</span>
+<span class="text-[10px] uppercase tracking-widest">Terminal</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="lg:ml-64 pt-24 px-8 pb-12 min-h-screen">
+<!-- Header Section -->
+<header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div>
+<nav class="flex items-center gap-2 text-on-surface-variant text-xs mb-2 font-mono uppercase tracking-widest">
+<span>Infrastructure</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-primary-fixed-dim">Cluster-US-East-1</span>
+</nav>
+<h1 class="text-4xl font-headline font-bold tracking-tight text-on-surface">Service Inventory</h1>
+<p class="text-on-surface-variant mt-2 font-body max-w-xl">
+                    Global view of active microservices, orchestration health, and real-time P99 latency distribution across the primary mesh.
+                </p>
+</div>
+<div class="flex items-center gap-3">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors">search</span>
+<input class="bg-surface-container-lowest border border-outline-variant rounded-sm py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all w-64" placeholder="Search services..." type="text"/>
+</div>
+<button class="bg-surface-container-high text-on-surface px-4 py-2 border border-outline-variant/20 rounded-sm text-sm font-medium hover:bg-surface-bright transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">filter_list</span> Filter
+                </button>
+<button class="bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold px-6 py-2 rounded-sm active:scale-95 transition-all text-sm">
+                    New Service
+                </button>
+</div>
+</header>
+<!-- Stats Overview (Bento Grid Style) -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+<div class="bg-surface-container-low p-6 border-l-2 border-primary">
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Total Services</p>
+<p class="text-3xl font-headline font-bold">142</p>
+<div class="flex items-center gap-1 text-primary text-[10px] mt-2 font-mono">
+<span class="material-symbols-outlined text-xs">trending_up</span> +4 this week
+                </div>
+</div>
+<div class="bg-surface-container-low p-6 border-l-2 border-primary">
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Global Health</p>
+<p class="text-3xl font-headline font-bold">99.8%</p>
+<div class="flex items-center gap-1 text-primary text-[10px] mt-2 font-mono">
+<span class="material-symbols-outlined text-xs">check_circle</span> All systems nominal
+                </div>
+</div>
+<div class="bg-surface-container-low p-6 border-l-2 border-error">
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Active Alerts</p>
+<p class="text-3xl font-headline font-bold">3</p>
+<div class="flex items-center gap-1 text-error text-[10px] mt-2 font-mono">
+<span class="material-symbols-outlined text-xs">warning</span> Requires attention
+                </div>
+</div>
+<div class="bg-surface-container-low p-6 border-l-2 border-primary-container">
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Avg Latency</p>
+<p class="text-3xl font-headline font-bold">24ms</p>
+<div class="flex items-center gap-1 text-on-surface-variant text-[10px] mt-2 font-mono">
+<span class="material-symbols-outlined text-xs">history</span> Stable vs last 24h
+                </div>
+</div>
+</div>
+<!-- Inventory Table Container -->
+<div class="bg-surface-container-low rounded-sm overflow-hidden border border-outline-variant/10 shadow-xl">
+<div class="overflow-x-auto no-scrollbar">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-lowest border-b border-outline-variant/10">
+<tr>
+<th class="px-6 py-4 text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">Service Name</th>
+<th class="px-6 py-4 text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">Health Status</th>
+<th class="px-6 py-4 text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">Replication</th>
+<th class="px-6 py-4 text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">P99 Latency</th>
+<th class="px-6 py-4 text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">Performance (24h)</th>
+<th class="px-6 py-4 text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">Version</th>
+<th class="px-6 py-4 text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-primary status-pulse"></div>
+<span class="font-mono font-medium text-sm text-on-surface">auth-aggregator-v2</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-tighter">Healthy</span>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-xs">12 / 12</span>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-xs text-primary">18.4ms</span>
+</td>
+<td class="px-6 py-4">
+<svg class="w-24 h-6 sparkline-svg" viewbox="0 0 100 25">
+<path d="M0 15 L10 12 L20 18 L30 14 L40 10 L50 15 L60 8 L70 12 L80 5 L90 10 L100 8" fill="none" stroke="#6bde80" stroke-width="2"></path>
+</svg>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-[10px] bg-surface-container-highest px-2 py-1 rounded">sha-8a21f9c</span>
+</td>
+<td class="px-6 py-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 (Error State) -->
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-[#ff4d4d] animate-pulse"></div>
+<span class="font-mono font-medium text-sm text-on-surface">payment-gateway</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded-full bg-error-container/30 text-error text-[10px] font-bold uppercase tracking-tighter">Degraded</span>
+</td>
+<td class="px-6 py-4 text-[#ff4d4d]">
+<span class="font-mono text-xs">4 / 8</span>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-xs text-[#ff4d4d]">142.1ms</span>
+</td>
+<td class="px-6 py-4">
+<svg class="w-24 h-6 sparkline-svg" viewbox="0 0 100 25">
+<path d="M0 5 L10 8 L20 15 L30 20 L40 22 L50 18 L60 22 L70 20 L80 23 L90 20 L100 24" fill="none" stroke="#ff4d4d" stroke-width="2"></path>
+</svg>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-[10px] bg-surface-container-highest px-2 py-1 rounded">sha-2b5d4e1</span>
+</td>
+<td class="px-6 py-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-primary status-pulse"></div>
+<span class="font-mono font-medium text-sm text-on-surface">user-profile-api</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-tighter">Healthy</span>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-xs">24 / 24</span>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-xs text-primary">12.2ms</span>
+</td>
+<td class="px-6 py-4">
+<svg class="w-24 h-6 sparkline-svg" viewbox="0 0 100 25">
+<path d="M0 10 L20 10 L40 11 L60 10 L80 10 L100 11" fill="none" stroke="#6bde80" stroke-width="2"></path>
+</svg>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-[10px] bg-surface-container-highest px-2 py-1 rounded">sha-f9c32a0</span>
+</td>
+<td class="px-6 py-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-primary status-pulse"></div>
+<span class="font-mono font-medium text-sm text-on-surface">inventory-worker</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-tighter">Healthy</span>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-xs">150 / 150</span>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-xs text-primary">45.0ms</span>
+</td>
+<td class="px-6 py-4">
+<svg class="w-24 h-6 sparkline-svg" viewbox="0 0 100 25">
+<path d="M0 15 L20 5 L40 15 L60 5 L80 15 L100 5" fill="none" stroke="#6bde80" stroke-width="2"></path>
+</svg>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-[10px] bg-surface-container-highest px-2 py-1 rounded">sha-31d2a4e</span>
+</td>
+<td class="px-6 py-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 5 (Warning State) -->
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-secondary-fixed-dim"></div>
+<span class="font-mono font-medium text-sm text-on-surface">search-indexer</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] font-bold uppercase tracking-tighter">Starting</span>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-xs">2 / 10</span>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-xs text-on-surface-variant">N/A</span>
+</td>
+<td class="px-6 py-4">
+<div class="w-24 h-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="w-1/4 h-full bg-primary animate-[shimmer_2s_infinite]"></div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-[10px] bg-surface-container-highest px-2 py-1 rounded">sha-77a8b1c</span>
+</td>
+<td class="px-6 py-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Duplicate rows to simulate high density -->
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4"><div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-primary"></div><span class="font-mono text-sm">notification-hub</span></div></td>
+<td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase">Healthy</span></td>
+<td class="px-6 py-4"><span class="font-mono text-xs">5/5</span></td>
+<td class="px-6 py-4"><span class="font-mono text-xs text-primary">8.5ms</span></td>
+<td class="px-6 py-4"><svg class="w-24 h-6" viewbox="0 0 100 25"><path d="M0 10 L100 10" fill="none" stroke="#6bde80" stroke-width="2"></path></svg></td>
+<td class="px-6 py-4"><span class="font-mono text-[10px] bg-surface-container-highest px-2 py-1 rounded">sha-99d0e1</span></td>
+<td class="px-6 py-4"><span class="material-symbols-outlined text-lg cursor-pointer">more_vert</span></td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4"><div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-primary"></div><span class="font-mono text-sm">logging-collector</span></div></td>
+<td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase">Healthy</span></td>
+<td class="px-6 py-4"><span class="font-mono text-xs">8/8</span></td>
+<td class="px-6 py-4"><span class="font-mono text-xs text-primary">32.1ms</span></td>
+<td class="px-6 py-4"><svg class="w-24 h-6" viewbox="0 0 100 25"><path d="M0 15 L20 18 L40 14 L60 16 L80 12 L100 15" fill="none" stroke="#6bde80" stroke-width="2"></path></svg></td>
+<td class="px-6 py-4"><span class="font-mono text-[10px] bg-surface-container-highest px-2 py-1 rounded">sha-44f2g3</span></td>
+<td class="px-6 py-4"><span class="material-symbols-outlined text-lg cursor-pointer">more_vert</span></td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4"><div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-primary"></div><span class="font-mono text-sm">audit-streamer</span></div></td>
+<td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase">Healthy</span></td>
+<td class="px-6 py-4"><span class="font-mono text-xs">2/2</span></td>
+<td class="px-6 py-4"><span class="font-mono text-xs text-primary">5.1ms</span></td>
+<td class="px-6 py-4"><svg class="w-24 h-6" viewbox="0 0 100 25"><path d="M0 5 L50 20 L100 5" fill="none" stroke="#6bde80" stroke-width="2"></path></svg></td>
+<td class="px-6 py-4"><span class="font-mono text-[10px] bg-surface-container-highest px-2 py-1 rounded">sha-12h3i4</span></td>
+<td class="px-6 py-4"><span class="material-symbols-outlined text-lg cursor-pointer">more_vert</span></td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4"><div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-primary"></div><span class="font-mono text-sm">metrics-exporter</span></div></td>
+<td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase">Healthy</span></td>
+<td class="px-6 py-4"><span class="font-mono text-xs">4/4</span></td>
+<td class="px-6 py-4"><span class="font-mono text-xs text-primary">15.8ms</span></td>
+<td class="px-6 py-4"><svg class="w-24 h-6" viewbox="0 0 100 25"><path d="M0 15 L30 15 L60 15 L100 15" fill="none" stroke="#6bde80" stroke-width="2"></path></svg></td>
+<td class="px-6 py-4"><span class="font-mono text-[10px] bg-surface-container-highest px-2 py-1 rounded">sha-55j6k7</span></td>
+<td class="px-6 py-4"><span class="material-symbols-outlined text-lg cursor-pointer">more_vert</span></td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4"><div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-primary"></div><span class="font-mono text-sm">edge-router-ext</span></div></td>
+<td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase">Healthy</span></td>
+<td class="px-6 py-4"><span class="font-mono text-xs">10/10</span></td>
+<td class="px-6 py-4"><span class="font-mono text-xs text-primary">2.4ms</span></td>
+<td class="px-6 py-4"><svg class="w-24 h-6" viewbox="0 0 100 25"><path d="M0 10 L25 5 L50 10 L75 5 L100 10" fill="none" stroke="#6bde80" stroke-width="2"></path></svg></td>
+<td class="px-6 py-4"><span class="font-mono text-[10px] bg-surface-container-highest px-2 py-1 rounded">sha-88l9m0</span></td>
+<td class="px-6 py-4"><span class="material-symbols-outlined text-lg cursor-pointer">more_vert</span></td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4"><div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-primary"></div><span class="font-mono text-sm">recommendation-engine</span></div></td>
+<td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase">Healthy</span></td>
+<td class="px-6 py-4"><span class="font-mono text-xs">20/20</span></td>
+<td class="px-6 py-4"><span class="font-mono text-xs text-primary">112ms</span></td>
+<td class="px-6 py-4"><svg class="w-24 h-6" viewbox="0 0 100 25"><path d="M0 20 L20 18 L40 15 L60 12 L80 10 L100 8" fill="none" stroke="#6bde80" stroke-width="2"></path></svg></td>
+<td class="px-6 py-4"><span class="font-mono text-[10px] bg-surface-container-highest px-2 py-1 rounded">sha-33n4o5</span></td>
+<td class="px-6 py-4"><span class="material-symbols-outlined text-lg cursor-pointer">more_vert</span></td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4"><div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-primary"></div><span class="font-mono text-sm">image-resizer</span></div></td>
+<td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase">Healthy</span></td>
+<td class="px-6 py-4"><span class="font-mono text-xs">5/5</span></td>
+<td class="px-6 py-4"><span class="font-mono text-xs text-primary">450ms</span></td>
+<td class="px-6 py-4"><svg class="w-24 h-6" viewbox="0 0 100 25"><path d="M0 12 L50 5 L100 12" fill="none" stroke="#6bde80" stroke-width="2"></path></svg></td>
+<td class="px-6 py-4"><span class="font-mono text-[10px] bg-surface-container-highest px-2 py-1 rounded">sha-66p7q8</span></td>
+<td class="px-6 py-4"><span class="material-symbols-outlined text-lg cursor-pointer">more_vert</span></td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4"><div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-primary"></div><span class="font-mono text-sm">content-moderator</span></div></td>
+<td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase">Healthy</span></td>
+<td class="px-6 py-4"><span class="font-mono text-xs">8/8</span></td>
+<td class="px-6 py-4"><span class="font-mono text-xs text-primary">85ms</span></td>
+<td class="px-6 py-4"><svg class="w-24 h-6" viewbox="0 0 100 25"><path d="M0 10 L20 12 L40 10 L60 12 L80 10 L100 12" fill="none" stroke="#6bde80" stroke-width="2"></path></svg></td>
+<td class="px-6 py-4"><span class="font-mono text-[10px] bg-surface-container-highest px-2 py-1 rounded">sha-99r0s1</span></td>
+<td class="px-6 py-4"><span class="material-symbols-outlined text-lg cursor-pointer">more_vert</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Footer/Pagination -->
+<div class="px-6 py-4 bg-surface-container-lowest border-t border-outline-variant/10 flex items-center justify-between">
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest font-mono">Showing 15 of 142 services</p>
+<div class="flex items-center gap-2">
+<button class="w-8 h-8 rounded border border-outline-variant/20 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded border border-primary/20 bg-primary/10 flex items-center justify-center text-primary text-[10px] font-bold">1</button>
+<button class="w-8 h-8 rounded border border-outline-variant/20 flex items-center justify-center text-on-surface-variant hover:text-primary text-[10px] font-bold">2</button>
+<button class="w-8 h-8 rounded border border-outline-variant/20 flex items-center justify-center text-on-surface-variant hover:text-primary text-[10px] font-bold">3</button>
+<button class="w-8 h-8 rounded border border-outline-variant/20 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Quick Info (Glassmorphism Tooltip Preview) -->
+<div class="fixed bottom-8 right-8 glass-panel px-6 py-4 rounded-xl shadow-2xl border border-outline-variant/20 flex items-center gap-4 z-50">
+<div class="flex flex-col">
+<span class="text-[8px] text-on-surface-variant uppercase tracking-[0.2em] font-bold">Cluster Resource Load</span>
+<div class="flex items-center gap-3 mt-1">
+<div class="flex flex-col">
+<span class="text-xs font-mono font-bold text-primary">CPU 42%</span>
+<div class="w-16 h-1 bg-surface-container rounded-full overflow-hidden mt-1">
+<div class="w-[42%] h-full bg-primary"></div>
+</div>
+</div>
+<div class="w-[1px] h-6 bg-outline-variant/20"></div>
+<div class="flex flex-col">
+<span class="text-xs font-mono font-bold text-on-surface">MEM 68%</span>
+<div class="w-16 h-1 bg-surface-container rounded-full overflow-hidden mt-1">
+<div class="w-[68%] h-full bg-primary-container"></div>
+</div>
+</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-primary cursor-pointer hover:rotate-180 transition-transform duration-500">refresh</span>
+</div>
+</body></html>

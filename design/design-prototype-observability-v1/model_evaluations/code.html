@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed": "#171c22",
+              "primary": "#6bde80",
+              "on-secondary-fixed": "#141c25",
+              "on-background": "#dee3eb",
+              "on-error-container": "#ffdad6",
+              "surface-container": "#1b2026",
+              "outline": "#889485",
+              "on-secondary": "#29313a",
+              "on-primary": "#003913",
+              "outline-variant": "#3e4a3d",
+              "secondary": "#bec7d2",
+              "on-primary-container": "#003210",
+              "on-tertiary": "#2c3137",
+              "inverse-surface": "#dee3eb",
+              "surface": "#0f1419",
+              "surface-container-highest": "#30353b",
+              "primary-fixed-dim": "#6bde80",
+              "surface-container-high": "#252a30",
+              "tertiary": "#c2c7cf",
+              "on-error": "#690005",
+              "tertiary-container": "#8c9198",
+              "inverse-on-surface": "#2c3137",
+              "secondary-container": "#414a53",
+              "on-primary-fixed": "#002108",
+              "error-container": "#93000a",
+              "secondary-fixed-dim": "#bec7d2",
+              "tertiary-fixed-dim": "#c2c7cf",
+              "surface-container-lowest": "#0a0f14",
+              "on-surface": "#dee3eb",
+              "on-secondary-fixed-variant": "#3f4851",
+              "error": "#ffb4ab",
+              "surface-bright": "#353a40",
+              "secondary-fixed": "#dae3ef",
+              "inverse-primary": "#006e2c",
+              "surface-variant": "#30353b",
+              "primary-fixed": "#88fb99",
+              "primary-container": "#2fa54f",
+              "surface-container-low": "#171c22",
+              "on-tertiary-container": "#252a30",
+              "on-surface-variant": "#bdcaba",
+              "on-tertiary-fixed-variant": "#42474e",
+              "on-secondary-container": "#b0b9c4",
+              "surface-dim": "#0f1419",
+              "surface-tint": "#6bde80",
+              "on-primary-fixed-variant": "#00531f",
+              "tertiary-fixed": "#dee3eb",
+              "background": "#0f1419"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .glass-panel {
+            background: rgba(27, 32, 38, 0.6);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30">
+<!-- SideNavBar (Authority: JSON + Design System) -->
+<aside class="bg-[#171c22] border-r border-[#30353b]/15 h-screen w-64 fixed left-0 top-0 overflow-y-auto flex flex-col py-6 px-4 z-[60] font-['Space_Grotesk'] tracking-tight">
+<div class="mb-10 px-2 flex items-center gap-3">
+<div class="w-8 h-8 bg-gradient-to-br from-primary to-primary-container rounded-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary text-xl" style="font-variation-settings: 'FILL' 1;">lens</span>
+</div>
+<span class="text-[#6bde80] font-bold text-xl uppercase tracking-widest">Obsidian Lens</span>
+</div>
+<nav class="flex-1 space-y-1">
+<div class="text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026]/50 transition-all duration-200 ease-in-out active:scale-[0.98] flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-sm">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="text-sm">Dashboard</span>
+</div>
+<div class="text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026]/50 transition-all duration-200 ease-in-out active:scale-[0.98] flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-sm">
+<span class="material-symbols-outlined text-[20px]">query_stats</span>
+<span class="text-sm">Traces</span>
+</div>
+<!-- ACTIVE: Evaluations -->
+<div class="bg-[#1b2026] text-[#6bde80] font-semibold border-l-4 border-[#6bde80] transition-all duration-200 ease-in-out active:scale-[0.98] flex items-center gap-3 px-3 py-2.5 cursor-pointer">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">compare_arrows</span>
+<span class="text-sm">Evaluations</span>
+</div>
+<div class="text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026]/50 transition-all duration-200 ease-in-out active:scale-[0.98] flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-sm">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="text-sm">Settings</span>
+</div>
+</nav>
+<div class="mt-auto pt-6 border-t border-[#30353b]/15 space-y-1">
+<button class="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold py-2.5 px-4 mb-6 rounded-sm flex items-center justify-center gap-2 active:scale-[0.96] transition-transform">
+<span class="material-symbols-outlined text-sm">add</span>
+<span class="text-sm uppercase tracking-wider">New Project</span>
+</button>
+<div class="text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026]/50 transition-all duration-200 ease-in-out flex items-center gap-3 px-3 py-2 cursor-pointer rounded-sm">
+<span class="material-symbols-outlined text-[18px]">description</span>
+<span class="text-xs">Docs</span>
+</div>
+<div class="text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026]/50 transition-all duration-200 ease-in-out flex items-center gap-3 px-3 py-2 cursor-pointer rounded-sm">
+<span class="material-symbols-outlined text-[18px]">help</span>
+<span class="text-xs">Support</span>
+</div>
+</div>
+</aside>
+<!-- TopNavBar (Authority: JSON + Design System) -->
+<header class="fixed top-0 right-0 left-64 h-16 z-50 bg-[#0f1419]/80 backdrop-blur-xl border-b border-[#30353b]/15 flex items-center justify-between px-8">
+<div class="flex items-center gap-8">
+<h1 class="font-headline font-bold text-lg text-on-surface">Trace Analyzer</h1>
+<nav class="flex items-center gap-6 font-['Inter'] text-sm font-medium">
+<a class="text-[#bdcaba] hover:text-[#dee3eb] cursor-pointer">Projects</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] cursor-pointer">Models</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] cursor-pointer">Datasets</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">terminal</span>
+</button>
+</div>
+<button class="bg-surface-container-high border border-outline-variant/20 px-4 py-1.5 text-xs font-semibold rounded-sm hover:bg-surface-container-highest transition-colors">
+                Deploy Model
+            </button>
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center overflow-hidden">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="Close up professional headshot portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAk6knJM1AZbatsX3ZCF7CDBXvM61YT_IFIzht8lRxTm9ZAEvEoZSlxCso8Uww5EPB6BvG0POg7LGgosm-1mMw4Us4WQoWmPguWq4RFga41YsK23tBKMNVvqC-0JhQvRlFOpBQtsINiG59J48upHHWT5aMZXGeIuyDj19yE89zmyKd-zmfA23mpES-YGiDDR-7XXL7gTrPo_NH5le666TqOWjs0VoBmleZDBV6t3owWeJ-dcwo6h7C5hj4kmGcC-PEheuH-1bWtQqA"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-16 min-h-screen">
+<div class="p-8 max-w-7xl mx-auto space-y-8">
+<!-- Header Section -->
+<div class="flex justify-between items-end">
+<div>
+<h2 class="font-headline text-3xl font-bold tracking-tight mb-2">Evaluations</h2>
+<p class="text-on-surface-variant text-sm">Compare model performance across benchmark datasets.</p>
+</div>
+<button class="bg-gradient-to-br from-primary to-primary-container text-on-primary px-6 py-3 font-bold rounded-sm flex items-center gap-2 active:scale-95 transition-all shadow-lg shadow-primary/10">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                    RUN NEW EVAL
+                </button>
+</div>
+<!-- Dashboard Grid (Asymmetric Bento) -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Metrics Table Card -->
+<div class="col-span-12 lg:col-span-8 bg-surface-container-low p-6 rounded-md shadow-sm border-l-2 border-primary/20">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline font-semibold text-sm uppercase tracking-widest text-primary">Model Comparison</h3>
+<div class="flex gap-2">
+<span class="px-2 py-1 text-[10px] bg-primary/10 text-primary font-bold rounded-sm">DATASET: QA_BENCH_V4</span>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="text-[10px] uppercase tracking-wider text-on-surface-variant border-b border-outline-variant/10">
+<th class="pb-3 font-medium">Model / Version</th>
+<th class="pb-3 font-medium">Accuracy</th>
+<th class="pb-3 font-medium">Faithfulness</th>
+<th class="pb-3 font-medium">Relevance</th>
+<th class="pb-3 font-medium">Lat. (P95)</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/5">
+<!-- Row 1 -->
+<tr class="group hover:bg-surface-container transition-colors">
+<td class="py-4">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-on-surface">GPT-4o-Mini</span>
+<span class="text-[10px] font-mono text-on-surface-variant">v2.4-tuned</span>
+</div>
+</td>
+<td class="py-4">
+<div class="flex items-center gap-3">
+<div class="w-16 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 92%"></div>
+</div>
+<span class="text-xs font-mono">0.92</span>
+</div>
+</td>
+<td class="py-4">
+<div class="flex items-center gap-3">
+<div class="w-16 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 88%"></div>
+</div>
+<span class="text-xs font-mono">0.88</span>
+</div>
+</td>
+<td class="py-4">
+<div class="flex items-center gap-3">
+<div class="w-16 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 95%"></div>
+</div>
+<span class="text-xs font-mono">0.95</span>
+</div>
+</td>
+<td class="py-4 text-xs font-mono text-on-surface-variant">1.2s</td>
+</tr>
+<!-- Row 2 -->
+<tr class="group hover:bg-surface-container transition-colors border-l-4 border-primary">
+<td class="py-4 pl-2">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-on-surface">Claude 3.5 Sonnet</span>
+<span class="text-[10px] font-mono text-on-surface-variant">base-latest</span>
+</div>
+</td>
+<td class="py-4">
+<div class="flex items-center gap-3">
+<div class="w-16 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container" style="width: 96%"></div>
+</div>
+<span class="text-xs font-mono text-primary">0.96</span>
+</div>
+</td>
+<td class="py-4">
+<div class="flex items-center gap-3">
+<div class="w-16 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container" style="width: 94%"></div>
+</div>
+<span class="text-xs font-mono text-primary">0.94</span>
+</div>
+</td>
+<td class="py-4">
+<div class="flex items-center gap-3">
+<div class="w-16 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container" style="width: 91%"></div>
+</div>
+<span class="text-xs font-mono text-primary">0.91</span>
+</div>
+</td>
+<td class="py-4 text-xs font-mono text-on-surface-variant">1.8s</td>
+</tr>
+<!-- Row 3 -->
+<tr class="group hover:bg-surface-container transition-colors">
+<td class="py-4">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-on-surface">Llama 3-70B</span>
+<span class="text-[10px] font-mono text-on-surface-variant">v1.0-prod</span>
+</div>
+</td>
+<td class="py-4">
+<div class="flex items-center gap-3">
+<div class="w-16 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-error" style="width: 74%"></div>
+</div>
+<span class="text-xs font-mono text-error">0.74</span>
+</div>
+</td>
+<td class="py-4">
+<div class="flex items-center gap-3">
+<div class="w-16 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-secondary" style="width: 82%"></div>
+</div>
+<span class="text-xs font-mono">0.82</span>
+</div>
+</td>
+<td class="py-4">
+<div class="flex items-center gap-3">
+<div class="w-16 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-secondary" style="width: 79%"></div>
+</div>
+<span class="text-xs font-mono">0.79</span>
+</div>
+</td>
+<td class="py-4 text-xs font-mono text-on-surface-variant">0.9s</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Summary Stats Side Card -->
+<div class="col-span-12 lg:col-span-4 grid grid-rows-2 gap-6">
+<div class="bg-surface-container-low p-6 rounded-md flex flex-col justify-between">
+<div class="flex items-start justify-between">
+<span class="text-[10px] uppercase font-bold tracking-[0.2em] text-on-surface-variant">Total Evaluations</span>
+<span class="material-symbols-outlined text-primary">analytics</span>
+</div>
+<div>
+<div class="text-4xl font-headline font-bold text-on-surface">1,402</div>
+<div class="flex items-center gap-1 mt-1 text-xs text-primary">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span>+12% vs last week</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-md flex flex-col justify-between">
+<div class="flex items-start justify-between">
+<span class="text-[10px] uppercase font-bold tracking-[0.2em] text-on-surface-variant">Failed Tests</span>
+<span class="material-symbols-outlined text-error">warning</span>
+</div>
+<div>
+<div class="text-4xl font-headline font-bold text-on-surface">43</div>
+<div class="text-xs text-on-surface-variant mt-1">Primarily relevance drift in v2.4</div>
+</div>
+</div>
+</div>
+<!-- Side-by-Side Comparison Explorer -->
+<div class="col-span-12 bg-surface-container-low p-8 rounded-md">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+<div>
+<h3 class="font-headline font-semibold text-xl text-on-surface">Trace Inspector</h3>
+<p class="text-sm text-on-surface-variant">Comparing single test case ID: <span class="font-mono text-primary">tc_8842-xa</span></p>
+</div>
+<div class="flex gap-2">
+<div class="bg-surface-container p-1 rounded-sm flex">
+<button class="px-4 py-1.5 text-xs font-semibold bg-surface-container-highest rounded-sm">Prompt A</button>
+<button class="px-4 py-1.5 text-xs font-medium text-on-surface-variant hover:text-on-surface">Prompt B</button>
+</div>
+<button class="flex items-center gap-2 bg-surface-container-high px-4 py-1.5 rounded-sm text-xs font-medium border border-outline-variant/20">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+                                Filter Failures
+                            </button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
+<!-- Divider Line -->
+<div class="hidden md:block absolute left-1/2 top-0 bottom-0 w-[1px] bg-outline-variant/20 -translate-x-1/2"></div>
+<!-- Left View -->
+<div class="space-y-4">
+<div class="flex items-center justify-between pb-4 border-b border-outline-variant/10">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="text-sm font-bold tracking-tight">GPT-4o-Mini</span>
+</div>
+<span class="text-[10px] font-mono px-2 py-0.5 bg-surface-container-high rounded-full">v2.4-tuned</span>
+</div>
+<div class="p-4 bg-surface-container-lowest rounded-sm border border-outline-variant/5">
+<div class="text-[10px] uppercase text-on-surface-variant font-bold mb-3 tracking-widest">Input Prompt</div>
+<p class="text-sm leading-relaxed text-on-surface">Explain the concept of quantum superposition to a 10-year old using a sports analogy.</p>
+</div>
+<div class="p-4 bg-surface-container-lowest rounded-sm border border-primary/20">
+<div class="flex justify-between items-center mb-3">
+<div class="text-[10px] uppercase text-on-surface-variant font-bold tracking-widest">Model Output</div>
+<div class="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded-sm">PASSED</div>
+</div>
+<p class="text-sm leading-relaxed font-body">Imagine a soccer player about to take a penalty kick. Before he kicks the ball, it's like the ball is going into both the left corner and the right corner at the exact same time. It only "chooses" a side the moment the goalie looks at it. In quantum physics, things can be in two places at once until someone checks on them!</p>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="p-3 bg-surface-container rounded-sm">
+<div class="text-[8px] uppercase text-on-surface-variant mb-1">Accuracy</div>
+<div class="text-sm font-mono text-primary">0.95</div>
+</div>
+<div class="p-3 bg-surface-container rounded-sm">
+<div class="text-[8px] uppercase text-on-surface-variant mb-1">Faithful</div>
+<div class="text-sm font-mono">0.88</div>
+</div>
+<div class="p-3 bg-surface-container rounded-sm">
+<div class="text-[8px] uppercase text-on-surface-variant mb-1">Relevance</div>
+<div class="text-sm font-mono">0.98</div>
+</div>
+</div>
+</div>
+<!-- Right View -->
+<div class="space-y-4">
+<div class="flex items-center justify-between pb-4 border-b border-outline-variant/10">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+<span class="text-sm font-bold tracking-tight">Claude 3.5 Sonnet</span>
+</div>
+<span class="text-[10px] font-mono px-2 py-0.5 bg-surface-container-high rounded-full">base-latest</span>
+</div>
+<div class="p-4 bg-surface-container-lowest rounded-sm border border-outline-variant/5">
+<div class="text-[10px] uppercase text-on-surface-variant font-bold mb-3 tracking-widest">Input Prompt</div>
+<p class="text-sm leading-relaxed text-on-surface">Explain the concept of quantum superposition to a 10-year old using a sports analogy.</p>
+</div>
+<div class="p-4 bg-surface-container-lowest rounded-sm border border-error/20">
+<div class="flex justify-between items-center mb-3">
+<div class="text-[10px] uppercase text-on-surface-variant font-bold tracking-widest">Model Output</div>
+<div class="px-2 py-0.5 bg-error/10 text-error text-[10px] font-bold rounded-sm">FAILED (RELEVANCE)</div>
+</div>
+<p class="text-sm leading-relaxed font-body">Superposition is a fundamental principle of quantum mechanics. It states that a physical system—such as an electron—exists partly in all its theoretically possible states simultaneously. Think of a baseball game where the score is tied; the outcome is undecided until the 9th inning ends.</p>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="p-3 bg-surface-container rounded-sm">
+<div class="text-[8px] uppercase text-on-surface-variant mb-1">Accuracy</div>
+<div class="text-sm font-mono text-primary">0.98</div>
+</div>
+<div class="p-3 bg-surface-container rounded-sm">
+<div class="text-[8px] uppercase text-on-surface-variant mb-1">Faithful</div>
+<div class="text-sm font-mono">0.96</div>
+</div>
+<div class="p-3 bg-surface-container rounded-sm border border-error/30">
+<div class="text-[8px] uppercase text-error mb-1">Relevance</div>
+<div class="text-sm font-mono text-error">0.42</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Recent Runs Log -->
+<div class="col-span-12">
+<div class="bg-surface-container-low rounded-md overflow-hidden">
+<div class="px-6 py-4 border-b border-outline-variant/10 flex justify-between items-center">
+<h4 class="font-headline font-semibold text-sm">Recent Evaluation Runs</h4>
+<button class="text-primary text-xs font-bold hover:underline">View All</button>
+</div>
+<div class="divide-y divide-outline-variant/5">
+<div class="px-6 py-3 flex items-center justify-between hover:bg-surface-container/30">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">history</span>
+<span class="text-xs font-mono">run_8922_qa_bench</span>
+<span class="text-[10px] bg-surface-container px-2 py-0.5 rounded text-on-surface-variant">2 hours ago</span>
+</div>
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-1">
+<div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+<span class="text-[10px] font-bold">COMPLETED</span>
+</div>
+<span class="text-xs text-on-surface-variant">1,200 test cases</span>
+</div>
+</div>
+<div class="px-6 py-3 flex items-center justify-between hover:bg-surface-container/30">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">history</span>
+<span class="text-xs font-mono">run_8919_security_v3</span>
+<span class="text-[10px] bg-surface-container px-2 py-0.5 rounded text-on-surface-variant">5 hours ago</span>
+</div>
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-1">
+<div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+<span class="text-[10px] font-bold">COMPLETED</span>
+</div>
+<span class="text-xs text-on-surface-variant">500 test cases</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Help Button -->
+<div class="fixed bottom-8 right-8 z-[70]">
+<button class="w-12 h-12 bg-surface-container-highest text-primary rounded-full shadow-2xl flex items-center justify-center border border-outline-variant/20 hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">help_center</span>
+</button>
+</div>
+</body></html>

@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed": "#171c22",
+              "primary": "#6bde80",
+              "on-secondary-fixed": "#141c25",
+              "on-background": "#dee3eb",
+              "on-error-container": "#ffdad6",
+              "surface-container": "#1b2026",
+              "outline": "#889485",
+              "on-secondary": "#29313a",
+              "on-primary": "#003913",
+              "outline-variant": "#3e4a3d",
+              "secondary": "#bec7d2",
+              "on-primary-container": "#003210",
+              "on-tertiary": "#2c3137",
+              "inverse-surface": "#dee3eb",
+              "surface": "#0f1419",
+              "surface-container-highest": "#30353b",
+              "primary-fixed-dim": "#6bde80",
+              "surface-container-high": "#252a30",
+              "tertiary": "#c2c7cf",
+              "on-error": "#690005",
+              "tertiary-container": "#8c9198",
+              "inverse-on-surface": "#2c3137",
+              "secondary-container": "#414a53",
+              "on-primary-fixed": "#002108",
+              "error-container": "#93000a",
+              "secondary-fixed-dim": "#bec7d2",
+              "tertiary-fixed-dim": "#c2c7cf",
+              "surface-container-lowest": "#0a0f14",
+              "on-surface": "#dee3eb",
+              "on-secondary-fixed-variant": "#3f4851",
+              "error": "#ffb4ab",
+              "surface-bright": "#353a40",
+              "secondary-fixed": "#dae3ef",
+              "inverse-primary": "#006e2c",
+              "surface-variant": "#30353b",
+              "primary-fixed": "#88fb99",
+              "primary-container": "#2fa54f",
+              "surface-container-low": "#171c22",
+              "on-tertiary-container": "#252a30",
+              "on-surface-variant": "#bdcaba",
+              "on-tertiary-fixed-variant": "#42474e",
+              "on-secondary-container": "#b0b9c4",
+              "surface-dim": "#0f1419",
+              "surface-tint": "#6bde80",
+              "on-primary-fixed-variant": "#00531f",
+              "tertiary-fixed": "#dee3eb",
+              "background": "#0f1419"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30">
+<!-- SideNavBar (Shared Component) -->
+<aside class="bg-[#171c22] border-r border-[#30353b]/15 h-screen w-64 fixed left-0 top-0 overflow-y-auto flex flex-col py-6 px-4 z-[60]">
+<div class="mb-10 px-2">
+<h1 class="text-[#6bde80] font-bold text-xl uppercase tracking-widest font-['Space_Grotesk']">Obsidian Lens</h1>
+<p class="text-on-surface-variant text-xs mt-1">LLM Observability</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026]/50 transition-all duration-200 ease-in-out rounded-sm" href="#">
+<span class="material-symbols-outlined text-xl">dashboard</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026]/50 transition-all duration-200 ease-in-out rounded-sm" href="#">
+<span class="material-symbols-outlined text-xl">query_stats</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Traces</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026]/50 transition-all duration-200 ease-in-out rounded-sm" href="#">
+<span class="material-symbols-outlined text-xl">compare_arrows</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Evaluations</span>
+</a>
+<!-- Active State Logic: Settings -->
+<a class="flex items-center gap-3 px-3 py-2 bg-[#1b2026] text-[#6bde80] font-semibold border-l-4 border-[#6bde80] transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-xl">settings</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Settings</span>
+</a>
+</nav>
+<div class="mt-auto space-y-1 border-t border-outline-variant/20 pt-6">
+<button class="w-full mb-4 py-2 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold rounded-sm active:scale-[0.98] transition-all">
+                New Project
+            </button>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] transition-all" href="#">
+<span class="material-symbols-outlined text-xl">description</span>
+<span class="font-['Space_Grotesk'] tracking-tight text-sm">Docs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] transition-all" href="#">
+<span class="material-symbols-outlined text-xl">help</span>
+<span class="font-['Space_Grotesk'] tracking-tight text-sm">Support</span>
+</a>
+</div>
+</aside>
+<!-- TopNavBar (Shared Component) -->
+<header class="fixed top-0 right-0 left-64 h-16 z-50 bg-[#0f1419]/80 backdrop-blur-xl border-b border-[#30353b]/15 flex items-center justify-between px-8">
+<div class="flex items-center gap-8">
+<span class="text-on-surface font-headline font-bold text-lg">Trace Analyzer</span>
+<nav class="hidden md:flex gap-6 items-center">
+<a class="text-[#bdcaba] hover:text-[#dee3eb] font-body text-sm font-medium transition-colors" href="#">Projects</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] font-body text-sm font-medium transition-colors" href="#">Models</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] font-body text-sm font-medium transition-colors" href="#">Datasets</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="bg-surface-container-lowest border border-outline-variant/20 rounded-sm pl-9 pr-4 py-1.5 text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all w-64" placeholder="Search traces..." type="text"/>
+</div>
+<button class="p-2 text-[#bdcaba] hover:text-[#dee3eb] transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-[#bdcaba] hover:text-[#dee3eb] transition-colors">
+<span class="material-symbols-outlined">terminal</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant/30 flex items-center justify-center overflow-hidden">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="User profile avatar placeholder" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCBWiueDlB0k0_SgjASSkp70n5vbTlu-rqyvIllmMMT2WZ3BWekdSivL4cIMYhj3mzDKTv08m3dVGIcPQw3tGpLkhq_CmaIq6bIurviomvb8kbnznrzz1nAxQr93izjkdTfBmJqpmd1Hup0JAB7-Gc_VAUPOYyVdRC5A0-nfsx9m9MgaYl8-t_lGJFdxuV5rRQXArw7mgwALMrRqkRbulXUHzmTLvL8ZGAGf3_-KLxmRN96P0wFYyJIrRgO3Rt4cDrzrbLPzOZ-CW8"/>
+</div>
+<button class="bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold px-4 py-1.5 text-xs rounded-sm transition-all hover:brightness-110 active:scale-95">
+                Deploy Model
+            </button>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="ml-64 pt-16 min-h-screen bg-surface">
+<div class="max-w-6xl mx-auto p-12 space-y-12">
+<!-- Page Header -->
+<section class="mb-12">
+<h2 class="text-4xl font-headline font-bold tracking-tighter text-on-surface mb-2">Workspace Settings</h2>
+<p class="text-on-surface-variant max-w-2xl">Configure your environment observability, manage API connections, and control team access for the <span class="text-primary font-mono">obsidian-production-v4</span> project.</p>
+</section>
+<!-- Bento Grid Layout for Sections -->
+<div class="grid grid-cols-12 gap-8">
+<!-- Project API Keys Section -->
+<div class="col-span-12 lg:col-span-7 bg-surface-container-low p-8 rounded-md relative overflow-hidden group">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary opacity-50"></div>
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="text-xl font-headline font-semibold text-on-surface">Project API Keys</h3>
+<p class="text-sm text-on-surface-variant mt-1">Authenticates your SDK and CLI tools.</p>
+</div>
+<button class="text-xs font-bold text-primary flex items-center gap-1 bg-primary/5 px-3 py-1.5 rounded-sm hover:bg-primary/10 transition-colors uppercase tracking-widest">
+<span class="material-symbols-outlined text-sm">add</span> Create Key
+                        </button>
+</div>
+<div class="space-y-4">
+<!-- Key Item -->
+<div class="bg-surface-container flex items-center justify-between p-4 rounded-sm border border-outline-variant/5">
+<div class="flex flex-col">
+<span class="text-xs font-mono uppercase tracking-widest text-on-surface-variant mb-1">Production Default</span>
+<div class="flex items-center gap-3">
+<span class="font-mono text-sm text-on-surface tracking-wider">obs_••••••••••••••••39k2</span>
+<span class="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-sm font-bold uppercase">Active</span>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="p-2 hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface rounded-sm transition-colors">
+<span class="material-symbols-outlined text-sm">content_copy</span>
+</button>
+<button class="p-2 hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface rounded-sm transition-colors">
+<span class="material-symbols-outlined text-sm">visibility</span>
+</button>
+</div>
+</div>
+<!-- Key Item -->
+<div class="bg-surface-container flex items-center justify-between p-4 rounded-sm border border-outline-variant/5">
+<div class="flex flex-col">
+<span class="text-xs font-mono uppercase tracking-widest text-on-surface-variant mb-1">Staging Environment</span>
+<div class="flex items-center gap-3">
+<span class="font-mono text-sm text-on-surface tracking-wider">obs_••••••••••••••••7xL1</span>
+<span class="text-[10px] bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-sm font-bold uppercase">Rotated</span>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="p-2 hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface rounded-sm transition-colors">
+<span class="material-symbols-outlined text-sm">content_copy</span>
+</button>
+<button class="p-2 hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface rounded-sm transition-colors">
+<span class="material-symbols-outlined text-sm">visibility</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Usage Limits Section -->
+<div class="col-span-12 lg:col-span-5 bg-surface-container-low p-8 rounded-md border border-outline-variant/10">
+<h3 class="text-xl font-headline font-semibold text-on-surface mb-6">Usage Limits</h3>
+<div class="space-y-8">
+<!-- Token Usage -->
+<div>
+<div class="flex justify-between items-end mb-2">
+<span class="text-sm font-medium text-on-surface">Total Tokens Processed</span>
+<span class="text-xs font-mono text-on-surface-variant">42.8M / 50M</span>
+</div>
+<div class="h-2 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 85.6%"></div>
+</div>
+</div>
+<!-- Trace Storage -->
+<div>
+<div class="flex justify-between items-end mb-2">
+<span class="text-sm font-medium text-on-surface">Trace Storage</span>
+<span class="text-xs font-mono text-on-surface-variant">12.4 GB / 25 GB</span>
+</div>
+<div class="h-2 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary/40 rounded-full" style="width: 49.6%"></div>
+</div>
+</div>
+<div class="pt-4 border-t border-outline-variant/10">
+<div class="flex items-start gap-3 p-3 bg-secondary-container/20 rounded-sm">
+<span class="material-symbols-outlined text-primary text-xl">info</span>
+<p class="text-xs text-on-secondary-container leading-relaxed">
+                                    You have reached 85% of your token limit. Auto-scaling will prevent trace drops but may incur additional costs.
+                                </p>
+</div>
+<button class="mt-4 w-full text-xs font-bold text-on-surface hover:text-primary transition-colors py-2 border border-outline-variant/20 rounded-sm uppercase tracking-widest">
+                                Manage Subscription
+                            </button>
+</div>
+</div>
+</div>
+<!-- Connected Models Section -->
+<div class="col-span-12 bg-surface-container-high p-8 rounded-md">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h3 class="text-xl font-headline font-semibold text-on-surface">Connected Models</h3>
+<p class="text-sm text-on-surface-variant">Managed integrations for direct trace capture and cost calculation.</p>
+</div>
+<button class="px-6 py-2 bg-surface-container-highest text-on-surface font-semibold text-sm rounded-sm border border-outline-variant/20 hover:bg-surface-bright transition-all">
+                            Refresh Connection Status
+                        </button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- OpenAI -->
+<div class="bg-surface-container-lowest p-6 rounded-sm flex flex-col justify-between border border-transparent hover:border-primary/20 transition-all group">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-10 h-10 bg-on-background/5 rounded-sm flex items-center justify-center grayscale group-hover:grayscale-0 transition-all">
+<img alt="OpenAI Logo" class="w-6 h-6" data-alt="OpenAI logo abstract brand icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD72MxdA8LFwFIgqGmrn6779shhlz7qNqNJT96zxTzJ_0slbAUzCV1Ka6cdZVshUUnlsmnzYQoDEHvjZt3soz0zvEzRKBgzF-dIN6I5hzaYxxE5GSQIvtKx36tMsOLRKyEdVjWdVFoYreAaHJsYaQsIcz-J2_HL0dMT9qSnE-vdb6W6Pjx7Bed9VVBFJ55aNMdjJ6JCSxiNFshwgCy6R3u1EsnBGgsZXx9ILyPQTCvU2IOd7RcvmLChnu0TBFRqdKjrLFxX1nQlyf8"/>
+</div>
+<div>
+<h4 class="font-headline font-bold text-on-surface">OpenAI</h4>
+<span class="text-[10px] text-primary font-mono font-bold tracking-tighter uppercase">Connected</span>
+</div>
+</div>
+<p class="text-xs text-on-surface-variant mb-6">GPT-4o, GPT-3.5-Turbo, and DALL-E embeddings integration active.</p>
+<button class="text-xs font-bold text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-1 group/btn">
+                                Configure <span class="material-symbols-outlined text-sm group-hover/btn:translate-x-0.5 transition-transform">arrow_forward</span>
+</button>
+</div>
+<!-- Anthropic -->
+<div class="bg-surface-container-lowest p-6 rounded-sm flex flex-col justify-between border border-transparent hover:border-primary/20 transition-all group">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-10 h-10 bg-on-background/5 rounded-sm flex items-center justify-center grayscale group-hover:grayscale-0 transition-all">
+<img alt="Anthropic Logo" class="w-6 h-6" data-alt="Anthropic logo abstract brand icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuALy16AVR0nJGLouSzUPAe6u1r_eKcl8Z5SzyJ0eEvzhcQj0SzCV15ZEQIvXFOC1wcx0uWuWaQlcb4mHbEIY8X4HsduCQJrzJ32FLd69C_XfHILjUMYbmLAJHJD0rzmRTxkm2MegyKeJxCS_gLGREJ1CdfS7Meq38wNig79alRu5tS8wkmhI8v_KudbXSyQtNsHbkZZmOMUeXOKDclYEx53_4x2Mg084ZMCTTHOjrwOU8rA_jLgdT9PhnBX8u5SW2y3_I4XSEmQgMo"/>
+</div>
+<div>
+<h4 class="font-headline font-bold text-on-surface">Anthropic</h4>
+<span class="text-[10px] text-primary font-mono font-bold tracking-tighter uppercase">Connected</span>
+</div>
+</div>
+<p class="text-xs text-on-surface-variant mb-6">Claude 3.5 Sonnet and Haiku trace monitoring configured.</p>
+<button class="text-xs font-bold text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-1 group/btn">
+                                Configure <span class="material-symbols-outlined text-sm group-hover/btn:translate-x-0.5 transition-transform">arrow_forward</span>
+</button>
+</div>
+<!-- Azure -->
+<div class="bg-surface-container-lowest p-6 rounded-sm flex flex-col justify-between border border-outline-variant/10 opacity-70 hover:opacity-100 transition-all group">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-10 h-10 bg-on-background/5 rounded-sm flex items-center justify-center grayscale group-hover:grayscale-0 transition-all">
+<img alt="Azure Logo" class="w-6 h-6" data-alt="Azure logo abstract brand icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCiZrtHMYBHLnmZcMb2tKknFnWNSM4y_88_HRXeeT1Agmnd-HRtA1n4-OPUZEkEfwtfLhzaiVV3TDIe56ttdbBYeupsgho1gidE1mbbYk0I3O8BLH9xBCDDi0NOphLHY1cdcY6zydbcAZJtgvjVqO8mnFhqf6wZErGhPAIFMKHl-hu1SVcgZaTU9KLi_JQwcIpv5nRtriK3ovCJ5L0pQUyBbyGAougCMYynhdv0B2t9ARLoP8ckuMP0L4cW8174fxD0JcJxvbsGP9Y"/>
+</div>
+<div>
+<h4 class="font-headline font-bold text-on-surface">Azure OpenAI</h4>
+<span class="text-[10px] text-on-surface-variant font-mono font-bold tracking-tighter uppercase">Not Linked</span>
+</div>
+</div>
+<p class="text-xs text-on-surface-variant mb-6">Connect your enterprise Azure instances for VPC-compliant tracking.</p>
+<button class="text-xs font-bold text-primary transition-colors flex items-center gap-1">
+                                Setup Integration <span class="material-symbols-outlined text-sm">link</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Team Members Section -->
+<div class="col-span-12 bg-surface-container-low rounded-md overflow-hidden">
+<div class="p-8 border-b border-outline-variant/10 flex items-center justify-between">
+<div>
+<h3 class="text-xl font-headline font-semibold text-on-surface">Team Members</h3>
+<p class="text-sm text-on-surface-variant">Control who can access and manage workspace data.</p>
+</div>
+<button class="px-5 py-2 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold text-sm rounded-sm hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-[0.98]">
+                            Invite Member
+                        </button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead class="bg-surface-container-lowest">
+<tr>
+<th class="px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant font-mono">Member</th>
+<th class="px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant font-mono">Role</th>
+<th class="px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant font-mono">Last Active</th>
+<th class="px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant font-mono text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/5">
+<!-- Member Row -->
+<tr class="hover:bg-surface-container-high/50 transition-colors">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold">EK</div>
+<div>
+<div class="text-sm font-medium text-on-surface">Elias Kaelin</div>
+<div class="text-xs text-on-surface-variant">elias@obsidian.io</div>
+</div>
+</div>
+</td>
+<td class="px-8 py-5">
+<span class="text-xs px-2 py-0.5 rounded-sm bg-primary/10 text-primary font-bold uppercase border border-primary/20">Owner</span>
+</td>
+<td class="px-8 py-5 text-sm text-on-surface-variant font-mono">2 mins ago</td>
+<td class="px-8 py-5 text-right">
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Member Row -->
+<tr class="hover:bg-surface-container-high/50 transition-colors">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container font-bold">SC</div>
+<div>
+<div class="text-sm font-medium text-on-surface">Sarah Chen</div>
+<div class="text-xs text-on-surface-variant">s.chen@obsidian.io</div>
+</div>
+</div>
+</td>
+<td class="px-8 py-5">
+<span class="text-xs px-2 py-0.5 rounded-sm bg-surface-container-highest text-on-surface font-bold uppercase border border-outline-variant/20">Editor</span>
+</td>
+<td class="px-8 py-5 text-sm text-on-surface-variant font-mono">Yesterday</td>
+<td class="px-8 py-5 text-right">
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Member Row -->
+<tr class="hover:bg-surface-container-high/50 transition-colors">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface-variant font-bold">JD</div>
+<div>
+<div class="text-sm font-medium text-on-surface">Julian Drake</div>
+<div class="text-xs text-on-surface-variant">j.drake@obsidian.io</div>
+</div>
+</div>
+</td>
+<td class="px-8 py-5">
+<span class="text-xs px-2 py-0.5 rounded-sm bg-surface-container-highest text-on-surface font-bold uppercase border border-outline-variant/20">Viewer</span>
+</td>
+<td class="px-8 py-5 text-sm text-on-surface-variant font-mono">Oct 12, 2023</td>
+<td class="px-8 py-5 text-right">
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Danger Zone -->
+<section class="border-t border-error/20 pt-12 mt-12">
+<div class="flex items-center gap-2 text-error mb-4">
+<span class="material-symbols-outlined">warning</span>
+<h3 class="font-headline font-bold uppercase tracking-widest">Danger Zone</h3>
+</div>
+<div class="bg-error-container/10 p-6 rounded-md border border-error/20 flex flex-col md:flex-row md:items-center justify-between gap-6">
+<div>
+<h4 class="text-on-surface font-bold">Delete this project</h4>
+<p class="text-sm text-on-surface-variant">Once you delete a project, there is no going back. All traces, datasets, and evaluations will be permanently purged.</p>
+</div>
+<button class="bg-transparent border border-error/50 text-error hover:bg-error hover:text-on-error px-6 py-2 rounded-sm font-bold text-sm transition-all whitespace-nowrap">
+                        Delete obsidian-production-v4
+                    </button>
+</div>
+</section>
+</div>
+</main>
+</body></html>

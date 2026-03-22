@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lumen Trace | API Gateway Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container": "#1b2026",
+              "on-error-container": "#ffdad6",
+              "on-primary-fixed-variant": "#00531f",
+              "secondary": "#bec7d2",
+              "on-primary": "#003913",
+              "secondary-fixed-dim": "#bec7d2",
+              "inverse-primary": "#006e2c",
+              "primary-fixed": "#88fb99",
+              "on-tertiary": "#2c3137",
+              "tertiary": "#c2c7cf",
+              "surface-container-low": "#171c22",
+              "inverse-on-surface": "#2c3137",
+              "error-container": "#93000a",
+              "on-tertiary-fixed": "#171c22",
+              "on-secondary-fixed": "#141c25",
+              "outline-variant": "#3e4a3d",
+              "outline": "#889485",
+              "secondary-fixed": "#dae3ef",
+              "error": "#ffb4ab",
+              "surface-variant": "#30353b",
+              "on-surface-variant": "#bdcaba",
+              "on-tertiary-fixed-variant": "#42474e",
+              "surface-container-high": "#252a30",
+              "surface": "#0f1419",
+              "primary-container": "#2fa54f",
+              "tertiary-container": "#8c9198",
+              "on-error": "#690005",
+              "on-surface": "#dee3eb",
+              "on-secondary": "#29313a",
+              "primary-fixed-dim": "#6bde80",
+              "on-tertiary-container": "#252a30",
+              "surface-container-lowest": "#0a0f14",
+              "secondary-container": "#414a53",
+              "on-secondary-fixed-variant": "#3f4851",
+              "on-secondary-container": "#b0b9c4",
+              "tertiary-fixed": "#dee3eb",
+              "primary": "#6bde80",
+              "on-background": "#dee3eb",
+              "inverse-surface": "#dee3eb",
+              "surface-tint": "#6bde80",
+              "on-primary-fixed": "#002108",
+              "surface-container-highest": "#30353b",
+              "surface-bright": "#353a40",
+              "background": "#0f1419",
+              "on-primary-container": "#003210",
+              "tertiary-fixed-dim": "#c2c7cf",
+              "surface-dim": "#0f1419"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"],
+              "mono": ["JetBrains Mono"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .no-line { border: none !important; }
+      .tonal-shift { transition: background-color 0.3s ease; }
+      .glass-panel {
+        background: rgba(48, 53, 59, 0.6);
+        backdrop-filter: blur(12px);
+      }
+      .trace-gradient {
+        background: linear-gradient(135deg, #6bde80 0%, #2fa54f 100%);
+      }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30">
+<!-- SideNavBar -->
+<aside class="bg-slate-900 dark:bg-[#171c22] h-screen w-64 fixed left-0 top-0 flex flex-col py-6 px-4 z-50">
+<div class="mb-10 px-2">
+<div class="text-emerald-500 dark:text-[#6bde80] font-bold text-xl font-['Space_Grotesk'] tracking-tight">Lumen Trace</div>
+<div class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-medium mt-1">Precision Observability</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-xl">dashboard</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 bg-[#30353b] text-[#6bde80] font-semibold rounded-sm group" href="#">
+<span class="material-symbols-outlined text-xl">memory</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Infrastructure</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-xl">workspaces</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Workspace</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-xl">insights</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-xl">settings</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Settings</span>
+</a>
+</nav>
+<div class="mt-auto px-2">
+<button class="w-full trace-gradient text-on-primary-container font-bold py-3 rounded-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all scale-98 active:opacity-80">
+<span class="material-symbols-outlined">add</span>
+<span class="font-['Space_Grotesk'] tracking-tight">New Trace</span>
+</button>
+<div class="mt-6 flex items-center gap-3 pt-6 border-t border-white/5">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center overflow-hidden">
+<img alt="User Profile" data-alt="User profile avatar icon placeholder" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBGfa3t349i_4FL4sM629GcTnVa8ZqiYWVWJ31lDk48tW0AxK1i_dcg2fxqMHMbi1tT360vGavGd_XNySc6Fty-8dmsoZrGk4B1-1HzRyMlpqGUWECnLTgOEcdsRknUvateMeNp_A2WnP9llOyF0G2EXb-5r6fU2g6Y054Wi6nWZFJpuDvsOiKv_WIwuLf8S3ztHoUocZY-74s6NOeIw-A4u6bIgMx9C_enfJmB_QCmZoRcPm3xMFMXe4eq6pW2s2YDiOGbBHlpGc"/>
+</div>
+<div>
+<div class="text-sm font-medium text-on-surface">Admin_Root</div>
+<div class="text-[10px] text-on-surface-variant">System Architect</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- TopNavBar -->
+<header class="bg-slate-950/60 dark:bg-[#0f1419]/60 backdrop-blur-xl flex justify-between items-center h-16 ml-64 px-8 sticky top-0 z-40 border-b border-white/5">
+<div class="flex items-center gap-4">
+<span class="text-on-surface-variant">/</span>
+<span class="text-sm font-medium font-['Inter']">API Gateway Management</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
+<input class="bg-surface-container-lowest border border-white/5 rounded-sm py-1.5 pl-10 pr-4 text-sm focus:outline-none focus:border-primary/50 w-64 transition-all" placeholder="Search endpoints..." type="text"/>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant">
+<button class="hover:text-white transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full"></span>
+</button>
+<button class="hover:text-white transition-colors">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 p-8 min-h-screen space-y-8">
+<!-- Metrics Header -->
+<section class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="bg-surface-container-low p-6 rounded-sm relative overflow-hidden group">
+<div class="text-on-surface-variant text-xs font-medium uppercase tracking-widest mb-2">Total Throughput</div>
+<div class="text-4xl font-headline font-bold text-on-surface">84.2<span class="text-lg font-light text-on-surface-variant ml-1">k/req</span></div>
+<div class="mt-4 flex items-center gap-2 text-primary text-xs font-mono">
+<span class="material-symbols-outlined text-sm">trending_up</span> +12.4% vs last hour
+                </div>
+<div class="absolute bottom-0 left-0 w-full h-1 bg-primary/20">
+<div class="h-full bg-primary w-[75%]"></div>
+</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-sm">
+<div class="text-on-surface-variant text-xs font-medium uppercase tracking-widest mb-2">Avg. Latency</div>
+<div class="text-4xl font-headline font-bold text-on-surface">142<span class="text-lg font-light text-on-surface-variant ml-1">ms</span></div>
+<div class="mt-4 flex items-center gap-2 text-error text-xs font-mono">
+<span class="material-symbols-outlined text-sm">trending_up</span> +8ms spike detected
+                </div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-sm">
+<div class="text-on-surface-variant text-xs font-medium uppercase tracking-widest mb-2">Success Rate</div>
+<div class="text-4xl font-headline font-bold text-on-surface">99.98<span class="text-lg font-light text-on-surface-variant ml-1">%</span></div>
+<div class="mt-4 flex items-center gap-2 text-primary/60 text-xs font-mono">
+<span class="material-symbols-outlined text-sm">check_circle</span> Optimized
+                </div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-sm">
+<div class="text-on-surface-variant text-xs font-medium uppercase tracking-widest mb-2">Active Nodes</div>
+<div class="text-4xl font-headline font-bold text-on-surface">12<span class="text-lg font-light text-on-surface-variant ml-1">/ 12</span></div>
+<div class="mt-4 flex items-center gap-2 text-on-surface-variant text-xs font-mono">
+<span class="material-symbols-outlined text-sm">dns</span> us-east-1 Cluster
+                </div>
+</div>
+</section>
+<!-- Request Aggregation Visual Mapper -->
+<section class="bg-surface-container rounded-sm overflow-hidden">
+<div class="px-6 py-4 border-b border-white/5 flex justify-between items-center">
+<div>
+<h2 class="font-headline text-lg font-bold">Request Aggregation Mapper</h2>
+<p class="text-xs text-on-surface-variant">Define fan-out logic for gateway requests to microservices.</p>
+</div>
+<div class="flex gap-2">
+<button class="bg-surface-container-highest text-on-surface px-3 py-1.5 rounded-sm text-xs font-medium flex items-center gap-2 border border-white/5 hover:bg-surface-variant">
+<span class="material-symbols-outlined text-base">save</span> Save Map
+                    </button>
+<button class="trace-gradient text-on-primary-container px-3 py-1.5 rounded-sm text-xs font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-base">auto_fix_high</span> LLM Optimize
+                    </button>
+</div>
+</div>
+<div class="h-[400px] relative bg-surface-container-lowest p-8 overflow-hidden flex items-center justify-center">
+<!-- Abstract visual representation of a mapper -->
+<div class="flex items-center gap-24 relative z-10">
+<!-- Source Node -->
+<div class="w-48 bg-surface-container-high border-l-4 border-primary p-4 rounded-sm shadow-xl">
+<div class="text-[10px] text-primary font-bold mb-1">INGRESS GATEWAY</div>
+<div class="text-sm font-mono truncate">GET /v1/user/summary</div>
+<div class="mt-3 flex justify-end">
+<div class="w-3 h-3 rounded-full bg-primary animate-pulse"></div>
+</div>
+</div>
+<!-- Flow Lines (SVG) -->
+<svg class="absolute top-0 left-0 w-full h-full -z-10 pointer-events-none" viewbox="0 0 800 400">
+<path d="M 220 200 C 350 200, 350 100, 480 100" fill="none" opacity="0.4" stroke="#6bde80" stroke-dasharray="4" stroke-width="2"></path>
+<path d="M 220 200 L 480 200" fill="none" opacity="0.4" stroke="#6bde80" stroke-dasharray="4" stroke-width="2"></path>
+<path d="M 220 200 C 350 200, 350 300, 480 300" fill="none" opacity="0.4" stroke="#6bde80" stroke-dasharray="4" stroke-width="2"></path>
+</svg>
+<!-- Target Nodes -->
+<div class="space-y-6">
+<div class="w-56 bg-surface-container p-3 rounded-sm border border-white/5 flex items-center justify-between group hover:border-primary/40 transition-colors">
+<div class="w-2 h-2 rounded-full bg-primary/40"></div>
+<div class="flex-1 px-3">
+<div class="text-[9px] text-on-surface-variant font-medium">AUTH-SERVICE</div>
+<div class="text-xs font-mono">GET /internal/validate</div>
+</div>
+<span class="material-symbols-outlined text-sm text-on-surface-variant">settings</span>
+</div>
+<div class="w-56 bg-surface-container p-3 rounded-sm border border-white/5 flex items-center justify-between group hover:border-primary/40 transition-colors">
+<div class="w-2 h-2 rounded-full bg-primary/40"></div>
+<div class="flex-1 px-3">
+<div class="text-[9px] text-on-surface-variant font-medium">USER-DB-PROXY</div>
+<div class="text-xs font-mono">gRPC .GetUserMeta</div>
+</div>
+<span class="material-symbols-outlined text-sm text-on-surface-variant">settings</span>
+</div>
+<div class="w-56 bg-surface-container p-3 rounded-sm border border-white/5 flex items-center justify-between group hover:border-primary/40 transition-colors">
+<div class="w-2 h-2 rounded-full bg-primary/40"></div>
+<div class="flex-1 px-3">
+<div class="text-[9px] text-on-surface-variant font-medium">ANALYTICS-ENGINE</div>
+<div class="text-xs font-mono">POST /v1/event/log</div>
+</div>
+<span class="material-symbols-outlined text-sm text-on-surface-variant">settings</span>
+</div>
+</div>
+</div>
+<!-- Background grid -->
+<div class="absolute inset-0 opacity-[0.03] pointer-events-none" style="background-image: radial-gradient(#6bde80 1px, transparent 1px); background-size: 20px 20px;"></div>
+</div>
+</section>
+<!-- LLM Code Generation & Policy Editor -->
+<section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<!-- Code Gen Panel -->
+<div class="bg-surface-container rounded-sm flex flex-col h-[500px]">
+<div class="px-6 py-4 border-b border-white/5 flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<h3 class="font-headline font-bold">LLM Protocol Translation</h3>
+</div>
+<div class="flex-1 overflow-hidden flex flex-col">
+<div class="p-4 bg-surface-container-high flex gap-4">
+<div class="flex-1">
+<label class="text-[10px] uppercase font-bold text-on-surface-variant block mb-1">Source (REST)</label>
+<div class="bg-surface-container-lowest p-2 rounded-sm text-xs font-mono border border-white/5">JSON Application/Body</div>
+</div>
+<div class="flex items-center text-on-surface-variant">
+<span class="material-symbols-outlined">arrow_forward</span>
+</div>
+<div class="flex-1">
+<label class="text-[10px] uppercase font-bold text-on-surface-variant block mb-1">Target (gRPC)</label>
+<div class="bg-surface-container-lowest p-2 rounded-sm text-xs font-mono border border-white/5">ProtoBuf v3</div>
+</div>
+</div>
+<div class="flex-1 bg-surface-container-lowest font-mono text-sm p-6 overflow-y-auto border-t border-white/5">
+<div class="text-primary-container mb-2">// Generated by Lumen Trace LLM</div>
+<div class="text-on-surface opacity-80 leading-relaxed">
+<span class="text-primary">func</span> <span class="text-tertiary">HandleTranslation</span>(req *RestRequest) (*GrpcMsg, error) {<br/>
+                              msg := &amp;user_summary.Profile{<br/>
+                                Id:      req.UserID,<br/>
+                                Context: req.Headers[<span class="text-secondary">"X-Trace-ID"</span>],<br/>
+                                Flags:   convertFlags(req.Body.Meta),<br/>
+                              }<br/>
+                              <span class="text-primary">return</span> msg, nil<br/>
+                            }
+                        </div>
+</div>
+</div>
+<div class="p-4 bg-surface-container-high flex justify-between items-center">
+<div class="text-xs text-on-surface-variant flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span> Ready for deployment
+                    </div>
+<button class="bg-surface-container-highest hover:bg-surface-variant text-on-surface text-xs px-4 py-2 rounded-sm font-medium transition-all">Copy Implementation</button>
+</div>
+</div>
+<!-- Caching & Rate Limiting Policies -->
+<div class="bg-surface-container rounded-sm flex flex-col">
+<div class="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+<h3 class="font-headline font-bold">Endpoint Policies</h3>
+<div class="flex gap-1">
+<div class="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tight">Active</div>
+</div>
+</div>
+<div class="p-6 space-y-6 flex-1">
+<!-- Rate Limiting -->
+<div class="space-y-3">
+<div class="flex justify-between items-end">
+<div>
+<div class="text-sm font-bold">Global Rate Limiting</div>
+<div class="text-xs text-on-surface-variant">Token bucket algorithm per API Key</div>
+</div>
+<div class="text-primary font-mono text-sm">5,000 req/min</div>
+</div>
+<div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[65%]"></div>
+</div>
+</div>
+<!-- Caching -->
+<div class="bg-surface-container-low p-4 rounded-sm border border-white/5">
+<div class="flex justify-between mb-4">
+<div class="text-sm font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-base">cached</span>
+                                Response Caching
+                            </div>
+<input checked="" class="rounded-sm bg-surface-container-highest border-none text-primary focus:ring-primary/20" type="checkbox"/>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="text-[10px] uppercase font-bold text-on-surface-variant block mb-1">TTL (Seconds)</label>
+<input class="w-full bg-surface-container-lowest border-none rounded-sm text-xs py-2 focus:ring-1 focus:ring-primary/40" type="number" value="300"/>
+</div>
+<div>
+<label class="text-[10px] uppercase font-bold text-on-surface-variant block mb-1">Scope</label>
+<select class="w-full bg-surface-container-lowest border-none rounded-sm text-xs py-2 focus:ring-1 focus:ring-primary/40">
+<option>Edge Node</option>
+<option>Regional Cluster</option>
+</select>
+</div>
+</div>
+</div>
+<!-- Authentication -->
+<div class="space-y-3">
+<div class="text-sm font-bold">Authentication Strategy</div>
+<div class="flex gap-2">
+<div class="bg-surface-container-highest px-3 py-2 rounded-sm text-xs border border-primary/30 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">key</span> JWT Bearer
+                            </div>
+<div class="bg-surface-container-high px-3 py-2 rounded-sm text-xs border border-white/5 flex items-center gap-2 opacity-50">
+<span class="material-symbols-outlined text-sm">shield</span> mTLS
+                            </div>
+<div class="bg-surface-container-high px-3 py-2 rounded-sm text-xs border border-white/5 flex items-center gap-2 opacity-50">
+<span class="material-symbols-outlined text-sm">fingerprint</span> OAuth2
+                            </div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Real-time Throughput & Error Rates Table -->
+<section class="bg-surface-container rounded-sm overflow-hidden pb-4">
+<div class="px-6 py-4 border-b border-white/5">
+<h3 class="font-headline font-bold">Endpoint Performance Analysis</h3>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left text-sm">
+<thead>
+<tr class="text-on-surface-variant border-b border-white/5">
+<th class="px-6 py-4 font-medium">Endpoint</th>
+<th class="px-6 py-4 font-medium">Throughput</th>
+<th class="px-6 py-4 font-medium">Error Rate</th>
+<th class="px-6 py-4 font-medium">P99 Latency</th>
+<th class="px-6 py-4 font-medium text-right">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/5">
+<tr class="hover:bg-white/5 transition-colors">
+<td class="px-6 py-4">
+<div class="font-mono text-xs">/v1/user/summary</div>
+<div class="text-[10px] text-on-surface-variant">Method: GET</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+                                    12.4k <span class="text-[10px] text-on-surface-variant">req/s</span>
+<div class="w-16 h-4 flex items-end gap-0.5">
+<div class="bg-primary/40 w-full h-[60%]"></div>
+<div class="bg-primary/40 w-full h-[80%]"></div>
+<div class="bg-primary/40 w-full h-[70%]"></div>
+<div class="bg-primary/40 w-full h-[90%]"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-primary">0.02%</span>
+</td>
+<td class="px-6 py-4 font-mono text-xs">114ms</td>
+<td class="px-6 py-4 text-right">
+<span class="inline-block w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(107,222,128,0.5)]"></span>
+</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors">
+<td class="px-6 py-4">
+<div class="font-mono text-xs">/v1/auth/login</div>
+<div class="text-[10px] text-on-surface-variant">Method: POST</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+                                    4.2k <span class="text-[10px] text-on-surface-variant">req/s</span>
+<div class="w-16 h-4 flex items-end gap-0.5">
+<div class="bg-primary/40 w-full h-[40%]"></div>
+<div class="bg-primary/40 w-full h-[50%]"></div>
+<div class="bg-primary/40 w-full h-[45%]"></div>
+<div class="bg-primary/40 w-full h-[55%]"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-error">1.45%</span>
+</td>
+<td class="px-6 py-4 font-mono text-xs">280ms</td>
+<td class="px-6 py-4 text-right">
+<span class="inline-block w-2 h-2 rounded-full bg-error shadow-[0_0_8px_rgba(255,180,171,0.5)] animate-pulse"></span>
+</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors">
+<td class="px-6 py-4">
+<div class="font-mono text-xs">/v1/products/list</div>
+<div class="text-[10px] text-on-surface-variant">Method: GET</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+                                    38.1k <span class="text-[10px] text-on-surface-variant">req/s</span>
+<div class="w-16 h-4 flex items-end gap-0.5">
+<div class="bg-primary/40 w-full h-[90%]"></div>
+<div class="bg-primary/40 w-full h-[95%]"></div>
+<div class="bg-primary/40 w-full h-[88%]"></div>
+<div class="bg-primary/40 w-full h-[92%]"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-primary">0.00%</span>
+</td>
+<td class="px-6 py-4 font-mono text-xs">42ms</td>
+<td class="px-6 py-4 text-right">
+<span class="inline-block w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(107,222,128,0.5)]"></span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</main>
+<!-- Contextual FAB -->
+<div class="fixed bottom-8 right-8 z-50">
+<button class="trace-gradient w-14 h-14 rounded-full flex items-center justify-center text-on-primary-container shadow-2xl hover:scale-110 transition-transform active:scale-95 group">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'wght' 600;">add</span>
+<span class="absolute right-16 bg-surface-container-high px-3 py-1.5 rounded-sm text-xs font-bold border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">New Gateway Endpoint</span>
+</button>
+</div>
+</body></html>

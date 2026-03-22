@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Global Configuration | Obsidian Lens</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "outline-variant": "#3e4a3d",
+                        "on-secondary-container": "#b0b9c4",
+                        "on-secondary": "#29313a",
+                        "on-primary-fixed": "#002108",
+                        "primary": "#6bde80",
+                        "secondary": "#bec7d2",
+                        "primary-container": "#2fa54f",
+                        "on-primary-fixed-variant": "#00531f",
+                        "secondary-fixed": "#dae3ef",
+                        "primary-fixed": "#88fb99",
+                        "on-error": "#690005",
+                        "surface-container-low": "#171c22",
+                        "on-tertiary-fixed-variant": "#42474e",
+                        "tertiary-fixed-dim": "#c2c7cf",
+                        "secondary-fixed-dim": "#bec7d2",
+                        "tertiary-fixed": "#dee3eb",
+                        "error-container": "#93000a",
+                        "surface-tint": "#6bde80",
+                        "surface-dim": "#0f1419",
+                        "on-surface-variant": "#bdcaba",
+                        "on-primary-container": "#003210",
+                        "error": "#ffb4ab",
+                        "outline": "#889485",
+                        "surface-container-lowest": "#0a0f14",
+                        "inverse-on-surface": "#2c3137",
+                        "surface-variant": "#30353b",
+                        "surface-bright": "#353a40",
+                        "background": "#0f1419",
+                        "tertiary": "#c2c7cf",
+                        "surface-container-high": "#252a30",
+                        "on-background": "#dee3eb",
+                        "inverse-surface": "#dee3eb",
+                        "on-tertiary-container": "#252a30",
+                        "on-secondary-fixed-variant": "#3f4851",
+                        "inverse-primary": "#006e2c",
+                        "tertiary-container": "#8c9198",
+                        "primary-fixed-dim": "#6bde80",
+                        "secondary-container": "#414a53",
+                        "on-tertiary-fixed": "#171c22",
+                        "on-secondary-fixed": "#141c25",
+                        "on-tertiary": "#2c3137",
+                        "on-primary": "#003913",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-highest": "#30353b",
+                        "surface-container": "#1b2026",
+                        "surface": "#0f1419",
+                        "on-surface": "#dee3eb"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-space-grotesk { font-family: 'Space Grotesk', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="bg-background text-on-surface selection:bg-primary/30">
+<!-- TopNavBar -->
+<header class="bg-[#0f1419]/80 backdrop-blur-md fixed top-0 z-50 flex justify-between items-center w-full px-6 h-14 shadow-[0_24px_48px_rgba(0,0,0,0.4)]">
+<div class="flex items-center gap-8">
+<span class="text-xl font-black text-[#6bde80] tracking-tighter font-space-grotesk">Obsidian Lens</span>
+<nav class="hidden md:flex gap-6 items-center">
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors font-space-grotesk font-bold tracking-tight" href="#">Docs</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors font-space-grotesk font-bold tracking-tight" href="#">API</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors font-space-grotesk font-bold tracking-tight" href="#">Status</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group hidden sm:block">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant text-sm">search</span>
+<input class="bg-surface-container-lowest border border-outline-variant/20 rounded-sm pl-9 pr-4 py-1.5 text-xs focus:ring-1 focus:ring-primary focus:border-primary w-64 transition-all" placeholder="Global Search..." type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-[#bdcaba] hover:bg-[#30353b]/50 transition-all duration-200 rounded-sm active:scale-95">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+</button>
+<button class="p-2 text-[#bdcaba] hover:bg-[#30353b]/50 transition-all duration-200 rounded-sm active:scale-95">
+<span class="material-symbols-outlined text-[20px]">terminal</span>
+</button>
+<button class="p-2 text-[#6bde80] border-b-2 border-[#6bde80] pb-1 transition-all duration-200 active:scale-95">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+</button>
+</div>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-primary/20">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="Close up profile picture of a professional software engineer" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVzW2hii8ibEf12dzKI_DF_zABdhD_eDrUoeY1H0Nw0ruMAyqak1De-yf1irNZQxiqCWPxLzOqZMl7D90gepMYggehwYXDs3X6Ur6-n1_l1g6DYCueAqmC9sfWUF4giEKH_o68PCdshB82NVOUAzIsOxBzxy0B09zmgll95ixjUNkkT1VUryzWdevgLoat23bYXAuz5qDEbzFgxY_hNLBoNWK_970YcygOx1Sdele_t_w_avu2lBo7Zmq6iPC2sd-LRkkQBwQPP3Q"/>
+</div>
+</div>
+</header>
+<div class="flex pt-14 min-h-screen">
+<!-- SideNavBar -->
+<aside class="hidden md:flex flex-col h-[calc(100vh-3.5rem)] w-64 bg-[#171c22] py-4 border-r border-[#30353b]/10 fixed left-0 top-14">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-surface-container-highest rounded-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">hub</span>
+</div>
+<div>
+<h2 class="text-sm font-semibold text-on-surface">Core Engine</h2>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest">v2.4.0-stable</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1 px-3">
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] transition-transform duration-200 hover:translate-x-1 cursor-pointer" href="#">
+<span class="material-symbols-outlined">view_in_ar</span>
+<span class="text-sm">Containers</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] transition-transform duration-200 hover:translate-x-1 cursor-pointer" href="#">
+<span class="material-symbols-outlined">layers</span>
+<span class="text-sm">Infrastructure</span>
+</a>
+<a class="bg-[#30353b] text-[#6bde80] font-semibold border-r-2 border-[#6bde80] flex items-center gap-3 px-3 py-2 cursor-pointer" href="#">
+<span class="material-symbols-outlined">settings_input_component</span>
+<span class="text-sm">Config</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] transition-transform duration-200 hover:translate-x-1 cursor-pointer" href="#">
+<span class="material-symbols-outlined">account_tree</span>
+<span class="text-sm">Dependencies</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] transition-transform duration-200 hover:translate-x-1 cursor-pointer" href="#">
+<span class="material-symbols-outlined">reorder</span>
+<span class="text-sm">Logs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] transition-transform duration-200 hover:translate-x-1 cursor-pointer" href="#">
+<span class="material-symbols-outlined">psychology</span>
+<span class="text-sm">Models</span>
+</a>
+</nav>
+<div class="px-6 mt-auto space-y-4">
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary-container text-xs font-bold py-3 rounded-sm active:scale-95 transition-all">
+                    Deploy New Node
+                </button>
+<div class="pt-4 border-t border-outline-variant/10 space-y-2">
+<a class="flex items-center gap-3 text-xs text-on-surface-variant hover:text-on-surface" href="#">
+<span class="material-symbols-outlined text-sm">help_outline</span> Support
+                    </a>
+<a class="flex items-center gap-3 text-xs text-on-surface-variant hover:text-on-surface" href="#">
+<span class="material-symbols-outlined text-sm">manage_accounts</span> Account
+                    </a>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-64 p-8 bg-surface">
+<!-- Header Section -->
+<div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div>
+<h1 class="text-4xl font-black font-space-grotesk tracking-tight text-on-surface mb-2">Global Configuration</h1>
+<p class="text-on-surface-variant max-w-2xl">Manage system-level environment variables, security policies, and automation webhooks across all clusters.</p>
+</div>
+<div class="flex gap-3">
+<button class="px-4 py-2 bg-surface-container-high text-on-surface text-sm font-medium border border-outline-variant/20 hover:bg-surface-container-highest transition-colors rounded-sm">
+                        Export Config
+                    </button>
+<button class="px-4 py-2 bg-gradient-to-br from-primary to-primary-container text-on-primary-container text-sm font-bold rounded-sm shadow-lg shadow-primary/10">
+                        Save Changes
+                    </button>
+</div>
+</div>
+<!-- Tabs Navigation (The Editorial tech stack approach) -->
+<div class="flex gap-8 border-b border-outline-variant/10 mb-8 overflow-x-auto">
+<button class="pb-4 text-primary font-bold border-b-2 border-primary text-sm whitespace-nowrap">Security &amp; RBAC</button>
+<button class="pb-4 text-on-surface-variant hover:text-on-surface font-medium text-sm whitespace-nowrap transition-colors">Environment Variables</button>
+<button class="pb-4 text-on-surface-variant hover:text-on-surface font-medium text-sm whitespace-nowrap transition-colors">Alert Rules</button>
+<button class="pb-4 text-on-surface-variant hover:text-on-surface font-medium text-sm whitespace-nowrap transition-colors">Webhooks</button>
+<button class="pb-4 text-on-surface-variant hover:text-on-surface font-medium text-sm whitespace-nowrap transition-colors">API Keys</button>
+</div>
+<!-- Bento Grid Layout for Settings -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Security Overview (Large Module) -->
+<div class="lg:col-span-8 bg-surface-container-low p-6 rounded-sm relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
+<span class="material-symbols-outlined text-[120px]" style="font-variation-settings: 'FILL' 1;">security</span>
+</div>
+<div class="relative z-10">
+<h3 class="text-lg font-bold font-space-grotesk text-on-surface mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">admin_panel_settings</span>
+                            Access Control Policies
+                        </h3>
+<div class="space-y-4">
+<!-- RBAC Table -->
+<div class="bg-surface-container-lowest rounded-sm overflow-hidden">
+<table class="w-full text-left text-sm">
+<thead class="bg-surface-container text-on-surface-variant text-[10px] uppercase tracking-widest border-b border-outline-variant/5">
+<tr>
+<th class="px-4 py-3 font-semibold">Entity Name</th>
+<th class="px-4 py-3 font-semibold">Role</th>
+<th class="px-4 py-3 font-semibold">Scope</th>
+<th class="px-4 py-3 font-semibold text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/5">
+<tr class="hover:bg-surface-container/30 transition-colors group">
+<td class="px-4 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-sm bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">JP</div>
+<div>
+<p class="font-medium">Jordan Peterson</p>
+<p class="text-[10px] text-on-surface-variant font-mono">ID: usr_8829</p>
+</div>
+</div>
+</td>
+<td class="px-4 py-4">
+<span class="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider rounded-full">Administrator</span>
+</td>
+<td class="px-4 py-4 text-on-surface-variant font-mono text-xs">Global (*)</td>
+<td class="px-4 py-4 text-right">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">edit</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container/30 transition-colors">
+<td class="px-4 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-sm bg-secondary/10 flex items-center justify-center text-secondary font-bold text-xs">SA</div>
+<div>
+<p class="font-medium">Service-Agent-Alpha</p>
+<p class="text-[10px] text-on-surface-variant font-mono">ID: bot_1022</p>
+</div>
+</div>
+</td>
+<td class="px-4 py-4">
+<span class="px-2 py-0.5 bg-outline-variant/20 text-on-surface-variant text-[10px] font-bold uppercase tracking-wider rounded-full">ReadOnly</span>
+</td>
+<td class="px-4 py-4 text-on-surface-variant font-mono text-xs">Cluster: US-East-1</td>
+<td class="px-4 py-4 text-right">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">edit</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<button class="w-full py-3 border border-dashed border-outline-variant/30 text-on-surface-variant text-xs hover:border-primary/50 hover:text-primary transition-all rounded-sm flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">add</span> Add New Entity or Role
+                            </button>
+</div>
+</div>
+</div>
+<!-- Environment Health (Small Module) -->
+<div class="lg:col-span-4 bg-surface-container-low p-6 rounded-sm flex flex-col justify-between">
+<div>
+<h3 class="text-lg font-bold font-space-grotesk text-on-surface mb-2">Secrets Manager</h3>
+<p class="text-xs text-on-surface-variant mb-6">Vault connection is active and synchronized.</p>
+<div class="space-y-4">
+<div class="flex items-center justify-between p-3 bg-surface-container rounded-sm border-l-2 border-primary">
+<div>
+<p class="text-[10px] uppercase tracking-tighter text-on-surface-variant font-bold">AWS_REGION</p>
+<p class="font-mono text-sm text-on-surface">us-west-2</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary">visibility</span>
+</div>
+<div class="flex items-center justify-between p-3 bg-surface-container rounded-sm border-l-2 border-primary-container">
+<div>
+<p class="text-[10px] uppercase tracking-tighter text-on-surface-variant font-bold">DATABASE_URL</p>
+<p class="font-mono text-sm text-on-surface">••••••••••••••••</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary">visibility</span>
+</div>
+</div>
+</div>
+<button class="mt-8 text-primary font-bold text-xs flex items-center gap-1 hover:underline">
+                        Rotate All Secrets <span class="material-symbols-outlined text-sm">refresh</span>
+</button>
+</div>
+<!-- Custom Alert Rules (Wide Module) -->
+<div class="lg:col-span-12 bg-surface-container-low p-6 rounded-sm">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h3 class="text-lg font-bold font-space-grotesk text-on-surface">Active Alert Conditionals</h3>
+<p class="text-xs text-on-surface-variant">LUA-based rules applied across global streams.</p>
+</div>
+<button class="px-4 py-2 bg-surface-container-highest text-primary text-xs font-bold rounded-sm border border-primary/20">
+                            New Alert Rule
+                        </button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+<!-- Alert Card 1 -->
+<div class="bg-surface-container-lowest p-5 rounded-sm border-t-2 border-error hover:scale-[1.02] transition-transform duration-300">
+<div class="flex justify-between items-start mb-4">
+<span class="px-2 py-0.5 bg-error/10 text-error text-[10px] font-bold uppercase tracking-wider rounded-full">Critical</span>
+<span class="material-symbols-outlined text-on-surface-variant text-sm">more_vert</span>
+</div>
+<h4 class="font-bold text-on-surface mb-1">Latency Spike &gt; 500ms</h4>
+<p class="text-xs text-on-surface-variant mb-4 line-clamp-2">Triggers when P99 latency across all edge nodes exceeds 500ms for more than 3 consecutive minutes.</p>
+<div class="flex items-center gap-4 pt-4 border-t border-outline-variant/5">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-xs text-primary">webhook</span>
+<span class="text-[10px] text-on-surface-variant">Slack</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-xs text-primary">mail</span>
+<span class="text-[10px] text-on-surface-variant">PagerDuty</span>
+</div>
+</div>
+</div>
+<!-- Alert Card 2 -->
+<div class="bg-surface-container-lowest p-5 rounded-sm border-t-2 border-primary hover:scale-[1.02] transition-transform duration-300">
+<div class="flex justify-between items-start mb-4">
+<span class="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider rounded-full">System</span>
+<span class="material-symbols-outlined text-on-surface-variant text-sm">more_vert</span>
+</div>
+<h4 class="font-bold text-on-surface mb-1">Model Drift Detected</h4>
+<p class="text-xs text-on-surface-variant mb-4 line-clamp-2">Monitoring output distribution for LLM clusters. Triggers on &gt;15% variance from baseline.</p>
+<div class="flex items-center gap-4 pt-4 border-t border-outline-variant/5">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-xs text-primary">webhook</span>
+<span class="text-[10px] text-on-surface-variant">Discord</span>
+</div>
+</div>
+</div>
+<!-- Alert Card 3 -->
+<div class="bg-surface-container-lowest p-5 rounded-sm border-t-2 border-secondary hover:scale-[1.02] transition-transform duration-300">
+<div class="flex justify-between items-start mb-4">
+<span class="px-2 py-0.5 bg-secondary/10 text-secondary text-[10px] font-bold uppercase tracking-wider rounded-full">Pending</span>
+<span class="material-symbols-outlined text-on-surface-variant text-sm">more_vert</span>
+</div>
+<h4 class="font-bold text-on-surface mb-1">Token Quota Warning</h4>
+<p class="text-xs text-on-surface-variant mb-4 line-clamp-2">Alert when monthly OpenAI/Anthropic spend reaches 80% of configured monthly budget.</p>
+<div class="flex items-center gap-4 pt-4 border-t border-outline-variant/5">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-xs text-on-surface-variant">mail</span>
+<span class="text-[10px] text-on-surface-variant">Billing-Dept</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Webhooks & Integrations (Side Column) -->
+<div class="lg:col-span-5 bg-surface-container-low p-6 rounded-sm">
+<h3 class="text-lg font-bold font-space-grotesk text-on-surface mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">api</span>
+                        Endpoint Webhooks
+                    </h3>
+<div class="space-y-3">
+<div class="bg-surface-container-lowest p-4 rounded-sm flex items-center justify-between border border-outline-variant/5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-surface-container rounded-sm flex items-center justify-center">
+<img alt="Slack" class="w-6 h-6 grayscale hover:grayscale-0 transition-all opacity-60 hover:opacity-100" data-alt="Official Slack logo icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCofCzmsA2ydw1g4A_h0-hIV_bxf60lHSUNWB75bUgezDewWteaalcYyQ419FKjoUYTahv_aIZF4jR_ByNTuaZZ1nBWV11yRkpcNLb4keZamR0TYhFDB1CpK3f8NL5vLl8Te0AeCHp5wyMOAX_Zn3fow7pwoYa2bDUNhPLE5VKYgk3ANPs4ku1Y04lc7wtW9wywVEXTvX_EWk1qS5_2Sjvw5cLO-0pUcWlUMGWIZccp2zTvAhd9NYodM3u8GhtgPfpkUC-wMyyCHV0"/>
+</div>
+<div>
+<p class="font-bold text-sm">Slack Infrastructure</p>
+<p class="text-[10px] font-mono text-on-surface-variant">https://hooks.slack.com/...</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(107,222,128,0.5)]"></span>
+<span class="material-symbols-outlined text-on-surface-variant text-sm cursor-pointer">settings</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-sm flex items-center justify-between border border-outline-variant/5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-surface-container rounded-sm flex items-center justify-center">
+<img alt="Datadog" class="w-6 h-6 grayscale hover:grayscale-0 transition-all opacity-60 hover:opacity-100" data-alt="Official Datadog logo icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBnt8VXiyNO_cwc5tgt2RM9yljUDX2KNsOxh-traoPRHRoTRLLDq7hLQj_6Tt0aEofAHarOqTIMg5ZdQUg4AEDQJowYZncZzjXnV254THwE9yNw0MpZFdW7dcxgEzZEexLzbxQxwwXEbPb7JgiyK5rLI5DnuDII68fKATWWxfJkGaCsj2ZT9RveLWIpUCGnm8ep67egw04AlmVRLRNGusQ6qR1ydITzIRpI8i30PlqFDoKnA58XMoW5Fw2N4xGOmM7j03z4-bdvlQ"/>
+</div>
+<div>
+<p class="font-bold text-sm">Datadog APM Sink</p>
+<p class="text-[10px] font-mono text-on-surface-variant">https://api.datadoghq.com/...</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(107,222,128,0.5)]"></span>
+<span class="material-symbols-outlined text-on-surface-variant text-sm cursor-pointer">settings</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-sm flex items-center justify-between border border-outline-variant/5 border-dashed">
+<button class="w-full text-xs text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">add_link</span> Register New Webhook
+                            </button>
+</div>
+</div>
+</div>
+<!-- Form Card: Domain Whitelisting -->
+<div class="lg:col-span-7 bg-surface-container-low p-6 rounded-sm">
+<h3 class="text-lg font-bold font-space-grotesk text-on-surface mb-2">Network Security</h3>
+<p class="text-xs text-on-surface-variant mb-6">Restrict data ingress to specific verified origins.</p>
+<form class="space-y-4">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">CORS Allowed Origins</label>
+<input class="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-sm px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" type="text" value="*.obsidian-lens.io, localhost:3000"/>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Max Payload Size (MB)</label>
+<input class="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-sm px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" type="number" value="15"/>
+</div>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Whitelisted IPs (CIDR)</label>
+<textarea class="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-sm px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" rows="3">192.168.1.0/24
+10.0.0.1/32</textarea>
+</div>
+<div class="flex items-center gap-4">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+<span class="ml-3 text-xs font-medium text-on-surface">Enforce SSL Verification</span>
+</label>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+<span class="ml-3 text-xs font-medium text-on-surface">Enable Trace Obfuscation</span>
+</label>
+</div>
+</form>
+</div>
+</div>
+</main>
+</div>
+</body></html>

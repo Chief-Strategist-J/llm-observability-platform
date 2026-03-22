@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Latency Analysis | Obsidian Lens</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "inverse-surface": "#dee3eb",
+                        "on-tertiary": "#2c3137",
+                        "on-background": "#dee3eb",
+                        "on-tertiary-container": "#252a30",
+                        "secondary-container": "#414a53",
+                        "on-surface-variant": "#bdcaba",
+                        "on-secondary": "#29313a",
+                        "primary-fixed-dim": "#6bde80",
+                        "outline-variant": "#3e4a3d",
+                        "surface-container-lowest": "#0a0f14",
+                        "surface-container": "#1b2026",
+                        "tertiary-fixed-dim": "#c2c7cf",
+                        "tertiary-fixed": "#dee3eb",
+                        "on-secondary-container": "#b0b9c4",
+                        "on-error": "#690005",
+                        "secondary-fixed-dim": "#bec7d2",
+                        "secondary": "#bec7d2",
+                        "on-error-container": "#ffdad6",
+                        "surface-bright": "#353a40",
+                        "error": "#ffb4ab",
+                        "on-surface": "#dee3eb",
+                        "surface-dim": "#0f1419",
+                        "on-tertiary-fixed-variant": "#42474e",
+                        "secondary-fixed": "#dae3ef",
+                        "tertiary": "#c2c7cf",
+                        "surface-container-high": "#252a30",
+                        "surface-tint": "#6bde80",
+                        "outline": "#889485",
+                        "surface-variant": "#30353b",
+                        "on-primary-fixed": "#002108",
+                        "on-primary": "#003913",
+                        "primary": "#6bde80",
+                        "inverse-on-surface": "#2c3137",
+                        "surface-container-highest": "#30353b",
+                        "background": "#0f1419",
+                        "surface-container-low": "#171c22",
+                        "primary-fixed": "#88fb99",
+                        "on-primary-container": "#003210",
+                        "on-secondary-fixed-variant": "#3f4851",
+                        "primary-container": "#2fa54f",
+                        "on-secondary-fixed": "#141c25",
+                        "inverse-primary": "#006e2c",
+                        "error-container": "#93000a",
+                        "tertiary-container": "#8c9198",
+                        "on-primary-fixed-variant": "#00531f",
+                        "surface": "#0f1419",
+                        "on-tertiary-fixed": "#171c22"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .heatmap-cell { transition: opacity 0.2s ease; }
+        .heatmap-cell:hover { opacity: 0.7; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body overflow-hidden">
+<!-- SideNavBar (Authority: JSON) -->
+<aside class="h-screen w-64 fixed left-0 top-0 flex flex-col bg-[#171c22] border-r border-[#30353b]/15 z-50 py-6 font-['Space_Grotesk'] tracking-tight">
+<div class="px-6 mb-8">
+<h1 class="text-[#6bde80] font-bold text-xl uppercase tracking-tighter">Obsidian Lens</h1>
+<p class="text-on-surface-variant text-[10px] uppercase tracking-[0.2em] mt-1 opacity-70">LLM Observability</p>
+</div>
+<div class="px-4 mb-6">
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary-container py-2 px-4 rounded-sm font-bold text-sm flex items-center justify-center gap-2 transition-transform scale-95 active:scale-90">
+<span class="material-symbols-outlined text-sm">add</span>
+                New Trace
+            </button>
+</div>
+<nav class="flex-1 space-y-1 px-3">
+<!-- Navigation Items Mapping -->
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200 rounded-sm" href="#">
+<span class="material-symbols-outlined" data-icon="account_tree">account_tree</span>
+<span class="text-sm">Knowledge Graph</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200 rounded-sm" href="#">
+<span class="material-symbols-outlined" data-icon="manage_search">manage_search</span>
+<span class="text-sm">Trace Search</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200 rounded-sm" href="#">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+<span class="text-sm">Log Stream</span>
+</a>
+<!-- Active Tab: Latency (Semantic Mapping) -->
+<a class="flex items-center gap-3 px-3 py-2 text-[#6bde80] bg-[#30353b]/30 font-bold border-r-2 border-[#6bde80] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="query_stats">query_stats</span>
+<span class="text-sm">Latency</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200 rounded-sm" href="#">
+<span class="material-symbols-outlined" data-icon="compare_arrows">compare_arrows</span>
+<span class="text-sm">Comparison</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200 rounded-sm" href="#">
+<span class="material-symbols-outlined" data-icon="bug_report">bug_report</span>
+<span class="text-sm">Errors</span>
+</a>
+</nav>
+<div class="px-3 mt-auto space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200 rounded-sm" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="text-sm">Docs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200 rounded-sm" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-sm">Settings</span>
+</a>
+<div class="pt-4 mt-4 border-t border-[#30353b]/20 px-3 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center border border-outline-variant/20">
+<span class="material-symbols-outlined text-sm">person</span>
+</div>
+<div class="overflow-hidden">
+<p class="text-xs font-bold text-on-surface truncate">Tech Lead</p>
+<p class="text-[10px] text-on-surface-variant truncate">v2.4.0-stable</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- TopNavBar (Authority: JSON) -->
+<header class="fixed top-0 right-0 left-64 h-16 z-40 bg-[#0f1419]/80 backdrop-blur-xl border-b border-[#30353b]/10 flex justify-between items-center px-8 w-full">
+<div class="flex items-center gap-8">
+<nav class="flex gap-6 font-['Inter'] text-sm font-medium">
+<a class="text-[#bdcaba] hover:text-[#6bde80] transition-opacity" href="#">Dashboard</a>
+<a class="text-[#bdcaba] hover:text-[#6bde80] transition-opacity" href="#">Workspaces</a>
+<a class="text-[#bdcaba] hover:text-[#6bde80] transition-opacity" href="#">Clusters</a>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant text-sm">search</span>
+<input class="bg-surface-container-lowest border border-outline-variant/15 text-xs rounded-sm pl-9 pr-4 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary bg-transparent outline-none transition-all" placeholder="Search traces..." type="text"/>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant">
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-all" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-all" data-icon="help_outline">help_outline</span>
+</div>
+<button class="bg-surface-container-high text-primary-fixed-dim px-4 py-1.5 rounded-sm text-xs font-bold border border-outline-variant/20 hover:bg-surface-container transition-all">
+                Deploy Model
+            </button>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="ml-64 pt-16 h-screen overflow-y-auto no-scrollbar bg-surface selection:bg-primary/30">
+<div class="p-8 space-y-8 max-w-[1600px] mx-auto">
+<!-- Page Header -->
+<section class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="text-[10px] uppercase tracking-widest text-primary font-bold">Real-time Analysis</span>
+</div>
+<h2 class="text-4xl font-headline font-bold text-on-surface tracking-tight">Latency Analysis</h2>
+<p class="text-on-surface-variant mt-2 max-w-xl">Deep-dive into inference response times across the global neural mesh. Identified 12 bottlenecks in the last 60 minutes.</p>
+</div>
+<div class="flex items-center gap-3 bg-surface-container-low p-1 rounded-sm border border-outline-variant/10">
+<button class="px-4 py-2 text-xs font-bold bg-surface-container-highest text-primary rounded-sm shadow-xl">1H</button>
+<button class="px-4 py-2 text-xs font-medium text-on-surface-variant hover:text-on-surface transition-colors">6H</button>
+<button class="px-4 py-2 text-xs font-medium text-on-surface-variant hover:text-on-surface transition-colors">24H</button>
+<button class="px-4 py-2 text-xs font-medium text-on-surface-variant hover:text-on-surface transition-colors">7D</button>
+</div>
+</section>
+<!-- Metrics Bento Grid -->
+<section class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<!-- P50 -->
+<div class="bg-surface-container-low p-6 rounded-md border border-outline-variant/5">
+<div class="flex justify-between items-start mb-4">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Percentile P50</span>
+<span class="text-primary text-xs font-mono">-12.4%</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-4xl font-headline font-light">420</span>
+<span class="text-on-surface-variant text-sm font-mono">ms</span>
+</div>
+<div class="mt-4 h-1 bg-surface-container-highest overflow-hidden">
+<div class="h-full bg-primary w-1/2"></div>
+</div>
+</div>
+<!-- P90 -->
+<div class="bg-surface-container-low p-6 rounded-md border border-outline-variant/5">
+<div class="flex justify-between items-start mb-4">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Percentile P90</span>
+<span class="text-error text-xs font-mono">+4.1%</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-4xl font-headline font-light text-on-surface">1,240</span>
+<span class="text-on-surface-variant text-sm font-mono">ms</span>
+</div>
+<div class="mt-4 h-1 bg-surface-container-highest overflow-hidden">
+<div class="h-full bg-primary/60 w-3/4"></div>
+</div>
+</div>
+<!-- P99 -->
+<div class="bg-surface-container-low p-6 rounded-md border border-outline-variant/5">
+<div class="flex justify-between items-start mb-4">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Percentile P99</span>
+<span class="text-on-surface-variant text-xs font-mono">Stable</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-4xl font-headline font-light">3,892</span>
+<span class="text-on-surface-variant text-sm font-mono">ms</span>
+</div>
+<div class="mt-4 h-1 bg-surface-container-highest overflow-hidden">
+<div class="h-full bg-error w-full"></div>
+</div>
+</div>
+<!-- Throughput -->
+<div class="bg-surface-container-low p-6 rounded-md border border-outline-variant/5 relative overflow-hidden group">
+<div class="flex justify-between items-start mb-4 relative z-10">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Avg Throughput</span>
+</div>
+<div class="flex items-baseline gap-2 relative z-10">
+<span class="text-4xl font-headline font-light">84.2</span>
+<span class="text-on-surface-variant text-sm font-mono">req/s</span>
+</div>
+<div class="absolute bottom-0 right-0 opacity-20 group-hover:opacity-40 transition-opacity">
+<span class="material-symbols-outlined text-8xl text-primary" style="font-variation-settings: 'FILL' 1">insights</span>
+</div>
+</div>
+</section>
+<!-- Main Latency Heatmap Section -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Heatmap (The Precision Instrument) -->
+<div class="lg:col-span-2 bg-surface-container p-8 rounded-md relative border border-outline-variant/10">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h3 class="font-headline font-bold text-xl">Latency Distribution Heatmap</h3>
+<p class="text-xs text-on-surface-variant font-mono">Global Mesh | 256 Buckets</p>
+</div>
+<div class="flex items-center gap-4 text-[10px] uppercase font-bold tracking-tighter text-on-surface-variant">
+<span>0ms</span>
+<div class="flex h-2 w-32 bg-gradient-to-r from-surface-container-highest via-primary/40 to-primary"></div>
+<span>5000ms+</span>
+</div>
+</div>
+<!-- Heatmap Grid -->
+<div class="grid grid-cols-12 gap-1 h-64">
+<!-- Simulated Heatmap Data -->
+<div class="col-span-12 grid grid-cols-[repeat(24,minmax(0,1fr))] gap-1">
+<!-- Rows for latency buckets -->
+<div class="contents" id="heatmap-cells">
+<!-- JS-free placeholder grid -->
+<div class="bg-primary/20 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/40 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/80 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/60 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-error/40 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/20 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/30 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/90 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/40 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/20 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/30 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+</div>
+</div>
+<!-- Repeat for more rows -->
+<div class="col-span-12 grid grid-cols-[repeat(24,minmax(0,1fr))] gap-1">
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/30 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/90 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/70 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/20 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/20 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/50 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/20 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+</div>
+<div class="col-span-12 grid grid-cols-[repeat(24,minmax(0,1fr))] gap-1">
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/20 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/60 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/80 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/30 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/30 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/10 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+<div class="bg-primary/5 h-full rounded-sm heatmap-cell"></div>
+</div>
+</div>
+<div class="flex justify-between mt-4 text-[10px] text-on-surface-variant font-mono">
+<span>12:00 PM</span>
+<span>12:15 PM</span>
+<span>12:30 PM</span>
+<span>12:45 PM</span>
+<span>01:00 PM</span>
+</div>
+</div>
+<!-- Component Breakdown (Editorial List) -->
+<div class="bg-surface-container-low p-8 rounded-md border border-outline-variant/10">
+<h3 class="font-headline font-bold text-xl mb-6">Component Breakdown</h3>
+<div class="space-y-6">
+<!-- LLM Call -->
+<div>
+<div class="flex justify-between text-xs mb-2">
+<span class="font-bold text-on-surface">LLM Inference</span>
+<span class="text-on-surface-variant font-mono">850ms (68%)</span>
+</div>
+<div class="h-2 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[68%]"></div>
+</div>
+</div>
+<!-- Database -->
+<div>
+<div class="flex justify-between text-xs mb-2">
+<span class="font-bold text-on-surface">Vector DB Retrieval</span>
+<span class="text-on-surface-variant font-mono">240ms (19%)</span>
+</div>
+<div class="h-2 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary/60 w-[19%]"></div>
+</div>
+</div>
+<!-- Pre-processing -->
+<div>
+<div class="flex justify-between text-xs mb-2">
+<span class="font-bold text-on-surface">Tokenization &amp; Pre-proc</span>
+<span class="text-on-surface-variant font-mono">112ms (9%)</span>
+</div>
+<div class="h-2 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary/40 w-[9%]"></div>
+</div>
+</div>
+<!-- Network -->
+<div>
+<div class="flex justify-between text-xs mb-2">
+<span class="font-bold text-on-surface">Network Overhead</span>
+<span class="text-on-surface-variant font-mono">48ms (4%)</span>
+</div>
+<div class="h-2 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary/20 w-[4%]"></div>
+</div>
+</div>
+</div>
+<div class="mt-8 pt-8 border-t border-outline-variant/10">
+<div class="bg-surface-container-highest p-4 rounded-sm">
+<p class="text-[10px] font-bold text-on-surface-variant uppercase mb-2">Optimization Insight</p>
+<p class="text-xs text-on-surface italic">"The inference phase is currently CPU-bound. Switching to H100 instances could reduce latency by up to 34%."</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Historical Baseline Comparison -->
+<section class="bg-surface-container-low p-8 rounded-md border border-outline-variant/10">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+<div>
+<h3 class="font-headline font-bold text-2xl tracking-tight">Historical Baseline Comparison</h3>
+<p class="text-xs text-on-surface-variant mt-1">Comparing Current Session vs. Last 7 Days Average</p>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 bg-primary"></span>
+<span class="text-[10px] font-bold uppercase">Current</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 border border-outline border-dashed"></span>
+<span class="text-[10px] font-bold uppercase">Baseline</span>
+</div>
+</div>
+</div>
+<div class="relative h-64 w-full flex items-end gap-1">
+<!-- High-end custom chart bars -->
+<!-- Bar 1 -->
+<div class="flex-1 flex flex-col justify-end gap-1 group relative">
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-surface-bright p-2 rounded-sm text-[10px] opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none border border-outline-variant/20 whitespace-nowrap">
+                            420ms | -15% vs Avg
+                        </div>
+<div class="w-full bg-primary/10 border-x border-t border-primary/20 border-dashed h-[50%]"></div>
+<div class="w-full bg-primary h-[40%] shadow-[0_0_15px_rgba(107,222,128,0.2)]"></div>
+</div>
+<!-- Bar 2 -->
+<div class="flex-1 flex flex-col justify-end gap-1 group relative">
+<div class="w-full bg-primary/10 border-x border-t border-primary/20 border-dashed h-[55%]"></div>
+<div class="w-full bg-primary h-[45%]"></div>
+</div>
+<!-- Bar 3 -->
+<div class="flex-1 flex flex-col justify-end gap-1 group relative">
+<div class="w-full bg-primary/10 border-x border-t border-primary/20 border-dashed h-[48%]"></div>
+<div class="w-full bg-primary h-[52%]"></div>
+</div>
+<!-- Bar 4 (Anomaly) -->
+<div class="flex-1 flex flex-col justify-end gap-1 group relative">
+<div class="w-full bg-primary/10 border-x border-t border-primary/20 border-dashed h-[50%]"></div>
+<div class="w-full bg-error h-[85%]"></div>
+</div>
+<!-- Repeat logic for rest of the bars -->
+<div class="flex-1 flex flex-col justify-end gap-1"><div class="w-full bg-primary/10 border-x border-t border-primary/20 border-dashed h-[52%]"></div><div class="w-full bg-primary h-[48%]"></div></div>
+<div class="flex-1 flex flex-col justify-end gap-1"><div class="w-full bg-primary/10 border-x border-t border-primary/20 border-dashed h-[50%]"></div><div class="w-full bg-primary h-[45%]"></div></div>
+<div class="flex-1 flex flex-col justify-end gap-1"><div class="w-full bg-primary/10 border-x border-t border-primary/20 border-dashed h-[45%]"></div><div class="w-full bg-primary h-[42%]"></div></div>
+<div class="flex-1 flex flex-col justify-end gap-1"><div class="w-full bg-primary/10 border-x border-t border-primary/20 border-dashed h-[50%]"></div><div class="w-full bg-primary h-[46%]"></div></div>
+<div class="flex-1 flex flex-col justify-end gap-1"><div class="w-full bg-primary/10 border-x border-t border-primary/20 border-dashed h-[48%]"></div><div class="w-full bg-primary h-[44%]"></div></div>
+<div class="flex-1 flex flex-col justify-end gap-1"><div class="w-full bg-primary/10 border-x border-t border-primary/20 border-dashed h-[50%]"></div><div class="w-full bg-primary h-[47%]"></div></div>
+<div class="flex-1 flex flex-col justify-end gap-1"><div class="w-full bg-primary/10 border-x border-t border-primary/20 border-dashed h-[45%]"></div><div class="w-full bg-primary h-[41%]"></div></div>
+<div class="flex-1 flex flex-col justify-end gap-1"><div class="w-full bg-primary/10 border-x border-t border-primary/20 border-dashed h-[55%]"></div><div class="w-full bg-primary h-[50%]"></div></div>
+</div>
+</section>
+<!-- Trace Log Sample -->
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h3 class="font-headline font-bold text-xl">High-Latency Traces (&gt;2s)</h3>
+<button class="text-primary text-xs font-bold hover:underline">View all anomalous traces</button>
+</div>
+<div class="space-y-px rounded-md overflow-hidden border border-outline-variant/10">
+<!-- Trace Row 1 -->
+<div class="grid grid-cols-12 items-center px-6 py-4 bg-surface-container-low hover:bg-surface-container transition-colors group cursor-pointer">
+<div class="col-span-2 flex items-center gap-3">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+<span class="font-mono text-xs text-on-surface-variant uppercase">trc_8829_ax</span>
+</div>
+<div class="col-span-4">
+<p class="text-xs font-bold">Inference: Multi-modal Reasoning Task</p>
+<p class="text-[10px] text-on-surface-variant truncate">User ID: node_77_cluster_delta</p>
+</div>
+<div class="col-span-2">
+<div class="flex items-baseline gap-1">
+<span class="text-sm font-bold text-error">4,281</span>
+<span class="text-[10px] text-on-surface-variant font-mono">ms</span>
+</div>
+</div>
+<div class="col-span-3">
+<div class="flex gap-2">
+<span class="px-2 py-0.5 bg-error/10 text-error text-[9px] font-bold uppercase rounded-sm">Latency Spike</span>
+<span class="px-2 py-0.5 bg-surface-container-highest text-on-surface-variant text-[9px] font-bold uppercase rounded-sm">GPT-4o</span>
+</div>
+</div>
+<div class="col-span-1 flex justify-end">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">arrow_forward</span>
+</div>
+</div>
+<!-- Trace Row 2 -->
+<div class="grid grid-cols-12 items-center px-6 py-4 bg-surface-container-low hover:bg-surface-container transition-colors group cursor-pointer border-t border-outline-variant/5">
+<div class="col-span-2 flex items-center gap-3">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+<span class="font-mono text-xs text-on-surface-variant uppercase">trc_9110_zk</span>
+</div>
+<div class="col-span-4">
+<p class="text-xs font-bold">Query: Semantic Vector Search</p>
+<p class="text-[10px] text-on-surface-variant truncate">User ID: web_client_prod_01</p>
+</div>
+<div class="col-span-2">
+<div class="flex items-baseline gap-1">
+<span class="text-sm font-bold text-on-surface">2,050</span>
+<span class="text-[10px] text-on-surface-variant font-mono">ms</span>
+</div>
+</div>
+<div class="col-span-3">
+<div class="flex gap-2">
+<span class="px-2 py-0.5 bg-surface-container-highest text-on-surface-variant text-[9px] font-bold uppercase rounded-sm">Search</span>
+<span class="px-2 py-0.5 bg-surface-container-highest text-on-surface-variant text-[9px] font-bold uppercase rounded-sm">Pinecone</span>
+</div>
+</div>
+<div class="col-span-1 flex justify-end">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">arrow_forward</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Footer Spatial Awareness (Design System Principle) -->
+<footer class="p-8 mt-12 border-t border-outline-variant/5 flex justify-between items-center text-[10px] uppercase font-bold tracking-widest text-on-surface-variant">
+<div>
+                Node: US-EAST-1 (ASHBURN) | Cluster: LENS-DELTA-01
+            </div>
+<div class="flex gap-8">
+<span class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span> System Healthy</span>
+<span class="opacity-50">© 2024 Obsidian Lens Observability</span>
+</div>
+</footer>
+</main>
+<!-- Contextual Floating Panel (Glassmorphism) -->
+<div class="fixed bottom-8 right-8 z-50 bg-surface-bright/60 backdrop-blur-xl border border-outline-variant/30 p-4 rounded-md shadow-2xl max-w-xs flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+<div class="w-10 h-10 rounded-sm bg-primary/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">auto_awesome</span>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface">AI Assistant Insight</p>
+<p class="text-[10px] text-on-surface-variant leading-relaxed">Latency in P99 has drifted 20% in the last 15 mins. Check <span class="text-primary cursor-pointer underline">Trace #AX-902</span>.</p>
+</div>
+<button class="text-on-surface-variant hover:text-error transition-colors">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+</body></html>
