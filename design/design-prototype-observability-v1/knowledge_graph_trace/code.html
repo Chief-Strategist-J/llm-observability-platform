@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Obsidian Lens - Knowledge Graph Trace</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "inverse-surface": "#dee3eb",
+                        "on-tertiary": "#2c3137",
+                        "on-background": "#dee3eb",
+                        "on-tertiary-container": "#252a30",
+                        "secondary-container": "#414a53",
+                        "on-surface-variant": "#bdcaba",
+                        "on-secondary": "#29313a",
+                        "primary-fixed-dim": "#6bde80",
+                        "outline-variant": "#3e4a3d",
+                        "surface-container-lowest": "#0a0f14",
+                        "surface-container": "#1b2026",
+                        "tertiary-fixed-dim": "#c2c7cf",
+                        "tertiary-fixed": "#dee3eb",
+                        "on-secondary-container": "#b0b9c4",
+                        "on-error": "#690005",
+                        "secondary-fixed-dim": "#bec7d2",
+                        "secondary": "#bec7d2",
+                        "on-error-container": "#ffdad6",
+                        "surface-bright": "#353a40",
+                        "error": "#ffb4ab",
+                        "on-surface": "#dee3eb",
+                        "surface-dim": "#0f1419",
+                        "on-tertiary-fixed-variant": "#42474e",
+                        "secondary-fixed": "#dae3ef",
+                        "tertiary": "#c2c7cf",
+                        "surface-container-high": "#252a30",
+                        "surface-tint": "#6bde80",
+                        "outline": "#889485",
+                        "surface-variant": "#30353b",
+                        "on-primary-fixed": "#002108",
+                        "on-primary": "#003913",
+                        "primary": "#6bde80",
+                        "inverse-on-surface": "#2c3137",
+                        "surface-container-highest": "#30353b",
+                        "background": "#0f1419",
+                        "surface-container-low": "#171c22",
+                        "primary-fixed": "#88fb99",
+                        "on-primary-container": "#003210",
+                        "on-secondary-fixed-variant": "#3f4851",
+                        "primary-container": "#2fa54f",
+                        "on-secondary-fixed": "#141c25",
+                        "inverse-primary": "#006e2c",
+                        "error-container": "#93000a",
+                        "tertiary-container": "#8c9198",
+                        "on-primary-fixed-variant": "#00531f",
+                        "surface": "#0f1419",
+                        "on-tertiary-fixed": "#171c22"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 20px;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .graph-line {
+            stroke: #3e4a3d;
+            stroke-width: 1.5;
+            stroke-dasharray: 4;
+        }
+        .node-glow {
+            filter: drop-shadow(0 0 8px rgba(107, 222, 128, 0.3));
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body overflow-hidden">
+<!-- SideNavBar Shell -->
+<aside class="h-screen w-64 fixed left-0 top-0 flex flex-col bg-[#171c22] border-r border-[#30353b]/15 z-50">
+<div class="flex flex-col h-full py-6">
+<div class="px-6 mb-8">
+<div class="text-[#6bde80] font-['Space_Grotesk'] font-bold text-xl tracking-tight">Obsidian Lens</div>
+<div class="text-on-surface-variant text-xs font-label mt-1">LLM Observability</div>
+</div>
+<nav class="flex-1 space-y-1 px-3">
+<a class="flex items-center px-3 py-2 text-[#6bde80] bg-[#30353b]/30 font-bold border-r-2 border-[#6bde80] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3">account_tree</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Knowledge Graph</span>
+</a>
+<a class="flex items-center px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3">manage_search</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Trace Search</span>
+</a>
+<a class="flex items-center px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3">terminal</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Log Stream</span>
+</a>
+<a class="flex items-center px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3">query_stats</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Latency</span>
+</a>
+<a class="flex items-center px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3">compare_arrows</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Comparison</span>
+</a>
+<a class="flex items-center px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3">bug_report</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Errors</span>
+</a>
+</nav>
+<div class="mt-auto px-3 space-y-1">
+<button class="w-full mb-6 py-2 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold rounded-sm text-sm scale-95 active:scale-90 transition-transform">
+                    New Trace
+                </button>
+<a class="flex items-center px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3">description</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Docs</span>
+</a>
+<a class="flex items-center px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3">settings</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Settings</span>
+</a>
+<div class="pt-4 px-3 flex items-center">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest border border-outline-variant flex items-center justify-center overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="User avatar placeholder profile picture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdxWr_4XgNZoRha8fw_Kf58F701_Y1522S5whMMIERA37iQK9pSIYjSKtap6iJzB5I-7qSGuD-vAAJO2FNS4J_W2rpnE3nzWewwiPleOIDRDiex4MiPj9RNApHn_bURRdpbYOd4sdX_kWNJiFP3rJhJLRYPXc6abfzNTXpT2z3wbUgzkf390-9DMxqwmv8QHgnnFK-mRDWrHOeWtn40ldRNAHyyItfQXSHdX-NrU1_4euWIpjXJQIb9xjUknbbBAcmTD2273Q7etw"/>
+</div>
+<div class="ml-3">
+<p class="text-xs font-bold text-on-surface leading-none">Tech Lead</p>
+<p class="text-[10px] text-on-surface-variant">Lumen Trace Engine</p>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- TopNavBar Shell -->
+<header class="fixed top-0 right-0 left-64 h-16 z-40 bg-[#0f1419]/80 backdrop-blur-xl border-b border-[#30353b]/10">
+<div class="flex justify-between items-center px-8 w-full h-full">
+<div class="flex items-center space-x-8">
+<nav class="flex space-x-6 text-sm font-medium">
+<a class="text-[#bdcaba] hover:text-[#6bde80] transition-opacity" href="#">Dashboard</a>
+<a class="text-[#bdcaba] hover:text-[#6bde80] transition-opacity" href="#">Workspaces</a>
+<a class="text-[#bdcaba] hover:text-[#6bde80] transition-opacity" href="#">Clusters</a>
+</nav>
+</div>
+<div class="flex items-center space-x-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="bg-surface-container-lowest border-none focus:ring-1 focus:ring-primary text-xs pl-10 pr-4 py-1.5 w-64 rounded-sm transition-all" placeholder="Search Trace ID..." type="text"/>
+</div>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="bg-surface-container-high px-4 py-1.5 text-xs font-bold text-primary-fixed-dim rounded-sm border border-outline-variant/20 hover:border-primary/40 transition-all">
+                    Deploy Model
+                </button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-16 h-screen flex overflow-hidden">
+<!-- Left Panel: Knowledge Graph Trace -->
+<section class="flex-1 relative overflow-hidden bg-surface-container-low">
+<!-- Graph Background & Grid -->
+<div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#6bde80 0.5px, transparent 0.5px); background-size: 24px 24px;"></div>
+<!-- Breadcrumbs / Header Information -->
+<div class="absolute top-6 left-8 z-10 flex items-center space-x-3">
+<div class="bg-surface-container px-3 py-1 rounded-sm border border-outline-variant/15">
+<span class="text-[10px] uppercase tracking-widest text-on-surface-variant block leading-tight">Trace ID</span>
+<span class="font-mono text-sm text-primary font-medium">kg-7742-retrieve-vector-alpha</span>
+</div>
+<div class="bg-surface-container px-3 py-1 rounded-sm border border-outline-variant/15">
+<span class="text-[10px] uppercase tracking-widest text-on-surface-variant block leading-tight">Latency</span>
+<span class="font-mono text-sm text-on-surface font-medium">142ms</span>
+</div>
+</div>
+<!-- SVG Graph Visualization -->
+<div class="w-full h-full flex items-center justify-center">
+<svg class="w-full h-full" viewbox="0 0 1000 800">
+<!-- Connection Lines -->
+<path class="graph-line" d="M 500 400 L 300 250"></path>
+<path class="graph-line" d="M 500 400 L 700 250"></path>
+<path class="graph-line" d="M 500 400 L 500 150"></path>
+<path class="graph-line" d="M 500 400 L 250 550"></path>
+<path class="graph-line" d="M 500 400 L 750 550"></path>
+<!-- Nodes -->
+<!-- Central Node: The Query -->
+<g class="node-glow" transform="translate(500, 400)">
+<circle fill="#1b2026" r="40" stroke="#6bde80" stroke-width="2"></circle>
+<text fill="#dee3eb" font-family="Space Grotesk" font-size="12" font-weight="bold" text-anchor="middle" y="5">QUERY</text>
+</g>
+<!-- Entity: Vector Search -->
+<g transform="translate(500, 150)">
+<rect fill="#171c22" height="40" rx="2" stroke="#3e4a3d" width="120" x="-60" y="-20"></rect>
+<text fill="#bdcaba" font-family="Inter" font-size="10" text-anchor="middle" y="5">Similarity Engine</text>
+<circle cx="0" cy="-20" fill="#6bde80" r="6"></circle>
+</g>
+<!-- Entity: Document A -->
+<g transform="translate(300, 250)">
+<rect fill="#1b2026" height="60" rx="2" stroke="#30353b" width="140" x="-70" y="-30"></rect>
+<text fill="#dee3eb" font-family="Space Grotesk" font-size="11" font-weight="medium" text-anchor="middle" y="-5">Legal_Statute_202</text>
+<text fill="#6bde80" font-family="Inter" font-size="9" text-anchor="middle" y="12">Conf: 0.982</text>
+</g>
+<!-- Entity: Document B -->
+<g transform="translate(700, 250)">
+<rect fill="#1b2026" height="60" rx="2" stroke="#30353b" width="140" x="-70" y="-30"></rect>
+<text fill="#dee3eb" font-family="Space Grotesk" font-size="11" font-weight="medium" text-anchor="middle" y="-5">Case_Precedent_X</text>
+<text fill="#6bde80" font-family="Inter" font-size="9" text-anchor="middle" y="12">Conf: 0.841</text>
+</g>
+<!-- Relationship Node -->
+<g transform="translate(250, 550)">
+<circle fill="#0a0f14" r="30" stroke="#3e4a3d" stroke-dasharray="2"></circle>
+<text fill="#bdcaba" font-family="Inter" font-size="9" font-style="italic" text-anchor="middle" y="5">Inherits</text>
+</g>
+<!-- Relationship Node -->
+<g transform="translate(750, 550)">
+<circle fill="#0a0f14" r="30" stroke="#3e4a3d" stroke-dasharray="2"></circle>
+<text fill="#bdcaba" font-family="Inter" font-size="9" font-style="italic" text-anchor="middle" y="5">References</text>
+</g>
+</svg>
+</div>
+<!-- Floating Controls -->
+<div class="absolute bottom-8 left-1/2 -translate-x-1/2 bg-surface-container/60 backdrop-blur-md border border-outline-variant/20 rounded-lg p-2 flex items-center space-x-2">
+<button class="p-2 hover:bg-surface-container-high rounded-sm transition-colors">
+<span class="material-symbols-outlined">zoom_in</span>
+</button>
+<div class="h-4 w-px bg-outline-variant/30"></div>
+<button class="p-2 hover:bg-surface-container-high rounded-sm transition-colors">
+<span class="material-symbols-outlined">zoom_out</span>
+</button>
+<div class="h-4 w-px bg-outline-variant/30"></div>
+<button class="p-2 hover:bg-surface-container-high rounded-sm transition-colors">
+<span class="material-symbols-outlined">center_focus_strong</span>
+</button>
+<div class="h-4 w-px bg-outline-variant/30"></div>
+<button class="p-2 hover:bg-surface-container-high rounded-sm transition-colors">
+<span class="material-symbols-outlined text-primary">play_arrow</span>
+</button>
+</div>
+</section>
+<!-- Right Panel: Metadata & Analytics -->
+<aside class="w-[400px] h-full bg-[#171c22] border-l border-[#30353b]/15 flex flex-col">
+<!-- Panel Header -->
+<div class="p-6 border-b border-[#30353b]/10">
+<div class="flex items-center justify-between mb-2">
+<h2 class="font-headline font-bold text-lg tracking-tight">Trace Metadata</h2>
+<span class="px-2 py-0.5 rounded-sm bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">High Confidence</span>
+</div>
+<p class="text-on-surface-variant text-xs font-body leading-relaxed">Detailed graph traversal data for primary RAG retrieval path.</p>
+</div>
+<div class="flex-1 overflow-y-auto no-scrollbar p-6 space-y-8">
+<!-- Section: Query Parameters -->
+<div>
+<h3 class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant mb-4 flex items-center">
+<span class="material-symbols-outlined text-xs mr-2">database</span>
+                        Query Parameters
+                    </h3>
+<div class="bg-surface-container-lowest p-4 rounded-sm space-y-4">
+<div class="flex justify-between items-center">
+<span class="text-xs text-on-surface-variant font-mono">top_k</span>
+<span class="text-xs text-on-surface font-mono">15</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-xs text-on-surface-variant font-mono">alpha_decay</span>
+<span class="text-xs text-on-surface font-mono">0.024</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-xs text-on-surface-variant font-mono">max_depth</span>
+<span class="text-xs text-on-surface font-mono">3 hops</span>
+</div>
+<div class="pt-2 border-t border-outline-variant/10">
+<p class="text-[10px] text-on-surface-variant mb-2">RAW PROMPT EMBEDDING</p>
+<div class="h-2 w-full bg-surface-container rounded-full overflow-hidden flex">
+<div class="h-full bg-primary/40" style="width: 35%"></div>
+<div class="h-full bg-primary" style="width: 25%"></div>
+<div class="h-full bg-primary/60" style="width: 40%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Section: Performance Benchmarks -->
+<div>
+<h3 class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant mb-4 flex items-center">
+<span class="material-symbols-outlined text-xs mr-2">speed</span>
+                        Step Latency
+                    </h3>
+<div class="space-y-3">
+<div class="flex flex-col">
+<div class="flex justify-between text-[11px] mb-1">
+<span class="text-on-surface font-medium">Node Expansion</span>
+<span class="text-on-surface-variant">42ms</span>
+</div>
+<div class="w-full bg-surface-container h-1 rounded-full">
+<div class="bg-primary h-full rounded-full" style="width: 60%"></div>
+</div>
+</div>
+<div class="flex flex-col">
+<div class="flex justify-between text-[11px] mb-1">
+<span class="text-on-surface font-medium">Edge Verification</span>
+<span class="text-on-surface-variant">28ms</span>
+</div>
+<div class="w-full bg-surface-container h-1 rounded-full">
+<div class="bg-primary h-full rounded-full" style="width: 40%"></div>
+</div>
+</div>
+<div class="flex flex-col">
+<div class="flex justify-between text-[11px] mb-1">
+<span class="text-on-surface font-medium">Re-Ranking Output</span>
+<span class="text-on-surface-variant">72ms</span>
+</div>
+<div class="w-full bg-surface-container h-1 rounded-full">
+<div class="bg-primary h-full rounded-full" style="width: 85%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Section: Raw JSON Output (Glassmorphism effect) -->
+<div>
+<h3 class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant mb-4 flex items-center">
+<span class="material-symbols-outlined text-xs mr-2">code</span>
+                        Raw Graph Response
+                    </h3>
+<div class="relative group">
+<div class="absolute -inset-1 bg-gradient-to-r from-primary/10 to-transparent rounded-lg blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+<pre class="relative bg-surface-container-lowest/80 backdrop-blur-xl border border-outline-variant/10 p-4 rounded-sm text-[11px] font-mono leading-relaxed text-on-surface-variant overflow-x-auto">{
+  "graph_id": "nx-299",
+  "root": "QUERY_VECTOR_8",
+  "entities": [
+    {
+      "id": "statute_202",
+      "type": "DOC",
+      "pagerank": 0.089
+    },
+    {
+      "id": "ref_legal",
+      "type": "REL",
+      "weight": 0.95
+    }
+  ],
+  "traversal_stats": {
+    "nodes_visited": 124,
+    "edges_pruned": 12,
+    "confidence": 0.982
+  }
+}
+                        </pre>
+</div>
+</div>
+</div>
+<!-- Footer Action -->
+<div class="p-6 border-t border-[#30353b]/10 bg-surface-container-high/30">
+<button class="w-full py-3 bg-surface-container-highest hover:bg-surface-container-high text-on-surface text-xs font-bold rounded-sm border border-outline-variant/30 flex items-center justify-center transition-all">
+<span class="material-symbols-outlined text-sm mr-2">download</span>
+                    Export Trace JSON
+                </button>
+</div>
+</aside>
+</main>
+</body></html>

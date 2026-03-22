@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Obsidian Lens - Trace Explorer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "outline-variant": "#3e4a3d",
+                        "on-secondary-container": "#b0b9c4",
+                        "on-secondary": "#29313a",
+                        "on-primary-fixed": "#002108",
+                        "primary": "#6bde80",
+                        "secondary": "#bec7d2",
+                        "primary-container": "#2fa54f",
+                        "on-primary-fixed-variant": "#00531f",
+                        "secondary-fixed": "#dae3ef",
+                        "primary-fixed": "#88fb99",
+                        "on-error": "#690005",
+                        "surface-container-low": "#171c22",
+                        "on-tertiary-fixed-variant": "#42474e",
+                        "tertiary-fixed-dim": "#c2c7cf",
+                        "secondary-fixed-dim": "#bec7d2",
+                        "tertiary-fixed": "#dee3eb",
+                        "error-container": "#93000a",
+                        "surface-tint": "#6bde80",
+                        "surface-dim": "#0f1419",
+                        "on-surface-variant": "#bdcaba",
+                        "on-primary-container": "#003210",
+                        "error": "#ffb4ab",
+                        "outline": "#889485",
+                        "surface-container-lowest": "#0a0f14",
+                        "inverse-on-surface": "#2c3137",
+                        "surface-variant": "#30353b",
+                        "surface-bright": "#353a40",
+                        "background": "#0f1419",
+                        "tertiary": "#c2c7cf",
+                        "surface-container-high": "#252a30",
+                        "on-background": "#dee3eb",
+                        "inverse-surface": "#dee3eb",
+                        "on-tertiary-container": "#252a30",
+                        "on-secondary-fixed-variant": "#3f4851",
+                        "inverse-primary": "#006e2c",
+                        "tertiary-container": "#8c9198",
+                        "primary-fixed-dim": "#6bde80",
+                        "secondary-container": "#414a53",
+                        "on-tertiary-fixed": "#171c22",
+                        "on-secondary-fixed": "#141c25",
+                        "on-tertiary": "#2c3137",
+                        "on-primary": "#003913",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-highest": "#30353b",
+                        "surface-container": "#1b2026",
+                        "surface": "#0f1419",
+                        "on-surface": "#dee3eb"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f1419; color: #dee3eb; }
+        .font-space-grotesk { font-family: 'Space Grotesk', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .trace-line { background: linear-gradient(to bottom, transparent, #6bde80 15%, #6bde80 85%, transparent); }
+    </style>
+</head>
+<body class="bg-surface overflow-hidden">
+<!-- TopNavBar -->
+<nav class="bg-[#0f1419]/80 backdrop-blur-md text-[#6bde80] font-space-grotesk font-bold tracking-tight docked full-width top-0 z-50 shadow-[0_24px_48px_rgba(0,0,0,0.4)] flex justify-between items-center w-full px-6 h-14">
+<div class="flex items-center gap-8">
+<span class="text-xl font-black text-[#6bde80] tracking-tighter">Obsidian Lens</span>
+<div class="hidden md:flex gap-6 text-sm">
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors" href="#">Docs</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors" href="#">API</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors" href="#">Status</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="bg-[#171c22] rounded-md px-3 py-1 flex items-center gap-2 border border-[#30353b]/50">
+<span class="material-symbols-outlined text-sm">search</span>
+<input class="bg-transparent border-none text-xs focus:ring-0 w-48 text-[#dee3eb] placeholder-[#bdcaba]/50" placeholder="Search trace ID..." type="text"/>
+</div>
+<span class="material-symbols-outlined text-[#bdcaba] hover:bg-[#30353b]/50 p-1 rounded transition-all cursor-pointer">notifications</span>
+<span class="material-symbols-outlined text-[#bdcaba] hover:bg-[#30353b]/50 p-1 rounded transition-all cursor-pointer">terminal</span>
+<span class="material-symbols-outlined text-[#bdcaba] hover:bg-[#30353b]/50 p-1 rounded transition-all cursor-pointer">settings</span>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest border border-outline-variant flex items-center justify-center overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="Cyberpunk style profile avatar for technical user" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDsSj7PgXR8CNRQV5DLTNRhfClRY_UkGfsHyWtzHVxeu7qKDAacRBHqR6i1qSr0Rd9Dtup95gIuLqu0Z_c9qxa0RAc2amqErh2PPGVSHwXZXKGNGUsGx9J-VL3QW5MDI-XpjtMvdqrysi2UC6d1rc23TgyImkDpUYPXjNkj7J50QwUc3zJc90awrnpmiYIVTUBu5k1mkKqQEbOR5GXDLAyFya_dmERnHLKWYh1nxaDY0uOytX9oJnzBfkz7hnTxbZ7dMAqgJlPrQd4"/>
+</div>
+</div>
+</nav>
+<div class="flex h-[calc(100vh-3.5rem)]">
+<!-- SideNavBar -->
+<aside class="bg-[#171c22] font-inter text-sm antialiased docked left-0 h-full w-64 flex flex-col h-full py-4 border-r border-[#30353b]/10">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-10 h-10 bg-primary/10 rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">view_in_ar</span>
+</div>
+<div>
+<h3 class="text-on-surface font-bold text-xs uppercase tracking-widest">Core Engine</h3>
+<p class="text-[10px] text-on-surface-variant">v2.4.0-stable</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<div class="px-3">
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="view_in_ar">view_in_ar</span>
+<span>Containers</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="layers">layers</span>
+<span>Infrastructure</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="settings_input_component">settings_input_component</span>
+<span>Config</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-[#30353b] text-[#6bde80] font-semibold border-r-2 border-[#6bde80] cursor-pointer touch-none" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="account_tree">account_tree</span>
+<span>Dependencies</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="reorder">reorder</span>
+<span>Logs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="psychology">psychology</span>
+<span>Models</span>
+</a>
+</div>
+</nav>
+<div class="px-6 py-4">
+<button class="w-full bg-primary-container text-on-primary-container font-bold py-2 px-4 rounded-sm hover:brightness-110 transition-all text-xs flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">add</span>
+                    Deploy New Node
+                </button>
+</div>
+<div class="px-3 pt-4 border-t border-[#30353b]/20">
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] text-xs" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="help_outline">help_outline</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] text-xs" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="manage_accounts">manage_accounts</span>
+<span>Account</span>
+</a>
+</div>
+</aside>
+<!-- Main Content: Trace Visualization -->
+<main class="flex-1 bg-surface relative overflow-y-auto custom-scrollbar">
+<!-- Breadcrumbs / Header -->
+<div class="sticky top-0 z-40 bg-surface px-8 py-6 flex justify-between items-end border-b border-surface-container-highest/30">
+<div>
+<h1 class="text-3xl font-space-grotesk font-black text-on-surface tracking-tight">Trace: tx_8829_alpha</h1>
+<div class="flex items-center gap-4 mt-2">
+<span class="text-[10px] uppercase font-bold tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded">Completed</span>
+<span class="text-xs font-mono text-on-surface-variant">Duration: 1.42s</span>
+<span class="text-xs font-mono text-on-surface-variant">Tokens: 842</span>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="bg-surface-container-high text-on-surface text-xs px-4 py-2 rounded-sm border border-outline-variant/20 hover:bg-surface-container-highest transition-colors">Export JSON</button>
+<button class="bg-primary text-on-primary text-xs px-4 py-2 font-bold rounded-sm hover:brightness-110 transition-all">Replay Trace</button>
+</div>
+</div>
+<!-- Sequence Diagram View -->
+<div class="p-8 max-w-6xl mx-auto">
+<div class="relative flex flex-col gap-12">
+<!-- Trace Vertical Backbone -->
+<div class="absolute left-6 top-8 bottom-8 w-[2px] trace-line opacity-30"></div>
+<!-- Step 1: User Input -->
+<div class="relative flex items-start gap-12 group">
+<div class="z-10 w-12 h-12 bg-surface-container border-2 border-primary rounded-full flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-primary">person</span>
+</div>
+<div class="flex-1 bg-surface-container-low rounded-lg p-6 hover:bg-surface-container-high transition-colors">
+<div class="flex justify-between items-center mb-4">
+<h4 class="font-bold text-on-surface font-space-grotesk">User Interaction</h4>
+<span class="text-[10px] font-mono text-primary bg-primary/5 px-2 py-0.5 rounded">T+0ms</span>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded border-l-4 border-primary">
+<p class="text-xs text-on-surface-variant font-mono mb-2">// raw_prompt</p>
+<p class="text-sm font-body">"Analyze the last 5 minutes of logs for node-cluster-04 and identify any OOM issues."</p>
+</div>
+</div>
+</div>
+<!-- Step 2: API Gateway -->
+<div class="relative flex items-start gap-12 group">
+<div class="z-10 w-12 h-12 bg-surface-container border-2 border-primary rounded-full flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-primary">router</span>
+</div>
+<div class="flex-1 bg-surface-container-low rounded-lg p-6 hover:bg-surface-container-high transition-colors">
+<div class="flex justify-between items-center mb-4">
+<h4 class="font-bold text-on-surface font-space-grotesk">API Ingress &amp; Auth</h4>
+<span class="text-[10px] font-mono text-primary bg-primary/5 px-2 py-0.5 rounded">T+124ms</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-lowest p-3 rounded">
+<p class="text-[10px] text-on-surface-variant font-mono uppercase mb-1">Header Validation</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xs">check_circle</span>
+<span class="text-xs text-primary font-mono">X-API-KEY: OK</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-3 rounded">
+<p class="text-[10px] text-on-surface-variant font-mono uppercase mb-1">Rate Limit</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xs">bolt</span>
+<span class="text-xs text-primary font-mono">14/1000 req/m</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Step 3: Prompt Engineering / Template -->
+<div class="relative flex items-start gap-12 group">
+<div class="z-10 w-12 h-12 bg-surface-container border-2 border-primary rounded-full flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-primary">architecture</span>
+</div>
+<div class="flex-1 bg-surface-container-low rounded-lg p-6 hover:bg-surface-container-high transition-colors">
+<div class="flex justify-between items-center mb-4">
+<h4 class="font-bold text-on-surface font-space-grotesk">Context Orchestration</h4>
+<span class="text-[10px] font-mono text-primary bg-primary/5 px-2 py-0.5 rounded">T+382ms</span>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded overflow-hidden">
+<p class="text-xs text-on-surface-variant font-mono mb-2 uppercase tracking-widest text-[9px]">Transformed System Message</p>
+<pre class="text-[11px] font-mono text-on-surface leading-relaxed">{
+  "role": "system",
+  "content": "You are a SRE specialist. Injecting context from cluster-04.
+  [CLUSTER_METRICS]: CPU 42%, MEM 89%, IOPS 1.2k..."
+}
+                                </pre>
+</div>
+</div>
+</div>
+<!-- Step 4: LLM Inference (Large Centerpiece) -->
+<div class="relative flex items-start gap-12 group">
+<div class="z-10 w-12 h-12 bg-surface-container border-2 border-primary-container rounded-full flex items-center justify-center flex-shrink-0 shadow-[0_0_15px_rgba(107,222,128,0.2)]">
+<span class="material-symbols-outlined text-primary">psychology</span>
+</div>
+<div class="flex-1 bg-surface-container-high rounded-xl p-8 border border-primary/20 shadow-xl">
+<div class="flex justify-between items-center mb-6">
+<div>
+<h4 class="font-bold text-on-surface font-space-grotesk text-lg">LLM Inference: GPT-4-Turbo</h4>
+<p class="text-[10px] text-on-surface-variant">PROVIDER: OPENAI | TEMPERATURE: 0.1</p>
+</div>
+<div class="text-right">
+<span class="block text-2xl font-mono text-primary font-bold">712ms</span>
+<span class="text-[9px] font-mono text-on-surface-variant uppercase tracking-widest">LATENCY</span>
+</div>
+</div>
+<!-- Token Visualizer -->
+<div class="flex gap-1 mb-6">
+<div class="h-1 flex-1 bg-primary rounded-full"></div>
+<div class="h-1 flex-1 bg-primary rounded-full"></div>
+<div class="h-1 flex-1 bg-primary rounded-full"></div>
+<div class="h-1 flex-1 bg-primary/30 rounded-full"></div>
+<div class="h-1 flex-1 bg-primary/30 rounded-full"></div>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/20 relative">
+<div class="absolute -top-3 left-4 bg-surface-container-highest px-2 py-0.5 rounded text-[8px] font-bold text-primary border border-primary/30 uppercase">Raw Output Stream</div>
+<p class="text-sm font-mono leading-relaxed text-[#dee3eb]">
+                                    "Based on the log analysis of <span class="text-primary">node-cluster-04</span>, I found a recurring <span class="text-error">java.lang.OutOfMemoryError</span> at 14:02:11 UTC. Recommendation: Increase heap size to 8GB."
+                                </p>
+</div>
+</div>
+</div>
+<!-- Step 5: Post-Processing & Output -->
+<div class="relative flex items-start gap-12 group">
+<div class="z-10 w-12 h-12 bg-surface-container border-2 border-primary rounded-full flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-primary">verified</span>
+</div>
+<div class="flex-1 bg-surface-container-low rounded-lg p-6 hover:bg-surface-container-high transition-colors">
+<div class="flex justify-between items-center mb-4">
+<h4 class="font-bold text-on-surface font-space-grotesk">Validation &amp; Response</h4>
+<span class="text-[10px] font-mono text-primary bg-primary/5 px-2 py-0.5 rounded">T+1.42s</span>
+</div>
+<div class="flex gap-4">
+<div class="flex-1 bg-surface-container-lowest p-3 rounded">
+<p class="text-[9px] text-on-surface-variant font-mono mb-2 uppercase">Sanitization</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xs">shield</span>
+<span class="text-[11px] font-mono">PII/Sensative Data: CLEAN</span>
+</div>
+</div>
+<div class="flex-1 bg-surface-container-lowest p-3 rounded">
+<p class="text-[9px] text-on-surface-variant font-mono mb-2 uppercase">Cost Metrics</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xs">payments</span>
+<span class="text-[11px] font-mono">$0.00842 (842 Tok)</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Side Metadata Panel (Floating Style) -->
+<div class="fixed right-8 top-20 w-80 bg-surface-container-high/60 backdrop-blur-xl rounded-xl border border-outline-variant/30 p-6 shadow-2xl hidden lg:block">
+<h5 class="text-xs font-bold text-on-surface font-space-grotesk uppercase tracking-widest mb-4">Trace Metadata</h5>
+<div class="space-y-4">
+<div class="flex justify-between items-center py-2 border-b border-outline-variant/10">
+<span class="text-[11px] text-on-surface-variant font-mono">Environment</span>
+<span class="text-[11px] text-primary font-mono">production-us-east-1</span>
+</div>
+<div class="flex justify-between items-center py-2 border-b border-outline-variant/10">
+<span class="text-[11px] text-on-surface-variant font-mono">SDK Version</span>
+<span class="text-[11px] text-on-surface font-mono">obsidian-py-4.1.2</span>
+</div>
+<div class="flex justify-between items-center py-2 border-b border-outline-variant/10">
+<span class="text-[11px] text-on-surface-variant font-mono">User ID</span>
+<span class="text-[11px] text-on-surface font-mono">u_4922_beta</span>
+</div>
+<div class="mt-8">
+<h6 class="text-[10px] font-bold text-on-surface-variant uppercase mb-3">Health Metrics</h6>
+<div class="bg-surface-container-lowest p-3 rounded-lg">
+<div class="flex justify-between mb-2">
+<span class="text-[10px] text-on-surface-variant">P99 Latency</span>
+<span class="text-[10px] text-primary">Normal</span>
+</div>
+<div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary w-[35%] h-full"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-8 bg-primary/10 p-4 rounded-lg border border-primary/20">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary text-sm">auto_awesome</span>
+<span class="text-xs font-bold text-primary">Lens Insight</span>
+</div>
+<p class="text-[10px] text-on-surface-variant leading-relaxed">This trace performed 12% faster than the average for the cluster-04 agent group.</p>
+</div>
+</div>
+</main>
+</div>
+</body></html>

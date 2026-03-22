@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lumen Trace | Release &amp; Deployment</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container": "#1b2026",
+              "on-error-container": "#ffdad6",
+              "on-primary-fixed-variant": "#00531f",
+              "secondary": "#bec7d2",
+              "on-primary": "#003913",
+              "secondary-fixed-dim": "#bec7d2",
+              "inverse-primary": "#006e2c",
+              "primary-fixed": "#88fb99",
+              "on-tertiary": "#2c3137",
+              "tertiary": "#c2c7cf",
+              "surface-container-low": "#171c22",
+              "inverse-on-surface": "#2c3137",
+              "error-container": "#93000a",
+              "on-tertiary-fixed": "#171c22",
+              "on-secondary-fixed": "#141c25",
+              "outline-variant": "#3e4a3d",
+              "outline": "#889485",
+              "secondary-fixed": "#dae3ef",
+              "error": "#ffb4ab",
+              "surface-variant": "#30353b",
+              "on-surface-variant": "#bdcaba",
+              "on-tertiary-fixed-variant": "#42474e",
+              "surface-container-high": "#252a30",
+              "surface": "#0f1419",
+              "primary-container": "#2fa54f",
+              "tertiary-container": "#8c9198",
+              "on-error": "#690005",
+              "on-surface": "#dee3eb",
+              "on-secondary": "#29313a",
+              "primary-fixed-dim": "#6bde80",
+              "on-tertiary-container": "#252a30",
+              "surface-container-lowest": "#0a0f14",
+              "secondary-container": "#414a53",
+              "on-secondary-fixed-variant": "#3f4851",
+              "on-secondary-container": "#b0b9c4",
+              "tertiary-fixed": "#dee3eb",
+              "primary": "#6bde80",
+              "on-background": "#dee3eb",
+              "inverse-surface": "#dee3eb",
+              "surface-tint": "#6bde80",
+              "on-primary-fixed": "#002108",
+              "surface-container-highest": "#30353b",
+              "surface-bright": "#353a40",
+              "background": "#0f1419",
+              "on-primary-container": "#003210",
+              "tertiary-fixed-dim": "#c2c7cf",
+              "surface-dim": "#0f1419"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"],
+              "mono": ["JetBrains Mono"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .glass-panel {
+        background: rgba(48, 53, 59, 0.6);
+        backdrop-filter: blur(12px);
+      }
+      .gradient-primary {
+        background: linear-gradient(135deg, #6bde80 0%, #2fa54f 100%);
+      }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30">
+<!-- SideNavBar -->
+<aside class="bg-slate-900 dark:bg-[#171c22] h-screen w-64 fixed left-0 top-0 flex flex-col py-6 px-4 z-50">
+<div class="flex items-center gap-3 px-2 mb-10">
+<span class="material-symbols-outlined text-emerald-500 dark:text-[#6bde80] text-2xl" style="font-variation-settings: 'FILL' 1;">view_object_track</span>
+<span class="text-emerald-500 dark:text-[#6bde80] font-bold text-xl font-['Space_Grotesk'] tracking-tight">Lumen Trace</span>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-lg">dashboard</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-lg">memory</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Infrastructure</span>
+</a>
+<a class="bg-[#30353b] text-[#6bde80] font-semibold rounded-sm flex items-center gap-3 px-3 py-2 transition-all" href="#">
+<span class="material-symbols-outlined text-lg">workspaces</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Workspace</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-lg">insights</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-lg">settings</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Settings</span>
+</a>
+</nav>
+<button class="mt-auto flex items-center justify-center gap-2 gradient-primary text-on-primary py-2.5 rounded-sm font-semibold text-sm active:opacity-80 transition-all">
+<span class="material-symbols-outlined text-sm">add</span>
+<span>New Trace</span>
+</button>
+</aside>
+<!-- TopNavBar -->
+<header class="bg-slate-950/60 dark:bg-[#0f1419]/60 backdrop-blur-xl flex justify-between items-center h-16 ml-64 px-8 sticky top-0 z-40 border-b border-white/5">
+<div class="flex items-center gap-4">
+<h1 class="text-on-surface font-headline font-bold text-lg tracking-tight">Release Strategies</h1>
+<div class="h-4 w-[1px] bg-outline-variant/30"></div>
+<span class="text-on-surface-variant text-sm font-mono uppercase tracking-widest">env: production-alpha</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
+<input class="bg-surface-container-lowest border border-white/5 rounded-sm py-1.5 pl-10 pr-4 text-sm focus:outline-none focus:border-primary transition-all w-64" placeholder="Search traces..." type="text"/>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant">
+<button class="hover:text-white transition-colors"><span class="material-symbols-outlined">notifications</span></button>
+<button class="hover:text-white transition-colors"><span class="material-symbols-outlined">help_outline</span></button>
+<div class="w-8 h-8 rounded-sm bg-surface-container-highest overflow-hidden border border-white/10">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="Minimalist portrait of a professional system administrator" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCYl-wh4mCUNLi13bAJx6CyI7US_j4uHYYLngimMab1VwLcO6gUOBNOYNe8i5nmrgHRSKqDLZNgolchL7HQfRh_CiEEfhAiVQEpLiEeuMdugEOfu5i20eZ422xtQZFSCpJ1PUqha0cwR-yX4qeAyydyHV4IrlNJLf3LZARSgHyLG6DNM0GdjZQ_Y8_tqMmpMaFivDV5DwzanQ9pm6PdikO2e1XoATv2UJpFrTZLl88-WY6eyrXAWIpnYKLOaZgpi1y7mLwtTeNxjy4"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 p-8 space-y-8 max-w-[1600px] mx-auto">
+<!-- GitOps Reconciliation View (Bento Section) -->
+<section class="grid grid-cols-12 gap-6">
+<div class="col-span-12 lg:col-span-8 bg-surface-container-low p-6 rounded-md relative overflow-hidden group">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h2 class="font-headline text-xl font-bold mb-1">GitOps Reconciliation</h2>
+<p class="text-on-surface-variant text-sm">Real-time sync between Git Source and Infrastructure</p>
+</div>
+<div class="flex gap-2">
+<span class="bg-primary/10 text-primary text-[10px] font-bold px-2 py-1 rounded-sm uppercase tracking-tighter flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                            In Sync
+                        </span>
+</div>
+</div>
+<div class="flex gap-8 items-center justify-between">
+<!-- Source: Git -->
+<div class="flex-1 space-y-4">
+<div class="flex items-center gap-2 text-on-surface-variant text-xs font-mono uppercase tracking-widest">
+<span class="material-symbols-outlined text-sm">account_tree</span>
+                            main / head
+                        </div>
+<div class="bg-surface-container-lowest p-4 rounded-sm border border-white/5">
+<div class="flex items-center gap-3 mb-3">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="font-mono text-sm text-primary">commit: 7f2a10b</span>
+</div>
+<div class="space-y-2">
+<div class="h-2 w-full bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full w-[100%] bg-primary"></div>
+</div>
+<div class="text-[10px] text-on-surface-variant font-mono">Desired State: 4 Replicas, v2.1.0-stable</div>
+</div>
+</div>
+</div>
+<!-- Flow Arrow -->
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined text-primary text-3xl animate-pulse">sync_alt</span>
+<span class="text-[10px] font-mono mt-2 text-primary/50">2ms latency</span>
+</div>
+<!-- Target: Cluster -->
+<div class="flex-1 space-y-4 text-right">
+<div class="flex items-center justify-end gap-2 text-on-surface-variant text-xs font-mono uppercase tracking-widest">
+<span class="material-symbols-outlined text-sm">hub</span>
+                            k8s-cluster-aws-us-east
+                        </div>
+<div class="bg-surface-container-lowest p-4 rounded-sm border border-white/5 text-left">
+<div class="flex items-center gap-3 mb-3">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="font-mono text-sm text-primary">status: deployed</span>
+</div>
+<div class="space-y-2">
+<div class="h-2 w-full bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full w-[100%] bg-primary"></div>
+</div>
+<div class="text-[10px] text-on-surface-variant font-mono">Actual State: 4 Pods Running, Image: v2.1.0</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Strategy Quick Actions -->
+<div class="col-span-12 lg:col-span-4 grid grid-cols-2 gap-4">
+<button class="bg-surface-container p-4 rounded-md flex flex-col items-start gap-4 hover:bg-surface-variant transition-colors border-l-2 border-primary">
+<span class="material-symbols-outlined text-primary">layers</span>
+<div class="text-left">
+<p class="font-headline font-bold text-sm">Blue-Green</p>
+<p class="text-[10px] text-on-surface-variant">Zero-downtime switchover</p>
+</div>
+</button>
+<button class="bg-surface-container p-4 rounded-md flex flex-col items-start gap-4 hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">rocket_launch</span>
+<div class="text-left">
+<p class="font-headline font-bold text-sm">Canary</p>
+<p class="text-[10px] text-on-surface-variant">Staged rollout (5%, 10%)</p>
+</div>
+</button>
+<button class="bg-surface-container p-4 rounded-md flex flex-col items-start gap-4 hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">visibility_off</span>
+<div class="text-left">
+<p class="font-headline font-bold text-sm">Shadow</p>
+<p class="text-[10px] text-on-surface-variant">Mirror traffic for testing</p>
+</div>
+</button>
+<button class="bg-surface-container p-4 rounded-md flex flex-col items-start gap-4 hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">auto_fix_high</span>
+<div class="text-left">
+<p class="font-headline font-bold text-sm">A/B Testing</p>
+<p class="text-[10px] text-on-surface-variant">Split segment analysis</p>
+</div>
+</button>
+</div>
+</section>
+<!-- LLM Assisted Pipeline Generator & Code View -->
+<section class="bg-surface-container-low rounded-md overflow-hidden border border-white/5">
+<div class="p-6 flex justify-between items-center border-b border-white/5 bg-surface-container-low">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">bolt</span>
+<h2 class="font-headline text-lg font-bold">LLM Pipeline Generator</h2>
+</div>
+<div class="flex gap-4">
+<select class="bg-surface-container-lowest border border-white/10 text-xs px-3 py-1 rounded-sm focus:outline-none focus:border-primary">
+<option>Terraform (HCL)</option>
+<option>Pulumi (TypeScript)</option>
+<option>CloudFormation (YAML)</option>
+</select>
+<button class="gradient-primary text-on-primary text-xs px-4 py-1.5 rounded-sm font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-xs">auto_awesome</span>
+                        Generate Strategy
+                    </button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2">
+<!-- Chat/Input side -->
+<div class="p-6 border-r border-white/5 space-y-6">
+<div class="bg-surface-container p-4 rounded-sm">
+<p class="text-xs text-on-surface-variant font-mono mb-4 leading-relaxed">
+<span class="text-primary">lumen-ai:</span> Describe the infrastructure pattern you want to deploy. I can handle Immutable Infrastructure, blue-green logic, and automatic rollback triggers.
+                        </p>
+<textarea class="w-full bg-surface-container-lowest border-none focus:ring-1 focus:ring-primary/50 rounded-sm text-sm p-3 min-h-[120px] text-on-surface placeholder:text-on-surface-variant/30" placeholder="e.g., 'Create a blue-green deployment for an EKS cluster with a custom health check on port 8080 and a 5-minute bake time...'"></textarea>
+</div>
+<div class="space-y-2">
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">Detected Constraints</p>
+<div class="flex flex-wrap gap-2">
+<span class="bg-surface-container-highest px-2 py-1 text-[10px] rounded-sm text-on-surface-variant">Immutable Pattern</span>
+<span class="bg-surface-container-highest px-2 py-1 text-[10px] rounded-sm text-on-surface-variant">AWS Region: us-east-1</span>
+<span class="bg-surface-container-highest px-2 py-1 text-[10px] rounded-sm text-on-surface-variant">Rollback: Latency &gt; 200ms</span>
+</div>
+</div>
+</div>
+<!-- Code Side -->
+<div class="bg-surface-container-lowest p-6 font-mono text-[13px] leading-relaxed relative group">
+<div class="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-on-surface-variant hover:text-white"><span class="material-symbols-outlined text-lg">content_copy</span></button>
+</div>
+<div class="text-[#889485] italic mb-4">// Generated Immutable Blue-Green Pattern</div>
+<div><span class="text-[#6bde80]">resource</span> <span class="text-tertiary">"aws_launch_template"</span> <span class="text-[#dee3eb]">"lumen_app_v2"</span> {</div>
+<div class="pl-4"> <span class="text-[#bdcaba]">name_prefix</span>   = <span class="text-[#6bde80]">"lumen-trace-v2"</span></div>
+<div class="pl-4"> <span class="text-[#bdcaba]">image_id</span>      = <span class="text-[#6bde80]">"ami-07d105228"</span></div>
+<div class="pl-4"> <span class="text-[#bdcaba]">instance_type</span> = <span class="text-[#6bde80]">"t3.medium"</span></div>
+<div>}</div>
+<br/>
+<div><span class="text-[#6bde80]">resource</span> <span class="text-tertiary">"aws_autoscaling_group"</span> <span class="text-[#dee3eb]">"green_fleet"</span> {</div>
+<div class="pl-4"> <span class="text-[#bdcaba]">max_size</span> = <span class="text-primary-container">10</span></div>
+<div class="pl-4"> <span class="text-[#bdcaba]">min_size</span> = <span class="text-primary-container">2</span></div>
+<div class="pl-4"> <span class="text-[#bdcaba]">health_check_type</span> = <span class="text-[#6bde80]">"ELB"</span></div>
+<div class="pl-4"> <span class="text-[#bdcaba]">target_group_arns</span> = [aws_lb_target_group.green.arn]</div>
+<div>}</div>
+</div>
+</div>
+</section>
+<!-- Feature Flags & Segment Control (Asymmetric Layout) -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Feature Flag List -->
+<div class="lg:col-span-2 bg-surface-container-low p-6 rounded-md">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline font-bold">Feature Architecture</h3>
+<button class="text-primary text-xs font-bold hover:underline">View All Flags</button>
+</div>
+<div class="space-y-4">
+<!-- Flag 1 -->
+<div class="bg-surface-container-lowest p-4 rounded-sm flex items-center justify-between border-l-2 border-primary">
+<div class="flex items-center gap-4">
+<div class="p-2 bg-primary/10 rounded-sm">
+<span class="material-symbols-outlined text-primary text-lg">toggle_on</span>
+</div>
+<div>
+<p class="text-sm font-bold">New-Model-Optimizer-v4</p>
+<p class="text-[10px] text-on-surface-variant font-mono">ID: ff_opt_4592</p>
+</div>
+</div>
+<div class="flex items-center gap-8">
+<div class="text-right">
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">Exposure</p>
+<p class="text-sm font-mono">15.0%</p>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-16 h-1 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full w-[15%] bg-primary"></div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-sm cursor-pointer">more_vert</span>
+</div>
+</div>
+</div>
+<!-- Flag 2 -->
+<div class="bg-surface-container-lowest p-4 rounded-sm flex items-center justify-between border-l-2 border-surface-variant">
+<div class="flex items-center gap-4">
+<div class="p-2 bg-surface-variant/20 rounded-sm">
+<span class="material-symbols-outlined text-on-surface-variant text-lg">toggle_off</span>
+</div>
+<div>
+<p class="text-sm font-bold">Search-Latency-Reduction-v2</p>
+<p class="text-[10px] text-on-surface-variant font-mono">ID: ff_slr_1102</p>
+</div>
+</div>
+<div class="flex items-center gap-8">
+<div class="text-right">
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">Exposure</p>
+<p class="text-sm font-mono">0.0%</p>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-16 h-1 bg-surface-variant rounded-full"></div>
+<span class="material-symbols-outlined text-on-surface-variant text-sm cursor-pointer">more_vert</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Segmentation Glass Card -->
+<div class="glass-panel p-6 rounded-md border border-white/5 relative flex flex-col justify-between">
+<div>
+<h3 class="font-headline font-bold mb-4">A/B Testing Segments</h3>
+<div class="space-y-4">
+<div class="flex items-center justify-between text-xs">
+<span class="text-on-surface-variant">Tier-1 Enterprise</span>
+<span class="font-mono text-primary">Active</span>
+</div>
+<div class="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+<div class="h-full w-2/3 bg-primary/40"></div>
+</div>
+<div class="flex items-center justify-between text-xs pt-2">
+<span class="text-on-surface-variant">Beta Testers (Internal)</span>
+<span class="font-mono text-primary">Active</span>
+</div>
+<div class="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+<div class="h-full w-[90%] bg-primary/40"></div>
+</div>
+<div class="flex items-center justify-between text-xs pt-2">
+<span class="text-on-surface-variant">Free Tier Users</span>
+<span class="font-mono text-on-surface-variant">Disabled</span>
+</div>
+<div class="h-1 w-full bg-white/5 rounded-full"></div>
+</div>
+</div>
+<div class="mt-8">
+<button class="w-full border border-primary/30 text-primary text-xs py-2 rounded-sm hover:bg-primary/5 transition-colors font-bold uppercase tracking-widest">
+                        Configure Segments
+                    </button>
+</div>
+<div class="absolute -bottom-10 -right-10 w-32 h-32 bg-primary/10 blur-3xl rounded-full"></div>
+</div>
+</section>
+<!-- Analytics Preview -->
+<section class="bg-surface-container-low p-6 rounded-md">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h3 class="font-headline font-bold text-lg">Deployment Health Metrics</h3>
+<p class="text-on-surface-variant text-xs">Real-time telemetry during rollout</p>
+</div>
+<div class="flex gap-4">
+<div class="text-right">
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">Error Rate</p>
+<p class="text-lg font-headline font-bold text-primary">0.02%</p>
+</div>
+<div class="text-right">
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">P99 Latency</p>
+<p class="text-lg font-headline font-bold text-primary">124ms</p>
+</div>
+</div>
+</div>
+<!-- Asymmetric Data Visualization Placeholder -->
+<div class="h-48 flex items-end gap-1 px-2">
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 transition-colors h-[40%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 transition-colors h-[45%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 transition-colors h-[42%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 transition-colors h-[60%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 transition-colors h-[80%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 transition-colors h-[75%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 transition-colors h-[90%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/30 hover:bg-primary/50 transition-colors h-[100%] rounded-t-sm relative">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 text-[10px] font-mono text-primary bg-surface-container-highest px-2 py-1 rounded-sm">Current</div>
+</div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 transition-colors h-[85%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 transition-colors h-[70%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 transition-colors h-[65%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 transition-colors h-[50%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 transition-colors h-[40%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 transition-colors h-[30%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 transition-colors h-[25%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 transition-colors h-[35%] rounded-t-sm"></div>
+</div>
+<div class="flex justify-between mt-4 text-[10px] text-on-surface-variant font-mono uppercase tracking-widest px-2">
+<span>12:00:00 UTC</span>
+<span>12:15:00 UTC</span>
+<span>12:30:00 UTC</span>
+<span>12:45:00 UTC</span>
+</div>
+</section>
+</main>
+<!-- Floating Action Button (FAB) -->
+<button class="fixed bottom-8 right-8 w-14 h-14 gradient-primary text-on-primary rounded-sm shadow-2xl flex items-center justify-center group active:scale-95 transition-all">
+<span class="material-symbols-outlined text-3xl group-hover:rotate-90 transition-transform">add</span>
+</button>
+</body></html>

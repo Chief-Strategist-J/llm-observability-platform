@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>API &amp; Access Management | Obsidian Lens</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container": "#1b2026",
+              "tertiary-fixed-dim": "#c2c7cf",
+              "on-primary": "#003913",
+              "secondary-container": "#414a53",
+              "on-secondary-fixed-variant": "#3f4851",
+              "surface": "#0f1419",
+              "secondary-fixed": "#dae3ef",
+              "surface-container-highest": "#30353b",
+              "on-secondary-fixed": "#141c25",
+              "tertiary-fixed": "#dee3eb",
+              "on-tertiary-fixed": "#171c22",
+              "surface-container-lowest": "#0a0f14",
+              "on-surface": "#dee3eb",
+              "on-surface-variant": "#bdcaba",
+              "secondary-fixed-dim": "#bec7d2",
+              "outline": "#889485",
+              "surface-container-high": "#252a30",
+              "primary-fixed-dim": "#6bde80",
+              "on-error": "#690005",
+              "inverse-on-surface": "#2c3137",
+              "surface-variant": "#30353b",
+              "tertiary-container": "#8c9198",
+              "on-tertiary": "#2c3137",
+              "on-secondary": "#29313a",
+              "on-primary-fixed-variant": "#00531f",
+              "on-primary-container": "#003210",
+              "error": "#ffb4ab",
+              "outline-variant": "#3e4a3d",
+              "background": "#0f1419",
+              "surface-tint": "#6bde80",
+              "surface-bright": "#353a40",
+              "on-secondary-container": "#b0b9c4",
+              "tertiary": "#c2c7cf",
+              "surface-dim": "#0f1419",
+              "on-tertiary-container": "#252a30",
+              "error-container": "#93000a",
+              "primary": "#6bde80",
+              "surface-container-low": "#171c22",
+              "on-primary-fixed": "#002108",
+              "inverse-surface": "#dee3eb",
+              "on-background": "#dee3eb",
+              "inverse-primary": "#006e2c",
+              "secondary": "#bec7d2",
+              "primary-fixed": "#88fb99",
+              "on-error-container": "#ffdad6",
+              "primary-container": "#2fa54f",
+              "on-tertiary-fixed-variant": "#42474e"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"],
+              "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .glass-panel {
+        background: rgba(53, 58, 64, 0.6);
+        backdrop-filter: blur(12px);
+      }
+      .primary-gradient {
+        background: linear-gradient(135deg, #6bde80 0%, #2fa54f 100%);
+      }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary selection:text-on-primary">
+<!-- Top Navigation Bar -->
+<nav class="fixed top-0 w-full z-50 bg-[#171c22]/80 backdrop-blur-md flex items-center justify-between px-6 h-16 w-full shadow-2xl shadow-black/40">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tighter text-[#dee3eb] font-['Space_Grotesk']">Obsidian Lens</span>
+<div class="hidden md:flex gap-6">
+<a class="text-[#bdcaba] font-medium tracking-tight font-['Space_Grotesk'] hover:text-[#6bde80] transition-colors duration-200" href="#">Docs</a>
+<a class="text-[#bdcaba] font-medium tracking-tight font-['Space_Grotesk'] hover:text-[#6bde80] transition-colors duration-200" href="#">API Reference</a>
+<a class="text-[#bdcaba] font-medium tracking-tight font-['Space_Grotesk'] hover:text-[#6bde80] transition-colors duration-200" href="#">Support</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-[#bdcaba] hover:text-[#6bde80] transition-colors active:scale-95 duration-100">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-[#6bde80] font-semibold transition-colors active:scale-95 duration-100">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="h-8 w-8 bg-surface-container-highest rounded-sm flex items-center justify-center border border-outline-variant/20 overflow-hidden">
+<img alt="User profile avatar" data-alt="User profile circular avatar placeholder" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBpabzGE69c_kGJ4213qOoGJF3KWX4paSKcJbMGOD3aX4zxytcuow0wswYIkDgl2MGdYXcadxxDm4pemZF8J1CmGM7vGgq2b8qWrz87FvnZQ6bgJvD8vzgWGo0yHAztRlKmJIceoS-joeX2zZy_PAoS75lnopBzQocxsHO5cMMx03YN7Xkuqq8ujtPmsWt4QYYhWlu4uUMpKusDK0RTnuUeQP9MJb2JgFfloTx9IL3ACftbXwJ_oD-GX6NgztuVDu7GLGbygcffJNs"/>
+</div>
+</div>
+</nav>
+<!-- Side Navigation -->
+<aside class="h-screen w-64 fixed left-0 top-0 z-40 bg-[#171c22] flex flex-col pt-20 pb-6 hidden md:flex border-r border-outline-variant/10">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 bg-primary/10 flex items-center justify-center rounded-sm">
+<span class="material-symbols-outlined text-primary">dns</span>
+</div>
+<div>
+<h3 class="font-bold text-[#6bde80] leading-none text-sm uppercase tracking-widest font-['Space_Grotesk']">System Core</h3>
+<p class="text-[10px] text-on-surface-variant mt-1">v2.4.0-stable</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-2 space-y-1">
+<a class="flex items-center gap-3 text-[#bdcaba] py-3 px-4 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all font-['Space_Grotesk'] text-sm uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined">dashboard</span> Dashboard
+            </a>
+<a class="flex items-center gap-3 text-[#bdcaba] py-3 px-4 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all font-['Space_Grotesk'] text-sm uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined">account_tree</span> Orchestration
+            </a>
+<a class="flex items-center gap-3 text-[#bdcaba] py-3 px-4 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all font-['Space_Grotesk'] text-sm uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined">dns</span> Infrastructure
+            </a>
+<a class="flex items-center gap-3 text-[#bdcaba] py-3 px-4 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all font-['Space_Grotesk'] text-sm uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined">workspaces</span> Workspace
+            </a>
+<a class="flex items-center gap-3 text-[#bdcaba] py-3 px-4 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all font-['Space_Grotesk'] text-sm uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined">monitoring</span> Analytics
+            </a>
+<a class="bg-[#30353b] text-[#6bde80] border-l-2 border-[#6bde80] py-3 px-4 flex items-center gap-3 font-['Space_Grotesk'] text-sm uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined">tune</span> Settings
+            </a>
+</nav>
+<div class="px-4 mt-auto">
+<button class="w-full primary-gradient text-on-primary font-bold py-3 px-4 rounded-sm flex items-center justify-center gap-2 text-xs uppercase tracking-widest">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">add</span> New Trace
+            </button>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="md:ml-64 pt-24 pb-12 px-8 min-h-screen bg-surface">
+<div class="max-w-6xl mx-auto">
+<!-- Page Header -->
+<header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<nav class="flex gap-2 text-[10px] uppercase tracking-[0.2em] text-on-surface-variant mb-2">
+<span>Settings</span>
+<span>/</span>
+<span class="text-primary">API &amp; Access</span>
+</nav>
+<h1 class="text-4xl font-headline font-bold text-on-surface tracking-tight">API &amp; Access Management</h1>
+<p class="text-on-surface-variant mt-2 max-w-xl">Configure secure programmatic access to the Obsidian Lens infrastructure. Use scoped keys to limit exposure during trace orchestration.</p>
+</div>
+<div class="flex gap-3">
+<button class="px-6 py-2.5 bg-surface-container-high text-on-surface text-xs font-bold uppercase tracking-widest rounded-sm border border-outline-variant/20 hover:bg-surface-bright transition-colors">
+                        Security Audit
+                    </button>
+<button class="px-6 py-2.5 primary-gradient text-on-primary text-xs font-bold uppercase tracking-widest rounded-sm shadow-lg shadow-primary/10">
+                        Create New Key
+                    </button>
+</div>
+</header>
+<!-- API Keys Section -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Main Key List (Left 2 Columns) -->
+<div class="lg:col-span-2 space-y-6">
+<div class="bg-surface-container-low p-6 rounded-md">
+<div class="flex items-center justify-between mb-6">
+<h2 class="font-headline text-lg font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">key</span>
+                                Active API Keys
+                            </h2>
+<div class="flex gap-2">
+<input class="bg-surface-container-lowest border-none text-xs px-3 py-1.5 focus:ring-1 focus:ring-primary w-48 rounded-sm" placeholder="Filter keys..." type="text"/>
+</div>
+</div>
+<!-- Key Table -->
+<div class="space-y-4">
+<!-- Key Item 1 -->
+<div class="group flex items-center justify-between p-4 bg-surface-container-lowest rounded-sm hover:bg-surface-container transition-colors border-l-2 border-primary">
+<div class="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+<div class="md:col-span-1">
+<p class="text-xs font-bold uppercase tracking-widest text-on-surface mb-1">Production-Main</p>
+<div class="flex items-center gap-2 text-primary font-mono text-[10px]">
+<span>obsd_live_••••••••••••3a9f</span>
+<span class="material-symbols-outlined text-xs cursor-pointer hover:text-on-surface">content_copy</span>
+</div>
+</div>
+<div class="text-center">
+<span class="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter">Read/Write</span>
+</div>
+<div class="text-[11px] text-on-surface-variant flex flex-col">
+<span class="uppercase tracking-tighter opacity-50 text-[9px]">Last Used</span>
+<span class="font-mono">2 mins ago</span>
+</div>
+<div class="text-[11px] text-on-surface-variant flex flex-col">
+<span class="uppercase tracking-tighter opacity-50 text-[9px]">Created</span>
+<span class="font-mono">Oct 12, 2023</span>
+</div>
+</div>
+<div class="flex items-center gap-2 ml-4">
+<button class="p-2 text-on-surface-variant hover:text-error transition-colors">
+<span class="material-symbols-outlined text-sm">delete</span>
+</button>
+</div>
+</div>
+<!-- Key Item 2 -->
+<div class="group flex items-center justify-between p-4 bg-surface-container-lowest rounded-sm hover:bg-surface-container transition-colors border-l-2 border-outline-variant">
+<div class="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+<div class="md:col-span-1">
+<p class="text-xs font-bold uppercase tracking-widest text-on-surface mb-1">CI/CD-Runner</p>
+<div class="flex items-center gap-2 text-on-surface-variant font-mono text-[10px]">
+<span>obsd_test_••••••••••••7x2d</span>
+<span class="material-symbols-outlined text-xs cursor-pointer hover:text-on-surface">content_copy</span>
+</div>
+</div>
+<div class="text-center">
+<span class="text-[10px] bg-secondary-container/30 text-secondary px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter">Read-Only</span>
+</div>
+<div class="text-[11px] text-on-surface-variant flex flex-col">
+<span class="uppercase tracking-tighter opacity-50 text-[9px]">Last Used</span>
+<span class="font-mono">14 hours ago</span>
+</div>
+<div class="text-[11px] text-on-surface-variant flex flex-col">
+<span class="uppercase tracking-tighter opacity-50 text-[9px]">Created</span>
+<span class="font-mono">Sep 04, 2023</span>
+</div>
+</div>
+<div class="flex items-center gap-2 ml-4">
+<button class="p-2 text-on-surface-variant hover:text-error transition-colors">
+<span class="material-symbols-outlined text-sm">delete</span>
+</button>
+</div>
+</div>
+<!-- Key Item 3 -->
+<div class="group flex items-center justify-between p-4 bg-surface-container-lowest rounded-sm hover:bg-surface-container transition-colors border-l-2 border-outline-variant opacity-60">
+<div class="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+<div class="md:col-span-1">
+<p class="text-xs font-bold uppercase tracking-widest text-on-surface mb-1">Staging-Debug</p>
+<div class="flex items-center gap-2 text-on-surface-variant font-mono text-[10px]">
+<span>obsd_dev_••••••••••••1r8w</span>
+<span class="material-symbols-outlined text-xs cursor-pointer hover:text-on-surface">content_copy</span>
+</div>
+</div>
+<div class="text-center">
+<span class="text-[10px] bg-secondary-container/30 text-secondary px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter">Read/Write</span>
+</div>
+<div class="text-[11px] text-on-surface-variant flex flex-col">
+<span class="uppercase tracking-tighter opacity-50 text-[9px]">Last Used</span>
+<span class="font-mono italic">Never</span>
+</div>
+<div class="text-[11px] text-on-surface-variant flex flex-col">
+<span class="uppercase tracking-tighter opacity-50 text-[9px]">Created</span>
+<span class="font-mono">Aug 18, 2023</span>
+</div>
+</div>
+<div class="flex items-center gap-2 ml-4">
+<button class="p-2 text-on-surface-variant hover:text-error transition-colors">
+<span class="material-symbols-outlined text-sm">delete</span>
+</button>
+</div>
+</div>
+</div>
+<div class="mt-8 pt-6 border-t border-outline-variant/10">
+<h3 class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-4">Quick Integration Guide</h3>
+<div class="bg-surface-container-lowest p-4 rounded-sm font-mono text-xs text-secondary-fixed leading-relaxed border border-outline-variant/5">
+<div class="flex justify-between items-center mb-2">
+<span class="text-[10px] text-on-surface-variant font-sans uppercase">Python SDK</span>
+<span class="material-symbols-outlined text-sm cursor-pointer hover:text-primary">content_copy</span>
+</div>
+<pre>import obsidian_lens as ol<br/><br/>client = ol.Client(api_key="YOUR_API_KEY")<br/>client.track(project="core-v2", log_id="tr_442k")</pre>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Sidebar (Audit & Settings) -->
+<div class="space-y-6">
+<!-- Scope Permissions Table -->
+<div class="bg-surface-container-low p-6 rounded-md border-t-2 border-primary/40">
+<h3 class="font-headline text-sm font-semibold mb-4 uppercase tracking-wider">Scope Capabilities</h3>
+<div class="space-y-3">
+<div class="flex items-center justify-between text-[11px] py-1 border-b border-outline-variant/10">
+<span class="text-on-surface-variant uppercase tracking-widest font-medium">Trace Read</span>
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div class="flex items-center justify-between text-[11px] py-1 border-b border-outline-variant/10">
+<span class="text-on-surface-variant uppercase tracking-widest font-medium">Trace Write</span>
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div class="flex items-center justify-between text-[11px] py-1 border-b border-outline-variant/10">
+<span class="text-on-surface-variant uppercase tracking-widest font-medium">Model Metrics</span>
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div class="flex items-center justify-between text-[11px] py-1 border-b border-outline-variant/10">
+<span class="text-on-surface-variant uppercase tracking-widest font-medium">Billing Access</span>
+<span class="material-symbols-outlined text-error text-sm">cancel</span>
+</div>
+<div class="flex items-center justify-between text-[11px] py-1">
+<span class="text-on-surface-variant uppercase tracking-widest font-medium">User Mgmt</span>
+<span class="material-symbols-outlined text-error text-sm">cancel</span>
+</div>
+</div>
+</div>
+<!-- Security Audit Log -->
+<div class="bg-surface-container-low p-6 rounded-md">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-headline text-sm font-semibold uppercase tracking-wider">Security Audit</h3>
+<a class="text-[10px] text-primary hover:underline" href="#">View All</a>
+</div>
+<div class="space-y-5">
+<div class="flex gap-3">
+<div class="mt-1 w-2 h-2 rounded-full bg-primary flex-shrink-0"></div>
+<div>
+<p class="text-xs text-on-surface font-medium leading-tight">Key "Production-Main" generated token</p>
+<p class="text-[10px] text-on-surface-variant mt-1 font-mono">Today, 14:02 · IP 192.168.1.1</p>
+</div>
+</div>
+<div class="flex gap-3">
+<div class="mt-1 w-2 h-2 rounded-full bg-secondary flex-shrink-0"></div>
+<div>
+<p class="text-xs text-on-surface font-medium leading-tight">Key created: "CI/CD-Runner"</p>
+<p class="text-[10px] text-on-surface-variant mt-1 font-mono">Oct 12, 09:15 · by User: Admin</p>
+</div>
+</div>
+<div class="flex gap-3">
+<div class="mt-1 w-2 h-2 rounded-full bg-error flex-shrink-0"></div>
+<div>
+<p class="text-xs text-on-surface font-medium leading-tight">Invalid key attempt (401)</p>
+<p class="text-[10px] text-on-surface-variant mt-1 font-mono">Oct 11, 23:45 · IP 45.22.12.9</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Revocation Warning -->
+<div class="bg-error-container/10 p-4 border border-error/20 rounded-sm">
+<div class="flex gap-3">
+<span class="material-symbols-outlined text-error text-lg">warning</span>
+<p class="text-[11px] text-error font-medium leading-relaxed">
+                                Revoked keys are immediately invalidated. Applications using these keys will receive authentication errors instantly.
+                            </p>
+</div>
+</div>
+</div>
+</section>
+<!-- Create New Key Modal/Section -->
+<section class="mt-12">
+<div class="glass-panel p-8 rounded-md border border-outline-variant/20 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-8 opacity-10">
+<span class="material-symbols-outlined text-9xl">add_moderator</span>
+</div>
+<div class="relative z-10 max-w-2xl">
+<h2 class="font-headline text-2xl font-bold text-on-surface mb-2 tracking-tight">Generate New Access Credentials</h2>
+<p class="text-on-surface-variant text-sm mb-8">Establish a new secure bridge for your external applications. Keys should be treated as sensitive passwords.</p>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+<div class="space-y-2">
+<label class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Key Label</label>
+<input class="w-full bg-surface-container-lowest border-none px-4 py-3 text-sm focus:ring-2 focus:ring-primary rounded-sm transition-all" placeholder="e.g. Analytics-Vercel-Integration" type="text"/>
+</div>
+<div class="space-y-2">
+<label class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Scope Selection</label>
+<select class="w-full bg-surface-container-lowest border-none px-4 py-3 text-sm focus:ring-2 focus:ring-primary rounded-sm transition-all appearance-none">
+<option>Full Access (Read/Write)</option>
+<option>Read-Only Analytics</option>
+<option>Trace Logging Only</option>
+</select>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="px-10 py-3 primary-gradient text-on-primary text-xs font-bold uppercase tracking-[0.2em] rounded-sm transition-transform active:scale-95">
+                                Generate Secure Key
+                            </button>
+<button class="px-6 py-3 text-on-surface-variant text-xs font-bold uppercase tracking-widest hover:text-on-surface transition-colors">
+                                Cancel
+                            </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer Stats -->
+<footer class="mt-20 flex flex-wrap gap-12 border-t border-outline-variant/10 pt-10">
+<div class="space-y-1">
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest">Total Active Keys</p>
+<p class="text-3xl font-headline font-bold text-primary">03</p>
+</div>
+<div class="space-y-1">
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest">Monthly API Calls</p>
+<p class="text-3xl font-headline font-bold text-on-surface">1.2M</p>
+</div>
+<div class="space-y-1">
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest">Auth Success Rate</p>
+<p class="text-3xl font-headline font-bold text-on-surface">99.98%</p>
+</div>
+<div class="ml-auto flex items-center gap-6">
+<div class="text-right">
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest">System Health</p>
+<p class="text-xs text-primary font-bold flex items-center justify-end gap-1">
+<span class="w-2 h-2 rounded-full bg-primary inline-block"></span>
+                            Operational
+                        </p>
+</div>
+</div>
+</footer>
+</div>
+</main>
+</body></html>

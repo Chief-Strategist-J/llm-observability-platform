@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Edge Observability Monitor | Obsidian Lens</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-secondary-fixed": "#141c25",
+              "tertiary-fixed": "#dee3eb",
+              "on-primary-container": "#003210",
+              "on-background": "#dee3eb",
+              "on-secondary": "#29313a",
+              "tertiary": "#c2c7cf",
+              "secondary-container": "#414a53",
+              "on-error-container": "#ffdad6",
+              "on-primary": "#003913",
+              "tertiary-fixed-dim": "#c2c7cf",
+              "surface-container-low": "#171c22",
+              "on-tertiary-container": "#252a30",
+              "primary-fixed": "#88fb99",
+              "primary-fixed-dim": "#6bde80",
+              "on-error": "#690005",
+              "error": "#ffb4ab",
+              "secondary": "#bec7d2",
+              "on-tertiary-fixed-variant": "#42474e",
+              "surface": "#0f1419",
+              "surface-dim": "#0f1419",
+              "inverse-primary": "#006e2c",
+              "on-surface": "#dee3eb",
+              "inverse-on-surface": "#2c3137",
+              "on-secondary-fixed-variant": "#3f4851",
+              "surface-tint": "#6bde80",
+              "on-primary-fixed": "#002108",
+              "surface-container": "#1b2026",
+              "primary": "#6bde80",
+              "error-container": "#93000a",
+              "surface-container-lowest": "#0a0f14",
+              "secondary-fixed-dim": "#bec7d2",
+              "on-surface-variant": "#bdcaba",
+              "on-primary-fixed-variant": "#00531f",
+              "background": "#0f1419",
+              "surface-bright": "#353a40",
+              "surface-container-high": "#252a30",
+              "outline-variant": "#3e4a3d",
+              "secondary-fixed": "#dae3ef",
+              "on-secondary-container": "#b0b9c4",
+              "tertiary-container": "#8c9198",
+              "surface-container-highest": "#30353b",
+              "on-tertiary-fixed": "#171c22",
+              "surface-variant": "#30353b",
+              "primary-container": "#2fa54f",
+              "inverse-surface": "#dee3eb",
+              "on-tertiary": "#2c3137",
+              "outline": "#889485"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"],
+              "mono": ["JetBrains Mono"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #0f1419;
+            color: #dee3eb;
+            font-family: 'Inter', sans-serif;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .no-border { border: none !important; }
+    </style>
+</head>
+<body class="overflow-hidden">
+<!-- Sidebar Navigation -->
+<nav class="bg-[#171c22] dark:bg-[#171c22] h-screen w-64 fixed left-0 top-0 flex flex-col py-6 z-50">
+<div class="px-6 mb-10">
+<h1 class="text-[#6bde80] font-bold text-xl tracking-tighter font-headline">The Obsidian Lens</h1>
+<p class="text-[#bdcaba] text-xs opacity-70 font-label">LLM Infrastructure</p>
+</div>
+<div class="flex-1 space-y-1">
+<a class="flex items-center px-6 py-3 text-[#bdcaba] opacity-70 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all duration-200" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="terminal">terminal</span>
+<span class="font-label font-medium text-sm">Command Center</span>
+</a>
+<a class="flex items-center px-6 py-3 text-[#bdcaba] opacity-70 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all duration-200" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="account_tree">account_tree</span>
+<span class="font-label font-medium text-sm">Data Lineage</span>
+</a>
+<a class="flex items-center px-6 py-3 text-[#bdcaba] opacity-70 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all duration-200" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="payments">payments</span>
+<span class="font-label font-medium text-sm">Cost Attribution</span>
+</a>
+<a class="flex items-center px-6 py-3 text-[#bdcaba] opacity-70 hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all duration-200" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="auto_fix_high">auto_fix_high</span>
+<span class="font-label font-medium text-sm">Remediation</span>
+</a>
+<a class="flex items-center px-6 py-3 bg-[#1b2026] text-[#6bde80] border-l-2 border-[#6bde80] transition-all duration-200" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="analytics">analytics</span>
+<span class="font-label font-medium text-sm">Observability</span>
+</a>
+</div>
+<div class="px-6 mt-auto space-y-4">
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary-container font-bold py-3 px-4 rounded-sm flex items-center justify-center gap-2 scale-95 active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+<span class="text-xs uppercase tracking-wider">New Trace</span>
+</button>
+<div class="pt-6 space-y-1">
+<a class="flex items-center py-2 text-[#bdcaba] opacity-70 hover:text-[#dee3eb] transition-colors" href="#">
+<span class="material-symbols-outlined mr-3 text-lg" data-icon="settings">settings</span>
+<span class="font-label text-sm">Settings</span>
+</a>
+<a class="flex items-center py-2 text-[#bdcaba] opacity-70 hover:text-[#dee3eb] transition-colors" href="#">
+<span class="material-symbols-outlined mr-3 text-lg" data-icon="help">help</span>
+<span class="font-label text-sm">Support</span>
+</a>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="ml-64 h-screen flex flex-col bg-surface overflow-y-auto hide-scrollbar">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 right-0 w-[calc(100%-16rem)] h-16 z-50 flex items-center justify-between px-8 bg-[#0f1419]/80 backdrop-blur-xl no-border">
+<div class="flex items-center gap-8">
+<nav class="flex gap-6">
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors font-body text-sm" href="#">Cluster Status</a>
+<a class="text-[#6bde80] font-bold border-b-2 border-[#6bde80] pb-1 font-body text-sm" href="#">Model Health</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors font-body text-sm" href="#">Edge Nodes</a>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative flex items-center group">
+<span class="material-symbols-outlined absolute left-3 text-on-surface-variant text-sm" data-icon="search">search</span>
+<input class="bg-surface-container-lowest border border-outline-variant/15 rounded-sm pl-9 pr-4 py-1.5 text-xs focus:ring-1 focus:ring-[#6bde80]/30 focus:border-[#6bde80] outline-none w-64 transition-all" placeholder="Search Trace ID..." type="text"/>
+</div>
+<div class="flex items-center gap-4 text-[#bdcaba]">
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors" data-icon="history">history</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors" data-icon="cloud_sync">cloud_sync</span>
+</div>
+<button class="bg-surface-container-high px-4 py-1.5 rounded-sm border border-outline-variant/20 text-xs font-bold hover:bg-surface-container transition-colors">
+                    Deploy Update
+                </button>
+<img class="w-8 h-8 rounded-full border border-primary/20" data-alt="Close up portrait of system administrator" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCocMehG5TwL8QW-j1r2OnFlQl35ARFFfybgAMrcSmo7yXviyw1r24Ek03seoyZ0bb1GNAJNDlkmpT5B0DZc_yHq-Exv7TImqekY86Rl7hUtyYX6_W01W0ehZoBL9qjzD8cXpPPphef7-gMnIFT-OGnhv9pQG0qvjzh3TYFErnbJ6od4JJDcu83JObbZ7j_PZHx8hkHQUQtmEIp1syJIrcdBty6VLfqK9Q99ZULruc3GdZ42isIoniCwLzB1y9F_Idd9qCvgVF_g84"/>
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="mt-16 p-8 space-y-8">
+<!-- Dashboard Header Metrics -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<div class="bg-surface-container-low p-6 rounded-md group hover:bg-surface-container transition-colors">
+<p class="text-on-surface-variant text-xs uppercase tracking-widest font-label mb-2">Global Avg Latency</p>
+<h2 class="text-3xl font-headline font-bold text-primary">142<span class="text-sm font-normal text-on-surface-variant ml-1">ms</span></h2>
+<div class="mt-4 flex items-center gap-2">
+<span class="text-xs text-primary font-mono bg-primary/10 px-2 py-0.5 rounded-sm">-12% vs last hr</span>
+</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-md group hover:bg-surface-container transition-colors">
+<p class="text-on-surface-variant text-xs uppercase tracking-widest font-label mb-2">Cache Hit Rate</p>
+<h2 class="text-3xl font-headline font-bold text-on-surface">94.2<span class="text-sm font-normal text-on-surface-variant ml-1">%</span></h2>
+<div class="mt-4 w-full bg-surface-container-lowest h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[94.2%]"></div>
+</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-md group hover:bg-surface-container transition-colors">
+<p class="text-on-surface-variant text-xs uppercase tracking-widest font-label mb-2">Active Edge Nodes</p>
+<h2 class="text-3xl font-headline font-bold text-on-surface">1,842</h2>
+<p class="mt-4 text-xs text-on-surface-variant font-mono">Sync Status: <span class="text-primary">Healthy</span></p>
+</div>
+<div class="bg-surface-container-low p-6 rounded-md group hover:bg-surface-container transition-colors">
+<p class="text-on-surface-variant text-xs uppercase tracking-widest font-label mb-2">Core Sync Offset</p>
+<h2 class="text-3xl font-headline font-bold text-error">4.8<span class="text-sm font-normal text-on-surface-variant ml-1">s</span></h2>
+<div class="mt-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-error text-sm" data-icon="warning">warning</span>
+<span class="text-xs text-error">Delayed in US-East-1</span>
+</div>
+</div>
+</div>
+<!-- Main Interactive Area: Heatmap & Region Latency -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Global Heatmap Section -->
+<div class="lg:col-span-2 bg-surface-container-low rounded-md overflow-hidden flex flex-col h-[500px]">
+<div class="p-6 flex items-center justify-between border-b border-outline-variant/5">
+<h3 class="font-headline font-bold text-lg text-on-surface">Geographic Latency Distribution</h3>
+<div class="flex items-center gap-2 bg-surface-container-lowest p-1 rounded-sm">
+<button class="px-3 py-1 text-xs font-bold bg-surface-container-high rounded-sm">L4 Map</button>
+<button class="px-3 py-1 text-xs text-on-surface-variant hover:text-on-surface transition-colors">Heat Grid</button>
+</div>
+</div>
+<div class="relative flex-1 bg-[#0a0f14] flex items-center justify-center">
+<!-- Simulated Map Pattern -->
+<div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(#6bde80 0.5px, transparent 0.5px); background-size: 20px 20px;"></div>
+<img class="w-full h-full object-cover mix-blend-luminosity opacity-40" data-alt="Dark stylized world map showing network connections" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnzqLzMtZg31GvjS_vNGCGJ8E5No8iJOF4t_F5DrPwN23NPh_k8blsieY2PFBvgf0h28zJKuQ-78_kqw6_XtE1wK7OwSwHpcWvmv2dEY7rldpMkV4T2qq1WTW15_uOyH8FaPMcBm660bd59Ahp58ThxVAdaaJD9k6on8YqkNNM0xWJIpawfZcjDqdnPSPOQ_yfoCvGsfJ0TCrFiY62sKZZeGmKOriOyszaRkpYKGwYIPEUdUqVwThYNiYlxkT2FcIo8hohAusL4D4"/>
+<!-- Pulse Points -->
+<div class="absolute top-1/4 left-1/4">
+<div class="w-3 h-3 bg-primary rounded-full animate-ping absolute opacity-75"></div>
+<div class="w-3 h-3 bg-primary rounded-full relative"></div>
+</div>
+<div class="absolute top-1/2 left-1/2">
+<div class="w-3 h-3 bg-error rounded-full animate-ping absolute opacity-75"></div>
+<div class="w-3 h-3 bg-error rounded-full relative"></div>
+</div>
+<div class="absolute bottom-1/3 right-1/4">
+<div class="w-3 h-3 bg-primary rounded-full animate-ping absolute opacity-75"></div>
+<div class="w-3 h-3 bg-primary rounded-full relative"></div>
+</div>
+<!-- Map Overlay Info -->
+<div class="absolute bottom-6 left-6 bg-surface-container-highest/80 backdrop-blur-md p-4 rounded-sm border border-outline-variant/20">
+<p class="text-xs text-on-surface-variant font-mono mb-1">CURSOR_LOC: 40.7128° N, 74.0060° W</p>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="text-[10px] uppercase font-bold tracking-tighter">Normal</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-error"></div>
+<span class="text-[10px] uppercase font-bold tracking-tighter">High Latency</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Region Stack List -->
+<div class="bg-surface-container-low rounded-md flex flex-col h-[500px]">
+<div class="p-6 border-b border-outline-variant/5">
+<h3 class="font-headline font-bold text-lg text-on-surface">Regional Cache Hits</h3>
+<p class="text-xs text-on-surface-variant mt-1">Real-time edge local cache performance</p>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-2 hide-scrollbar">
+<!-- Region Row -->
+<div class="bg-surface-container p-4 rounded-sm flex items-center justify-between hover:bg-surface-container-high transition-colors">
+<div>
+<h4 class="text-sm font-bold">FRA-1 (Frankfurt)</h4>
+<p class="text-[10px] font-mono text-on-surface-variant">NODE_ID: OBX-7729</p>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold text-primary">98.2%</p>
+<p class="text-[10px] text-on-surface-variant">HIT RATE</p>
+</div>
+</div>
+<!-- Region Row -->
+<div class="bg-surface-container p-4 rounded-sm flex items-center justify-between hover:bg-surface-container-high transition-colors">
+<div>
+<h4 class="text-sm font-bold">IAD-2 (Virginia)</h4>
+<p class="text-[10px] font-mono text-on-surface-variant">NODE_ID: OBX-0114</p>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold text-error">42.1%</p>
+<p class="text-[10px] text-on-surface-variant">SYNC ERROR</p>
+</div>
+</div>
+<!-- Region Row -->
+<div class="bg-surface-container p-4 rounded-sm flex items-center justify-between hover:bg-surface-container-high transition-colors">
+<div>
+<h4 class="text-sm font-bold">HND-1 (Tokyo)</h4>
+<p class="text-[10px] font-mono text-on-surface-variant">NODE_ID: OBX-9003</p>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold text-primary">89.5%</p>
+<p class="text-[10px] text-on-surface-variant">HIT RATE</p>
+</div>
+</div>
+<!-- Region Row -->
+<div class="bg-surface-container p-4 rounded-sm flex items-center justify-between hover:bg-surface-container-high transition-colors">
+<div>
+<h4 class="text-sm font-bold">SJC-4 (San Jose)</h4>
+<p class="text-[10px] font-mono text-on-surface-variant">NODE_ID: OBX-4421</p>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold text-primary">92.0%</p>
+<p class="text-[10px] text-on-surface-variant">HIT RATE</p>
+</div>
+</div>
+<!-- Region Row -->
+<div class="bg-surface-container p-4 rounded-sm flex items-center justify-between hover:bg-surface-container-high transition-colors">
+<div>
+<h4 class="text-sm font-bold">LHR-2 (London)</h4>
+<p class="text-[10px] font-mono text-on-surface-variant">NODE_ID: OBX-2210</p>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold text-primary">95.4%</p>
+<p class="text-[10px] text-on-surface-variant">HIT RATE</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Trace Waterfall / Logs Asymmetric Section -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+<!-- Large Trace Analysis Section -->
+<div class="md:col-span-3 bg-surface-container-low rounded-md p-6">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h3 class="font-headline font-bold text-lg">Inference Latency Trace</h3>
+<p class="text-xs text-on-surface-variant">Detailed breakdown of latest edge inference cycle</p>
+</div>
+<span class="bg-primary/10 text-primary text-[10px] font-bold px-3 py-1 rounded-sm border border-primary/20">LIVE STREAM</span>
+</div>
+<div class="space-y-6">
+<!-- Waterfall Item -->
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] uppercase font-bold text-on-surface-variant">
+<span>DNS Lookup &amp; Handshake</span>
+<span class="font-mono">12ms</span>
+</div>
+<div class="w-full bg-surface-container-lowest h-6 rounded-sm relative overflow-hidden">
+<div class="absolute left-0 top-0 h-full bg-primary-container/40 w-[5%]"></div>
+</div>
+</div>
+<!-- Waterfall Item -->
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] uppercase font-bold text-on-surface-variant">
+<span>Edge Cache Probe</span>
+<span class="font-mono">4ms</span>
+</div>
+<div class="w-full bg-surface-container-lowest h-6 rounded-sm relative overflow-hidden">
+<div class="absolute left-[5%] top-0 h-full bg-primary-container/60 w-[2%]"></div>
+</div>
+</div>
+<!-- Waterfall Item -->
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] uppercase font-bold text-on-surface-variant">
+<span>Inference Kernel Launch</span>
+<span class="font-mono">88ms</span>
+</div>
+<div class="w-full bg-surface-container-lowest h-6 rounded-sm relative overflow-hidden">
+<div class="absolute left-[7%] top-0 h-full bg-primary w-[35%]"></div>
+</div>
+</div>
+<!-- Waterfall Item -->
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] uppercase font-bold text-on-surface-variant">
+<span>Core Sync Verification</span>
+<span class="font-mono">152ms</span>
+</div>
+<div class="w-full bg-surface-container-lowest h-6 rounded-sm relative overflow-hidden">
+<div class="absolute left-[42%] top-0 h-full bg-error w-[55%]"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Model Stats -->
+<div class="md:col-span-1 space-y-6">
+<div class="bg-surface-container-low p-6 rounded-md">
+<h4 class="text-xs uppercase font-bold text-on-surface-variant mb-4 tracking-widest">Core Version</h4>
+<div class="flex items-center justify-between font-mono text-sm mb-4">
+<span>Llama-3-Edge-8B</span>
+<span class="text-primary">v2.4.1</span>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between items-center text-xs">
+<span class="text-on-surface-variant">Context Size</span>
+<span>32k</span>
+</div>
+<div class="flex justify-between items-center text-xs">
+<span class="text-on-surface-variant">Quantization</span>
+<span>INT-8</span>
+</div>
+<div class="flex justify-between items-center text-xs">
+<span class="text-on-surface-variant">Avg Tokens/Sec</span>
+<span class="text-primary font-bold">142</span>
+</div>
+</div>
+</div>
+<div class="bg-gradient-to-br from-surface-container-low to-surface-container p-6 rounded-md border-l-2 border-primary">
+<h4 class="text-xs uppercase font-bold text-primary mb-2">Optimization Tip</h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+                            Region <span class="font-bold text-on-surface">IAD-2</span> is experiencing heavy congestion. Route spill-over to <span class="font-bold text-on-surface">EWR-1</span> recommended for latency parity.
+                        </p>
+<button class="mt-4 text-[10px] font-bold uppercase tracking-widest text-primary hover:underline">Apply Reroute</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer / Status Bar -->
+<footer class="mt-auto px-8 py-3 bg-surface-container-lowest/50 flex items-center justify-between text-[10px] text-on-surface-variant font-mono uppercase tracking-widest">
+<div class="flex gap-6">
+<span class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span> API_GATEWAY: CONNECTED</span>
+<span class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span> VECTOR_ENGINE: STABLE</span>
+<span class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span> SYNC_PIPELINE: DEGRADED</span>
+</div>
+<div>
+                REFRESH_RATE: 200MS | SYSTEM_TIME: 14:22:01.042
+            </div>
+</footer>
+</main>
+</body></html>

@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Obsidian Lens | LLM Observability</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;700&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-tertiary-fixed": "#171c22",
+                        "primary": "#6bde80",
+                        "on-secondary-fixed": "#141c25",
+                        "on-background": "#dee3eb",
+                        "on-error-container": "#ffdad6",
+                        "surface-container": "#1b2026",
+                        "outline": "#889485",
+                        "on-secondary": "#29313a",
+                        "on-primary": "#003913",
+                        "outline-variant": "#3e4a3d",
+                        "secondary": "#bec7d2",
+                        "on-primary-container": "#003210",
+                        "on-tertiary": "#2c3137",
+                        "inverse-surface": "#dee3eb",
+                        "surface": "#0f1419",
+                        "surface-container-highest": "#30353b",
+                        "primary-fixed-dim": "#6bde80",
+                        "surface-container-high": "#252a30",
+                        "tertiary": "#c2c7cf",
+                        "on-error": "#690005",
+                        "tertiary-container": "#8c9198",
+                        "inverse-on-surface": "#2c3137",
+                        "secondary-container": "#414a53",
+                        "on-primary-fixed": "#002108",
+                        "error-container": "#93000a",
+                        "secondary-fixed-dim": "#bec7d2",
+                        "tertiary-fixed-dim": "#c2c7cf",
+                        "surface-container-lowest": "#0a0f14",
+                        "on-surface": "#dee3eb",
+                        "on-secondary-fixed-variant": "#3f4851",
+                        "error": "#ffb4ab",
+                        "surface-bright": "#353a40",
+                        "secondary-fixed": "#dae3ef",
+                        "inverse-primary": "#006e2c",
+                        "surface-variant": "#30353b",
+                        "primary-fixed": "#88fb99",
+                        "primary-container": "#2fa54f",
+                        "surface-container-low": "#171c22",
+                        "on-tertiary-container": "#252a30",
+                        "on-surface-variant": "#bdcaba",
+                        "on-tertiary-fixed-variant": "#42474e",
+                        "on-secondary-container": "#b0b9c4",
+                        "surface-dim": "#0f1419",
+                        "surface-tint": "#6bde80",
+                        "on-primary-fixed-variant": "#00531f",
+                        "tertiary-fixed": "#dee3eb",
+                        "background": "#0f1419"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .glass-panel {
+            background: rgba(27, 32, 38, 0.6);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30">
+<!-- SideNavBar Shell -->
+<aside class="h-screen w-64 fixed left-0 top-0 overflow-y-auto bg-[#171c22] border-r border-[#30353b]/15 flex flex-col py-6 px-4 z-[60] font-['Space_Grotesk'] tracking-tight">
+<div class="mb-10 px-2">
+<h1 class="text-[#6bde80] font-bold text-xl uppercase tracking-widest">Obsidian Lens</h1>
+<p class="text-[10px] text-on-surface-variant tracking-[0.2em] mt-1 opacity-70">LLM Observability</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 bg-[#1b2026] text-[#6bde80] font-semibold border-l-4 border-[#6bde80] transition-all duration-200 ease-in-out active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026]/50 transition-all duration-200 ease-in-out active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined text-[20px]">query_stats</span>
+<span>Traces</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026]/50 transition-all duration-200 ease-in-out active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined text-[20px]">compare_arrows</span>
+<span>Evaluations</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026]/50 transition-all duration-200 ease-in-out active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+<div class="mt-auto space-y-4">
+<button class="w-full py-2.5 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold rounded-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-sm">add</span>
+<span>New Project</span>
+</button>
+<div class="pt-4 border-t border-outline-variant/10 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-sm text-[#bdcaba] hover:text-[#dee3eb] transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">description</span>
+<span>Docs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-sm text-[#bdcaba] hover:text-[#dee3eb] transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">help</span>
+<span>Support</span>
+</a>
+</div>
+<div class="flex items-center gap-3 px-2 mt-4">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="Close up of a professional male user profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDYRfTHsjsUmikf7b2x0Pz4WI4E_5-yh7ksxWZsDoDc1gkD3u-wVG4u58XzlXAokCCLhVjBckRBBVCUXN27XThj6R_z_MbcX73AGCGRYf7GyXTXKblArwGHhrdEHhVBDVVjYYgIFBOXrWJQ5H4LtW-BJnaHBcw7anCCQqSeAKilcCjSD4KTfutQ3SDEU9WQMBcxrJxrpRIyjWpk8uXwMWg4-nZSQJLDUzyMUA7_-2giWlIjwLT6103_60r3WC6kgfxtAAoAMdM5Fmw"/>
+</div>
+<div class="flex flex-col">
+<span class="text-xs font-bold text-on-surface">Alex Rivera</span>
+<span class="text-[10px] text-on-surface-variant">Admin Pool</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- TopNavBar Shell -->
+<header class="fixed top-0 right-0 left-64 h-16 z-50 bg-[#0f1419]/80 backdrop-blur-xl border-b border-[#30353b]/15 flex items-center justify-between px-8 font-['Inter'] text-sm font-medium">
+<div class="flex items-center gap-8">
+<span class="text-primary font-mono text-xs tracking-tighter">PROJECT / obsidian-core-v1</span>
+<nav class="flex items-center gap-6">
+<a class="text-[#6bde80] border-b-2 border-[#6bde80] pb-5 transition-colors duration-200" href="#">Projects</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors duration-200" href="#">Models</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors duration-200" href="#">Datasets</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant text-lg">search</span>
+<input class="bg-surface-container-lowest border border-outline-variant/20 rounded-sm py-1.5 pl-10 pr-4 text-xs w-64 focus:border-primary focus:ring-0 transition-all placeholder:text-on-surface-variant/50" placeholder="Search traces or logs..." type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined">terminal</span>
+</button>
+</div>
+<button class="px-4 py-1.5 bg-surface-container-high border border-outline-variant/20 text-primary-fixed-dim rounded-sm text-xs font-bold hover:bg-surface-container-highest transition-colors cursor-pointer">
+                Deploy Model
+            </button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-24 pb-12 px-8">
+<!-- Dashboard Header -->
+<header class="mb-10 flex justify-between items-end">
+<div>
+<h2 class="font-headline text-3xl font-bold tracking-tight text-on-surface">System Health</h2>
+<p class="text-on-surface-variant mt-1">Real-time LLM performance across all production clusters.</p>
+</div>
+<div class="flex gap-2">
+<div class="flex bg-surface-container rounded-sm p-1">
+<button class="px-3 py-1 text-xs font-bold bg-surface-container-highest text-primary rounded-sm">24H</button>
+<button class="px-3 py-1 text-xs font-bold text-on-surface-variant hover:text-on-surface transition-colors">7D</button>
+<button class="px-3 py-1 text-xs font-bold text-on-surface-variant hover:text-on-surface transition-colors">30D</button>
+</div>
+<button class="flex items-center gap-2 px-4 py-2 bg-surface-container-high border border-outline-variant/10 rounded-sm text-xs font-semibold">
+<span class="material-symbols-outlined text-sm">download</span>
+                    Export Data
+                </button>
+</div>
+</header>
+<!-- Metrics Grid (Bento Style) -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+<!-- Avg Latency -->
+<div class="bg-surface-container-low p-6 rounded-md border border-outline-variant/5 hover:border-primary/20 transition-all group">
+<div class="flex justify-between items-start mb-4">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Avg Latency</span>
+<span class="text-primary text-xs font-mono bg-primary/10 px-2 py-0.5 rounded-sm">-12%</span>
+</div>
+<div class="flex items-baseline gap-2 mb-4">
+<span class="text-4xl font-headline font-bold text-on-surface">428</span>
+<span class="text-on-surface-variant font-mono text-sm">ms</span>
+</div>
+<div class="h-12 w-full flex items-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+<div class="flex-1 bg-surface-container-highest h-[40%] rounded-t-sm"></div>
+<div class="flex-1 bg-surface-container-highest h-[60%] rounded-t-sm"></div>
+<div class="flex-1 bg-surface-container-highest h-[45%] rounded-t-sm"></div>
+<div class="flex-1 bg-surface-container-highest h-[75%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary h-[90%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary h-[85%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary h-[70%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary h-[80%] rounded-t-sm"></div>
+</div>
+</div>
+<!-- Total Tokens -->
+<div class="bg-surface-container-low p-6 rounded-md border border-outline-variant/5 hover:border-primary/20 transition-all group">
+<div class="flex justify-between items-start mb-4">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Total Tokens</span>
+<span class="text-primary text-xs font-mono bg-primary/10 px-2 py-0.5 rounded-sm">+4.2M</span>
+</div>
+<div class="flex items-baseline gap-2 mb-4">
+<span class="text-4xl font-headline font-bold text-on-surface">12.8</span>
+<span class="text-on-surface-variant font-mono text-sm">M</span>
+</div>
+<div class="h-12 w-full flex items-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+<div class="flex-1 bg-primary/40 h-[20%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/40 h-[30%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/40 h-[50%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/40 h-[40%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/40 h-[60%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary h-[70%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary h-[85%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary h-[95%] rounded-t-sm"></div>
+</div>
+</div>
+<!-- Total Cost -->
+<div class="bg-surface-container-low p-6 rounded-md border border-outline-variant/5 hover:border-primary/20 transition-all group">
+<div class="flex justify-between items-start mb-4">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Total Cost</span>
+<span class="text-on-surface-variant text-xs font-mono bg-surface-container px-2 py-0.5 rounded-sm">PROD</span>
+</div>
+<div class="flex items-baseline gap-2 mb-4">
+<span class="text-on-surface-variant font-mono text-xl">$</span>
+<span class="text-4xl font-headline font-bold text-on-surface">3,241</span>
+<span class="text-on-surface-variant font-mono text-sm">.20</span>
+</div>
+<div class="h-12 w-full flex items-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+<div class="flex-1 bg-primary/20 h-[50%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-[55%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-[48%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-[52%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-[60%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary h-[58%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary h-[62%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary h-[65%] rounded-t-sm"></div>
+</div>
+</div>
+<!-- Error Rate -->
+<div class="bg-surface-container-low p-6 rounded-md border border-outline-variant/5 hover:border-error/20 transition-all group">
+<div class="flex justify-between items-start mb-4">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Error Rate</span>
+<span class="text-error text-xs font-mono bg-error/10 px-2 py-0.5 rounded-sm">+0.02%</span>
+</div>
+<div class="flex items-baseline gap-2 mb-4">
+<span class="text-4xl font-headline font-bold text-on-surface">0.14</span>
+<span class="text-on-surface-variant font-mono text-sm">%</span>
+</div>
+<div class="h-12 w-full flex items-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+<div class="flex-1 bg-surface-container-highest h-[10%] rounded-t-sm"></div>
+<div class="flex-1 bg-surface-container-highest h-[15%] rounded-t-sm"></div>
+<div class="flex-1 bg-error/40 h-[12%] rounded-t-sm"></div>
+<div class="flex-1 bg-surface-container-highest h-[8%] rounded-t-sm"></div>
+<div class="flex-1 bg-error/40 h-[25%] rounded-t-sm"></div>
+<div class="flex-1 bg-surface-container-highest h-[10%] rounded-t-sm"></div>
+<div class="flex-1 bg-error h-[15%] rounded-t-sm"></div>
+<div class="flex-1 bg-surface-container-highest h-[9%] rounded-t-sm"></div>
+</div>
+</div>
+</section>
+<!-- Large Chart Section -->
+<section class="bg-surface-container p-8 rounded-md border border-outline-variant/5 mb-10 overflow-hidden relative">
+<div class="flex justify-between items-center mb-10">
+<div>
+<h3 class="font-headline text-xl font-bold text-on-surface">Request Volume</h3>
+<div class="flex gap-4 mt-2">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">GPT-4o</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Claude-3.5</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-outline"></span>
+<span class="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Llama-3</span>
+</div>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block mb-1">Peak Volume</span>
+<span class="text-2xl font-mono text-on-surface">2.4k<span class="text-sm opacity-50 ml-1">req/m</span></span>
+</div>
+</div>
+<!-- Simulated Chart Area -->
+<div class="relative h-64 w-full flex items-end">
+<svg class="absolute inset-0 w-full h-full overflow-visible" preserveaspectratio="none">
+<!-- Grid Lines -->
+<line class="text-outline-variant/10" stroke="currentColor" stroke-dasharray="4 4" x1="0" x2="100%" y1="0%" y2="0%"></line>
+<line class="text-outline-variant/10" stroke="currentColor" stroke-dasharray="4 4" x1="0" x2="100%" y1="25%" y2="25%"></line>
+<line class="text-outline-variant/10" stroke="currentColor" stroke-dasharray="4 4" x1="0" x2="100%" y1="50%" y2="50%"></line>
+<line class="text-outline-variant/10" stroke="currentColor" stroke-dasharray="4 4" x1="0" x2="100%" y1="75%" y2="75%"></line>
+<!-- Area Chart Paths -->
+<path class="opacity-20" d="M0 256 L0 200 Q 150 150, 300 210 T 600 120 T 900 180 T 1200 150 L 1200 256 Z" fill="url(#grad1)"></path>
+<path d="M0 200 Q 150 150, 300 210 T 600 120 T 900 180 T 1200 150" fill="none" stroke="#6bde80" stroke-width="2"></path>
+<path d="M0 180 Q 200 100, 400 180 T 800 140 T 1200 190" fill="none" stroke="#bec7d2" stroke-dasharray="4" stroke-width="1.5"></path>
+<defs>
+<lineargradient id="grad1" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" style="stop-color:#6bde80;stop-opacity:1"></stop>
+<stop offset="100%" style="stop-color:#6bde80;stop-opacity:0"></stop>
+</lineargradient>
+</defs>
+</svg>
+<div class="absolute bottom-0 left-0 w-full flex justify-between text-[10px] font-mono text-on-surface-variant uppercase tracking-tighter pt-4 border-t border-outline-variant/10 translate-y-full">
+<span>00:00</span>
+<span>04:00</span>
+<span>08:00</span>
+<span>12:00</span>
+<span>16:00</span>
+<span>20:00</span>
+<span>23:59</span>
+</div>
+</div>
+</section>
+<!-- Trace Table -->
+<section class="bg-surface-container-low rounded-md border border-outline-variant/5">
+<div class="p-6 border-b border-outline-variant/10 flex justify-between items-center">
+<h3 class="font-headline text-lg font-bold text-on-surface">Recent Traces</h3>
+<button class="text-xs font-bold text-primary hover:underline">View All Traces</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest bg-surface-container-lowest/50">
+<tr>
+<th class="px-6 py-4">Trace ID</th>
+<th class="px-6 py-4">Status</th>
+<th class="px-6 py-4">Model</th>
+<th class="px-6 py-4">Execution Time</th>
+<th class="px-6 py-4">Tokens</th>
+<th class="px-6 py-4 text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/5">
+<tr class="hover:bg-surface-container transition-colors group cursor-pointer">
+<td class="px-6 py-4">
+<span class="font-mono text-xs text-on-surface">#tr_8k2n9m1p</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary">
+<span class="w-1 h-1 rounded-full bg-primary"></span>
+                                    Success
+                                </span>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-medium text-on-surface-variant">GPT-4o-2024-08-06</span>
+</td>
+<td class="px-6 py-4">
+<div class="w-24 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[45%]"></div>
+</div>
+<span class="text-[10px] font-mono text-on-surface-variant mt-1 block">452ms</span>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-xs">1,204</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="p-1.5 hover:bg-surface-container-highest rounded-sm transition-colors">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group cursor-pointer">
+<td class="px-6 py-4">
+<span class="font-mono text-xs text-on-surface">#tr_7x5v3q9y</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-error/10 text-error">
+<span class="w-1 h-1 rounded-full bg-error"></span>
+                                    Failure
+                                </span>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-medium text-on-surface-variant">Claude-3.5-Sonnet</span>
+</td>
+<td class="px-6 py-4">
+<div class="w-24 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-error w-[90%]"></div>
+</div>
+<span class="text-[10px] font-mono text-on-surface-variant mt-1 block">2.1s</span>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-xs">45</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="p-1.5 hover:bg-surface-container-highest rounded-sm transition-colors">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group cursor-pointer">
+<td class="px-6 py-4">
+<span class="font-mono text-xs text-on-surface">#tr_2m0l4b8k</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary">
+<span class="w-1 h-1 rounded-full bg-primary"></span>
+                                    Success
+                                </span>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-medium text-on-surface-variant">Llama-3-70b</span>
+</td>
+<td class="px-6 py-4">
+<div class="w-24 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[25%]"></div>
+</div>
+<span class="text-[10px] font-mono text-on-surface-variant mt-1 block">180ms</span>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-xs">890</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="p-1.5 hover:bg-surface-container-highest rounded-sm transition-colors">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors group cursor-pointer">
+<td class="px-6 py-4">
+<span class="font-mono text-xs text-on-surface">#tr_1p9d5f3j</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary">
+<span class="w-1 h-1 rounded-full bg-primary"></span>
+                                    Success
+                                </span>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-medium text-on-surface-variant">GPT-4o-mini</span>
+</td>
+<td class="px-6 py-4">
+<div class="w-24 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[35%]"></div>
+</div>
+<span class="text-[10px] font-mono text-on-surface-variant mt-1 block">312ms</span>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-xs">2,450</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="p-1.5 hover:bg-surface-container-highest rounded-sm transition-colors">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</main>
+<!-- Floating Action Info (Contextual) -->
+<div class="fixed bottom-8 right-8 flex flex-col items-end gap-3 z-[100]">
+<div class="glass-panel border border-primary/20 p-4 rounded-md shadow-2xl flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+<div class="flex flex-col">
+<span class="text-[10px] font-bold text-primary uppercase tracking-[0.2em] mb-1">Live Feed</span>
+<span class="text-xs text-on-surface font-mono">Incoming trace from: <span class="text-primary">Worker_Node_04</span></span>
+</div>
+<div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+</div>
+</div>
+</body></html>

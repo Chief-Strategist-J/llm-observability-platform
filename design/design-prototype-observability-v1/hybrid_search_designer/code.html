@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Obsidian Lens | Search Arch</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "error-container": "#93000a",
+              "outline-variant": "#3e4a3d",
+              "inverse-primary": "#006e2c",
+              "tertiary-container": "#8c9198",
+              "surface-container": "#1b2026",
+              "surface-container-highest": "#30353b",
+              "on-tertiary": "#2c3137",
+              "on-surface-variant": "#bdcaba",
+              "primary": "#6bde80",
+              "on-primary-fixed-variant": "#00531f",
+              "inverse-on-surface": "#2c3137",
+              "surface-variant": "#30353b",
+              "on-tertiary-container": "#252a30",
+              "background": "#0f1419",
+              "error": "#ffb4ab",
+              "on-secondary-fixed": "#141c25",
+              "surface-container-high": "#252a30",
+              "surface-tint": "#6bde80",
+              "outline": "#889485",
+              "secondary-container": "#414a53",
+              "surface": "#0f1419",
+              "on-tertiary-fixed-variant": "#42474e",
+              "on-tertiary-fixed": "#171c22",
+              "tertiary-fixed": "#dee3eb",
+              "primary-container": "#2fa54f",
+              "secondary-fixed-dim": "#bec7d2",
+              "on-secondary-fixed-variant": "#3f4851",
+              "on-surface": "#dee3eb",
+              "secondary": "#bec7d2",
+              "surface-bright": "#353a40",
+              "secondary-fixed": "#dae3ef",
+              "on-primary-fixed": "#002108",
+              "primary-fixed": "#88fb99",
+              "primary-fixed-dim": "#6bde80",
+              "on-primary": "#003913",
+              "inverse-surface": "#dee3eb",
+              "on-secondary": "#29313a",
+              "on-secondary-container": "#b0b9c4",
+              "on-error": "#690005",
+              "on-background": "#dee3eb",
+              "tertiary-fixed-dim": "#c2c7cf",
+              "surface-dim": "#0f1419",
+              "on-primary-container": "#003210",
+              "tertiary": "#c2c7cf",
+              "surface-container-lowest": "#0a0f14",
+              "surface-container-low": "#171c22",
+              "on-error-container": "#ffdad6"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"],
+              "mono": ["JetBrains Mono"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f1419; color: #dee3eb; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; }
+        .glass-panel { background: rgba(48, 53, 59, 0.6); backdrop-filter: blur(12px); }
+        input[type="range"] { accent-color: #6bde80; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #0f1419; }
+        ::-webkit-scrollbar-thumb { background: #30353b; border-radius: 2px; }
+    </style>
+</head>
+<body class="flex min-h-screen overflow-hidden">
+<!-- SideNavBar Shell -->
+<aside class="bg-slate-900 dark:bg-[#171c22] h-screen w-64 fixed left-0 top-0 flex flex-col border-r border-white/5 shadow-2xl font-['Space_Grotesk'] tracking-tight text-sm p-4 gap-2 z-[60]">
+<div class="mb-8 px-2">
+<h1 class="text-xl font-bold tracking-tighter text-emerald-400 dark:text-[#6bde80]">Obsidian</h1>
+<p class="text-[10px] text-slate-500 uppercase tracking-[0.2em] mt-1">LLM Control Plane</p>
+</div>
+<nav class="flex flex-col gap-1 flex-grow">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:bg-[#1b2026] hover:text-[#6bde80] transition-all duration-200 ease-in-out active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="monitoring">monitoring</span>
+<span>Observability</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-[#30353b] text-[#6bde80] rounded-sm font-semibold transition-all duration-200 ease-in-out active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="database_search">database_search</span>
+<span>Search Arch</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:bg-[#1b2026] hover:text-[#6bde80] transition-all duration-200 ease-in-out active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="account_tree">account_tree</span>
+<span>Workflows</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:bg-[#1b2026] hover:text-[#6bde80] transition-all duration-200 ease-in-out active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+<span>Tenants</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:bg-[#1b2026] hover:text-[#6bde80] transition-all duration-200 ease-in-out active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="shield_lock">shield_lock</span>
+<span>Security</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:bg-[#1b2026] hover:text-[#6bde80] transition-all duration-200 ease-in-out active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+<button class="mt-4 mb-8 bg-gradient-to-br from-primary to-primary-container text-on-primary py-2 px-4 rounded-sm font-bold flex items-center justify-center gap-2 active:opacity-80 transition-all">
+<span class="material-symbols-outlined text-sm">add</span>
+            New Pipeline
+        </button>
+<div class="mt-auto flex flex-col gap-1 border-t border-white/5 pt-4">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+<span>Docs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="support_agent">support_agent</span>
+<span>Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 flex-1 flex flex-col">
+<!-- TopNavBar Shell -->
+<header class="fixed top-0 right-0 left-64 h-16 z-50 bg-slate-900/60 dark:bg-[#0f1419]/60 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-8 font-['Space_Grotesk'] text-sm uppercase tracking-widest">
+<div class="flex items-center gap-8">
+<div class="relative group">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 text-lg" data-icon="search">search</span>
+<input class="bg-surface-container-lowest border border-white/5 rounded-sm pl-10 pr-4 py-1.5 w-64 text-xs focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none" placeholder="Search parameters..." type="text"/>
+</div>
+<div class="flex items-center gap-6">
+<a class="text-slate-400 hover:text-slate-200 transition-colors" href="#">Cluster Status</a>
+<a class="text-slate-400 hover:text-slate-200 transition-colors" href="#">Latency</a>
+<a class="text-[#6bde80] border-b-2 border-[#6bde80] pb-1" href="#">Tokens</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 mr-4 border-r border-white/10 pr-4">
+<button class="text-slate-400 hover:text-primary transition-colors cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-slate-400 hover:text-primary transition-colors cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+</button>
+</div>
+<button class="bg-surface-container-high px-4 py-1.5 rounded-sm text-xs font-bold border border-white/5 hover:bg-surface-container-highest transition-colors">Logs</button>
+<button class="bg-gradient-to-r from-primary to-primary-container text-on-primary px-4 py-1.5 rounded-sm text-xs font-bold shadow-lg shadow-primary/10">Deploy</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-primary/30">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="Cyberpunk style user avatar profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8pGTnK31TMTVQ1sbG4u4umTzw8-5IUfrafgHeFi4eb8adqSfHo5dE1M0Ts5oDX8FNRTvUtL6OzSeLxyeYLxoxazoVJE3PW9ylKxG29MlJU3OwOR6D5e-mirmhVSKTe_ApnRhBhH_QN1ohG8YL2F0DV0r_C0ts008CEUQGUZweKcnrwA1uEEJvKlKA4fVAkkLQzl5Hm9jckqdZtVXAyd8scKIqdVCb0pJCKr4myLp8Dy6nxCycFAN9r4PSh6LKw05Wz2ykg5jVK7E"/>
+</div>
+</div>
+</header>
+<!-- Search Designer Canvas -->
+<div class="mt-16 p-8 overflow-y-auto h-[calc(100vh-64px)] bg-surface text-on-surface">
+<!-- Hero Header Section -->
+<div class="mb-10">
+<div class="flex items-center gap-2 text-primary mb-2">
+<span class="material-symbols-outlined" data-icon="tune">tune</span>
+<span class="text-xs font-mono tracking-widest uppercase">Configuration Engine v2.4</span>
+</div>
+<h2 class="text-4xl font-headline font-bold text-on-surface tracking-tight mb-2">Hybrid Search Designer</h2>
+<p class="text-on-surface-variant max-w-2xl text-lg font-light">Fine-tune the balance between linguistic precision and semantic depth using Reciprocal Rank Fusion (RRF).</p>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Tuning Panel -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="bg-surface-container-low p-6 rounded-md">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline text-lg font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="settings_input_component">settings_input_component</span>
+                                Weight Parameters
+                            </h3>
+<span class="text-[10px] font-mono bg-primary/10 text-primary px-2 py-0.5 rounded">RRF STABLE</span>
+</div>
+<!-- BM25 Weight -->
+<div class="space-y-4 mb-8">
+<div class="flex justify-between items-end">
+<div>
+<label class="text-xs font-mono text-on-surface-variant uppercase">Keyword (BM25)</label>
+<p class="text-[10px] text-slate-500">Lexical exact matching frequency</p>
+</div>
+<span class="font-mono text-primary font-bold">0.45</span>
+</div>
+<input class="w-full h-1 bg-surface-container rounded-lg appearance-none cursor-pointer" type="range"/>
+</div>
+<!-- HNSW Weight -->
+<div class="space-y-4 mb-8">
+<div class="flex justify-between items-end">
+<div>
+<label class="text-xs font-mono text-on-surface-variant uppercase">Vector (HNSW)</label>
+<p class="text-[10px] text-slate-500">Semantic embedding proximity</p>
+</div>
+<span class="font-mono text-primary font-bold">0.55</span>
+</div>
+<input class="w-full h-1 bg-surface-container rounded-lg appearance-none cursor-pointer" type="range"/>
+</div>
+<!-- Fusion Constant -->
+<div class="space-y-4">
+<div class="flex justify-between items-end">
+<div>
+<label class="text-xs font-mono text-on-surface-variant uppercase">Fusion K</label>
+<p class="text-[10px] text-slate-500">Rank penalty constant</p>
+</div>
+<span class="font-mono text-primary font-bold">60</span>
+</div>
+<div class="flex items-center gap-4">
+<input class="bg-surface-container-lowest border border-white/5 rounded-sm px-2 py-1 w-20 text-xs font-mono" type="number" value="60"/>
+<div class="flex-1 h-[1px] bg-white/5"></div>
+</div>
+</div>
+</div>
+<!-- AI Assistant Panel -->
+<div class="bg-surface-container p-6 rounded-md border-l-2 border-primary shadow-xl">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-8 h-8 rounded-sm bg-primary/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-sm" data-icon="auto_awesome">auto_awesome</span>
+</div>
+<h3 class="font-headline font-medium">Obsidian Intelligence</h3>
+</div>
+<p class="text-sm text-on-surface-variant italic mb-4">"Based on your query history, increasing Vector weights by 12% would improve recall for abstract long-tail searches."</p>
+<button class="w-full py-2 bg-surface-container-highest text-primary text-xs font-bold rounded-sm border border-primary/20 hover:bg-primary hover:text-on-primary transition-all flex items-center justify-center gap-2">
+                            Apply Optimized Weights
+                            <span class="material-symbols-outlined text-sm" data-icon="bolt">bolt</span>
+</button>
+</div>
+</div>
+<!-- Preview Panel -->
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+<div class="bg-surface-container-low rounded-md overflow-hidden flex flex-col h-full min-h-[500px]">
+<div class="p-6 border-b border-white/5 flex items-center justify-between">
+<h3 class="font-headline text-lg font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="visibility">visibility</span>
+                                Real-time Preview
+                            </h3>
+<div class="flex items-center gap-2">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full bg-surface-container-highest border border-white/10 flex items-center justify-center"><span class="material-symbols-outlined text-[10px]" data-icon="data_object">data_object</span></div>
+<div class="w-6 h-6 rounded-full bg-surface-container-highest border border-white/10 flex items-center justify-center"><span class="material-symbols-outlined text-[10px]" data-icon="terminal">terminal</span></div>
+</div>
+<span class="text-[10px] text-on-surface-variant font-mono uppercase ml-2">Sample Set: Wiki-10k</span>
+</div>
+</div>
+<!-- Results List -->
+<div class="flex-1 p-6 space-y-6 overflow-y-auto">
+<!-- Search Sample Input -->
+<div class="bg-surface-container-lowest p-4 rounded-sm border border-white/5 flex items-center gap-4 mb-4">
+<span class="text-xs font-mono text-primary">QUERY:</span>
+<input class="flex-1 bg-transparent border-none focus:ring-0 text-on-surface text-sm italic font-light" type="text" value="How does quantum entanglement affect communication latency?"/>
+<button class="text-primary hover:bg-primary/10 p-1 transition-colors"><span class="material-symbols-outlined" data-icon="refresh">refresh</span></button>
+</div>
+<!-- Trace Item 1 -->
+<div class="group relative bg-surface-container-lowest p-5 border-l-2 border-primary rounded-sm hover:bg-surface-container-highest transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-4">
+<span class="text-lg font-mono font-bold text-primary">#01</span>
+<h4 class="font-headline font-semibold text-on-surface">Spooky Action at a Distance: Entanglement Dynamics</h4>
+</div>
+<div class="text-right">
+<div class="text-[10px] font-mono text-on-surface-variant mb-1">FUSION SCORE</div>
+<div class="text-xl font-headline font-bold text-primary">0.9842</div>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant font-light line-clamp-2 mb-4 leading-relaxed">Recent experiments confirm that while entanglement persists over thousands of kilometers, the no-communication theorem prevents superluminal data transfer, maintaining causality...</p>
+<!-- Waterfall Analysis -->
+<div class="grid grid-cols-2 gap-8 pt-4 border-t border-white/5">
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-mono">
+<span>BM25 Component</span>
+<span>42.1</span>
+</div>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full" style="width: 65%;"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-mono">
+<span>HNSW Distance</span>
+<span>0.042</span>
+</div>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+<div class="bg-primary h-full" style="width: 88%;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Trace Item 2 -->
+<div class="group relative bg-surface-container-lowest p-5 border-l-2 border-white/10 rounded-sm hover:bg-surface-container-highest transition-colors cursor-pointer opacity-80 hover:opacity-100">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-4">
+<span class="text-lg font-mono font-bold text-on-surface-variant">#02</span>
+<h4 class="font-headline font-semibold text-on-surface">Fiber Optic Latency in Global Networks</h4>
+</div>
+<div class="text-right">
+<div class="text-[10px] font-mono text-on-surface-variant mb-1">FUSION SCORE</div>
+<div class="text-xl font-headline font-bold text-on-surface">0.8210</div>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant font-light line-clamp-2 mb-4 leading-relaxed">Network latency is primarily determined by physical distance and the refractive index of glass fibers, typically resulting in 5ms delay per 1000km...</p>
+<div class="grid grid-cols-2 gap-8 pt-4 border-t border-white/5">
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-mono">
+<span>BM25 Component</span>
+<span>58.4</span>
+</div>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full" style="width: 85%;"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-mono">
+<span>HNSW Distance</span>
+<span>0.158</span>
+</div>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+<div class="bg-primary h-full" style="width: 32%;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Trace Item 3 -->
+<div class="group relative bg-surface-container-lowest p-5 border-l-2 border-white/10 rounded-sm hover:bg-surface-container-highest transition-colors cursor-pointer opacity-80 hover:opacity-100">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-4">
+<span class="text-lg font-mono font-bold text-on-surface-variant">#03</span>
+<h4 class="font-headline font-semibold text-on-surface">Quantum Information Theory: A Primer</h4>
+</div>
+<div class="text-right">
+<div class="text-[10px] font-mono text-on-surface-variant mb-1">FUSION SCORE</div>
+<div class="text-xl font-headline font-bold text-on-surface">0.7554</div>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant font-light line-clamp-2 mb-4 leading-relaxed">The foundations of quantum mechanics provide the mathematical framework for understanding qubits, entanglement, and unitary evolution...</p>
+<div class="grid grid-cols-2 gap-8 pt-4 border-t border-white/5">
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-mono">
+<span>BM25 Component</span>
+<span>12.8</span>
+</div>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full" style="width: 25%;"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-mono">
+<span>HNSW Distance</span>
+<span>0.091</span>
+</div>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+<div class="bg-primary h-full" style="width: 72%;"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Actions -->
+<div class="p-4 bg-surface-container border-t border-white/5 flex justify-between items-center">
+<div class="flex gap-4">
+<button class="flex items-center gap-2 text-on-surface-variant hover:text-white text-xs transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="file_download">file_download</span>
+                                    Export Weights
+                                </button>
+<button class="flex items-center gap-2 text-on-surface-variant hover:text-white text-xs transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="history">history</span>
+                                    Version History
+                                </button>
+</div>
+<span class="text-[10px] font-mono text-slate-500">Latency: 124ms | Engine: Obsidian-H3</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Stats Bar -->
+<div class="mt-8 grid grid-cols-4 gap-6">
+<div class="bg-surface-container-low p-4 rounded-sm border-t border-white/5">
+<div class="text-[10px] font-mono text-on-surface-variant uppercase mb-1">Mean Reciprocal Rank</div>
+<div class="text-2xl font-headline font-bold text-primary">0.912</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-sm border-t border-white/5">
+<div class="text-[10px] font-mono text-on-surface-variant uppercase mb-1">nDCG @ 10</div>
+<div class="text-2xl font-headline font-bold text-primary">0.884</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-sm border-t border-white/5">
+<div class="text-[10px] font-mono text-on-surface-variant uppercase mb-1">Hybrid Coverage</div>
+<div class="text-2xl font-headline font-bold text-primary">94.2%</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-sm border-t border-white/5">
+<div class="text-[10px] font-mono text-on-surface-variant uppercase mb-1">Query Latency</div>
+<div class="text-2xl font-headline font-bold text-primary">82ms</div>
+</div>
+</div>
+</div>
+</main>
+<!-- FAB Overlay for Quick Assistance -->
+<div class="fixed bottom-8 right-8 z-[100]">
+<button class="bg-primary text-on-primary w-14 h-14 rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all group overflow-hidden">
+<span class="material-symbols-outlined text-2xl" data-icon="chat_bubble">chat_bubble</span>
+<div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</button>
+</div>
+</body></html>

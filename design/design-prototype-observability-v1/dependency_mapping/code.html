@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Obsidian Lens | Dependency Engine</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800;900&amp;family=Inter:wght@100;200;300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "outline-variant": "#3e4a3d",
+                "on-secondary-container": "#b0b9c4",
+                "on-secondary": "#29313a",
+                "on-primary-fixed": "#002108",
+                "primary": "#6bde80",
+                "secondary": "#bec7d2",
+                "primary-container": "#2fa54f",
+                "on-primary-fixed-variant": "#00531f",
+                "secondary-fixed": "#dae3ef",
+                "primary-fixed": "#88fb99",
+                "on-error": "#690005",
+                "surface-container-low": "#171c22",
+                "on-tertiary-fixed-variant": "#42474e",
+                "tertiary-fixed-dim": "#c2c7cf",
+                "secondary-fixed-dim": "#bec7d2",
+                "tertiary-fixed": "#dee3eb",
+                "error-container": "#93000a",
+                "surface-tint": "#6bde80",
+                "surface-dim": "#0f1419",
+                "on-surface-variant": "#bdcaba",
+                "on-primary-container": "#003210",
+                "error": "#ffb4ab",
+                "outline": "#889485",
+                "surface-container-lowest": "#0a0f14",
+                "inverse-on-surface": "#2c3137",
+                "surface-variant": "#30353b",
+                "surface-bright": "#353a40",
+                "background": "#0f1419",
+                "tertiary": "#c2c7cf",
+                "surface-container-high": "#252a30",
+                "on-background": "#dee3eb",
+                "inverse-surface": "#dee3eb",
+                "on-tertiary-container": "#252a30",
+                "on-secondary-fixed-variant": "#3f4851",
+                "inverse-primary": "#006e2c",
+                "tertiary-container": "#8c9198",
+                "primary-fixed-dim": "#6bde80",
+                "secondary-container": "#414a53",
+                "on-tertiary-fixed": "#171c22",
+                "on-secondary-fixed": "#141c25",
+                "on-tertiary": "#2c3137",
+                "on-primary": "#003913",
+                "on-error-container": "#ffdad6",
+                "surface-container-highest": "#30353b",
+                "surface-container": "#1b2026",
+                "surface": "#0f1419",
+                "on-surface": "#dee3eb"
+              },
+              fontFamily: {
+                "headline": ["Space Grotesk"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+              },
+              borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(48, 53, 59, 0.6);
+            backdrop-filter: blur(12px);
+        }
+        .trace-line {
+            background: linear-gradient(90deg, transparent, #6bde80, transparent);
+            background-size: 200% 100%;
+        }
+        body {
+            background-color: #0f1419;
+            color: #dee3eb;
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="overflow-hidden">
+<!-- Top Navigation -->
+<header class="bg-[#0f1419]/80 backdrop-blur-md text-[#6bde80] font-space-grotesk font-bold tracking-tight fixed top-0 z-50 flex justify-between items-center w-full px-6 h-14 shadow-[0_24px_48px_rgba(0,0,0,0.4)]">
+<div class="flex items-center gap-8">
+<span class="text-xl font-black text-[#6bde80] tracking-tighter">Obsidian Lens</span>
+<nav class="hidden md:flex items-center gap-6 text-sm font-medium">
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors" href="#">Docs</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors" href="#">API</a>
+<a class="text-[#bdcaba] hover:text-[#dee3eb] transition-colors" href="#">Status</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-[#30353b]/50 transition-all duration-200 active:scale-95">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 hover:bg-[#30353b]/50 transition-all duration-200 active:scale-95">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+</button>
+<button class="p-2 hover:bg-[#30353b]/50 transition-all duration-200 active:scale-95">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="w-8 h-8 rounded bg-surface-container-highest border border-outline-variant flex items-center justify-center overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="Stylized user avatar portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDt7tYp5LsGaszUJTRpAkwP6SeZSspNf8AlitPp0oMwA2mAOpvtwEzmjBm_0tU9mcJN_LmtVyZa0w8JYrGlKcfJS5UomLxqhfcuiFcobizrOz9yrsone5nZQHxbsM0anhXV_fbmADRqO7pX6EYfU3_hnxl2KC-uKJrn_kyvS2C-VbTmWt7KT00-Sfz22uD24lp31mzuLGlm3RNLBLybDnEwcOME6wUU4der622WOC_eFp3NYJBgDVxJMlCAU6CxXQ1Lgi88miq-LBE"/>
+</div>
+</div>
+</header>
+<div class="flex h-screen pt-14">
+<!-- Sidebar Navigation -->
+<aside class="bg-[#171c22] flex flex-col h-full py-4 border-r border-[#30353b]/10 w-64 hidden md:flex shrink-0">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3 mb-1">
+<div class="w-8 h-8 bg-primary/10 rounded-sm flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-sm" data-icon="hub">hub</span>
+</div>
+<div>
+<h2 class="text-sm font-bold text-on-surface">Core Engine</h2>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest">v2.4.0-stable</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-6 py-3 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] hover:translate-x-1 transition-all" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="view_in_ar">view_in_ar</span>
+<span class="text-sm">Containers</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] hover:translate-x-1 transition-all" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="layers">layers</span>
+<span class="text-sm">Infrastructure</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 bg-[#30353b] text-[#6bde80] font-semibold border-r-2 border-[#6bde80] cursor-pointer" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="account_tree">account_tree</span>
+<span class="text-sm">Dependencies</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] hover:translate-x-1 transition-all" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="settings_input_component">settings_input_component</span>
+<span class="text-sm">Config</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] hover:translate-x-1 transition-all" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="reorder">reorder</span>
+<span class="text-sm">Logs</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] hover:translate-x-1 transition-all" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="psychology">psychology</span>
+<span class="text-sm">Models</span>
+</a>
+</nav>
+<div class="px-4 mt-auto">
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary-container py-2 rounded-sm text-xs font-bold uppercase tracking-wider mb-6 active:scale-[0.98] transition-transform">
+                    Deploy New Node
+                </button>
+<div class="space-y-1">
+<a class="flex items-center gap-3 px-2 py-2 text-[#bdcaba] text-xs hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-base" data-icon="help_outline">help_outline</span> Support
+                    </a>
+<a class="flex items-center gap-3 px-2 py-2 text-[#bdcaba] text-xs hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-base" data-icon="manage_accounts">manage_accounts</span> Account
+                    </a>
+</div>
+</div>
+</aside>
+<!-- Main Content Area: Dependency Graph -->
+<main class="flex-1 relative overflow-hidden bg-surface-container-lowest">
+<!-- Graph Background Pattern -->
+<div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#6bde80 0.5px, transparent 0.5px); background-size: 24px 24px;"></div>
+<!-- Graph Canvas -->
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="relative w-full h-full max-w-5xl max-h-[600px]">
+<!-- Nodes & Connections (Asymmetric Layout) -->
+<!-- Connection Lines (SVG) -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none">
+<!-- Main Path: API -> Orchestrator -->
+<path d="M 200 300 Q 300 250 450 300" fill="none" stroke="url(#gradient-green)" stroke-dasharray="4 4" stroke-width="2"></path>
+<!-- Orchestrator -> LLM Proxy -->
+<path d="M 550 300 Q 650 150 750 200" fill="none" opacity="0.6" stroke="#6bde80" stroke-width="2"></path>
+<!-- Orchestrator -> Vector DB -->
+<path d="M 550 300 Q 650 450 750 400" fill="none" opacity="0.3" stroke="#6bde80" stroke-width="2"></path>
+<!-- Orchestrator -> Redis Cache -->
+<path d="M 550 300 L 750 300" fill="none" opacity="0.8" stroke="#ffb4ab" stroke-dasharray="8 4" stroke-width="2"></path>
+<defs>
+<lineargradient id="gradient-green" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="transparent"></stop>
+<stop offset="50%" stop-color="#6bde80"></stop>
+<stop offset="100%" stop-color="transparent"></stop>
+</lineargradient>
+</defs>
+</svg>
+<!-- Latency Indicators (Positioned absolute) -->
+<div class="absolute left-[310px] top-[245px] glass-panel px-2 py-1 rounded text-[10px] font-mono text-primary flex items-center gap-1 border border-primary/20">
+<span class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></span>
+                        12ms
+                    </div>
+<div class="absolute left-[640px] top-[180px] glass-panel px-2 py-1 rounded text-[10px] font-mono text-primary flex items-center gap-1 border border-primary/20">
+<span class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></span>
+                        142ms
+                    </div>
+<div class="absolute left-[640px] top-[290px] glass-panel px-2 py-1 rounded text-[10px] font-mono text-error flex items-center gap-1 border border-error/20">
+<span class="w-1.5 h-1.5 bg-error rounded-full animate-pulse"></span>
+                        TIMEOUT
+                    </div>
+<!-- Service Nodes -->
+<!-- API Gateway -->
+<div class="absolute left-[100px] top-[270px] group">
+<div class="w-48 bg-surface-container rounded-sm border-l-4 border-primary p-4 transition-all hover:bg-surface-container-high cursor-pointer">
+<div class="flex items-center justify-between mb-3">
+<span class="material-symbols-outlined text-primary text-xl" data-icon="cloud_queue">cloud_queue</span>
+<span class="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold">STABLE</span>
+</div>
+<h3 class="font-headline font-bold text-sm tracking-tight">gateway-api-main</h3>
+<p class="text-[10px] text-on-surface-variant font-mono mt-1">10.0.4.122</p>
+</div>
+</div>
+<!-- Task Orchestrator -->
+<div class="absolute left-[450px] top-[270px] group scale-110">
+<div class="w-56 bg-surface-container-high ring-1 ring-primary/40 rounded-sm border-l-4 border-primary p-5 shadow-2xl">
+<div class="flex items-center justify-between mb-3">
+<span class="material-symbols-outlined text-primary text-2xl" data-icon="memory" data-weight="fill">memory</span>
+<div class="flex gap-1">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="w-2 h-2 rounded-full bg-primary/20"></span>
+</div>
+</div>
+<h3 class="font-headline font-bold text-base tracking-tight">task-orchestrator-v2</h3>
+<div class="mt-4 grid grid-cols-2 gap-2">
+<div class="bg-surface-container-lowest p-2 rounded-sm">
+<p class="text-[8px] text-on-surface-variant uppercase">CPU</p>
+<p class="text-xs font-mono text-primary">42.8%</p>
+</div>
+<div class="bg-surface-container-lowest p-2 rounded-sm">
+<p class="text-[8px] text-on-surface-variant uppercase">MEM</p>
+<p class="text-xs font-mono text-primary">1.2GB</p>
+</div>
+</div>
+</div>
+</div>
+<!-- External Dependencies -->
+<div class="absolute left-[750px] top-[150px] group">
+<div class="w-48 bg-surface-container rounded-sm border-l-4 border-primary-container p-4 transition-all hover:bg-surface-container-high cursor-pointer">
+<div class="flex items-center justify-between mb-3">
+<span class="material-symbols-outlined text-primary-container text-xl" data-icon="smart_toy">smart_toy</span>
+<span class="text-[9px] bg-primary-container/10 text-primary-container px-1.5 py-0.5 rounded font-bold uppercase">LLM Provider</span>
+</div>
+<h3 class="font-headline font-bold text-sm tracking-tight">gpt-4-turbo-0125</h3>
+<p class="text-[10px] text-on-surface-variant font-mono mt-1">openai-api-external</p>
+</div>
+</div>
+<div class="absolute left-[750px] top-[270px] group">
+<div class="w-48 bg-surface-container rounded-sm border-l-4 border-error p-4 transition-all hover:bg-surface-container-high cursor-pointer">
+<div class="flex items-center justify-between mb-3">
+<span class="material-symbols-outlined text-error text-xl" data-icon="database">database</span>
+<span class="text-[9px] bg-error/10 text-error px-1.5 py-0.5 rounded font-bold">CRITICAL</span>
+</div>
+<h3 class="font-headline font-bold text-sm tracking-tight">redis-cache-cluster</h3>
+<p class="text-[10px] text-on-surface-variant font-mono mt-1">cluster-id: redis-001</p>
+</div>
+</div>
+<div class="absolute left-[750px] top-[390px] group">
+<div class="w-48 bg-surface-container rounded-sm border-l-4 border-secondary p-4 transition-all hover:bg-surface-container-high cursor-pointer opacity-50">
+<div class="flex items-center justify-between mb-3">
+<span class="material-symbols-outlined text-secondary text-xl" data-icon="storage">storage</span>
+</div>
+<h3 class="font-headline font-bold text-sm tracking-tight">pinecone-vector-v2</h3>
+<p class="text-[10px] text-on-surface-variant font-mono mt-1">namespace: production</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Toolbar Overlay -->
+<div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 p-1 bg-surface-container-high border border-outline-variant/30 rounded-lg shadow-2xl backdrop-blur-xl">
+<button class="p-2 hover:bg-surface-container-highest rounded text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined" data-icon="zoom_in">zoom_in</span>
+</button>
+<button class="p-2 hover:bg-surface-container-highest rounded text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined" data-icon="zoom_out">zoom_out</span>
+</button>
+<div class="w-px bg-outline-variant/30 mx-1"></div>
+<button class="p-2 hover:bg-surface-container-highest rounded text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined" data-icon="center_focus_strong">center_focus_strong</span>
+</button>
+<button class="p-2 hover:bg-surface-container-highest rounded text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+</button>
+</div>
+</main>
+<!-- Right Side Panel: Detail View -->
+<aside class="w-[380px] h-full bg-surface-container-low border-l border-[#30353b]/20 hidden lg:flex flex-col shrink-0">
+<div class="p-6 border-b border-[#30353b]/20">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-lg font-headline font-bold tracking-tight">Node Details</h2>
+<button class="text-on-surface-variant hover:text-white transition-colors">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<div class="flex items-center gap-4 bg-surface-container-lowest p-3 rounded-sm border border-outline-variant/10">
+<div class="w-12 h-12 bg-primary/20 rounded flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-3xl" data-icon="memory" data-weight="fill">memory</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-sm">task-orchestrator-v2</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-[10px] text-on-surface-variant uppercase font-bold tracking-tighter">Healthy</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+<!-- Metrics Grid -->
+<section>
+<h4 class="text-[10px] text-on-surface-variant uppercase font-black tracking-widest mb-4">Real-time Performance</h4>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container p-4 rounded-sm">
+<p class="text-[10px] text-on-surface-variant uppercase">Success Rate</p>
+<p class="text-2xl font-headline font-bold text-primary">99.98%</p>
+</div>
+<div class="bg-surface-container p-4 rounded-sm">
+<p class="text-[10px] text-on-surface-variant uppercase">P95 Latency</p>
+<p class="text-2xl font-headline font-bold text-primary">42ms</p>
+</div>
+</div>
+</section>
+<!-- Dependency List -->
+<section>
+<h4 class="text-[10px] text-on-surface-variant uppercase font-black tracking-widest mb-4">Active Downstream</h4>
+<div class="space-y-3">
+<div class="flex items-center justify-between p-3 bg-surface-container-lowest rounded-sm border-l-2 border-primary-container">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container text-lg" data-icon="smart_toy">smart_toy</span>
+<span class="text-xs font-medium">gpt-4-turbo</span>
+</div>
+<span class="text-[10px] font-mono text-primary-container">142ms</span>
+</div>
+<div class="flex items-center justify-between p-3 bg-surface-container-lowest rounded-sm border-l-2 border-error">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-error text-lg" data-icon="database">database</span>
+<span class="text-xs font-medium">redis-cache-cluster</span>
+</div>
+<span class="text-[10px] font-mono text-error">FAIL</span>
+</div>
+<div class="flex items-center justify-between p-3 bg-surface-container-lowest rounded-sm border-l-2 border-primary/20">
+<div class="flex items-center gap-3 opacity-40">
+<span class="material-symbols-outlined text-on-surface-variant text-lg" data-icon="storage">storage</span>
+<span class="text-xs font-medium">pinecone-v2</span>
+</div>
+<span class="text-[10px] font-mono text-on-surface-variant">IDLE</span>
+</div>
+</div>
+</section>
+<!-- Configuration Trace -->
+<section>
+<h4 class="text-[10px] text-on-surface-variant uppercase font-black tracking-widest mb-4">Environment Config</h4>
+<div class="bg-surface-container-lowest p-4 rounded-sm border border-outline-variant/10 font-mono text-[11px] leading-relaxed">
+<p class="text-primary-container">NODE_ENV="production"</p>
+<p class="text-primary-container">MAX_CONCURRENCY=200</p>
+<p class="text-primary-container">TIMEOUT_MS=5000</p>
+<p class="text-on-surface-variant/40 mt-2">// Provider specific keys</p>
+<p class="text-primary-container">LLM_PROVIDER="openai"</p>
+<p class="text-primary-container">RETRY_STRATEGY="exponential"</p>
+</div>
+</section>
+</div>
+<div class="p-6 bg-surface-container mt-auto">
+<button class="w-full bg-surface-container-highest hover:bg-surface-bright text-white py-3 rounded-sm text-xs font-bold transition-colors border border-outline-variant/20 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-base" data-icon="refresh">refresh</span> Restart Instance
+                </button>
+</div>
+</aside>
+</div>
+<!-- Floating Action Button (FAB) -->
+<div class="fixed bottom-8 right-8 z-[60] lg:hidden">
+<button class="w-14 h-14 bg-gradient-to-br from-primary to-primary-container text-on-primary-container rounded shadow-2xl flex items-center justify-center active:scale-95 transition-all">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</div>
+</body></html>

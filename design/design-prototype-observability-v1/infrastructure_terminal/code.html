@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Obsidian Lens | Infrastructure Terminal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container": "#1b2026",
+              "tertiary-fixed-dim": "#c2c7cf",
+              "on-primary": "#003913",
+              "secondary-container": "#414a53",
+              "on-secondary-fixed-variant": "#3f4851",
+              "surface": "#0f1419",
+              "secondary-fixed": "#dae3ef",
+              "surface-container-highest": "#30353b",
+              "on-secondary-fixed": "#141c25",
+              "tertiary-fixed": "#dee3eb",
+              "on-tertiary-fixed": "#171c22",
+              "surface-container-lowest": "#0a0f14",
+              "on-surface": "#dee3eb",
+              "on-surface-variant": "#bdcaba",
+              "secondary-fixed-dim": "#bec7d2",
+              "outline": "#889485",
+              "surface-container-high": "#252a30",
+              "primary-fixed-dim": "#6bde80",
+              "on-error": "#690005",
+              "inverse-on-surface": "#2c3137",
+              "surface-variant": "#30353b",
+              "tertiary-container": "#8c9198",
+              "on-tertiary": "#2c3137",
+              "on-secondary": "#29313a",
+              "on-primary-fixed-variant": "#00531f",
+              "on-primary-container": "#003210",
+              "error": "#ffb4ab",
+              "outline-variant": "#3e4a3d",
+              "background": "#0f1419",
+              "surface-tint": "#6bde80",
+              "surface-bright": "#353a40",
+              "on-secondary-container": "#b0b9c4",
+              "tertiary": "#c2c7cf",
+              "surface-dim": "#0f1419",
+              "on-tertiary-container": "#252a30",
+              "error-container": "#93000a",
+              "primary": "#6bde80",
+              "surface-container-low": "#171c22",
+              "on-primary-fixed": "#002108",
+              "inverse-surface": "#dee3eb",
+              "on-background": "#dee3eb",
+              "inverse-primary": "#006e2c",
+              "secondary": "#bec7d2",
+              "primary-fixed": "#88fb99",
+              "on-error-container": "#ffdad6",
+              "primary-container": "#2fa54f",
+              "on-tertiary-fixed-variant": "#42474e"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"],
+              "mono": ["JetBrains Mono", "monospace"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 20px;
+        }
+        .terminal-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .terminal-scroll::-webkit-scrollbar-track {
+            background: #0f1419;
+        }
+        .terminal-scroll::-webkit-scrollbar-thumb {
+            background: #30353b;
+        }
+        .cursor-blink {
+            animation: blink 1s step-end infinite;
+        }
+        @keyframes blink {
+            from, to { opacity: 1; }
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body overflow-hidden">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-[#171c22]/80 backdrop-blur-md shadow-2xl shadow-black/40 flex items-center justify-between px-6 h-16 w-full">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tighter text-[#dee3eb] font-['Space_Grotesk']">Obsidian Lens</span>
+<div class="hidden md:flex items-center gap-6 font-['Space_Grotesk'] font-medium tracking-tight">
+<a class="text-[#bdcaba] hover:text-[#6bde80] transition-colors duration-200" href="#">Docs</a>
+<a class="text-[#bdcaba] hover:text-[#6bde80] transition-colors duration-200" href="#">API Reference</a>
+<a class="text-[#bdcaba] hover:text-[#6bde80] transition-colors duration-200" href="#">Support</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-[#bdcaba] hover:text-[#6bde80] transition-colors active:scale-95 duration-100">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-[#bdcaba] hover:text-[#6bde80] transition-colors active:scale-95 duration-100">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="text-[#bdcaba] hover:text-[#6bde80] transition-colors active:scale-95 duration-100">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<div class="h-8 w-8 bg-surface-container-highest rounded-full overflow-hidden ml-2 border border-outline-variant/20">
+<img alt="Profile" data-alt="User profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxFwa5UYDiP3MQpVDDhWnyLPXoVX66xIFE_3C1Ut-FxpuEwHtP6u6yd_NAD1bMDa2XgpHkJmOp32cWTx9X42CrxJOiUnVgS5uMNTMVDnStPd3LLRGZPeaVSQ9HTK_N5DJHzEcX74oHKJHwV75QdaBdrw48quCVnECOowtemZ7cUoPEoJMk5e5Z2XI1Tr4Wvxc5alrxxX5vpMNbYdOMwEI7-3wyEXTim_OCuyhOboHaMGZuCv1_41C0aiTTYc3mD011lYiZlX5NEeE"/>
+</div>
+</div>
+</nav>
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 z-40 bg-[#171c22] border-r border-outline-variant/10 flex flex-col h-full pt-20 pb-6 hidden md:flex">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 bg-primary/20 rounded-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">terminal</span>
+</div>
+<div>
+<h2 class="font-headline font-bold text-[#6bde80] leading-none">System Core</h2>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">v2.4.0-stable</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-2 space-y-1 overflow-y-auto">
+<div class="text-[#bdcaba] py-3 px-4 flex items-center gap-3 font-['Space_Grotesk'] text-sm uppercase tracking-widest hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all cursor-pointer">
+<span class="material-symbols-outlined">dashboard</span>
+                Dashboard
+            </div>
+<div class="text-[#bdcaba] py-3 px-4 flex items-center gap-3 font-['Space_Grotesk'] text-sm uppercase tracking-widest hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all cursor-pointer">
+<span class="material-symbols-outlined">account_tree</span>
+                Orchestration
+            </div>
+<div class="text-[#bdcaba] py-3 px-4 flex items-center gap-3 font-['Space_Grotesk'] text-sm uppercase tracking-widest hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all cursor-pointer">
+<span class="material-symbols-outlined">dns</span>
+                Infrastructure
+            </div>
+<div class="text-[#bdcaba] py-3 px-4 flex items-center gap-3 font-['Space_Grotesk'] text-sm uppercase tracking-widest hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all cursor-pointer">
+<span class="material-symbols-outlined">workspaces</span>
+                Workspace
+            </div>
+<div class="text-[#bdcaba] py-3 px-4 flex items-center gap-3 font-['Space_Grotesk'] text-sm uppercase tracking-widest hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all cursor-pointer">
+<span class="material-symbols-outlined">monitoring</span>
+                Analytics
+            </div>
+<div class="text-[#bdcaba] py-3 px-4 flex items-center gap-3 font-['Space_Grotesk'] text-sm uppercase tracking-widest hover:bg-[#1b2026] hover:text-[#dee3eb] transition-all cursor-pointer">
+<span class="material-symbols-outlined">tune</span>
+                Settings
+            </div>
+<!-- Active State Indication for Terminal (Current Page) -->
+<div class="bg-[#30353b] text-[#6bde80] border-l-2 border-[#6bde80] py-3 px-4 flex items-center gap-3 font-['Space_Grotesk'] text-sm uppercase tracking-widest cursor-pointer">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">terminal</span>
+                Terminal
+            </div>
+</nav>
+<div class="px-4 pt-4 mt-4 border-t border-outline-variant/10">
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary py-3 rounded-sm font-headline font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-sm">add</span>
+                New Trace
+            </button>
+<div class="mt-4 space-y-1">
+<div class="text-[#bdcaba] py-2 px-4 flex items-center gap-3 font-['Space_Grotesk'] text-[10px] uppercase tracking-widest hover:text-[#dee3eb] transition-all cursor-pointer">
+<span class="material-symbols-outlined text-sm">description</span>
+                    Documentation
+                </div>
+<div class="text-[#bdcaba] py-2 px-4 flex items-center gap-3 font-['Space_Grotesk'] text-[10px] uppercase tracking-widest hover:text-[#dee3eb] transition-all cursor-pointer">
+<span class="material-symbols-outlined text-sm">terminal</span>
+                    Terminal
+                </div>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="md:ml-64 pt-16 h-screen flex flex-col">
+<!-- Terminal Header -->
+<div class="h-12 bg-surface-container-low flex items-center justify-between px-6 border-b border-outline-variant/5">
+<div class="flex items-center gap-4">
+<div class="flex gap-1.5">
+<div class="w-3 h-3 rounded-full bg-error/40 border border-error/20"></div>
+<div class="w-3 h-3 rounded-full bg-secondary/40 border border-secondary/20"></div>
+<div class="w-3 h-3 rounded-full bg-primary/40 border border-primary/20"></div>
+</div>
+<h1 class="font-mono text-sm text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-xs">folder_open</span>
+                    /usr/bin/obsidian-lens-infra
+                </h1>
+</div>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-2 font-mono text-xs text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xs">block</span>
+                    Clear
+                </button>
+<button class="flex items-center gap-2 font-mono text-xs text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xs">content_copy</span>
+                    Copy Output
+                </button>
+<button class="flex items-center gap-2 font-mono text-xs text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xs">settings_suggest</span>
+                    Terminal Settings
+                </button>
+</div>
+</div>
+<!-- Terminal Body -->
+<div class="flex-1 bg-surface-container-lowest p-6 font-mono text-sm leading-relaxed overflow-y-auto terminal-scroll relative">
+<!-- Background Gradient Glow -->
+<div class="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-transparent pointer-events-none"></div>
+<pre class="text-primary opacity-90 mb-8 whitespace-pre font-mono leading-none tracking-tighter">   ____  ____  _____ ___ ____ ___  _   _ 
+  / __ \| __ )| ___|_ _|  _ \_ _|/ \ | |
+ / / _` |  _ \|___ \ | || | | | |/ _ \| |
+| | (_| | |_) |___) || || |_| | / ___ \ |
+ \ \__,_|____/|____/|___|____/___/_/   \_\
+  \____/  L E N S   I N F R A S T R U C T U R E
+            </pre>
+<div class="space-y-4">
+<div class="flex items-start gap-4">
+<span class="text-primary-container shrink-0">14:02:11</span>
+<span class="text-on-surface-variant italic">System kernel initialized. Connection established to node-04-west-us.</span>
+</div>
+<!-- Stats Section -->
+<div class="p-4 bg-surface-container rounded-sm border border-outline-variant/5">
+<div class="grid grid-cols-4 gap-4 mb-4">
+<div class="space-y-1">
+<span class="text-[10px] text-on-surface-variant uppercase tracking-widest block">CPU LOAD</span>
+<div class="flex items-end gap-2">
+<span class="text-2xl font-bold text-primary">12.4%</span>
+<div class="w-16 h-2 bg-surface-container-highest rounded-full overflow-hidden mb-1.5">
+<div class="h-full bg-primary" style="width: 12.4%"></div>
+</div>
+</div>
+</div>
+<div class="space-y-1">
+<span class="text-[10px] text-on-surface-variant uppercase tracking-widest block">MEMORY</span>
+<div class="flex items-end gap-2">
+<span class="text-2xl font-bold text-primary">4.2GB</span>
+<div class="w-16 h-2 bg-surface-container-highest rounded-full overflow-hidden mb-1.5">
+<div class="h-full bg-primary" style="width: 45%"></div>
+</div>
+</div>
+</div>
+<div class="space-y-1">
+<span class="text-[10px] text-on-surface-variant uppercase tracking-widest block">TASKS</span>
+<div class="flex items-end gap-2">
+<span class="text-2xl font-bold text-on-surface">142</span>
+<span class="text-[10px] text-on-surface-variant mb-1.5">Total</span>
+</div>
+</div>
+<div class="space-y-1">
+<span class="text-[10px] text-on-surface-variant uppercase tracking-widest block">UPTIME</span>
+<div class="flex items-end gap-2">
+<span class="text-2xl font-bold text-on-surface">42:12:04</span>
+</div>
+</div>
+</div>
+<div class="space-y-1 text-xs text-on-surface-variant font-mono">
+<div class="grid grid-cols-6 border-b border-outline-variant/10 pb-1 text-primary-container">
+<span>PID</span>
+<span>USER</span>
+<span>PR</span>
+<span>NI</span>
+<span>VIRT</span>
+<span>COMMAND</span>
+</div>
+<div class="grid grid-cols-6 pt-1">
+<span>1024</span>
+<span>root</span>
+<span>20</span>
+<span>0</span>
+<span>1.2G</span>
+<span class="text-primary">obsidian-core</span>
+</div>
+<div class="grid grid-cols-6">
+<span>2048</span>
+<span>node</span>
+<span>20</span>
+<span>0</span>
+<span>844M</span>
+<span class="text-primary">trace-proxy</span>
+</div>
+<div class="grid grid-cols-6">
+<span>3011</span>
+<span>admin</span>
+<span>20</span>
+<span>0</span>
+<span>212M</span>
+<span class="text-on-surface">top</span>
+</div>
+</div>
+</div>
+<div class="flex items-start gap-4">
+<span class="text-primary-container shrink-0">14:02:15</span>
+<span class="text-on-surface">tail -f /var/log/obsidian/ingestion.log</span>
+</div>
+<div class="space-y-1 pl-4 border-l border-primary/20">
+<div class="flex gap-4">
+<span class="text-on-surface-variant opacity-60">INGEST_01:</span>
+<span class="text-primary">INFO</span>
+<span class="text-on-surface-variant text-xs">Received batch_id: 8x-921-zz | Tokens: 4,211</span>
+</div>
+<div class="flex gap-4">
+<span class="text-on-surface-variant opacity-60">INGEST_01:</span>
+<span class="text-primary">INFO</span>
+<span class="text-on-surface-variant text-xs">Embeddings generated in 124ms</span>
+</div>
+<div class="flex gap-4">
+<span class="text-on-surface-variant opacity-60">INGEST_01:</span>
+<span class="text-error">WARN</span>
+<span class="text-on-surface-variant text-xs">Latency spike detected in Vector DB connection (42ms)</span>
+</div>
+<div class="flex gap-4">
+<span class="text-on-surface-variant opacity-60">INGEST_01:</span>
+<span class="text-primary">INFO</span>
+<span class="text-on-surface-variant text-xs">Handshake confirmed with primary-shard-01</span>
+</div>
+</div>
+<div class="flex items-center gap-2 pt-4">
+<span class="text-primary font-bold">obsidian@core-node:~$</span>
+<span class="text-on-surface">kubectl get pods --all-namespaces</span>
+<span class="w-2.5 h-5 bg-primary cursor-blink ml-1"></span>
+</div>
+</div>
+</div>
+<!-- Terminal Footer -->
+<div class="h-8 bg-surface-container-high border-t border-outline-variant/10 flex items-center justify-between px-4 text-[10px] text-on-surface-variant uppercase tracking-widest font-mono">
+<div class="flex items-center gap-6">
+<span class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                    Live Connection
+                </span>
+<span>SSH: node-04-west-us</span>
+<span>Port: 2201</span>
+</div>
+<div class="flex items-center gap-6">
+<span>ENC: AES-256-GCM</span>
+<span>UTF-8</span>
+</div>
+</div>
+</main>
+<!-- Visual Polish: CRT Overlay Effect -->
+<div class="fixed inset-0 pointer-events-none opacity-[0.03] z-[100]" style="background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); background-size: 100% 2px, 3px 100%;"></div>
+</body></html>

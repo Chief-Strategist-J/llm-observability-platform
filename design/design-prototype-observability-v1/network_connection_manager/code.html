@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container": "#1b2026",
+              "on-error-container": "#ffdad6",
+              "on-primary-fixed-variant": "#00531f",
+              "secondary": "#bec7d2",
+              "on-primary": "#003913",
+              "secondary-fixed-dim": "#bec7d2",
+              "inverse-primary": "#006e2c",
+              "primary-fixed": "#88fb99",
+              "on-tertiary": "#2c3137",
+              "tertiary": "#c2c7cf",
+              "surface-container-low": "#171c22",
+              "inverse-on-surface": "#2c3137",
+              "error-container": "#93000a",
+              "on-tertiary-fixed": "#171c22",
+              "on-secondary-fixed": "#141c25",
+              "outline-variant": "#3e4a3d",
+              "outline": "#889485",
+              "secondary-fixed": "#dae3ef",
+              "error": "#ffb4ab",
+              "surface-variant": "#30353b",
+              "on-surface-variant": "#bdcaba",
+              "on-tertiary-fixed-variant": "#42474e",
+              "surface-container-high": "#252a30",
+              "surface": "#0f1419",
+              "primary-container": "#2fa54f",
+              "tertiary-container": "#8c9198",
+              "on-error": "#690005",
+              "on-surface": "#dee3eb",
+              "on-secondary": "#29313a",
+              "primary-fixed-dim": "#6bde80",
+              "on-tertiary-container": "#252a30",
+              "surface-container-lowest": "#0a0f14",
+              "secondary-container": "#414a53",
+              "on-secondary-fixed-variant": "#3f4851",
+              "on-secondary-container": "#b0b9c4",
+              "tertiary-fixed": "#dee3eb",
+              "primary": "#6bde80",
+              "on-background": "#dee3eb",
+              "inverse-surface": "#dee3eb",
+              "surface-tint": "#6bde80",
+              "on-primary-fixed": "#002108",
+              "surface-container-highest": "#30353b",
+              "surface-bright": "#353a40",
+              "background": "#0f1419",
+              "on-primary-container": "#003210",
+              "tertiary-fixed-dim": "#c2c7cf",
+              "surface-dim": "#0f1419"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .glass-panel {
+            background: rgba(48, 53, 59, 0.6);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30">
+<!-- SideNavBar Anchor -->
+<aside class="bg-slate-900 dark:bg-[#171c22] font-['Space_Grotesk'] tracking-tight h-screen w-64 fixed left-0 top-0 flex flex-col py-6 px-4 z-50">
+<div class="flex items-center gap-3 mb-10 px-2">
+<div class="w-8 h-8 bg-primary rounded-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary text-xl">hub</span>
+</div>
+<span class="text-emerald-500 dark:text-[#6bde80] font-bold text-xl">Lumen Trace</span>
+</div>
+<nav class="flex-1 space-y-2">
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-[#30353b] text-[#6bde80] font-semibold rounded-sm transition-all scale-98 active:opacity-80" href="#">
+<span class="material-symbols-outlined">memory</span>
+<span>Infrastructure</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">workspaces</span>
+<span>Workspace</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">insights</span>
+<span>Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-white/5">
+<button class="w-full py-3 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold rounded-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all">
+<span class="material-symbols-outlined">add</span>
+<span>New Trace</span>
+</button>
+</div>
+</aside>
+<!-- TopNavBar Anchor -->
+<header class="bg-slate-950/60 dark:bg-[#0f1419]/60 backdrop-blur-xl border-b border-white/5 flex justify-between items-center h-16 ml-64 px-8 sticky top-0 z-40">
+<div class="flex items-center gap-4">
+<h1 class="font-headline font-bold text-lg tracking-tight">Connection Manager</h1>
+<div class="h-4 w-px bg-outline-variant/30"></div>
+<div class="flex items-center gap-2 px-3 py-1 bg-surface-container rounded-sm border border-outline-variant/20">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="text-xs font-medium text-on-surface-variant uppercase tracking-widest">Network Live</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant text-sm">search</span>
+<input class="bg-surface-container-lowest border border-outline-variant/20 rounded-sm pl-9 pr-4 py-1.5 text-sm focus:ring-1 focus:ring-primary focus:border-primary w-64 transition-all outline-none" placeholder="Search connection pools..." type="text"/>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant">
+<button class="hover:text-white transition-colors opacity-90 hover:opacity-100">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="hover:text-white transition-colors opacity-90 hover:opacity-100">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<div class="w-8 h-8 rounded-sm overflow-hidden border border-outline-variant/40">
+<img class="w-full h-full object-cover" data-alt="User avatar for professional profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBKmHQVco8onOWnDC0NtEgpUvxaJgjv_ZcpOoFT8YPpXDiqVm9-KmbWY7izWi3MVeYkoZ2qTLxJm2G_YLrbiKor0nKFEB7Vte5KfAcz-af-t5hpZxeBB9UoZfbSrwxzNnbj3AcfFpBsyJ9e6t2hx88-Vqi4_zF1p6rAQVNstmpJ4c4RiDqU4Z8L0o4gtV4odgyZVNr_E6LgnXqjXitT832MxjBcfxfX-feLOEvpjmDMyk3-SFKXk_lrZ5h-ZwgNooF1LXeiXqiDdVE"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 p-8 min-h-screen">
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Left Column: Load Balancing Controls -->
+<div class="col-span-12 lg:col-span-8 space-y-6">
+<!-- Traffic Orchestrator Card -->
+<section class="bg-surface-container-low rounded-md p-6 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-8 opacity-5">
+<span class="material-symbols-outlined text-9xl">router</span>
+</div>
+<div class="flex justify-between items-start mb-8">
+<div>
+<h2 class="font-headline text-2xl font-bold text-on-surface mb-1">Global Load Balancer</h2>
+<p class="text-on-surface-variant text-sm">Manage L4/L7 traffic distribution and algorithm priority.</p>
+</div>
+<div class="flex gap-2">
+<span class="px-2 py-1 bg-primary/10 text-primary text-[10px] font-bold tracking-tighter uppercase rounded-sm">Active Layer: L7</span>
+<span class="px-2 py-1 bg-surface-container-highest text-on-surface-variant text-[10px] font-bold tracking-tighter uppercase rounded-sm">Pool ID: LT-094</span>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-4">
+<div class="bg-surface-container rounded-sm p-4 border border-outline-variant/10 hover:border-primary/40 transition-all cursor-pointer group/card">
+<div class="flex items-center justify-between mb-4">
+<span class="material-symbols-outlined text-primary">cyclone</span>
+<input checked="" class="text-primary focus:ring-0 bg-surface-container border-outline-variant" name="algorithm" type="radio"/>
+</div>
+<h3 class="font-headline font-bold text-on-surface mb-1">Round Robin</h3>
+<p class="text-xs text-on-surface-variant leading-relaxed">Standard sequential distribution for uniform workloads.</p>
+</div>
+<div class="bg-surface-container rounded-sm p-4 border border-outline-variant/10 hover:border-primary/40 transition-all cursor-pointer group/card">
+<div class="flex items-center justify-between mb-4">
+<span class="material-symbols-outlined text-secondary">analytics</span>
+<input class="text-primary focus:ring-0 bg-surface-container border-outline-variant" name="algorithm" type="radio"/>
+</div>
+<h3 class="font-headline font-bold text-on-surface mb-1">Least Connections</h3>
+<p class="text-xs text-on-surface-variant leading-relaxed">Dynamic routing based on real-time server pressure.</p>
+</div>
+<div class="bg-surface-container rounded-sm p-4 border border-outline-variant/10 hover:border-primary/40 transition-all cursor-pointer group/card">
+<div class="flex items-center justify-between mb-4">
+<span class="material-symbols-outlined text-secondary">fingerprint</span>
+<input class="text-primary focus:ring-0 bg-surface-container border-outline-variant" name="algorithm" type="radio"/>
+</div>
+<h3 class="font-headline font-bold text-on-surface mb-1">Consistent Hash</h3>
+<p class="text-xs text-on-surface-variant leading-relaxed">Sticky sessions via client IP or custom header mapping.</p>
+</div>
+</div>
+<div class="mt-8 pt-6 border-t border-white/5 grid grid-cols-1 md:grid-cols-3 gap-8">
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3">Protocol Stack</label>
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<span class="text-sm font-medium">HTTP/2 Multiplexing</span>
+<div class="w-8 h-4 bg-primary-container rounded-full relative"><div class="absolute right-1 top-1 w-2 h-2 bg-white rounded-full"></div></div>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-sm font-medium">gRPC Streaming</span>
+<div class="w-8 h-4 bg-primary-container rounded-full relative"><div class="absolute right-1 top-1 w-2 h-2 bg-white rounded-full"></div></div>
+</div>
+<div class="flex items-center justify-between opacity-50">
+<span class="text-sm font-medium">QUIC (UDP/443)</span>
+<div class="w-8 h-4 bg-surface-container-highest rounded-full relative"><div class="absolute left-1 top-1 w-2 h-2 bg-white rounded-full"></div></div>
+</div>
+</div>
+</div>
+<div class="col-span-2">
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3">Connection Health Summary</label>
+<div class="flex items-end gap-1 h-24">
+<div class="flex-1 bg-primary/20 h-[60%] rounded-t-sm relative group/bar">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-mono hidden group-hover/bar:block bg-surface px-1">94ms</div>
+</div>
+<div class="flex-1 bg-primary/40 h-[80%] rounded-t-sm relative group/bar"></div>
+<div class="flex-1 bg-primary/20 h-[50%] rounded-t-sm relative group/bar"></div>
+<div class="flex-1 bg-primary h-[95%] rounded-t-sm relative group/bar"></div>
+<div class="flex-1 bg-primary/60 h-[70%] rounded-t-sm relative group/bar"></div>
+<div class="flex-1 bg-error/40 h-[30%] rounded-t-sm relative group/bar"></div>
+<div class="flex-1 bg-primary/30 h-[55%] rounded-t-sm relative group/bar"></div>
+<div class="flex-1 bg-primary/80 h-[85%] rounded-t-sm relative group/bar"></div>
+<div class="flex-1 bg-primary/40 h-[65%] rounded-t-sm relative group/bar"></div>
+<div class="flex-1 bg-primary/20 h-[40%] rounded-t-sm relative group/bar"></div>
+</div>
+<div class="flex justify-between mt-2 text-[10px] font-mono text-on-surface-variant">
+<span>T-60m</span>
+<span>Real-time Latency Distribution</span>
+<span>NOW</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Active Connection Pools -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<section class="bg-surface-container-low rounded-md p-6">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline font-bold text-on-surface">Upstream Targets</h3>
+<button class="text-primary text-xs font-bold uppercase tracking-widest">Manage All</button>
+</div>
+<div class="space-y-4">
+<div class="p-3 bg-surface-container rounded-sm flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-sm bg-surface-container-lowest flex items-center justify-center border border-outline-variant/10">
+<span class="material-symbols-outlined text-primary text-sm">dns</span>
+</div>
+<div>
+<div class="text-sm font-bold">us-east-prod-01</div>
+<div class="text-[10px] font-mono text-on-surface-variant">10.0.4.12:8080</div>
+</div>
+</div>
+<div class="text-right">
+<div class="text-xs font-bold text-primary">HEALTHY</div>
+<div class="text-[10px] text-on-surface-variant">4.2k active</div>
+</div>
+</div>
+<div class="p-3 bg-surface-container rounded-sm flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-sm bg-surface-container-lowest flex items-center justify-center border border-outline-variant/10">
+<span class="material-symbols-outlined text-primary text-sm">dns</span>
+</div>
+<div>
+<div class="text-sm font-bold">us-east-prod-02</div>
+<div class="text-[10px] font-mono text-on-surface-variant">10.0.4.13:8080</div>
+</div>
+</div>
+<div class="text-right">
+<div class="text-xs font-bold text-primary">HEALTHY</div>
+<div class="text-[10px] text-on-surface-variant">3.8k active</div>
+</div>
+</div>
+<div class="p-3 bg-surface-container rounded-sm flex items-center justify-between group opacity-60">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-sm bg-surface-container-lowest flex items-center justify-center border border-outline-variant/10">
+<span class="material-symbols-outlined text-error text-sm">warning</span>
+</div>
+<div>
+<div class="text-sm font-bold">eu-west-staging</div>
+<div class="text-[10px] font-mono text-on-surface-variant">172.16.1.4:443</div>
+</div>
+</div>
+<div class="text-right">
+<div class="text-xs font-bold text-error">DRAINING</div>
+<div class="text-[10px] text-on-surface-variant">12 active</div>
+</div>
+</div>
+</div>
+</section>
+<section class="bg-surface-container-low rounded-md p-6 overflow-hidden relative">
+<h3 class="font-headline font-bold text-on-surface mb-6">Traffic Isolation Topology</h3>
+<div class="flex items-center justify-center h-48 relative">
+<!-- Abstract SVG Map/Graph for visualization -->
+<svg class="w-full h-full text-outline-variant/20" viewbox="0 0 200 100">
+<circle cx="40" cy="50" fill="currentColor" r="10"></circle>
+<circle cx="100" cy="20" fill="currentColor" r="10"></circle>
+<circle cx="100" cy="80" fill="currentColor" r="10"></circle>
+<circle cx="160" cy="50" fill="currentColor" r="10"></circle>
+<path d="M50 50 L90 25" stroke="currentColor" stroke-width="1"></path>
+<path d="M50 50 L90 75" stroke="currentColor" stroke-width="1"></path>
+<path d="M110 25 L150 50" stroke="currentColor" stroke-dasharray="2 2" stroke-width="1"></path>
+<path d="M110 75 L150 50" stroke="currentColor" stroke-width="1"></path>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="px-3 py-1 bg-surface-container-highest border border-outline-variant/30 text-[10px] font-bold tracking-widest uppercase rounded-full">Zero-Trust mTLS Enabled</div>
+</div>
+</div>
+<div class="mt-4 space-y-2">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Encrypted Node-to-Node</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full border border-outline-variant"></span>
+<span class="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Public Ingress (Filtered)</span>
+</div>
+</div>
+</section>
+</div>
+</div>
+<!-- Right Column: LLM Assistant & Policy Generator -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<section class="bg-surface-container-low rounded-md flex-1 flex flex-col overflow-hidden border border-primary/5">
+<div class="p-6 border-b border-white/5 bg-surface-container-high/30">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-sm bg-primary/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-on-surface">Policy Intelligence</h3>
+<p class="text-[10px] font-bold text-primary uppercase tracking-widest">Trace-AI v4.0</p>
+</div>
+</div>
+</div>
+<div class="flex-1 p-6 space-y-6 overflow-y-auto no-scrollbar max-h-[400px]">
+<div class="flex gap-3 max-w-[90%]">
+<div class="w-6 h-6 rounded-full bg-primary-container shrink-0 flex items-center justify-center text-[10px] font-bold text-on-primary">AI</div>
+<div class="bg-surface-container rounded-sm p-3 text-sm leading-relaxed border border-outline-variant/10">
+                                I've analyzed your current traffic patterns. Would you like me to generate a **Zero-Trust mTLS** policy for the `order-processing` namespace?
+                            </div>
+</div>
+<div class="flex gap-3 max-w-[90%] ml-auto flex-row-reverse">
+<div class="w-6 h-6 rounded-full bg-surface-container-highest shrink-0 flex items-center justify-center text-[10px] font-bold">ME</div>
+<div class="bg-primary/10 text-primary rounded-sm p-3 text-sm leading-relaxed border border-primary/20">
+                                Yes, include traffic isolation for the database tier.
+                            </div>
+</div>
+<div class="flex gap-3 max-w-[90%]">
+<div class="w-6 h-6 rounded-full bg-primary-container shrink-0 flex items-center justify-center text-[10px] font-bold text-on-primary">AI</div>
+<div class="bg-surface-container rounded-sm p-4 text-xs font-mono border border-outline-variant/10 w-full">
+<div class="text-primary-fixed-dim mb-2"># Generated NetworkPolicy</div>
+<div>apiVersion: networking.k8s.io/v1</div>
+<div>kind: NetworkPolicy</div>
+<div>metadata:</div>
+<div class="pl-2">name: db-isolation</div>
+<div>spec:</div>
+<div class="pl-2">podSelector:</div>
+<div class="pl-4">matchLabels:</div>
+<div class="pl-6">role: db</div>
+<div class="pl-2">policyTypes: [Ingress]</div>
+</div>
+</div>
+</div>
+<div class="p-6 bg-surface-container-high/30 mt-auto">
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-sm py-3 pl-4 pr-12 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" placeholder="Describe network policy..." type="text"/>
+<button class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-primary hover:bg-primary/10 rounded-sm transition-all">
+<span class="material-symbols-outlined">send</span>
+</button>
+</div>
+<div class="flex gap-2 mt-4">
+<button class="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest bg-surface-container-highest hover:bg-surface-variant transition-colors rounded-sm">Validate Code</button>
+<button class="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest bg-primary text-on-primary hover:opacity-90 transition-opacity rounded-sm">Deploy Rules</button>
+</div>
+</div>
+</section>
+<!-- Connection Quota Card -->
+<section class="bg-surface-container-low rounded-md p-6">
+<h3 class="font-headline font-bold text-on-surface mb-4">Resource Limits</h3>
+<div class="space-y-5">
+<div>
+<div class="flex justify-between text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">
+<span>Max Connections</span>
+<span>84%</span>
+</div>
+<div class="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[84%]"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">
+<span>Keep-Alive Timeout</span>
+<span>120s</span>
+</div>
+<div class="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[45%]"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">
+<span>Multiplexing Stream Cap</span>
+<span>100 / conn</span>
+</div>
+<div class="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[60%]"></div>
+</div>
+</div>
+</div>
+<button class="w-full mt-6 py-2 border border-outline-variant/20 text-[10px] font-bold uppercase tracking-widest hover:bg-surface-container transition-colors rounded-sm">Adjust Soft Quotas</button>
+</section>
+</div>
+</div>
+</main>
+<!-- Floating Action State (Subtle) -->
+<div class="fixed bottom-8 right-8 flex flex-col gap-3">
+<div class="glass-panel px-4 py-2 rounded-sm border border-primary/20 shadow-xl flex items-center gap-3">
+<span class="w-2 h-2 rounded-full bg-primary animate-ping"></span>
+<span class="text-xs font-mono font-medium">Auto-scaling group LT-EAST-4 triggered scale-up</span>
+<button class="material-symbols-outlined text-sm hover:text-white">close</button>
+</div>
+</div>
+</body></html>

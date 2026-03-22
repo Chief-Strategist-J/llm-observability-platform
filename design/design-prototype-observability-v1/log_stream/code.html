@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Log Stream | Obsidian Lens</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "inverse-surface": "#dee3eb",
+                        "on-tertiary": "#2c3137",
+                        "on-background": "#dee3eb",
+                        "on-tertiary-container": "#252a30",
+                        "secondary-container": "#414a53",
+                        "on-surface-variant": "#bdcaba",
+                        "on-secondary": "#29313a",
+                        "primary-fixed-dim": "#6bde80",
+                        "outline-variant": "#3e4a3d",
+                        "surface-container-lowest": "#0a0f14",
+                        "surface-container": "#1b2026",
+                        "tertiary-fixed-dim": "#c2c7cf",
+                        "tertiary-fixed": "#dee3eb",
+                        "on-secondary-container": "#b0b9c4",
+                        "on-error": "#690005",
+                        "secondary-fixed-dim": "#bec7d2",
+                        "secondary": "#bec7d2",
+                        "on-error-container": "#ffdad6",
+                        "surface-bright": "#353a40",
+                        "error": "#ffb4ab",
+                        "on-surface": "#dee3eb",
+                        "surface-dim": "#0f1419",
+                        "on-tertiary-fixed-variant": "#42474e",
+                        "secondary-fixed": "#dae3ef",
+                        "tertiary": "#c2c7cf",
+                        "surface-container-high": "#252a30",
+                        "surface-tint": "#6bde80",
+                        "outline": "#889485",
+                        "surface-variant": "#30353b",
+                        "on-primary-fixed": "#002108",
+                        "on-primary": "#003913",
+                        "primary": "#6bde80",
+                        "inverse-on-surface": "#2c3137",
+                        "surface-container-highest": "#30353b",
+                        "background": "#0f1419",
+                        "surface-container-low": "#171c22",
+                        "primary-fixed": "#88fb99",
+                        "on-primary-container": "#003210",
+                        "on-secondary-fixed-variant": "#3f4851",
+                        "primary-container": "#2fa54f",
+                        "on-secondary-fixed": "#141c25",
+                        "inverse-primary": "#006e2c",
+                        "error-container": "#93000a",
+                        "tertiary-container": "#8c9198",
+                        "on-primary-fixed-variant": "#00531f",
+                        "surface": "#0f1419",
+                        "on-tertiary-fixed": "#171c22"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono", "ui-monospace"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+            font-size: 20px;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0a0f14;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #30353b;
+        }
+        .log-line:hover {
+            background: rgba(107, 222, 128, 0.03);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body overflow-hidden">
+<!-- SideNavBar (Predicted Component) -->
+<aside class="h-screen w-64 fixed left-0 top-0 flex flex-col bg-[#171c22] border-r border-[#30353b]/15 z-50">
+<div class="flex flex-col h-full py-6">
+<div class="px-6 mb-8">
+<div class="text-[#6bde80] font-['Space_Grotesk'] font-bold text-xl tracking-tight">Obsidian Lens</div>
+<div class="text-[#bdcaba] text-xs font-medium tracking-widest uppercase mt-1 opacity-60">LLM Observability</div>
+</div>
+<button class="mx-6 mb-8 py-2 px-4 bg-primary-container text-on-primary-container rounded-sm font-['Space_Grotesk'] font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all scale-95 active:scale-90">
+<span class="material-symbols-outlined">add</span>
+                New Trace
+            </button>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center px-6 py-3 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3">account_tree</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Knowledge Graph</span>
+</a>
+<a class="flex items-center px-6 py-3 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3">manage_search</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Trace Search</span>
+</a>
+<a class="flex items-center px-6 py-3 text-[#6bde80] bg-[#30353b]/30 font-bold border-r-2 border-[#6bde80] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3">terminal</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Log Stream</span>
+</a>
+<a class="flex items-center px-6 py-3 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3">query_stats</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Latency</span>
+</a>
+<a class="flex items-center px-6 py-3 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3">compare_arrows</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Comparison</span>
+</a>
+<a class="flex items-center px-6 py-3 text-[#bdcaba] hover:bg-[#1b2026] hover:text-[#dee3eb] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3">bug_report</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Errors</span>
+</a>
+</nav>
+<div class="mt-auto border-t border-[#30353b]/10 pt-4">
+<a class="flex items-center px-6 py-3 text-[#bdcaba] hover:bg-[#1b2026] transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">description</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Docs</span>
+</a>
+<a class="flex items-center px-6 py-3 text-[#bdcaba] hover:bg-[#1b2026] transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">settings</span>
+<span class="font-['Space_Grotesk'] tracking-tight">Settings</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 flex flex-col h-screen">
+<!-- TopNavBar (Predicted Component) -->
+<header class="fixed top-0 right-0 left-64 h-16 bg-[#0f1419]/80 backdrop-blur-xl border-b border-[#30353b]/10 z-40 flex justify-between items-center px-8 w-full">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+<span class="font-headline font-bold text-on-surface tracking-tighter">Live Stream</span>
+</div>
+<div class="h-4 w-px bg-outline-variant opacity-20"></div>
+<div class="flex items-center gap-4 text-sm font-medium">
+<span class="text-primary border-b-2 border-primary pb-5 mt-5">Cluster-01</span>
+<span class="text-on-surface-variant hover:text-primary transition-opacity cursor-pointer">Workspaces</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative group">
+<input class="bg-surface-container-lowest border border-outline-variant/20 rounded-sm px-4 py-1.5 text-xs w-64 focus:outline-none focus:border-primary transition-all text-on-surface" placeholder="Search logs..." type="text"/>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-all">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-all">help_outline</span>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/20">
+<img class="w-full h-full object-cover" data-alt="Technical Lead profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQLNcMXJNWK5xwUpeqKj79YVnjieHM5CYq0hAhngudtiBYBv4aY1QSirNsV7HMnSFMtIhDA8nXXQbeuBoLYFMYdDhAHSz3o4Tx-i5wpjBNAQ1yygiWtQT1r_yRR7SQUArgb-Ggc94zAUmUxi6nmXz3fUIfWuTkenwijsZeyooGOGJP4L-xNVt7H5afcHMZ3eTeG3EPvx1dczTC5kNSPN3-ep5oRDHSJ3hHBOiW08a3JXNpv91W95kaCUCP6ZMz-vKO3-5BqWn5Xac"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Tool Bar / Filters -->
+<section class="mt-16 bg-surface-container-low px-8 py-3 flex items-center justify-between border-b border-outline-variant/10">
+<div class="flex items-center gap-3">
+<span class="text-xs font-bold font-headline text-on-surface-variant uppercase tracking-widest mr-2">Filters:</span>
+<button class="px-3 py-1 bg-surface-container-highest/40 text-xs font-medium rounded-sm text-primary border border-primary/20">INFO</button>
+<button class="px-3 py-1 bg-surface-container-highest/20 text-xs font-medium rounded-sm text-on-surface-variant border border-transparent hover:border-outline-variant">WARN</button>
+<button class="px-3 py-1 bg-surface-container-highest/20 text-xs font-medium rounded-sm text-error/80 border border-transparent hover:border-error/20">ERROR</button>
+<button class="px-3 py-1 bg-surface-container-highest/20 text-xs font-medium rounded-sm text-on-surface-variant border border-transparent hover:border-outline-variant">CRITICAL</button>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-3">
+<span class="text-xs font-medium text-on-surface-variant">Follow Tail</span>
+<div class="w-10 h-5 bg-primary rounded-full relative cursor-pointer shadow-inner">
+<div class="absolute right-0.5 top-0.5 w-4 h-4 bg-on-primary rounded-full"></div>
+</div>
+</div>
+<div class="h-4 w-px bg-outline-variant opacity-20"></div>
+<button class="flex items-center gap-2 text-xs font-medium text-on-surface-variant hover:text-primary">
+<span class="material-symbols-outlined text-sm">download</span>
+                    Export
+                </button>
+<button class="flex items-center gap-2 text-xs font-medium text-on-surface-variant hover:text-error">
+<span class="material-symbols-outlined text-sm">delete_sweep</span>
+                    Clear
+                </button>
+</div>
+</section>
+<!-- Log Viewer Content Area -->
+<section class="flex-1 relative overflow-hidden bg-surface flex">
+<!-- Terminal Viewer -->
+<div class="flex-1 overflow-y-auto custom-scrollbar p-6 font-mono text-[13px] leading-relaxed">
+<!-- Log Entry -->
+<div class="log-line group py-0.5 flex items-start gap-4">
+<span class="text-on-surface-variant/40 select-none w-20 shrink-0">14:22:01.42</span>
+<span class="text-primary font-bold shrink-0 w-12">INFO</span>
+<div class="flex-1">
+<span class="text-secondary-fixed-dim">llm-router-service:</span>
+<span class="text-on-surface-variant">Routing request </span>
+<span class="text-tertiary">#req_9281a</span>
+<span class="text-on-surface-variant"> to </span>
+<span class="text-primary-fixed-dim">gpt-4-turbo-0125</span>
+</div>
+</div>
+<!-- Log Entry (Python Style) -->
+<div class="log-line group py-0.5 flex items-start gap-4">
+<span class="text-on-surface-variant/40 select-none w-20 shrink-0">14:22:01.89</span>
+<span class="text-primary font-bold shrink-0 w-12">INFO</span>
+<div class="flex-1">
+<span class="text-secondary-fixed-dim">embedding-engine:</span>
+<code class="text-[#f8f8f2]"><span class="text-[#f1fa8c]">def</span> <span class="text-[#50fa7b]">calculate_cosine_similarity</span>(v1, v2): <span class="text-[#ff79c6]">return</span> dot(v1, v2) / (norm(v1) * norm(v2))</code>
+</div>
+</div>
+<!-- Log Entry (JSON) -->
+<div class="log-line group py-2 flex items-start gap-4 bg-surface-container-low/30 my-2 rounded-sm px-2">
+<span class="text-on-surface-variant/40 select-none w-20 shrink-0">14:22:02.11</span>
+<span class="text-[#ffb86c] font-bold shrink-0 w-12">WARN</span>
+<div class="flex-1">
+<span class="text-secondary-fixed-dim">latency-monitor:</span>
+<span class="text-on-surface-variant">Token limit approaching. Current usage:</span>
+<div class="mt-2 ml-4 p-3 bg-surface-container-lowest rounded-sm border border-outline-variant/10">
+<pre class="text-on-surface-variant/90">{
+  <span class="text-[#ff79c6]">"request_id"</span>: <span class="text-[#f1fa8c]">"trc_77218"</span>,
+  <span class="text-[#ff79c6]">"tokens_used"</span>: <span class="text-[#bd93f9]">8192</span>,
+  <span class="text-[#ff79c6]">"context_window"</span>: <span class="text-[#bd93f9]">128000</span>,
+  <span class="text-[#ff79c6]">"latency_ms"</span>: <span class="text-[#bd93f9]">452.1</span>
+}</pre>
+</div>
+</div>
+</div>
+<!-- Repeated Entries for Visual Flow -->
+<div class="log-line group py-0.5 flex items-start gap-4">
+<span class="text-on-surface-variant/40 select-none w-20 shrink-0">14:22:02.45</span>
+<span class="text-primary font-bold shrink-0 w-12">INFO</span>
+<div class="flex-1">
+<span class="text-secondary-fixed-dim">vector-db:</span>
+<span class="text-on-surface-variant">Semantic search completed. Found </span>
+<span class="text-[#bd93f9]">12</span>
+<span class="text-on-surface-variant"> matches in 12ms.</span>
+</div>
+</div>
+<div class="log-line group py-0.5 flex items-start gap-4">
+<span class="text-on-surface-variant/40 select-none w-20 shrink-0">14:22:03.02</span>
+<span class="text-error font-bold shrink-0 w-12">ERROR</span>
+<div class="flex-1">
+<span class="text-secondary-fixed-dim">auth-middleware:</span>
+<span class="text-error/80">Failed to validate JWT: ExpiredSignatureError. Refusing connection from 192.168.1.42</span>
+</div>
+</div>
+<div class="log-line group py-0.5 flex items-start gap-4">
+<span class="text-on-surface-variant/40 select-none w-20 shrink-0">14:22:03.15</span>
+<span class="text-primary font-bold shrink-0 w-12">INFO</span>
+<div class="flex-1">
+<span class="text-secondary-fixed-dim">system-daemon:</span>
+<span class="text-on-surface-variant">Heartbeat acknowledged by cluster-coordinator.</span>
+</div>
+</div>
+<!-- Continuous Stream Illusion -->
+<div class="space-y-0.5 mt-4 opacity-40">
+<div class="log-line py-0.5 flex items-start gap-4">
+<span class="text-on-surface-variant/40 select-none w-20 shrink-0">14:22:03.20</span>
+<span class="text-primary font-bold shrink-0 w-12">INFO</span>
+<div class="flex-1 text-on-surface-variant/60">Worker 04 polling for tasks...</div>
+</div>
+<div class="log-line py-0.5 flex items-start gap-4">
+<span class="text-on-surface-variant/40 select-none w-20 shrink-0">14:22:03.22</span>
+<span class="text-primary font-bold shrink-0 w-12">INFO</span>
+<div class="flex-1 text-on-surface-variant/60">Cache hit for key 'metadata:v4:system'</div>
+</div>
+</div>
+</div>
+<!-- Performance Overlay (Floating Right) -->
+<div class="absolute top-6 right-6 w-72 space-y-4">
+<!-- Metrics Card -->
+<div class="bg-surface-container-high/60 backdrop-blur-md border border-outline-variant/10 p-5 rounded-md shadow-2xl">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-[10px] font-bold font-headline text-on-surface-variant uppercase tracking-[0.2em]">Real-time Performance</h3>
+<span class="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(107,222,128,0.5)]"></span>
+</div>
+<div class="space-y-4">
+<div>
+<div class="flex justify-between text-xs mb-1.5">
+<span class="text-on-surface-variant">Throughput</span>
+<span class="text-primary font-mono">1.2k req/s</span>
+</div>
+<div class="h-1 bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 65%;"></div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<span class="block text-[10px] text-on-surface-variant uppercase mb-1">P95 Latency</span>
+<span class="text-lg font-headline font-bold text-on-surface tracking-tighter">142<span class="text-xs font-normal ml-0.5">ms</span></span>
+</div>
+<div>
+<span class="block text-[10px] text-on-surface-variant uppercase mb-1">Error Rate</span>
+<span class="text-lg font-headline font-bold text-error tracking-tighter">0.04<span class="text-xs font-normal ml-0.5">%</span></span>
+</div>
+</div>
+</div>
+</div>
+<!-- Visual Trace Map (Asymmetric Bento Style) -->
+<div class="bg-surface-container-high/40 backdrop-blur-sm border border-outline-variant/5 rounded-md p-4">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-xs text-secondary-fixed-dim">hub</span>
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Active Threads</span>
+</div>
+<div class="grid grid-cols-6 gap-1 h-12">
+<div class="bg-primary/40 rounded-sm"></div>
+<div class="bg-primary/20 rounded-sm"></div>
+<div class="bg-primary/60 rounded-sm"></div>
+<div class="bg-primary/30 rounded-sm"></div>
+<div class="bg-error/30 rounded-sm"></div>
+<div class="bg-primary/50 rounded-sm"></div>
+<div class="bg-primary/10 rounded-sm"></div>
+<div class="bg-primary/40 rounded-sm"></div>
+<div class="bg-primary/20 rounded-sm"></div>
+<div class="bg-primary/70 rounded-sm"></div>
+<div class="bg-primary/40 rounded-sm"></div>
+<div class="bg-primary/10 rounded-sm"></div>
+</div>
+</div>
+</div>
+<!-- Scroll to Bottom Indicator -->
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-primary px-4 py-2 rounded-full text-on-primary font-headline font-bold text-xs cursor-pointer shadow-lg hover:translate-y-[-2px] transition-transform">
+<span class="material-symbols-outlined text-sm">arrow_downward</span>
+                Jump to bottom
+            </div>
+</section>
+<!-- Footer / Status Bar -->
+<footer class="h-8 bg-surface-container-lowest border-t border-outline-variant/10 flex items-center justify-between px-6 text-[10px] font-medium text-on-surface-variant/60 uppercase tracking-widest">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+<span>Connected: wss://obsidian.core.internal</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[12px]">storage</span>
+<span>Buffer: 4.2 MB / 100 MB</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span>v2.4.0-stable</span>
+<span>TZ: UTC+00:00</span>
+</div>
+</footer>
+</main>
+</body></html>

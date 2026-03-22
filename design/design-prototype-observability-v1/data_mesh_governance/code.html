@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lumen Trace | Data Mesh Governance</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container": "#1b2026",
+                        "on-error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#00531f",
+                        "secondary": "#bec7d2",
+                        "on-primary": "#003913",
+                        "secondary-fixed-dim": "#bec7d2",
+                        "inverse-primary": "#006e2c",
+                        "primary-fixed": "#88fb99",
+                        "on-tertiary": "#2c3137",
+                        "tertiary": "#c2c7cf",
+                        "surface-container-low": "#171c22",
+                        "inverse-on-surface": "#2c3137",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed": "#171c22",
+                        "on-secondary-fixed": "#141c25",
+                        "outline-variant": "#3e4a3d",
+                        "outline": "#889485",
+                        "secondary-fixed": "#dae3ef",
+                        "error": "#ffb4ab",
+                        "surface-variant": "#30353b",
+                        "on-surface-variant": "#bdcaba",
+                        "on-tertiary-fixed-variant": "#42474e",
+                        "surface-container-high": "#252a30",
+                        "surface": "#0f1419",
+                        "primary-container": "#2fa54f",
+                        "tertiary-container": "#8c9198",
+                        "on-error": "#690005",
+                        "on-surface": "#dee3eb",
+                        "on-secondary": "#29313a",
+                        "primary-fixed-dim": "#6bde80",
+                        "on-tertiary-container": "#252a30",
+                        "surface-container-lowest": "#0a0f14",
+                        "secondary-container": "#414a53",
+                        "on-secondary-fixed-variant": "#3f4851",
+                        "on-secondary-container": "#b0b9c4",
+                        "tertiary-fixed": "#dee3eb",
+                        "primary": "#6bde80",
+                        "on-background": "#dee3eb",
+                        "inverse-surface": "#dee3eb",
+                        "surface-tint": "#6bde80",
+                        "on-primary-fixed": "#002108",
+                        "surface-container-highest": "#30353b",
+                        "surface-bright": "#353a40",
+                        "background": "#0f1419",
+                        "on-primary-container": "#003210",
+                        "tertiary-fixed-dim": "#c2c7cf",
+                        "surface-dim": "#0f1419"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .no-line { border: none !important; }
+        .glass-panel {
+            background: rgba(48, 53, 59, 0.6);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary-container selection:text-white">
+<!-- SideNavBar (Shared Component) -->
+<aside class="bg-slate-900 dark:bg-[#171c22] h-screen w-64 fixed left-0 top-0 flex flex-col py-6 px-4 z-50">
+<div class="mb-10 px-2 flex items-center gap-3">
+<div class="w-8 h-8 bg-primary rounded-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary text-xl" style="font-variation-settings: 'FILL' 1;">insights</span>
+</div>
+<span class="text-emerald-500 dark:text-[#6bde80] font-bold text-xl font-['Space_Grotesk'] tracking-tight">Lumen Trace</span>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined">memory</span>
+<span class="font-medium">Infrastructure</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 bg-[#30353b] text-[#6bde80] font-semibold rounded-sm group" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">workspaces</span>
+<span class="font-medium">Workspace</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined">insights</span>
+<span class="font-medium">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-medium">Settings</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-white/5">
+<button class="w-full bg-primary-container text-on-primary-container py-3 rounded-sm font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-lg">add</span>
+                New Trace
+            </button>
+</div>
+</aside>
+<!-- TopNavBar (Shared Component) -->
+<header class="bg-slate-950/60 dark:bg-[#0f1419]/60 backdrop-blur-xl docked full-width top-0 sticky z-40 border-b border-white/5 flex justify-between items-center h-16 ml-64 px-8">
+<div class="flex items-center gap-4">
+<h1 class="text-on-surface font-headline font-bold text-lg tracking-tight">Data Mesh Governance</h1>
+<span class="bg-surface-container-high px-2 py-0.5 rounded text-[10px] font-bold text-primary tracking-widest uppercase">Federated</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative w-80">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="w-full bg-surface-container-lowest border-none text-sm py-2 pl-10 pr-4 rounded-sm focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant/50" placeholder="Search data products..." type="text"/>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant">
+<button class="hover:text-white transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-0 right-0 w-1.5 h-1.5 bg-primary rounded-full"></span>
+</button>
+<button class="hover:text-white transition-colors">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<div class="h-8 w-8 rounded-full overflow-hidden border border-white/10">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="User avatar with a professional tech look" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAE42qJr1oBVqlJBP-OZAPinU30gkYQ6fIRRRT4xTWv2VA2vFXMJDTA4k4LmO6YjvAXTQIPUYsJHI9ktCxVyu_79_zZCya6jtv_YaPuPRu7fS_4XCfnQiYWNI2Dj2NABXskW0a_uDueVDJuLagfUyLEOljN_8qKqQ0KDcVfd-Lp864lmfOJYSh9-L04bNKLsDrIe7gJkS41epPyFPbyOn0D15pmM64v84X76TejxlQsRqhfod73spNaar275imIqN5OmwrjvTSfH_4"/>
+</div>
+</div>
+</div>
+</header>
+<main class="ml-64 p-8 min-h-screen">
+<!-- Key Metrics Grid -->
+<section class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+<div class="bg-surface-container-low p-5 rounded-sm relative overflow-hidden group">
+<div class="flex justify-between items-start mb-4">
+<span class="text-on-surface-variant text-xs font-medium uppercase tracking-wider">Total Data Products</span>
+<span class="material-symbols-outlined text-primary text-xl">database</span>
+</div>
+<div class="text-4xl font-headline font-bold text-on-surface mb-1">128</div>
+<div class="text-xs text-primary font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">trending_up</span> +12% this month
+                </div>
+</div>
+<div class="bg-surface-container-low p-5 rounded-sm">
+<div class="flex justify-between items-start mb-4">
+<span class="text-on-surface-variant text-xs font-medium uppercase tracking-wider">Global SLA Status</span>
+<span class="material-symbols-outlined text-primary text-xl">verified_user</span>
+</div>
+<div class="text-4xl font-headline font-bold text-on-surface mb-1">99.8<span class="text-xl font-medium text-on-surface-variant">%</span></div>
+<div class="text-xs text-on-surface-variant font-medium">Across all domains</div>
+</div>
+<div class="bg-surface-container-low p-5 rounded-sm">
+<div class="flex justify-between items-start mb-4">
+<span class="text-on-surface-variant text-xs font-medium uppercase tracking-wider">Active Domains</span>
+<span class="material-symbols-outlined text-primary text-xl">hub</span>
+</div>
+<div class="text-4xl font-headline font-bold text-on-surface mb-1">14</div>
+<div class="text-xs text-on-surface-variant font-medium">Federated ownership</div>
+</div>
+<div class="bg-surface-container-low p-5 rounded-sm">
+<div class="flex justify-between items-start mb-4">
+<span class="text-on-surface-variant text-xs font-medium uppercase tracking-wider">Policy Compliance</span>
+<span class="material-symbols-outlined text-primary text-xl">gavel</span>
+</div>
+<div class="text-4xl font-headline font-bold text-on-surface mb-1">94<span class="text-xl font-medium text-on-surface-variant">%</span></div>
+<div class="text-xs text-error font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">warning</span> 2 breaches detected
+                </div>
+</div>
+</section>
+<!-- Main Content Area: Catalog & Query Builder -->
+<div class="grid grid-cols-12 gap-8">
+<!-- Left: Data Product Catalog -->
+<section class="col-span-12 xl:col-span-7">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-xl font-headline font-bold">Data Product Catalog</h2>
+<div class="flex gap-2">
+<button class="bg-surface-container-high px-3 py-1.5 text-xs font-medium text-on-surface-variant hover:text-white rounded-sm transition-colors">Filters</button>
+<button class="bg-surface-container-high px-3 py-1.5 text-xs font-medium text-on-surface-variant hover:text-white rounded-sm transition-colors">Export</button>
+</div>
+</div>
+<div class="space-y-4">
+<!-- Product Card 1 -->
+<div class="bg-surface-container p-6 rounded-sm hover:shadow-2xl transition-all duration-300">
+<div class="flex items-start justify-between mb-4">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-surface-container-low rounded-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-2xl">shopping_cart</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-lg">Checkout Events Stream</h3>
+<p class="text-xs text-on-surface-variant">Domain: Sales &amp; Logistics • Owned by: Engineering Team-A</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-2">
+<span class="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">HEALTHY</span>
+<span class="text-[10px] text-on-surface-variant font-mono">ID: LT-S-901</span>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-4 mb-4">
+<div class="bg-surface-container-low p-3 rounded-sm">
+<div class="text-[10px] uppercase tracking-widest text-on-surface-variant mb-1">Availability</div>
+<div class="text-sm font-bold">99.99%</div>
+</div>
+<div class="bg-surface-container-low p-3 rounded-sm">
+<div class="text-[10px] uppercase tracking-widest text-on-surface-variant mb-1">Freshness</div>
+<div class="text-sm font-bold">2.4ms Latency</div>
+</div>
+<div class="bg-surface-container-low p-3 rounded-sm">
+<div class="text-[10px] uppercase tracking-widest text-on-surface-variant mb-1">Schemas</div>
+<div class="text-sm font-bold">v3 (Avro)</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-white/5">
+<div class="flex -space-x-2">
+<img alt="Member" class="w-6 h-6 rounded-full border border-surface-container" data-alt="User avatar small" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvw3q71bWRnsXnoWZzSbaIf__-L-wak7kGuOuYlBMRTo4HN5UOpCHjprFArROjdkbDay3JTCD9w2-eTnqaREG9khRbkl_T2ACA8qZkcYKe0kuABCGqK5t93cI-zgKLfUfLU-XDoigJ9bDJKdtyPMdlABQuYDwzEQc6NvWbZ5FF4O5XG78VuL0_YLpn9ij6ko1lQcXY544N9ZPpWbvYYcPjYTuM7osh6Tv1-6CCpibAaEx6603HL7TFpitvrN8BgNyd5zpw85iCYVc"/>
+<img alt="Member" class="w-6 h-6 rounded-full border border-surface-container" data-alt="User avatar small" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlSYG39gM-BeFCsXhWH5ez3IpKT1XTMmDCs-n5Ddovag1Y_PnLTgqiItUYsnDai3xqwivQFH6mg1hLWC10H5FNZctyjkJuLvLL12uY9du9ATZkTAvCG7Ocypa5JYnDzwZb2xQbdWLnO_Q43AYWDAkFCiQknvcLYL6kzH9hw85X42gLlZPzAVJaYA4qCvkPgZBaFI1lnahCjCRTMKikLIQw9zeIhPAb4qR5JJ42opjsLpl6X3zwO3yc-AWnkNN5_VlqODb9rskUhMo"/>
+<div class="w-6 h-6 rounded-full bg-surface-container-high flex items-center justify-center text-[8px] font-bold text-on-surface-variant border border-surface-container">+4</div>
+</div>
+<button class="text-primary text-xs font-bold flex items-center gap-1 hover:underline">
+                                VIEW DOCUMENTATION <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Product Card 2 -->
+<div class="bg-surface-container p-6 rounded-sm opacity-90">
+<div class="flex items-start justify-between mb-4">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-surface-container-low rounded-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary text-2xl">person_search</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-lg">Customer Identity Master</h3>
+<p class="text-xs text-on-surface-variant">Domain: Marketing • Owned by: Data-Ops South</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-2">
+<span class="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-tertiary/10 text-tertiary border border-tertiary/20">MAINTENANCE</span>
+<span class="text-[10px] text-on-surface-variant font-mono">ID: LT-M-442</span>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-4 mb-4">
+<div class="bg-surface-container-low p-3 rounded-sm">
+<div class="text-[10px] uppercase tracking-widest text-on-surface-variant mb-1">Availability</div>
+<div class="text-sm font-bold">98.5%</div>
+</div>
+<div class="bg-surface-container-low p-3 rounded-sm">
+<div class="text-[10px] uppercase tracking-widest text-on-surface-variant mb-1">Freshness</div>
+<div class="text-sm font-bold">Batch (Daily)</div>
+</div>
+<div class="bg-surface-container-low p-3 rounded-sm">
+<div class="text-[10px] uppercase tracking-widest text-on-surface-variant mb-1">Schemas</div>
+<div class="text-sm font-bold">v12 (JSON)</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-white/5">
+<div class="flex -space-x-2">
+<img alt="Member" class="w-6 h-6 rounded-full border border-surface-container" data-alt="User avatar small" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXDrfxEED-xXqcbUlcPpLSDrJe9xw5KD_6AjUHOfAgjzuEx3VFh9gNVObP6BAQeke7WUbzy4cDBkwVJUIp_RsnWbnSZ-21a0QzmS1n-1ojf9VjFZYnT6_EbuZZizN268DqQBTvbpYnT7eBRMj6rwMGjfUjMd0psTPv-nd9SWKKzpmZiY1LyodabMb4UNCK077_bRBmRGnzPyzeDa8hj2fs7Vlv3_osWVwA1gKwL4dHu0jsSOjAjUdoDNd6kshYC9Oa4AYMbKuJQQY"/>
+<img alt="Member" class="w-6 h-6 rounded-full border border-surface-container" data-alt="User avatar small" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6liLY_zcZkXu5r5pLbWbpvmq65t-WWGgwvRm74lAikmI3v_mNSLXmGZ72haZww6uUhkWhd-yyCeZxqEOiq4SxIShxdOIySEy4S6PqIYyaophwugw-pkvYOoce5snH5esBuOvGoyPthScv1JVVGaEsNI18jrh1dDhzqRRkGbudxmWYRTvcbgXi_p-rHcdAYa-SAEZS9xl9FsB51jLVPNSVXU2JuSc3pXQd_bgixprIWukLrYr6QmrTVIh66bVqYyS481NWfVgl88M"/>
+</div>
+<button class="text-on-surface-variant text-xs font-bold flex items-center gap-1 hover:underline">
+                                VIEW DOCUMENTATION <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Right: Visual Query Builder & AI Code Gen -->
+<section class="col-span-12 xl:col-span-5">
+<div class="sticky top-24 space-y-8">
+<!-- Visual Query Builder -->
+<div class="bg-surface-container-low p-6 rounded-sm border-l-4 border-primary">
+<div class="flex items-center justify-between mb-6">
+<h2 class="text-lg font-headline font-bold">Cross-Domain Event Joining</h2>
+<span class="material-symbols-outlined text-on-surface-variant">extension</span>
+</div>
+<div class="space-y-4 mb-8">
+<div class="bg-surface-container-lowest p-4 rounded-sm relative group cursor-pointer border border-white/5 hover:border-primary/40 transition-all">
+<div class="flex items-center justify-between text-xs mb-2">
+<span class="text-primary font-bold">Source A</span>
+<span class="material-symbols-outlined text-sm">close</span>
+</div>
+<div class="font-medium text-sm">Sales:checkout_completed</div>
+</div>
+<div class="flex justify-center -my-2 relative z-10">
+<div class="bg-primary-container p-1.5 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-base">link</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-sm relative group cursor-pointer border border-white/5 hover:border-primary/40 transition-all">
+<div class="flex items-center justify-between text-xs mb-2">
+<span class="text-primary font-bold">Source B</span>
+<span class="material-symbols-outlined text-sm">close</span>
+</div>
+<div class="font-medium text-sm">Logistics:delivery_ready</div>
+</div>
+</div>
+<div class="space-y-3">
+<label class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant">Join Condition</label>
+<div class="bg-surface p-3 rounded-sm text-sm font-mono flex items-center justify-between">
+<span class="text-primary">order_id</span>
+<span class="text-on-surface-variant">==</span>
+<span class="text-primary">transaction_id</span>
+</div>
+</div>
+</div>
+<!-- AI Assistant Section -->
+<div class="bg-surface-container p-6 rounded-sm glass-panel relative">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<h3 class="font-headline font-bold">LLM Code Generation</h3>
+</div>
+<div class="bg-surface-container-lowest rounded-sm p-4 mb-4 border border-white/5">
+<div class="flex justify-between items-center mb-3">
+<div class="flex gap-2">
+<span class="px-2 py-0.5 rounded-sm bg-surface-container-high text-[10px] font-bold text-on-surface-variant">SQL</span>
+<span class="px-2 py-0.5 rounded-sm bg-primary/20 text-[10px] font-bold text-primary">OPTIMIZED</span>
+</div>
+<button class="material-symbols-outlined text-sm hover:text-primary transition-colors">content_copy</button>
+</div>
+<pre class="text-[12px] font-mono leading-relaxed text-secondary-fixed-dim"><span class="text-primary">SELECT</span>
+  a.order_id,
+  a.customer_id,
+  b.courier_name,
+  <span class="text-primary">COUNT</span>(*) <span class="text-primary">OVER</span>(PARTITION BY customer_id)
+<span class="text-primary">FROM</span> `sales.checkout` a
+<span class="text-primary">JOIN</span> `logistics.delivery` b
+  <span class="text-primary">ON</span> a.order_id = b.transaction_id
+<span class="text-primary">WHERE</span> b.status = <span class="text-emerald-400">'PENDING'</span></pre>
+</div>
+<div class="relative">
+<input class="w-full bg-surface-container-high border-none rounded-sm py-2.5 pl-4 pr-12 text-sm text-on-surface placeholder:text-on-surface-variant/40 italic" placeholder="Refine query (e.g., 'Add window function for latency')" type="text"/>
+<button class="absolute right-2 top-1/2 -translate-y-1/2 bg-primary w-8 h-8 rounded-sm flex items-center justify-center hover:bg-primary-container transition-colors">
+<span class="material-symbols-outlined text-on-primary text-xl">arrow_upward</span>
+</button>
+</div>
+</div>
+<!-- Governance Controls Quick Actions -->
+<div class="bg-surface-container-low p-6 rounded-sm">
+<h3 class="font-headline font-bold mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">security</span> Federated Controls
+                        </h3>
+<div class="grid grid-cols-2 gap-3">
+<button class="p-3 bg-surface hover:bg-surface-container-high transition-colors text-left flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">policy</span>
+<span class="text-xs font-medium">New Policy</span>
+</button>
+<button class="p-3 bg-surface hover:bg-surface-container-high transition-colors text-left flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">shield_person</span>
+<span class="text-xs font-medium">Ownership Shift</span>
+</button>
+<button class="p-3 bg-surface hover:bg-surface-container-high transition-colors text-left flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">list_alt</span>
+<span class="text-xs font-medium">Audit Logs</span>
+</button>
+<button class="p-3 bg-surface hover:bg-surface-container-high transition-colors text-left flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">token</span>
+<span class="text-xs font-medium">Secret Mgmt</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- System Activity (Bento style small) -->
+<section class="mt-12">
+<h2 class="text-xl font-headline font-bold mb-6">Mesh Activity Feed</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="bg-surface-container p-4 rounded-sm border-t border-primary/20">
+<div class="flex items-center gap-3 mb-3">
+<span class="material-symbols-outlined text-primary">schema</span>
+<span class="text-xs font-bold text-on-surface uppercase">Schema Update</span>
+</div>
+<p class="text-sm text-on-surface-variant mb-2">Marketing:leads_gen updated to v2.3. Nullable constraints added to email field.</p>
+<span class="text-[10px] text-on-surface-variant/50 font-mono">2 min ago</span>
+</div>
+<div class="bg-surface-container p-4 rounded-sm border-t border-error/20">
+<div class="flex items-center gap-3 mb-3">
+<span class="material-symbols-outlined text-error">priority_high</span>
+<span class="text-xs font-bold text-on-surface uppercase text-error">Governance Breach</span>
+</div>
+<p class="text-sm text-on-surface-variant mb-2">PII data detected in non-encrypted stream: logistics.route_details.</p>
+<span class="text-[10px] text-on-surface-variant/50 font-mono">45 min ago</span>
+</div>
+<div class="bg-surface-container p-4 rounded-sm border-t border-primary/20">
+<div class="flex items-center gap-3 mb-3">
+<span class="material-symbols-outlined text-primary">add_circle</span>
+<span class="text-xs font-bold text-on-surface uppercase">New Product</span>
+</div>
+<p class="text-sm text-on-surface-variant mb-2">Finance:q4_earnings_preview registered by user: sara.l@lumen.tech</p>
+<span class="text-[10px] text-on-surface-variant/50 font-mono">1 hour ago</span>
+</div>
+</div>
+</section>
+</main>
+</body></html>

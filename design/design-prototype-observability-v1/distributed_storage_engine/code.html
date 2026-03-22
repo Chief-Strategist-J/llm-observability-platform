@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lumen Trace | Distributed Storage Engine</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container": "#1b2026",
+                        "on-error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#00531f",
+                        "secondary": "#bec7d2",
+                        "on-primary": "#003913",
+                        "secondary-fixed-dim": "#bec7d2",
+                        "inverse-primary": "#006e2c",
+                        "primary-fixed": "#88fb99",
+                        "on-tertiary": "#2c3137",
+                        "tertiary": "#c2c7cf",
+                        "surface-container-low": "#171c22",
+                        "inverse-on-surface": "#2c3137",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed": "#171c22",
+                        "on-secondary-fixed": "#141c25",
+                        "outline-variant": "#3e4a3d",
+                        "outline": "#889485",
+                        "secondary-fixed": "#dae3ef",
+                        "error": "#ffb4ab",
+                        "surface-variant": "#30353b",
+                        "on-surface-variant": "#bdcaba",
+                        "on-tertiary-fixed-variant": "#42474e",
+                        "surface-container-high": "#252a30",
+                        "surface": "#0f1419",
+                        "primary-container": "#2fa54f",
+                        "tertiary-container": "#8c9198",
+                        "on-error": "#690005",
+                        "on-surface": "#dee3eb",
+                        "on-secondary": "#29313a",
+                        "primary-fixed-dim": "#6bde80",
+                        "on-tertiary-container": "#252a30",
+                        "surface-container-lowest": "#0a0f14",
+                        "secondary-container": "#414a53",
+                        "on-secondary-fixed-variant": "#3f4851",
+                        "on-secondary-container": "#b0b9c4",
+                        "tertiary-fixed": "#dee3eb",
+                        "primary": "#6bde80",
+                        "on-background": "#dee3eb",
+                        "inverse-surface": "#dee3eb",
+                        "surface-tint": "#6bde80",
+                        "on-primary-fixed": "#002108",
+                        "surface-container-highest": "#30353b",
+                        "surface-bright": "#353a40",
+                        "background": "#0f1419",
+                        "on-primary-container": "#003210",
+                        "tertiary-fixed-dim": "#c2c7cf",
+                        "surface-dim": "#0f1419"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .glass-panel {
+            background: rgba(48, 53, 59, 0.6);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30">
+<!-- SideNavBar -->
+<aside class="bg-slate-900 dark:bg-[#171c22] font-['Space_Grotesk'] tracking-tight h-screen w-64 fixed left-0 top-0 flex flex-col py-6 px-4 z-50">
+<div class="mb-10 px-2 flex items-center gap-3">
+<div class="w-8 h-8 bg-primary-container rounded-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container" style="font-variation-settings: 'FILL' 1;">view_object_track</span>
+</div>
+<span class="text-emerald-500 dark:text-[#6bde80] font-bold text-xl">Lumen Trace</span>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 bg-[#30353b] text-[#6bde80] font-semibold rounded-sm transition-all scale-98 active:opacity-80" href="#">
+<span class="material-symbols-outlined">memory</span>
+<span>Infrastructure</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined">workspaces</span>
+<span>Workspace</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined">insights</span>
+<span>Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+<div class="mt-auto px-2">
+<button class="w-full py-3 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold rounded-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined">add</span>
+<span>New Trace</span>
+</button>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="bg-slate-950/60 dark:bg-[#0f1419]/60 backdrop-blur-xl flex justify-between items-center h-16 px-8 sticky top-0 z-40 border-b border-white/5 font-['Inter'] text-sm">
+<div class="flex items-center gap-4">
+<span class="text-on-surface-variant">Infrastructure</span>
+<span class="text-outline-variant">/</span>
+<span class="text-primary font-medium">Distributed Storage Engine</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="bg-surface-container-lowest border border-outline-variant/20 rounded-sm pl-10 pr-4 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none text-on-surface transition-all w-64" placeholder="Search traces or nodes..." type="text"/>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant">
+<button class="hover:text-white transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-0 right-0 w-1.5 h-1.5 bg-primary rounded-full"></span>
+</button>
+<button class="hover:text-white transition-colors">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant/30 flex items-center justify-center overflow-hidden">
+<img alt="User Avatar" data-alt="Abstract user profile placeholder icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCLedBzZ9yBpqZLX6_QZ71-XgxdAl-2qexlPL7e-hlTOKUq6WyA7361QP433tJS5FPiuuMae-FCe3VHFj0Ld-B0qg-RuGySYbwd9lFtayP7dsR6p6GT_Mi0kKRAz76jFmr2shFJIEAZkX60nGXQbGQOz8Bgt1VQPkG0z9nKUBFBEC-4EceiLcBQBC2D5lQOCIGsfNnui1fPRXATytlQVE7Fgip1gCSHCWveOov05S7h1bdxJpayDJjCJY6l45BtLHskw4WqSD2kRt4"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Canvas -->
+<div class="p-8 space-y-8">
+<!-- Header Section -->
+<div class="flex justify-between items-end">
+<div class="space-y-1">
+<h1 class="text-4xl font-headline font-bold text-on-surface tracking-tight">Storage Engine Lab</h1>
+<p class="text-on-surface-variant max-w-2xl">Configure low-level storage primitives and indexing strategies for distributed workloads.</p>
+</div>
+<div class="flex gap-3">
+<span class="px-3 py-1 bg-primary/10 text-primary text-xs font-bold tracking-widest uppercase rounded-sm border border-primary/20 flex items-center gap-2">
+<span class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></span>
+                        Cluster: LT-ALPHA-04
+                    </span>
+</div>
+</div>
+<!-- Main Layout Grid -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Engine Selection & Performance Preview (Left Column) -->
+<div class="col-span-12 lg:col-span-8 space-y-6">
+<!-- Engine Toggle Card -->
+<div class="bg-surface-container-low p-6 rounded-md relative overflow-hidden group">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary opacity-50 group-hover:opacity-100 transition-opacity"></div>
+<div class="flex justify-between items-start mb-8">
+<div>
+<h3 class="text-lg font-headline font-semibold text-on-surface mb-1">Indexing Strategy</h3>
+<p class="text-sm text-on-surface-variant">Choose the core data structure for your persistence layer.</p>
+</div>
+<div class="flex bg-surface-container-lowest p-1 rounded-sm border border-outline-variant/10">
+<button class="px-6 py-1.5 bg-surface-container-highest text-primary font-medium rounded-sm shadow-xl transition-all">LSM Tree</button>
+<button class="px-6 py-1.5 text-on-surface-variant hover:text-on-surface transition-all">B-Tree</button>
+</div>
+</div>
+<!-- Performance Matrix -->
+<div class="grid grid-cols-3 gap-8">
+<div class="space-y-4">
+<div class="flex justify-between items-center text-xs text-on-surface-variant font-medium tracking-wider uppercase">
+<span>Write Throughput</span>
+<span class="text-primary">+42%</span>
+</div>
+<div class="h-1 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[85%]"></div>
+</div>
+<p class="text-[10px] leading-relaxed text-on-surface-variant/70 italic">Optimized for high-velocity log ingestion and append-only workloads.</p>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between items-center text-xs text-on-surface-variant font-medium tracking-wider uppercase">
+<span>Read Latency</span>
+<span class="text-error">-15%</span>
+</div>
+<div class="h-1 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[45%]"></div>
+</div>
+<p class="text-[10px] leading-relaxed text-on-surface-variant/70 italic">May require Bloom Filter optimization for point lookups.</p>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between items-center text-xs text-on-surface-variant font-medium tracking-wider uppercase">
+<span>Space Efficiency</span>
+<span class="text-primary">+12%</span>
+</div>
+<div class="h-1 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[65%]"></div>
+</div>
+<p class="text-[10px] leading-relaxed text-on-surface-variant/70 italic">Compaction strategy manages fragmentation effectively.</p>
+</div>
+</div>
+</div>
+<!-- Storage Patterns Bento -->
+<div class="grid grid-cols-2 gap-6">
+<div class="bg-surface-container p-6 rounded-md group hover:bg-surface-container-high transition-colors">
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">lan</span>
+<h3 class="font-headline font-semibold">Shared-Nothing</h3>
+</div>
+<p class="text-sm text-on-surface-variant mb-6 leading-relaxed">Local NVMe storage with horizontal scaling via gossip protocols. Maximum performance, higher operational cost.</p>
+<button class="w-full py-2 bg-surface-container-highest border border-outline-variant/20 text-xs font-bold uppercase tracking-widest text-on-surface hover:border-primary/50 transition-all">Select Pattern</button>
+</div>
+<div class="bg-surface-container-lowest border-2 border-primary/20 p-6 rounded-md relative shadow-2xl">
+<div class="absolute -top-3 right-4 px-2 bg-primary text-on-primary text-[10px] font-bold rounded-sm">RECOMMENDED</div>
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">cloud_done</span>
+<h3 class="font-headline font-semibold">Disaggregated (S3)</h3>
+</div>
+<p class="text-sm text-on-surface-variant mb-6 leading-relaxed">Decoupled compute and storage. Infinite scaling with tiered caching (SSD + Object Store). Cost optimized.</p>
+<button class="w-full py-2 bg-primary text-on-primary text-xs font-bold uppercase tracking-widest rounded-sm transition-all hover:scale-[1.02]">Active Pattern</button>
+</div>
+</div>
+<!-- WAL and Buffer Pool Visualization -->
+<div class="bg-surface-container p-6 rounded-md">
+<h3 class="text-lg font-headline font-semibold text-on-surface mb-6">Write-Ahead Log &amp; Buffer Pool</h3>
+<div class="flex gap-4 h-48">
+<!-- Buffer Pool Pages -->
+<div class="flex-1 bg-surface-container-low p-4 rounded-sm border border-outline-variant/10 flex flex-col">
+<span class="text-[10px] font-bold text-on-surface-variant mb-3">BUFFER POOL (LRU CACHE)</span>
+<div class="flex-1 grid grid-cols-8 gap-1.5">
+<div class="bg-primary/40 rounded-sm animate-pulse"></div>
+<div class="bg-primary/40 rounded-sm"></div>
+<div class="bg-primary/20 rounded-sm"></div>
+<div class="bg-surface-container-high rounded-sm"></div>
+<div class="bg-primary/40 rounded-sm"></div>
+<div class="bg-surface-container-high rounded-sm"></div>
+<div class="bg-surface-container-high rounded-sm"></div>
+<div class="bg-primary/40 rounded-sm"></div>
+<div class="bg-primary/10 rounded-sm"></div>
+<div class="bg-surface-container-high rounded-sm"></div>
+<div class="bg-primary/40 rounded-sm"></div>
+<div class="bg-primary/40 rounded-sm"></div>
+<div class="bg-primary/20 rounded-sm"></div>
+<div class="bg-surface-container-high rounded-sm"></div>
+<div class="bg-primary/40 rounded-sm"></div>
+<div class="bg-surface-container-high rounded-sm"></div>
+</div>
+</div>
+<!-- WAL Queue -->
+<div class="w-32 bg-surface-container-low p-4 rounded-sm border border-outline-variant/10 flex flex-col items-center">
+<span class="text-[10px] font-bold text-on-surface-variant mb-3">WAL QUEUE</span>
+<div class="flex-1 flex flex-col-reverse gap-1 w-full overflow-hidden">
+<div class="h-3 bg-primary/60 rounded-sm w-full"></div>
+<div class="h-3 bg-primary/50 rounded-sm w-full"></div>
+<div class="h-3 bg-primary/30 rounded-sm w-full"></div>
+<div class="h-3 bg-primary/20 rounded-sm w-full"></div>
+<div class="h-3 bg-primary/10 rounded-sm w-full"></div>
+<div class="h-3 bg-surface-container-high rounded-sm w-full"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- LLM Console (Right Column) -->
+<div class="col-span-12 lg:col-span-4 space-y-6">
+<div class="bg-surface-container-highest/50 border border-outline-variant/20 rounded-md flex flex-col h-[740px] sticky top-24">
+<div class="p-4 border-b border-outline-variant/10 flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<h3 class="font-headline font-bold text-sm tracking-tight">Ask for Storage Schema</h3>
+</div>
+<div class="flex-1 p-6 overflow-y-auto no-scrollbar space-y-6">
+<!-- User Message -->
+<div class="flex flex-col items-end gap-2">
+<div class="bg-surface-container-high p-4 rounded-xl rounded-tr-none text-sm text-on-surface max-w-[90%] border border-outline-variant/20">
+                                    Suggest an optimized schema for a real-time analytics workload with high cardinality user IDs.
+                                </div>
+<span class="text-[10px] text-on-surface-variant uppercase font-bold px-2">User</span>
+</div>
+<!-- AI Response -->
+<div class="flex flex-col items-start gap-2">
+<div class="bg-surface-container-lowest p-4 rounded-xl rounded-tl-none text-sm text-on-surface max-w-[95%] border border-primary/20 shadow-lg">
+<p class="mb-4 text-on-surface-variant">Based on your workload description, I recommend an LSM-based engine with a Partitioned Index strategy.</p>
+<div class="bg-black/40 p-3 rounded-sm font-mono text-xs text-primary leading-relaxed mb-4 overflow-x-auto whitespace-pre">CREATE TABLE trace_metrics (
+  node_id UUID PRIMARY KEY,
+  timestamp TIMESTAMP,
+  user_id BIGINT,
+  payload JSONB,
+  INDEX idx_user (user_id) 
+    USING BRIN
+);</div>
+<div class="space-y-3">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+<span class="text-[11px] text-on-surface-variant">LSM compaction set to 'Leveled' to minimize read amplification on high cardinality fields.</span>
+</div>
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+<span class="text-[11px] text-on-surface-variant">Bloom Filters enabled for user_id to skip lookups on non-matching SSTables.</span>
+</div>
+</div>
+</div>
+<span class="text-[10px] text-primary uppercase font-bold px-2 flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">bolt</span> Lumen AI
+                                </span>
+</div>
+</div>
+<!-- Chat Input -->
+<div class="p-4 bg-surface-container-high rounded-b-md">
+<div class="relative">
+<textarea class="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-sm p-3 text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none text-on-surface resize-none" placeholder="Describe your workload (e.g., IoT ingestion, high-read search)..." rows="3"></textarea>
+<button class="absolute bottom-3 right-3 p-2 bg-primary text-on-primary rounded-sm hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-sm">send</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Floating Metric Bar -->
+<div class="fixed bottom-8 left-1/2 -translate-x-1/2 px-8 py-3 glass-panel border border-white/5 rounded-full flex items-center gap-12 shadow-2xl z-50">
+<div class="flex flex-col">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">IOPS Utilization</span>
+<span class="text-xl font-headline font-bold text-primary">84.2k</span>
+</div>
+<div class="w-px h-8 bg-outline-variant/30"></div>
+<div class="flex flex-col">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">WAL Lag</span>
+<span class="text-xl font-headline font-bold text-on-surface">1.2ms</span>
+</div>
+<div class="w-px h-8 bg-outline-variant/30"></div>
+<div class="flex flex-col">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">Buffer Hit Rate</span>
+<span class="text-xl font-headline font-bold text-primary">99.8%</span>
+</div>
+<div class="w-px h-8 bg-outline-variant/30"></div>
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(107,222,128,0.6)] animate-pulse"></div>
+<span class="text-[10px] font-bold text-on-surface uppercase tracking-widest">LIVE SYNC</span>
+</div>
+</div>
+</main>
+</body></html>

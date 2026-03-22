@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lumen Trace | Service Mesh Control Plane</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container": "#1b2026",
+                        "on-error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#00531f",
+                        "secondary": "#bec7d2",
+                        "on-primary": "#003913",
+                        "secondary-fixed-dim": "#bec7d2",
+                        "inverse-primary": "#006e2c",
+                        "primary-fixed": "#88fb99",
+                        "on-tertiary": "#2c3137",
+                        "tertiary": "#c2c7cf",
+                        "surface-container-low": "#171c22",
+                        "inverse-on-surface": "#2c3137",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed": "#171c22",
+                        "on-secondary-fixed": "#141c25",
+                        "outline-variant": "#3e4a3d",
+                        "outline": "#889485",
+                        "secondary-fixed": "#dae3ef",
+                        "error": "#ffb4ab",
+                        "surface-variant": "#30353b",
+                        "on-surface-variant": "#bdcaba",
+                        "on-tertiary-fixed-variant": "#42474e",
+                        "surface-container-high": "#252a30",
+                        "surface": "#0f1419",
+                        "primary-container": "#2fa54f",
+                        "tertiary-container": "#8c9198",
+                        "on-error": "#690005",
+                        "on-surface": "#dee3eb",
+                        "on-secondary": "#29313a",
+                        "primary-fixed-dim": "#6bde80",
+                        "on-tertiary-container": "#252a30",
+                        "surface-container-lowest": "#0a0f14",
+                        "secondary-container": "#414a53",
+                        "on-secondary-fixed-variant": "#3f4851",
+                        "on-secondary-container": "#b0b9c4",
+                        "tertiary-fixed": "#dee3eb",
+                        "primary": "#6bde80",
+                        "on-background": "#dee3eb",
+                        "inverse-surface": "#dee3eb",
+                        "surface-tint": "#6bde80",
+                        "on-primary-fixed": "#002108",
+                        "surface-container-highest": "#30353b",
+                        "surface-bright": "#353a40",
+                        "background": "#0f1419",
+                        "on-primary-container": "#003210",
+                        "tertiary-fixed-dim": "#c2c7cf",
+                        "surface-dim": "#0f1419"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .no-line { border: none !important; }
+        .tonal-shift { background-color: #171c22; }
+        .glass-panel {
+            background: rgba(48, 53, 59, 0.6);
+            backdrop-filter: blur(12px);
+        }
+        .code-editor-bg {
+            background-color: #0a0f14;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30">
+<!-- SideNavBar Anchor -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-slate-900 dark:bg-[#171c22] flex flex-col py-6 px-4 z-50">
+<div class="flex items-center gap-3 mb-10 px-2">
+<span class="material-symbols-outlined text-emerald-500 dark:text-[#6bde80] text-2xl" style="font-variation-settings: 'FILL' 1;">hub</span>
+<div>
+<h1 class="text-emerald-500 dark:text-[#6bde80] font-bold text-xl font-headline tracking-tight">Lumen Trace</h1>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest font-medium">Precision Observability</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 bg-[#30353b] text-[#6bde80] font-semibold rounded-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-headline tracking-tight">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">memory</span>
+<span class="font-headline tracking-tight">Infrastructure</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">workspaces</span>
+<span class="font-headline tracking-tight">Workspace</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">insights</span>
+<span class="font-headline tracking-tight">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#bdcaba] hover:text-[#dee3eb] hover:bg-[#1b2026] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-headline tracking-tight">Settings</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-white/5">
+<button class="w-full py-2.5 px-4 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold rounded-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-lg">add_circle</span>
+                New Trace
+            </button>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen flex flex-col">
+<!-- TopNavBar Anchor -->
+<header class="flex justify-between items-center h-16 px-8 sticky top-0 z-40 bg-slate-950/60 dark:bg-[#0f1419]/60 backdrop-blur-xl border-b border-white/5">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 text-on-surface-variant text-sm font-medium">
+<span>Cluster-01</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="text-on-surface">Service Mesh Control Plane</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative group">
+<span class="absolute inset-y-0 left-3 flex items-center text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">search</span>
+</span>
+<input class="bg-surface-container-lowest border border-white/5 rounded-sm py-1.5 pl-10 pr-4 text-sm w-64 focus:outline-none focus:border-primary transition-colors" placeholder="Search services or nodes..." type="text"/>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant">
+<button class="hover:text-white transition-colors"><span class="material-symbols-outlined">notifications</span></button>
+<button class="hover:text-white transition-colors"><span class="material-symbols-outlined">help_outline</span></button>
+<div class="h-8 w-8 rounded-full bg-surface-container-highest overflow-hidden border border-white/10">
+<img class="w-full h-full object-cover" data-alt="User Avatar Profile Silhouette" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3FjBoss_E70DpjlDDakOkEN9Q9KnAGTOWCAlGgpEtAtA6PuBPxVc_BQbdmMnLpjXOj4LrfFmqJLEgSe9E768MeF5SH29Ed8CBmiKbZprlGb-nnCTdhqn_7OsqkAphhtbJjR1NMqJCgBX38pAf1rZrc4eLJGh_gtr3oI8vJK1X6ZTXsnrg6MMrMqNs2J-taVgMnzVkf7LhcSIxydHdtFmZgu75Xtk5iR3g2O8bl5XcqjE3ZcuawPyYRZpLWw4OQkyJpK1e1HxTL8o"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Canvas Area -->
+<div class="p-8 space-y-8">
+<!-- Hero Stats: Sidecar & mTLS Health -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<div class="bg-surface-container-low p-6 rounded-sm space-y-2">
+<p class="text-on-surface-variant text-xs uppercase tracking-widest font-semibold">Sidecar Proxy Health</p>
+<div class="flex items-baseline gap-2">
+<h2 class="text-4xl font-headline font-bold text-on-surface">98.2%</h2>
+<span class="text-primary text-xs font-medium flex items-center gap-0.5">
+<span class="material-symbols-outlined text-xs">arrow_upward</span> 0.4%
+                        </span>
+</div>
+<div class="w-full bg-surface-container-lowest h-1 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[98.2%]"></div>
+</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-sm space-y-2">
+<p class="text-on-surface-variant text-xs uppercase tracking-widest font-semibold">mTLS Coverage</p>
+<div class="flex items-baseline gap-2">
+<h2 class="text-4xl font-headline font-bold text-on-surface">100%</h2>
+<span class="text-primary text-xs font-medium">Encrypted</span>
+</div>
+<div class="flex gap-1">
+<div class="h-1 flex-1 bg-primary rounded-full"></div>
+<div class="h-1 flex-1 bg-primary rounded-full"></div>
+<div class="h-1 flex-1 bg-primary rounded-full"></div>
+<div class="h-1 flex-1 bg-primary rounded-full"></div>
+</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-sm space-y-2">
+<p class="text-on-surface-variant text-xs uppercase tracking-widest font-semibold">Active Services</p>
+<div class="flex items-baseline gap-2">
+<h2 class="text-4xl font-headline font-bold text-on-surface">142</h2>
+<span class="text-on-surface-variant text-xs">Across 4 Zones</span>
+</div>
+<p class="text-[10px] text-on-surface-variant font-mono">DISCOVERY_SYNC: OK</p>
+</div>
+<div class="bg-surface-container-low p-6 rounded-sm space-y-2">
+<p class="text-on-surface-variant text-xs uppercase tracking-widest font-semibold">Mesh Latency (P99)</p>
+<div class="flex items-baseline gap-2">
+<h2 class="text-4xl font-headline font-bold text-on-surface">12ms</h2>
+<span class="text-error text-xs font-medium flex items-center gap-0.5">
+<span class="material-symbols-outlined text-xs">arrow_upward</span> 2ms
+                        </span>
+</div>
+<p class="text-[10px] text-on-surface-variant font-mono">GLOBAL_MESH_AVERAGE</p>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Left: Service Discovery & Visualizer -->
+<div class="lg:col-span-8 space-y-8">
+<section class="bg-surface-container p-6 rounded-sm">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline text-lg font-bold">Traffic Topology &amp; Registry</h3>
+<div class="flex gap-2">
+<span class="px-3 py-1 bg-surface-container-highest text-[10px] font-bold uppercase rounded-sm border border-white/5 cursor-pointer">Live View</span>
+<span class="px-3 py-1 text-on-surface-variant text-[10px] font-bold uppercase rounded-sm border border-white/5 hover:bg-surface-container-highest cursor-pointer">History</span>
+</div>
+</div>
+<!-- Visualizer Placeholder -->
+<div class="h-[400px] bg-surface-container-lowest relative overflow-hidden rounded-sm group">
+<!-- Abstract Grid Lines -->
+<div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(#6bde80 1px, transparent 1px); background-size: 24px 24px;"></div>
+<!-- Visualizing Services as "Nodes" -->
+<div class="absolute top-1/2 left-1/4 -translate-y-1/2 flex flex-col items-center gap-4">
+<div class="h-12 w-12 rounded-sm bg-primary/20 border border-primary flex items-center justify-center shadow-[0_0_20px_rgba(107,222,128,0.2)]">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">lan</span>
+</div>
+<span class="text-[10px] font-mono text-on-surface-variant">gateway-api</span>
+</div>
+<div class="absolute top-1/4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4">
+<div class="h-12 w-12 rounded-sm bg-surface-container-highest border border-white/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface">database</span>
+</div>
+<span class="text-[10px] font-mono text-on-surface-variant">auth-db-proxy</span>
+</div>
+<div class="absolute bottom-1/4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4">
+<div class="h-12 w-12 rounded-sm bg-surface-container-highest border border-white/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface">settings_input_component</span>
+</div>
+<span class="text-[10px] font-mono text-on-surface-variant">payment-v1</span>
+</div>
+<div class="absolute top-1/2 right-1/4 -translate-y-1/2 flex flex-col items-center gap-4">
+<div class="h-12 w-12 rounded-sm bg-primary/10 border border-primary/40 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">shopping_cart</span>
+</div>
+<span class="text-[10px] font-mono text-on-surface-variant">cart-service</span>
+</div>
+<!-- Connection Lines (SVG) -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none">
+<path d="M 25% 50% L 50% 25%" fill="none" opacity="0.3" stroke="#6bde80" stroke-dasharray="4" stroke-width="1"></path>
+<path d="M 25% 50% L 50% 75%" fill="none" opacity="0.5" stroke="#6bde80" stroke-width="2"></path>
+<path d="M 50% 75% L 75% 50%" fill="none" opacity="0.3" stroke="#6bde80" stroke-dasharray="2" stroke-width="1"></path>
+<circle cx="42%" cy="66%" fill="#6bde80" r="3">
+<animate attributename="opacity" dur="2s" repeatcount="indefinite" values="1;0.2;1"></animate>
+</circle>
+</svg>
+<!-- Overlay Legend -->
+<div class="absolute bottom-4 left-4 flex gap-4 bg-surface-container-high/80 p-3 rounded-sm backdrop-blur-md border border-white/5">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="text-[10px] text-on-surface-variant">mTLS Active</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-error"></div>
+<span class="text-[10px] text-on-surface-variant">Unsecure Traffic</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Traffic Shaping Controls -->
+<section class="grid grid-cols-2 gap-6">
+<div class="bg-surface-container p-6 rounded-sm border-l-2 border-primary">
+<h4 class="font-headline font-bold mb-4 flex items-center justify-between">
+                                Canary Rollout
+                                <span class="px-2 py-0.5 bg-primary/10 text-primary text-[10px] rounded-sm">Active</span>
+</h4>
+<div class="space-y-4">
+<div class="flex justify-between text-xs font-mono">
+<span class="text-on-surface-variant">v1.2.0 (Stable)</span>
+<span class="text-on-surface">90%</span>
+</div>
+<div class="w-full h-2 bg-surface-container-lowest rounded-full overflow-hidden flex">
+<div class="h-full bg-primary-container w-[90%]"></div>
+<div class="h-full bg-primary w-[10%]"></div>
+</div>
+<div class="flex justify-between text-xs font-mono">
+<span class="text-primary">v1.3.0-rc1 (Canary)</span>
+<span class="text-on-surface">10%</span>
+</div>
+<button class="w-full mt-2 py-2 text-xs font-bold border border-outline-variant hover:bg-surface-container-highest transition-colors uppercase tracking-tight">Adjust Weights</button>
+</div>
+</div>
+<div class="bg-surface-container p-6 rounded-sm border-l-2 border-secondary">
+<h4 class="font-headline font-bold mb-4 flex items-center justify-between">
+                                Circuit Breaker
+                                <span class="px-2 py-0.5 bg-surface-container-highest text-on-surface-variant text-[10px] rounded-sm">Standby</span>
+</h4>
+<div class="space-y-3">
+<div class="flex justify-between items-center text-xs">
+<span class="text-on-surface-variant">Max Connections</span>
+<span class="font-mono text-on-surface">1,024</span>
+</div>
+<div class="flex justify-between items-center text-xs">
+<span class="text-on-surface-variant">Error Threshold</span>
+<span class="font-mono text-on-surface">5% / 10s</span>
+</div>
+<div class="flex justify-between items-center text-xs">
+<span class="text-on-surface-variant">Ejection Period</span>
+<span class="font-mono text-on-surface">30s</span>
+</div>
+<button class="w-full mt-1 py-2 text-xs font-bold border border-outline-variant hover:bg-surface-container-highest transition-colors uppercase tracking-tight">Manage Policies</button>
+</div>
+</div>
+</section>
+</div>
+<!-- Right: Envoy Editor & LLM Assistant -->
+<div class="lg:col-span-4 space-y-6">
+<section class="bg-surface-container h-full rounded-sm flex flex-col overflow-hidden">
+<div class="p-4 border-b border-white/5 flex items-center justify-between bg-surface-container-high">
+<h3 class="font-headline text-sm font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">terminal</span>
+                                Envoy Config Editor
+                            </h3>
+<div class="flex gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-sm cursor-pointer hover:text-white">content_copy</span>
+<span class="material-symbols-outlined text-on-surface-variant text-sm cursor-pointer hover:text-white">save</span>
+</div>
+</div>
+<!-- LLM Assistant Prompt -->
+<div class="p-4 bg-primary/5 border-b border-primary/10">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<span class="text-[10px] font-bold text-primary uppercase tracking-tighter">AI Assistant</span>
+</div>
+<div class="relative">
+<textarea class="w-full bg-surface-container-lowest border border-primary/20 rounded-sm p-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary h-20 resize-none" placeholder="Ask for config: 'Create a retry policy for checkout service...'"></textarea>
+<button class="absolute bottom-2 right-2 p-1.5 bg-primary rounded-sm text-on-primary shadow-lg active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm">send</span>
+</button>
+</div>
+</div>
+<!-- Code Display -->
+<div class="flex-1 code-editor-bg p-4 font-mono text-[11px] leading-relaxed text-[#bdcaba] overflow-y-auto">
+<div class="flex gap-4">
+<div class="text-white/20 select-none text-right w-4">
+                                    1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12<br/>13<br/>14
+                                </div>
+<div class="whitespace-pre">
+<span class="text-primary">static_resources:</span>
+<span class="text-secondary">listeners:</span>
+  - <span class="text-secondary">name:</span> listener_0
+    <span class="text-secondary">address:</span>
+<span class="text-secondary">socket_address:</span>
+<span class="text-secondary">address:</span> 0.0.0.0
+        <span class="text-secondary">port_value:</span> 10000
+    <span class="text-secondary">filter_chains:</span>
+    - <span class="text-secondary">filters:</span>
+      - <span class="text-secondary">name:</span> envoy.filters.network.http_connection_manager
+        <span class="text-secondary">typed_config:</span>
+<span class="text-primary">"@type":</span> type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          <span class="text-secondary">stat_prefix:</span> ingress_http
+          <span class="text-secondary">route_config:</span>
+<span class="text-secondary">name:</span> local_route
+                                </div>
+</div>
+</div>
+<div class="p-4 bg-surface-container-high border-t border-white/5 flex gap-3">
+<button class="flex-1 py-2 text-xs font-bold bg-primary text-on-primary rounded-sm hover:opacity-90 active:scale-95 transition-all">Apply to Mesh</button>
+<button class="px-4 py-2 text-xs font-bold border border-outline-variant text-on-surface rounded-sm hover:bg-surface-container-highest transition-all">Validate</button>
+</div>
+</section>
+</div>
+</div>
+<!-- Detailed Service Registry Table -->
+<section class="bg-surface-container rounded-sm overflow-hidden">
+<div class="p-6 border-b border-white/5 flex items-center justify-between">
+<h3 class="font-headline text-lg font-bold">Service Registry (EDS)</h3>
+<div class="flex gap-4">
+<select class="bg-surface-container-lowest border border-white/5 text-[10px] uppercase font-bold px-4 py-1.5 rounded-sm focus:outline-none">
+<option>Namespace: Production</option>
+<option>Namespace: Staging</option>
+</select>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-white transition-colors">filter_list</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead class="bg-surface-container-high text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+<tr>
+<th class="px-6 py-4">Service Name</th>
+<th class="px-6 py-4">Protocol</th>
+<th class="px-6 py-4">Sidecar Version</th>
+<th class="px-6 py-4">Instances</th>
+<th class="px-6 py-4">mTLS Status</th>
+<th class="px-6 py-4">Last Sync</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/5">
+<tr class="hover:bg-white/[0.02] transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+<span class="text-sm font-medium">api-gateway-v2</span>
+</div>
+</td>
+<td class="px-6 py-4 text-xs font-mono">gRPC/HTTP2</td>
+<td class="px-6 py-4 text-xs font-mono text-on-surface-variant">envoy 1.28.1</td>
+<td class="px-6 py-4 text-xs">
+<span class="text-on-surface">12</span> <span class="text-on-surface-variant">/ 12 Ready</span>
+</td>
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-[10px] font-bold text-primary">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">lock</span>
+                                        STRICT
+                                    </span>
+</td>
+<td class="px-6 py-4 text-xs font-mono text-on-surface-variant">2s ago</td>
+</tr>
+<tr class="hover:bg-white/[0.02] transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+<span class="text-sm font-medium">user-auth-service</span>
+</div>
+</td>
+<td class="px-6 py-4 text-xs font-mono">HTTPS</td>
+<td class="px-6 py-4 text-xs font-mono text-on-surface-variant">envoy 1.28.0</td>
+<td class="px-6 py-4 text-xs">
+<span class="text-on-surface">5</span> <span class="text-on-surface-variant">/ 5 Ready</span>
+</td>
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-[10px] font-bold text-primary">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">lock</span>
+                                        STRICT
+                                    </span>
+</td>
+<td class="px-6 py-4 text-xs font-mono text-on-surface-variant">4s ago</td>
+</tr>
+<tr class="hover:bg-white/[0.02] transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-1.5 h-1.5 rounded-full bg-error"></div>
+<span class="text-sm font-medium">legacy-billing-svc</span>
+</div>
+</td>
+<td class="px-6 py-4 text-xs font-mono">HTTP/1.1</td>
+<td class="px-6 py-4 text-xs font-mono text-on-surface-variant">envoy 1.25.x</td>
+<td class="px-6 py-4 text-xs">
+<span class="text-error">1</span> <span class="text-on-surface-variant">/ 2 Ready</span>
+</td>
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-[10px] font-bold text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">lock_open</span>
+                                        PERMISSIVE
+                                    </span>
+</td>
+<td class="px-6 py-4 text-xs font-mono text-on-surface-variant">12m ago</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 bg-surface-container-low text-center">
+<button class="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline">View All 142 Services</button>
+</div>
+</section>
+</div>
+<!-- Floating Action Button - Supressed on this deep management view according to rules but contextually useful for emergencies -->
+<!-- We prioritize the design system's "suppress" rule for Details/Transactional views -->
+</main>
+</body></html>
