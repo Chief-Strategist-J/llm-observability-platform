@@ -1,0 +1,5 @@
+videosdk-agents[deepgram,openai,elevenlabs,silero,turn_detector]
+pydantic-settings
+python-dotenv
+PyJWT
+videosdk-plugins-google

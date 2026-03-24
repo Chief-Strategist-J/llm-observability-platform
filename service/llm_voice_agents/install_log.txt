@@ -1,0 +1,214 @@
+DEBUG uv 0.11.0 (x86_64-unknown-linux-gnu)
+DEBUG Searching for default Python interpreter in virtual environments
+DEBUG Found `cpython-3.12.13-linux-x86_64-gnu` at `/home/btpl-lap-22/prod/llm-observability-platform/service/llm_voice_agents/.venv/bin/python3` (active virtual environment)
+DEBUG Using Python 3.12.13 environment at: .venv
+DEBUG Requirement satisfied: aec-audio-processing>=1.0.1
+DEBUG Requirement satisfied: aiohappyeyeballs>=2.5.0
+DEBUG Requirement satisfied: aiohttp
+DEBUG Requirement satisfied: aioice>=0.10.1, <1.0.0
+DEBUG Requirement satisfied: aiosignal>=1.4.0
+DEBUG Requirement satisfied: annotated-doc>=0.0.2
+DEBUG Requirement satisfied: annotated-types>=0.6.0
+DEBUG Requirement satisfied: anyio
+DEBUG Requirement satisfied: anyio>=3.5.0, <5
+DEBUG Requirement satisfied: anyio>=3.6.2, <5
+DEBUG Requirement satisfied: anyio>=4.5
+DEBUG Requirement satisfied: anyio>=4.7.0
+DEBUG Requirement satisfied: anyio>=4.8.0, <5.0.0
+DEBUG Requirement satisfied: attrs>=17.3.0
+DEBUG Requirement satisfied: attrs>=22.2.0
+DEBUG Requirement satisfied: av>=14.0.0, <17.0.0
+DEBUG Requirement satisfied: certifi
+DEBUG Requirement satisfied: certifi>=2017.4.17
+DEBUG Requirement satisfied: cffi
+DEBUG Requirement satisfied: cffi>=1.0.0
+DEBUG Requirement satisfied: cffi>=2.0.0 ; python_full_version >= '3.9' and platform_python_implementation != 'PyPy'
+DEBUG Requirement satisfied: charset-normalizer>=2, <4
+DEBUG Requirement satisfied: click>=7.0
+DEBUG Requirement satisfied: click>=8.0.0
+DEBUG Requirement satisfied: click>=8.2.1
+DEBUG Requirement satisfied: cryptography>=3.4.0 ; extra == 'crypto'
+DEBUG Requirement satisfied: cryptography>=38.0.3
+DEBUG Requirement satisfied: cryptography>=44.0.0
+DEBUG Requirement satisfied: cryptography>=46.0.0, <47
+DEBUG Requirement satisfied: distro>=1.7.0, <2
+DEBUG Requirement satisfied: dnspython>=2.0.0
+DEBUG Requirement satisfied: docstring-parser
+DEBUG Requirement satisfied: filelock>=3.10.0
+DEBUG Requirement satisfied: flatbuffers
+DEBUG Requirement satisfied: frozenlist>=1.1.0
+DEBUG Requirement satisfied: frozenlist>=1.1.1
+DEBUG Requirement satisfied: fsspec>=2023.5.0
+DEBUG Requirement satisfied: google-api-core[grpc]>=1.34.1, !=2.0.*, !=2.1.*, !=2.2.*, !=2.3.*, !=2.4.*, !=2.5.*, !=2.6.*, !=2.7.*, !=2.8.*, !=2.9.*, !=2.10.*, <3.0.0
+DEBUG Requirement satisfied: google-auth>=2.14.1, !=2.24.0, !=2.25.0, <3.0.0
+DEBUG Requirement satisfied: google-auth>=2.14.1, <3.0.0
+DEBUG Requirement satisfied: google-auth[requests]>=2.47.0, <3.0.0
+DEBUG Requirement satisfied: google-cloud-speech>=2, <3
+DEBUG Requirement satisfied: google-cloud-texttospeech>=2.24, <3
+DEBUG Requirement satisfied: google-crc32c>=1.1
+DEBUG Requirement satisfied: google-genai
+DEBUG Requirement satisfied: google-genai>=1.14.0
+DEBUG Requirement satisfied: googleapis-common-protos>=1.5.5
+DEBUG Requirement satisfied: googleapis-common-protos>=1.56.3, <2.0.0
+DEBUG Requirement satisfied: googleapis-common-protos~=1.52
+DEBUG Requirement satisfied: grpcio
+DEBUG Requirement satisfied: grpcio-status>=1.33.2, <2.0.0 ; extra == 'grpc'
+DEBUG Requirement satisfied: grpcio-status>=1.49.1, <2.0.0 ; python_full_version >= '3.11' and extra == 'grpc'
+DEBUG Requirement satisfied: grpcio>=1.33.2, <2.0.0
+DEBUG Requirement satisfied: grpcio>=1.33.2, <2.0.0 ; extra == 'grpc'
+DEBUG Requirement satisfied: grpcio>=1.49.1, <2.0.0 ; python_full_version >= '3.11' and extra == 'grpc'
+DEBUG Requirement satisfied: grpcio>=1.71.2
+DEBUG Requirement satisfied: h11>=0.16
+DEBUG Requirement satisfied: h11>=0.8
+DEBUG Requirement satisfied: h264-profile-level-id>=1.0.0, <1.1.0
+DEBUG Requirement satisfied: hf-xet>=1.4.2, <2.0.0 ; platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64'
+DEBUG Requirement satisfied: httpcore==1.*
+DEBUG Requirement satisfied: httpx
+DEBUG Requirement satisfied: httpx-sse>=0.4
+DEBUG Requirement satisfied: httpx>=0.23.0, <1
+DEBUG Requirement satisfied: httpx>=0.27.1
+DEBUG Requirement satisfied: httpx>=0.28.1, <1.0.0
+DEBUG Requirement satisfied: huggingface-hub>=0.16.4, <2.0
+DEBUG Requirement satisfied: huggingface-hub>=1.3.0, <2.0
+DEBUG Requirement satisfied: idna
+DEBUG Requirement satisfied: idna>=2.0
+DEBUG Requirement satisfied: idna>=2.5, <4
+DEBUG Requirement satisfied: idna>=2.8
+DEBUG Requirement satisfied: ifaddr>=0.2.0
+DEBUG Requirement satisfied: importlib-metadata>=6.0, <8.8.0
+DEBUG Requirement satisfied: jinja2
+DEBUG Requirement satisfied: jiter>=0.10.0, <1
+DEBUG Requirement satisfied: jsonschema-specifications>=2023.3.6
+DEBUG Requirement satisfied: jsonschema>=4.20.0
+DEBUG Requirement satisfied: markdown-it-py>=2.2.0
+DEBUG Requirement satisfied: markupsafe>=2.0
+DEBUG Requirement satisfied: mcp
+DEBUG Requirement satisfied: mdurl~=0.1
+DEBUG Requirement satisfied: mpmath>=1.1.0, <1.4
+DEBUG Requirement satisfied: multidict>=4.0
+DEBUG Requirement satisfied: multidict>=4.5, <7.0
+DEBUG Requirement satisfied: numpy
+DEBUG Requirement satisfied: numpy>=1.17
+DEBUG Requirement satisfied: numpy>=1.21.6
+DEBUG Requirement satisfied: numpy>=1.26.4, <2.7
+DEBUG Requirement satisfied: numpy>=1.27
+DEBUG Requirement satisfied: onnxruntime>=1.18
+DEBUG Requirement satisfied: openai
+DEBUG Requirement satisfied: openai[realtime]>=1.68.2
+DEBUG Requirement satisfied: opentelemetry-api==1.40.0
+DEBUG Requirement satisfied: opentelemetry-api~=1.15
+DEBUG Requirement satisfied: opentelemetry-exporter-otlp-proto-common==1.40.0
+DEBUG Requirement satisfied: opentelemetry-exporter-otlp-proto-http>=1.34.1
+DEBUG Requirement satisfied: opentelemetry-proto==1.40.0
+DEBUG Requirement satisfied: opentelemetry-sdk>=1.34.1
+DEBUG Requirement satisfied: opentelemetry-sdk~=1.40.0
+DEBUG Requirement satisfied: opentelemetry-semantic-conventions==0.61b0
+DEBUG Requirement satisfied: packaging
+DEBUG Requirement satisfied: packaging>=20.0
+DEBUG Requirement satisfied: packaging>=20.9
+DEBUG Requirement satisfied: pillow>=11.1.0
+DEBUG Requirement satisfied: propcache>=0.2.0
+DEBUG Requirement satisfied: propcache>=0.2.1
+DEBUG Requirement satisfied: proto-plus>=1.22.3, <2.0.0
+DEBUG Requirement satisfied: protobuf
+DEBUG Requirement satisfied: protobuf>=3.19.0, <7.0.0
+DEBUG Requirement satisfied: protobuf>=3.20.2, !=4.21.0, !=4.21.1, !=4.21.2, !=4.21.3, !=4.21.4, !=4.21.5, <7.0.0
+DEBUG Requirement satisfied: protobuf>=3.20.2, !=4.21.1, !=4.21.2, !=4.21.3, !=4.21.4, !=4.21.5, <7.0.0
+DEBUG Requirement satisfied: protobuf>=4.25.8, <7.0.0
+DEBUG Requirement satisfied: protobuf>=5.0, <7.0
+DEBUG Requirement satisfied: protobuf>=5.26.1, <6.0.dev0
+DEBUG Requirement satisfied: protobuf>=5.29, <6.0
+DEBUG Requirement satisfied: pyasn1-modules>=0.2.1
+DEBUG Requirement satisfied: pyasn1>=0.6.1, <0.7.0
+DEBUG Requirement satisfied: pycparser ; implementation_name != 'PyPy'
+DEBUG Requirement satisfied: pycryptodome==3.20.0
+DEBUG Requirement satisfied: pydantic-core==2.41.5
+DEBUG Requirement satisfied: pydantic-settings
+DEBUG Requirement satisfied: pydantic-settings>=2.5.2
+DEBUG Requirement satisfied: pydantic>=1.10.15
+DEBUG Requirement satisfied: pydantic>=1.9.0, <3
+DEBUG Requirement satisfied: pydantic>=2.0, <3
+DEBUG Requirement satisfied: pydantic>=2.11.0, <3.0.0
+DEBUG Requirement satisfied: pydantic>=2.7.0
+DEBUG Requirement satisfied: pydantic>=2.9.0, <3.0.0
+DEBUG Requirement satisfied: pyee>=13.0.0
+DEBUG Requirement satisfied: pygments>=2.13.0, <3.0.0
+DEBUG Requirement satisfied: pyjwt
+DEBUG Requirement satisfied: pyjwt[crypto]>=2.10.1
+DEBUG Requirement satisfied: pylibsrtp>=0.10.0
+DEBUG Requirement satisfied: pyopenssl>=24.0.0
+DEBUG Requirement satisfied: pyopenssl>=25.0.0
+DEBUG Requirement satisfied: python-dotenv
+DEBUG Requirement satisfied: python-dotenv>=0.21.0
+DEBUG Requirement satisfied: python-multipart>=0.0.9
+DEBUG Requirement satisfied: pyyaml
+DEBUG Requirement satisfied: pyyaml>=5.1
+DEBUG Requirement satisfied: referencing>=0.28.4
+DEBUG Requirement satisfied: referencing>=0.31.0
+DEBUG Requirement satisfied: regex!=2019.12.17
+DEBUG Requirement satisfied: requests
+DEBUG Requirement satisfied: requests>=2.20.0, <3.0.0
+DEBUG Requirement satisfied: requests>=2.20.0, <3.0.0 ; extra == 'requests'
+DEBUG Requirement satisfied: requests>=2.25.0
+DEBUG Requirement satisfied: requests>=2.28.1, <3.0.0
+DEBUG Requirement satisfied: requests>=2.3.1, <2.32.0
+DEBUG Requirement satisfied: requests~=2.7
+DEBUG Requirement satisfied: rich>=10.0.0
+DEBUG Requirement satisfied: rich>=12.3.0
+DEBUG Requirement satisfied: rpds-py>=0.25.0
+DEBUG Requirement satisfied: rpds-py>=0.7.0
+DEBUG Requirement satisfied: safetensors>=0.4.3
+DEBUG Requirement satisfied: scipy
+DEBUG Requirement satisfied: scipy>=1.11.0
+DEBUG Requirement satisfied: sdp-transform>=1.1.0, <1.2.0
+DEBUG Requirement satisfied: shellingham>=1.3.0
+DEBUG Requirement satisfied: sniffio
+DEBUG Requirement satisfied: sounddevice
+DEBUG Requirement satisfied: sse-starlette>=1.6.1
+DEBUG Requirement satisfied: starlette>=0.27
+DEBUG Requirement satisfied: starlette>=0.49.1
+DEBUG Requirement satisfied: sympy
+DEBUG Requirement satisfied: tenacity>=8.2.3, <9.2.0
+DEBUG Requirement satisfied: tokenizers>=0.22.0, <=0.23.0
+DEBUG Requirement satisfied: tqdm>4
+DEBUG Requirement satisfied: tqdm>=4.27
+DEBUG Requirement satisfied: tqdm>=4.42.1
+DEBUG Requirement satisfied: transformers>=4.47.1
+DEBUG Requirement satisfied: typer
+DEBUG Requirement satisfied: typing-extensions
+DEBUG Requirement satisfied: typing-extensions>=4.1.0
+DEBUG Requirement satisfied: typing-extensions>=4.10.0 ; python_full_version < '3.13'
+DEBUG Requirement satisfied: typing-extensions>=4.11, <5
+DEBUG Requirement satisfied: typing-extensions>=4.12.0
+DEBUG Requirement satisfied: typing-extensions>=4.14, <5
+DEBUG Requirement satisfied: typing-extensions>=4.14.1
+DEBUG Requirement satisfied: typing-extensions>=4.2 ; python_full_version < '3.13'
+DEBUG Requirement satisfied: typing-extensions>=4.4.0 ; python_full_version < '3.13'
+DEBUG Requirement satisfied: typing-extensions>=4.5 ; python_full_version < '3.13'
+DEBUG Requirement satisfied: typing-extensions>=4.5.0
+DEBUG Requirement satisfied: typing-extensions>=4.9 ; python_full_version >= '3.8' and python_full_version < '3.13'
+DEBUG Requirement satisfied: typing-extensions>=4.9.0
+DEBUG Requirement satisfied: typing-extensions~=4.12
+DEBUG Requirement satisfied: typing-inspection>=0.4.0
+DEBUG Requirement satisfied: typing-inspection>=0.4.1
+DEBUG Requirement satisfied: typing-inspection>=0.4.2
+DEBUG Requirement satisfied: urllib3
+DEBUG Requirement satisfied: urllib3>=1.21.1, <3
+DEBUG Requirement satisfied: uvicorn
+DEBUG Requirement satisfied: uvicorn>=0.31.1 ; sys_platform != 'emscripten'
+DEBUG Requirement satisfied: videosdk-agents>=0.0.72
+DEBUG Requirement satisfied: videosdk-agents[deepgram,openai,elevenlabs,silero,turn-detector]
+DEBUG Requirement satisfied: videosdk-plugins-deepgram>=0.0.72 ; extra == 'deepgram'
+DEBUG Requirement satisfied: videosdk-plugins-elevenlabs>=0.0.72 ; extra == 'elevenlabs'
+DEBUG Requirement satisfied: videosdk-plugins-google
+DEBUG Requirement satisfied: videosdk-plugins-openai>=0.0.72 ; extra == 'openai'
+DEBUG Requirement satisfied: videosdk-plugins-silero>=0.0.72 ; extra == 'silero'
+DEBUG Requirement satisfied: videosdk-plugins-turn-detector>=0.0.72 ; extra == 'turn-detector'
+DEBUG Requirement satisfied: videosdk>=0.2.9
+DEBUG Requirement satisfied: vsaiortc>=0.0.6
+DEBUG Requirement satisfied: websockets>=12.0.0, <=15.0.1
+DEBUG Requirement satisfied: websockets>=13, <16 ; extra == 'realtime'
+DEBUG Requirement satisfied: websockets>=13.0.0, <17.0
+DEBUG Requirement satisfied: yarl>=1.17.0, <2.0
+DEBUG Requirement satisfied: zipp>=3.20
+Checked 5 packages in 52ms
