@@ -1,0 +1,39 @@
+- name: provision_cloud_resources
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: create_vpc
+      ec2_vpc_net:
+        name: observability-vpc
+        cidr_block: 10.0.0.0/16
+        region: "{{ region }}"
+        state: present
+      register: vpc
+    - name: create_subnet
+      ec2_vpc_subnet:
+        vpc_id: "{{ vpc.vpc.id }}"
+        cidr: 10.0.1.0/24
+        az: "{{ region }}a"
+        region: "{{ region }}"
+        state: present
+      register: subnet
+    - name: create_security_group
+      ec2_group:
+        name: observability-sg
+        description: Security group for observability stack
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ region }}"
+        rules:
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: 0.0.0.0/0
+        state: present

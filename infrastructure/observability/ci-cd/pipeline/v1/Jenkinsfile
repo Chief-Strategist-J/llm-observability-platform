@@ -1,0 +1,33 @@
+pipeline {
+    agent any
+    parameters {
+        string(name: 'VERSION', defaultValue: 'v1.0.0', description: 'Deployment Version')
+    }
+    stages {
+        stage('Build') {
+            steps {
+                sh 'cd deployment/docker && ./scripts/build.sh dev ${VERSION}'
+            }
+        }
+        stage('Deploy Staging') {
+            steps {
+                sh 'cd deployment/ansible && ./scripts/pipeline_deploy.sh deploy stage ${VERSION}'
+            }
+        }
+        stage('Validate Staging') {
+            steps {
+                sh 'cd deployment/ansible && ./scripts/pipeline_deploy.sh smoke stage ${VERSION}'
+            }
+        }
+        stage('Promote') {
+            steps {
+                sh 'cd deployment/ansible && ./scripts/pipeline_deploy.sh promote prod ${VERSION}'
+            }
+        }
+        stage('Deploy Production') {
+            steps {
+                sh 'cd deployment/ansible && ./scripts/pipeline_deploy.sh deploy prod ${VERSION}'
+            }
+        }
+    }
+}

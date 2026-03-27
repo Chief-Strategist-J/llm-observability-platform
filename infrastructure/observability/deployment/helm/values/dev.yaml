@@ -1,0 +1,36 @@
+replicaCount: 2
+image:
+  repository: observability-service
+  pullPolicy: IfNotPresent
+  tag: "1.0.0"
+service:
+  type: ClusterIP
+  port: 80
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  hosts:
+    - host: observability.scaibu.com
+      paths:
+        - path: /
+          pathType: Prefix
+persistence:
+  enabled: true
+  storageClass: "standard"
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  mountPath: /data
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70

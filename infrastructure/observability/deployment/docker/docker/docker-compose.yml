@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  observability-service:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENV=production
+    volumes:
+      - observability_data:/data
+    networks:
+      - observability-network
+volumes:
+  observability_data:
+networks:
+  observability-network:
+    external: true
