@@ -1,0 +1,36 @@
+- name: orchestrate_network_infrastructure
+  hosts: network_devices
+  gather_facts: no
+  tasks:
+    - name: validate_pre_change_state
+      cisco.ios.ios_command:
+        commands:
+          - show running-config
+          - show interfaces status
+      register: pre_state
+      when: ansible_network_os == 'cisco.ios.ios'
+    - name: apply_network_configuration
+      block:
+        - name: configure_switchports
+          cisco.ios.ios_config:
+            lines:
+              - description Observability_Uplink
+              - switchport mode trunk
+            parents: interface GigabitEthernet0/1
+          when: ansible_network_os == 'cisco.ios.ios'
+        - name: configure_junos_vlans
+          junipernetworks.junos.junos_config:
+            lines:
+              - set vlans observability-vlan vlan-id 100
+          when: ansible_network_os == 'junipernetworks.junos.junos'
+      rescue:
+        - name: rollback_network_config
+          debug:
+            msg: "Rollback initiated for {{ inventory_hostname }}"
+    - name: post_validation_testing
+      cisco.ios.ios_command:
+        commands:
+          - ping 10.0.0.1
+      register: ping_test
+      failed_when: "'Success' not in ping_test.stdout[0]"
+      when: ansible_network_os == 'cisco.ios.ios'

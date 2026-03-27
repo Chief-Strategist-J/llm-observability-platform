@@ -1,0 +1,33 @@
+- name: setup_observability_env
+  hosts: all
+  become: yes
+  tasks:
+    - name: install_dependencies
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+          - python3
+          - python3-pip
+          - git
+        state: present
+        update_cache: yes
+    - name: enable_docker
+      systemd:
+        name: docker
+        enabled: yes
+        state: started
+    - name: create_network
+      docker_network:
+        name: observability-network
+        state: present
+    - name: configure_firewall
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - "80"
+        - "443"
+        - "8000"
+        - "7233"

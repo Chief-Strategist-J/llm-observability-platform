@@ -1,0 +1,41 @@
+- name: orchestrate_container_ecosystem
+  hosts: localhost
+  connection: local
+  vars:
+    namespace: "observability-{{ env }}"
+    chart_path: "../helm"
+    kubeconfig_path: "~/.kube/config"
+  tasks:
+    - name: ensure_namespace_exists
+      kubernetes.core.k8s:
+        name: "{{ namespace }}"
+        api_version: v1
+        kind: Namespace
+        state: present
+    - name: deploy_observability_chart
+      kubernetes.core.helm:
+        name: observability-stack
+        chart_ref: "{{ chart_path }}"
+        release_namespace: "{{ namespace }}"
+        values_files:
+          - "{{ chart_path }}/values/{{ env }}.yaml"
+        set_values:
+          - value: "image.tag={{ app_version }}"
+        state: present
+        wait: yes
+    - name: apply_supplementary_manifests
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ namespace }}"
+        src: "../../k8s/env/{{ env }}/{{ item }}.yaml"
+      loop:
+        - hpa
+        - vpa
+        - ingress
+    - name: verify_deployment_status
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        name: observability-service
+        namespace: "{{ namespace }}"
+      register: deploy_info
+      failed_when: deploy_info.resources[0].status.availableReplicas < 1

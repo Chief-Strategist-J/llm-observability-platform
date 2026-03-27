@@ -1,0 +1,22 @@
+- name: perform_scale_optimized_operations
+  hosts: all
+  strategy: free
+  tasks:
+    - name: async_log_cleanup
+      shell: "find /var/log/observability -mtime +7 -type f -delete"
+      async: 300
+      poll: 0
+      register: cleanup_job
+    - name: parallel_service_check
+      uri:
+        url: "http://{{ inventory_hostname }}:8000/health"
+        status_code: 200
+      register: health_check
+    - name: wait_for_cleanup_completion
+      async_status:
+        jid: "{{ cleanup_job.ansible_job_id }}"
+      register: job_result
+      until: job_result.finished
+      retries: 30
+      delay: 10
+      when: cleanup_job.ansible_job_id is defined

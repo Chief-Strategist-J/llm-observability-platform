@@ -1,54 +1,23 @@
-# Observability Infrastructure Module
+# Observability Infrastructure
 
-This module provides a unified observability stack featuring Grafana, Prometheus, Loki, Jaeger, and OpenTelemetry.
+This module provides a production-ready, highly organized, and durable observability stack. It handles environment provisioning, container orchestration, and large-scale Kubernetes deployments with automated scaling and persistence.
 
-> [!IMPORTANT]
-> **Zero Localhost Policy**: This module is designed to work exclusively via Traefik-resolved URLs. Do not use `localhost` for testing, health checks, or API interaction.
+## Infrastructure Suite
 
-## Prerequisites
+### Environment & Network Setup
+- **Ansible**: Found in `deployment/ansible/`. Provisions the OS (Ubuntu/Linux) and installs core dependencies (Docker, Python, Temporal).
+- **Master Setup**: Found in `setup/scripts/setup_all.sh`. A unified orchestrator for the entire stack.
 
-Ensure the following tools are installed on your system:
+### Deployment Platforms
+Every component below follows a standardized interface with `scripts/deploy.sh` and `scripts/retry_deploy.sh`.
 
-- **Python 3.10+**: Required for the orchestration logic and service API.
-- **Docker**: Engine for running containerized services.
-- **Docker Compose**: Plugin for managing multi-container stacks.
-- **Host Configuration**: One-time setup to enable Traefik URLs. Run:
-  ```bash
-  sudo ./infrastructure/observability/dependencies/configure_hosts.sh --apply
-  ```
+- **Docker Compose**: Located in `deployment/docker/`. Local orchestration with named volumes.
+- **Helm**: Located in `deployment/helm/`. Kubernetes charts with persistence and scaling.
+- **Kubernetes**: Located in `deployment/k8s/`. Advanced manifests including HPA, VPA, and Ingress.
+- **Terraform**: Located in `deployment/terraform/`. Versioned cloud infrastructure provisioning.
 
-## Module Structure
+## CI/CD & Hooks
+Comprehensive CI/CD integration and automated hooks are located in the `ci-cd/` directory.
 
-- `api/`: REST API for service orchestration.
-- `setup/`: Setup activities and configuration.
-  - `activities/`: Orchestration logic.
-- `dependencies/`: Requirements and install scripts.
-- `hooks/`: Git hook installation and templates.
-
-## Quick Start
-
-1. **Install Dependencies**:
-   ```bash
-   ./infrastructure/observability/dependencies/install_deps.sh
-   ```
-
-2. **Start the Service**:
-   This script handles port conflicts and dependency verification automatically:
-   ```bash
-   ./infrastructure/observability/start.sh
-   ```
-
-3. **Orchestrate via API (Traefik URLs Only)**:
-   - Start Stack: `curl -X POST http://scaibu.observability-api/start`
-   - Check Status: `curl http://scaibu.observability-api/status`
-   - Stop Stack: `curl -X POST http://scaibu.observability-api/stop`
-
-> [!IMPORTANT]
-> **No Localhost**: Never use `localhost` for testing or health checks. All interactions must use Traefik hostnames.
-
-## Development
-
-Linting is configured via `.flake8`. Install git hooks for safety:
-```bash
-./infrastructure/observability/hooks/install_hooks.sh
-```
+## No-Comment Policy
+To ensure clean automation and processing, all configuration, manifest, and script files are strictly comment-free.

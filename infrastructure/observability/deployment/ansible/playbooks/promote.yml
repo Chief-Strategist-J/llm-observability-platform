@@ -1,0 +1,15 @@
+- name: promote_artifact
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: pull_staging_image
+      command: "docker pull {{ registry }}/{{ image }}:{{ staging_tag }}"
+    - name: retag_for_production
+      command: "docker tag {{ registry }}/{{ image }}:{{ staging_tag }} {{ registry }}/{{ image }}:{{ prod_tag }}"
+    - name: push_production_image
+      command: "docker push {{ registry }}/{{ image }}:{{ prod_tag }}"
+    - name: update_production_inventory
+      lineinfile:
+        path: "../inventory/prod.ini"
+        regexp: "^current_version="
+        line: "current_version={{ prod_tag }}"
