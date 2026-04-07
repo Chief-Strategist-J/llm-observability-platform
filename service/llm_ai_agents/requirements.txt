@@ -1,0 +1,10 @@
+torch
+transformers
+accelerate
+bitsandbytes
+huggingface-hub[cli]
+psutil
+pynvml
+pyyaml
+flask
+requests
