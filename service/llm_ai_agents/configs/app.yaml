@@ -1,0 +1,8 @@
+app:
+  name: "llm_ai_agents"
+  version: "1.0.0"
+  env: "development"
+  log_level: "info"
+security:
+  api_key_header: "X-API-Key"
+  jwt_secret: "${JWT_SECRET}"

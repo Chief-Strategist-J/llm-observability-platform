@@ -1,0 +1,17 @@
+model:
+  id: mistralai/Mixtral-8x7B-Instruct-v0.1
+  name: Mistral mixtral 8X7B (CPU)
+  version: mixtral
+  size: 8x7b
+  provider: local
+  backend: transformers
+  parameters:
+    temperature: 0.7
+    top_p: 0.95
+    max_tokens: 4096
+  resources:
+    min_ram_gb: 144
+    accelerator: cpu
+  quantization: none
+  device_map: cpu
+  trust_remote_code: true

@@ -1,0 +1,17 @@
+model:
+  id: 01-ai/Yi-1.5-34B-Chat
+  name: Yi v1.5 34B (CPU)
+  version: v1.5
+  size: 34b
+  provider: local
+  backend: transformers
+  parameters:
+    temperature: 0.7
+    top_p: 0.95
+    max_tokens: 4096
+  resources:
+    min_ram_gb: 120
+    accelerator: cpu
+  quantization: none
+  device_map: cpu
+  trust_remote_code: true

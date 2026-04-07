@@ -1,0 +1,18 @@
+model:
+  id: mistralai/Mistral-7B-Instruct-v0.3
+  name: Mistral v0.3 7B (GPU)
+  version: v0.3
+  size: 7b
+  provider: local
+  backend: transformers
+  parameters:
+    temperature: 0.7
+    top_p: 0.95
+    max_tokens: 4096
+  resources:
+    min_ram_gb: 16
+    min_vram_gb: 8
+    accelerator: cuda
+  quantization: 4bit
+  device_map: auto
+  trust_remote_code: true
