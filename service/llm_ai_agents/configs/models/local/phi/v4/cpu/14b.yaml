@@ -1,0 +1,17 @@
+model:
+  id: microsoft/phi-4
+  name: Phi v4 14B (CPU)
+  version: v4
+  size: 14b
+  provider: local
+  backend: transformers
+  parameters:
+    temperature: 0.7
+    top_p: 0.95
+    max_tokens: 4096
+  resources:
+    min_ram_gb: 48
+    accelerator: cpu
+  quantization: none
+  device_map: cpu
+  trust_remote_code: true

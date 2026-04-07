@@ -1,0 +1,18 @@
+model:
+  id: 01-ai/Yi-1.5-34B-Chat
+  name: Yi v1.5 34B (GPU)
+  version: v1.5
+  size: 34b
+  provider: local
+  backend: transformers
+  parameters:
+    temperature: 0.7
+    top_p: 0.95
+    max_tokens: 4096
+  resources:
+    min_ram_gb: 80
+    min_vram_gb: 24
+    accelerator: cuda
+  quantization: 4bit
+  device_map: auto
+  trust_remote_code: true
