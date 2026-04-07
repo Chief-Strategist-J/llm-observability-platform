@@ -1,0 +1,17 @@
+model:
+  id: google/gemma-2-9b-it
+  name: Gemma v2 9B (CPU)
+  version: v2
+  size: 9b
+  provider: local
+  backend: transformers
+  parameters:
+    temperature: 0.7
+    top_p: 0.95
+    max_tokens: 4096
+  resources:
+    min_ram_gb: 30
+    accelerator: cpu
+  quantization: none
+  device_map: cpu
+  trust_remote_code: true

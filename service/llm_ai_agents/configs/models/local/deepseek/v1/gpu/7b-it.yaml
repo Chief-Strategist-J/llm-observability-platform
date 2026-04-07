@@ -1,0 +1,18 @@
+model:
+  id: "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
+  name: "DeepSeek R1 Distill Qwen 7B (GPU)"
+  version: "1"
+  size: "7b"
+  provider: "local"
+  backend: "transformers"
+  parameters:
+    temperature: 0.6
+    top_p: 0.95
+    max_tokens: 8192
+  resources:
+    min_ram_gb: 12
+    min_vram_gb: 8
+    accelerator: "cuda"
+  quantization: "4bit"
+  device_map: "auto"
+  trust_remote_code: true
