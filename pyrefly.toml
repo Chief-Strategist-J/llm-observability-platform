@@ -2,3 +2,10 @@ project-includes = [
     "**/*.py*",
     "**/*.ipynb",
 ]
+
+# Add virtual environment site-packages to the search path
+python-path = [
+    "service/llm_ai_agents",
+    "service/llm_ai_agents/services/api",
+    "service/llm_ai_agents/venv/lib/python3.12/site-packages"
+]
