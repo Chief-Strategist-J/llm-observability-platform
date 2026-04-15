@@ -1,0 +1,13 @@
+Git Commit Message Rules
+- One commit = one logical change (feature, fix, refactor — not mixed)
+- Review before committing using git diff
+- Stage selectively (git add -p), avoid git add .
+- Write subject as: WHAT changed (short, ≤ 50 chars)
+- Use imperative mood (“add”, “fix”, “remove”)
+- Add body for: WHY it changed (clear reason/context)
+- Keep commits small and atomic (independent & reversible)
+- Do not commit unrelated changes together
+- Avoid vague messages (“update”, “fix stuff”)
+- Use standard types (feat, fix, refactor, docs, etc.)
+- Separate subject and body with a blank line
+- Focus on intent, not implementation details

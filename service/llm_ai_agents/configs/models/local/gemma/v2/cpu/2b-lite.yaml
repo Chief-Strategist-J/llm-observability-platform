@@ -1,0 +1,18 @@
+model:
+  id: google/gemma-2-2b-it
+  name: Gemma v2 2B (CPU Lite)
+  version: v2
+  size: 2b
+  provider: local
+  backend: transformers
+  parameters:
+    temperature: 0.7
+    top_p: 0.9
+    max_tokens: 512
+  resources:
+    min_ram_gb: 8
+    accelerator: cpu
+  quantization: int8
+  device_map: cpu
+  trust_remote_code: true
+  load_in_8bit: true

@@ -1,6 +1,6 @@
 torch
-transformers
-accelerate
+transformers>=4.42.0
+accelerate>=0.30.0
 bitsandbytes
 huggingface-hub[cli]
 psutil
@@ -8,3 +8,6 @@ pynvml
 pyyaml
 flask
 requests
+sentencepiece
+python-dotenv
+streamlit

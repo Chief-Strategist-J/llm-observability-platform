@@ -1,53 +1,95 @@
 version: "3.8"
 
+x-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "50m"
+    max-file: "5"
+
+x-gpu: &gpu
+  driver: nvidia
+  count: all
+  capabilities: [gpu]
+
 services:
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:${OLLAMA_TAG:-latest}
     container_name: ollama
+    restart: unless-stopped
     ports:
-      - "11434:11434"
+      - "127.0.0.1:11434:11434"
     volumes:
-      - ./auth_data/ollama:/root/.ollama
+      - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_HOST: "0.0.0.0"
+      OLLAMA_NUM_PARALLEL: "2"
+      OLLAMA_MAX_LOADED_MODELS: "2"
+      OLLAMA_KEEP_ALIVE: "24h"
     deploy:
       resources:
         reservations:
           devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    restart: unless-stopped
+            - <<: *gpu
+        limits:
+          memory: 48G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 30s
+      test: ["CMD", "curl", "-sf", "http://localhost:11434/api/tags"]
+      interval: 20s
       timeout: 10s
-      retries: 5
+      retries: 10
+      start_period: 60s
+    networks:
+      - llm_net
+    logging: *logging
 
   agent_runner:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CUDA_VERSION: "12.1.1"
+    image: llm-agent:${IMAGE_TAG:-latest}
     container_name: llm_agent_runner
+    restart: on-failure:5
     depends_on:
       ollama:
         condition: service_healthy
     environment:
-      - APP_TYPE=agent
-      - AGENT_ID=researcher
-      - MODEL_CONFIG=v2/gpu/9b-it
-      - HF_TOKEN=${HF_TOKEN}
-      - OLLAMA_HOST=http://ollama:11434
+      APP_TYPE: "agent"
+      AGENT_ID: "researcher"
+      MODEL_CONFIG: "v2/gpu/9b-it"
+      HF_TOKEN: "${HF_TOKEN:?HF_TOKEN is required}"
+      OLLAMA_HOST: "http://ollama:11434"
+      PYTHONUNBUFFERED: "1"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+      - ./logs:/app/logs
+      # Remove `.:/app` bind mount in production — baked into image
     deploy:
       resources:
         limits:
           memory: 32G
         reservations:
           devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    volumes:
-      - .:/app
-      - ~/.cache/huggingface:/root/.cache/huggingface
-    restart: on-failure
+            - <<: *gpu
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+    networks:
+      - llm_net
+    logging: *logging
+
+volumes:
+  ollama_data:
+    driver: local
+  hf_cache:
+    driver: local
 
 networks:
-  default:
+  llm_net:
     name: llm_platform_network
+    driver: bridge
