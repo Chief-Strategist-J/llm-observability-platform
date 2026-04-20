@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "llm-ai-agents"
+version = "0.1.0"
+requires-python = ">=3.10"
+
+[tool.pytest]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--html=reports/test-report.html",
+    "--self-contained-html",
+    "--json-report",
+    "--json-report-file=reports/test-report.json",
+    "--json-report-indent=2",
+    "--cov=services",
+    "--cov-report=html:reports/coverage",
+    "--cov-report=xml:reports/coverage.xml",
+    "--cov-report=json:reports/coverage.json",
+    "--cov-report=term-missing",
+    "--alluredir=reports/allure-results",
+    "--instafail"
+]
+
+[tool.json-report]
+report_name = "LLM Observability Platform - Test Execution Report"
+output = "reports/test-report.json"
+indent = 2
+include = ["summary", "collectors", "tests"]
+exclude = ["environment", "collectors"]

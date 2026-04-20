@@ -1,17 +1,14 @@
 from typing import Any, Dict
 from services.llm.base.llm import BaseLLM
-from services.llm.providers.local import LocalLLMProvider
+from services.llm.registry import PROVIDER_REGISTRY
+from services.shared.exceptions import ProviderNotFoundError
+
 
 class LLMFactory:
-    """Factory for creating LLM providers."""
-    
     @staticmethod
     def create(config: Dict[str, Any]) -> BaseLLM:
-        """Create an LLM provider based on config."""
-        model_config = config.get("model", {})
-        provider_type = model_config.get("provider", "local")
-        
-        if provider_type == "local":
-            return LocalLLMProvider(config)
-        else:
-            raise ValueError(f"Unsupported provider type: {provider_type}")
+        provider_type = config.get("model", {}).get("provider", "local")
+        provider_class = PROVIDER_REGISTRY.get(provider_type)
+        if provider_class is None:
+            raise ProviderNotFoundError(f"Unknown provider: {provider_type}")
+        return provider_class(config)
