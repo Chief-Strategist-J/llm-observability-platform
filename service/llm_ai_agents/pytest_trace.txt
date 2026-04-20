@@ -1,0 +1,1042 @@
+PLUGIN registered: <_pytest.config.PytestPluginManager object at 0x785973e438c0>
+PLUGIN registered: <_pytest.config.Config object at 0x785974575d60>
+PLUGIN registered: <module '_pytest.mark' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/mark/__init__.py'>
+PLUGIN registered: <module '_pytest.main' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/main.py'>
+PLUGIN registered: <module '_pytest.runner' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/runner.py'>
+PLUGIN registered: <module '_pytest.fixtures' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/fixtures.py'>
+PLUGIN registered: <module '_pytest.helpconfig' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/helpconfig.py'>
+PLUGIN registered: <module '_pytest.python' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/python.py'>
+PLUGIN registered: <module '_pytest.terminal' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/terminal.py'>
+PLUGIN registered: <module '_pytest.debugging' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/debugging.py'>
+PLUGIN registered: <module '_pytest.unittest' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/unittest.py'>
+PLUGIN registered: <module '_pytest.capture' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/capture.py'>
+PLUGIN registered: <module '_pytest.skipping' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/skipping.py'>
+PLUGIN registered: <module '_pytest.legacypath' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/legacypath.py'>
+PLUGIN registered: <module '_pytest.tmpdir' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/tmpdir.py'>
+PLUGIN registered: <module '_pytest.monkeypatch' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/monkeypatch.py'>
+PLUGIN registered: <module '_pytest.recwarn' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/recwarn.py'>
+PLUGIN registered: <module '_pytest.pastebin' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/pastebin.py'>
+PLUGIN registered: <module '_pytest.assertion' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/assertion/__init__.py'>
+PLUGIN registered: <module '_pytest.junitxml' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/junitxml.py'>
+PLUGIN registered: <module '_pytest.doctest' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/doctest.py'>
+PLUGIN registered: <module '_pytest.cacheprovider' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/cacheprovider.py'>
+PLUGIN registered: <module '_pytest.setuponly' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/setuponly.py'>
+PLUGIN registered: <module '_pytest.setupplan' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/setupplan.py'>
+PLUGIN registered: <module '_pytest.stepwise' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/stepwise.py'>
+PLUGIN registered: <module '_pytest.unraisableexception' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/unraisableexception.py'>
+PLUGIN registered: <module '_pytest.threadexception' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/threadexception.py'>
+PLUGIN registered: <module '_pytest.warnings' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/warnings.py'>
+PLUGIN registered: <module '_pytest.logging' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/logging.py'>
+PLUGIN registered: <module '_pytest.reports' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/reports.py'>
+PLUGIN registered: <module '_pytest.faulthandler' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/faulthandler.py'>
+PLUGIN registered: <module '_pytest.subtests' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/subtests.py'>
+PLUGIN registered: <module 'langsmith.pytest_plugin' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/langsmith/pytest_plugin.py'>
+PLUGIN registered: <module 'pytest_metadata.plugin' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_metadata/plugin.py'>
+PLUGIN registered: <module 'pytest_mock' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_mock/__init__.py'>
+PLUGIN registered: <module 'pytest_html.plugin' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_html/plugin.py'>
+PLUGIN registered: <module 'pytest_html.fixtures' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_html/fixtures.py'>
+PLUGIN registered: <module 'allure_pytest.plugin' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/allure_pytest/plugin.py'>
+PLUGIN registered: <module 'pytest_cov.plugin' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_cov/plugin.py'>
+PLUGIN registered: <module 'anyio.pytest_plugin' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/anyio/pytest_plugin.py'>
+PLUGIN registered: <module 'pytest_sugar' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_sugar.py'>
+PLUGIN registered: <module 'pytest_instafail' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_instafail.py'>
+PLUGIN registered: <CaptureManager _method='fd' _global_capturing=<MultiCapture out=<FDCapture 1 oldfd=13 _state='suspended' tmpfile=<_io.TextIOWrapper name="<_io.FileIO name=18 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>> err=<FDCapture 2 oldfd=21 _state='suspended' tmpfile=<_io.TextIOWrapper name="<_io.FileIO name=22 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>> in_=<FDCapture 0 oldfd=10 _state='started' tmpfile=<_io.TextIOWrapper name='/dev/null' mode='r' encoding='utf-8'>> _state='suspended' _in_suspended=False> _capture_fixture=None>
+PLUGIN registered: <pytest_cov.plugin.CovPlugin object at 0x785973abe930>
+PLUGIN registered: <module 'tests.conftest' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/tests/conftest.py'>
+PLUGIN registered: <Session  exitstatus=<ExitCode.OK: 0> testsfailed=0 testscollected=0>
+PLUGIN registered: <_pytest.cacheprovider.LFPlugin object at 0x785887897380>
+PLUGIN registered: <_pytest.cacheprovider.NFPlugin object at 0x7858882a7530>
+PLUGIN registered: <allure_pytest.listener.AllureListener object at 0x7858876e2210>
+PLUGIN registered: <pytest_html.selfcontained_report.SelfContainedReport object at 0x785887bd8f80>
+PLUGIN registered: <class '_pytest.legacypath.LegacyTmpdirPlugin'>
+PLUGIN registered: <_pytest.terminal.TerminalReporter object at 0x7858876e3bf0>
+PLUGIN registered: <_pytest.logging.LoggingPlugin object at 0x785887738200>
+PLUGIN registered: <_pytest.config.PytestPluginManager object at 0x785973e438c0>
+PLUGIN registered: <_pytest.config.Config object at 0x785974575d60>
+PLUGIN registered: <module '_pytest.mark' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/mark/__init__.py'>
+PLUGIN registered: <module '_pytest.main' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/main.py'>
+PLUGIN registered: <module '_pytest.runner' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/runner.py'>
+PLUGIN registered: <module '_pytest.fixtures' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/fixtures.py'>
+PLUGIN registered: <module '_pytest.helpconfig' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/helpconfig.py'>
+PLUGIN registered: <module '_pytest.python' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/python.py'>
+PLUGIN registered: <module '_pytest.terminal' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/terminal.py'>
+PLUGIN registered: <module '_pytest.debugging' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/debugging.py'>
+PLUGIN registered: <module '_pytest.unittest' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/unittest.py'>
+PLUGIN registered: <module '_pytest.capture' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/capture.py'>
+PLUGIN registered: <module '_pytest.skipping' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/skipping.py'>
+PLUGIN registered: <module '_pytest.legacypath' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/legacypath.py'>
+PLUGIN registered: <module '_pytest.tmpdir' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/tmpdir.py'>
+PLUGIN registered: <module '_pytest.monkeypatch' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/monkeypatch.py'>
+PLUGIN registered: <module '_pytest.recwarn' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/recwarn.py'>
+PLUGIN registered: <module '_pytest.pastebin' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/pastebin.py'>
+PLUGIN registered: <module '_pytest.assertion' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/assertion/__init__.py'>
+PLUGIN registered: <module '_pytest.junitxml' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/junitxml.py'>
+PLUGIN registered: <module '_pytest.doctest' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/doctest.py'>
+PLUGIN registered: <module '_pytest.cacheprovider' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/cacheprovider.py'>
+PLUGIN registered: <module '_pytest.setuponly' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/setuponly.py'>
+PLUGIN registered: <module '_pytest.setupplan' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/setupplan.py'>
+PLUGIN registered: <module '_pytest.stepwise' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/stepwise.py'>
+PLUGIN registered: <module '_pytest.unraisableexception' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/unraisableexception.py'>
+PLUGIN registered: <module '_pytest.threadexception' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/threadexception.py'>
+PLUGIN registered: <module '_pytest.warnings' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/warnings.py'>
+PLUGIN registered: <module '_pytest.logging' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/logging.py'>
+PLUGIN registered: <module '_pytest.reports' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/reports.py'>
+PLUGIN registered: <module '_pytest.faulthandler' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/faulthandler.py'>
+PLUGIN registered: <module '_pytest.subtests' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/subtests.py'>
+PLUGIN registered: <module 'langsmith.pytest_plugin' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/langsmith/pytest_plugin.py'>
+PLUGIN registered: <module 'pytest_metadata.plugin' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_metadata/plugin.py'>
+PLUGIN registered: <module 'pytest_mock' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_mock/__init__.py'>
+PLUGIN registered: <module 'pytest_html.plugin' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_html/plugin.py'>
+PLUGIN registered: <module 'pytest_html.fixtures' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_html/fixtures.py'>
+PLUGIN registered: <module 'allure_pytest.plugin' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/allure_pytest/plugin.py'>
+PLUGIN registered: <module 'pytest_cov.plugin' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_cov/plugin.py'>
+PLUGIN registered: <module 'anyio.pytest_plugin' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/anyio/pytest_plugin.py'>
+PLUGIN registered: <module 'pytest_sugar' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_sugar.py'>
+PLUGIN registered: <module 'pytest_instafail' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_instafail.py'>
+PLUGIN registered: <CaptureManager _method='fd' _global_capturing=<MultiCapture out=<FDCapture 1 oldfd=13 _state='suspended' tmpfile=<_io.TextIOWrapper name="<_io.FileIO name=18 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>> err=<FDCapture 2 oldfd=21 _state='suspended' tmpfile=<_io.TextIOWrapper name="<_io.FileIO name=22 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>> in_=<FDCapture 0 oldfd=10 _state='started' tmpfile=<_io.TextIOWrapper name='/dev/null' mode='r' encoding='utf-8'>> _state='suspended' _in_suspended=False> _capture_fixture=None>
+PLUGIN registered: <pytest_cov.plugin.CovPlugin object at 0x785973abe930>
+PLUGIN registered: <module 'tests.conftest' from '/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/tests/conftest.py'>
+PLUGIN registered: <Session  exitstatus=<ExitCode.OK: 0> testsfailed=0 testscollected=0>
+PLUGIN registered: <_pytest.cacheprovider.LFPlugin object at 0x785887897380>
+PLUGIN registered: <_pytest.cacheprovider.NFPlugin object at 0x7858882a7530>
+PLUGIN registered: <allure_pytest.listener.AllureListener object at 0x7858876e2210>
+PLUGIN registered: <pytest_html.selfcontained_report.SelfContainedReport object at 0x785887bd8f80>
+PLUGIN registered: <class '_pytest.legacypath.LegacyTmpdirPlugin'>
+PLUGIN registered: <_pytest.terminal.TerminalReporter object at 0x7858876e3bf0>
+PLUGIN registered: <_pytest.logging.LoggingPlugin object at 0x785887738200>
+PLUGIN registered: <pytest_instafail.InstafailingTerminalReporter object at 0x785887738830>
+PLUGIN registered: <_pytest.fixtures.FixtureManager object at 0x7858876e36b0>
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.0.3, pluggy-1.6.0 -- /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/bin/python3
+using: pytest-9.0.3
+registered third-party plugins:
+  langsmith-0.7.32 at /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/langsmith/pytest_plugin.py
+  pytest-metadata-3.1.1 at /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_metadata/plugin.py
+  pytest-mock-3.15.1 at /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_mock/__init__.py
+  pytest-html-4.2.0 at /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_html/plugin.py
+  pytest-html-4.2.0 at /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_html/fixtures.py
+  allure-pytest-2.15.3 at /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/allure_pytest/plugin.py
+  pytest-cov-7.1.0 at /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_cov/plugin.py
+  anyio-4.13.0 at /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/anyio/pytest_plugin.py
+  pytest-sugar-1.1.1 at /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_sugar.py
+  pytest-instafail-0.5.0 at /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_instafail.py
+active plugins:
+    132325591759040     : <_pytest.config.PytestPluginManager object at 0x785973e438c0>
+    pytestconfig        : <_pytest.config.Config object at 0x785974575d60>
+    mark                : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/mark/__init__.py
+    main                : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/main.py
+    runner              : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/runner.py
+    fixtures            : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/fixtures.py
+    helpconfig          : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/helpconfig.py
+    python              : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/python.py
+    terminal            : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/terminal.py
+    debugging           : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/debugging.py
+    unittest            : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/unittest.py
+    capture             : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/capture.py
+    skipping            : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/skipping.py
+    legacypath          : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/legacypath.py
+    tmpdir              : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/tmpdir.py
+    monkeypatch         : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/monkeypatch.py
+    recwarn             : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/recwarn.py
+    pastebin            : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/pastebin.py
+    assertion           : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/assertion/__init__.py
+    junitxml            : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/junitxml.py
+    doctest             : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/doctest.py
+    cacheprovider       : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/cacheprovider.py
+    setuponly           : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/setuponly.py
+    setupplan           : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/setupplan.py
+    stepwise            : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/stepwise.py
+    unraisableexception : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/unraisableexception.py
+    threadexception     : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/threadexception.py
+    warnings            : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/warnings.py
+    logging             : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/logging.py
+    reports             : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/reports.py
+    faulthandler        : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/faulthandler.py
+    subtests            : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/_pytest/subtests.py
+    langsmith_plugin    : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/langsmith/pytest_plugin.py
+    metadata            : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_metadata/plugin.py
+    pytest_mock         : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_mock/__init__.py
+    html                : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_html/plugin.py
+    html_fixtures       : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_html/fixtures.py
+    allure_pytest       : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/allure_pytest/plugin.py
+    pytest_cov          : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_cov/plugin.py
+    anyio               : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/anyio/pytest_plugin.py
+    sugar               : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_sugar.py
+    instafail           : /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/pytest_instafail.py
+    capturemanager      : <CaptureManager _method='fd' _global_capturing=<MultiCapture out=<FDCapture 1 oldfd=13 _state='suspended' tmpfile=<_io.TextIOWrapper name="<_io.FileIO name=18 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>> err=<FDCapture 2 oldfd=21 _state='suspended' tmpfile=<_io.TextIOWrapper name="<_io.FileIO name=22 mode='rb+' closefd=True>" mode='r+' encoding='utf-8'>> in_=<FDCapture 0 oldfd=10 _state='started' tmpfile=<_io.TextIOWrapper name='/dev/null' mode='r' encoding='utf-8'>> _state='suspended' _in_suspended=False> _capture_fixture=None>
+    _cov                : <pytest_cov.plugin.CovPlugin object at 0x785973abe930>
+    /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/tests/conftest.py: /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/tests/conftest.py
+    session             : <Session  exitstatus=<ExitCode.OK: 0> testsfailed=0 testscollected=0>
+    lfplugin            : <_pytest.cacheprovider.LFPlugin object at 0x785887897380>
+    nfplugin            : <_pytest.cacheprovider.NFPlugin object at 0x7858882a7530>
+    allure_listener     : <allure_pytest.listener.AllureListener object at 0x7858876e2210>
+    132321629802368     : <pytest_html.selfcontained_report.SelfContainedReport object at 0x785887bd8f80>
+    legacypath-tmpdir   : <class '_pytest.legacypath.LegacyTmpdirPlugin'>
+    logging-plugin      : <_pytest.logging.LoggingPlugin object at 0x785887738200>
+    terminalreporter    : <pytest_instafail.InstafailingTerminalReporter object at 0x785887738830>
+    funcmanage          : <_pytest.fixtures.FixtureManager object at 0x7858876e36b0>
+cachedir: .pytest_cache
+metadata: {'Python': '3.12.3', 'Platform': 'Linux-6.8.0-110-generic-x86_64-with-glibc2.39', 'Packages': {'pytest': '9.0.3', 'pluggy': '1.6.0'}, 'Plugins': {'langsmith': '0.7.32', 'metadata': '3.1.1', 'mock': '3.15.1', 'html': '4.2.0', 'allure-pytest': '2.15.3', 'cov': '7.1.0', 'anyio': '4.13.0', 'sugar': '1.1.1', 'instafail': '0.5.0'}, 'Project Name': 'LLM AI Agents Platform', 'Architecture': 'Hexagonal (Ports & Adapters)', 'Observability': 'LangSmith Tracing', 'Vector Store': 'ChromaDB'}
+rootdir: /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents
+configfile: pyproject.toml
+testpaths: tests
+plugins: langsmith-0.7.32, metadata-3.1.1, mock-3.15.1, html-4.2.0, allure-pytest-2.15.3, cov-7.1.0, anyio-4.13.0, sugar-1.1.1, instafail-0.5.0
+collecting ... collected 114 items
+
+tests/integration/api/test_agents_routes.py::test_run_agent_success ERROR [  0%]
+___________________ ERROR at setup of test_run_agent_success ___________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/integration/api/test_agents_routes.py::test_list_agents ERROR      [  1%]
+______________________ ERROR at setup of test_list_agents ______________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/integration/api/test_agents_routes.py::test_agent_types ERROR      [  2%]
+______________________ ERROR at setup of test_agent_types ______________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/integration/api/test_chat_routes.py::test_chat_completions_success ERROR [  3%]
+_______________ ERROR at setup of test_chat_completions_success ________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/integration/api/test_chat_routes.py::test_chat_simple_success ERROR [  4%]
+__________________ ERROR at setup of test_chat_simple_success __________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/integration/api/test_chat_routes.py::test_chat_no_prompt_error ERROR [  5%]
+_________________ ERROR at setup of test_chat_no_prompt_error __________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/integration/api/test_rag_routes.py::test_rag_ingest_success ERROR  [  6%]
+__________________ ERROR at setup of test_rag_ingest_success ___________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/integration/api/test_rag_routes.py::test_rag_query_success ERROR   [  7%]
+___________________ ERROR at setup of test_rag_query_success ___________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/integration/api/test_rag_routes.py::test_rag_list_collections ERROR [  7%]
+_________________ ERROR at setup of test_rag_list_collections __________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/integration/api/test_rag_routes.py::test_rag_delete_collection ERROR [  8%]
+_________________ ERROR at setup of test_rag_delete_collection _________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_chat_agent.py::test_run_returns_agent_output ERROR [  9%]
+_______________ ERROR at setup of test_run_returns_agent_output ________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_chat_agent.py::test_run_returns_llm_response_text ERROR [ 10%]
+_____________ ERROR at setup of test_run_returns_llm_response_text _____________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_chat_agent.py::test_run_calls_llm_generate ERROR  [ 11%]
+________________ ERROR at setup of test_run_calls_llm_generate _________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_chat_agent.py::test_run_includes_user_message_in_prompt ERROR [ 12%]
+__________ ERROR at setup of test_run_includes_user_message_in_prompt __________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_chat_agent.py::test_run_builds_session_history ERROR [ 13%]
+______________ ERROR at setup of test_run_builds_session_history _______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_chat_agent.py::test_run_separate_sessions_do_not_share_history ERROR [ 14%]
+______ ERROR at setup of test_run_separate_sessions_do_not_share_history _______
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_chat_agent.py::test_run_empty_session_id_uses_default_bucket ERROR [ 14%]
+_______ ERROR at setup of test_run_empty_session_id_uses_default_bucket ________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_chat_agent.py::test_sources_empty_for_chat_agent ERROR [ 15%]
+_____________ ERROR at setup of test_sources_empty_for_chat_agent ______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_rag_agent.py::test_run_returns_agent_output ERROR [ 16%]
+_______________ ERROR at setup of test_run_returns_agent_output ________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_rag_agent.py::test_run_answer_comes_from_llm ERROR [ 17%]
+_______________ ERROR at setup of test_run_answer_comes_from_llm _______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_rag_agent.py::test_run_sources_populated_from_retriever ERROR [ 18%]
+_________ ERROR at setup of test_run_sources_populated_from_retriever __________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_rag_agent.py::test_run_uses_collection_from_input ERROR [ 19%]
+____________ ERROR at setup of test_run_uses_collection_from_input _____________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_rag_agent.py::test_run_metadata_includes_chunks_retrieved ERROR [ 20%]
+________ ERROR at setup of test_run_metadata_includes_chunks_retrieved _________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_rag_agent.py::test_run_calls_llm_exactly_once ERROR [ 21%]
+______________ ERROR at setup of test_run_calls_llm_exactly_once _______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_registries.py::test_register_and_get_by_name ERROR [ 21%]
+_______________ ERROR at setup of test_register_and_get_by_name ________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_registries.py::test_get_all_returns_all_registered ERROR [ 22%]
+____________ ERROR at setup of test_get_all_returns_all_registered _____________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_registries.py::test_names_returns_all_tool_names ERROR [ 23%]
+_____________ ERROR at setup of test_names_returns_all_tool_names ______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_registries.py::test_get_unknown_tool_returns_none ERROR [ 24%]
+_____________ ERROR at setup of test_get_unknown_tool_returns_none _____________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_registries.py::test_register_overwrites_by_name ERROR [ 25%]
+______________ ERROR at setup of test_register_overwrites_by_name ______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_registries.py::test_empty_registry_get_all_returns_empty_list ERROR [ 26%]
+_______ ERROR at setup of test_empty_registry_get_all_returns_empty_list _______
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_registries.py::test_agents_registry_maps_all_types ERROR [ 27%]
+____________ ERROR at setup of test_agents_registry_maps_all_types _____________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_registries.py::test_agent_descriptions_match_registry_keys ERROR [ 28%]
+________ ERROR at setup of test_agent_descriptions_match_registry_keys _________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_research_agent.py::test_run_without_tools_falls_back_to_direct_llm ERROR [ 28%]
+______ ERROR at setup of test_run_without_tools_falls_back_to_direct_llm _______
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_research_agent.py::test_run_returns_agent_output ERROR [ 29%]
+_______________ ERROR at setup of test_run_returns_agent_output ________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_research_agent.py::test_run_with_langchain_llm_none_uses_fallback ERROR [ 30%]
+_______ ERROR at setup of test_run_with_langchain_llm_none_uses_fallback _______
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_research_agent.py::test_tool_registry_names_returns_list ERROR [ 31%]
+___________ ERROR at setup of test_tool_registry_names_returns_list ____________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_research_agent.py::test_tool_registry_get_all_empty_by_default ERROR [ 32%]
+________ ERROR at setup of test_tool_registry_get_all_empty_by_default _________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/agents/test_research_agent.py::test_research_agent_uses_input_text_in_llm_call ERROR [ 33%]
+______ ERROR at setup of test_research_agent_uses_input_text_in_llm_call _______
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/llm/test_factory.py::test_factory_raises_for_unknown_provider ERROR [ 34%]
+__________ ERROR at setup of test_factory_raises_for_unknown_provider __________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/llm/test_factory.py::test_factory_instantiates_correct_provider[openai] ERROR [ 35%]
+_____ ERROR at setup of test_factory_instantiates_correct_provider[openai] _____
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/llm/test_factory.py::test_factory_instantiates_correct_provider[anthropic] ERROR [ 35%]
+___ ERROR at setup of test_factory_instantiates_correct_provider[anthropic] ____
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/llm/test_factory.py::test_factory_instantiates_correct_provider[gemini] ERROR [ 36%]
+_____ ERROR at setup of test_factory_instantiates_correct_provider[gemini] _____
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/llm/test_factory.py::test_factory_instantiates_correct_provider[grok] ERROR [ 37%]
+______ ERROR at setup of test_factory_instantiates_correct_provider[grok] ______
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/llm/test_factory.py::test_factory_instantiates_correct_provider[mistral] ERROR [ 38%]
+____ ERROR at setup of test_factory_instantiates_correct_provider[mistral] _____
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/llm/test_factory.py::test_factory_instantiates_correct_provider[huggingface] ERROR [ 39%]
+__ ERROR at setup of test_factory_instantiates_correct_provider[huggingface] ___
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/llm/test_factory.py::test_factory_passes_full_config_to_provider ERROR [ 40%]
+________ ERROR at setup of test_factory_passes_full_config_to_provider _________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/llm/test_providers.py::test_openai_generate_returns_llm_content ERROR [ 41%]
+__________ ERROR at setup of test_openai_generate_returns_llm_content __________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/llm/test_providers.py::test_openai_stream_generate_yields_tokens ERROR [ 42%]
+_________ ERROR at setup of test_openai_stream_generate_yields_tokens __________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/llm/test_providers.py::test_openai_uses_correct_model_id ERROR [ 42%]
+_____________ ERROR at setup of test_openai_uses_correct_model_id ______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/llm/test_registry.py::test_registry_contains_all_expected_providers ERROR [ 43%]
+_______ ERROR at setup of test_registry_contains_all_expected_providers ________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/llm/test_registry.py::test_all_registered_classes_are_subclasses_of_base_llm ERROR [ 44%]
+___ ERROR at setup of test_all_registered_classes_are_subclasses_of_base_llm ___
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/llm/test_registry.py::test_registry_values_are_classes_not_instances ERROR [ 45%]
+_______ ERROR at setup of test_registry_values_are_classes_not_instances _______
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/llm/test_registry.py::test_adding_new_provider_to_registry ERROR [ 46%]
+____________ ERROR at setup of test_adding_new_provider_to_registry ____________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/orchestrator/test_context_manager.py::test_session_context_initialization ERROR [ 47%]
+____________ ERROR at setup of test_session_context_initialization _____________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/orchestrator/test_context_manager.py::test_session_context_default_collection ERROR [ 48%]
+__________ ERROR at setup of test_session_context_default_collection ___________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/orchestrator/test_executor.py::test_execute_invalid_provider ERROR [ 49%]
+_______________ ERROR at setup of test_execute_invalid_provider ________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/orchestrator/test_executor.py::test_execute_invalid_agent_type ERROR [ 50%]
+______________ ERROR at setup of test_execute_invalid_agent_type _______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/orchestrator/test_executor.py::test_execute_chat_agent ERROR  [ 50%]
+__________________ ERROR at setup of test_execute_chat_agent ___________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/orchestrator/test_executor.py::test_execute_rag_agent ERROR   [ 51%]
+___________________ ERROR at setup of test_execute_rag_agent ___________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/orchestrator/test_router.py::test_resolve_agent_type_explicit ERROR [ 52%]
+______________ ERROR at setup of test_resolve_agent_type_explicit ______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/orchestrator/test_router.py::test_resolve_agent_type_auto_rag ERROR [ 53%]
+______________ ERROR at setup of test_resolve_agent_type_auto_rag ______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/orchestrator/test_router.py::test_resolve_agent_type_auto_research ERROR [ 54%]
+___________ ERROR at setup of test_resolve_agent_type_auto_research ____________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/orchestrator/test_router.py::test_resolve_agent_type_auto_default_chat ERROR [ 55%]
+_________ ERROR at setup of test_resolve_agent_type_auto_default_chat __________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/orchestrator/test_router.py::test_build_context ERROR         [ 56%]
+_____________________ ERROR at setup of test_build_context _____________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_chunker.py::test_split_long_document_produces_multiple_chunks ERROR [ 57%]
+_____ ERROR at setup of test_split_long_document_produces_multiple_chunks ______
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_chunker.py::test_split_short_document_produces_single_chunk ERROR [ 57%]
+______ ERROR at setup of test_split_short_document_produces_single_chunk _______
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_chunker.py::test_split_preserves_metadata ERROR      [ 58%]
+_______________ ERROR at setup of test_split_preserves_metadata ________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_chunker.py::test_split_empty_document_returns_empty ERROR [ 59%]
+__________ ERROR at setup of test_split_empty_document_returns_empty ___________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_chunker.py::test_chunk_overlap_causes_content_repetition ERROR [ 60%]
+________ ERROR at setup of test_chunk_overlap_causes_content_repetition ________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_chunker.py::test_multiple_documents_all_split ERROR  [ 61%]
+_____________ ERROR at setup of test_multiple_documents_all_split ______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_ingestion_pipeline.py::test_ingest_text_stores_chunks ERROR [ 62%]
+_______________ ERROR at setup of test_ingest_text_stores_chunks _______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_ingestion_pipeline.py::test_ingest_text_returns_chunk_count ERROR [ 63%]
+____________ ERROR at setup of test_ingest_text_returns_chunk_count ____________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_ingestion_pipeline.py::test_ingest_text_with_metadata ERROR [ 64%]
+_______________ ERROR at setup of test_ingest_text_with_metadata _______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_ingestion_pipeline.py::test_ingest_url_delegates_to_loader ERROR [ 64%]
+____________ ERROR at setup of test_ingest_url_delegates_to_loader _____________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_ingestion_pipeline.py::test_ingest_file_real_file ERROR [ 65%]
+_________________ ERROR at setup of test_ingest_file_real_file _________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_ingestion_pipeline.py::test_ingest_url_wraps_error_in_rag_ingestion_error ERROR [ 66%]
+_____ ERROR at setup of test_ingest_url_wraps_error_in_rag_ingestion_error _____
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_loader.py::test_from_text_returns_one_document ERROR [ 67%]
+____________ ERROR at setup of test_from_text_returns_one_document _____________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_loader.py::test_from_text_attaches_metadata ERROR    [ 68%]
+______________ ERROR at setup of test_from_text_attaches_metadata ______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_loader.py::test_from_text_empty_metadata_defaults_to_empty_dict ERROR [ 69%]
+____ ERROR at setup of test_from_text_empty_metadata_defaults_to_empty_dict ____
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_loader.py::test_from_url_delegates_to_web_base_loader ERROR [ 70%]
+_________ ERROR at setup of test_from_url_delegates_to_web_base_loader _________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_loader.py::test_from_file_delegates_to_text_loader ERROR [ 71%]
+__________ ERROR at setup of test_from_file_delegates_to_text_loader ___________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_loader.py::test_from_url_propagates_loader_error ERROR [ 71%]
+___________ ERROR at setup of test_from_url_propagates_loader_error ____________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_rag_service.py::test_query_calls_retriever_with_correct_args ERROR [ 72%]
+________ ERROR at setup of test_query_calls_retriever_with_correct_args ________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_rag_service.py::test_query_passes_retrieved_context_to_llm ERROR [ 73%]
+_________ ERROR at setup of test_query_passes_retrieved_context_to_llm _________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_rag_service.py::test_query_returns_correct_answer ERROR [ 74%]
+_____________ ERROR at setup of test_query_returns_correct_answer ______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_rag_service.py::test_query_returns_sources ERROR     [ 75%]
+_________________ ERROR at setup of test_query_returns_sources _________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_rag_service.py::test_query_returns_chunks_retrieved_count ERROR [ 76%]
+_________ ERROR at setup of test_query_returns_chunks_retrieved_count __________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_rag_service.py::test_ingest_text_delegates_to_pipeline ERROR [ 77%]
+___________ ERROR at setup of test_ingest_text_delegates_to_pipeline ___________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_rag_service.py::test_delete_collection_delegates_to_store ERROR [ 78%]
+_________ ERROR at setup of test_delete_collection_delegates_to_store __________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_rag_service.py::test_list_collections_returns_known_collections ERROR [ 78%]
+______ ERROR at setup of test_list_collections_returns_known_collections _______
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_reranker.py::test_rerank_returns_top_k_documents ERROR [ 79%]
+____________ ERROR at setup of test_rerank_returns_top_k_documents _____________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_reranker.py::test_rerank_orders_by_descending_score ERROR [ 80%]
+___________ ERROR at setup of test_rerank_orders_by_descending_score ___________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_reranker.py::test_rerank_empty_input_returns_empty ERROR [ 81%]
+___________ ERROR at setup of test_rerank_empty_input_returns_empty ____________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_reranker.py::test_rerank_top_k_greater_than_docs_returns_all ERROR [ 82%]
+______ ERROR at setup of test_rerank_top_k_greater_than_docs_returns_all _______
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/rag/test_reranker.py::test_rerank_single_document ERROR       [ 83%]
+________________ ERROR at setup of test_rerank_single_document _________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/shared/test_cache.py::test_set_and_get_returns_value ERROR    [ 84%]
+_______________ ERROR at setup of test_set_and_get_returns_value _______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/shared/test_cache.py::test_get_missing_key_returns_none ERROR [ 85%]
+_____________ ERROR at setup of test_get_missing_key_returns_none ______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/shared/test_cache.py::test_set_overwrites_existing_key ERROR  [ 85%]
+______________ ERROR at setup of test_set_overwrites_existing_key ______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/shared/test_cache.py::test_clear_removes_all_entries ERROR    [ 86%]
+_______________ ERROR at setup of test_clear_removes_all_entries _______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/shared/test_cache.py::test_thread_safe_concurrent_writes ERROR [ 87%]
+_____________ ERROR at setup of test_thread_safe_concurrent_writes _____________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/shared/test_cache.py::test_stores_arbitrary_objects ERROR     [ 88%]
+_______________ ERROR at setup of test_stores_arbitrary_objects ________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/shared/test_config_loader.py::test_load_valid_yaml ERROR      [ 89%]
+____________________ ERROR at setup of test_load_valid_yaml ____________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/shared/test_config_loader.py::test_load_empty_yaml_returns_empty_dict ERROR [ 90%]
+__________ ERROR at setup of test_load_empty_yaml_returns_empty_dict ___________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/shared/test_config_loader.py::test_missing_file_raises_config_not_found ERROR [ 91%]
+_________ ERROR at setup of test_missing_file_raises_config_not_found __________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/shared/test_config_loader.py::test_nested_yaml_structure ERROR [ 92%]
+_________________ ERROR at setup of test_nested_yaml_structure _________________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/shared/test_exceptions.py::test_provider_not_found_is_exception ERROR [ 92%]
+____________ ERROR at setup of test_provider_not_found_is_exception ____________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/shared/test_exceptions.py::test_rag_ingestion_error_carries_message ERROR [ 93%]
+__________ ERROR at setup of test_rag_ingestion_error_carries_message __________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/shared/test_exceptions.py::test_agent_execution_error_is_exception ERROR [ 94%]
+__________ ERROR at setup of test_agent_execution_error_is_exception ___________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/shared/test_exceptions.py::test_config_not_found_carries_path ERROR [ 95%]
+_____________ ERROR at setup of test_config_not_found_carries_path _____________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/shared/test_exceptions.py::test_collection_not_found_is_exception ERROR [ 96%]
+___________ ERROR at setup of test_collection_not_found_is_exception ___________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/shared/test_exceptions.py::test_all_exceptions_are_subclasses_of_exception ERROR [ 97%]
+______ ERROR at setup of test_all_exceptions_are_subclasses_of_exception _______
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/shared/test_logging.py::test_does_nothing_when_no_api_key ERROR [ 98%]
+_____________ ERROR at setup of test_does_nothing_when_no_api_key ______________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/shared/test_logging.py::test_sets_tracing_env_vars_when_key_present ERROR [ 99%]
+________ ERROR at setup of test_sets_tracing_env_vars_when_key_present _________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+tests/unit/shared/test_logging.py::test_does_not_override_existing_project ERROR [100%]
+__________ ERROR at setup of test_does_not_override_existing_project ___________
+tests/conftest.py:48: in setup_logging
+    from services.shared.logging import setup_tracing
+E   ImportError: cannot import name 'setup_tracing' from 'services.shared.logging' (/home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/services/shared/logging.py)
+
+=============================== warnings summary ===============================
+venv/lib/python3.12/site-packages/torch/cuda/__init__.py:61
+  /home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/venv/lib/python3.12/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+    import pynvml  # type: ignore[import]
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.12.3-final-0 ________________
+
+Name                                                Stmts   Miss  Cover   Missing
+---------------------------------------------------------------------------------
+services/agents/base/agent.py                          21      2    90%   24, 28
+services/agents/implementations/chat_agent.py          18     11    39%   9-10, 13-28
+services/agents/implementations/rag_agent.py           10      4    60%   8-9, 12-17
+services/agents/implementations/research_agent.py      24     12    50%   31-33, 36-45
+services/agents/registry.py                             7      0   100%
+services/agents/tools/db_tool.py                        4      1    75%   7
+services/agents/tools/github_tool.py                    4      1    75%   7
+services/agents/tools/slack_tool.py                     4      1    75%   7
+services/agents/tools/tool_registry.py                 13      5    62%   7, 10, 13, 16, 19
+services/llm/base/llm.py                               23      9    61%   8-11, 16, 21, 26, 31, 36
+services/llm/factory.py                                12      5    58%   10-14
+services/llm/providers/anthropic.py                    23     11    52%   10-12, 20, 23-24, 27-28, 31-32, 35
+services/llm/providers/gemini.py                       23     11    52%   10-12, 20, 23-24, 27-28, 31-32, 35
+services/llm/providers/grok.py                         24     11    54%   12-14, 23, 26-27, 30-31, 34-35, 38
+services/llm/providers/huggingface.py                  22     10    55%   12-14, 22, 25-26, 29, 32-33, 36
+services/llm/providers/local.py                        97     82    15%   14-24, 28-72, 75-121, 125-165, 169-171, 175-179, 183-186
+services/llm/providers/mistral.py                      23     11    52%   10-12, 20, 23-24, 27-28, 31-32, 35
+services/llm/providers/openai.py                       23     11    52%   10-12, 20, 23-24, 27-28, 31-32, 35
+services/llm/registry.py                               10      0   100%
+services/orchestrator/context_manager.py                9      0   100%
+services/orchestrator/executor.py                      53     33    38%   18-22, 26-33, 37-46, 51-52, 55-83
+services/orchestrator/router.py                        13      8    38%   15-21, 30
+services/rag/api/rag_service.py                        31     17    45%   26-29, 32-36, 46-51, 58, 61
+services/rag/ingestion/chunker.py                       8      2    75%   8, 14
+services/rag/ingestion/loader.py                       11      3    73%   9, 12, 15
+services/rag/ingestion/pipeline.py                     35     24    31%   11-13, 16-22, 25-31, 34-40
+services/rag/ports/__init__.py                          0      0   100%
+services/rag/ports/document_store.py                   13      3    77%   9, 13, 17
+services/rag/ports/embedder.py                          9      2    78%   8, 12
+services/rag/ports/retriever.py                         7      1    86%   9
+services/rag/retrieval/reranker.py                     13      7    46%   8, 11-16
+services/shared/cache.py                               15      5    67%   11, 14-15, 18-19
+services/shared/config_loader.py                       12      6    50%   8, 14-18
+services/shared/exceptions.py                          10      0   100%
+services/shared/logging.py                              9      7    22%   5-11
+---------------------------------------------------------------------------------
+TOTAL                                                 633    316    50%
+Coverage HTML written to dir reports/coverage
+- Generated html report: file:///home/btpl-lap-07/prod/llm-observability-platform/service/llm_ai_agents/reports/test-report.html -
+=========================== short test summary info ============================
+ERROR tests/integration/api/test_agents_routes.py::test_run_agent_success - I...
+ERROR tests/integration/api/test_agents_routes.py::test_list_agents - ImportE...
+ERROR tests/integration/api/test_agents_routes.py::test_agent_types - ImportE...
+ERROR tests/integration/api/test_chat_routes.py::test_chat_completions_success
+ERROR tests/integration/api/test_chat_routes.py::test_chat_simple_success - I...
+ERROR tests/integration/api/test_chat_routes.py::test_chat_no_prompt_error - ...
+ERROR tests/integration/api/test_rag_routes.py::test_rag_ingest_success - Imp...
+ERROR tests/integration/api/test_rag_routes.py::test_rag_query_success - Impo...
+ERROR tests/integration/api/test_rag_routes.py::test_rag_list_collections - I...
+ERROR tests/integration/api/test_rag_routes.py::test_rag_delete_collection - ...
+ERROR tests/unit/agents/test_chat_agent.py::test_run_returns_agent_output - I...
+ERROR tests/unit/agents/test_chat_agent.py::test_run_returns_llm_response_text
+ERROR tests/unit/agents/test_chat_agent.py::test_run_calls_llm_generate - Imp...
+ERROR tests/unit/agents/test_chat_agent.py::test_run_includes_user_message_in_prompt
+ERROR tests/unit/agents/test_chat_agent.py::test_run_builds_session_history
+ERROR tests/unit/agents/test_chat_agent.py::test_run_separate_sessions_do_not_share_history
+ERROR tests/unit/agents/test_chat_agent.py::test_run_empty_session_id_uses_default_bucket
+ERROR tests/unit/agents/test_chat_agent.py::test_sources_empty_for_chat_agent
+ERROR tests/unit/agents/test_rag_agent.py::test_run_returns_agent_output - Im...
+ERROR tests/unit/agents/test_rag_agent.py::test_run_answer_comes_from_llm - I...
+ERROR tests/unit/agents/test_rag_agent.py::test_run_sources_populated_from_retriever
+ERROR tests/unit/agents/test_rag_agent.py::test_run_uses_collection_from_input
+ERROR tests/unit/agents/test_rag_agent.py::test_run_metadata_includes_chunks_retrieved
+ERROR tests/unit/agents/test_rag_agent.py::test_run_calls_llm_exactly_once - ...
+ERROR tests/unit/agents/test_registries.py::test_register_and_get_by_name - I...
+ERROR tests/unit/agents/test_registries.py::test_get_all_returns_all_registered
+ERROR tests/unit/agents/test_registries.py::test_names_returns_all_tool_names
+ERROR tests/unit/agents/test_registries.py::test_get_unknown_tool_returns_none
+ERROR tests/unit/agents/test_registries.py::test_register_overwrites_by_name
+ERROR tests/unit/agents/test_registries.py::test_empty_registry_get_all_returns_empty_list
+ERROR tests/unit/agents/test_registries.py::test_agents_registry_maps_all_types
+ERROR tests/unit/agents/test_registries.py::test_agent_descriptions_match_registry_keys
+ERROR tests/unit/agents/test_research_agent.py::test_run_without_tools_falls_back_to_direct_llm
+ERROR tests/unit/agents/test_research_agent.py::test_run_returns_agent_output
+ERROR tests/unit/agents/test_research_agent.py::test_run_with_langchain_llm_none_uses_fallback
+ERROR tests/unit/agents/test_research_agent.py::test_tool_registry_names_returns_list
+ERROR tests/unit/agents/test_research_agent.py::test_tool_registry_get_all_empty_by_default
+ERROR tests/unit/agents/test_research_agent.py::test_research_agent_uses_input_text_in_llm_call
+ERROR tests/unit/llm/test_factory.py::test_factory_raises_for_unknown_provider
+ERROR tests/unit/llm/test_factory.py::test_factory_instantiates_correct_provider[openai]
+ERROR tests/unit/llm/test_factory.py::test_factory_instantiates_correct_provider[anthropic]
+ERROR tests/unit/llm/test_factory.py::test_factory_instantiates_correct_provider[gemini]
+ERROR tests/unit/llm/test_factory.py::test_factory_instantiates_correct_provider[grok]
+ERROR tests/unit/llm/test_factory.py::test_factory_instantiates_correct_provider[mistral]
+ERROR tests/unit/llm/test_factory.py::test_factory_instantiates_correct_provider[huggingface]
+ERROR tests/unit/llm/test_factory.py::test_factory_passes_full_config_to_provider
+ERROR tests/unit/llm/test_providers.py::test_openai_generate_returns_llm_content
+ERROR tests/unit/llm/test_providers.py::test_openai_stream_generate_yields_tokens
+ERROR tests/unit/llm/test_providers.py::test_openai_uses_correct_model_id - I...
+ERROR tests/unit/llm/test_registry.py::test_registry_contains_all_expected_providers
+ERROR tests/unit/llm/test_registry.py::test_all_registered_classes_are_subclasses_of_base_llm
+ERROR tests/unit/llm/test_registry.py::test_registry_values_are_classes_not_instances
+ERROR tests/unit/llm/test_registry.py::test_adding_new_provider_to_registry
+ERROR tests/unit/orchestrator/test_context_manager.py::test_session_context_initialization
+ERROR tests/unit/orchestrator/test_context_manager.py::test_session_context_default_collection
+ERROR tests/unit/orchestrator/test_executor.py::test_execute_invalid_provider
+ERROR tests/unit/orchestrator/test_executor.py::test_execute_invalid_agent_type
+ERROR tests/unit/orchestrator/test_executor.py::test_execute_chat_agent - Imp...
+ERROR tests/unit/orchestrator/test_executor.py::test_execute_rag_agent - Impo...
+ERROR tests/unit/orchestrator/test_router.py::test_resolve_agent_type_explicit
+ERROR tests/unit/orchestrator/test_router.py::test_resolve_agent_type_auto_rag
+ERROR tests/unit/orchestrator/test_router.py::test_resolve_agent_type_auto_research
+ERROR tests/unit/orchestrator/test_router.py::test_resolve_agent_type_auto_default_chat
+ERROR tests/unit/orchestrator/test_router.py::test_build_context - ImportErro...
+ERROR tests/unit/rag/test_chunker.py::test_split_long_document_produces_multiple_chunks
+ERROR tests/unit/rag/test_chunker.py::test_split_short_document_produces_single_chunk
+ERROR tests/unit/rag/test_chunker.py::test_split_preserves_metadata - ImportE...
+ERROR tests/unit/rag/test_chunker.py::test_split_empty_document_returns_empty
+ERROR tests/unit/rag/test_chunker.py::test_chunk_overlap_causes_content_repetition
+ERROR tests/unit/rag/test_chunker.py::test_multiple_documents_all_split - Imp...
+ERROR tests/unit/rag/test_ingestion_pipeline.py::test_ingest_text_stores_chunks
+ERROR tests/unit/rag/test_ingestion_pipeline.py::test_ingest_text_returns_chunk_count
+ERROR tests/unit/rag/test_ingestion_pipeline.py::test_ingest_text_with_metadata
+ERROR tests/unit/rag/test_ingestion_pipeline.py::test_ingest_url_delegates_to_loader
+ERROR tests/unit/rag/test_ingestion_pipeline.py::test_ingest_file_real_file
+ERROR tests/unit/rag/test_ingestion_pipeline.py::test_ingest_url_wraps_error_in_rag_ingestion_error
+ERROR tests/unit/rag/test_loader.py::test_from_text_returns_one_document - Im...
+ERROR tests/unit/rag/test_loader.py::test_from_text_attaches_metadata - Impor...
+ERROR tests/unit/rag/test_loader.py::test_from_text_empty_metadata_defaults_to_empty_dict
+ERROR tests/unit/rag/test_loader.py::test_from_url_delegates_to_web_base_loader
+ERROR tests/unit/rag/test_loader.py::test_from_file_delegates_to_text_loader
+ERROR tests/unit/rag/test_loader.py::test_from_url_propagates_loader_error - ...
+ERROR tests/unit/rag/test_rag_service.py::test_query_calls_retriever_with_correct_args
+ERROR tests/unit/rag/test_rag_service.py::test_query_passes_retrieved_context_to_llm
+ERROR tests/unit/rag/test_rag_service.py::test_query_returns_correct_answer
+ERROR tests/unit/rag/test_rag_service.py::test_query_returns_sources - Import...
+ERROR tests/unit/rag/test_rag_service.py::test_query_returns_chunks_retrieved_count
+ERROR tests/unit/rag/test_rag_service.py::test_ingest_text_delegates_to_pipeline
+ERROR tests/unit/rag/test_rag_service.py::test_delete_collection_delegates_to_store
+ERROR tests/unit/rag/test_rag_service.py::test_list_collections_returns_known_collections
+ERROR tests/unit/rag/test_reranker.py::test_rerank_returns_top_k_documents - ...
+ERROR tests/unit/rag/test_reranker.py::test_rerank_orders_by_descending_score
+ERROR tests/unit/rag/test_reranker.py::test_rerank_empty_input_returns_empty
+ERROR tests/unit/rag/test_reranker.py::test_rerank_top_k_greater_than_docs_returns_all
+ERROR tests/unit/rag/test_reranker.py::test_rerank_single_document - ImportEr...
+ERROR tests/unit/shared/test_cache.py::test_set_and_get_returns_value - Impor...
+ERROR tests/unit/shared/test_cache.py::test_get_missing_key_returns_none - Im...
+ERROR tests/unit/shared/test_cache.py::test_set_overwrites_existing_key - Imp...
+ERROR tests/unit/shared/test_cache.py::test_clear_removes_all_entries - Impor...
+ERROR tests/unit/shared/test_cache.py::test_thread_safe_concurrent_writes - I...
+ERROR tests/unit/shared/test_cache.py::test_stores_arbitrary_objects - Import...
+ERROR tests/unit/shared/test_config_loader.py::test_load_valid_yaml - ImportE...
+ERROR tests/unit/shared/test_config_loader.py::test_load_empty_yaml_returns_empty_dict
+ERROR tests/unit/shared/test_config_loader.py::test_missing_file_raises_config_not_found
+ERROR tests/unit/shared/test_config_loader.py::test_nested_yaml_structure - I...
+ERROR tests/unit/shared/test_exceptions.py::test_provider_not_found_is_exception
+ERROR tests/unit/shared/test_exceptions.py::test_rag_ingestion_error_carries_message
+ERROR tests/unit/shared/test_exceptions.py::test_agent_execution_error_is_exception
+ERROR tests/unit/shared/test_exceptions.py::test_config_not_found_carries_path
+ERROR tests/unit/shared/test_exceptions.py::test_collection_not_found_is_exception
+ERROR tests/unit/shared/test_exceptions.py::test_all_exceptions_are_subclasses_of_exception
+ERROR tests/unit/shared/test_logging.py::test_does_nothing_when_no_api_key - ...
+ERROR tests/unit/shared/test_logging.py::test_sets_tracing_env_vars_when_key_present
+ERROR tests/unit/shared/test_logging.py::test_does_not_override_existing_project
+======================= 3 warnings, 114 errors in 29.16s =======================
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
