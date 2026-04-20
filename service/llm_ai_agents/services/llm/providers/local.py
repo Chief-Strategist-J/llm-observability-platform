@@ -19,7 +19,6 @@ class LocalLLMProvider(BaseLLM):
         self.trust_remote_code = self.model_config.get("trust_remote_code", True)
         self.load_in_8bit = self.model_config.get("load_in_8bit", False)
         
-        # Load Hugging Face token from environment if available
         self.hf_token = os.getenv("HF_TOKEN")
         
         self._load_model()
@@ -38,21 +37,17 @@ class LocalLLMProvider(BaseLLM):
                 trust_remote_code=self.trust_remote_code
             )
             
-            # For CPU inference, always use float32 for stability
             dtype = torch.float32
             if self.device != "cpu" and torch.cuda.is_available():
-                # Use bfloat16 on GPU if available
                 if hasattr(torch, 'bfloat16'):
                     dtype = torch.bfloat16
             
-            # Quantization settings
             load_kwargs = {
                 "device_map": self.device,
                 "token": self.hf_token,
                 "trust_remote_code": self.trust_remote_code
             }
             
-            # Only set torch_dtype if not using quantization
             if not self.load_in_8bit:
                 load_kwargs["torch_dtype"] = dtype
             else:
@@ -77,16 +72,13 @@ class LocalLLMProvider(BaseLLM):
             raise
 
     def generate(self, prompt: str, **kwargs) -> str:
-        """Generate response from the local model."""
         if not self.pipeline:
             self._load_model()
             
         params = self.model_config.get("parameters", {})
-        # Merge with runtime kwargs with safe defaults
         temperature = kwargs.get("temperature", params.get("temperature", 0.7))
         top_p = kwargs.get("top_p", params.get("top_p", 0.95))
         
-        # Clamp parameters to safe ranges
         temperature = max(0.1, min(temperature, 2.0))
         top_p = max(0.1, min(top_p, 1.0))
         
@@ -182,8 +174,13 @@ class LocalLLMProvider(BaseLLM):
         """Async wrapper for streaming generation."""
         import asyncio
         loop = asyncio.get_event_loop()
-        # For now, we can just run the generator in a thread or similar
-        # but simpler to just wrap the sync generator
         for token in self.stream_generate(prompt, **kwargs):
             yield token
             await asyncio.sleep(0)
+
+    def get_langchain_model(self) -> Any:
+        """Return the pipeline wrapped in a LangChain object."""
+        if self.pipeline is None:
+            self._load_model()
+        from langchain_huggingface import HuggingFacePipeline
+        return HuggingFacePipeline(pipeline=self.pipeline)

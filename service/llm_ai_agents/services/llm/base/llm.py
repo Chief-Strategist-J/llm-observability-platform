@@ -29,3 +29,8 @@ class BaseLLM(ABC):
     async def astream_generate(self, prompt: str, **kwargs):
         """Asynchronously stream the generation of a response."""
         pass
+
+    @abstractmethod
+    def get_langchain_model(self) -> Any:
+        """Return the underlying LangChain model instance if available."""
+        pass
