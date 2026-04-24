@@ -1,0 +1,144 @@
+version: "3.9"
+
+services:
+  messaging-sdk:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: messaging-sdk
+    environment:
+      - POSTGRES_DSN=postgresql://postgres:postgres@postgres:5432/messaging
+      - MONGODB_URI=mongodb://mongodb:27017/
+      - SCHEMA_REGISTRY_URL=http://schema-registry:8081
+    networks:
+      - messaging-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/.pytest_cache
+    command: tail -f /dev/null
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: messaging-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: messaging
+    networks:
+      - messaging-network
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  mongodb:
+    image: mongo:7
+    container_name: messaging-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+    networks:
+      - messaging-network
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - mongodb-data:/data/db
+
+  kafka:
+    image: apache/kafka:4.1.1
+    container_name: messaging-kafka
+    environment:
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_NODE_ID: "0"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9093,CONTROLLER://0.0.0.0:19093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9093"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "0@kafka:19093"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_LOG_DIRS: "/var/lib/kafka/data"
+    networks:
+      - messaging-network
+    ports:
+      - "9093:9093"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9093 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: messaging-kafka-ui
+    environment:
+      KAFKA_CLUSTERS_0_NAME: "messaging-cluster"
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:9093"
+      KAFKA_CLUSTERS_0_ZOOKEEPER: ""
+      DYNAMIC_CONFIG_ENABLED: "false"
+      AUTH_TYPE: "DISABLED"
+      SERVER_PORT: "8082"
+    networks:
+      - messaging-network
+    ports:
+      - "8082:8082"
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.5.0
+    container_name: messaging-schema-registry
+    environment:
+      SCHEMA_REGISTRY_KAFKASTRA_BOOTSTRAP_SERVERS: "kafka:9093"
+      SCHEMA_REGISTRY_HOST_NAME: "schema-registry"
+      SCHEMA_REGISTRY_LISTENERS: "http://0.0.0.0:8081"
+      SCHEMA_REGISTRY_LOG4J_ROOT_LOGLEVEL: "INFO"
+      SCHEMA_REGISTRY_AVRO_COMPATIBILITY_LEVEL: "backward"
+      SCHEMA_REGISTRY_SCHEMA_COMPATIBILITY_LEVEL: "backward"
+    networks:
+      - messaging-network
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8081/subjects || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+networks:
+  messaging-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  mongodb-data:
+  kafka-data:

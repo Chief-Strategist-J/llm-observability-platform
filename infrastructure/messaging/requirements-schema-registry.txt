@@ -1,0 +1,9 @@
+# Schema Registry Dependencies (Optional)
+# Install with: pip install -r requirements-schema-registry.txt
+# Required for: Confluent Schema Registry adapter tests
+confluent-kafka>=2.0.0
+authlib>=1.0.0
+cachetools>=5.0.0
+fastavro>=1.0.0
+orjson>=3.0.0
+referencing<0.35

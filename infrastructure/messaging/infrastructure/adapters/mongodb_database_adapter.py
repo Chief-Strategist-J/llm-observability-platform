@@ -1,0 +1,142 @@
+from typing import Any, Dict, List, Optional
+from datetime import datetime
+from pymongo import MongoClient, ASCENDING
+from pymongo.collection import Collection
+from pymongo.database import Database
+from infrastructure.messaging.domain.ports.database_port import DatabasePort, EventRecord, ConsumerOffset
+
+
+class MongoDatabaseAdapter(DatabasePort):
+    def __init__(self, uri: str, database_name: str = "kafka_events"):
+        self._client = MongoClient(uri)
+        self._db = self._client[database_name]
+        self._events_collection = self._db["kafka_events"]
+        self._offsets_collection = self._db["consumer_offsets"]
+        self._ensure_indexes()
+
+    def _ensure_indexes(self):
+        self._events_collection.create_index([("topic", ASCENDING)])
+        self._events_collection.create_index([("processed", ASCENDING)])
+        self._events_collection.create_index([("topic", ASCENDING), ("partition", ASCENDING), ("offset", ASCENDING)], unique=True)
+        self._offsets_collection.create_index([("consumer_group", ASCENDING)])
+        self._offsets_collection.create_index([("consumer_group", ASCENDING), ("topic", ASCENDING), ("partition", ASCENDING)], unique=True)
+
+    def save_event(self, event: EventRecord) -> str:
+        doc = self._event_to_dict(event)
+        result = self._events_collection.update_one(
+            {"topic": event.topic, "partition": event.partition, "offset": event.offset},
+            {"$set": doc},
+            upsert=True
+        )
+        if result.upserted_id:
+            return str(result.upserted_id)
+        existing = self._events_collection.find_one({"topic": event.topic, "partition": event.partition, "offset": event.offset})
+        return str(existing["_id"]) if existing else ""
+
+    def save_events_batch(self, events: List[EventRecord]) -> List[str]:
+        ids = []
+        for event in events:
+            event_id = self.save_event(event)
+            ids.append(event_id)
+        return ids
+
+    def get_event(self, event_id: str) -> Optional[EventRecord]:
+        from bson.objectid import ObjectId
+        try:
+            doc = self._events_collection.find_one({"_id": ObjectId(event_id)})
+            if doc:
+                return self._dict_to_event(doc)
+        except Exception:
+            doc = self._events_collection.find_one({"_id": event_id})
+            if doc:
+                return self._dict_to_event(doc)
+        return None
+
+    def get_events_by_topic(self, topic: str, limit: int = 100, offset: int = 0) -> List[EventRecord]:
+        cursor = self._events_collection.find({"topic": topic}).sort("created_at", -1).skip(offset).limit(limit)
+        return [self._dict_to_event(doc) for doc in cursor]
+
+    def get_unprocessed_events(self, limit: int = 100) -> List[EventRecord]:
+        cursor = self._events_collection.find({"processed": False}).sort("created_at", 1).limit(limit)
+        return [self._dict_to_event(doc) for doc in cursor]
+
+    def mark_event_processed(self, event_id: str, error: Optional[str] = None) -> bool:
+        from bson.objectid import ObjectId
+        update_data = {"processed": True, "error": error}
+        try:
+            result = self._events_collection.update_one({"_id": ObjectId(event_id)}, {"$set": update_data})
+        except Exception:
+            result = self._events_collection.update_one({"_id": event_id}, {"$set": update_data})
+        return result.modified_count > 0
+
+    def save_consumer_offset(self, offset: ConsumerOffset) -> bool:
+        doc = {
+            "consumer_group": offset.consumer_group,
+            "topic": offset.topic,
+            "partition": offset.partition,
+            "offset": offset.offset,
+            "updated_at": offset.updated_at
+        }
+        result = self._offsets_collection.update_one(
+            {"consumer_group": offset.consumer_group, "topic": offset.topic, "partition": offset.partition},
+            {"$set": doc},
+            upsert=True
+        )
+        return result.acknowledged
+
+    def get_consumer_offset(self, consumer_group: str, topic: str, partition: int) -> Optional[ConsumerOffset]:
+        doc = self._offsets_collection.find_one({
+            "consumer_group": consumer_group,
+            "topic": topic,
+            "partition": partition
+        })
+        if doc:
+            return ConsumerOffset(
+                consumer_group=doc["consumer_group"],
+                topic=doc["topic"],
+                partition=doc["partition"],
+                offset=doc["offset"],
+                updated_at=doc["updated_at"]
+            )
+        return None
+
+    def delete_events_by_topic(self, topic: str) -> int:
+        result = self._events_collection.delete_many({"topic": topic})
+        return result.deleted_count
+
+    def get_event_count(self, topic: Optional[str] = None) -> int:
+        if topic:
+            return self._events_collection.count_documents({"topic": topic})
+        return self._events_collection.estimated_document_count()
+
+    def close(self) -> None:
+        if self._client:
+            self._client.close()
+
+    def _event_to_dict(self, event: EventRecord) -> Dict[str, Any]:
+        return {
+            "topic": event.topic,
+            "partition": event.partition,
+            "offset": event.offset,
+            "key": event.key,
+            "value": event.value,
+            "timestamp": event.timestamp,
+            "headers": event.headers,
+            "processed": event.processed,
+            "error": event.error,
+            "created_at": event.created_at
+        }
+
+    def _dict_to_event(self, doc: Dict[str, Any]) -> EventRecord:
+        return EventRecord(
+            topic=doc["topic"],
+            partition=doc["partition"],
+            offset=doc["offset"],
+            key=doc.get("key"),
+            value=doc.get("value"),
+            timestamp=doc["timestamp"],
+            headers=doc.get("headers"),
+            processed=doc.get("processed", False),
+            error=doc.get("error"),
+            created_at=doc.get("created_at")
+        )

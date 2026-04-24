@@ -1,0 +1,185 @@
+version: "3.9"
+
+services:
+  kafka:
+    image: apache/kafka:4.1.1
+    container_name: kafka-instance-0
+    environment:
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_NODE_ID: "0"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9093,CONTROLLER://0.0.0.0:19093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-instance-0:9093"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "0@kafka-instance-0:19093"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_LOG_DIRS: "/var/lib/kafka/data"
+      KAFKA_NUM_NETWORK_THREADS: "3"
+      KAFKA_NUM_IO_THREADS: "8"
+      INSTANCE_ID: "0"
+
+    volumes:
+      - kafka-data-0:/var/lib/kafka/data
+
+    networks:
+      - messaging-network
+      - observability-network
+
+    ports:
+      - "9093:9093"
+      - "19093:19093"
+
+    labels:
+      traefik.enable: "false"
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "9308"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "kafka-0"
+
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+        reservations:
+          memory: 512m
+
+    restart: unless-stopped
+    user: "0:0"
+
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9093 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui-instance-0
+
+    environment:
+      KAFKA_CLUSTERS_0_NAME: "kafka-cluster-0"
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka-instance-0:9093"
+      KAFKA_CLUSTERS_0_ZOOKEEPER: ""
+      DYNAMIC_CONFIG_ENABLED: "false"
+      AUTH_TYPE: "DISABLED"
+      SERVER_PORT: "8082"
+      INSTANCE_ID: "0"
+
+    networks:
+      - messaging-network
+      - observability-network
+
+    ports:
+      - "8082:8082"
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "observability-network"
+      traefik.http.routers.kafka-ui-0.rule: "Host(`kafka-ui-0.localhost`)"
+      traefik.http.routers.kafka-ui-0.entrypoints: "web,websecure"
+      traefik.http.routers.kafka-ui-0.service: "kafka-ui-0"
+      traefik.http.routers.kafka-ui-0.tls: "true"
+      traefik.http.routers.kafka-ui-0.tls.certresolver: "letsencrypt"
+      traefik.http.routers.kafka-ui-scaibu-0.rule: "Host(`scaibu.kafka-ui`)"
+      traefik.http.routers.kafka-ui-scaibu-0.entrypoints: "web,websecure"
+      traefik.http.routers.kafka-ui-scaibu-0.service: "kafka-ui-0"
+      traefik.http.routers.kafka-ui-scaibu-0.tls: "true"
+      traefik.http.services.kafka-ui-0.loadbalancer.server.port: "8082"
+      traefik.http.services.kafka-ui-0.loadbalancer.healthcheck.path: "/actuator/health"
+      traefik.http.services.kafka-ui-0.loadbalancer.healthcheck.interval: "30s"
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "8082"
+      prometheus.io.path: "/actuator/prometheus"
+      loki.source: "docker"
+      loki.job: "kafka-ui-0"
+
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+        reservations:
+          memory: 256m
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8082/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.5.0
+    container_name: schema-registry-instance-0
+    environment:
+      SCHEMA_REGISTRY_KAFKASTRA_BOOTSTRAP_SERVERS: "kafka-instance-0:9093"
+      SCHEMA_REGISTRY_HOST_NAME: "schema-registry-instance-0"
+      SCHEMA_REGISTRY_LISTENERS: "http://0.0.0.0:8081"
+      SCHEMA_REGISTRY_LOG4J_ROOT_LOGLEVEL: "INFO"
+      SCHEMA_REGISTRY_AVRO_COMPATIBILITY_LEVEL: "backward"
+      SCHEMA_REGISTRY_SCHEMA_COMPATIBILITY_LEVEL: "backward"
+      SCHEMA_REGISTRY_ACCESS_CONTROL_ALLOW_METHODS: "GET,POST,PUT,DELETE,OPTIONS"
+      SCHEMA_REGISTRY_ACCESS_CONTROL_ALLOW_ORIGIN: "*"
+      INSTANCE_ID: "0"
+
+    networks:
+      - messaging-network
+      - observability-network
+
+    ports:
+      - "8081:8081"
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "observability-network"
+      traefik.http.routers.schema-registry-0.rule: "Host(`schema-registry-0.localhost`)"
+      traefik.http.routers.schema-registry-0.entrypoints: "web,websecure"
+      traefik.http.routers.schema-registry-0.service: "schema-registry-0"
+      traefik.http.routers.schema-registry-0.tls: "true"
+      traefik.http.routers.schema-registry-0.tls.certresolver: "letsencrypt"
+      traefik.http.services.schema-registry-0.loadbalancer.server.port: "8081"
+      traefik.http.services.schema-registry-0.loadbalancer.healthcheck.path: "/subjects"
+      traefik.http.services.schema-registry-0.loadbalancer.healthcheck.interval: "30s"
+      prometheus.io.scrape: "true"
+      prometheus.io.port: "8081"
+      prometheus.io.path: "/metrics"
+      loki.source: "docker"
+      loki.job: "schema-registry-0"
+
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+        reservations:
+          memory: 256m
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8081/subjects || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+volumes:
+  kafka-data-0:
+
+networks:
+  messaging-network:
+    external: true
+  observability-network:
+    external: true
