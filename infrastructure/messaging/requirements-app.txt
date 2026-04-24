@@ -1,0 +1,12 @@
+# Application Dependencies (Optional)
+# Install with: pip install -r requirements-app.txt
+# Required for: Temporal activities and FastAPI API tests
+temporalio>=1.0.0
+fastapi>=0.100.0
+uvicorn>=0.23.0
+httpx>=0.24.0
+pyyaml>=6.0
+pytest-benchmark>=4.0.0
+slowapi>=0.1.9
+locust>=2.0.0
+confluent-kafka>=2.0.0

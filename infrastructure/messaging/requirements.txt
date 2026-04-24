@@ -1,0 +1,32 @@
+# Core Dependencies (Required for basic functionality)
+pydantic>=2.0.0
+python-dateutil>=2.8.0
+
+# Database Adapters (Required for database functionality)
+psycopg2-binary>=2.9.0
+pymongo>=4.0.0
+
+# API Framework (Required for REST APIs)
+fastapi>=0.100.0
+uvicorn>=0.23.0
+
+# Testing Dependencies (Required for running tests)
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0.0
+hypothesis>=6.0.0
+
+# Schema Registry Dependencies (Optional - for Confluent Schema Registry tests)
+# Install with: pip install -r requirements-schema-registry.txt
+confluent-kafka>=2.0.0
+authlib>=1.0.0
+cachetools>=5.0.0
+fastavro>=1.0.0
+orjson>=3.0.0
+referencing<0.35
+
+# Application Dependencies (Optional - for Temporal activities)
+# Install with: pip install -r requirements-app.txt
+temporalio>=1.0.0
+httpx>=0.24.0
+pyyaml>=6.0
