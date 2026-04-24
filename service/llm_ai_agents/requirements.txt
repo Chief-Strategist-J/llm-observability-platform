@@ -33,3 +33,5 @@ pytest-cov
 allure-pytest
 pytest-sugar
 pytest-instafail
+
+pymongo

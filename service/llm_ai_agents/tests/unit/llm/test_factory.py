@@ -16,7 +16,7 @@ def test_factory_raises_for_unknown_provider():
 
 
 @pytest.mark.parametrize("provider", [
-    "openai", "anthropic", "gemini", "grok", "mistral", "huggingface"
+    "openai", "anthropic", "gemini", "grok", "mistral", "huggingface", "cloudflare"
 ])
 def test_factory_instantiates_correct_provider(provider):
     sentinel = MagicMock(spec=BaseLLM)

@@ -7,6 +7,7 @@ from services.llm.providers.gemini import GeminiProvider
 from services.llm.providers.grok import GrokProvider
 from services.llm.providers.mistral import MistralProvider
 from services.llm.providers.huggingface import HuggingFaceProvider
+from services.llm.providers.cloudflare import CloudflareWorkersAIProvider
 
 PROVIDER_REGISTRY: Dict[str, Type[BaseLLM]] = {
     "local": LocalLLMProvider,
@@ -16,4 +17,5 @@ PROVIDER_REGISTRY: Dict[str, Type[BaseLLM]] = {
     "grok": GrokProvider,
     "mistral": MistralProvider,
     "huggingface": HuggingFaceProvider,
+    "cloudflare": CloudflareWorkersAIProvider,
 }
