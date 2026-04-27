@@ -7,17 +7,17 @@ from slowapi.errors import RateLimitExceeded
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from infrastructure.messaging.application.api.v1.database_api import DatabaseAPI
-from infrastructure.messaging.application.api.v1.schema_registry_api import SchemaRegistryAPI
-from infrastructure.messaging.application.api.v1.event_handler_api import EventHandlerAPI, SchemaAwareEventHandlerAPI
-from infrastructure.messaging.application.api.v1.producer_api import ProducerAPI
-from infrastructure.messaging.application.api.v1.consumer_api import ConsumerAPI
-from infrastructure.messaging.domain.ports.database_port import DatabasePort
-from infrastructure.messaging.domain.ports.schema_registry_port import SchemaRegistryPort
-from infrastructure.messaging.domain.ports.producer_port import ProducerPort
-from infrastructure.messaging.domain.ports.consumer_port import ConsumerPort
-from infrastructure.messaging.domain.services.event_handler import EventHandler
-from infrastructure.messaging.domain.services.schema_aware_event_handler import SchemaAwareEventHandler
+from application.api.v1.database_api import DatabaseAPI
+from application.api.v1.schema_registry_api import SchemaRegistryAPI
+from application.api.v1.event_handler_api import EventHandlerAPI, SchemaAwareEventHandlerAPI
+from application.api.v1.producer_api import ProducerAPI
+from application.api.v1.consumer_api import ConsumerAPI
+from domain.ports.database_port import DatabasePort
+from domain.ports.schema_registry_port import SchemaRegistryPort
+from domain.ports.producer_port import ProducerPort
+from domain.ports.consumer_port import ConsumerPort
+from domain.services.event_handler import EventHandler
+from domain.services.schema_aware_event_handler import SchemaAwareEventHandler
 
 
 security = HTTPBearer()

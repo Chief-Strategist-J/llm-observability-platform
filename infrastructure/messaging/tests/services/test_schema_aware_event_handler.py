@@ -1,9 +1,9 @@
 import pytest
 from unittest.mock import Mock, MagicMock
-from infrastructure.messaging.domain.services.schema_aware_event_handler import SchemaAwareEventHandler
-from infrastructure.messaging.domain.ports.database_port import EventRecord, ConsumerOffset
-from infrastructure.messaging.domain.ports.schema_registry_port import SchemaType
-from infrastructure.messaging.domain.services.event_handler import ConsumerRecord
+from domain.services.schema_aware_event_handler import SchemaAwareEventHandler
+from domain.ports.database_port import EventRecord, ConsumerOffset
+from domain.ports.schema_registry_port import SchemaType
+from domain.services.event_handler import ConsumerRecord
 
 
 class TestSchemaAwareEventHandler:

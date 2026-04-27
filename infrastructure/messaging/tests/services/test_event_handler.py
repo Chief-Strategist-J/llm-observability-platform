@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import Mock, MagicMock
 from datetime import datetime
-from infrastructure.messaging.domain.services.event_handler import EventHandler, ConsumerRecord
-from infrastructure.messaging.domain.ports.database_port import EventRecord, ConsumerOffset
+from domain.services.event_handler import EventHandler, ConsumerRecord
+from domain.ports.database_port import EventRecord, ConsumerOffset
 
 
 class TestConsumerRecord:

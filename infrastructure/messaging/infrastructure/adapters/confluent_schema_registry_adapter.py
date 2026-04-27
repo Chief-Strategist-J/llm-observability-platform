@@ -4,7 +4,7 @@ import requests
 from confluent_kafka.schema_registry import SchemaRegistryClient as ConfluentSchemaRegistryClient
 from confluent_kafka.schema_registry.avro import AvroSerializer, AvroDeserializer
 from confluent_kafka.schema_registry.json_schema import JsonSchemaSerializer, JsonSchemaDeserializer
-from infrastructure.messaging.domain.ports.schema_registry_port import SchemaRegistryPort, SchemaInfo, SchemaType
+from domain.ports.schema_registry_port import SchemaRegistryPort, SchemaInfo, SchemaType
 
 
 class ConfluentSchemaRegistryAdapter(SchemaRegistryPort):

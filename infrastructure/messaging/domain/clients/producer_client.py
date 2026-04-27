@@ -1,6 +1,6 @@
 from typing import List, Optional, Dict, Any
 
-from infrastructure.messaging.domain.ports.producer_port import ProducerPort
+from domain.ports.producer_port import ProducerPort
 
 
 class ProducerDomainClient:

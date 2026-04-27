@@ -1,14 +1,14 @@
 from typing import Optional, Dict, Any, Callable
-from infrastructure.messaging.domain.ports.database_port import DatabasePort
-from infrastructure.messaging.domain.ports.schema_registry_port import SchemaRegistryPort, SchemaType
-from infrastructure.messaging.infrastructure.adapters.postgres_database_adapter import PostgresDatabaseAdapter
-from infrastructure.messaging.infrastructure.adapters.mongodb_database_adapter import MongoDatabaseAdapter
-from infrastructure.messaging.domain.services.event_handler import EventHandler, ConsumerRecord
-from infrastructure.messaging.domain.services.schema_aware_event_handler import SchemaAwareEventHandler
-from infrastructure.messaging.domain.models.schemas import DatabaseConfig, SchemaRegistryConfig
+from domain.ports.database_port import DatabasePort
+from domain.ports.schema_registry_port import SchemaRegistryPort, SchemaType
+from infrastructure.adapters.postgres_database_adapter import PostgresDatabaseAdapter
+from infrastructure.adapters.mongodb_database_adapter import MongoDatabaseAdapter
+from domain.services.event_handler import EventHandler, ConsumerRecord
+from domain.services.schema_aware_event_handler import SchemaAwareEventHandler
+from domain.models.schemas import DatabaseConfig, SchemaRegistryConfig
 
 try:
-    from infrastructure.messaging.infrastructure.adapters.confluent_schema_registry_adapter import ConfluentSchemaRegistryAdapter
+    from infrastructure.adapters.confluent_schema_registry_adapter import ConfluentSchemaRegistryAdapter
     CONFLUENT_AVAILABLE = True
 except (ImportError, AttributeError):
     CONFLUENT_AVAILABLE = False

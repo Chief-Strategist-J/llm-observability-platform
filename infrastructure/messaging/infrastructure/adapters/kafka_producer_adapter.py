@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 import asyncio
 from dataclasses import dataclass
 
-from infrastructure.messaging.domain.ports.producer_port import ProducerPort
+from domain.ports.producer_port import ProducerPort
 
 
 @dataclass

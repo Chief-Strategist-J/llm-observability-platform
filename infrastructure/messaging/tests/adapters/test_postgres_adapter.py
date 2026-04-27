@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import Mock, MagicMock, patch
 from datetime import datetime
-from infrastructure.messaging.infrastructure.adapters.postgres_database_adapter import PostgresDatabaseAdapter
-from infrastructure.messaging.domain.ports.database_port import EventRecord, ConsumerOffset
+from infrastructure.adapters.postgres_database_adapter import PostgresDatabaseAdapter
+from domain.ports.database_port import EventRecord, ConsumerOffset
 
 
 class TestPostgresDatabaseAdapter:
@@ -18,13 +18,13 @@ class TestPostgresDatabaseAdapter:
 
     @pytest.fixture
     def adapter(self, mock_pool):
-        with patch('infrastructure.messaging.infrastructure.adapters.postgres_database_adapter.psycopg2.pool.ThreadedConnectionPool', return_value=mock_pool):
+        with patch('infrastructure.adapters.postgres_database_adapter.psycopg2.pool.ThreadedConnectionPool', return_value=mock_pool):
             adapter = PostgresDatabaseAdapter(dsn="postgresql://test:test@localhost:5432/test")
             adapter._pool = mock_pool
             return adapter
 
     def test_initialization(self, mock_pool):
-        with patch('infrastructure.messaging.infrastructure.adapters.postgres_database_adapter.psycopg2.pool.ThreadedConnectionPool', return_value=mock_pool):
+        with patch('infrastructure.adapters.postgres_database_adapter.psycopg2.pool.ThreadedConnectionPool', return_value=mock_pool):
             adapter = PostgresDatabaseAdapter(dsn="postgresql://test:test@localhost:5432/test")
             assert adapter._pool is not None
 

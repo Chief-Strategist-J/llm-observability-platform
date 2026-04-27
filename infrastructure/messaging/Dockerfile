@@ -13,15 +13,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml ./
-COPY README.md ./
+COPY infrastructure/ ./infrastructure/
+COPY application/ ./application/
+COPY domain/ ./domain/
 
 RUN pip install --upgrade pip setuptools wheel
 
 RUN pip install -e .
 
-COPY infrastructure/ ./infrastructure/
-
-RUN pip install -e .[dev]
+RUN pip install -e .[dev,schema-registry,app]
 
 EXPOSE 8000 8200 8201
 

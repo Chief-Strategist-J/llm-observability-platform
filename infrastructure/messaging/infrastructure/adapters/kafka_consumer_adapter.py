@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import threading
 import queue
 
-from infrastructure.messaging.domain.ports.consumer_port import ConsumerPort
+from domain.ports.consumer_port import ConsumerPort
 
 
 @dataclass

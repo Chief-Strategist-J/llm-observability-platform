@@ -1,10 +1,10 @@
 import pytest
 from unittest.mock import Mock, MagicMock, patch
-from infrastructure.messaging.infrastructure.adapters.kafka_producer_adapter import (
+from infrastructure.adapters.kafka_producer_adapter import (
     HighThroughputKafkaProducer,
     KafkaProducerConfig
 )
-from infrastructure.messaging.infrastructure.adapters.kafka_consumer_adapter import (
+from infrastructure.adapters.kafka_consumer_adapter import (
     HighThroughputKafkaConsumer,
     KafkaConsumerConfig
 )

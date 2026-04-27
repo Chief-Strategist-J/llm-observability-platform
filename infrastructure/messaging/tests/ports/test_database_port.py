@@ -1,7 +1,7 @@
 import pytest
 from dataclasses import dataclass
 from datetime import datetime
-from infrastructure.messaging.domain.ports.database_port import DatabasePort, EventRecord, ConsumerOffset
+from domain.ports.database_port import DatabasePort, EventRecord, ConsumerOffset
 
 
 class TestEventRecord:

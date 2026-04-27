@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock, MagicMock, patch
-from infrastructure.messaging.infrastructure.adapters.confluent_schema_registry_adapter import ConfluentSchemaRegistryAdapter
-from infrastructure.messaging.domain.ports.schema_registry_port import SchemaInfo, SchemaType
+from infrastructure.adapters.confluent_schema_registry_adapter import ConfluentSchemaRegistryAdapter
+from domain.ports.schema_registry_port import SchemaInfo, SchemaType
 
 
 class TestConfluentSchemaRegistryAdapter:
@@ -12,18 +12,18 @@ class TestConfluentSchemaRegistryAdapter:
 
     @pytest.fixture
     def adapter(self, mock_client):
-        with patch('infrastructure.messaging.infrastructure.adapters.confluent_schema_registry_adapter.ConfluentSchemaRegistryClient', return_value=mock_client):
+        with patch('infrastructure.adapters.confluent_schema_registry_adapter.ConfluentSchemaRegistryClient', return_value=mock_client):
             adapter = ConfluentSchemaRegistryAdapter(url="http://localhost:8081")
             adapter._client = mock_client
             return adapter
 
     def test_initialization(self, mock_client):
-        with patch('infrastructure.messaging.infrastructure.adapters.confluent_schema_registry_adapter.ConfluentSchemaRegistryClient', return_value=mock_client):
+        with patch('infrastructure.adapters.confluent_schema_registry_adapter.ConfluentSchemaRegistryClient', return_value=mock_client):
             adapter = ConfluentSchemaRegistryAdapter(url="http://localhost:8081")
             assert adapter._base_url == "http://localhost:8081"
 
     def test_initialization_with_auth(self, mock_client):
-        with patch('infrastructure.messaging.infrastructure.adapters.confluent_schema_registry_adapter.ConfluentSchemaRegistryClient', return_value=mock_client) as mock_constructor:
+        with patch('infrastructure.adapters.confluent_schema_registry_adapter.ConfluentSchemaRegistryClient', return_value=mock_client) as mock_constructor:
             adapter = ConfluentSchemaRegistryAdapter(
                 url="http://localhost:8081",
                 auth={"basic.auth.user.info": "user:password"}
@@ -123,7 +123,7 @@ class TestConfluentSchemaRegistryAdapter:
         mock_schema.version = 1
         mock_client.get_latest_version.return_value = mock_schema
 
-        with patch('infrastructure.messaging.infrastructure.adapters.confluent_schema_registry_adapter.AvroSerializer') as mock_serializer:
+        with patch('infrastructure.adapters.confluent_schema_registry_adapter.AvroSerializer') as mock_serializer:
             mock_serializer_instance = MagicMock()
             mock_serializer.return_value = mock_serializer_instance
             mock_serializer_instance.return_value = b"serialized"
@@ -140,7 +140,7 @@ class TestConfluentSchemaRegistryAdapter:
         mock_schema.version = 1
         mock_client.get_schema.return_value = mock_schema
 
-        with patch('infrastructure.messaging.infrastructure.adapters.confluent_schema_registry_adapter.AvroDeserializer') as mock_deserializer:
+        with patch('infrastructure.adapters.confluent_schema_registry_adapter.AvroDeserializer') as mock_deserializer:
             mock_deserializer_instance = MagicMock()
             mock_deserializer.return_value = mock_deserializer_instance
             mock_deserializer_instance.return_value = {"data": "test"}
@@ -157,7 +157,7 @@ class TestConfluentSchemaRegistryAdapter:
         mock_schema.version = 1
         mock_client.get_latest_version.return_value = mock_schema
 
-        with patch('infrastructure.messaging.infrastructure.adapters.confluent_schema_registry_adapter.JsonSchemaSerializer') as mock_serializer:
+        with patch('infrastructure.adapters.confluent_schema_registry_adapter.JsonSchemaSerializer') as mock_serializer:
             mock_serializer_instance = MagicMock()
             mock_serializer.return_value = mock_serializer_instance
             mock_serializer_instance.return_value = b"serialized"
@@ -174,7 +174,7 @@ class TestConfluentSchemaRegistryAdapter:
         mock_schema.version = 1
         mock_client.get_schema.return_value = mock_schema
 
-        with patch('infrastructure.messaging.infrastructure.adapters.confluent_schema_registry_adapter.JsonSchemaDeserializer') as mock_deserializer:
+        with patch('infrastructure.adapters.confluent_schema_registry_adapter.JsonSchemaDeserializer') as mock_deserializer:
             mock_deserializer_instance = MagicMock()
             mock_deserializer.return_value = mock_deserializer_instance
             mock_deserializer_instance.return_value = {"data": "test"}

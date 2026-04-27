@@ -10,21 +10,44 @@ services:
       - POSTGRES_DSN=postgresql://postgres:postgres@postgres:5432/messaging
       - MONGODB_URI=mongodb://mongodb:27017/
       - SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - BATCH_SIZE=100
+      - POSTGRES_SHARDS=8
+      - MONGO_SHARDS=8
+      - LOGICAL_SHARDS_PER_INSTANCE=8
+      - ADAPTIVE_BATCHING=true
+      - MAX_LATENCY_MS=100
+      - BATCH_SIZE=1000
     networks:
       - messaging-network
+    ports:
+      - "8001:8001"
     depends_on:
-      postgres:
-        condition: service_healthy
-      mongodb:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-      schema-registry:
-        condition: service_healthy
+      - postgres
+      - postgres-1
+      - postgres-2
+      - postgres-3
+      - postgres-4
+      - postgres-5
+      - postgres-6
+      - postgres-7
+      - mongodb
+      - mongodb-1
+      - mongodb-2
+      - mongodb-3
+      - mongodb-4
+      - mongodb-5
+      - mongodb-6
+      - mongodb-7
+      - kafka
+      - schema-registry
     volumes:
       - .:/app
       - /app/.pytest_cache
     command: tail -f /dev/null
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
 
   postgres:
     image: postgres:15-alpine
@@ -33,17 +56,190 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: messaging
+    command: postgres -c max_connections=500
     networks:
       - messaging-network
     ports:
-      - "5432:5432"
+      - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - ./data/postgres-0:/var/lib/postgresql/data
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  postgres-1:
+    image: postgres:15-alpine
+    container_name: messaging-postgres-1
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: messaging
+    command: postgres -c max_connections=500
+    networks:
+      - messaging-network
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./data/postgres-1:/var/lib/postgresql/data
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  postgres-2:
+    image: postgres:15-alpine
+    container_name: messaging-postgres-2
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: messaging
+    command: postgres -c max_connections=500
+    networks:
+      - messaging-network
+    ports:
+      - "5435:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./data/postgres-2:/var/lib/postgresql/data
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  postgres-3:
+    image: postgres:15-alpine
+    container_name: messaging-postgres-3
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: messaging
+    command: postgres -c max_connections=500
+    networks:
+      - messaging-network
+    ports:
+      - "5436:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./data/postgres-3:/var/lib/postgresql/data
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  postgres-4:
+    image: postgres:15-alpine
+    container_name: messaging-postgres-4
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: messaging
+    command: postgres -c max_connections=500
+    networks:
+      - messaging-network
+    ports:
+      - "5437:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./data/postgres-4:/var/lib/postgresql/data
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  postgres-5:
+    image: postgres:15-alpine
+    container_name: messaging-postgres-5
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: messaging
+    command: postgres -c max_connections=500
+    networks:
+      - messaging-network
+    ports:
+      - "5438:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./data/postgres-5:/var/lib/postgresql/data
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  postgres-6:
+    image: postgres:15-alpine
+    container_name: messaging-postgres-6
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: messaging
+    command: postgres -c max_connections=500
+    networks:
+      - messaging-network
+    ports:
+      - "5439:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./data/postgres-6:/var/lib/postgresql/data
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  postgres-7:
+    image: postgres:15-alpine
+    container_name: messaging-postgres-7
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: messaging
+    command: postgres -c max_connections=500
+    networks:
+      - messaging-network
+    ports:
+      - "5440:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./data/postgres-7:/var/lib/postgresql/data
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
 
   mongodb:
     image: mongo:7
@@ -61,7 +257,165 @@ services:
       timeout: 5s
       retries: 5
     volumes:
-      - mongodb-data:/data/db
+      - ./data/mongodb-0:/data/db
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  mongodb-1:
+    image: mongo:7
+    container_name: messaging-mongodb-1
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+    networks:
+      - messaging-network
+    ports:
+      - "27018:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./data/mongodb-1:/data/db
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  mongodb-2:
+    image: mongo:7
+    container_name: messaging-mongodb-2
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+    networks:
+      - messaging-network
+    ports:
+      - "27019:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./data/mongodb-2:/data/db
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  mongodb-3:
+    image: mongo:7
+    container_name: messaging-mongodb-3
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+    networks:
+      - messaging-network
+    ports:
+      - "27020:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./data/mongodb-3:/data/db
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  mongodb-4:
+    image: mongo:7
+    container_name: messaging-mongodb-4
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+    networks:
+      - messaging-network
+    ports:
+      - "27021:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./data/mongodb-4:/data/db
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  mongodb-5:
+    image: mongo:7
+    container_name: messaging-mongodb-5
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+    networks:
+      - messaging-network
+    ports:
+      - "27022:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./data/mongodb-5:/data/db
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  mongodb-6:
+    image: mongo:7
+    container_name: messaging-mongodb-6
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+    networks:
+      - messaging-network
+    ports:
+      - "27023:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./data/mongodb-6:/data/db
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  mongodb-7:
+    image: mongo:7
+    container_name: messaging-mongodb-7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+    networks:
+      - messaging-network
+    ports:
+      - "27024:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./data/mongodb-7:/data/db
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
 
   kafka:
     image: apache/kafka:4.1.1
@@ -114,7 +468,7 @@ services:
     image: confluentinc/cp-schema-registry:7.5.0
     container_name: messaging-schema-registry
     environment:
-      SCHEMA_REGISTRY_KAFKASTRA_BOOTSTRAP_SERVERS: "kafka:9093"
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: "kafka:9093"
       SCHEMA_REGISTRY_HOST_NAME: "schema-registry"
       SCHEMA_REGISTRY_LISTENERS: "http://0.0.0.0:8081"
       SCHEMA_REGISTRY_LOG4J_ROOT_LOGLEVEL: "INFO"
@@ -139,6 +493,4 @@ networks:
     driver: bridge
 
 volumes:
-  postgres-data:
-  mongodb-data:
   kafka-data:

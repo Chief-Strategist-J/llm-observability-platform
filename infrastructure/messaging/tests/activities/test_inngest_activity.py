@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock, MagicMock, patch
 from pathlib import Path
-from infrastructure.messaging.application.activities.inngest_activity import (
+from application.activities.inngest_activity import (
     start_inngest_activity,
     stop_inngest_activity,
     restart_inngest_activity,

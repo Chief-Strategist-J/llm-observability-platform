@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 
-from infrastructure.messaging.domain.ports.broker_port import BrokerPort
+from domain.ports.broker_port import BrokerPort
 
 
 class BrokerDomainClient:

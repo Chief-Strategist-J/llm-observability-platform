@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import Mock
 from fastapi import HTTPException
 
-from infrastructure.messaging.application.api.v1.broker_api import (
+from application.api.v1.broker_api import (
     BrokerAPI,
     BrokerMetadataResponse,
     BrokerInfoResponse,
@@ -11,7 +11,7 @@ from infrastructure.messaging.application.api.v1.broker_api import (
     ConsumerGroupLagResponse,
     ClusterConfigResponse
 )
-from infrastructure.messaging.application.api.v1.validators import ValidationError
+from application.api.v1.validators import ValidationError
 
 
 @pytest.fixture

@@ -1,8 +1,8 @@
 from typing import Any, Callable, Dict, List, Optional
 from datetime import datetime
-from infrastructure.messaging.domain.ports.database_port import DatabasePort, EventRecord, ConsumerOffset
-from infrastructure.messaging.domain.ports.schema_registry_port import SchemaRegistryPort, SchemaType
-from infrastructure.messaging.domain.services.event_handler import ConsumerRecord
+from domain.ports.database_port import DatabasePort, EventRecord, ConsumerOffset
+from domain.ports.schema_registry_port import SchemaRegistryPort, SchemaType
+from domain.services.event_handler import ConsumerRecord
 
 
 class SchemaAwareEventHandler:

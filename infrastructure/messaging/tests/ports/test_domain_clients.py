@@ -2,17 +2,17 @@ import pytest
 from unittest.mock import Mock
 from datetime import datetime
 
-from infrastructure.messaging.domain.ports.database_port import DatabasePort, EventRecord, ConsumerOffset
-from infrastructure.messaging.domain.ports.schema_registry_port import SchemaRegistryPort, SchemaType, SchemaInfo
-from infrastructure.messaging.domain.ports.producer_port import ProducerPort
-from infrastructure.messaging.domain.ports.consumer_port import ConsumerPort
-from infrastructure.messaging.domain.ports.broker_port import BrokerPort
+from domain.ports.database_port import DatabasePort, EventRecord, ConsumerOffset
+from domain.ports.schema_registry_port import SchemaRegistryPort, SchemaType, SchemaInfo
+from domain.ports.producer_port import ProducerPort
+from domain.ports.consumer_port import ConsumerPort
+from domain.ports.broker_port import BrokerPort
 
-from infrastructure.messaging.domain.clients.database_client import DatabaseDomainClient
-from infrastructure.messaging.domain.clients.schema_registry_client import SchemaRegistryDomainClient
-from infrastructure.messaging.domain.clients.producer_client import ProducerDomainClient
-from infrastructure.messaging.domain.clients.consumer_client import ConsumerDomainClient
-from infrastructure.messaging.domain.clients.broker_client import BrokerDomainClient
+from domain.clients.database_client import DatabaseDomainClient
+from domain.clients.schema_registry_client import SchemaRegistryDomainClient
+from domain.clients.producer_client import ProducerDomainClient
+from domain.clients.consumer_client import ConsumerDomainClient
+from domain.clients.broker_client import BrokerDomainClient
 
 
 @pytest.fixture

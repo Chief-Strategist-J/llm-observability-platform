@@ -1,5 +1,5 @@
 import pytest
-from infrastructure.messaging.domain.ports.schema_registry_port import SchemaRegistryPort, SchemaInfo, SchemaType
+from domain.ports.schema_registry_port import SchemaRegistryPort, SchemaInfo, SchemaType
 
 
 class TestSchemaType:
