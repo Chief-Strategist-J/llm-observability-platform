@@ -1,22 +1,29 @@
 from typing import Any, Callable, Dict, List, Optional
 from datetime import datetime
+from dataclasses import dataclass
 from domain.ports.database_port import DatabasePort, EventRecord, ConsumerOffset
 
 
+@dataclass
 class ConsumerRecord:
-    def __init__(self, topic: str, partition: int, offset: int, key: Any, value: Any, timestamp: int, headers: Optional[Dict[str, Any]] = None):
-        self.topic = topic
-        self.partition = partition
-        self.offset = offset
-        self.key = key
-        self.value = value
-        self.timestamp = timestamp
-        self.headers = headers
+    topic: str
+    partition: int
+    offset: int
+    key: Any
+    value: Any
+    timestamp: int
+    headers: Optional[Dict[str, Any]] = None
 
 
 class EventHandler:
     def __init__(self, database: DatabasePort):
         self._database = database
+
+    def _get_event_id(self, event: EventRecord) -> str:
+        return str(getattr(event, 'id', ""))
+
+    def _get_mongo_collection(self) -> Optional[Any]:
+        return getattr(self._database, '_events_collection', None)
 
     def process_kafka_record(self, record: ConsumerRecord) -> str:
         event = EventRecord(
@@ -61,7 +68,7 @@ class EventHandler:
         for event in events:
             try:
                 result = processor(event)
-                self._database.mark_event_processed(str(event_id) if hasattr(event, 'id') else "")
+                self._database.mark_event_processed(self._get_event_id(event))
                 results.append({"success": True, "result": result})
             except Exception as e:
                 results.append({"success": False, "error": str(e)})
@@ -89,7 +96,7 @@ class EventHandler:
     def cleanup_old_events(self, topic: str, days_to_keep: int = 30) -> int:
         from datetime import timedelta
         cutoff_date = datetime.utcnow() - timedelta(days=days_to_keep)
-        collection = self._database._events_collection if hasattr(self._database, '_events_collection') else None
+        collection = self._get_mongo_collection()
         if collection:
             result = collection.delete_many({
                 "topic": topic,

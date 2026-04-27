@@ -1,8 +1,9 @@
 from typing import Any, Dict, List, Optional
+from datetime import datetime
 from fastapi import HTTPException, status, APIRouter
 from pydantic import BaseModel, Field
 
-from domain.services.event_handler import ConsumerRecord
+from domain.ports.event_handler_port import EventHandlerPort
 from application.api.v1.validators import Preconditions, Postconditions, ValidationError
 
 
@@ -72,6 +73,11 @@ class EventHandlerAPI:
         self._event_handler = event_handler
         self.router = APIRouter()
         self._setup_routes()
+
+    def _serialize_datetime(self, dt: Any) -> str:
+        if isinstance(dt, datetime):
+            return dt.isoformat()
+        return str(dt)
 
     def _setup_routes(self):
         @self.router.post("/process-record", response_model=ProcessEventResponse)
@@ -267,11 +273,11 @@ class EventHandlerAPI:
                     "offset": e.offset,
                     "key": e.key,
                     "value": e.value,
-                    "timestamp": e.timestamp.isoformat() if hasattr(e.timestamp, 'isoformat') else str(e.timestamp),
+                    "timestamp": self._serialize_datetime(e.timestamp),
                     "headers": e.headers,
                     "processed": e.processed,
                     "error": e.error,
-                    "created_at": e.created_at.isoformat() if hasattr(e.created_at, 'isoformat') else str(e.created_at)
+                    "created_at": self._serialize_datetime(e.created_at)
                 }
                 for e in events
             ]

@@ -8,6 +8,7 @@ from application.api.v1.producer_api import (
     BatchProduceMessageRequest
 )
 from application.api.v1.validators import ValidationError
+from domain.ports.producer_port import ProduceMessageParams, TopicCreationParams
 
 
 @pytest.fixture
@@ -115,21 +116,24 @@ class TestProducerAPIListTopics:
 
 class TestProducerAPICreateTopic:
     def test_create_topic_success(self, producer_api, mock_producer):
-        response = producer_api._create_topic("new-topic", 3, 2)
-        
+        config = TopicCreationParams("new-topic", 3, 2)
+        response = producer_api._create_topic(config)
+
         assert response["success"] is True
         assert response["topic"] == "new-topic"
 
     def test_create_topic_empty_name_raises_400(self, producer_api):
+        config = TopicCreationParams("", 3, 2)
         with pytest.raises(HTTPException) as exc:
-            producer_api._create_topic("", 3, 2)
-        
+            producer_api._create_topic(config)
+
         assert exc.value.status_code == 400
         assert "topic_name" in str(exc.value.detail)
 
     def test_create_topic_invalid_partitions_raises_400(self, producer_api):
+        config = TopicCreationParams("test-topic", 0, 2)
         with pytest.raises(HTTPException) as exc:
-            producer_api._create_topic("test-topic", 0, 2)
-        
+            producer_api._create_topic(config)
+
         assert exc.value.status_code == 400
         assert "partitions" in str(exc.value.detail)

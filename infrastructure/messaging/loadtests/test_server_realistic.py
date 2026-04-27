@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 import asyncio
 import os
+import sys
 
 from application.api.v1.database_api import DatabaseAPI
 from application.api.v1.schema_registry_api import SchemaRegistryAPI
@@ -13,12 +14,19 @@ from application.api.v1.consumer_api import ConsumerAPI
 from application.api.v1.broker_api import BrokerAPI
 from domain.ports.database_port import EventRecord, ConsumerOffset, DatabasePort
 from domain.ports.schema_registry_port import SchemaRegistryPort, SchemaType, SchemaInfo
-from domain.ports.producer_port import ProducerPort
-from domain.ports.consumer_port import ConsumerPort
+from domain.ports.producer_port import ProducerPort, ProduceMessageParams, TopicCreationParams
+from domain.ports.consumer_port import ConsumerPort, ConsumeParams, ParallelConsumeParams, ConsumerOffsetParams
 from domain.ports.broker_port import BrokerPort
 from domain.services.event_handler import EventHandler
 from domain.services.schema_aware_event_handler import SchemaAwareEventHandler
-from infrastructure.adapters.horizontally_sharded_database_adapter import HorizontallyShardedDatabaseAdapter
+from infrastructure.adapters.horizontally_sharded_database_adapter import HorizontallyShardedDatabaseAdapter, ShardingConfig
+from infrastructure.queue.in_memory_queue import InMemoryQueue, QueueConfig
+from infrastructure.adapters.redis_idempotency_store import RedisIdempotencyStore
+from infrastructure.metrics.metrics_collector import MetricsCollector
+from application.api.v1.database_api import DatabaseAPIConfig
+from application.middleware.logging_middleware import LoggingMiddleware
+from application.middleware.auth_middleware import AuthMiddleware
+from application.middleware.sanitization_middleware import SanitizationMiddleware
 
 
 class MockSchemaRegistry(SchemaRegistryPort):
@@ -78,16 +86,28 @@ class MockSchemaRegistry(SchemaRegistryPort):
 
 
 class MockProducer(ProducerPort):
-    def produce(self, topic: str, key: Optional[str], value: Any, partition: Optional[int], headers: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        return {"topic": topic, "partition": partition or 0, "offset": 100, "timestamp": 1234567890}
-    
+    def produce(self, params: ProduceMessageParams) -> Dict[str, Any]:
+        return {
+            "topic": params.topic,
+            "partition": params.partition or 0,
+            "offset": 0,
+            "key": params.key,
+            "timestamp": 0
+        }
+
+    def produce_async(self, params: ProduceMessageParams) -> asyncio.Future:
+        future = asyncio.Future()
+        future.set_result({
+            "topic": params.topic,
+            "partition": params.partition or 0,
+            "offset": 0,
+            "key": params.key,
+            "timestamp": 0
+        })
+        return future
+
     def produce_batch(self, topic: str, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         return [{"topic": topic, "partition": 0, "offset": 100 + i, "timestamp": 1234567890} for i in range(len(messages))]
-    
-    def produce_async(self, topic: str, key: Optional[str], value: Any, partition: Optional[int], headers: Optional[Dict[str, Any]]) -> asyncio.Future:
-        future = asyncio.Future()
-        future.set_result({"topic": topic, "partition": partition or 0, "offset": 100, "timestamp": 1234567890})
-        return future
     
     def flush(self, timeout: float = 10.0) -> None:
         pass
@@ -95,32 +115,32 @@ class MockProducer(ProducerPort):
     def list_topics(self) -> List[str]:
         return ["topic1", "topic2"]
     
-    def create_topic(self, topic_name: str, partitions: int, replication_factor: int) -> bool:
+    def create_topic(self, params: TopicCreationParams) -> bool:
         return True
 
 
 class MockConsumer(ConsumerPort):
-    def consume(self, topic: str, consumer_group: str, partition: Optional[int], max_messages: int, timeout_ms: int) -> List[Dict[str, Any]]:
-        return [{"topic": topic, "partition": 0, "offset": 100, "key": "key", "value": "value", "timestamp": 1234567890, "headers": {}}]
-    
-    def consume_parallel(self, topic: str, consumer_group: str, partitions: List[int], max_messages_per_partition: int, timeout_ms: int) -> Dict[int, List[Dict[str, Any]]]:
-        return {p: [{"topic": topic, "partition": p, "offset": 100, "key": "key", "value": "value", "timestamp": 1234567890, "headers": {}} for _ in range(max_messages_per_partition)] for p in partitions}
-    
+    def consume(self, params: ConsumeParams) -> List[Dict[str, Any]]:
+        return []
+
+    def consume_parallel(self, params: ParallelConsumeParams) -> Dict[int, List[Dict[str, Any]]]:
+        return {p: [{"topic": params.topic, "partition": p, "offset": 100, "key": "key", "value": "value", "timestamp": 1234567890, "headers": {}} for _ in range(params.max_messages_per_partition)] for p in params.partitions}
+
     def consume_stream(self, topic: str, consumer_group: str, message_handler, batch_size: int = 100) -> None:
         pass
-    
+
     def stop_stream(self) -> None:
         pass
-    
-    def commit_offset(self, consumer_group: str, topic: str, partition: int, offset: int) -> bool:
+
+    def commit_offset(self, params: ConsumerOffsetParams) -> bool:
         return True
-    
+
     def commit_offsets_batch(self, offsets: Dict[str, Dict[int, int]]) -> bool:
         return True
-    
+
     def get_offset(self, consumer_group: str, topic: str, partition: int) -> int:
         return 100
-    
+
     def subscribe(self, topic: str, consumer_group: str) -> bool:
         return True
     
@@ -192,16 +212,51 @@ mongo_instances = [
 batch_size = int(os.getenv("BATCH_SIZE", "1000"))
 logical_shards_per_instance = int(os.getenv("LOGICAL_SHARDS_PER_INSTANCE", "8"))
 adaptive_batching = os.getenv("ADAPTIVE_BATCHING", "true").lower() == "true"
-max_latency_ms = int(os.getenv("MAX_LATENCY_MS", "100"))
+max_latency_ms = int(os.getenv("MAX_LATENCY_MS", "20"))
+benchmark_mode = os.getenv("BENCHMARK_MODE", "false").lower() == "true"
+test_mode = os.getenv("TEST_MODE", "full")
+redis_url = os.getenv("REDIS_URL", "redis://redis:6379/")
 
-sharded_database = HorizontallyShardedDatabaseAdapter(
-    postgres_instances=postgres_instances,
-    mongo_instances=mongo_instances,
+required_vars = ["BATCH_SIZE", "MAX_LATENCY_MS", "TEST_MODE"]
+missing_vars = [var for var in required_vars if var not in os.environ]
+if missing_vars:
+    print(f"ERROR: Missing required environment variables: {missing_vars}")
+    sys.exit(1)
+
+print(f"Configuration:")
+print(f"  BATCH_SIZE: {batch_size}")
+print(f"  LOGICAL_SHARDS_PER_INSTANCE: {logical_shards_per_instance}")
+print(f"  ADAPTIVE_BATCHING: {adaptive_batching}")
+print(f"  MAX_LATENCY_MS: {max_latency_ms}")
+print(f"  BENCHMARK_MODE: {benchmark_mode}")
+print(f"  TEST_MODE: {test_mode}")
+print(f"  REDIS_URL: {redis_url}")
+
+sharding_config = ShardingConfig(
     logical_shards_per_instance=logical_shards_per_instance,
     batch_size=batch_size,
     adaptive_batching=adaptive_batching,
     max_latency_ms=max_latency_ms
 )
+
+sharded_database = HorizontallyShardedDatabaseAdapter(
+    postgres_instances=postgres_instances,
+    mongo_instances=mongo_instances,
+    config=sharding_config
+)
+
+queue_config = QueueConfig(max_size=100000, per_shard_limit=10000, enable_priority=True)
+event_queue = InMemoryQueue(queue_config)
+
+idempotency_store = None
+if redis_url:
+    try:
+        idempotency_store = RedisIdempotencyStore(redis_url, ttl_seconds=3600)
+        print("Redis idempotency store initialized")
+    except Exception as e:
+        print(f"WARNING: Failed to initialize Redis: {e}")
+
+metrics = MetricsCollector(window_size=1000)
 
 mock_schema_registry = MockSchemaRegistry()
 mock_event_handler = EventHandler(sharded_database)
@@ -209,7 +264,18 @@ mock_producer = MockProducer()
 mock_consumer = MockConsumer()
 mock_broker = MockBroker()
 
-database_api = DatabaseAPI(sharded_database)
+api_config = DatabaseAPIConfig(
+    event_writer=sharded_database,
+    event_reader=sharded_database,
+    event_manager=sharded_database,
+    offset_port=sharded_database,
+    count_port=sharded_database,
+    queue=event_queue,
+    idempotency_store=idempotency_store,
+    metrics=metrics
+)
+
+database_api = DatabaseAPI(api_config)
 schema_registry_api = SchemaRegistryAPI(mock_schema_registry)
 event_handler_api = EventHandlerAPI(mock_event_handler)
 producer_api = ProducerAPI(mock_producer)
@@ -223,16 +289,31 @@ app.include_router(producer_api.router, prefix="/api/v1/producer", tags=["Produc
 app.include_router(consumer_api.router, prefix="/api/v1/consumer", tags=["Consumer"])
 app.include_router(broker_api.router, prefix="/api/v1/broker", tags=["Broker"])
 
+app.add_middleware(LoggingMiddleware)
+app.add_middleware(SanitizationMiddleware, max_body_size=1024 * 1024)
+app.add_middleware(AuthMiddleware, api_key=None, skip_paths=["/health", "/metrics", "/docs", "/openapi.json"])
+
 
 @app.get("/health")
 def health():
+    queue_stats = event_queue.get_stats()
     return {
         "status": "healthy",
         "database": "connected",
         "shards": sharded_database.total_shards,
         "batch_size": sharded_database.current_batch_size,
-        "adaptive_batching": adaptive_batching
+        "adaptive_batching": adaptive_batching,
+        "queue_depth": queue_stats.total_size,
+        "queue_dropped": queue_stats.dropped_count,
+        "queue_rejections": queue_stats.rejection_count,
+        "test_mode": test_mode,
+        "benchmark_mode": benchmark_mode
     }
+
+
+@app.get("/metrics")
+def get_metrics():
+    return metrics.get_all_metrics()
 
 
 if __name__ == "__main__":
@@ -244,5 +325,7 @@ if __name__ == "__main__":
         limit_concurrency=4000,
         limit_max_requests=1000000,
         timeout_keep_alive=30,
-        workers=1
+        workers=4,
+        loop="uvloop",
+        http="httptools"
     )

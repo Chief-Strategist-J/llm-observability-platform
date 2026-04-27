@@ -1,8 +1,9 @@
 from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
 from fastapi import HTTPException, status, APIRouter
 from pydantic import BaseModel, Field
 
-from domain.ports.consumer_port import ConsumerPort
+from domain.ports.consumer_port import ConsumerPort, ConsumeParams, ParallelConsumeParams, ConsumerOffsetParams
 from application.api.v1.validators import Preconditions, Postconditions, ValidationError
 
 
@@ -43,6 +44,12 @@ class ConsumerAPI:
         self.router = APIRouter()
         self._setup_routes()
 
+    def _supports_parallel_consume(self) -> bool:
+        return hasattr(self._consumer, 'consume_parallel')
+
+    def _supports_batch_commit(self) -> bool:
+        return hasattr(self._consumer, 'commit_offsets_batch')
+
     def _setup_routes(self):
         @self.router.post("/consume", response_model=ConsumeMessageResponse, summary="Consume messages from Kafka")
         def consume_messages(request: ConsumeMessageRequest):
@@ -50,7 +57,8 @@ class ConsumerAPI:
 
         @self.router.post("/consume/parallel", summary="Consume messages from multiple partitions in parallel")
         def consume_parallel(topic: str, consumer_group: str, partitions: List[int], max_messages_per_partition: int = 100, timeout_ms: int = 1000):
-            return self._consume_parallel(topic, consumer_group, partitions, max_messages_per_partition, timeout_ms)
+            params = ParallelConsumeParams(topic, consumer_group, partitions, max_messages_per_partition, timeout_ms)
+            return self._consume_parallel(params)
 
         @self.router.post("/offsets", summary="Commit consumer offset")
         def commit_offset(request: ConsumerOffsetRequest):
@@ -90,13 +98,14 @@ class ConsumerAPI:
             )
 
         try:
-            messages = self._consumer.consume(
+            params = ConsumeParams(
                 topic=request.topic,
                 consumer_group=request.consumer_group,
                 partition=request.partition,
                 max_messages=request.max_messages,
                 timeout_ms=request.timeout_ms
             )
+            messages = self._consumer.consume(params)
             Postconditions.validate_not_none(messages, "consume")
             
             consumed_messages = [
@@ -128,7 +137,7 @@ class ConsumerAPI:
                 detail=f"Failed to consume messages: {str(e)}"
             )
 
-    def _commit_offset(self, request: ConsumerOffsetRequest) -> Dict[str, Any]:
+    def _commit_offset(self, request: ConsumerOffsetRequest) -> Dict[str, bool]:
         try:
             Preconditions.validate_non_empty_string(request.consumer_group, "consumer_group")
             Preconditions.validate_non_empty_string(request.topic, "topic")
@@ -141,13 +150,14 @@ class ConsumerAPI:
             )
 
         try:
-            result = self._consumer.commit_offset(
+            params = ConsumerOffsetParams(
                 consumer_group=request.consumer_group,
                 topic=request.topic,
                 partition=request.partition,
                 offset=request.offset
             )
-            Postconditions.validate_success(result, "commit_offset")
+            success = self._consumer.commit_offset(params)
+            Postconditions.validate_success(success, "commit_offset")
             return {"success": True}
         except ValidationError as e:
             raise HTTPException(
@@ -160,12 +170,11 @@ class ConsumerAPI:
                 detail=f"Failed to commit offset: {str(e)}"
             )
 
-    def _consume_parallel(self, topic: str, consumer_group: str, partitions: List[int], 
-                         max_messages_per_partition: int, timeout_ms: int) -> Dict[str, Any]:
+    def _consume_parallel(self, params: ParallelConsumeParams) -> Dict[str, Any]:
         try:
-            Preconditions.validate_non_empty_string(topic, "topic")
-            Preconditions.validate_non_empty_string(consumer_group, "consumer_group")
-            Preconditions.validate_not_empty_list(partitions, "partitions")
+            Preconditions.validate_non_empty_string(params.topic, "topic")
+            Preconditions.validate_non_empty_string(params.consumer_group, "consumer_group")
+            Preconditions.validate_not_empty_list(params.partitions, "partitions")
         except ValidationError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -173,13 +182,13 @@ class ConsumerAPI:
             )
 
         try:
-            if hasattr(self._consumer, 'consume_parallel'):
+            if self._supports_parallel_consume():
                 results = self._consumer.consume_parallel(
-                    topic=topic,
-                    consumer_group=consumer_group,
-                    partitions=partitions,
-                    max_messages_per_partition=max_messages_per_partition,
-                    timeout_ms=timeout_ms
+                    topic=params.topic,
+                    consumer_group=params.consumer_group,
+                    partitions=params.partitions,
+                    max_messages_per_partition=params.max_messages_per_partition,
+                    timeout_ms=params.timeout_ms
                 )
                 return {"success": True, "results": results}
             else:
@@ -192,9 +201,9 @@ class ConsumerAPI:
 
     def _commit_offsets_batch(self, offsets: Dict[str, Dict[int, int]]) -> Dict[str, bool]:
         try:
-            if hasattr(self._consumer, 'commit_offsets_batch'):
-                result = self._consumer.commit_offsets_batch(offsets)
-                return {"success": result}
+            if self._supports_batch_commit():
+                results = self._consumer.commit_offsets_batch(offsets)
+                return {"success": True, "results": results}
             else:
                 return {"success": False, "message": "Batch commit not supported"}
         except Exception as e:
