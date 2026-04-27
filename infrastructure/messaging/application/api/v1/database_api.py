@@ -3,8 +3,8 @@ from datetime import datetime
 from fastapi import HTTPException, status, APIRouter
 from pydantic import BaseModel, Field
 
-from infrastructure.messaging.domain.ports.database_port import EventRecord, ConsumerOffset, DatabasePort
-from infrastructure.messaging.application.api.v1.validators import Preconditions, Postconditions, ValidationError
+from domain.ports.database_port import EventRecord, ConsumerOffset, DatabasePort
+from application.api.v1.validators import Preconditions, Postconditions, ValidationError
 
 
 class EventRecordRequest(BaseModel):

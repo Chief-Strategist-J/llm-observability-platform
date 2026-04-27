@@ -1,6 +1,6 @@
 from typing import List, Optional, Dict, Any
 
-from infrastructure.messaging.domain.ports.consumer_port import ConsumerPort
+from domain.ports.consumer_port import ConsumerPort
 
 
 class ConsumerDomainClient:

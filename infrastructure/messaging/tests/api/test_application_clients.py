@@ -2,13 +2,13 @@ import pytest
 from unittest.mock import Mock, patch
 from datetime import datetime
 
-from infrastructure.messaging.application.clients.base_client import BaseClient, ClientConfig
-from infrastructure.messaging.application.clients.database_client import DatabaseClient
-from infrastructure.messaging.application.clients.schema_registry_client import SchemaRegistryClient
-from infrastructure.messaging.application.clients.event_handler_client import EventHandlerClient, SchemaAwareEventHandlerClient
-from infrastructure.messaging.application.clients.producer_client import ProducerClient
-from infrastructure.messaging.application.clients.consumer_client import ConsumerClient
-from infrastructure.messaging.application.clients.broker_client import BrokerClient
+from application.clients.base_client import BaseClient, ClientConfig
+from application.clients.database_client import DatabaseClient
+from application.clients.schema_registry_client import SchemaRegistryClient
+from application.clients.event_handler_client import EventHandlerClient, SchemaAwareEventHandlerClient
+from application.clients.producer_client import ProducerClient
+from application.clients.consumer_client import ConsumerClient
+from application.clients.broker_client import BrokerClient
 
 
 @pytest.fixture

@@ -2,8 +2,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import HTTPException, status, APIRouter
 from pydantic import BaseModel, Field
 
-from infrastructure.messaging.domain.ports.schema_registry_port import SchemaType
-from infrastructure.messaging.application.api.v1.validators import Preconditions, Postconditions, ValidationError
+from domain.ports.schema_registry_port import SchemaType
+from application.api.v1.validators import Preconditions, Postconditions, ValidationError
 
 
 class SchemaRegisterRequest(BaseModel):

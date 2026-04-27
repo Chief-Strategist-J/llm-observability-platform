@@ -3,7 +3,7 @@ from datetime import datetime
 from pymongo import MongoClient, ASCENDING
 from pymongo.collection import Collection
 from pymongo.database import Database
-from infrastructure.messaging.domain.ports.database_port import DatabasePort, EventRecord, ConsumerOffset
+from domain.ports.database_port import DatabasePort, EventRecord, ConsumerOffset
 
 
 class MongoDatabaseAdapter(DatabasePort):

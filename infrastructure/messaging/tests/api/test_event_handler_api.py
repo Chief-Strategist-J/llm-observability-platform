@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import Mock
 from fastapi import HTTPException
 
-from infrastructure.messaging.application.api.v1.event_handler_api import (
+from application.api.v1.event_handler_api import (
     EventHandlerAPI,
     SchemaAwareEventHandlerAPI,
     ConsumerRecordRequest,
@@ -13,8 +13,8 @@ from infrastructure.messaging.application.api.v1.event_handler_api import (
     BatchProcessEventResponse,
     ConsumerOffsetResponse
 )
-from infrastructure.messaging.domain.services.event_handler import ConsumerRecord
-from infrastructure.messaging.application.api.v1.validators import ValidationError
+from domain.services.event_handler import ConsumerRecord
+from application.api.v1.validators import ValidationError
 
 
 @pytest.fixture
@@ -222,7 +222,7 @@ class TestEventHandlerAPIGetConsumerOffset:
 
 class TestEventHandlerAPIGetEventsByTopic:
     def test_get_events_by_topic_success(self, event_handler_api, mock_event_handler):
-        from infrastructure.messaging.domain.ports.database_port import EventRecord
+        from domain.ports.database_port import EventRecord
         from datetime import datetime
         events = [
             EventRecord(topic="test-topic", partition=0, offset=i, key=str(i), value=f"value-{i}", timestamp=datetime.now())

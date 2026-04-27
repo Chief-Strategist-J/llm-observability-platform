@@ -19,12 +19,12 @@ from infrastructure.messaging.utils.partition_selector import (
     HashPartitioner,
     RoundRobinPartitioner,
 )
-from infrastructure.messaging.domain.models.schemas import (
+from domain.models.schemas import (
     DatabaseConfig,
     SchemaRegistryConfig,
     ProcessingConfig,
 )
-from infrastructure.messaging.domain.ports.schema_registry_port import SchemaType
+from domain.ports.schema_registry_port import SchemaType
 
 
 class TestSerializationPropertyBased:

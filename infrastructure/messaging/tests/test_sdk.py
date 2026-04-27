@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import Mock, MagicMock, patch
 from infrastructure.messaging.sdk import MessagingSDK, create_postgres_sdk, create_mongodb_sdk, create_schema_registry_sdk
-from infrastructure.messaging.domain.models.schemas import DatabaseConfig, SchemaRegistryConfig
-from infrastructure.messaging.domain.ports.schema_registry_port import SchemaType
+from domain.models.schemas import DatabaseConfig, SchemaRegistryConfig
+from domain.ports.schema_registry_port import SchemaType
 
 
 class TestMessagingSDK:

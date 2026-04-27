@@ -2,24 +2,24 @@ import pytest
 from unittest.mock import Mock
 from datetime import datetime
 
-from infrastructure.messaging.application.api.v1.database_api import (
+from application.api.v1.database_api import (
     DatabaseAPI,
     EventRecordRequest,
     BatchEventRequest,
     ConsumerOffsetRequest
 )
-from infrastructure.messaging.application.api.v1.schema_registry_api import (
+from application.api.v1.schema_registry_api import (
     SchemaRegistryAPI,
     SchemaRegisterRequest,
     SchemaCompatibilityRequest
 )
-from infrastructure.messaging.application.api.v1.event_handler_api import (
+from application.api.v1.event_handler_api import (
     EventHandlerAPI,
     ConsumerRecordRequest,
     BatchConsumerRecordRequest
 )
-from infrastructure.messaging.domain.ports.schema_registry_port import SchemaType, SchemaInfo
-from infrastructure.messaging.domain.ports.database_port import EventRecord
+from domain.ports.schema_registry_port import SchemaType, SchemaInfo
+from domain.ports.database_port import EventRecord
 
 
 @pytest.fixture

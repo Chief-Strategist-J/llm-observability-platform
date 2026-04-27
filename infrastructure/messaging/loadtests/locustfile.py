@@ -4,7 +4,7 @@ import random
 
 
 class MessagingAPIUser(HttpUser):
-    wait_time = between(1, 3)
+    wait_time = between(0, 0)
     
     def on_start(self):
         self.event_id = "test-event-123"

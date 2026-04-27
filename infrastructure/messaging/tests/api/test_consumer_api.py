@@ -2,12 +2,12 @@ import pytest
 from unittest.mock import Mock
 from fastapi import HTTPException
 
-from infrastructure.messaging.application.api.v1.consumer_api import (
+from application.api.v1.consumer_api import (
     ConsumerAPI,
     ConsumeMessageRequest,
     ConsumerOffsetRequest
 )
-from infrastructure.messaging.application.api.v1.validators import ValidationError
+from application.api.v1.validators import ValidationError
 
 
 @pytest.fixture

@@ -29,9 +29,11 @@ classifiers = [
 
 dependencies = [
     "pydantic>=2.0.0",
+    "python-dateutil>=2.8.0",
     "psycopg2-binary>=2.9.0",
     "pymongo>=4.0.0",
-    "confluent-kafka>=2.0.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
     "requests>=2.28.0",
 ]
 
@@ -50,6 +52,24 @@ dev = [
     "pylint>=3.0.0",
     "hypothesis>=6.0.0",
 ]
+schema-registry = [
+    "confluent-kafka>=2.0.0",
+    "authlib>=1.0.0",
+    "cachetools>=5.0.0",
+    "fastavro>=1.0.0",
+    "orjson>=3.0.0",
+    "referencing<0.35",
+    "jsonschema>=4.0.0",
+]
+app = [
+    "temporalio>=1.0.0",
+    "httpx>=0.24.0",
+    "pyyaml>=6.0",
+    "pytest-benchmark>=4.0.0",
+    "slowapi>=0.1.9",
+    "locust>=2.0.0",
+    "opentelemetry-api>=1.0.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/example/llm-messaging-sdk"
@@ -63,7 +83,7 @@ package-dir = {"" = "."}
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["infrastructure*"]
-exclude = ["tests*", "docs*"]
+exclude = ["tests*", "docs*", "loadtests*", "scripts*", "examples*", "utils*", ".benchmarks*"]
 
 [tool.setuptools.package-data]
 "infrastructure.messaging" = ["py.typed"]

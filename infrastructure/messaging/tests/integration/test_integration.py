@@ -1,11 +1,11 @@
 import pytest
 import os
 from datetime import datetime
-from infrastructure.messaging.infrastructure.adapters.postgres_database_adapter import PostgresDatabaseAdapter
-from infrastructure.messaging.infrastructure.adapters.mongodb_database_adapter import MongoDatabaseAdapter
-from infrastructure.messaging.infrastructure.adapters.confluent_schema_registry_adapter import ConfluentSchemaRegistryAdapter
-from infrastructure.messaging.domain.ports.database_port import EventRecord, ConsumerOffset
-from infrastructure.messaging.domain.ports.schema_registry_port import SchemaType
+from infrastructure.adapters.postgres_database_adapter import PostgresDatabaseAdapter
+from infrastructure.adapters.mongodb_database_adapter import MongoDatabaseAdapter
+from infrastructure.adapters.confluent_schema_registry_adapter import ConfluentSchemaRegistryAdapter
+from domain.ports.database_port import EventRecord, ConsumerOffset
+from domain.ports.schema_registry_port import SchemaType
 
 
 @pytest.mark.integration

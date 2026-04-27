@@ -3,8 +3,8 @@ from fastapi import HTTPException, status, APIRouter
 from pydantic import BaseModel, Field
 import asyncio
 
-from infrastructure.messaging.domain.ports.producer_port import ProducerPort
-from infrastructure.messaging.application.api.v1.validators import Preconditions, Postconditions, ValidationError
+from domain.ports.producer_port import ProducerPort
+from application.api.v1.validators import Preconditions, Postconditions, ValidationError
 
 
 class ProduceMessageRequest(BaseModel):

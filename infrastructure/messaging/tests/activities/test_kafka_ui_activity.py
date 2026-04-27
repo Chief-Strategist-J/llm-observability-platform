@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock, MagicMock, patch
 from pathlib import Path
-from infrastructure.messaging.application.activities.kafka_ui_activity import (
+from application.activities.kafka_ui_activity import (
     start_kafka_ui_activity,
     stop_kafka_ui_activity,
     restart_kafka_ui_activity,

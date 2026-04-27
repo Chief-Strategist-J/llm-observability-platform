@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import Mock, MagicMock, patch
 from datetime import datetime
-from infrastructure.messaging.infrastructure.adapters.mongodb_database_adapter import MongoDatabaseAdapter
-from infrastructure.messaging.domain.ports.database_port import EventRecord, ConsumerOffset
+from infrastructure.adapters.mongodb_database_adapter import MongoDatabaseAdapter
+from domain.ports.database_port import EventRecord, ConsumerOffset
 
 
 class TestMongoDatabaseAdapter:
@@ -26,7 +26,7 @@ class TestMongoDatabaseAdapter:
 
     @pytest.fixture
     def adapter(self, mock_client):
-        with patch('infrastructure.messaging.infrastructure.adapters.mongodb_database_adapter.MongoClient', return_value=mock_client):
+        with patch('infrastructure.adapters.mongodb_database_adapter.MongoClient', return_value=mock_client):
             adapter = MongoDatabaseAdapter(uri="mongodb://localhost:27017/", database_name="test_db")
             adapter._client = mock_client
             adapter._db = mock_client.__getitem__.return_value
@@ -35,7 +35,7 @@ class TestMongoDatabaseAdapter:
             return adapter
 
     def test_initialization(self, mock_client):
-        with patch('infrastructure.messaging.infrastructure.adapters.mongodb_database_adapter.MongoClient', return_value=mock_client):
+        with patch('infrastructure.adapters.mongodb_database_adapter.MongoClient', return_value=mock_client):
             adapter = MongoDatabaseAdapter(uri="mongodb://localhost:27017/")
             assert adapter._client is not None
 

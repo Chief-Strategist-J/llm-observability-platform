@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime
 import psycopg2
 from psycopg2 import pool, extras
-from infrastructure.messaging.domain.ports.database_port import DatabasePort, EventRecord, ConsumerOffset
+from domain.ports.database_port import DatabasePort, EventRecord, ConsumerOffset
 
 
 class PostgresDatabaseAdapter(DatabasePort):
@@ -15,12 +15,13 @@ class PostgresDatabaseAdapter(DatabasePort):
         conn = self._pool.getconn()
         try:
             with conn.cursor() as cur:
+                cur.execute("SET synchronous_commit = off")
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS kafka_events (
                         id SERIAL PRIMARY KEY,
                         topic VARCHAR(255) NOT NULL,
                         partition INTEGER NOT NULL,
-                        offset BIGINT NOT NULL,
+                        "offset" BIGINT NOT NULL,
                         key TEXT,
                         value JSONB,
                         timestamp TIMESTAMPTZ NOT NULL,
@@ -31,16 +32,8 @@ class PostgresDatabaseAdapter(DatabasePort):
                     )
                 """)
                 cur.execute("""
-                    CREATE INDEX IF NOT EXISTS idx_kafka_events_topic 
-                    ON kafka_events(topic)
-                """)
-                cur.execute("""
-                    CREATE INDEX IF NOT EXISTS idx_kafka_events_processed 
-                    ON kafka_events(processed)
-                """)
-                cur.execute("""
-                    CREATE UNIQUE INDEX IF NOT EXISTS idx_kafka_events_unique 
-                    ON kafka_events(topic, partition, offset)
+                    CREATE INDEX IF NOT EXISTS idx_kafka_events_unique 
+                    ON kafka_events(topic, partition, "offset")
                 """)
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS consumer_offsets (
@@ -48,14 +41,10 @@ class PostgresDatabaseAdapter(DatabasePort):
                         consumer_group VARCHAR(255) NOT NULL,
                         topic VARCHAR(255) NOT NULL,
                         partition INTEGER NOT NULL,
-                        offset BIGINT NOT NULL,
+                        "offset" BIGINT NOT NULL,
                         updated_at TIMESTAMPTZ DEFAULT NOW(),
                         UNIQUE(consumer_group, topic, partition)
                     )
-                """)
-                cur.execute("""
-                    CREATE INDEX IF NOT EXISTS idx_consumer_offsets_group 
-                    ON consumer_offsets(consumer_group)
                 """)
             conn.commit()
         finally:
@@ -73,14 +62,8 @@ class PostgresDatabaseAdapter(DatabasePort):
             with conn.cursor() as cur:
                 cur.execute("""
                     INSERT INTO kafka_events 
-                    (topic, partition, offset, key, value, timestamp, headers, processed, error, created_at)
+                    (topic, partition, "offset", key, value, timestamp, headers, processed, error, created_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (topic, partition, offset) 
-                    DO UPDATE SET 
-                        value = EXCLUDED.value,
-                        processed = EXCLUDED.processed,
-                        error = EXCLUDED.error,
-                        created_at = EXCLUDED.created_at
                     RETURNING id
                 """, (
                     event.topic,
@@ -97,6 +80,9 @@ class PostgresDatabaseAdapter(DatabasePort):
                 result = cur.fetchone()
                 conn.commit()
                 return str(result[0])
+        except Exception as e:
+            conn.rollback()
+            raise e
         finally:
             self._put_connection(conn)
 
@@ -108,14 +94,8 @@ class PostgresDatabaseAdapter(DatabasePort):
                 for event in events:
                     cur.execute("""
                         INSERT INTO kafka_events 
-                        (topic, partition, offset, key, value, timestamp, headers, processed, error, created_at)
+                        (topic, partition, "offset", key, value, timestamp, headers, processed, error, created_at)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (topic, partition, offset) 
-                        DO UPDATE SET 
-                            value = EXCLUDED.value,
-                            processed = EXCLUDED.processed,
-                            error = EXCLUDED.error,
-                            created_at = EXCLUDED.created_at
                         RETURNING id
                     """, (
                         event.topic,
@@ -133,6 +113,9 @@ class PostgresDatabaseAdapter(DatabasePort):
                     ids.append(str(result[0]))
                 conn.commit()
                 return ids
+        except Exception as e:
+            conn.rollback()
+            raise e
         finally:
             self._put_connection(conn)
 

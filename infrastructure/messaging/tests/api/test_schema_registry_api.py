@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import Mock
 from fastapi import HTTPException
 
-from infrastructure.messaging.application.api.v1.schema_registry_api import (
+from application.api.v1.schema_registry_api import (
     SchemaRegistryAPI,
     SchemaRegisterRequest,
     SchemaInfoResponse,
@@ -11,8 +11,8 @@ from infrastructure.messaging.application.api.v1.schema_registry_api import (
     SerializationRequest,
     DeserializationRequest
 )
-from infrastructure.messaging.domain.ports.schema_registry_port import SchemaType, SchemaInfo
-from infrastructure.messaging.application.api.v1.validators import ValidationError
+from domain.ports.schema_registry_port import SchemaType, SchemaInfo
+from application.api.v1.validators import ValidationError
 
 
 @pytest.fixture

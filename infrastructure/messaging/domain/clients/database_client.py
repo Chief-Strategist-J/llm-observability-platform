@@ -1,7 +1,7 @@
 from typing import List, Optional
 from datetime import datetime
 
-from infrastructure.messaging.domain.ports.database_port import DatabasePort, EventRecord, ConsumerOffset
+from domain.ports.database_port import DatabasePort, EventRecord, ConsumerOffset
 
 
 class DatabaseDomainClient:

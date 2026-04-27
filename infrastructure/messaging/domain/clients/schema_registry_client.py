@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from infrastructure.messaging.domain.ports.schema_registry_port import SchemaRegistryPort, SchemaType, SchemaInfo
+from domain.ports.schema_registry_port import SchemaRegistryPort, SchemaType, SchemaInfo
 
 
 class SchemaRegistryDomainClient:

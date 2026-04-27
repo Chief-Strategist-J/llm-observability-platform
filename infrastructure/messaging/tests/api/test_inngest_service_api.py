@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import Mock, MagicMock, patch, AsyncMock
 from fastapi.testclient import TestClient
 from datetime import datetime, timezone
-from infrastructure.messaging.application.api.inngest_service_api import (
+from application.api.inngest_service_api import (
     ServiceRequest,
     BatchServiceRequest,
     ConnectionManager,

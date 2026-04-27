@@ -5,16 +5,16 @@ This file demonstrates how to use the high-throughput Kafka adapters
 to handle 1M+ messages efficiently with batching, compression, and parallel processing.
 """
 
-from infrastructure.messaging.infrastructure.adapters.kafka_producer_adapter import (
+from infrastructure.adapters.kafka_producer_adapter import (
     HighThroughputKafkaProducer, 
     KafkaProducerConfig
 )
-from infrastructure.messaging.infrastructure.adapters.kafka_consumer_adapter import (
+from infrastructure.adapters.kafka_consumer_adapter import (
     HighThroughputKafkaConsumer,
     KafkaConsumerConfig
 )
-from infrastructure.messaging.domain.clients.producer_client import ProducerDomainClient
-from infrastructure.messaging.domain.clients.consumer_client import ConsumerDomainClient
+from domain.clients.producer_client import ProducerDomainClient
+from domain.clients.consumer_client import ConsumerDomainClient
 import asyncio
 
 

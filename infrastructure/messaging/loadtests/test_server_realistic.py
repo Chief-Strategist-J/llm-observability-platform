@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from unittest.mock import Mock
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any, Dict, List, Optional
 import asyncio
+import os
 
 from application.api.v1.database_api import DatabaseAPI
 from application.api.v1.schema_registry_api import SchemaRegistryAPI
@@ -18,54 +18,7 @@ from domain.ports.consumer_port import ConsumerPort
 from domain.ports.broker_port import BrokerPort
 from domain.services.event_handler import EventHandler
 from domain.services.schema_aware_event_handler import SchemaAwareEventHandler
-
-
-class MockDatabase(DatabasePort):
-    def save_event(self, event: EventRecord) -> str:
-        return "event-id-123"
-    
-    def save_events_batch(self, events: list) -> list:
-        return [f"id-{i}" for i in range(len(events))]
-    
-    def get_event(self, event_id: str) -> EventRecord:
-        return EventRecord(
-            topic="test-topic",
-            partition=0,
-            offset=1,
-            key="key",
-            value="value",
-            timestamp=datetime.now(),
-            headers={}
-        )
-    
-    def get_events_by_topic(self, topic: str, limit: int, offset: int) -> list:
-        return []
-    
-    def get_unprocessed_events(self, limit: int) -> list:
-        return []
-    
-    def mark_event_processed(self, event_id: str) -> bool:
-        return True
-    
-    def save_consumer_offset(self, offset) -> bool:
-        return True
-    
-    def get_consumer_offset(self, consumer_group: str, topic: str, partition: int) -> ConsumerOffset:
-        return ConsumerOffset(
-            consumer_group=consumer_group,
-            topic=topic,
-            partition=partition,
-            offset=100
-        )
-    
-    def delete_events_by_topic(self, topic: str) -> int:
-        return 5
-    
-    def get_event_count(self, topic: str) -> int:
-        return 100
-    
-    def close(self):
-        pass
+from infrastructure.adapters.horizontally_sharded_database_adapter import HorizontallyShardedDatabaseAdapter
 
 
 class MockSchemaRegistry(SchemaRegistryPort):
@@ -99,10 +52,10 @@ class MockSchemaRegistry(SchemaRegistryPort):
             version=1
         )
     
-    def list_subjects(self) -> list:
+    def list_subjects(self) -> List[str]:
         return ["subject1", "subject2"]
     
-    def list_versions(self, subject: str) -> list:
+    def list_versions(self, subject: str) -> List[int]:
         return [1, 2, 3]
     
     def delete_subject(self, subject: str) -> bool:
@@ -114,10 +67,10 @@ class MockSchemaRegistry(SchemaRegistryPort):
     def update_compatibility(self, subject: str, compatibility: str) -> bool:
         return True
     
-    def serialize(self, subject: str, data: dict, schema_id: int = None) -> bytes:
+    def serialize(self, subject: str, data: Dict, schema_id: int = None) -> bytes:
         return b"serialized-data"
     
-    def deserialize(self, data: bytes, schema_id: int) -> dict:
+    def deserialize(self, data: bytes, schema_id: int) -> Dict:
         return {"key": "value"}
     
     def close(self):
@@ -132,7 +85,6 @@ class MockProducer(ProducerPort):
         return [{"topic": topic, "partition": 0, "offset": 100 + i, "timestamp": 1234567890} for i in range(len(messages))]
     
     def produce_async(self, topic: str, key: Optional[str], value: Any, partition: Optional[int], headers: Optional[Dict[str, Any]]) -> asyncio.Future:
-        import asyncio
         future = asyncio.Future()
         future.set_result({"topic": topic, "partition": partition or 0, "offset": 100, "timestamp": 1234567890})
         return future
@@ -154,7 +106,7 @@ class MockConsumer(ConsumerPort):
     def consume_parallel(self, topic: str, consumer_group: str, partitions: List[int], max_messages_per_partition: int, timeout_ms: int) -> Dict[int, List[Dict[str, Any]]]:
         return {p: [{"topic": topic, "partition": p, "offset": 100, "key": "key", "value": "value", "timestamp": 1234567890, "headers": {}} for _ in range(max_messages_per_partition)] for p in partitions}
     
-    def consume_stream(self, topic: str, consumer_group: str, message_handler: Callable, batch_size: int = 100) -> None:
+    def consume_stream(self, topic: str, consumer_group: str, message_handler, batch_size: int = 100) -> None:
         pass
     
     def stop_stream(self) -> None:
@@ -180,32 +132,32 @@ class MockConsumer(ConsumerPort):
 
 
 class MockBroker(BrokerPort):
-    def get_broker_metadata(self) -> dict:
+    def get_broker_metadata(self) -> Dict:
         return {"cluster_id": "test-cluster", "controller_id": 1, "broker_count": 3, "topic_count": 10}
     
-    def list_brokers(self) -> list:
+    def list_brokers(self) -> List:
         return [{"broker_id": 1, "host": "localhost", "port": 9092, "rack": "rack1"}]
     
-    def get_broker_info(self, broker_id: int) -> dict:
+    def get_broker_info(self, broker_id: int) -> Dict:
         return {"broker_id": broker_id, "host": "localhost", "port": 9092, "rack": "rack1"}
     
-    def list_topics(self) -> list:
+    def list_topics(self) -> List:
         return ["topic1", "topic2", "topic3"]
     
-    def get_topic_metadata(self, topic_name: str) -> dict:
+    def get_topic_metadata(self, topic_name: str) -> Dict:
         return {"topic_name": topic_name, "partition_count": 3, "replication_factor": 2, "partitions": []}
     
-    def get_consumer_groups(self) -> list:
+    def get_consumer_groups(self) -> List:
         return [{"group_id": "group1", "state": "Stable", "members": 3, "topics": ["topic1"]}]
     
-    def get_consumer_group_lag(self, group_id: str) -> list:
+    def get_consumer_group_lag(self, group_id: str) -> List:
         return [{"group_id": group_id, "topic": "topic1", "partition": 0, "current_offset": 100, "log_end_offset": 150, "lag": 50}]
     
-    def get_cluster_config(self) -> dict:
+    def get_cluster_config(self) -> Dict:
         return {"num.partitions": "3", "default.replication.factor": "2"}
 
 
-app = FastAPI(title="Messaging API Test Server")
+app = FastAPI(title="Messaging API Realistic Test Server")
 
 app.add_middleware(
     CORSMiddleware,
@@ -215,14 +167,49 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-mock_database = MockDatabase()
+postgres_instances = [
+    "postgresql://postgres:postgres@messaging-postgres:5432/messaging",
+    "postgresql://postgres:postgres@messaging-postgres-1:5432/messaging",
+    "postgresql://postgres:postgres@messaging-postgres-2:5432/messaging",
+    "postgresql://postgres:postgres@messaging-postgres-3:5432/messaging",
+    "postgresql://postgres:postgres@messaging-postgres-4:5432/messaging",
+    "postgresql://postgres:postgres@messaging-postgres-5:5432/messaging",
+    "postgresql://postgres:postgres@messaging-postgres-6:5432/messaging",
+    "postgresql://postgres:postgres@messaging-postgres-7:5432/messaging"
+]
+
+mongo_instances = [
+    "mongodb://admin:admin@messaging-mongodb:27017/",
+    "mongodb://admin:admin@messaging-mongodb-1:27017/",
+    "mongodb://admin:admin@messaging-mongodb-2:27017/",
+    "mongodb://admin:admin@messaging-mongodb-3:27017/",
+    "mongodb://admin:admin@messaging-mongodb-4:27017/",
+    "mongodb://admin:admin@messaging-mongodb-5:27017/",
+    "mongodb://admin:admin@messaging-mongodb-6:27017/",
+    "mongodb://admin:admin@messaging-mongodb-7:27017/"
+]
+
+batch_size = int(os.getenv("BATCH_SIZE", "1000"))
+logical_shards_per_instance = int(os.getenv("LOGICAL_SHARDS_PER_INSTANCE", "8"))
+adaptive_batching = os.getenv("ADAPTIVE_BATCHING", "true").lower() == "true"
+max_latency_ms = int(os.getenv("MAX_LATENCY_MS", "100"))
+
+sharded_database = HorizontallyShardedDatabaseAdapter(
+    postgres_instances=postgres_instances,
+    mongo_instances=mongo_instances,
+    logical_shards_per_instance=logical_shards_per_instance,
+    batch_size=batch_size,
+    adaptive_batching=adaptive_batching,
+    max_latency_ms=max_latency_ms
+)
+
 mock_schema_registry = MockSchemaRegistry()
-mock_event_handler = EventHandler(mock_database)
+mock_event_handler = EventHandler(sharded_database)
 mock_producer = MockProducer()
 mock_consumer = MockConsumer()
 mock_broker = MockBroker()
 
-database_api = DatabaseAPI(mock_database)
+database_api = DatabaseAPI(sharded_database)
 schema_registry_api = SchemaRegistryAPI(mock_schema_registry)
 event_handler_api = EventHandlerAPI(mock_event_handler)
 producer_api = ProducerAPI(mock_producer)
@@ -239,16 +226,22 @@ app.include_router(broker_api.router, prefix="/api/v1/broker", tags=["Broker"])
 
 @app.get("/health")
 def health():
-    return {"status": "healthy"}
+    return {
+        "status": "healthy",
+        "database": "connected",
+        "shards": sharded_database.total_shards,
+        "batch_size": sharded_database.current_batch_size,
+        "adaptive_batching": adaptive_batching
+    }
 
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        app, 
-        host="0.0.0.0", 
+        "loadtests.test_server_realistic:app",
+        host="0.0.0.0",
         port=8001,
-        limit_concurrency=1000,
+        limit_concurrency=4000,
         limit_max_requests=1000000,
         timeout_keep_alive=30,
         workers=1

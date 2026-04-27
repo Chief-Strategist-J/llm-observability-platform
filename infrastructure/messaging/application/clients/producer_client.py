@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Optional
 
-from infrastructure.messaging.application.clients.base_client import BaseClient, ClientConfig
+from application.clients.base_client import BaseClient, ClientConfig
 
 
 class ProducerClient(BaseClient):

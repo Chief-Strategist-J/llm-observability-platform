@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from infrastructure.messaging.domain.models.schemas import (
+from domain.models.schemas import (
     KafkaEventSchema,
     ConsumerOffsetSchema,
     EventQueryParams,

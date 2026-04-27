@@ -3,7 +3,7 @@ from unittest.mock import Mock
 from fastapi import HTTPException
 from datetime import datetime
 
-from infrastructure.messaging.application.api.v1.database_api import (
+from application.api.v1.database_api import (
     DatabaseAPI,
     EventRecordRequest,
     BatchEventRequest,
@@ -12,8 +12,8 @@ from infrastructure.messaging.application.api.v1.database_api import (
     BatchEventResponse,
     ConsumerOffsetResponse
 )
-from infrastructure.messaging.domain.ports.database_port import EventRecord, ConsumerOffset
-from infrastructure.messaging.application.api.v1.validators import ValidationError
+from domain.ports.database_port import EventRecord, ConsumerOffset
+from application.api.v1.validators import ValidationError
 
 
 @pytest.fixture
