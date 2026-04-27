@@ -1,7 +1,6 @@
 from typing import Any, Tuple
-from domain.ports.queue_port import QueuePort
+from domain.ports.queue_port import QueuePort, Priority
 from domain.ports.metrics_port import MetricsPort
-from infrastructure.queue.in_memory_queue import Priority
 from application.api.v1.error_handler import raise_too_many_requests_error
 
 
@@ -11,7 +10,6 @@ class QueueService:
         self._metrics = metrics
 
     async def enqueue_event(self, event: Any, shard_key: Tuple[int, int], priority: str = "normal") -> bool:
-        from infrastructure.queue.in_memory_queue import Priority
         priority_map = {"high": Priority.HIGH, "normal": Priority.NORMAL, "low": Priority.LOW}
         priority_enum = priority_map.get(priority, Priority.NORMAL)
 

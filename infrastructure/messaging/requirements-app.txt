@@ -10,3 +10,5 @@ pytest-benchmark>=4.0.0
 slowapi>=0.1.9
 locust>=2.0.0
 confluent-kafka>=2.0.0
+uvloop>=0.19.0
+httptools>=0.6.0
