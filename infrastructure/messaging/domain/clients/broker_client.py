@@ -32,5 +32,6 @@ class BrokerDomainClient:
         return self._broker.get_cluster_config()
     
     def close(self):
-        if hasattr(self._broker, 'close'):
-            self._broker.close()
+        close_method = getattr(self._broker, 'close', None)
+        if close_method:
+            close_method()

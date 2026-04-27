@@ -4,8 +4,8 @@ from datetime import datetime
 
 from domain.ports.database_port import DatabasePort, EventRecord, ConsumerOffset
 from domain.ports.schema_registry_port import SchemaRegistryPort, SchemaType, SchemaInfo
-from domain.ports.producer_port import ProducerPort
-from domain.ports.consumer_port import ConsumerPort
+from domain.ports.producer_port import ProducerPort, ProduceMessageParams, TopicCreationParams
+from domain.ports.consumer_port import ConsumerPort, ConsumeParams, ConsumerOffsetParams
 from domain.ports.broker_port import BrokerPort
 
 from domain.clients.database_client import DatabaseDomainClient
