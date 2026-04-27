@@ -1,9 +1,10 @@
 from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
 from fastapi import HTTPException, status, APIRouter
 from pydantic import BaseModel, Field
 import asyncio
 
-from domain.ports.producer_port import ProducerPort
+from domain.ports.producer_port import ProducerPort, ProduceMessageParams, TopicCreationParams
 from application.api.v1.validators import Preconditions, Postconditions, ValidationError
 
 
@@ -63,13 +64,37 @@ class ProducerAPI:
 
         @self.router.post("/topics/{topic_name}", summary="Create a new topic")
         def create_topic(topic_name: str, partitions: int = 1, replication_factor: int = 1):
-            return self._create_topic(topic_name, partitions, replication_factor)
+            config = TopicCreationParams(topic_name, partitions, replication_factor)
+            return self._create_topic(config)
+
+    def _validate_produce_request(self, request: ProduceMessageRequest) -> None:
+        Preconditions.validate_non_empty_string(request.topic, "topic")
+        if request.partition is not None:
+            Preconditions.validate_non_negative(request.partition, "partition")
+
+    def _call_produce(self, request: ProduceMessageRequest) -> Dict[str, Any]:
+        params = ProduceMessageParams(
+            topic=request.topic,
+            key=request.key,
+            value=request.value,
+            partition=request.partition,
+            headers=request.headers
+        )
+        return self._producer.produce(params)
+
+    def _build_produce_response(self, result: Dict[str, Any], request: ProduceMessageRequest) -> ProduceMessageResponse:
+        return ProduceMessageResponse(
+            success=True,
+            topic=result.get("topic", request.topic),
+            partition=result.get("partition", 0),
+            offset=result.get("offset", 0),
+            key=request.key,
+            timestamp=result.get("timestamp", 0)
+        )
 
     def _produce_message(self, request: ProduceMessageRequest) -> ProduceMessageResponse:
         try:
-            Preconditions.validate_non_empty_string(request.topic, "topic")
-            if request.partition is not None:
-                Preconditions.validate_non_negative(request.partition, "partition")
+            self._validate_produce_request(request)
         except ValidationError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -77,23 +102,9 @@ class ProducerAPI:
             )
 
         try:
-            result = self._producer.produce(
-                topic=request.topic,
-                key=request.key,
-                value=request.value,
-                partition=request.partition,
-                headers=request.headers
-            )
+            result = self._call_produce(request)
             Postconditions.validate_not_none(result, "produce")
-            
-            return ProduceMessageResponse(
-                success=True,
-                topic=result.get("topic", request.topic),
-                partition=result.get("partition", 0),
-                offset=result.get("offset", 0),
-                key=request.key,
-                timestamp=result.get("timestamp", 0)
-            )
+            return self._build_produce_response(result, request)
         except ValidationError as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -126,18 +137,12 @@ class ProducerAPI:
                 for msg in request.messages
             ]
             
-            if hasattr(self._producer, 'produce_batch'):
+            if self._supports_batch():
                 results = self._producer.produce_batch(request.messages[0].topic, messages_data)
             else:
                 results = []
                 for msg in request.messages:
-                    result = self._producer.produce(
-                        topic=msg.topic,
-                        key=msg.key,
-                        value=msg.value,
-                        partition=msg.partition,
-                        headers=msg.headers
-                    )
+                    result = self._call_produce(msg)
                     results.append(result)
             
             return BatchProduceMessageResponse(
@@ -163,9 +168,7 @@ class ProducerAPI:
 
     async def _produce_message_async(self, request: ProduceMessageRequest) -> ProduceMessageResponse:
         try:
-            Preconditions.validate_non_empty_string(request.topic, "topic")
-            if request.partition is not None:
-                Preconditions.validate_non_negative(request.partition, "partition")
+            self._validate_produce_request(request)
         except ValidationError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -173,41 +176,37 @@ class ProducerAPI:
             )
 
         try:
-            if hasattr(self._producer, 'produce_async'):
-                future = self._producer.produce_async(
+            if self._supports_async():
+                params = ProduceMessageParams(
                     topic=request.topic,
                     key=request.key,
                     value=request.value,
                     partition=request.partition,
                     headers=request.headers
                 )
+                future = self._producer.produce_async(params)
                 result = await asyncio.wrap_future(future)
             else:
-                result = self._producer.produce(
-                    topic=request.topic,
-                    key=request.key,
-                    value=request.value,
-                    partition=request.partition,
-                    headers=request.headers
-                )
-            
-            return ProduceMessageResponse(
-                success=True,
-                topic=result.get("topic", request.topic),
-                partition=result.get("partition", 0),
-                offset=result.get("offset", 0),
-                key=request.key,
-                timestamp=result.get("timestamp", 0)
-            )
+                result = self._call_produce(request)
+            return self._build_produce_response(result, request)
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to produce message async: {str(e)}"
             )
 
+    def _supports_batch(self) -> bool:
+        return hasattr(self._producer, 'produce_batch')
+
+    def _supports_async(self) -> bool:
+        return hasattr(self._producer, 'produce_async')
+
+    def _supports_flush(self) -> bool:
+        return hasattr(self._producer, 'flush')
+
     def _flush(self) -> Dict[str, bool]:
         try:
-            if hasattr(self._producer, 'flush'):
+            if self._supports_flush():
                 self._producer.flush()
             return {"success": True}
         except Exception as e:
@@ -232,11 +231,11 @@ class ProducerAPI:
                 detail=f"Failed to list topics: {str(e)}"
             )
 
-    def _create_topic(self, topic_name: str, partitions: int, replication_factor: int) -> Dict[str, Any]:
+    def _create_topic(self, config: TopicCreationParams) -> Dict[str, Any]:
         try:
-            Preconditions.validate_non_empty_string(topic_name, "topic_name")
-            Preconditions.validate_positive(partitions, "partitions")
-            Preconditions.validate_positive(replication_factor, "replication_factor")
+            Preconditions.validate_non_empty_string(config.topic_name, "topic_name")
+            Preconditions.validate_positive(config.partitions, "partitions")
+            Preconditions.validate_positive(config.replication_factor, "replication_factor")
         except ValidationError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -244,9 +243,9 @@ class ProducerAPI:
             )
 
         try:
-            result = self._producer.create_topic(topic_name, partitions, replication_factor)
+            result = self._producer.create_topic(config)
             Postconditions.validate_success(result, "create_topic")
-            return {"success": True, "topic": topic_name}
+            return {"success": True, "topic": config.topic_name}
         except ValidationError as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

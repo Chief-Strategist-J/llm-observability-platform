@@ -72,5 +72,6 @@ class DatabaseDomainClient:
         return self._database.get_event_count(topic)
     
     def close(self):
-        if hasattr(self._database, 'close'):
-            self._database.close()
+        close_method = getattr(self._database, 'close', None)
+        if close_method:
+            close_method()

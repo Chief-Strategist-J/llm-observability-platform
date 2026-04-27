@@ -2,13 +2,18 @@
 
 set -e
 
+BENCHMARK_MODE=${BENCHMARK_MODE:-false}
+TEST_MODE=${TEST_MODE:-full}
+
 echo "=================================="
 echo "Realistic Load Test - 1M Requests"
 echo "=================================="
+echo "BENCHMARK_MODE: $BENCHMARK_MODE"
+echo "TEST_MODE: $TEST_MODE"
 echo ""
 
 echo "Step 1: Starting all database instances..."
-docker-compose up -d postgres postgres-1 postgres-2 postgres-3 mongodb mongodb-1 mongodb-2 mongodb-3
+docker-compose up -d postgres postgres-1 postgres-2 postgres-3 postgres-4 postgres-5 postgres-6 postgres-7 mongodb mongodb-1 mongodb-2 mongodb-3 mongodb-4 mongodb-5 mongodb-6 mongodb-7 redis
 
 echo "Waiting for databases to be healthy..."
 sleep 30
@@ -20,13 +25,14 @@ echo "Waiting for messaging-sdk to be ready..."
 sleep 10
 
 echo "Step 3: Starting realistic test server..."
-docker exec -d messaging-sdk python loadtests/test_server_realistic.py
+docker exec -d messaging-sdk bash -c "export BENCHMARK_MODE=$BENCHMARK_MODE && export TEST_MODE=$TEST_MODE && python loadtests/test_server_realistic.py"
 
 echo "Waiting for test server to start..."
 sleep 5
 
 echo "Step 4: Checking server health..."
 docker exec messaging-sdk python -c "import requests; print(requests.get('http://localhost:8001/health').json())"
+docker exec messaging-sdk python -c "import requests; print(requests.get('http://localhost:8001/metrics').json())"
 
 echo ""
 echo "Step 5: Running Locust load test for 1M requests..."
