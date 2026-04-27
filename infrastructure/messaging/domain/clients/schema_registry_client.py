@@ -45,5 +45,6 @@ class SchemaRegistryDomainClient:
         return self._schema_registry.deserialize(data, schema_id)
     
     def close(self):
-        if hasattr(self._schema_registry, 'close'):
-            self._schema_registry.close()
+        close_method = getattr(self._schema_registry, 'close', None)
+        if close_method:
+            close_method()

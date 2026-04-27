@@ -390,8 +390,11 @@ class SchemaRegistryAPI:
         return SchemaInfoResponse(
             subject=schema_info.subject,
             schema_id=schema_info.schema_id,
-            schema_type=schema_info.schema_type.value if hasattr(schema_info.schema_type, 'value') else str(schema_info.schema_type),
+            schema_type=self._serialize_schema_type(schema_info.schema_type),
             schema=schema_info.schema,
             version=schema_info.version,
             compatibility=schema_info.compatibility
         )
+
+    def _serialize_schema_type(self, schema_type) -> str:
+        return getattr(schema_type, 'value', str(schema_type))

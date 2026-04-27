@@ -1,11 +1,32 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 import asyncio
+from dataclasses import dataclass
+
+
+@dataclass
+class ProduceMessageParams:
+    topic: str
+    key: Optional[str]
+    value: Any
+    partition: Optional[int]
+    headers: Optional[Dict[str, Any]]
+
+
+@dataclass
+class TopicCreationParams:
+    topic_name: str
+    partitions: int
+    replication_factor: int
 
 
 class ProducerPort(ABC):
     @abstractmethod
-    def produce(self, topic: str, key: Optional[str], value: Any, partition: Optional[int], headers: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    def produce(self, params: ProduceMessageParams) -> Dict[str, Any]:
+        pass
+
+    @abstractmethod
+    def produce_async(self, params: ProduceMessageParams) -> asyncio.Future:
         pass
 
     @abstractmethod
@@ -13,11 +34,7 @@ class ProducerPort(ABC):
         pass
 
     @abstractmethod
-    def produce_async(self, topic: str, key: Optional[str], value: Any, partition: Optional[int], headers: Optional[Dict[str, Any]]) -> asyncio.Future:
-        pass
-
-    @abstractmethod
-    def flush(self, timeout: float = 10.0) -> None:
+    def flush(self) -> None:
         pass
 
     @abstractmethod
@@ -25,5 +42,5 @@ class ProducerPort(ABC):
         pass
 
     @abstractmethod
-    def create_topic(self, topic_name: str, partitions: int, replication_factor: int) -> bool:
+    def create_topic(self, params: TopicCreationParams) -> bool:
         pass

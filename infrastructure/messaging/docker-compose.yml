@@ -10,13 +10,15 @@ services:
       - POSTGRES_DSN=postgresql://postgres:postgres@postgres:5432/messaging
       - MONGODB_URI=mongodb://mongodb:27017/
       - SCHEMA_REGISTRY_URL=http://schema-registry:8081
-      - BATCH_SIZE=100
+      - REDIS_URL=redis://redis:6379/
+      - BATCH_SIZE=1000
       - POSTGRES_SHARDS=8
       - MONGO_SHARDS=8
       - LOGICAL_SHARDS_PER_INSTANCE=8
       - ADAPTIVE_BATCHING=true
-      - MAX_LATENCY_MS=100
-      - BATCH_SIZE=1000
+      - MAX_LATENCY_MS=20
+      - BENCHMARK_MODE=false
+      - TEST_MODE=full
     networks:
       - messaging-network
     ports:
@@ -38,6 +40,7 @@ services:
       - mongodb-5
       - mongodb-6
       - mongodb-7
+      - redis
       - kafka
       - schema-registry
     volumes:
@@ -56,7 +59,15 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: messaging
-    command: postgres -c max_connections=500
+      BENCHMARK_MODE: "false"
+    command: >
+      bash -c "
+      if [ \"$BENCHMARK_MODE\" = \"true\" ]; then
+        postgres -c max_connections=500 -c synchronous_commit=off -c fsync=off -c full_page_writes=off
+      else
+        postgres -c max_connections=500
+      fi
+      "
     networks:
       - messaging-network
     ports:
@@ -80,7 +91,15 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: messaging
-    command: postgres -c max_connections=500
+      BENCHMARK_MODE: "false"
+    command: >
+      bash -c "
+      if [ \"$BENCHMARK_MODE\" = \"true\" ]; then
+        postgres -c max_connections=500 -c synchronous_commit=off -c fsync=off -c full_page_writes=off
+      else
+        postgres -c max_connections=500
+      fi
+      "
     networks:
       - messaging-network
     ports:
@@ -104,7 +123,15 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: messaging
-    command: postgres -c max_connections=500
+      BENCHMARK_MODE: "false"
+    command: >
+      bash -c "
+      if [ \"$BENCHMARK_MODE\" = \"true\" ]; then
+        postgres -c max_connections=500 -c synchronous_commit=off -c fsync=off -c full_page_writes=off
+      else
+        postgres -c max_connections=500
+      fi
+      "
     networks:
       - messaging-network
     ports:
@@ -128,7 +155,15 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: messaging
-    command: postgres -c max_connections=500
+      BENCHMARK_MODE: "false"
+    command: >
+      bash -c "
+      if [ \"$BENCHMARK_MODE\" = \"true\" ]; then
+        postgres -c max_connections=500 -c synchronous_commit=off -c fsync=off -c full_page_writes=off
+      else
+        postgres -c max_connections=500
+      fi
+      "
     networks:
       - messaging-network
     ports:
@@ -152,7 +187,15 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: messaging
-    command: postgres -c max_connections=500
+      BENCHMARK_MODE: "false"
+    command: >
+      bash -c "
+      if [ \"$BENCHMARK_MODE\" = \"true\" ]; then
+        postgres -c max_connections=500 -c synchronous_commit=off -c fsync=off -c full_page_writes=off
+      else
+        postgres -c max_connections=500
+      fi
+      "
     networks:
       - messaging-network
     ports:
@@ -176,7 +219,15 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: messaging
-    command: postgres -c max_connections=500
+      BENCHMARK_MODE: "false"
+    command: >
+      bash -c "
+      if [ \"$BENCHMARK_MODE\" = \"true\" ]; then
+        postgres -c max_connections=500 -c synchronous_commit=off -c fsync=off -c full_page_writes=off
+      else
+        postgres -c max_connections=500
+      fi
+      "
     networks:
       - messaging-network
     ports:
@@ -200,7 +251,15 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: messaging
-    command: postgres -c max_connections=500
+      BENCHMARK_MODE: "false"
+    command: >
+      bash -c "
+      if [ \"$BENCHMARK_MODE\" = \"true\" ]; then
+        postgres -c max_connections=500 -c synchronous_commit=off -c fsync=off -c full_page_writes=off
+      else
+        postgres -c max_connections=500
+      fi
+      "
     networks:
       - messaging-network
     ports:
@@ -224,7 +283,15 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: messaging
-    command: postgres -c max_connections=500
+      BENCHMARK_MODE: "false"
+    command: >
+      bash -c "
+      if [ \"$BENCHMARK_MODE\" = \"true\" ]; then
+        postgres -c max_connections=500 -c synchronous_commit=off -c fsync=off -c full_page_writes=off
+      else
+        postgres -c max_connections=500
+      fi
+      "
     networks:
       - messaging-network
     ports:
@@ -412,6 +479,24 @@ services:
       retries: 5
     volumes:
       - ./data/mongodb-7:/data/db
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  redis:
+    image: redis:7-alpine
+    container_name: messaging-redis
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - messaging-network
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     ulimits:
       nofile:
         soft: 65536

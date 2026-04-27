@@ -8,6 +8,7 @@ from application.api.v1.consumer_api import (
     ConsumerOffsetRequest
 )
 from application.api.v1.validators import ValidationError
+from domain.ports.consumer_port import ConsumeParams, ConsumerOffsetParams
 
 
 @pytest.fixture
@@ -110,9 +111,9 @@ class TestConsumerAPICommitOffset:
             partition=0,
             offset=100
         )
-        
+
         response = consumer_api._commit_offset(request)
-        
+
         assert response["success"] is True
         mock_consumer.commit_offset.assert_called_once()
 
@@ -123,10 +124,10 @@ class TestConsumerAPICommitOffset:
             partition=0,
             offset=100
         )
-        
+
         with pytest.raises(HTTPException) as exc:
             consumer_api._commit_offset(request)
-        
+
         assert exc.value.status_code == 400
         assert "consumer_group" in str(exc.value.detail)
 
@@ -137,10 +138,10 @@ class TestConsumerAPICommitOffset:
             partition=0,
             offset=-1
         )
-        
+
         with pytest.raises(HTTPException) as exc:
             consumer_api._commit_offset(request)
-        
+
         assert exc.value.status_code == 400
         assert "offset" in str(exc.value.detail)
 

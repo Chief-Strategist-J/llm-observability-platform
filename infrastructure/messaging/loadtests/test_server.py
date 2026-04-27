@@ -13,11 +13,11 @@ from application.api.v1.consumer_api import ConsumerAPI
 from application.api.v1.broker_api import BrokerAPI
 from domain.ports.database_port import EventRecord, ConsumerOffset, DatabasePort
 from domain.ports.schema_registry_port import SchemaRegistryPort, SchemaType, SchemaInfo
-from domain.ports.producer_port import ProducerPort
-from domain.ports.consumer_port import ConsumerPort
+from domain.ports.producer_port import ProducerPort, ProduceMessageParams, TopicCreationParams
+from domain.ports.consumer_port import ConsumerPort, ConsumeParams, ParallelConsumeParams, ConsumerOffsetParams
 from domain.ports.broker_port import BrokerPort
 from domain.services.event_handler import EventHandler
-from domain.services.schema_aware_event_handler import SchemaAwareEventHandler
+from infrastructure.adapters.mock_database_adapter import MockDatabaseEventHandler
 
 
 class MockDatabase(DatabasePort):
@@ -125,47 +125,47 @@ class MockSchemaRegistry(SchemaRegistryPort):
 
 
 class MockProducer(ProducerPort):
-    def produce(self, topic: str, key: Optional[str], value: Any, partition: Optional[int], headers: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        return {"topic": topic, "partition": partition or 0, "offset": 100, "timestamp": 1234567890}
-    
+    def produce(self, params: ProduceMessageParams) -> Dict[str, Any]:
+        return {"topic": params.topic, "partition": params.partition or 0, "offset": 100, "timestamp": 1234567890}
+
     def produce_batch(self, topic: str, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         return [{"topic": topic, "partition": 0, "offset": 100 + i, "timestamp": 1234567890} for i in range(len(messages))]
-    
-    def produce_async(self, topic: str, key: Optional[str], value: Any, partition: Optional[int], headers: Optional[Dict[str, Any]]) -> asyncio.Future:
+
+    def produce_async(self, params: ProduceMessageParams) -> asyncio.Future:
         import asyncio
         future = asyncio.Future()
-        future.set_result({"topic": topic, "partition": partition or 0, "offset": 100, "timestamp": 1234567890})
+        future.set_result({"topic": params.topic, "partition": params.partition or 0, "offset": 100, "timestamp": 1234567890})
         return future
-    
+
     def flush(self, timeout: float = 10.0) -> None:
         pass
-    
+
     def list_topics(self) -> List[str]:
         return ["topic1", "topic2"]
-    
-    def create_topic(self, topic_name: str, partitions: int, replication_factor: int) -> bool:
+
+    def create_topic(self, params: TopicCreationParams) -> bool:
         return True
 
 
 class MockConsumer(ConsumerPort):
-    def consume(self, topic: str, consumer_group: str, partition: Optional[int], max_messages: int, timeout_ms: int) -> List[Dict[str, Any]]:
-        return [{"topic": topic, "partition": 0, "offset": 100, "key": "key", "value": "value", "timestamp": 1234567890, "headers": {}}]
-    
-    def consume_parallel(self, topic: str, consumer_group: str, partitions: List[int], max_messages_per_partition: int, timeout_ms: int) -> Dict[int, List[Dict[str, Any]]]:
-        return {p: [{"topic": topic, "partition": p, "offset": 100, "key": "key", "value": "value", "timestamp": 1234567890, "headers": {}} for _ in range(max_messages_per_partition)] for p in partitions}
-    
+    def consume(self, params: ConsumeParams) -> List[Dict[str, Any]]:
+        return [{"topic": params.topic, "partition": 0, "offset": 100, "key": "key", "value": "value", "timestamp": 1234567890, "headers": {}}]
+
+    def consume_parallel(self, params: ParallelConsumeParams) -> Dict[int, List[Dict[str, Any]]]:
+        return {p: [{"topic": params.topic, "partition": p, "offset": 100, "key": "key", "value": "value", "timestamp": 1234567890, "headers": {}} for _ in range(params.max_messages_per_partition)] for p in params.partitions}
+
     def consume_stream(self, topic: str, consumer_group: str, message_handler: Callable, batch_size: int = 100) -> None:
         pass
-    
+
     def stop_stream(self) -> None:
         pass
-    
-    def commit_offset(self, consumer_group: str, topic: str, partition: int, offset: int) -> bool:
+
+    def commit_offset(self, params: ConsumerOffsetParams) -> bool:
         return True
-    
+
     def commit_offsets_batch(self, offsets: Dict[str, Dict[int, int]]) -> bool:
         return True
-    
+
     def get_offset(self, consumer_group: str, topic: str, partition: int) -> int:
         return 100
     
