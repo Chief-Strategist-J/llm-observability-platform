@@ -188,25 +188,25 @@ app.add_middleware(
 )
 
 postgres_instances = [
-    "postgresql://postgres:postgres@messaging-postgres:5432/messaging",
-    "postgresql://postgres:postgres@messaging-postgres-1:5432/messaging",
-    "postgresql://postgres:postgres@messaging-postgres-2:5432/messaging",
-    "postgresql://postgres:postgres@messaging-postgres-3:5432/messaging",
-    "postgresql://postgres:postgres@messaging-postgres-4:5432/messaging",
-    "postgresql://postgres:postgres@messaging-postgres-5:5432/messaging",
-    "postgresql://postgres:postgres@messaging-postgres-6:5432/messaging",
-    "postgresql://postgres:postgres@messaging-postgres-7:5432/messaging"
+    "postgresql://postgres:postgres@postgres:5432/messaging",
+    "postgresql://postgres:postgres@postgres-1:5432/messaging",
+    "postgresql://postgres:postgres@postgres-2:5432/messaging",
+    "postgresql://postgres:postgres@postgres-3:5432/messaging",
+    "postgresql://postgres:postgres@postgres-4:5432/messaging",
+    "postgresql://postgres:postgres@postgres-5:5432/messaging",
+    "postgresql://postgres:postgres@postgres-6:5432/messaging",
+    "postgresql://postgres:postgres@postgres-7:5432/messaging"
 ]
 
 mongo_instances = [
-    "mongodb://admin:admin@messaging-mongodb:27017/",
-    "mongodb://admin:admin@messaging-mongodb-1:27017/",
-    "mongodb://admin:admin@messaging-mongodb-2:27017/",
-    "mongodb://admin:admin@messaging-mongodb-3:27017/",
-    "mongodb://admin:admin@messaging-mongodb-4:27017/",
-    "mongodb://admin:admin@messaging-mongodb-5:27017/",
-    "mongodb://admin:admin@messaging-mongodb-6:27017/",
-    "mongodb://admin:admin@messaging-mongodb-7:27017/"
+    "mongodb://admin:admin@mongodb:27017/",
+    "mongodb://admin:admin@mongodb-1:27017/",
+    "mongodb://admin:admin@mongodb-2:27017/",
+    "mongodb://admin:admin@mongodb-3:27017/",
+    "mongodb://admin:admin@mongodb-4:27017/",
+    "mongodb://admin:admin@mongodb-5:27017/",
+    "mongodb://admin:admin@mongodb-6:27017/",
+    "mongodb://admin:admin@mongodb-7:27017/"
 ]
 
 batch_size = int(os.getenv("BATCH_SIZE", "1000"))

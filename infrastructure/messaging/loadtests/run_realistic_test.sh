@@ -25,13 +25,24 @@ echo "Waiting for messaging-sdk to be ready..."
 sleep 10
 
 echo "Step 3: Starting realistic test server..."
-docker exec -d messaging-sdk bash -c "export BENCHMARK_MODE=$BENCHMARK_MODE && export TEST_MODE=$TEST_MODE && python loadtests/test_server_realistic.py"
+docker exec -d messaging-sdk bash -c "cd /app && python -m loadtests.test_server_realistic"
 
 echo "Waiting for test server to start..."
-sleep 5
+sleep 8
 
 echo "Step 4: Checking server health..."
-docker exec messaging-sdk python -c "import requests; print(requests.get('http://localhost:8001/health').json())"
+docker exec messaging-sdk python -c "
+import requests, time, sys
+for i in range(10):
+    try:
+        r = requests.get('http://localhost:8001/health', timeout=2)
+        print(r.json())
+        sys.exit(0)
+    except Exception as e:
+        print(f'Attempt {i+1}/10 failed: {e}')
+        time.sleep(2)
+sys.exit(1)
+"
 docker exec messaging-sdk python -c "import requests; print(requests.get('http://localhost:8001/metrics').json())"
 
 echo ""
