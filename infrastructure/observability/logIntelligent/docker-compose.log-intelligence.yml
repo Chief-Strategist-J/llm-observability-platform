@@ -1,0 +1,161 @@
+version: '3.9'
+services:
+  log-intelligence-api:
+    build:
+      context: ../../..
+      dockerfile: infrastructure/observability/logIntelligent/Dockerfile
+    container_name: log-intelligence-api
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      SERVICE_NAME: log-intelligence-api
+    ports:
+    - 8113:8113
+    networks:
+      observability-network:
+        ipv4_address: 172.28.0.70
+    restart: unless-stopped
+    depends_on:
+      otel-collector:
+        condition: service_started
+      loki:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.91.0
+    container_name: otel-collector
+    user: 0:0
+    command:
+    - --config=/etc/otelcol/config.yaml
+    volumes:
+    - ./otel-config.yaml:/etc/otelcol/config.yaml:ro
+    - otel-logs:/var/log/otelcol
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      observability-network:
+        ipv4_address: 172.28.0.10
+    restart: unless-stopped
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    command:
+    - --config.file=/etc/prometheus/prometheus.yml
+    - --storage.tsdb.path=/prometheus
+    - --web.enable-remote-write-receiver
+    - --enable-feature=exemplar-storage
+    - --web.external-url=https://scaibu.prometheus
+    volumes:
+    - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    - ./alerting-rules.yml:/etc/prometheus/alerting-rules.yml:ro
+    - prometheus-data:/prometheus
+    networks:
+      observability-network:
+        ipv4_address: 172.28.0.20
+    restart: unless-stopped
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - --no-verbose
+      - --tries=1
+      - --spider
+      - http://localhost:9090/-/healthy
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      otel-collector:
+        condition: service_started
+  loki:
+    image: grafana/loki:2.9.2
+    container_name: loki
+    command:
+    - -config.file=/etc/loki/config.yaml
+    volumes:
+    - ./loki-config.yaml:/etc/loki/config.yaml:ro
+    - loki-data:/loki
+    networks:
+      observability-network:
+        ipv4_address: 172.28.0.30
+    restart: unless-stopped
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - --no-verbose
+      - --tries=1
+      - --spider
+      - http://localhost:3100/ready
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      otel-collector:
+        condition: service_started
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    environment:
+      COLLECTOR_ZIPKIN_HOST_PORT: :9411
+      COLLECTOR_OTLP_ENABLED: 'true'
+    networks:
+      observability-network:
+        ipv4_address: 172.28.0.40
+    restart: unless-stopped
+    depends_on:
+      otel-collector:
+        condition: service_started
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    command:
+    - --config.file=/etc/alertmanager/config.yml
+    - --storage.path=/alertmanager
+    - --web.external-url=https://scaibu.alertmanager
+    - --cluster.listen-address=0.0.0.0:9094
+    volumes:
+    - ./alertmanager.yml:/etc/alertmanager/config.yml:ro
+    - alertmanager-data:/alertmanager
+    networks:
+      observability-network:
+        ipv4_address: 172.28.0.50
+    restart: unless-stopped
+    depends_on:
+      prometheus:
+        condition: service_healthy
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: SuperSecret123!
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_SERVER_HTTP_PORT: '3000'
+      GF_SERVER_ROOT_URL: https://scaibu.grafana
+      GF_SERVER_DOMAIN: scaibu.grafana
+    volumes:
+    - grafana-data:/var/lib/grafana
+    - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    networks:
+      observability-network:
+        ipv4_address: 172.28.0.60
+    restart: unless-stopped
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+volumes:
+  otel-logs: null
+  prometheus-data: null
+  loki-data: null
+  alertmanager-data: null
+  grafana-data: null
+networks:
+  observability-network:
+    external: true
