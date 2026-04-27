@@ -1,6 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import Any, Tuple
-from infrastructure.queue.in_memory_queue import Priority
+from enum import Enum
+
+
+class Priority(Enum):
+    HIGH = 3
+    NORMAL = 2
+    LOW = 1
 
 
 class QueuePort(ABC):

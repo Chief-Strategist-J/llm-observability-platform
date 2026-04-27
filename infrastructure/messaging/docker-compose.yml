@@ -59,15 +59,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: messaging
-      BENCHMARK_MODE: "false"
-    command: >
-      bash -c "
-      if [ \"$BENCHMARK_MODE\" = \"true\" ]; then
-        postgres -c max_connections=500 -c synchronous_commit=off -c fsync=off -c full_page_writes=off
-      else
-        postgres -c max_connections=500
-      fi
-      "
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
     networks:
       - messaging-network
     ports:
@@ -77,8 +69,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    volumes:
-      - ./data/postgres-0:/var/lib/postgresql/data
     ulimits:
       nofile:
         soft: 65536
@@ -91,15 +81,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: messaging
-      BENCHMARK_MODE: "false"
-    command: >
-      bash -c "
-      if [ \"$BENCHMARK_MODE\" = \"true\" ]; then
-        postgres -c max_connections=500 -c synchronous_commit=off -c fsync=off -c full_page_writes=off
-      else
-        postgres -c max_connections=500
-      fi
-      "
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
     networks:
       - messaging-network
     ports:
@@ -109,8 +91,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    volumes:
-      - ./data/postgres-1:/var/lib/postgresql/data
     ulimits:
       nofile:
         soft: 65536
@@ -123,15 +103,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: messaging
-      BENCHMARK_MODE: "false"
-    command: >
-      bash -c "
-      if [ \"$BENCHMARK_MODE\" = \"true\" ]; then
-        postgres -c max_connections=500 -c synchronous_commit=off -c fsync=off -c full_page_writes=off
-      else
-        postgres -c max_connections=500
-      fi
-      "
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
     networks:
       - messaging-network
     ports:
@@ -141,8 +113,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    volumes:
-      - ./data/postgres-2:/var/lib/postgresql/data
     ulimits:
       nofile:
         soft: 65536
@@ -155,15 +125,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: messaging
-      BENCHMARK_MODE: "false"
-    command: >
-      bash -c "
-      if [ \"$BENCHMARK_MODE\" = \"true\" ]; then
-        postgres -c max_connections=500 -c synchronous_commit=off -c fsync=off -c full_page_writes=off
-      else
-        postgres -c max_connections=500
-      fi
-      "
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
     networks:
       - messaging-network
     ports:
@@ -173,8 +135,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    volumes:
-      - ./data/postgres-3:/var/lib/postgresql/data
     ulimits:
       nofile:
         soft: 65536
@@ -187,15 +147,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: messaging
-      BENCHMARK_MODE: "false"
-    command: >
-      bash -c "
-      if [ \"$BENCHMARK_MODE\" = \"true\" ]; then
-        postgres -c max_connections=500 -c synchronous_commit=off -c fsync=off -c full_page_writes=off
-      else
-        postgres -c max_connections=500
-      fi
-      "
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
     networks:
       - messaging-network
     ports:
@@ -205,8 +157,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    volumes:
-      - ./data/postgres-4:/var/lib/postgresql/data
     ulimits:
       nofile:
         soft: 65536
@@ -219,15 +169,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: messaging
-      BENCHMARK_MODE: "false"
-    command: >
-      bash -c "
-      if [ \"$BENCHMARK_MODE\" = \"true\" ]; then
-        postgres -c max_connections=500 -c synchronous_commit=off -c fsync=off -c full_page_writes=off
-      else
-        postgres -c max_connections=500
-      fi
-      "
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
     networks:
       - messaging-network
     ports:
@@ -237,8 +179,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    volumes:
-      - ./data/postgres-5:/var/lib/postgresql/data
     ulimits:
       nofile:
         soft: 65536
@@ -251,15 +191,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: messaging
-      BENCHMARK_MODE: "false"
-    command: >
-      bash -c "
-      if [ \"$BENCHMARK_MODE\" = \"true\" ]; then
-        postgres -c max_connections=500 -c synchronous_commit=off -c fsync=off -c full_page_writes=off
-      else
-        postgres -c max_connections=500
-      fi
-      "
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
     networks:
       - messaging-network
     ports:
@@ -269,8 +201,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    volumes:
-      - ./data/postgres-6:/var/lib/postgresql/data
     ulimits:
       nofile:
         soft: 65536
@@ -283,15 +213,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: messaging
-      BENCHMARK_MODE: "false"
-    command: >
-      bash -c "
-      if [ \"$BENCHMARK_MODE\" = \"true\" ]; then
-        postgres -c max_connections=500 -c synchronous_commit=off -c fsync=off -c full_page_writes=off
-      else
-        postgres -c max_connections=500
-      fi
-      "
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
     networks:
       - messaging-network
     ports:
@@ -301,8 +223,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    volumes:
-      - ./data/postgres-7:/var/lib/postgresql/data
     ulimits:
       nofile:
         soft: 65536
@@ -323,8 +243,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    volumes:
-      - ./data/mongodb-0:/data/db
     ulimits:
       nofile:
         soft: 65536
@@ -345,8 +263,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    volumes:
-      - ./data/mongodb-1:/data/db
     ulimits:
       nofile:
         soft: 65536
@@ -367,8 +283,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    volumes:
-      - ./data/mongodb-2:/data/db
     ulimits:
       nofile:
         soft: 65536
@@ -389,8 +303,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    volumes:
-      - ./data/mongodb-3:/data/db
     ulimits:
       nofile:
         soft: 65536
@@ -411,8 +323,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    volumes:
-      - ./data/mongodb-4:/data/db
     ulimits:
       nofile:
         soft: 65536
@@ -433,8 +343,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    volumes:
-      - ./data/mongodb-5:/data/db
     ulimits:
       nofile:
         soft: 65536
@@ -455,8 +363,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    volumes:
-      - ./data/mongodb-6:/data/db
     ulimits:
       nofile:
         soft: 65536

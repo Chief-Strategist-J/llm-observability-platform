@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 from dataclasses import dataclass
 from fastapi import HTTPException, status, APIRouter
