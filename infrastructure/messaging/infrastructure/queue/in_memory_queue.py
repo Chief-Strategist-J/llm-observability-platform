@@ -1,16 +1,9 @@
 import asyncio
-from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime
 import time
-from domain.ports.queue_port import QueuePort
-
-
-class Priority(Enum):
-    HIGH = 3
-    NORMAL = 2
-    LOW = 1
+from domain.ports.queue_port import QueuePort, Priority
 
 
 @dataclass(order=True)
