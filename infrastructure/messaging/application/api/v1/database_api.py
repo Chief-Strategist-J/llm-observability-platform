@@ -133,32 +133,32 @@ class DatabaseAPI:
             return await self.save_events_batch(request)
 
         @self.router.get("/events/{event_id}", response_model=EventRecordResponse)
-        def get_event_route(event_id: str):
-            return self.get_event(event_id)
+        async def get_event_route(event_id: str):
+            return await self.get_event(event_id)
 
         @self.router.get("/events", response_model=List[EventRecordResponse])
-        def get_events_by_topic_route(topic: str, limit: int = 100, offset: int = 0):
-            return self.get_events_by_topic(topic, limit, offset)
+        async def get_events_by_topic_route(topic: str, limit: int = 100, offset: int = 0):
+            return await self.get_events_by_topic(topic, limit, offset)
 
         @self.router.post("/events/{event_id}/processed")
-        def mark_event_processed_route(event_id: str):
-            return self.mark_event_processed(event_id)
+        async def mark_event_processed_route(event_id: str):
+            return await self.mark_event_processed(event_id)
 
         @self.router.post("/consumer-offsets")
-        def save_consumer_offset_route(request: ConsumerOffsetRequest):
-            return self.save_consumer_offset(request)
+        async def save_consumer_offset_route(request: ConsumerOffsetRequest):
+            return await self.save_consumer_offset(request)
 
         @self.router.get("/consumer-offsets/{consumer_group}/{topic}/{partition}", response_model=ConsumerOffsetResponse)
-        def get_consumer_offset_route(consumer_group: str, topic: str, partition: int):
-            return self.get_consumer_offset(consumer_group, topic, partition)
+        async def get_consumer_offset_route(consumer_group: str, topic: str, partition: int):
+            return await self.get_consumer_offset(consumer_group, topic, partition)
 
         @self.router.delete("/events/{topic}")
-        def delete_events_by_topic_route(topic: str):
-            return self.delete_events_by_topic(topic)
+        async def delete_events_by_topic_route(topic: str):
+            return await self.delete_events_by_topic(topic)
 
         @self.router.get("/events/{topic}/count")
-        def get_event_count_route(topic: str):
-            return self.get_event_count(topic)
+        async def get_event_count_route(topic: str):
+            return await self.get_event_count(topic)
 
     async def save_event(self, request: EventRecordRequest) -> EventRecordResponse:
         params = EventRequestParams(request.topic, request.partition, request.offset)
@@ -177,7 +177,7 @@ class DatabaseAPI:
             event_id = request.event_id or f"queued-{shard_key[0]}-{shard_key[1]}"
         else:
             try:
-                event_id = self._event_writer.save_event(event)
+                event_id = await self._event_writer.save_event(event)
                 Preconditions.validate_not_none(event_id, "save_event")
             except ValidationError as e:
                 raise_internal_error(str(e))
@@ -192,7 +192,7 @@ class DatabaseAPI:
         events = [self._build_event_record(e) for e in request.events]
 
         try:
-            event_ids = self._event_writer.save_events_batch(events)
+            event_ids = await self._event_writer.save_events_batch(events)
             Preconditions.validate_not_none(event_ids, "save_events_batch")
             Preconditions.validate_not_empty_list(event_ids, "save_events_batch")
             return BatchEventResponse(
@@ -205,11 +205,11 @@ class DatabaseAPI:
         except Exception as e:
             raise_internal_error(f"Failed to save events batch: {str(e)}")
 
-    def get_event(self, event_id: str) -> EventRecordResponse:
+    async def get_event(self, event_id: str) -> EventRecordResponse:
         self._validator.validate_event_id(event_id)
 
         try:
-            event = self._event_reader.get_event(event_id)
+            event = await self._event_reader.get_event(event_id)
             if not event:
                 raise_not_found_error(f"Event with id {event_id} not found. Verify the event ID is correct.")
             return self._build_event_response(event_id, event)
@@ -218,30 +218,30 @@ class DatabaseAPI:
         except Exception as e:
             raise_internal_error(f"Failed to get event: {str(e)}")
 
-    def get_events_by_topic(self, topic: str, limit: int = 100, offset: int = 0) -> List[EventRecordResponse]:
+    async def get_events_by_topic(self, topic: str, limit: int = 100, offset: int = 0) -> List[EventRecordResponse]:
         params = QueryParams(topic, limit, offset)
         self._validator.validate_query_params(params)
 
         try:
-            events = self._event_reader.get_events_by_topic(topic, limit=limit, offset=offset)
+            events = await self._event_reader.get_events_by_topic(topic, limit=limit, offset=offset)
             return [self._build_event_response(str(i), e) for i, e in enumerate(events)]
         except Exception as e:
             raise_internal_error(f"Failed to get events by topic: {str(e)}")
 
-    def get_unprocessed_events(self, limit: int = 100) -> List[EventRecordResponse]:
+    async def get_unprocessed_events(self, limit: int = 100) -> List[EventRecordResponse]:
         self._validator.validate_limit(limit)
 
         try:
-            events = self._event_reader.get_unprocessed_events(limit=limit)
+            events = await self._event_reader.get_unprocessed_events(limit=limit)
             return [self._build_event_response(str(i), e) for i, e in enumerate(events)]
         except Exception as e:
             raise_internal_error(f"Failed to get unprocessed events: {str(e)}")
 
-    def mark_event_processed(self, event_id: str) -> Dict[str, bool]:
+    async def mark_event_processed(self, event_id: str) -> Dict[str, bool]:
         self._validator.validate_event_id(event_id)
 
         try:
-            success = self._event_manager.mark_event_processed(event_id)
+            success = await self._event_manager.mark_event_processed(event_id)
             Postconditions.validate_success(success, "mark_event_processed")
             return {"success": True}
         except ValidationError as e:
@@ -249,7 +249,7 @@ class DatabaseAPI:
         except Exception as e:
             raise_internal_error(f"Failed to mark event as processed: {str(e)}")
 
-    def save_consumer_offset(self, request: ConsumerOffsetRequest) -> Dict[str, bool]:
+    async def save_consumer_offset(self, request: ConsumerOffsetRequest) -> Dict[str, bool]:
         params = ConsumerOffsetParams(request.consumer_group, request.topic, request.partition, request.offset)
         self._validator.validate_consumer_offset(params)
 
@@ -261,7 +261,7 @@ class DatabaseAPI:
         )
 
         try:
-            success = self._offset_port.save_consumer_offset(offset)
+            success = await self._offset_port.save_consumer_offset(offset)
             Postconditions.validate_success(success, "save_consumer_offset")
             return {"success": True}
         except ValidationError as e:
@@ -269,12 +269,12 @@ class DatabaseAPI:
         except Exception as e:
             raise_internal_error(f"Failed to save consumer offset: {str(e)}")
 
-    def get_consumer_offset(self, consumer_group: str, topic: str, partition: int) -> ConsumerOffsetResponse:
+    async def get_consumer_offset(self, consumer_group: str, topic: str, partition: int) -> ConsumerOffsetResponse:
         params = ConsumerOffsetParams(consumer_group, topic, partition, 0)
         self._validator.validate_consumer_offset(params)
 
         try:
-            offset = self._offset_port.get_consumer_offset(consumer_group, topic, partition)
+            offset = await self._offset_port.get_consumer_offset(consumer_group, topic, partition)
             if not offset:
                 raise_not_found_error(f"Consumer offset not found for group '{consumer_group}', topic '{topic}', partition {partition}. Verify the offset exists.")
             return ConsumerOffsetResponse(
@@ -289,18 +289,18 @@ class DatabaseAPI:
         except Exception as e:
             raise_internal_error(f"Failed to get consumer offset: {str(e)}")
 
-    def delete_events_by_topic(self, topic: str) -> Dict[str, int]:
+    async def delete_events_by_topic(self, topic: str) -> Dict[str, int]:
         self._validator.validate_event_id(topic)
 
         try:
-            count = self._event_manager.delete_events_by_topic(topic)
+            count = await self._event_manager.delete_events_by_topic(topic)
             return {"deleted_count": count}
         except Exception as e:
             raise_internal_error(f"Failed to delete events: {str(e)}")
 
-    def get_event_count(self, topic: Optional[str] = None) -> Dict[str, int]:
+    async def get_event_count(self, topic: Optional[str] = None) -> Dict[str, int]:
         try:
-            count = self._count_port.get_event_count(topic)
+            count = await self._count_port.get_event_count(topic)
             return {"count": count}
         except Exception as e:
             raise_internal_error(f"Failed to get event count: {str(e)}")

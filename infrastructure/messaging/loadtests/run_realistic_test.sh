@@ -19,16 +19,24 @@ echo "Waiting for databases to be healthy..."
 sleep 30
 
 echo "Step 2: Starting messaging-sdk container..."
-docker-compose up -d messaging-sdk
+docker-compose up -d --no-deps messaging-sdk
 
 echo "Waiting for messaging-sdk to be ready..."
 sleep 10
 
 echo "Step 3: Starting realistic test server..."
-docker exec -d messaging-sdk bash -c "cd /app && python -m loadtests.test_server_realistic"
+docker exec messaging-sdk bash -c "
+  cd /app && python -m loadtests.test_server_realistic > /tmp/server.log 2>&1 &
+  echo \$! > /tmp/server.pid
+"
 
 echo "Waiting for test server to start..."
 sleep 8
+
+echo "Step 3.5: Verifying server process is running..."
+docker exec messaging-sdk bash -c "
+  kill -0 \$(cat /tmp/server.pid) 2>/dev/null && echo 'Server running' || (cat /tmp/server.log && exit 1)
+"
 
 echo "Step 4: Checking server health..."
 docker exec messaging-sdk python -c "

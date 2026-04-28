@@ -21,6 +21,9 @@ class SanitizationMiddleware(BaseHTTPMiddleware):
         )
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        if request.url.path.startswith("/api/"):
+            return await call_next(request)
+
         if request.method in ["POST", "PUT", "PATCH"]:
             body = await request.body()
 
