@@ -8,7 +8,7 @@ from infrastructure.orchestrator.base import YAMLContainerManager
 logger = logging.getLogger(__name__)
 _tracer = trace.get_tracer(__name__)
 
-KAFKA_YAML = Path(__file__).parent.parent / "config" / "kafka-docker-compose.yaml"
+KAFKA_YAML = Path(__file__).parent.parent.parent / "infrastructure" / "setup" / "config" / "kafka-docker-compose.yaml"
 
 
 

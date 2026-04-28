@@ -26,6 +26,20 @@ limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    database_api = DatabaseAPI(get_database_port())
+    schema_registry_api = SchemaRegistryAPI(get_schema_registry_port())
+    event_handler_api = EventHandlerAPI(get_event_handler())
+    schema_aware_event_handler_api = SchemaAwareEventHandlerAPI(get_schema_aware_event_handler())
+    producer_api = ProducerAPI(get_producer_port())
+    consumer_api = ConsumerAPI(get_consumer_port())
+
+    app.include_router(database_api.router, prefix="/api/v1/database", tags=["Database"])
+    app.include_router(schema_registry_api.router, prefix="/api/v1/schema-registry", tags=["Schema Registry"])
+    app.include_router(event_handler_api.router, prefix="/api/v1/event-handler", tags=["Event Handler"])
+    app.include_router(schema_aware_event_handler_api.router, prefix="/api/v1/schema-aware-event-handler", tags=["Schema Aware Event Handler"])
+    app.include_router(producer_api.router, prefix="/api/v1/producer", tags=["Producer"])
+    app.include_router(consumer_api.router, prefix="/api/v1/consumer", tags=["Consumer"])
+
     yield
 
 
@@ -101,18 +115,3 @@ async def root():
         "docs": "/docs",
         "redoc": "/redoc"
     }
-
-
-database_api = DatabaseAPI(get_database_port())
-schema_registry_api = SchemaRegistryAPI(get_schema_registry_port())
-event_handler_api = EventHandlerAPI(get_event_handler())
-schema_aware_event_handler_api = SchemaAwareEventHandlerAPI(get_schema_aware_event_handler())
-producer_api = ProducerAPI(get_producer_port())
-consumer_api = ConsumerAPI(get_consumer_port())
-
-app.include_router(database_api.router, prefix="/api/v1/database", tags=["Database"])
-app.include_router(schema_registry_api.router, prefix="/api/v1/schema-registry", tags=["Schema Registry"])
-app.include_router(event_handler_api.router, prefix="/api/v1/event-handler", tags=["Event Handler"])
-app.include_router(schema_aware_event_handler_api.router, prefix="/api/v1/schema-aware-event-handler", tags=["Schema Aware Event Handler"])
-app.include_router(producer_api.router, prefix="/api/v1/producer", tags=["Producer"])
-app.include_router(consumer_api.router, prefix="/api/v1/consumer", tags=["Consumer"])
