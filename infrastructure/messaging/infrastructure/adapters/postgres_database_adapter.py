@@ -36,6 +36,14 @@ class PostgresDatabaseAdapter(DatabasePort):
                     ON kafka_events(topic, partition, "offset")
                 """)
                 cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_events_topic 
+                    ON kafka_events(topic)
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_events_topic_created 
+                    ON kafka_events(topic, created_at DESC)
+                """)
+                cur.execute("""
                     CREATE TABLE IF NOT EXISTS consumer_offsets (
                         id SERIAL PRIMARY KEY,
                         consumer_group VARCHAR(255) NOT NULL,
@@ -45,6 +53,10 @@ class PostgresDatabaseAdapter(DatabasePort):
                         updated_at TIMESTAMPTZ DEFAULT NOW(),
                         UNIQUE(consumer_group, topic, partition)
                     )
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_consumer_offsets_lookup 
+                    ON consumer_offsets(consumer_group, topic, partition)
                 """)
             conn.commit()
         finally:
