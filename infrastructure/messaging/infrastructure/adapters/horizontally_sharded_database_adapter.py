@@ -4,6 +4,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 import time
 import threading
+import asyncio
+import concurrent.futures
 from dataclasses import dataclass
 import psycopg2
 from psycopg2 import pool, extras
@@ -31,7 +33,8 @@ class ShardingConfig:
 
 class HorizontallyShardedDatabaseAdapter(DatabasePort, EventWriterPort, EventReaderPort, EventManagementPort, OffsetPort, CountPort):
     def __init__(self, postgres_instances: List[str], mongo_instances: List[str],
-                 config: Optional[ShardingConfig] = None):
+                 config: Optional[ShardingConfig] = None, thread_pool_workers: int = 200,
+                 postgres_minconn: int = 10, postgres_maxconn: int = 50):
         self.config = config or ShardingConfig()
         self.logical_shards_per_instance = self.config.logical_shards_per_instance
         self.total_shards = len(postgres_instances) * self.config.logical_shards_per_instance
@@ -43,7 +46,7 @@ class HorizontallyShardedDatabaseAdapter(DatabasePort, EventWriterPort, EventRea
 
         self.postgres_adapters = []
         for i, dsn in enumerate(postgres_instances):
-            adapter = PostgresDatabaseAdapter(dsn=dsn, minconn=2, maxconn=10)
+            adapter = PostgresDatabaseAdapter(dsn=dsn, minconn=postgres_minconn, maxconn=postgres_maxconn)
             self.postgres_adapters.append(adapter)
 
         self.mongo_adapters = []
@@ -56,6 +59,7 @@ class HorizontallyShardedDatabaseAdapter(DatabasePort, EventWriterPort, EventRea
         self.shard_healthy: Dict[Tuple[int, int], bool] = {}
         self.flush_lock = threading.Lock()
         self.per_shard_buffer_limit = 10000
+        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=thread_pool_workers)
     
     def _get_shard(self, key: Optional[str]) -> tuple:
         if key:
@@ -82,7 +86,12 @@ class HorizontallyShardedDatabaseAdapter(DatabasePort, EventWriterPort, EventRea
         elif avg_latency < self.max_latency_ms * 0.5 and self.current_batch_size < 1000:
             self.current_batch_size = min(1000, int(self.current_batch_size * 1.2))
     
-    def save_event(self, event: EventRecord) -> str:
+    async def save_event(self, event: EventRecord) -> str:
+        return await asyncio.get_event_loop().run_in_executor(
+            self._executor, self._sync_save_event, event
+        )
+
+    def _sync_save_event(self, event: EventRecord) -> str:
         instance_idx, logical_shard = self._get_shard(event.key)
         shard_key = (instance_idx, logical_shard)
 
@@ -100,7 +109,12 @@ class HorizontallyShardedDatabaseAdapter(DatabasePort, EventWriterPort, EventRea
         self._check_and_flush_shard(shard_key)
         return f"pending-{shard_key[0]}-{shard_key[1]}-{len(self.shard_buffers[shard_key])}"
     
-    def save_events_batch(self, events: List[EventRecord]) -> List[str]:
+    async def save_events_batch(self, events: List[EventRecord]) -> List[str]:
+        return await asyncio.get_event_loop().run_in_executor(
+            self._executor, self._sync_save_events_batch, events
+        )
+
+    def _sync_save_events_batch(self, events: List[EventRecord]) -> List[str]:
         shard_events: Dict[Tuple[int, int], List[EventRecord]] = {}
         for event in events:
             shard_key = self._get_shard(event.key)
@@ -167,7 +181,12 @@ class HorizontallyShardedDatabaseAdapter(DatabasePort, EventWriterPort, EventRea
                     self.shard_buffers[shard_key] = buffer[:self.batch_size]
                     self.shard_buffer_timestamps[shard_key] = time.time()
     
-    def get_event(self, event_id: str) -> Optional[EventRecord]:
+    async def get_event(self, event_id: str) -> Optional[EventRecord]:
+        return await asyncio.get_event_loop().run_in_executor(
+            self._executor, self._sync_get_event, event_id
+        )
+
+    def _sync_get_event(self, event_id: str) -> Optional[EventRecord]:
         for adapter in self.postgres_adapters:
             try:
                 event = adapter.get_event(event_id)
@@ -177,40 +196,75 @@ class HorizontallyShardedDatabaseAdapter(DatabasePort, EventWriterPort, EventRea
                 continue
         return None
     
-    def get_events_by_topic(self, topic: str, limit: int, offset: int) -> List[EventRecord]:
+    async def get_events_by_topic(self, topic: str, limit: int, offset: int) -> List[EventRecord]:
+        return await asyncio.get_event_loop().run_in_executor(
+            self._executor, self._sync_get_events_by_topic, topic, limit, offset
+        )
+
+    def _sync_get_events_by_topic(self, topic: str, limit: int, offset: int) -> List[EventRecord]:
         return self.postgres_adapters[0].get_events_by_topic(topic, limit, offset)
     
-    def get_unprocessed_events(self, limit: int) -> List[EventRecord]:
+    async def get_unprocessed_events(self, limit: int) -> List[EventRecord]:
+        return await asyncio.get_event_loop().run_in_executor(
+            self._executor, self._sync_get_unprocessed_events, limit
+        )
+
+    def _sync_get_unprocessed_events(self, limit: int) -> List[EventRecord]:
         all_events = []
         per_shard_limit = max(1, limit // len(self.postgres_adapters))
         for adapter in self.postgres_adapters:
             all_events.extend(adapter.get_unprocessed_events(per_shard_limit))
         return all_events[:limit]
     
-    def mark_event_processed(self, event_id: str) -> bool:
+    async def mark_event_processed(self, event_id: str) -> bool:
+        return await asyncio.get_event_loop().run_in_executor(
+            self._executor, self._sync_mark_event_processed, event_id
+        )
+
+    def _sync_mark_event_processed(self, event_id: str) -> bool:
         for adapter in self.postgres_adapters:
             if adapter.mark_event_processed(event_id):
                 return True
         return False
     
-    def save_consumer_offset(self, offset: ConsumerOffset) -> bool:
+    async def save_consumer_offset(self, offset: ConsumerOffset) -> bool:
+        return await asyncio.get_event_loop().run_in_executor(
+            self._executor, self._sync_save_consumer_offset, offset
+        )
+
+    def _sync_save_consumer_offset(self, offset: ConsumerOffset) -> bool:
         instance_idx, _ = self._get_shard(offset.consumer_group)
         return self.postgres_adapters[instance_idx].save_consumer_offset(offset)
     
-    def get_consumer_offset(self, consumer_group: str, topic: str, partition: int) -> ConsumerOffset:
+    async def get_consumer_offset(self, consumer_group: str, topic: str, partition: int) -> ConsumerOffset:
+        return await asyncio.get_event_loop().run_in_executor(
+            self._executor, self._sync_get_consumer_offset, consumer_group, topic, partition
+        )
+
+    def _sync_get_consumer_offset(self, consumer_group: str, topic: str, partition: int) -> ConsumerOffset:
         instance_idx, _ = self._get_shard(consumer_group)
         try:
             return self.postgres_adapters[instance_idx].get_consumer_offset(consumer_group, topic, partition)
         except Exception:
             return None
     
-    def delete_events_by_topic(self, topic: str) -> int:
+    async def delete_events_by_topic(self, topic: str) -> int:
+        return await asyncio.get_event_loop().run_in_executor(
+            self._executor, self._sync_delete_events_by_topic, topic
+        )
+
+    def _sync_delete_events_by_topic(self, topic: str) -> int:
         total = 0
         for adapter in self.postgres_adapters:
             total += adapter.delete_events_by_topic(topic)
         return total
     
-    def get_event_count(self, topic: str) -> int:
+    async def get_event_count(self, topic: str) -> int:
+        return await asyncio.get_event_loop().run_in_executor(
+            self._executor, self._sync_get_event_count, topic
+        )
+
+    def _sync_get_event_count(self, topic: str) -> int:
         total = 0
         for adapter in self.postgres_adapters:
             total += adapter.get_event_count(topic)
@@ -224,3 +278,4 @@ class HorizontallyShardedDatabaseAdapter(DatabasePort, EventWriterPort, EventRea
             adapter.close()
         for adapter in self.mongo_adapters:
             adapter.close()
+        self._executor.shutdown(wait=True)
