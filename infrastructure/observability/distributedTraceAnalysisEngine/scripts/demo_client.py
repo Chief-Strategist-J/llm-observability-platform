@@ -7,7 +7,7 @@ BASE_URL = "http://localhost:8090"
 
 def generate_trace():
     trace_id = uuid.uuid4().hex
-    start_time = int(time.time() * 1e9)
+    start_time = int((time.time() - 35) * 1e9)
     
     spans = [
         {
@@ -70,7 +70,7 @@ def main():
     print(f"Found {len(results)} results.")
     
     for res in results:
-        tid = res.get("trace_id", {}).get("0")
+        tid = res.get("trace_id")
         is_anomaly = res.get("is_anomalous")
         confidence = res.get("confidence")
         print(f"Trace {tid}: Anomalous={is_anomaly}, Confidence={confidence:.2f}")
