@@ -146,6 +146,18 @@ async fn main() {
 }
 ```
 
+### Docker
+
+You can also run DTAE as a Docker container:
+
+```bash
+# Build the image
+docker build -t dtae-server .
+
+# Run the container
+docker run -p 8090:8090 dtae-server
+```
+
 ## ⚙️ Configuration
 
 Environment variables:
