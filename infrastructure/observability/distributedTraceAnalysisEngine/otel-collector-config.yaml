@@ -12,20 +12,26 @@ processors:
     send_batch_size: 1024
 
 exporters:
-  otlp/dtae:
-    endpoint: "dtae-server:8090"
+  otlp_http/dtae:
+    traces_endpoint: "http://dtae-server:8090/api/v1/spans/otlp"
+    encoding: json
+    compression: none
     tls:
       insecure: true
   otlp/tempo:
     endpoint: "tempo:4317"
     tls:
       insecure: true
-  logging:
-    loglevel: debug
+  otlp/jaeger:
+    endpoint: "jaeger:4317"
+    tls:
+      insecure: true
+  debug:
+    verbosity: detailed
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp/dtae, otlp/tempo, logging]
+      exporters: [otlp_http/dtae, otlp/tempo, otlp/jaeger, debug]

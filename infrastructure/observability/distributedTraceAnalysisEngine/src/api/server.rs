@@ -3,6 +3,7 @@ use tokio::sync::Mutex;
 use axum::{Router, Json, extract::State, extract::Path, routing::{get, post}, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use tower_http::cors::CorsLayer;
+use tower_http::trace::TraceLayer;
 
 use crate::domain::trace::{Span, TraceId};
 use crate::domain::events::AnalysisResult;
@@ -61,6 +62,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/api/v1/analysis/results/{trace_id}", get(get_result_by_trace_handler))
         .route("/api/v1/traces", get(list_traces_handler))
         .route("/api/v1/traces/{trace_id}", get(get_trace_handler))
+        .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive())
         .with_state(state)
 }
@@ -90,7 +92,10 @@ async fn ingest_otlp_handler(
     Json(payload): Json<serde_json::Value>,
 ) -> Result<(StatusCode, Json<IngestResponse>), (StatusCode, String)> {
     let spans = OtlpSpanReceiver::from_otlp_json(&payload)
-        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+        .map_err(|e| {
+            tracing::error!("Invalid OTLP JSON: {}", e);
+            (StatusCode::BAD_REQUEST, e.to_string())
+        })?;
     let count = spans.len();
     let mut assembler = state.assembler.lock().await;
     assembler.ingest_batch(spans);
