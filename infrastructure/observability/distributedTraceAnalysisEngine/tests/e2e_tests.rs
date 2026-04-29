@@ -1,13 +1,11 @@
 use distributed_trace_analysis_engine::api::client::TraceAnalysisClient;
-use distributed_trace_analysis_engine::domain::trace::{Span, TraceId, SpanId, SpanStatusCode};
-use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn now_ns() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64
 }
 
-fn create_otlp_span(tid: &str, sid: &str, parent: Option<&str>, svc: &str, op: &str, start: u64, dur: u64) -> serde_json::Value {
+fn create_otlp_span(tid: &str, sid: &str, parent: Option<&str>, _svc: &str, op: &str, start: u64, dur: u64) -> serde_json::Value {
     serde_json::json!({
         "traceId": tid,
         "spanId": sid,
@@ -35,18 +33,16 @@ fn create_otlp_payload(spans: Vec<serde_json::Value>) -> serde_json::Value {
 
 #[tokio::test]
 async fn test_e2e_ingestion_and_analysis() {
-    // Note: This test assumes the server is running on localhost:8090
-    // If not running, we skip the test or provide a way to start it.
     let client = TraceAnalysisClient::new("http://localhost:8090");
     
-    // Check health first
     if client.health().await.is_err() {
         println!("Skipping E2E test: server not running on localhost:8090");
         return;
     }
 
     let tid = "4bf92f3577b34da6a3ce929d0e0e4736";
-    let start = now_ns();
+    // Set start to 35 seconds ago to ensure it's older than the 30s retention window
+    let start = now_ns() - 35_000_000_000;
 
     let spans = vec![
         create_otlp_span(tid, "0000000000000001", None, "gateway", "GET /user", start, 500_000_000),
@@ -56,15 +52,12 @@ async fn test_e2e_ingestion_and_analysis() {
 
     let payload = create_otlp_payload(spans);
 
-    // 1. Ingest OTLP spans
     let accepted = client.ingest_otlp(&payload).await.expect("failed to ingest otlp");
     assert_eq!(accepted, 3);
 
-    // 2. Flush to trigger analysis
     let flush_res = client.flush().await.expect("failed to flush");
     assert!(flush_res.analysis_results >= 1);
 
-    // 3. Verify results
     let results = client.get_results().await.expect("failed to get results");
     let my_result = results.iter().find(|r| r.trace_id.0 == tid).expect("result for trace not found");
     
