@@ -1,0 +1,33 @@
+[package]
+name = "distributed_trace_analysis_engine"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "distributed_trace_analysis_engine"
+path = "src/lib.rs"
+
+[[bin]]
+name = "dtae-server"
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+axum = { version = "0.8", features = ["json"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+petgraph = "0.7"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+rand = "0.9"
+ordered-float = { version = "5", features = ["serde"] }
+thiserror = "2"
+async-trait = "0.1"
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
