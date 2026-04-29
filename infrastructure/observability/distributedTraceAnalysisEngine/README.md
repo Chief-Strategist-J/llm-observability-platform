@@ -158,6 +158,21 @@ docker build -t dtae-server .
 docker run -p 8090:8090 dtae-server
 ```
 
+### Docker Compose
+
+Alternatively, use Docker Compose to manage the service:
+
+```bash
+# Start the service
+docker compose up -d
+
+# Check logs
+docker compose logs -f
+
+# Stop the service
+docker compose down
+```
+
 ## ⚙️ Configuration
 
 Environment variables:
