@@ -8,13 +8,17 @@ DTAE follows the **Hexagonal Architecture** (Ports and Adapters) pattern, ensuri
 
 ```mermaid
 graph TD
-    subgraph Infrastructure
-        OTLP[OTLP Receiver]
-        JSON[JSON API]
-        Store[Trace Store]
+    subgraph External_World
+        SDK[App SDKs] --> |OTLP| OTel[OTel Collector]
     end
 
-    subgraph Domain
+    subgraph Infrastructure_Adapters
+        OTel --> |HTTP/JSON| OTLP_R[OTLP Receiver]
+        CLI[API Client] --> |JSON| JSON_R[JSON Receiver]
+        SQL[Trace Store]
+    end
+
+    subgraph Domain_Core
         direction TB
         Assembler[Trace Assembler]
         Extractor[Feature Extractor]
@@ -23,16 +27,31 @@ graph TD
         CriticalPath[Critical Path DP]
     end
 
-    OTLP --> Assembler
-    JSON --> Assembler
-    Assembler --> Extractor
-    Extractor --> Clustering
-    Extractor --> Detectors
-    Extractor --> CriticalPath
+    OTLP_R --> Assembler
+    JSON_R --> Assembler
+    Assembler --> |Trace Object| Extractor
+    Extractor --> |64-dim Fingerprint| Clustering
+    Extractor --> |Structural Metadata| Detectors
+    Extractor --> |DAG| CriticalPath
     Detectors --> Result[Analysis Result]
     Clustering --> Result
     CriticalPath --> Result
-    Result --> Store
+    Result --> SQL
+```
+
+## 📡 Network & Data Flow
+
+DTAE acts as a stateful sink for distributed traces. It is designed to sit alongside traditional storage backends like Grafana Tempo or Jaeger.
+
+```mermaid
+graph LR
+    App[Application] --> |OTLP| Collector[OTel Collector]
+    Collector --> |Fan-out| DTAE[DTAE Engine]
+    Collector --> |Fan-out| Tempo[Tempo Storage]
+    Collector --> |Fan-out| Jaeger[Jaeger UI]
+    
+    UI[Dashboard] --> |Query| DTAE
+    UI --> |Query| Jaeger
 ```
 
 ## 🔄 Sequence Diagram: Trace Analysis Pipeline
@@ -69,19 +88,36 @@ sequenceDiagram
     End
 ```
 
-## 🚀 Key Use Cases
+## 🧠 Deep Dive: How it Works
 
-### 1. Automatic Bottleneck Identification
-DTAE builds a Directed Acyclic Graph (DAG) for every trace and runs a Longest Path algorithm to find the "Critical Path". It accurately identifies which service is responsible for the majority of user-perceived latency.
+### 1. Stateful Trace Reconstruction
+Unlike stateless collectors, DTAE maintains an in-memory buffer of spans. It uses a **Watermark-based Flush** mechanism:
+- Spans are indexed by `trace_id`.
+- When a `flush` is triggered (or an auto-flush interval expires), DTAE identifies traces that have reached a terminal state or timed out.
+- It then reconstructs the full parent-child hierarchy to form a coherent **Trace Object**.
 
-### 2. Statistical Anomaly Detection (Signal Fusion)
-Instead of simple thresholds, DTAE uses:
-- **Log-normal Baselines**: For latency detection that accounts for natural variance.
-- **KS-Test (Kolmogorov-Smirnov)**: To detect shifts in the structural distribution of traces within a cluster.
-- **Novelty Detection**: Identifying error propagation paths never seen before.
+### 2. Geometric Trace Fingerprinting
+Every reconstructed trace is converted into a high-dimensional vector:
+- **Structural Encoding**: The graph topology (edges, service hops) is hashed into a fixed-length vector.
+- **Timing Signatures**: Relative latencies and depth levels are normalized and encoded.
+- **Outcome**: A 64-dimensional fingerprint that represents the "shape" of the trace.
 
-### 3. Trace Fingerprinting & Clustering
-Every trace is compressed into a 64-dimensional vector. **HDBSCAN** clustering then groups these fingerprints to find "normal" patterns and highlight "noise" (rare, anomalous traces) without requiring a pre-defined number of clusters (K).
+### 3. HDBSCAN Clustering (Noise as Signal)
+DTAE uses **HDBSCAN** (Hierarchical Density-Based Spatial Clustering of Applications with Noise):
+- **Clusters**: Group traces with similar structural and timing fingerprints (e.g., "Standard Checkout Flow").
+- **Noise**: Traces that don't fit into any cluster are automatically flagged as **Structural Anomalies**.
+- **No K-Means**: We don't need to guess how many "types" of traces exist; HDBSCAN discovers them.
+
+### 4. Critical Path Discovery (DAG DP)
+To find the bottleneck, DTAE treats the trace as a Directed Acyclic Graph (DAG):
+- It computes the **Longest Path** through the graph where edges are weighted by duration.
+- It subtracts the overlapping time of concurrent child spans.
+- **Result**: The exact sequence of operations that defined the total response time.
+
+### 5. Multi-Signal Anomaly Detection
+- **Latency**: Uses a rolling window of log-normal distributions to detect "slow" traces relative to their specific cluster.
+- **Structural**: Detects missing or unexpected service calls using the **KS-Test** on fingerprint distributions.
+- **Error Propagation**: Identifies traces where errors originated in downstream dependencies and bubbled up.
 
 ## 🛠️ How to Use
 
@@ -199,10 +235,16 @@ cargo run --bin dtae-server
 cargo test --test e2e_tests -- --nocapture
 ```
 
-### Demo Script (Python)
+### Verification Script (Stack-wide)
 
-A Python script is provided to quickly test the full flow without writing Rust code:
+A comprehensive verification script is provided to test the full pipeline (Ingestion -> Collector -> DTAE -> Jaeger):
 
 ```bash
-python3 scripts/demo_client.py
+# Ensure the stack is running
+docker compose up -d
+
+# Run verification
+python3 scripts/verify_stack.py
 ```
+
+This script generates a synthetic trace, sends it to the Collector, waits for propagation, triggers a DTAE flush, and verifies the result in both the analysis engine and Jaeger visualization.
