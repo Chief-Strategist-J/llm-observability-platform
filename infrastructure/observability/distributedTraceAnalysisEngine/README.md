@@ -183,5 +183,26 @@ Environment variables:
 ## 🧪 Testing
 
 ```bash
+# Run unit and integration tests
 cargo test
+```
+
+### End-to-End (E2E) Tests
+
+The E2E tests require a running instance of the DTAE server. You can run them against a local or Docker instance:
+
+```bash
+# Start server first
+cargo run --bin dtae-server
+
+# In another terminal, run E2E tests
+cargo test --test e2e_tests -- --nocapture
+```
+
+### Demo Script (Python)
+
+A Python script is provided to quickly test the full flow without writing Rust code:
+
+```bash
+python3 scripts/demo_client.py
 ```
