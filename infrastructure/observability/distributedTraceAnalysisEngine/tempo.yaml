@@ -5,21 +5,13 @@ distributor:
   receivers:
     otlp:
       protocols:
-        grpc:
         http:
-
-ingester:
-  max_block_duration: 5m
+        grpc:
 
 storage:
   trace:
     backend: local
-    local:
-      path: /tmp/tempo/traces
     wal:
       path: /tmp/tempo/wal
-
-overrides:
-  defaults:
-    ingestion:
-      max_traces_per_user: 10000
+    local:
+      path: /tmp/tempo/blocks
