@@ -158,20 +158,21 @@ docker build -t dtae-server .
 docker run -p 8090:8090 dtae-server
 ```
 
-### Docker Compose
+### Docker Compose (Full Stack)
 
-Alternatively, use Docker Compose to manage the service:
+Use Docker Compose to manage the entire observability stack (DTAE, OTel Collector, Tempo, and Jaeger):
 
 ```bash
-# Start the service
+# Start the full stack
 docker compose up -d
-
-# Check logs
-docker compose logs -f
-
-# Stop the service
-docker compose down
 ```
+
+**Services Included:**
+- **DTAE Server**: `http://localhost:8090` (Analysis Engine)
+- **OTel Collector**: `http://localhost:4317` (gRPC), `http://localhost:4318` (HTTP)
+- **Jaeger UI**: `http://localhost:16686` (Visualization)
+- **Tempo API**: `http://localhost:3200` (Storage)
+
 
 ## ⚙️ Configuration
 
