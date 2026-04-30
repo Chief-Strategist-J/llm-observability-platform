@@ -1,15 +1,20 @@
+use axum::{
+    extract::{Path, Query, State},
+    http::StatusCode,
+    routing::{get, post},
+    Json, Router,
+};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use axum::{Router, Json, extract::State, extract::Path, routing::{get, post}, http::StatusCode};
-use serde::{Deserialize, Serialize};
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
-use crate::domain::trace::{Span, TraceId};
-use crate::domain::events::AnalysisResult;
-use crate::domain::ports::TraceStore;
 use crate::application::assembler::TraceAssembler;
 use crate::application::processor::TraceProcessor;
+use crate::domain::events::AnalysisResult;
+use crate::domain::ports::TraceStore;
+use crate::domain::trace::{Span, TraceId};
 use crate::infrastructure::collector::OtlpSpanReceiver;
 
 pub struct AppState {
@@ -44,6 +49,15 @@ struct AnalysisResultResponse {
     results: Vec<AnalysisResult>,
 }
 
+#[derive(Deserialize)]
+struct AnalysisResultQuery {
+    limit: Option<usize>,
+    offset: Option<usize>,
+    trace_id: Option<String>,
+}
+const DEFAULT_RESULTS_LIMIT: usize = 100;
+const MAX_RESULTS_LIMIT: usize = 1_000;
+
 #[derive(Serialize)]
 struct TraceResponse {
     trace_id: String,
@@ -59,7 +73,10 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/api/v1/spans/otlp", post(ingest_otlp_handler))
         .route("/api/v1/flush", post(flush_handler))
         .route("/api/v1/analysis/results", get(get_results_handler))
-        .route("/api/v1/analysis/results/{trace_id}", get(get_result_by_trace_handler))
+        .route(
+            "/api/v1/analysis/results/{trace_id}",
+            get(get_result_by_trace_handler),
+        )
         .route("/api/v1/traces", get(list_traces_handler))
         .route("/api/v1/traces/{trace_id}", get(get_trace_handler))
         .layer(TraceLayer::new_for_http())
@@ -81,33 +98,36 @@ async fn ingest_spans_handler(
     let count = spans.len();
     let mut assembler = state.assembler.lock().await;
     assembler.ingest_batch(spans);
-    (StatusCode::ACCEPTED, Json(IngestResponse {
-        accepted: count,
-        message: "spans accepted".into(),
-    }))
+    (
+        StatusCode::ACCEPTED,
+        Json(IngestResponse {
+            accepted: count,
+            message: "spans accepted".into(),
+        }),
+    )
 }
 
 async fn ingest_otlp_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<(StatusCode, Json<IngestResponse>), (StatusCode, String)> {
-    let spans = OtlpSpanReceiver::from_otlp_json(&payload)
-        .map_err(|e| {
-            tracing::error!("Invalid OTLP JSON: {}", e);
-            (StatusCode::BAD_REQUEST, e.to_string())
-        })?;
+    let spans = OtlpSpanReceiver::from_otlp_json(&payload).map_err(|e| {
+        tracing::error!("Invalid OTLP JSON: {}", e);
+        (StatusCode::BAD_REQUEST, e.to_string())
+    })?;
     let count = spans.len();
     let mut assembler = state.assembler.lock().await;
     assembler.ingest_batch(spans);
-    Ok((StatusCode::ACCEPTED, Json(IngestResponse {
-        accepted: count,
-        message: "otlp spans accepted".into(),
-    })))
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(IngestResponse {
+            accepted: count,
+            message: "otlp spans accepted".into(),
+        }),
+    ))
 }
 
-async fn flush_handler(
-    State(state): State<Arc<AppState>>,
-) -> Json<FlushResponse> {
+async fn flush_handler(State(state): State<Arc<AppState>>) -> Json<FlushResponse> {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
@@ -152,9 +172,72 @@ async fn flush_handler(
 
 async fn get_results_handler(
     State(state): State<Arc<AppState>>,
+    Query(query): Query<AnalysisResultQuery>,
 ) -> Json<AnalysisResultResponse> {
     let results = state.results.lock().await;
-    Json(AnalysisResultResponse { results: results.clone() })
+    let paged = apply_results_query(results.as_slice(), query);
+    Json(AnalysisResultResponse { results: paged })
+}
+
+fn apply_results_query(
+    results: &[AnalysisResult],
+    query: AnalysisResultQuery,
+) -> Vec<AnalysisResult> {
+    let filtered: Vec<AnalysisResult> = if let Some(trace_id) = query.trace_id {
+        results
+            .iter()
+            .filter(|r| r.trace_id.0 == trace_id)
+            .cloned()
+            .collect()
+    } else {
+        results.to_vec()
+    };
+
+    let offset = query.offset.unwrap_or(0);
+    let limit = query
+        .limit
+        .unwrap_or(DEFAULT_RESULTS_LIMIT)
+        .min(MAX_RESULTS_LIMIT);
+    filtered.into_iter().skip(offset).take(limit).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::{
+        critical_path::CriticalPath, events::AnalysisResult, fingerprint::TraceFingerprint,
+        trace::TraceId,
+    };
+
+    fn mk_result(trace_id: &str, cluster_id: i64) -> AnalysisResult {
+        AnalysisResult {
+            trace_id: TraceId(trace_id.to_string()),
+            cluster_id,
+            fingerprint: TraceFingerprint { vector: vec![] },
+            anomaly_scores: vec![],
+            critical_path: CriticalPath {
+                nodes: vec![],
+                total_duration_ns: 0,
+                critical_service: None,
+                optimization_opportunity: false,
+            },
+            is_anomalous: false,
+            confidence: 0.0,
+        }
+    }
+
+    #[test]
+    fn applies_trace_filter_and_pagination() {
+        let results = vec![mk_result("t1", 1), mk_result("t2", 2), mk_result("t2", 3)];
+        let query = AnalysisResultQuery {
+            limit: Some(1),
+            offset: Some(1),
+            trace_id: Some("t2".into()),
+        };
+        let out = apply_results_query(&results, query);
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].cluster_id, 3);
+    }
 }
 
 async fn get_result_by_trace_handler(
@@ -162,23 +245,25 @@ async fn get_result_by_trace_handler(
     Path(trace_id): Path<String>,
 ) -> Result<Json<AnalysisResult>, StatusCode> {
     let results = state.results.lock().await;
-    results.iter()
+    results
+        .iter()
         .find(|r| r.trace_id.0 == trace_id)
         .cloned()
         .map(Json)
         .ok_or(StatusCode::NOT_FOUND)
 }
 
-async fn list_traces_handler(
-    State(state): State<Arc<AppState>>,
-) -> Json<Vec<TraceResponse>> {
+async fn list_traces_handler(State(state): State<Arc<AppState>>) -> Json<Vec<TraceResponse>> {
     let traces = state.trace_store.list_recent(100).await.unwrap_or_default();
-    let response: Vec<TraceResponse> = traces.iter().map(|t| TraceResponse {
-        trace_id: t.trace_id.0.clone(),
-        span_count: t.span_count(),
-        status: format!("{:?}", t.status),
-        duration_ns: t.total_duration_ns(),
-    }).collect();
+    let response: Vec<TraceResponse> = traces
+        .iter()
+        .map(|t| TraceResponse {
+            trace_id: t.trace_id.0.clone(),
+            span_count: t.span_count(),
+            status: format!("{:?}", t.status),
+            duration_ns: t.total_duration_ns(),
+        })
+        .collect();
     Json(response)
 }
 
@@ -186,7 +271,10 @@ async fn get_trace_handler(
     State(state): State<Arc<AppState>>,
     Path(trace_id): Path<String>,
 ) -> Result<Json<crate::domain::trace::Trace>, StatusCode> {
-    let trace = state.trace_store.load(&TraceId(trace_id)).await
+    let trace = state
+        .trace_store
+        .load(&TraceId(trace_id))
+        .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     trace.map(Json).ok_or(StatusCode::NOT_FOUND)
 }

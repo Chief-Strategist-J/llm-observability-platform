@@ -1,7 +1,7 @@
+use crate::domain::events::AnalysisResult;
+use crate::domain::trace::{Span, Trace};
 use reqwest::Client;
 use serde::de::DeserializeOwned;
-use crate::domain::trace::{Span, Trace};
-use crate::domain::events::AnalysisResult;
 
 pub struct TraceAnalysisClient {
     client: Client,
@@ -83,6 +83,34 @@ impl TraceAnalysisClient {
         Ok(resp.results)
     }
 
+    pub async fn get_results_filtered(
+        &self,
+        limit: Option<usize>,
+        offset: Option<usize>,
+        trace_id: Option<&str>,
+    ) -> Result<Vec<AnalysisResult>, ClientError> {
+        let mut params = Vec::new();
+        if let Some(limit) = limit {
+            params.push(format!("limit={limit}"));
+        }
+        if let Some(offset) = offset {
+            params.push(format!("offset={offset}"));
+        }
+        if let Some(trace_id) = trace_id {
+            let encoded_trace_id = trace_id.replace(' ', "%20");
+            params.push(format!("trace_id={encoded_trace_id}"));
+        }
+
+        let path = if params.is_empty() {
+            "/api/v1/analysis/results".to_string()
+        } else {
+            format!("/api/v1/analysis/results?{}", params.join("&"))
+        };
+
+        let resp: AnalysisResultsResponse = self.get(&path).await?;
+        Ok(resp.results)
+    }
+
     pub async fn get_result(&self, trace_id: &str) -> Result<AnalysisResult, ClientError> {
         let path = format!("/api/v1/analysis/results/{}", trace_id);
         self.get(&path).await
@@ -103,18 +131,28 @@ impl TraceAnalysisClient {
         let status = response.status();
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
-            return Err(ClientError::ServerError { status: status.as_u16(), body });
+            return Err(ClientError::ServerError {
+                status: status.as_u16(),
+                body,
+            });
         }
         Ok(response.json().await?)
     }
 
-    async fn post<T: DeserializeOwned, B: serde::Serialize + ?Sized>(&self, path: &str, body: &B) -> Result<T, ClientError> {
+    async fn post<T: DeserializeOwned, B: serde::Serialize + ?Sized>(
+        &self,
+        path: &str,
+        body: &B,
+    ) -> Result<T, ClientError> {
         let url = format!("{}{}", self.base_url, path);
         let response = self.client.post(&url).json(body).send().await?;
         let status = response.status();
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
-            return Err(ClientError::ServerError { status: status.as_u16(), body });
+            return Err(ClientError::ServerError {
+                status: status.as_u16(),
+                body,
+            });
         }
         Ok(response.json().await?)
     }
@@ -125,7 +163,10 @@ impl TraceAnalysisClient {
         let status = response.status();
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
-            return Err(ClientError::ServerError { status: status.as_u16(), body });
+            return Err(ClientError::ServerError {
+                status: status.as_u16(),
+                body,
+            });
         }
         Ok(response.json().await?)
     }
