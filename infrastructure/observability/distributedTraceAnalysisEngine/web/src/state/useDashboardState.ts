@@ -7,9 +7,9 @@ type DashboardState = {
   setHistogramBins: (bins: number) => void;
 };
 
-export const useDashboardState = create<DashboardState>((set) => ({
+export const useDashboardState = create<DashboardState>(set => ({
   selectedTraceId: undefined,
-  setSelectedTraceId: (selectedTraceId) => set({ selectedTraceId }),
+  setSelectedTraceId: selectedTraceId => set({ selectedTraceId }),
   histogramBins: 20,
-  setHistogramBins: (histogramBins) => set({ histogramBins }),
+  setHistogramBins: histogramBins => set({ histogramBins }),
 }));
