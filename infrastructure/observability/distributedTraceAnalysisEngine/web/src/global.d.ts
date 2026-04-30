@@ -1,11 +1,16 @@
 declare module 'react' {
   export const StrictMode: any;
   export function useState<T>(initial?: T): [T, (next: T) => void];
-  export function useEffect(effect: () => void | (() => void), deps?: any[]): void;
+  export function useEffect(
+    effect: () => void | (() => void),
+    deps?: any[]
+  ): void;
 }
 
 declare module 'react-dom/client' {
-  export function createRoot(container: Element | DocumentFragment): { render(node: any): void };
+  export function createRoot(container: Element | DocumentFragment): {
+    render(node: any): void;
+  };
 }
 
 declare module 'react/jsx-runtime' {

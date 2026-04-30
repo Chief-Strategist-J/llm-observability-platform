@@ -11,8 +11,10 @@ export function CriticalPathOverlay({ result }: { result?: AnalysisResult }) {
     <div>
       <h4>Critical Path Overlay</h4>
       <ul>
-        {nodes.map((n) => (
-          <li key={spanId(n.span_id)}>{spanId(n.span_id)} — {(n.contribution * 100).toFixed(1)}%</li>
+        {nodes.map(n => (
+          <li key={spanId(n.span_id)}>
+            {spanId(n.span_id)} — {(n.contribution * 100).toFixed(1)}%
+          </li>
         ))}
       </ul>
     </div>
