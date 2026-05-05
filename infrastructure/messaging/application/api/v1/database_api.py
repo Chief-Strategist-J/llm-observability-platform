@@ -115,6 +115,9 @@ class DatabaseAPI:
         self._persistence_strategy = config.persistence_strategy
 
         self._validator = EventValidator()
+        self._idempotency_service = None
+        self._queue_service = None
+        
         if config.idempotency_store:
             self._idempotency_service = IdempotencyService(config.idempotency_store)
         if config.queue and config.metrics:

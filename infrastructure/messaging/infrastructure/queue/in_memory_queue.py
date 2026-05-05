@@ -9,9 +9,9 @@ from domain.ports.queue_port import QueuePort, Priority
 @dataclass(order=True)
 class QueuedItem:
     priority: int = field(compare=True)
-    timestamp: float = field(compare=True)
-    event: Any = field(compare=False)
-    shard_key: Tuple[int, int] = field(compare=False)
+    timestamp: float = field(compare=True, default=0.0)
+    event: Any = field(compare=False, default=None)
+    shard_key: Tuple[int, int] = field(compare=False, default=(0, 0))
 
     def __post_init__(self):
         if self.timestamp == 0:
