@@ -4,7 +4,7 @@ export const API_CONFIG = {
   HEALTH_URL: '/health',
   DEFAULT_LIMIT: 200,
   DEFAULT_OFFSET: 0,
-  POLLING_INTERVAL_MS: 5000,
+  POLLING_INTERVAL_MS: 300000, // Increased from 30s to 60s to reduce API calls
   TRACE_LIST_LIMIT: 100,
 } as const;
 
