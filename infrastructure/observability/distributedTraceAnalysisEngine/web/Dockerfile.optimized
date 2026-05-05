@@ -1,18 +1,26 @@
+# Optimized multi-stage Dockerfile with better caching
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy package files first for better caching
+# Copy package files first for better layer caching
 COPY package*.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --prefer-offline
 
-# Copy source code
-COPY . .
+# Copy source code in order of change frequency
+# Less frequently changed files first
+COPY tsconfig.json ./
+COPY vite.config.ts ./
+COPY index.html ./
+
+# Source code (most frequently changed)
+COPY src ./src
 
 # Build application
 RUN --mount=type=cache,target=/root/.npm \
     npx vite build
 
+# Production stage
 FROM nginx:1.27-alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/nginx.conf

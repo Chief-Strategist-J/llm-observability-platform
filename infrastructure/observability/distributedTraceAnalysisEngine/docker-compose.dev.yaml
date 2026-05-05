@@ -48,12 +48,49 @@ services:
     environment:
       - COLLECTOR_OTLP_ENABLED=true
 
-  # Trace Analysis Web UI (Optimized)
-  dtae-web:
+  # Development Web UI with hot-reload
+  dtae-web-dev:
     build:
       context: ./web
-      dockerfile: Dockerfile.optimized
+      dockerfile: Dockerfile.dev
     ports:
-      - "5173:80"
+      - "5173:5173"
+    volumes:
+      - ./web/src:/app/src
+      - ./web/public:/app/public
+      - ./web/package.json:/app/package.json
+      - ./web/vite.config.ts:/app/vite.config.ts
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:8090
     depends_on:
       - dtae-server
+    command: npm run dev -- --host 0.0.0.0
+
+  # Simple Build Monitoring
+  build-monitor:
+    image: alpine:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: |
+      sh -c "
+      apk add --no-cache docker curl
+      echo 'Build monitoring started at: $$(date)'
+      while true; do
+        echo '=== Build Metrics ==='
+        docker images --format 'table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}' | head -10
+        echo ''
+        echo '=== Container Status ==='
+        docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+        echo ''
+        echo '=== System Usage ==='
+        docker system df
+        echo ''
+        curl -s http://localhost:5173 > /dev/null && echo 'Web UI: OK' || echo 'Web UI: ERROR'
+        echo 'Next check in 60 seconds...'
+        echo ''
+        sleep 60
+      done
+      "
+    depends_on:
+      - dtae-web-dev

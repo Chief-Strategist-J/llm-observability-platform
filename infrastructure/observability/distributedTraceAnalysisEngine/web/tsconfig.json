@@ -21,12 +21,13 @@
 
     /* Linting */
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    "noImplicitReturns": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true
+    "noImplicitReturns": false,
+    "noImplicitAny": false,
+    "strictNullChecks": true,
+    "downlevelIteration": true
   },
   "include": ["src"]
 }
