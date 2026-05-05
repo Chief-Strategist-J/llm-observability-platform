@@ -1,0 +1,49 @@
+{
+  "trace_id": "test-trace-001",
+  "spans": [
+    {
+      "span_id": "span-1",
+      "parent_span_id": null,
+      "trace_id": "test-trace-001",
+      "service_name": "frontend",
+      "operation_name": "GET /api/users",
+      "duration_ns": 150000000,
+      "start_time_ns": 1640995200000000000,
+      "end_time_ns": 1640995200150000000,
+      "status": "ok"
+    },
+    {
+      "span_id": "span-2",
+      "parent_span_id": "span-1",
+      "trace_id": "test-trace-001",
+      "service_name": "auth-service",
+      "operation_name": "validate_token",
+      "duration_ns": 50000000,
+      "start_time_ns": 1640995200005000000,
+      "end_time_ns": 1640995200050000000,
+      "status": "ok"
+    },
+    {
+      "span_id": "span-3",
+      "parent_span_id": "span-1",
+      "trace_id": "test-trace-001",
+      "service_name": "user-service",
+      "operation_name": "get_user_data",
+      "duration_ns": 80000000,
+      "start_time_ns": 1640995200010000000,
+      "end_time_ns": 1640995200090000000,
+      "status": "ok"
+    },
+    {
+      "span_id": "span-4",
+      "parent_span_id": "span-3",
+      "trace_id": "test-trace-001",
+      "service_name": "database",
+      "operation_name": "SELECT users",
+      "duration_ns": 30000000,
+      "start_time_ns": 1640995200015000000,
+      "end_time_ns": 1640995200045000000,
+      "status": "ok"
+    }
+  ]
+}
