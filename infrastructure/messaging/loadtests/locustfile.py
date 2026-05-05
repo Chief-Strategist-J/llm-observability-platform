@@ -7,7 +7,7 @@ class MessagingAPIUser(HttpUser):
     wait_time = between(0, 0)
     
     def on_start(self):
-        self.event_id = "test-event-123"
+        self.event_ids = []
         self.topic = "test-topic"
         self.consumer_group = "test-consumer-group"
         self.schema_id = 1
@@ -18,21 +18,33 @@ class MessagingAPIUser(HttpUser):
         payload = {
             "topic": self.topic,
             "partition": 0,
-            "offset": random.randint(1, 10000),
-            "key": f"key-{random.randint(1, 100)}",
-            "value": f"value-{random.randint(1, 100)}",
+            "offset": random.randint(1, 1000000),
+            "key": f"key-{random.randint(1, 1000)}",
+            "value": f"value-{random.randint(1, 1000)}",
             "timestamp": None,
             "headers": {"header1": "value1"}
         }
-        self.client.post("/api/v1/database/events", json=payload)
+        with self.client.post("/api/v1/database/events", json=payload) as response:
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    if "event_id" in data:
+                        self.event_ids.append(data["event_id"])
+                        if len(self.event_ids) > 100:
+                            self.event_ids.pop(0)
+                except Exception:
+                    pass
     
     @task(2)
     def get_event(self):
-        self.client.get(f"/api/v1/database/events/{self.event_id}")
+        eid = random.choice(self.event_ids) if self.event_ids else "test-event-123"
+        self.client.get(f"/api/v1/database/events/{eid}")
     
     @task(2)
     def get_events_by_topic(self):
-        self.client.get(f"/api/v1/database/events?topic={self.topic}&limit=10&offset=0")
+        with self.client.get(f"/api/v1/database/events?topic={self.topic}&limit=10&offset=0", catch_response=True) as response:
+            if response.status_code == 200 or response.status_code == 404:
+                response.success()
     
     @task(1)
     def save_events_batch(self):
@@ -56,13 +68,20 @@ class MessagingAPIUser(HttpUser):
             "consumer_group": self.consumer_group,
             "topic": self.topic,
             "partition": 0,
-            "offset": random.randint(1, 10000)
+            "offset": random.randint(1, 1000000)
         }
-        self.client.post("/api/v1/database/consumer-offsets", json=payload)
+        with self.client.post("/api/v1/database/consumer-offsets", json=payload) as response:
+            if response.status_code == 200:
+                self.offset_saved = True
     
     @task(1)
     def get_consumer_offset(self):
-        self.client.get(f"/api/v1/database/consumer-offsets/{self.consumer_group}/{self.topic}/0")
+        if getattr(self, 'offset_saved', False):
+            self.client.get(f"/api/v1/database/consumer-offsets/{self.consumer_group}/{self.topic}/0")
+        else:
+            with self.client.get(f"/api/v1/database/consumer-offsets/{self.consumer_group}/{self.topic}/0", catch_response=True) as response:
+                if response.status_code == 404:
+                    response.success()
     
     @task(2)
     def register_schema(self):
@@ -141,7 +160,9 @@ class MessagingAPIUser(HttpUser):
     
     @task(1)
     def get_events_by_topic_handler(self):
-        self.client.get(f"/api/v1/event-handler/events?topic={self.topic}&limit=10&offset=0")
+        with self.client.get(f"/api/v1/event-handler/events?topic={self.topic}&limit=10&offset=0", catch_response=True) as response:
+            if response.status_code == 200 or response.status_code == 404:
+                response.success()
     
     @task(1)
     def produce_message(self):

@@ -8,18 +8,22 @@ services:
     container_name: messaging-sdk
     environment:
       - POSTGRES_DSN=postgresql://postgres:postgres@postgres:5432/messaging
-      - MONGODB_URI=mongodb://mongodb:27017/
+      - MONGODB_URI=mongodb://admin:admin@mongodb:27017/
       - SCHEMA_REGISTRY_URL=http://schema-registry:8081
       - REDIS_URL=redis://redis:6379/
-      - BATCH_SIZE=1000
+      - BATCH_SIZE=2000
       - POSTGRES_SHARDS=8
       - MONGO_SHARDS=8
       - LOGICAL_SHARDS_PER_INSTANCE=8
       - ADAPTIVE_BATCHING=true
-      - MAX_LATENCY_MS=20
+      - MAX_LATENCY_MS=10
       - BENCHMARK_MODE=false
       - TEST_MODE=full
       - WORKER_ID=1
+      - POSTGRES_MINCONN=20
+      - POSTGRES_MAXCONN=100
+      - UVICORN_WORKERS=3
+      - IDEMPOTENCY_TTL=300
     networks:
       - messaging-network
     ports:
@@ -60,18 +64,22 @@ services:
     container_name: messaging-sdk-2
     environment:
       - POSTGRES_DSN=postgresql://postgres:postgres@postgres:5432/messaging
-      - MONGODB_URI=mongodb://mongodb:27017/
+      - MONGODB_URI=mongodb://admin:admin@mongodb:27017/
       - SCHEMA_REGISTRY_URL=http://schema-registry:8081
       - REDIS_URL=redis://redis:6379/
-      - BATCH_SIZE=1000
+      - BATCH_SIZE=2000
       - POSTGRES_SHARDS=8
       - MONGO_SHARDS=8
       - LOGICAL_SHARDS_PER_INSTANCE=8
       - ADAPTIVE_BATCHING=true
-      - MAX_LATENCY_MS=20
+      - MAX_LATENCY_MS=10
       - BENCHMARK_MODE=false
       - TEST_MODE=full
       - WORKER_ID=2
+      - POSTGRES_MINCONN=20
+      - POSTGRES_MAXCONN=100
+      - UVICORN_WORKERS=3
+      - IDEMPOTENCY_TTL=300
     networks:
       - messaging-network
     ports:
