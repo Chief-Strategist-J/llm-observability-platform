@@ -1,0 +1,17 @@
+# Development Dockerfile with hot-reload support
+FROM node:20-alpine
+WORKDIR /app
+
+# Install dependencies with cache
+COPY package*.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline
+
+# Copy all source files
+COPY . .
+
+# Expose port for Vite dev server
+EXPOSE 5173
+
+# Start development server with hot-reload
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

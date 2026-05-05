@@ -7,7 +7,7 @@ export function TraceListTable({
 }: {
   onSelectTrace: (traceId: string) => void;
 }) {
-  const { data, loading } = usePolling(() => api.results(50, 0), 5_000);
+  const { data, loading } = usePolling(() => api.traces(), 5_000);
   if (loading) return <p>Loading traces...</p>;
 
   return (
@@ -81,12 +81,9 @@ export function TraceListTable({
         </tr>
       </thead>
       <tbody>
-        {data?.results.map((row, idx) => {
-          const traceId =
-            typeof row.trace_id === 'string' ? row.trace_id : row.trace_id['0'];
-          const duration = row.total_duration_ns
-            ? `${(row.total_duration_ns / 1_000_000).toFixed(1)}ms`
-            : '-';
+        {data?.map((row, idx) => {
+          const traceId = row.trace_id;
+          const duration = `${(row.duration_ns / 1_000_000).toFixed(1)}ms`;
           return (
             <tr
               key={`${traceId}-${idx}`}
@@ -116,14 +113,10 @@ export function TraceListTable({
               <td style={{ padding: '12px', color: '#64748b' }}>-</td>
               <td style={{ padding: '12px', color: '#64748b' }}>{duration}</td>
               <td style={{ padding: '12px', color: '#64748b' }}>
-                {row.span_count ?? '-'}
+                {row.span_count}
               </td>
-              <td style={{ padding: '12px', color: '#64748b' }}>
-                {row.cluster_id}
-              </td>
-              <td style={{ padding: '12px' }}>
-                <AnomalyScoreBadge result={row} />
-              </td>
+              <td style={{ padding: '12px', color: '#64748b' }}>-</td>
+              <td style={{ padding: '12px' }}>-</td>
             </tr>
           );
         })}

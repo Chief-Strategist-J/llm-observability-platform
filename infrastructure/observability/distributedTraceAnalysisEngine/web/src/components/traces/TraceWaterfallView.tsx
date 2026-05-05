@@ -13,7 +13,16 @@ export function TraceWaterfallView({ spans }: TraceWaterfallViewProps) {
   useEffect(() => {
     if (!chartRef.current || !spans || spans.length === 0) return;
 
-    chartInstance.current = echarts.init(chartRef.current);
+    // Dispose existing chart if it exists
+    if (chartInstance.current) {
+      chartInstance.current.dispose();
+    }
+
+    // Initialize chart with explicit options
+    chartInstance.current = echarts.init(chartRef.current, null, {
+      renderer: 'canvas',
+      useDirtyRect: false
+    });
 
     // Process spans for waterfall chart
     const processedSpans = spans.map((span, _index) => {
@@ -139,7 +148,16 @@ export function TraceWaterfallView({ spans }: TraceWaterfallViewProps) {
       ],
     };
 
-    chartInstance.current.setOption(option);
+    try {
+      chartInstance.current.setOption(option);
+      
+      // Force a resize after setting options
+      setTimeout(() => {
+        chartInstance.current?.resize();
+      }, 100);
+    } catch (error) {
+      console.error('Error setting waterfall chart options:', error);
+    }
 
     const handleResize = () => {
       chartInstance.current?.resize();
