@@ -81,30 +81,30 @@ class EventHandlerAPI:
 
     def _setup_routes(self):
         @self.router.post("/process-record", response_model=ProcessEventResponse)
-        def process_record_route(request: ConsumerRecordRequest):
-            return self.process_record(request)
+        async def process_record_route(request: ConsumerRecordRequest):
+            return await self.process_record(request)
 
         @self.router.post("/process-records-batch", response_model=BatchProcessEventResponse)
-        def process_records_batch_route(request: BatchConsumerRecordRequest):
-            return self.process_records_batch(request)
+        async def process_records_batch_route(request: BatchConsumerRecordRequest):
+            return await self.process_records_batch(request)
 
         @self.router.post("/consumer-offsets")
-        def save_consumer_offset_route(request: ConsumerOffsetRequest):
-            return self.save_consumer_offset(request)
+        async def save_consumer_offset_route(request: ConsumerOffsetRequest):
+            return await self.save_consumer_offset(request)
 
         @self.router.get("/consumer-offsets/{consumer_group}/{topic}/{partition}")
-        def get_consumer_offset_route(consumer_group: str, topic: str, partition: int):
-            return self.get_consumer_offset(consumer_group, topic, partition)
+        async def get_consumer_offset_route(consumer_group: str, topic: str, partition: int):
+            return await self.get_consumer_offset(consumer_group, topic, partition)
 
         @self.router.get("/events")
-        def get_events_by_topic_route(topic: str, limit: int = 100, offset: int = 0):
-            return self.get_events_by_topic(topic, limit, offset)
+        async def get_events_by_topic_route(topic: str, limit: int = 100, offset: int = 0):
+            return await self.get_events_by_topic(topic, limit, offset)
 
         @self.router.get("/events/{topic}/count")
-        def get_event_count_route(topic: str):
-            return self.get_event_count(topic)
+        async def get_event_count_route(topic: str):
+            return await self.get_event_count(topic)
 
-    def process_record(self, request: ConsumerRecordRequest) -> ProcessEventResponse:
+    async def process_record(self, request: ConsumerRecordRequest) -> ProcessEventResponse:
         try:
             Preconditions.validate_non_empty_string(request.topic, "topic")
             Preconditions.validate_non_negative(request.partition, "partition")
@@ -126,7 +126,7 @@ class EventHandlerAPI:
                 timestamp=request.timestamp,
                 headers=request.headers
             )
-            event_id = self._event_handler.process_kafka_record(record)
+            event_id = await self._event_handler.process_kafka_record(record)
             Preconditions.validate_not_none(event_id, "process_kafka_record")
             return ProcessEventResponse(
                 event_id=event_id,
@@ -143,7 +143,7 @@ class EventHandlerAPI:
                 detail=f"Failed to process record: {str(e)}"
             )
 
-    def process_records_batch(self, request: BatchConsumerRecordRequest) -> BatchProcessEventResponse:
+    async def process_records_batch(self, request: BatchConsumerRecordRequest) -> BatchProcessEventResponse:
         try:
             Preconditions.validate_list_size(request.records, "records", min_size=1, max_size=1000)
             for record in request.records:
@@ -170,7 +170,7 @@ class EventHandlerAPI:
                 )
                 for r in request.records
             ]
-            event_ids = self._event_handler.process_kafka_records_batch(records)
+            event_ids = await self._event_handler.process_kafka_records_batch(records)
             Preconditions.validate_not_none(event_ids, "process_kafka_records_batch")
             Preconditions.validate_not_empty_list(event_ids, "process_kafka_records_batch")
             return BatchProcessEventResponse(
@@ -189,7 +189,7 @@ class EventHandlerAPI:
                 detail=f"Failed to process records batch: {str(e)}"
             )
 
-    def save_consumer_offset(self, request: ConsumerOffsetRequest) -> Dict[str, bool]:
+    async def save_consumer_offset(self, request: ConsumerOffsetRequest) -> Dict[str, bool]:
         try:
             Preconditions.validate_non_empty_string(request.consumer_group, "consumer_group")
             Preconditions.validate_non_empty_string(request.topic, "topic")
@@ -202,7 +202,7 @@ class EventHandlerAPI:
             )
 
         try:
-            success = self._event_handler.save_consumer_offset(
+            success = await self._event_handler.save_consumer_offset(
                 request.consumer_group,
                 request.topic,
                 request.partition,
@@ -221,7 +221,7 @@ class EventHandlerAPI:
                 detail=f"Failed to save consumer offset: {str(e)}"
             )
 
-    def get_consumer_offset(self, consumer_group: str, topic: str, partition: int) -> ConsumerOffsetResponse:
+    async def get_consumer_offset(self, consumer_group: str, topic: str, partition: int) -> ConsumerOffsetResponse:
         try:
             Preconditions.validate_non_empty_string(consumer_group, "consumer_group")
             Preconditions.validate_non_empty_string(topic, "topic")
@@ -233,7 +233,7 @@ class EventHandlerAPI:
             )
 
         try:
-            offset = self._event_handler.get_consumer_offset(consumer_group, topic, partition)
+            offset = await self._event_handler.get_consumer_offset(consumer_group, topic, partition)
             if offset is None:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -253,7 +253,7 @@ class EventHandlerAPI:
                 detail=f"Failed to get consumer offset: {str(e)}"
             )
 
-    def get_events_by_topic(self, topic: str, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+    async def get_events_by_topic(self, topic: str, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
         try:
             Preconditions.validate_non_empty_string(topic, "topic")
             Preconditions.validate_range(limit, "limit", min_val=1, max_val=1000)
@@ -265,7 +265,7 @@ class EventHandlerAPI:
             )
 
         try:
-            events = self._event_handler.get_events_by_topic(topic, limit=limit, offset=offset)
+            events = await self._event_handler.get_events_by_topic(topic, limit=limit, offset=offset)
             return [
                 {
                     "topic": e.topic,
@@ -287,9 +287,9 @@ class EventHandlerAPI:
                 detail=f"Failed to get events by topic: {str(e)}"
             )
 
-    def get_event_count(self, topic: Optional[str] = None) -> Dict[str, int]:
+    async def get_event_count(self, topic: Optional[str] = None) -> Dict[str, int]:
         try:
-            count = self._event_handler.get_event_count(topic)
+            count = await self._event_handler.get_event_count(topic)
             return {"count": count}
         except Exception as e:
             raise HTTPException(
@@ -306,31 +306,31 @@ class SchemaAwareEventHandlerAPI:
 
     def _setup_routes(self):
         @self.router.post("/register-subject-mapping")
-        def register_subject_mapping_route(request: SubjectMappingRequest):
+        async def register_subject_mapping_route(request: SubjectMappingRequest):
             return self.register_subject_mapping(request)
 
         @self.router.post("/process-record", response_model=ProcessEventResponse)
-        def process_record_route(request: ConsumerRecordRequest, deserialize: bool = True):
-            return self.process_record(request, deserialize)
+        async def process_record_route(request: ConsumerRecordRequest, deserialize: bool = True):
+            return await self.process_record(request, deserialize)
 
         @self.router.post("/process-records-batch", response_model=BatchProcessEventResponse)
-        def process_records_batch_route(request: BatchConsumerRecordRequest, deserialize: bool = True):
-            return self.process_records_batch(request, deserialize)
+        async def process_records_batch_route(request: BatchConsumerRecordRequest, deserialize: bool = True):
+            return await self.process_records_batch(request, deserialize)
 
         @self.router.post("/serialize-and-produce")
-        def serialize_and_produce_route(request: SerializationRequest):
+        async def serialize_and_produce_route(request: SerializationRequest):
             return self.serialize_and_produce(request)
 
         @self.router.post("/consumer-offsets")
-        def save_consumer_offset_route(request: ConsumerOffsetRequest):
-            return self.save_consumer_offset(request)
+        async def save_consumer_offset_route(request: ConsumerOffsetRequest):
+            return await self.save_consumer_offset(request)
 
         @self.router.get("/consumer-offsets/{consumer_group}/{topic}/{partition}")
-        def get_consumer_offset_route(consumer_group: str, topic: str, partition: int):
-            return self.get_consumer_offset(consumer_group, topic, partition)
+        async def get_consumer_offset_route(consumer_group: str, topic: str, partition: int):
+            return await self.get_consumer_offset(consumer_group, topic, partition)
 
         @self.router.get("/registered-subjects")
-        def list_registered_subjects_route():
+        async def list_registered_subjects_route():
             return self.list_registered_subjects()
 
     def register_subject_mapping(self, request: SubjectMappingRequest) -> Dict[str, bool]:
@@ -352,7 +352,7 @@ class SchemaAwareEventHandlerAPI:
                 detail=f"Failed to register subject mapping: {str(e)}"
             )
 
-    def process_record(self, request: ConsumerRecordRequest, deserialize: bool = True) -> ProcessEventResponse:
+    async def process_record(self, request: ConsumerRecordRequest, deserialize: bool = True) -> ProcessEventResponse:
         try:
             Preconditions.validate_non_empty_string(request.topic, "topic")
             Preconditions.validate_non_negative(request.partition, "partition")
@@ -374,7 +374,7 @@ class SchemaAwareEventHandlerAPI:
                 timestamp=request.timestamp,
                 headers=request.headers
             )
-            event_id = self._handler.process_kafka_record(record, deserialize=deserialize)
+            event_id = await self._handler.process_kafka_record(record, deserialize=deserialize)
             Preconditions.validate_not_none(event_id, "process_kafka_record")
             return ProcessEventResponse(
                 event_id=event_id,
@@ -391,7 +391,7 @@ class SchemaAwareEventHandlerAPI:
                 detail=f"Failed to process record: {str(e)}"
             )
 
-    def process_records_batch(self, request: BatchConsumerRecordRequest, deserialize: bool = True) -> BatchProcessEventResponse:
+    async def process_records_batch(self, request: BatchConsumerRecordRequest, deserialize: bool = True) -> BatchProcessEventResponse:
         try:
             Preconditions.validate_list_size(request.records, "records", min_size=1, max_size=1000)
             for record in request.records:
@@ -418,7 +418,7 @@ class SchemaAwareEventHandlerAPI:
                 )
                 for r in request.records
             ]
-            event_ids = self._handler.process_kafka_records_batch(records, deserialize=deserialize)
+            event_ids = await self._handler.process_kafka_records_batch(records, deserialize=deserialize)
             Preconditions.validate_not_none(event_ids, "process_kafka_records_batch")
             Preconditions.validate_not_empty_list(event_ids, "process_kafka_records_batch")
             return BatchProcessEventResponse(
@@ -473,7 +473,7 @@ class SchemaAwareEventHandlerAPI:
                 detail=f"Failed to list registered subjects: {str(e)}"
             )
 
-    def save_consumer_offset(self, request: ConsumerOffsetRequest) -> Dict[str, bool]:
+    async def save_consumer_offset(self, request: ConsumerOffsetRequest) -> Dict[str, bool]:
         try:
             Preconditions.validate_non_empty_string(request.consumer_group, "consumer_group")
             Preconditions.validate_non_empty_string(request.topic, "topic")
@@ -486,7 +486,7 @@ class SchemaAwareEventHandlerAPI:
             )
 
         try:
-            success = self._handler.save_consumer_offset(
+            success = await self._handler.save_consumer_offset(
                 request.consumer_group,
                 request.topic,
                 request.partition,
@@ -505,7 +505,7 @@ class SchemaAwareEventHandlerAPI:
                 detail=f"Failed to save consumer offset: {str(e)}"
             )
 
-    def get_consumer_offset(self, consumer_group: str, topic: str, partition: int) -> ConsumerOffsetResponse:
+    async def get_consumer_offset(self, consumer_group: str, topic: str, partition: int) -> ConsumerOffsetResponse:
         try:
             Preconditions.validate_non_empty_string(consumer_group, "consumer_group")
             Preconditions.validate_non_empty_string(topic, "topic")
@@ -517,7 +517,7 @@ class SchemaAwareEventHandlerAPI:
             )
 
         try:
-            offset = self._handler.get_consumer_offset(consumer_group, topic, partition)
+            offset = await self._handler.get_consumer_offset(consumer_group, topic, partition)
             if offset is None:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,

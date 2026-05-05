@@ -218,9 +218,9 @@ benchmark_mode = os.getenv("BENCHMARK_MODE", "false").lower() == "true"
 test_mode = os.getenv("TEST_MODE", "full")
 redis_url = os.getenv("REDIS_URL", "redis://redis:6379/")
 thread_pool_workers = int(os.getenv("THREAD_POOL_WORKERS", "200"))
-postgres_minconn = int(os.getenv("POSTGRES_MINCONN", "10"))
-postgres_maxconn = int(os.getenv("POSTGRES_MAXCONN", "50"))
-uvicorn_workers = int(os.getenv("UVICORN_WORKERS", "4"))
+postgres_minconn = int(os.getenv("POSTGRES_MINCONN", "20"))
+postgres_maxconn = int(os.getenv("POSTGRES_MAXCONN", "100"))
+uvicorn_workers = int(os.getenv("UVICORN_WORKERS", "3"))
 idempotency_ttl = int(os.getenv("IDEMPOTENCY_TTL", "300"))
 
 required_vars = ["BATCH_SIZE", "MAX_LATENCY_MS", "TEST_MODE"]
@@ -254,7 +254,7 @@ sharded_database = None
 database_api = None
 event_handler_api = None
 
-queue_config = QueueConfig(max_size=100000, per_shard_limit=10000, enable_priority=True)
+queue_config = QueueConfig(max_size=500000, per_shard_limit=50000, enable_priority=True)
 event_queue = InMemoryQueue(queue_config)
 
 idempotency_store = None
@@ -326,7 +326,7 @@ app.router.lifespan_context = lifespan_with_init
 
 
 @app.get("/health")
-def health():
+async def health():
     queue_stats = event_queue.get_stats()
     return {
         "status": "healthy",
@@ -343,7 +343,7 @@ def health():
 
 
 @app.get("/metrics")
-def get_metrics():
+async def get_metrics():
     return metrics.get_all_metrics()
 
 
@@ -353,8 +353,9 @@ if __name__ == "__main__":
         "loadtests.test_server_realistic:app",
         host="0.0.0.0",
         port=8001,
-        limit_concurrency=4000,
-        limit_max_requests=1000000,
+        workers=uvicorn_workers,
+        limit_concurrency=5000,
+        limit_max_requests=2000000,
         timeout_keep_alive=30,
         loop="uvloop",
         http="httptools"
