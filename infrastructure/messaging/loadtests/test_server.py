@@ -17,17 +17,16 @@ from domain.ports.producer_port import ProducerPort, ProduceMessageParams, Topic
 from domain.ports.consumer_port import ConsumerPort, ConsumeParams, ParallelConsumeParams, ConsumerOffsetParams
 from domain.ports.broker_port import BrokerPort
 from domain.services.event_handler import EventHandler
-from infrastructure.adapters.mock_database_adapter import MockDatabaseEventHandler
 
 
 class MockDatabase(DatabasePort):
-    def save_event(self, event: EventRecord) -> str:
+    async def save_event(self, event: EventRecord) -> str:
         return "event-id-123"
     
-    def save_events_batch(self, events: list) -> list:
+    async def save_events_batch(self, events: list) -> list:
         return [f"id-{i}" for i in range(len(events))]
     
-    def get_event(self, event_id: str) -> EventRecord:
+    async def get_event(self, event_id: str) -> EventRecord:
         return EventRecord(
             topic="test-topic",
             partition=0,
@@ -38,19 +37,19 @@ class MockDatabase(DatabasePort):
             headers={}
         )
     
-    def get_events_by_topic(self, topic: str, limit: int, offset: int) -> list:
+    async def get_events_by_topic(self, topic: str, limit: int, offset: int) -> list:
         return []
     
-    def get_unprocessed_events(self, limit: int) -> list:
+    async def get_unprocessed_events(self, limit: int) -> list:
         return []
     
-    def mark_event_processed(self, event_id: str) -> bool:
+    async def mark_event_processed(self, event_id: str) -> bool:
         return True
     
-    def save_consumer_offset(self, offset) -> bool:
+    async def save_consumer_offset(self, offset) -> bool:
         return True
     
-    def get_consumer_offset(self, consumer_group: str, topic: str, partition: int) -> ConsumerOffset:
+    async def get_consumer_offset(self, consumer_group: str, topic: str, partition: int) -> ConsumerOffset:
         return ConsumerOffset(
             consumer_group=consumer_group,
             topic=topic,
@@ -58,13 +57,13 @@ class MockDatabase(DatabasePort):
             offset=100
         )
     
-    def delete_events_by_topic(self, topic: str) -> int:
+    async def delete_events_by_topic(self, topic: str) -> int:
         return 5
     
-    def get_event_count(self, topic: str) -> int:
+    async def get_event_count(self, topic: str) -> int:
         return 100
     
-    def close(self):
+    async def close(self):
         pass
 
 
@@ -222,7 +221,18 @@ mock_producer = MockProducer()
 mock_consumer = MockConsumer()
 mock_broker = MockBroker()
 
-database_api = DatabaseAPI(mock_database)
+from application.api.v1.database_api import DatabaseAPIConfig
+api_config = DatabaseAPIConfig(
+    event_writer=mock_database,
+    event_reader=mock_database,
+    event_manager=mock_database,
+    offset_port=mock_database,
+    count_port=mock_database,
+    queue=None,
+    idempotency_store=None,
+    metrics=None
+)
+database_api = DatabaseAPI(api_config)
 schema_registry_api = SchemaRegistryAPI(mock_schema_registry)
 event_handler_api = EventHandlerAPI(mock_event_handler)
 producer_api = ProducerAPI(mock_producer)
