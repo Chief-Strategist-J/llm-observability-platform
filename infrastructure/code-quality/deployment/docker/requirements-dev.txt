@@ -12,7 +12,7 @@ mypy==1.7.1
 isort==5.12.0
 pre-commit==3.5.0
 bandit==1.7.5
-safety==2.3.5
+safety==3.2.0
 httpx==0.25.2
 # Allure reporting
 allure-pytest==2.13.2
