@@ -1,0 +1,83 @@
+# Multi-stage Dockerfile for Go Infrastructure Analyzer
+FROM golang:1.21-alpine as builder
+
+# Install git and other build tools
+RUN apk add --no-cache git ca-certificates tzdata
+
+# Set up working directory
+WORKDIR /app
+
+# Copy go mod files first for better caching
+COPY analysis-tools/go/infrastructure-analyzer/go.mod analysis-tools/go/infrastructure-analyzer/go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy source code
+COPY analysis-tools/go/infrastructure-analyzer/ .
+
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o infrastructure-analyzer .
+
+# Production stage
+FROM alpine:latest
+
+# Install ca-certificates for HTTPS requests
+RUN apk --no-cache add ca-certificates tzdata
+
+# Create non-root user
+RUN addgroup -g 1001 -S analyzer && \
+    adduser -u 1001 -S analyzer -G analyzer
+
+# Set up working directory
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /app/infrastructure-analyzer .
+
+# Set ownership
+RUN chown -R analyzer:analyzer /app
+
+# Switch to non-root user
+USER analyzer
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD ./infrastructure-analyzer --help || exit 1
+
+# Default command
+CMD ["./infrastructure-analyzer", "/code"]
+
+# Development stage
+FROM golang:1.21-alpine as development
+
+# Install development tools
+RUN apk add --no-cache git make
+
+# Set up working directory
+WORKDIR /app
+
+# Copy source code
+COPY analysis-tools/go/infrastructure-analyzer/ .
+
+# Install dependencies
+RUN go mod download
+
+# Set up development environment
+ENV CGO_ENABLED=0
+ENV GOOS=linux
+
+# Default command for development
+CMD ["go", "run", "main.go", "/code"]
+
+# Testing stage
+FROM development as testing
+
+# Run tests
+RUN go test -v ./...
+
+# Build for testing
+RUN go build -o infrastructure-analyzer .
+
+# Run integration tests
+CMD ["./infrastructure-analyzer", "--help"]

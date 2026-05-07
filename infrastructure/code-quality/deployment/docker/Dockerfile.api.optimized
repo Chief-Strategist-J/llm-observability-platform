@@ -1,0 +1,78 @@
+# Multi-stage build with proper caching
+FROM python:3.11-slim as base
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    postgresql-client \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up Python environment
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy requirements first for better caching
+COPY deployment/docker/requirements.txt /tmp/requirements.txt
+COPY deployment/docker/requirements-dev.txt /tmp/requirements-dev.txt
+
+# Install dependencies with caching
+RUN pip install --upgrade pip && \
+    pip install -r /tmp/requirements.txt && \
+    pip install -r /tmp/requirements-dev.txt
+
+# Copy application code
+WORKDIR /app
+COPY . .
+
+# Install the application in development mode
+RUN pip install -e .
+
+# Production stage
+FROM base as production
+
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash app
+
+# Set ownership
+RUN chown -R app:app /app /opt/venv
+
+# Switch to non-root user
+USER app
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:5000/health || exit 1
+
+EXPOSE 5000
+
+# Use gunicorn for production
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-", "main:app"]
+
+# Development stage
+FROM base as development
+
+# Install development tools
+RUN pip install pytest pytest-cov black flake8 mypy
+
+# Set up development environment
+ENV FLASK_ENV=development
+ENV FLASK_DEBUG=1
+
+EXPOSE 5000
+
+# Development server
+CMD ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=5000"]
+
+# Testing stage
+FROM development as testing
+
+# Run tests
+RUN python -m pytest tests/ -v --cov=app --cov-report=html --cov-report=term

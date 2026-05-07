@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql
+  namespace: code-quality
+spec:
+  serviceName: postgresql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql
+  template:
+    metadata:
+      labels:
+        app: postgresql
+    spec:
+      containers:
+      - name: postgresql
+        image: postgres:17
+        env:
+        - name: POSTGRES_USER
+          value: sonar
+        - name: POSTGRES_PASSWORD
+          value: sonar
+        - name: POSTGRES_DB
+          value: sonar
+        - name: POSTGRES_INITDB_ARGS
+          value: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -d
+            - sonar
+            - -U
+            - sonar
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -d
+            - sonar
+            - -U
+            - sonar
+          initialDelaySeconds: 5
+          periodSeconds: 5
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 20Gi
+      storageClassName: fast-ssd
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql
+  namespace: code-quality
+spec:
+  selector:
+    app: postgresql
+  ports:
+  - port: 5432
+    targetPort: 5432
+  type: ClusterIP

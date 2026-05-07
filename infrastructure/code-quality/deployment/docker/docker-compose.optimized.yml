@@ -1,0 +1,288 @@
+version: '3.8'
+
+services:
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube
+    hostname: sonarqube
+    read_only: true
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://db:5432/sonar
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: sonar
+      SONAR_WEB_JAVAOPTS: "-Xmx2048m -Xms2048m -XX:+UseG1GC"
+      SONAR_CE_JAVAOPTS: "-Xmx2048m -Xms2048m -XX:+UseG1GC"
+      SONAR_SEARCH_JAVAOPTS: "-Xmx1024m -Xms1024m -XX:+UseG1GC"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_temp:/opt/sonarqube/temp
+    tmpfs:
+      - /tmp:size=512M,mode=1777
+      - /opt/sonarqube/temp:size=1G,mode=1777
+    ports:
+      - "9000:9000"
+    networks:
+      - sonarqube_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/system/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  db:
+    image: postgres:17
+    container_name: sonarqube_db
+    hostname: postgresql
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonar
+      POSTGRES_DB: sonar
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+      POSTGRES_SHARED_PRELOAD_LIBRARIES: "pg_stat_statements"
+      POSTGRES_MAX_CONNECTIONS: "200"
+    volumes:
+      - postgresql:/var/lib/postgresql
+      - ./postgresql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./postgresql/postgresql.conf:/etc/postgresql/postgresql.conf
+    networks:
+      - sonarqube_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: >
+      postgres
+      -c config_file=/etc/postgresql/postgresql.conf
+      -c max_connections=200
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c maintenance_work_mem=64MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+
+  quality-api:
+    build:
+      context: ../../
+      dockerfile: deployment/docker/Dockerfile.api.optimized
+      target: production
+      cache_from:
+        - quality-api:latest
+      args:
+        BUILDKIT_INLINE_CACHE: "1"
+    image: quality-api:latest
+    container_name: quality_api
+    depends_on:
+      sonarqube:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://sonar:sonar@db:5432/sonar
+      SONARQUBE_URL: http://sonarqube:9000
+      SONARQUBE_TOKEN: ${SONARQUBE_TOKEN}
+      FLASK_ENV: production
+      GUNICORN_WORKERS: "4"
+      GUNICORN_TIMEOUT: "120"
+      GUNICORN_MAX_REQUESTS: "1000"
+      GUNICORN_MAX_REQUESTS_JITTER: "100"
+    ports:
+      - "5000:5000"
+    networks:
+      - sonarqube_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    volumes:
+      - ./logs:/app/logs
+      - api_cache:/tmp
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  python-analyzer:
+    build:
+      context: ../../
+      dockerfile: deployment/docker/Dockerfile.python-analyzer
+      target: production
+      cache_from:
+        - python-analyzer:latest
+      args:
+        BUILDKIT_INLINE_CACHE: "1"
+    image: python-analyzer:latest
+    container_name: python_analyzer
+    environment:
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./analysis-results:/app/results
+    networks:
+      - sonarqube_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  go-analyzer:
+    build:
+      context: ../../
+      dockerfile: deployment/docker/Dockerfile.go-analyzer
+      target: production
+      cache_from:
+        - go-analyzer:latest
+      args:
+        BUILDKIT_INLINE_CACHE: "1"
+    image: go-analyzer:latest
+    container_name: go_analyzer
+    environment:
+      CGO_ENABLED: "0"
+    volumes:
+      - ./analysis-results:/app/results
+    networks:
+      - sonarqube_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
+
+  rust-analyzer:
+    build:
+      context: ../../
+      dockerfile: deployment/docker/Dockerfile.rust-analyzer
+      target: production
+      cache_from:
+        - rust-analyzer:latest
+      args:
+        BUILDKIT_INLINE_CACHE: "1"
+    image: rust-analyzer:latest
+    container_name: rust_analyzer
+    environment:
+      RUST_LOG: "info"
+    volumes:
+      - ./analysis-results:/app/results
+    networks:
+      - sonarqube_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  nginx:
+    image: nginx:alpine
+    container_name: sonarqube_nginx
+    depends_on:
+      sonarqube:
+        condition: service_healthy
+      quality-api:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_cache:/var/cache/nginx
+      - nginx_logs:/var/log/nginx
+    networks:
+      - sonarqube_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+
+  redis:
+    image: redis:7-alpine
+    container_name: sonarqube_redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - sonarqube_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+
+volumes:
+  sonarqube_data:
+    driver: local
+  sonarqube_temp:
+    driver: local
+  sonarqube_extensions:
+    driver: local
+  sonarqube_logs:
+    driver: local
+  postgresql:
+    driver: local
+  api_cache:
+    driver: local
+  nginx_cache:
+    driver: local
+  nginx_logs:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  sonarqube_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
