@@ -1,0 +1,6 @@
+#!/home/btpl-lap-07/prod/llm-observability-platform/infrastructure/code-quality/test_env/bin/python3
+import sys
+from coverage.cmdline import main
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(main())
