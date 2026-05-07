@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube
+    hostname: sonarqube
+    read_only: true
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://db:5432/sonar
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: sonar
+      SONAR_WEB_JAVAOPTS: "-Xmx1024m -Xms1024m"
+      SONAR_CE_JAVAOPTS: "-Xmx1024m -Xms1024m"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_temp:/opt/sonarqube/temp
+    tmpfs:
+      - /tmp:size=256M,mode=1777
+    ports:
+      - "9000:9000"
+    networks:
+      - sonarqube_network
+    restart: unless-stopped
+
+  db:
+    image: postgres:17
+    container_name: sonarqube_db
+    hostname: postgresql
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonar
+      POSTGRES_DB: sonar
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgresql:/var/lib/postgresql
+      - ./postgresql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - sonarqube_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  quality-api:
+    build:
+      context: ../../
+      dockerfile: deployment/docker/Dockerfile.api
+    container_name: quality_api
+    depends_on:
+      - sonarqube
+      - db
+    environment:
+      DATABASE_URL: postgresql://sonar:sonar@db:5432/sonar
+      SONARQUBE_URL: http://sonarqube:9000
+      SONARQUBE_TOKEN: ${SONARQUBE_TOKEN}
+      FLASK_ENV: production
+    ports:
+      - "5000:5000"
+    networks:
+      - sonarqube_network
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+
+  nginx:
+    image: nginx:alpine
+    container_name: sonarqube_nginx
+    depends_on:
+      - sonarqube
+      - quality-api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    networks:
+      - sonarqube_network
+    restart: unless-stopped
+
+volumes:
+  sonarqube_data:
+    driver: local
+  sonarqube_temp:
+    driver: local
+  sonarqube_extensions:
+    driver: local
+  sonarqube_logs:
+    driver: local
+  postgresql:
+    driver: local
+
+networks:
+  sonarqube_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

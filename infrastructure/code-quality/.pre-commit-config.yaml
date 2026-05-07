@@ -1,0 +1,81 @@
+# Pre-commit hooks for SonarQube Code Quality Infrastructure
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: debug-statements
+      - id: check-docstring-first
+
+  - repo: https://github.com/psf/black
+    rev: 23.11.0
+    hooks:
+      - id: black
+        language_version: python3.12
+        args: [--line-length=88]
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: [--profile=black, --line-length=88]
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.1.0
+    hooks:
+      - id: flake8
+        args: [--max-line-length=88, --extend-ignore=E203,W503]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.1
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-all]
+        args: [--ignore-missing-imports]
+
+  - repo: https://github.com/pycqa/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: [-r, ., -f, json, -o, bandit-report.json]
+        pass_filenames: false
+
+  - repo: https://github.com/pyupio/safety
+    rev: 2.3.5
+    hooks:
+      - id: safety
+        args: [--json, --output, safety-report.json]
+
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
+    rev: v1.3.2
+    hooks:
+      - id: python-safety-dependencies-check
+
+  - repo: local
+    hooks:
+      - id: pytest-check
+        name: pytest-check
+        entry: bash -c 'source test_env/bin/activate && export PYTHONPATH=./infrastructure/code-quality:$PYTHONPATH && python -m pytest tests/test_domain/ tests/test_application/ -v --tb=short'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: coverage-check
+        name: coverage-check
+        entry: bash -c 'source test_env/bin/activate && export PYTHONPATH=./infrastructure/code-quality:$PYTHONPATH && python -m pytest tests/test_domain/ tests/test_application/ --cov=domain,application --cov-fail-under=80'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+# Configuration
+default_language_version:
+  python: python3.12
+
+# Global settings
+fail_fast: false
