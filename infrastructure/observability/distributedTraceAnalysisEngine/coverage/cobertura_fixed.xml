@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coverage lines-covered="581" lines-valid="997" line-rate="0.5827482447342026" branches-covered="0" branches-valid="0" branch-rate="0" complexity="0" version="1.9" timestamp="1778154312">
+  <sources>
+    <source>.</source>
+  </sources>
+  <packages>
+    <package name="src" line-rate="0.5827482447342026" branch-rate="0" complexity="0">
+      <classes>
+        <class name="main" filename="src/main.rs" line-rate="0" branch-rate="0" complexity="0">
+          <methods/>
+          <lines>
+            <line number="16" hits="0"/>
+            <line number="17" hits="0"/>
+            <line number="18" hits="0"/>
+            <line number="21" hits="0"/>
+            <line number="22" hits="0"/>
+            <line number="23" hits="0"/>
+            <line number="24" hits="0"/>
+            <line number="25" hits="0"/>
+            <line number="26" hits="0"/>
+            <line number="28" hits="0"/>
+            <line number="29" hits="0"/>
+            <line number="31" hits="0"/>
+            <line number="32" hits="0"/>
+            <line number="33" hits="0"/>
+            <line number="34" hits="0"/>
+            <line number="35" hits="0"/>
+            <line number="36" hits="0"/>
+            <line number="39" hits="0"/>
+            <line number="41" hits="0"/>
+            <line number="42" hits="0"/>
+            <line number="44" hits="0"/>
+            <line number="45" hits="0"/>
+          </lines>
+        </class>
+        <class name="assembler" filename="src/application/assembler.rs" line-rate="1" branch-rate="0" complexity="0">
+          <methods/>
+          <lines>
+            <line number="17" hits="6"/>
+            <line number="19" hits="6"/>
+            <line number="25" hits="6"/>
+            <line number="26" hits="17"/>
+            <line number="27" hits="5"/>
+            <line number="29" hits="3"/>
+            <line number="39" hits="4"/>
+            <line number="41" hits="5"/>
+            <line number="47" hits="1"/>
+            <line number="48" hits="1"/>
+            <line number="49" hits="1"/>
+            <line number="50" hits="1"/>
+            <line number="53" hits="4"/>
+            <line number="54" hits="4"/>
+            <line number="55" hits="4"/>
+            <line number="56" hits="4"/>
+            <line number="57" hits="5"/>
+            <line number="58" hits="16"/>
+            <line number="59" hits="6"/>
+            <line number="62" hits="1"/>
+            <line number="63" hits="2"/>
+            <line number="64" hits="2"/>
+            <line number="68" hits="3"/>
+            <line number="69" hits="4"/>
+            <line number="70" hits="3"/>
+            <line number="72" hits="5"/>
+            <line number="73" hits="3"/>
+            <line number="74" hits="5"/>
+            <line number="76" hits="8"/>
+            <line number="77" hits="8"/>
+            <line number="78" hits="10"/>
+            <line number="79" hits="3"/>
+            <line number="80" hits="2"/>
+            <line number="81" hits="2"/>
+            <line number="82" hits="1"/>
+            <line number="83" hits="1"/>
+            <line number="84" hits="1"/>
+            <line number="85" hits="1"/>
+            <line number="89" hits="4"/>
+            <line number="90" hits="6"/>
+            <line number="96" hits="1"/>
+            <line number="97" hits="1"/>
+          </lines>
+        </class>
+      </classes>
+    </package>
+  </packages>
+</coverage>

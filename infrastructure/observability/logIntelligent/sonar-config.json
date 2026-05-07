@@ -1,0 +1,36 @@
+{
+  "projectKey": "log-intelligent",
+  "projectName": "Log Intelligent",
+  "projectVersion": "0.1.0",
+  "language": "py",
+  "sourceDirs": [
+    "api",
+    "client",
+    "domain",
+    "enrichment",
+    "ingestion",
+    "intelligence",
+    "storage"
+  ],
+  "testDirs": [
+    "test"
+  ],
+  "exclusions": [
+    "**/__pycache__/**",
+    "**/node_modules/**",
+    "**/target/**",
+    "*.json",
+    "*.yaml",
+    "*.yml",
+    "*.md",
+    "Dockerfile",
+    "docker-compose*.yml"
+  ],
+  "sonarHostUrl": "http://sonarqube:9000",
+  "sonarToken": "squ_1234567890abcdef1234567890abcdef12345678",
+  "coverage": {
+    "tool": "pytest-cov",
+    "outputFormat": "xml",
+    "outputDir": "coverage"
+  }
+}
