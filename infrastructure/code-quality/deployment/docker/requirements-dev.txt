@@ -16,7 +16,6 @@ safety==2.3.5
 httpx==0.25.2
 # Allure reporting
 allure-pytest==2.13.2
-pytest-allure-adaptor==2.13.2
 # Performance monitoring
 memory-profiler==0.61.0
 psutil==5.9.6
