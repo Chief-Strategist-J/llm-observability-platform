@@ -1,0 +1,27 @@
+{
+  "projectKey": "distributed-trace-analysis-engine",
+  "projectName": "Distributed Trace Analysis Engine",
+  "projectVersion": "0.1.0",
+  "language": "rust",
+  "sourceDirs": [
+    "src"
+  ],
+  "testDirs": [
+    "tests"
+  ],
+  "exclusions": [
+    "target/**",
+    "web/**",
+    "node_modules/**",
+    "*.json",
+    "*.yaml",
+    "*.yml"
+  ],
+  "sonarHostUrl": "http://sonarqube:9000",
+  "sonarToken": "squ_ea5c687580907c1bee378247f15715aa",
+  "coverage": {
+    "tool": "cargo-tarpaulin",
+    "outputFormat": "xml",
+    "outputDir": "coverage"
+  }
+}
