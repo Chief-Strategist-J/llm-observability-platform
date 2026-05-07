@@ -1,0 +1,91 @@
+# Multi-stage Dockerfile for Rust Performance Tools
+FROM rust:1.75-slim as builder
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up working directory
+WORKDIR /app
+
+# Copy Cargo files first for better caching
+COPY analysis-tools/rust/performance-tools/Cargo.toml analysis-tools/rust/performance-tools/Cargo.lock ./
+
+# Create dummy source file to cache dependencies
+RUN mkdir src && \
+    echo "fn main() {}" > src/main.rs && \
+    cargo build --release && \
+    rm -rf src
+
+# Copy actual source code
+COPY analysis-tools/rust/performance-tools/src ./src
+
+# Build the application
+RUN cargo build --release
+
+# Production stage
+FROM debian:bookworm-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash rustanalyzer
+
+# Set up working directory
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /app/target/release/performance-tools .
+
+# Set ownership
+RUN chown -R rustanalyzer:rustanalyzer /app
+
+# Switch to non-root user
+USER rustanalyzer
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD ./performance-tools --help || exit 1
+
+# Default command
+CMD ["./performance-tools", "/code"]
+
+# Development stage
+FROM rust:1.75-slim as development
+
+# Install development dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up working directory
+WORKDIR /app
+
+# Copy source code
+COPY analysis-tools/rust/performance-tools/ .
+
+# Set up development environment
+ENV RUST_LOG=debug
+
+# Default command for development
+CMD ["cargo", "run", "--", "/code"]
+
+# Testing stage
+FROM development as testing
+
+# Run tests
+RUN cargo test --verbose
+
+# Build for testing
+RUN cargo build --release
+
+# Run integration tests
+CMD ["./target/release/performance-tools", "--help"]
