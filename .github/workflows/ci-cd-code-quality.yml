@@ -50,28 +50,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r deployment/docker/requirements.txt
           pip install -r deployment/docker/requirements-dev.txt
-          pip install pytest-cov pytest-allure-adaptor allure-pytest
+          pip install pytest-cov pytest-allure-adaptor allure-pytest coverage
 
       - name: Install Allure CLI
         run: npm install -g allure-commandline
 
-      - name: Create virtual environment
-        run: |
-          python -m venv test_env
-          source test_env/bin/activate
-          pip install -r deployment/docker/requirements.txt
-          pip install -r deployment/docker/requirements-dev.txt
-          pip install pytest-cov pytest-allure-adaptor
-
       - name: Run Domain Tests with Coverage & Allure
         run: |
-          source test_env/bin/activate
-          export PYTHONPATH=./infrastructure/code-quality:$PYTHONPATH
-          
-          # Create allure-results directory
           mkdir -p allure-results
-          
-          # Run domain tests with coverage and Allure
           python -m pytest tests/test_domain/ \
             --cov=domain \
             --cov-report=xml:coverage-domain.xml \
@@ -85,10 +71,6 @@ jobs:
 
       - name: Run Application Tests with Coverage & Allure
         run: |
-          source test_env/bin/activate
-          export PYTHONPATH=./infrastructure/code-quality:$PYTHONPATH
-          
-          # Run application tests with coverage and Allure
           python -m pytest tests/test_application/ \
             --cov=application \
             --cov-report=xml:coverage-application.xml \
@@ -102,10 +84,6 @@ jobs:
 
       - name: Run Critical Production Tests with Allure
         run: |
-          source test_env/bin/activate
-          export PYTHONPATH=./infrastructure/code-quality:$PYTHONPATH
-          
-          # Run critical tests with Allure
           python -m pytest tests/test_critical/ \
             --cov=domain,application,infrastructure,adapters \
             --cov-report=xml:coverage-critical.xml \
@@ -119,21 +97,15 @@ jobs:
 
       - name: Run Analysis Tools Tests with Allure
         run: |
-          source test_env/bin/activate
-          export PYTHONPATH=./infrastructure/code-quality:$PYTHONPATH
-          
-          # Run analysis tools tests with Allure
           python -m pytest tests/test_analysis_tools/ \
             --alluredir=allure-results \
             --allure-label-severity=major,normal,minor \
             --allure-label-suite=AnalysisToolsTests \
             -v \
-            --tb=short || true  # Allow failures for analysis tools tests
+            --tb=short || true
 
       - name: Generate Combined Coverage Report
         run: |
-          source test_env/bin/activate
-          pip install coverage
           
           # Combine coverage reports
           coverage combine coverage-*.xml
