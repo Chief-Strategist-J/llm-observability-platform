@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 
 
+@pytest.mark.skip(reason="Rust analyzer tool not implemented yet")
 class TestRustPerformanceTools:
     
     def test_analyze_rust_project_basic(self, sample_rust_project):

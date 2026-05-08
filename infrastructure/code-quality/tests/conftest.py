@@ -33,7 +33,7 @@ def sample_analysis():
         id="test-analysis-123",
         project_key="test-project",
         branch="main",
-        commit_hash="abc123def456",
+        commit_hash="abc123def456789012345678901234567890abcd",
         status=AnalysisStatus.COMPLETED,
         created_at=datetime.now(timezone.utc),
         completed_at=datetime.now(timezone.utc),
