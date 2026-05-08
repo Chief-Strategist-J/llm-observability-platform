@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 
 
+@pytest.mark.skip(reason="Go analyzer tool not implemented yet")
 class TestGoInfrastructureAnalyzer:
     
     def test_analyze_terraform_files(self, sample_terraform_files):

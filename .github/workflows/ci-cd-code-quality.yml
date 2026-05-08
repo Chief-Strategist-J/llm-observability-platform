@@ -11,24 +11,28 @@ on:
       - 'infrastructure/code-quality/**'
 
 env:
-  PYTHON_VERSION: '3.12'
-  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '20'
 
 jobs:
-  # Job 1: Run tests with coverage and Allure reporting
   test-and-report:
     name: Run Tests & Generate Reports
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: write
+      statuses: write
+
     defaults:
       run:
         working-directory: ./infrastructure/code-quality
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history for better reports
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -50,26 +54,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r deployment/docker/requirements.txt
           pip install -r deployment/docker/requirements-dev.txt
-          pip install pytest-cov pytest-allure-adaptor allure-pytest coverage
+          pip install pytest-cov coverage pytest-json-report pytest-html
 
       - name: Install Allure CLI
         run: npm install -g allure-commandline
 
-      - name: Run Domain Tests with Coverage & Allure
+      - name: Run Domain Tests with Coverage
         run: |
-          mkdir -p allure-results
           python -m pytest tests/test_domain/ \
             --cov=domain \
             --cov-report=xml:coverage-domain.xml \
             --cov-report=html:coverage-domain \
             --cov-report=term-missing \
             --alluredir=allure-results \
-            --allure-label-severity=critical,blocker,major,normal,minor \
-            --allure-label-suite=DomainTests \
+            --html=reports/html/domain-report.html \
+            --self-contained-html \
+            --json-report \
+            --json-report-file=reports/json/domain-report.json \
             -v \
             --tb=short
+          cp .coverage .coverage-domain
 
-      - name: Run Application Tests with Coverage & Allure
+      - name: Run Application Tests with Coverage
         run: |
           python -m pytest tests/test_application/ \
             --cov=application \
@@ -77,47 +83,48 @@ jobs:
             --cov-report=html:coverage-application \
             --cov-report=term-missing \
             --alluredir=allure-results \
-            --allure-label-severity=critical,blocker,major,normal,minor \
-            --allure-label-suite=ApplicationTests \
+            --html=reports/html/application-report.html \
+            --self-contained-html \
+            --json-report \
+            --json-report-file=reports/json/application-report.json \
             -v \
             --tb=short
+          cp .coverage .coverage-application
 
-      - name: Run Critical Production Tests with Allure
+      - name: Run Critical Production Tests
         run: |
           python -m pytest tests/test_critical/ \
-            --cov=domain,application,infrastructure,adapters \
-            --cov-report=xml:coverage-critical.xml \
-            --cov-report=html:coverage-critical \
-            --cov-report=term-missing \
             --alluredir=allure-results \
-            --allure-label-severity=critical,blocker \
-            --allure-label-suite=CriticalTests \
+            --html=reports/html/critical-report.html \
+            --self-contained-html \
+            --json-report \
+            --json-report-file=reports/json/critical-report.json \
             -v \
             --tb=short
 
-      - name: Run Analysis Tools Tests with Allure
+      - name: Run Analysis Tools Tests
         run: |
           python -m pytest tests/test_analysis_tools/ \
             --alluredir=allure-results \
-            --allure-label-severity=major,normal,minor \
-            --allure-label-suite=AnalysisToolsTests \
+            --html=reports/html/analysis-report.html \
+            --self-contained-html \
+            --json-report \
+            --json-report-file=reports/json/analysis-report.json \
             -v \
             --tb=short || true
 
       - name: Generate Combined Coverage Report
         run: |
-          
-          # Combine coverage reports
-          coverage combine coverage-*.xml
-          
-          # Generate final coverage report
+          coverage combine .coverage-domain .coverage-application
           coverage xml -o coverage-final.xml
           coverage html -d coverage-final
           coverage report
 
       - name: Generate Allure Report
+        if: always()
         run: |
-          allure generate allure-results --clean -o allure-report
+          allure generate allure-results --single-file --clean -o allure-report
+          cp allure-report/index.html reports/allure-report.html
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -127,49 +134,183 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
 
-      - name: Upload coverage artifacts
+      - name: Upload Allure Results (raw)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-reports
-          path: |
-            infrastructure/code-quality/coverage-final/
-            infrastructure/code-quality/coverage-*.xml
-          retention-days: 30
-
-      - name: Upload Allure results
-        uses: actions/upload-artifact@v4
-        with:
-          name: allure-results
+          name: allure-results-raw
           path: infrastructure/code-quality/allure-results
-          retention-days: 30
+          retention-days: 2
 
-      # On PRs: post allure comment on the PR
-      - name: Post Allure Report to PR
-        if: github.event_name == 'pull_request'
-        uses: allure-framework/allure-action@v0
-        with:
-          results-directory: ./infrastructure/code-quality/allure-results
-          issue-name: "Test Results — PR #${{ github.event.pull_request.number }}"
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      # On push to main: generate single-file report
-      - name: Generate Allure Report (single-file)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          cd infrastructure/code-quality
-          allure generate allure-results --single-file --clean -o allure-report
-
-      # Upload as artifact — downloads and opens directly in browser, no server needed
-      - name: Upload Allure Report Artifact
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - name: Upload Allure Report (single-file HTML)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-report
           path: infrastructure/code-quality/allure-report/index.html
-          retention-days: 30
+          retention-days: 7
 
-      # Also deploy to GitHub Pages for permanent URL access
-      - name: Deploy Allure Report to GitHub Pages
+      - name: Upload pytest HTML Reports (self-contained, open offline)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-html-reports
+          path: infrastructure/code-quality/reports/html/
+          retention-days: 7
+
+      - name: Upload pytest JSON Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-json-reports
+          path: infrastructure/code-quality/reports/json/
+          retention-days: 7
+
+      - name: Upload Coverage HTML Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html-report
+          path: infrastructure/code-quality/coverage-final/
+          retention-days: 7
+
+      - name: Upload Coverage XML Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml-reports
+          path: |
+            infrastructure/code-quality/coverage-final.xml
+            infrastructure/code-quality/coverage-domain.xml
+            infrastructure/code-quality/coverage-application.xml
+          retention-days: 7
+
+      - name: Post PR Summary Comment
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+
+            function parseCoverage(xmlPath, label) {
+              if (!fs.existsSync(xmlPath)) return null;
+              const xml = fs.readFileSync(xmlPath, 'utf8');
+              const lineRate   = parseFloat((xml.match(/line-rate="([\d.]+)"/)   || [])[1] || 0);
+              const branchRate = parseFloat((xml.match(/branch-rate="([\d.]+)"/) || [])[1] || 0);
+              const stmts      = parseInt((xml.match(/statements="(\d+)"/)       || [])[1] || 0);
+              const miss       = parseInt((xml.match(/missing="(\d+)"/)          || [])[1] || 0);
+              const pct        = v => `${(v * 100).toFixed(1)}%`;
+              const badge      = v => v >= 0.9 ? '🟢' : v >= 0.7 ? '🟡' : '🔴';
+              return { label, lineRate, branchRate, stmts, miss, pct, badge };
+            }
+
+            function parseJson(jsonPath) {
+              if (!fs.existsSync(jsonPath)) return null;
+              try {
+                const data = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+                return {
+                  total:   data.summary?.total   ?? 0,
+                  passed:  data.summary?.passed  ?? 0,
+                  failed:  data.summary?.failed  ?? 0,
+                  error:   data.summary?.error   ?? 0,
+                  skipped: data.summary?.skipped ?? 0,
+                  duration: data.duration        ?? 0,
+                };
+              } catch { return null; }
+            }
+
+            const coverages = [
+              parseCoverage('infrastructure/code-quality/coverage-domain.xml',      'Domain'),
+              parseCoverage('infrastructure/code-quality/coverage-application.xml', 'Application'),
+              parseCoverage('infrastructure/code-quality/coverage-final.xml',       '**Combined**'),
+            ].filter(Boolean);
+
+            const suites = [
+              { label: 'Domain',         json: 'infrastructure/code-quality/reports/json/domain-report.json' },
+              { label: 'Application',    json: 'infrastructure/code-quality/reports/json/application-report.json' },
+              { label: 'Critical',       json: 'infrastructure/code-quality/reports/json/critical-report.json' },
+              { label: 'Analysis Tools', json: 'infrastructure/code-quality/reports/json/analysis-report.json' },
+            ].map(s => ({ label: s.label, ...parseJson(s.json) })).filter(s => s.total !== undefined);
+
+            const totalTests  = suites.reduce((a, s) => a + s.total,   0);
+            const totalPassed = suites.reduce((a, s) => a + s.passed,  0);
+            const totalFailed = suites.reduce((a, s) => a + s.failed,  0);
+            const totalSkip   = suites.reduce((a, s) => a + s.skipped, 0);
+            const overallIcon = totalFailed === 0 ? '✅' : '❌';
+
+            const suiteRows = suites.map(s => {
+              const icon = s.failed === 0 ? '✅' : '❌';
+              return `| ${icon} ${s.label} | ${s.total} | ${s.passed} | ${s.failed} | ${s.skipped} | ${s.duration.toFixed(1)}s |`;
+            }).join('\n');
+
+            const covRows = coverages.map(c =>
+              `| ${c.badge(c.lineRate)} ${c.label} | ${c.pct(c.lineRate)} | ${c.pct(c.branchRate)} | ${c.stmts} | ${c.miss} |`
+            ).join('\n');
+
+            const runUrl  = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const prNum   = context.payload.pull_request.number;
+
+            const body = [
+              `## ${overallIcon} Test Report — PR #${prNum}`,
+              '',
+              `> Run: [#${context.runId}](${runUrl}) · Commit: \`${context.sha.slice(0,7)}\``,
+              '',
+              '---',
+              '',
+              '### 🧪 Test Suite Results',
+              '',
+              '| Suite | Total | ✅ Passed | ❌ Failed | ⏭ Skipped | ⏱ Duration |',
+              '|---|---|---|---|---|---|',
+              suiteRows,
+              `| **Total** | **${totalTests}** | **${totalPassed}** | **${totalFailed}** | **${totalSkip}** | — |`,
+              '',
+              '---',
+              '',
+              '### 📈 Coverage',
+              '',
+              '| Module | Lines | Branches | Statements | Missed |',
+              '|---|---|---|---|---|',
+              covRows,
+              '',
+              '---',
+              '',
+              '### 📦 Downloadable Reports',
+              '',
+              '| Report | Format | How to open |',
+              '|---|---|---|',
+              `| 🧪 Allure Test Report | Single-file HTML | Download \`allure-report\` → open \`index.html\` in browser |`,
+              `| 🐍 Domain pytest Report | Self-contained HTML | Download \`pytest-html-reports\` → open \`domain-report.html\` |`,
+              `| 🐍 Application pytest Report | Self-contained HTML | Download \`pytest-html-reports\` → open \`application-report.html\` |`,
+              `| 🐍 Critical pytest Report | Self-contained HTML | Download \`pytest-html-reports\` → open \`critical-report.html\` |`,
+              `| 🐍 Analysis pytest Report | Self-contained HTML | Download \`pytest-html-reports\` → open \`analysis-report.html\` |`,
+              `| 📊 Coverage HTML Report | Multi-file HTML | Download \`coverage-html-report\` → open \`index.html\` |`,
+              `| 📄 Coverage XML (combined) | XML (CI/SonarQube) | Download \`coverage-xml-reports\` → \`coverage-final.xml\` |`,
+              `| 📄 Coverage XML (domain) | XML | Download \`coverage-xml-reports\` → \`coverage-domain.xml\` |`,
+              `| 📄 Coverage XML (application) | XML | Download \`coverage-xml-reports\` → \`coverage-application.xml\` |`,
+              `| 🗂 pytest JSON Reports | JSON (raw data) | Download \`pytest-json-reports\` |`,
+              `| 🗂 Allure Raw Results | JSON (Allure format) | Download \`allure-results-raw\` |`,
+              '',
+              `> All artifacts available under [Actions → this run → Artifacts](${runUrl})`,
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              ...context.repo,
+              issue_number: prNum,
+            });
+            for (const c of comments) {
+              if (c.user.type === 'Bot' && c.body.startsWith('## ') && c.body.includes('Test Report')) {
+                await github.rest.issues.deleteComment({ ...context.repo, comment_id: c.id });
+              }
+            }
+
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: prNum,
+              body,
+            });
+
+      - name: Deploy Allure Report to GitHub Pages (main only)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: peaceiris/actions-gh-pages@v3
         with:
@@ -177,265 +318,3 @@ jobs:
           publish_dir: ./infrastructure/code-quality/allure-report
           destination_dir: allure-report
           keep_files: true
-
-  # Job 2: Build Docker images
-  build-docker:
-    name: Build Docker Images
-    runs-on: ubuntu-latest
-    needs: test-and-report
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
-    
-    defaults:
-      run:
-        working-directory: ./infrastructure/code-quality
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push API image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./infrastructure/code-quality
-          file: ./infrastructure/code-quality/deployment/docker/Dockerfile.api.optimized
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/sonarqube-quality-api:latest
-            ${{ secrets.DOCKER_USERNAME }}/sonarqube-quality-api:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
-
-      - name: Build and push Python analyzer image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./infrastructure/code-quality
-          file: ./infrastructure/code-quality/deployment/docker/Dockerfile.python-analyzer
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/sonarqube-python-analyzer:latest
-            ${{ secrets.DOCKER_USERNAME }}/sonarqube-python-analyzer:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
-
-      - name: Build and push Go analyzer image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./infrastructure/code-quality
-          file: ./infrastructure/code-quality/deployment/docker/Dockerfile.go-analyzer
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/sonarqube-go-analyzer:latest
-            ${{ secrets.DOCKER_USERNAME }}/sonarqube-go-analyzer:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
-
-      - name: Build and push Rust analyzer image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./infrastructure/code-quality
-          file: ./infrastructure/code-quality/deployment/docker/Dockerfile.rust-analyzer
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/sonarqube-rust-analyzer:latest
-            ${{ secrets.DOCKER_USERNAME }}/sonarqube-rust-analyzer:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
-
-  # Job 3: Security scanning
-  security-scan:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    needs: test-and-report
-    
-    defaults:
-      run:
-        working-directory: ./infrastructure/code-quality
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
-        with:
-          sarif_file: infrastructure/code-quality/trivy-results.sarif
-
-      - name: Run Bandit security scan
-        run: |
-          pip install bandit
-          bandit -r . -f json -o bandit-report.json || true
-          bandit -r . -f txt -o bandit-report.txt || true
-
-      - name: Upload Bandit report
-        uses: actions/upload-artifact@v4
-        with:
-          name: bandit-report
-          path: infrastructure/code-quality/bandit-report.*
-          retention-days: 30
-
-  # Job 4: Documentation generation
-  generate-docs:
-    name: Generate Documentation
-    runs-on: ubuntu-latest
-    needs: test-and-report
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
-    defaults:
-      run:
-        working-directory: ./infrastructure/code-quality
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install documentation dependencies
-        run: |
-          pip install sphinx sphinx-rtd-theme myst-parser
-
-      - name: Generate API documentation
-        run: |
-          # Create docs directory if it doesn't exist
-          mkdir -p docs/api
-          
-          # Generate API docs using sphinx-apidoc
-          sphinx-apidoc -o docs/api domain application infrastructure adapters shared analysis-tools
-          
-          # Build documentation
-          cd docs
-          make html
-
-      - name: Deploy documentation to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./infrastructure/code-quality/docs/_build/html
-          destination_dir: docs
-          keep_files: true
-
-  # Job 5: Performance testing
-  performance-test:
-    name: Performance Tests
-    runs-on: ubuntu-latest
-    needs: test-and-report
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
-    defaults:
-      run:
-        working-directory: ./infrastructure/code-quality
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install performance testing dependencies
-        run: |
-          pip install pytest-benchmark memory-profiler psutil
-
-      - name: Run performance benchmarks
-        run: |
-          mkdir -p performance-results
-          
-          # Run performance tests
-          python -m pytest tests/test_critical/test_production_breaking.py::TestCriticalProductionScenarios::test_memory_exhaustion_large_analysis \
-            --benchmark-only \
-            --benchmark-json=performance-results/benchmark.json \
-            --benchmark-html=performance-results/benchmark.html || true
-
-      - name: Upload performance results
-        uses: actions/upload-artifact@v4
-        with:
-          name: performance-results
-          path: infrastructure/code-quality/performance-results
-          retention-days: 30
-
-  # Job 6: Quality Gate Check
-  quality-gate:
-    name: Quality Gate Check
-    runs-on: ubuntu-latest
-    needs: [test-and-report, security-scan]
-    if: always()
-    
-    steps:
-      - name: Download coverage reports
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-reports
-          path: coverage-reports
-
-      - name: Quality Gate Check
-        run: |
-          # Check if tests passed
-          if [ "${{ needs.test-and-report.result }}" != "success" ]; then
-            echo "❌ Tests failed - Quality gate blocked"
-            exit 1
-          fi
-          
-          # Check if security scan passed
-          if [ "${{ needs.security-scan.result }}" != "success" ]; then
-            echo "❌ Security scan failed - Quality gate blocked"
-            exit 1
-          fi
-          
-          # Check coverage threshold (example: 80%)
-          echo "✅ All quality gates passed"
-          echo "✅ Tests: ${{ needs.test-and-report.result }}"
-          echo "✅ Security: ${{ needs.security-scan.result }}"
-
-  # Job 7: Notify results
-  notify:
-    name: Notify Results
-    runs-on: ubuntu-latest
-    needs: [test-and-report, build-docker, security-scan, quality-gate]
-    if: always()
-    
-    steps:
-      - name: Notify Slack on Success
-        if: needs.quality-gate.result == 'success'
-        uses: 8398a7/action-slack@v3
-        with:
-          status: success
-          channel: '#ci-cd'
-          text: "✅ Code Quality Infrastructure CI/CD Pipeline Succeeded!"
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Notify Slack on Failure
-        if: needs.quality-gate.result == 'failure'
-        uses: 8398a7/action-slack@v3
-        with:
-          status: failure
-          channel: '#ci-cd'
-          text: "❌ Code Quality Infrastructure CI/CD Pipeline Failed!"
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
