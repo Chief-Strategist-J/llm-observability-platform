@@ -57,6 +57,8 @@ class TestTriggerAnalysisUseCase:
     
     def test_execute_project_not_found(self, analysis_repository, project_repository):
         """Test execution with non-existent project"""
+        project_repository.find_by_key.return_value = None
+        
         use_case = TriggerAnalysisUseCase(
             analysis_repository,
             project_repository,
@@ -65,7 +67,7 @@ class TestTriggerAnalysisUseCase:
         )
         
         with pytest.raises(ValueError, match="Project with key 'non-existent' not found"):
-            use_case.execute("non-existent", "main", "abc123def456")
+            use_case.execute("non-existent", "main", "abc123def456789012345678901234567890abcd")
     
     def test_execute_existing_analysis(self, mock_sonarqube_service, analysis_repository, project_repository):
         """Test execution with existing analysis for same commit"""
@@ -87,7 +89,7 @@ class TestTriggerAnalysisUseCase:
             id="existing-analysis",
             project_key="test-project",
             branch="main",
-            commit_hash="abc123def456",
+            commit_hash="abc123def456789012345678901234567890abcd",
             status=AnalysisStatus.COMPLETED,
             created_at=datetime.now(timezone.utc),
             completed_at=datetime.now(timezone.utc),
@@ -95,6 +97,7 @@ class TestTriggerAnalysisUseCase:
             metrics=[]
         )
         analysis_repository.save(existing_analysis)
+        analysis_repository.find_by_commit.return_value = existing_analysis
         
         use_case = TriggerAnalysisUseCase(
             analysis_repository,
@@ -104,7 +107,7 @@ class TestTriggerAnalysisUseCase:
         )
         
         # Execute
-        analysis_id = use_case.execute("test-project", "main", "abc123def456")
+        analysis_id = use_case.execute("test-project", "main", "abc123def456789012345678901234567890abcd")
         
         # Should return existing analysis ID
         assert analysis_id == "existing-analysis"
@@ -130,6 +133,19 @@ class TestTriggerAnalysisUseCase:
         # Mock SonarQube failure
         mock_sonarqube_service.trigger_analysis.side_effect = Exception("SonarQube error")
         
+        # Track saved analysis for status update
+        saved_analysis = None
+        def mock_save(analysis):
+            nonlocal saved_analysis
+            saved_analysis = analysis
+            return analysis.id
+        analysis_repository.save.side_effect = mock_save
+        
+        def mock_update_status(analysis_id, status):
+            if saved_analysis:
+                saved_analysis.status = status
+        analysis_repository.update_status.side_effect = mock_update_status
+        
         use_case = TriggerAnalysisUseCase(
             analysis_repository,
             project_repository,
@@ -139,13 +155,10 @@ class TestTriggerAnalysisUseCase:
         
         # Execute and verify error
         with pytest.raises(RuntimeError, match="Failed to trigger SonarQube analysis"):
-            use_case.execute("test-project", "main", "abc123def456")
+            use_case.execute("test-project", "main", "abc123def456789012345678901234567890abcd")
         
         # Check analysis status was updated to FAILED
-        analyses = analysis_repository.find_by_project("test-project")
-        assert len(analyses) > 0
-        latest_analysis = max(analyses, key=lambda a: a.created_at)
-        assert latest_analysis.status == AnalysisStatus.FAILED
+        assert saved_analysis.status == AnalysisStatus.FAILED
     
     def test_execute_validation_errors(self, analysis_repository, project_repository):
         """Test execution with invalid input"""
@@ -158,15 +171,15 @@ class TestTriggerAnalysisUseCase:
         
         # Test invalid project key
         with pytest.raises(ValueError, match="Validation failed"):
-            use_case.execute("", "main", "abc123def456")
+            use_case.execute("", "main", "abc123def456789012345678901234567890abcd")
         
         # Test invalid branch
         with pytest.raises(ValueError, match="Validation failed"):
-            use_case.execute("test-project", "", "abc123def456")
+            use_case.execute("test-project", "", "abc123def456789012345678901234567890abcd")
         
-        # Test invalid commit hash
+        # Test invalid commit hash (6 chars instead of 40 or 7)
         with pytest.raises(ValueError, match="Validation failed"):
-            use_case.execute("test-project", "main", "invalid")
+            use_case.execute("test-project", "main", "abc123")
 
 
 class TestCheckAnalysisStatusUseCase:
@@ -178,7 +191,7 @@ class TestCheckAnalysisStatusUseCase:
             id="test-analysis",
             project_key="test-project",
             branch="main",
-            commit_hash="abc123def456",
+            commit_hash="abc123def456789012345678901234567890abcd",
             status=AnalysisStatus.RUNNING,
             created_at=datetime.now(timezone.utc),
             completed_at=None,
@@ -189,11 +202,12 @@ class TestCheckAnalysisStatusUseCase:
         
         # Mock SonarQube response
         mock_sonarqube_service.get_analysis_status.return_value = AnalysisStatus.COMPLETED
-        mock_sonarqube_service.get_analysis_results.return_value = Analysis(
+        
+        completed_analysis = Analysis(
             id="test-analysis",
             project_key="test-project",
             branch="main",
-            commit_hash="abc123def456",
+            commit_hash="abc123def456789012345678901234567890abcd",
             status=AnalysisStatus.COMPLETED,
             created_at=datetime.now(timezone.utc),
             completed_at=datetime.now(timezone.utc),
@@ -213,6 +227,11 @@ class TestCheckAnalysisStatusUseCase:
                 Metric(name="coverage", value=85.0, formatted_value="85.0%")
             ]
         )
+        mock_sonarqube_service.get_analysis_results.return_value = completed_analysis
+        analysis_repository.save.side_effect = lambda a: a.id
+        
+        # Mock find_by_id to return the completed analysis
+        analysis_repository.find_by_id.return_value = completed_analysis
         
         use_case = CheckAnalysisStatusUseCase(
             analysis_repository,
@@ -241,7 +260,7 @@ class TestCheckAnalysisStatusUseCase:
             id="test-analysis",
             project_key="test-project",
             branch="main",
-            commit_hash="abc123def456",
+            commit_hash="abc123def456789012345678901234567890abcd",
             status=AnalysisStatus.RUNNING,
             created_at=datetime.now(timezone.utc),
             completed_at=None,
@@ -269,6 +288,8 @@ class TestCheckAnalysisStatusUseCase:
     
     def test_execute_analysis_not_found(self, analysis_repository):
         """Test checking status of non-existent analysis"""
+        analysis_repository.find_by_id.return_value = None
+        
         use_case = CheckAnalysisStatusUseCase(
             analysis_repository,
             Mock(),
@@ -285,7 +306,7 @@ class TestCheckAnalysisStatusUseCase:
             id="test-analysis",
             project_key="test-project",
             branch="main",
-            commit_hash="abc123def456",
+            commit_hash="abc123def456789012345678901234567890abcd",
             status=AnalysisStatus.RUNNING,
             created_at=datetime.now(timezone.utc),
             completed_at=None,
@@ -297,6 +318,19 @@ class TestCheckAnalysisStatusUseCase:
         # Mock SonarQube - status is completed but results call fails
         mock_sonarqube_service.get_analysis_status.return_value = AnalysisStatus.COMPLETED
         mock_sonarqube_service.get_analysis_results.side_effect = Exception("Results fetch failed")
+        
+        # Track status updates
+        current_status = AnalysisStatus.RUNNING
+        def mock_update_status(analysis_id, status):
+            nonlocal current_status
+            current_status = status
+        analysis_repository.update_status.side_effect = mock_update_status
+        
+        # Mock find_by_id to return updated analysis
+        def mock_find_by_id(analysis_id):
+            analysis.status = current_status
+            return analysis
+        analysis_repository.find_by_id.side_effect = mock_find_by_id
         
         use_case = CheckAnalysisStatusUseCase(
             analysis_repository,
@@ -319,7 +353,7 @@ class TestCheckAnalysisStatusUseCase:
             id="test-analysis",
             project_key="test-project",
             branch="main",
-            commit_hash="abc123def456",
+            commit_hash="abc123def456789012345678901234567890abcd",
             status=AnalysisStatus.COMPLETED,
             created_at=datetime.now(timezone.utc),
             completed_at=datetime.now(timezone.utc),
@@ -338,13 +372,18 @@ class TestCheckAnalysisStatusUseCase:
             metrics=[Metric(name="coverage", value=85.0, formatted_value="85.0%")]
         )
         analysis_repository.save(analysis)
+        analysis_repository.find_by_id.return_value = analysis
         
         mock_sonarqube_service.get_analysis_status.return_value = AnalysisStatus.COMPLETED
+        
+        # Mock domain service to not block merge
+        mock_domain_service = Mock()
+        mock_domain_service.should_block_merge.return_value = False
         
         use_case = CheckAnalysisStatusUseCase(
             analysis_repository,
             mock_sonarqube_service,
-            Mock()
+            mock_domain_service
         )
         
         # Execute
@@ -360,7 +399,7 @@ class TestCheckAnalysisStatusUseCase:
             id="test-analysis",
             project_key="test-project",
             branch="main",
-            commit_hash="abc123def456",
+            commit_hash="abc123def456789012345678901234567890abcd",
             status=AnalysisStatus.COMPLETED,
             created_at=datetime.now(timezone.utc),
             completed_at=datetime.now(timezone.utc),
@@ -379,13 +418,18 @@ class TestCheckAnalysisStatusUseCase:
             metrics=[Metric(name="coverage", value=85.0, formatted_value="85.0%")]
         )
         analysis_repository.save(analysis)
+        analysis_repository.find_by_id.return_value = analysis
         
         mock_sonarqube_service.get_analysis_status.return_value = AnalysisStatus.COMPLETED
+        
+        # Mock domain service to block merge
+        mock_domain_service = Mock()
+        mock_domain_service.should_block_merge.return_value = True
         
         use_case = CheckAnalysisStatusUseCase(
             analysis_repository,
             mock_sonarqube_service,
-            Mock()
+            mock_domain_service
         )
         
         # Execute
@@ -401,7 +445,7 @@ class TestCheckAnalysisStatusUseCase:
             id="test-analysis",
             project_key="test-project",
             branch="main",
-            commit_hash="abc123def456",
+            commit_hash="abc123def456789012345678901234567890abcd",
             status=AnalysisStatus.COMPLETED,
             created_at=datetime.now(timezone.utc),
             completed_at=datetime.now(timezone.utc),
@@ -420,13 +464,18 @@ class TestCheckAnalysisStatusUseCase:
             metrics=[Metric(name="coverage", value=85.0, formatted_value="85.0%")]
         )
         analysis_repository.save(analysis)
+        analysis_repository.find_by_id.return_value = analysis
         
         mock_sonarqube_service.get_analysis_status.return_value = AnalysisStatus.COMPLETED
+        
+        # Mock domain service
+        mock_domain_service = Mock()
+        mock_domain_service.generate_analysis_summary.return_value = "Found 1 issues, 85.0% coverage"
         
         use_case = CheckAnalysisStatusUseCase(
             analysis_repository,
             mock_sonarqube_service,
-            Mock()
+            mock_domain_service
         )
         
         # Execute
@@ -443,7 +492,7 @@ class TestCheckAnalysisStatusUseCase:
             id="test-analysis",
             project_key="test-project",
             branch="main",
-            commit_hash="abc123def456",
+            commit_hash="abc123def456789012345678901234567890abcd",
             status=AnalysisStatus.COMPLETED,
             created_at=datetime.now(timezone.utc),
             completed_at=datetime.now(timezone.utc),
@@ -451,13 +500,18 @@ class TestCheckAnalysisStatusUseCase:
             metrics=[Metric(name="coverage", value=90.0, formatted_value="90.0%")]
         )
         analysis_repository.save(analysis)
+        analysis_repository.find_by_id.return_value = analysis
         
         mock_sonarqube_service.get_analysis_status.return_value = AnalysisStatus.COMPLETED
+        
+        # Mock domain service
+        mock_domain_service = Mock()
+        mock_domain_service.calculate_quality_score.return_value = 100.0
         
         use_case = CheckAnalysisStatusUseCase(
             analysis_repository,
             mock_sonarqube_service,
-            Mock()
+            mock_domain_service
         )
         
         # Execute
