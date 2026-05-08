@@ -12,7 +12,7 @@ on:
 
 env:
   PYTHON_VERSION: '3.12'
-  NODE_VERSION: '18'
+  NODE_VERSION: '20'
 
 jobs:
   # Job 1: Run tests with coverage and Allure reporting
