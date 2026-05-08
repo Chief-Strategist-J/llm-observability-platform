@@ -75,10 +75,6 @@ jobs:
       - name: Run Critical Production Tests
         run: |
           python -m pytest tests/test_critical/ \
-            --cov=domain,application,infrastructure,adapters \
-            --cov-report=xml:coverage-critical.xml \
-            --cov-report=html:coverage-critical \
-            --cov-report=term-missing \
             -v \
             --tb=short
 
