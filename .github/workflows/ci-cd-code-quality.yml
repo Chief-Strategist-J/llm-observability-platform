@@ -50,57 +50,41 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r deployment/docker/requirements.txt
           pip install -r deployment/docker/requirements-dev.txt
-          pip install pytest-cov pytest-allure-adaptor allure-pytest coverage
+          pip install pytest-cov coverage
 
-      - name: Install Allure CLI
-        run: npm install -g allure-commandline
-
-      - name: Run Domain Tests with Coverage & Allure
+      - name: Run Domain Tests with Coverage
         run: |
-          mkdir -p allure-results
           python -m pytest tests/test_domain/ \
             --cov=domain \
             --cov-report=xml:coverage-domain.xml \
             --cov-report=html:coverage-domain \
             --cov-report=term-missing \
-            --alluredir=allure-results \
-            --allure-label-severity=critical,blocker,major,normal,minor \
-            --allure-label-suite=DomainTests \
             -v \
             --tb=short
 
-      - name: Run Application Tests with Coverage & Allure
+      - name: Run Application Tests with Coverage
         run: |
           python -m pytest tests/test_application/ \
             --cov=application \
             --cov-report=xml:coverage-application.xml \
             --cov-report=html:coverage-application \
             --cov-report=term-missing \
-            --alluredir=allure-results \
-            --allure-label-severity=critical,blocker,major,normal,minor \
-            --allure-label-suite=ApplicationTests \
             -v \
             --tb=short
 
-      - name: Run Critical Production Tests with Allure
+      - name: Run Critical Production Tests
         run: |
           python -m pytest tests/test_critical/ \
             --cov=domain,application,infrastructure,adapters \
             --cov-report=xml:coverage-critical.xml \
             --cov-report=html:coverage-critical \
             --cov-report=term-missing \
-            --alluredir=allure-results \
-            --allure-label-severity=critical,blocker \
-            --allure-label-suite=CriticalTests \
             -v \
             --tb=short
 
-      - name: Run Analysis Tools Tests with Allure
+      - name: Run Analysis Tools Tests
         run: |
           python -m pytest tests/test_analysis_tools/ \
-            --alluredir=allure-results \
-            --allure-label-severity=major,normal,minor \
-            --allure-label-suite=AnalysisToolsTests \
             -v \
             --tb=short || true
 
@@ -114,10 +98,6 @@ jobs:
           coverage xml -o coverage-final.xml
           coverage html -d coverage-final
           coverage report
-
-      - name: Generate Allure Report
-        run: |
-          allure generate allure-results --clean -o allure-report
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -135,48 +115,6 @@ jobs:
             infrastructure/code-quality/coverage-final/
             infrastructure/code-quality/coverage-*.xml
           retention-days: 30
-
-      - name: Upload Allure results
-        uses: actions/upload-artifact@v4
-        with:
-          name: allure-results
-          path: infrastructure/code-quality/allure-results
-          retention-days: 30
-
-      # On PRs: post allure comment on the PR
-      - name: Post Allure Report to PR
-        if: github.event_name == 'pull_request'
-        uses: allure-framework/allure-action@v0
-        with:
-          results-directory: ./infrastructure/code-quality/allure-results
-          issue-name: "Test Results — PR #${{ github.event.pull_request.number }}"
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      # On push to main: generate single-file report
-      - name: Generate Allure Report (single-file)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          cd infrastructure/code-quality
-          allure generate allure-results --single-file --clean -o allure-report
-
-      # Upload as artifact — downloads and opens directly in browser, no server needed
-      - name: Upload Allure Report Artifact
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: actions/upload-artifact@v4
-        with:
-          name: allure-report
-          path: infrastructure/code-quality/allure-report/index.html
-          retention-days: 30
-
-      # Also deploy to GitHub Pages for permanent URL access
-      - name: Deploy Allure Report to GitHub Pages
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./infrastructure/code-quality/allure-report
-          destination_dir: allure-report
-          keep_files: true
 
   # Job 2: Build Docker images
   build-docker:
