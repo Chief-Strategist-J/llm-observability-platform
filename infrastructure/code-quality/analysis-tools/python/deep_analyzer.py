@@ -176,7 +176,7 @@ class PythonDeepAnalyzer:
             'cyclomatic_complexity': metrics.cyclomatic_complexity,
             'cognitive_complexity': metrics.cognitive_complexity,
             'lines_of_code': metrics.lines_of_code,
-            'maintainability_index': round(metrics.maintainability, 2)
+            'maintainability_index': round(metrics.maintainability_index, 2)
         }
 
 
