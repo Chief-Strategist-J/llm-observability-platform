@@ -134,15 +134,6 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
 
-      - name: Publish JUnit Test Results
-        if: always()
-        uses: EnricoMi/publish-test-results-action@v2
-        with:
-          files: infrastructure/code-quality/reports/json/*.json
-          check_name: Test Results
-          comment_title: Test Results
-          fail_on: test failures
-
       - name: Upload Allure Results (raw)
         if: always()
         uses: actions/upload-artifact@v4
@@ -157,7 +148,7 @@ jobs:
         with:
           name: allure-report
           path: infrastructure/code-quality/allure-report/index.html
-          retention-days: 2
+          retention-days: 7
 
       - name: Upload pytest HTML Reports (self-contained, open offline)
         if: always()
@@ -165,7 +156,7 @@ jobs:
         with:
           name: pytest-html-reports
           path: infrastructure/code-quality/reports/html/
-          retention-days: 2
+          retention-days: 7
 
       - name: Upload pytest JSON Reports
         if: always()
@@ -173,7 +164,7 @@ jobs:
         with:
           name: pytest-json-reports
           path: infrastructure/code-quality/reports/json/
-          retention-days: 2
+          retention-days: 7
 
       - name: Upload Coverage HTML Report
         if: always()
@@ -181,7 +172,7 @@ jobs:
         with:
           name: coverage-html-report
           path: infrastructure/code-quality/coverage-final/
-          retention-days: 2
+          retention-days: 7
 
       - name: Upload Coverage XML Reports
         if: always()
@@ -192,7 +183,7 @@ jobs:
             infrastructure/code-quality/coverage-final.xml
             infrastructure/code-quality/coverage-domain.xml
             infrastructure/code-quality/coverage-application.xml
-          retention-days: 2
+          retention-days: 7
 
       - name: Post PR Summary Comment
         if: github.event_name == 'pull_request' && always()
