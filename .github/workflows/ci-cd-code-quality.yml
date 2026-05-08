@@ -61,6 +61,8 @@ jobs:
             --cov-report=term-missing \
             -v \
             --tb=short
+          # Save coverage data
+          cp .coverage .coverage-domain
 
       - name: Run Application Tests with Coverage
         run: |
@@ -71,6 +73,8 @@ jobs:
             --cov-report=term-missing \
             -v \
             --tb=short
+          # Save coverage data
+          cp .coverage .coverage-application
 
       - name: Run Critical Production Tests
         run: |
@@ -88,7 +92,7 @@ jobs:
         run: |
           
           # Combine coverage reports
-          coverage combine .coverage
+          coverage combine .coverage-domain .coverage-application
           
           # Generate final coverage report
           coverage xml -o coverage-final.xml
