@@ -17,15 +17,37 @@ LOG_LEVEL_MAP = {
     "fatal": "FATAL",
 }
 
+# Fields with unbounded cardinality that should not track individual values
+# to prevent memory exhaustion (OOM) on high-cardinality attributes.
+HIGH_CARDINALITY_FIELDS = {"trace_id", "timestamp"}
+
 
 class StructuralEnricher:
+    """
+    Structural enricher for log messages with cardinality tracking.
+    
+    Concurrency Model:
+    - Not thread-safe: enrich() mutates internal cardinality state.
+    - Use external locking if concurrent access is required.
+    
+    Memory Management:
+    - LOW_CARDINALITY fields (level, service, etc.) track full value counts
+      via Counter to capture diversity.
+    - HIGH_CARDINALITY fields (trace_id, timestamp, etc.) track only the
+      total seen count to prevent unbounded memory growth (OOM).
+    """
+
     _timestamp_re = re.compile(r"\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?")
     _trace_id_re = re.compile(r"\b(?:trace[_-]?id|tid)=([A-Za-z0-9\-]+)", re.IGNORECASE)
     _service_re = re.compile(r"\bservice=([A-Za-z0-9._-]+)", re.IGNORECASE)
     _level_re = re.compile(r"\b(INFO|WARN|WARNING|ERROR|DEBUG|TRACE|FATAL|ERR)\b", re.IGNORECASE)
 
     def __init__(self) -> None:
+        """Initialize cardinality trackers for low and high cardinality fields."""
+        # For low-cardinality fields: track individual value counts
         self._cardinality: Dict[str, Counter] = defaultdict(Counter)
+        # For high-cardinality fields: track only total unique count
+        self._seen_counts: Dict[str, int] = {}
 
     def enrich(self, message: str) -> Tuple[Dict[str, str], Dict[str, str], Dict[str, int]]:
         extracted: Dict[str, str] = {}
@@ -71,8 +93,25 @@ class StructuralEnricher:
         return normalized
 
     def _update_cardinality(self, normalized: Dict[str, str]) -> Dict[str, int]:
+        """
+        Update cardinality snapshot for normalized fields.
+        
+        - HIGH_CARDINALITY_FIELDS: track only total count (seen_counts)
+        - Other fields: track full Counter of individual values
+        
+        Returns:
+            Dictionary mapping field_name to cardinality count.
+        """
         snapshot: Dict[str, int] = {}
         for field_name, value in normalized.items():
-            self._cardinality[field_name][value] += 1
-            snapshot[field_name] = len(self._cardinality[field_name])
+            if field_name in HIGH_CARDINALITY_FIELDS:
+                # For high-cardinality fields, track only the seen count
+                if field_name not in self._seen_counts:
+                    self._seen_counts[field_name] = 0
+                self._seen_counts[field_name] += 1
+                snapshot[field_name] = self._seen_counts[field_name]
+            else:
+                # For low-cardinality fields, track full Counter
+                self._cardinality[field_name][value] += 1
+                snapshot[field_name] = len(self._cardinality[field_name])
         return snapshot
