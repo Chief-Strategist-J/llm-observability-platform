@@ -101,9 +101,6 @@ class TestRouterBoundaries(unittest.TestCase):
         self.assertEqual(router.route(now - timedelta(days=31)).tier, "cold")
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 class TestProductionFailureScenarios(unittest.TestCase):
     def test_structural_enricher_handles_missing_service_and_invalid_timestamp(self):
         pipeline = LogIntelligencePipeline()
@@ -291,3 +288,7 @@ class TestApiSurfaceCriticality(unittest.TestCase):
         self.assertIn("implemented", client.capability_metrics())
         self.assertEqual(client.ingest_batch([{"line_id": "l1", "message": "m"}])["items"][0]["line_id"], "l1")
         self.assertTrue(client.log_lookup("l1")["found"])
+
+
+if __name__ == "__main__":
+    unittest.main()
