@@ -7,8 +7,7 @@ __pycache__/
 *.so
 
 # Distribution / packaging
-.Python
-build/
+# build/  # Commented out - needed for Docker
 develop-eggs/
 dist/
 downloads/

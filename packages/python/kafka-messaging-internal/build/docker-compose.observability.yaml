@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  # Tempo - Distributed Tracing Backend
+  tempo:
+    image: grafana/tempo:latest
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo-config.yaml:/etc/tempo.yaml
+      - tempo_data:/tmp/tempo
+    ports:
+      - "3200:3200"   # Tempo UI
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "9411:9411"   # Zipkin compatible
+    networks:
+      - observability
+
+  # Loki - Log Aggregation
+  loki:
+    image: grafana/loki:latest
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - ./loki-config.yaml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    ports:
+      - "3100:3100"   # Loki API
+    networks:
+      - observability
+
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - observability
+
+  # Grafana - Visualization Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-tempo-datasource
+    ports:
+      - "3000:3000"
+    networks:
+      - observability
+    depends_on:
+      - prometheus
+      - tempo
+      - loki
+
+  # MongoDB - Alternative Database
+  mongodb:
+    image: mongo:7
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+      - MONGO_INITDB_DATABASE=kafka_events
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongodb-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    ports:
+      - "27017:27017"
+    networks:
+      - observability
+
+volumes:
+  tempo_data:
+  loki_data:
+  prometheus_data:
+  grafana_data:
+  mongodb_data:
+
+networks:
+  observability:
+    driver: bridge
