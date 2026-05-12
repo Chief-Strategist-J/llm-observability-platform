@@ -1,0 +1,128 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "build"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kafka-messaging-internal"
+version = "1.0.0"
+description = "Internal Kafka messaging SDK following hexagonal architecture with strict separation of concerns"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "LLM Observability Platform", email = "dev@example.com"}
+]
+keywords = ["kafka", "messaging", "schema-registry", "hexagonal-architecture", "postgresql", "mongodb", "otel"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Distributed Computing",
+]
+
+dependencies = [
+    "pydantic>=2.10.0",
+    "python-dateutil>=2.9.0",
+    "psycopg2-binary>=2.9.9",
+    "pymongo>=4.10.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    "requests>=2.32.0",
+    "opentelemetry-sdk>=1.28.0",
+    "opentelemetry-instrumentation-fastapi>=0.49b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.49b0",
+    "opentelemetry-instrumentation-psycopg2>=0.49b0",
+    "opentelemetry-exporter-otlp>=1.28.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+    "bandit>=1.7.0",
+    "schemathesis>=3.0.0",
+    "httpx>=0.24.0",
+]
+schema-registry = [
+    "confluent-kafka>=2.0.0",
+    "authlib>=1.0.0",
+    "cachetools>=5.0.0",
+    "fastavro>=1.0.0",
+    "orjson>=3.0.0",
+    "referencing<0.35",
+    "jsonschema>=4.0.0",
+]
+app = [
+    "temporalio>=1.0.0",
+    "pyyaml>=6.0",
+    "slowapi>=0.1.9",
+    "locust>=2.0.0",
+    "redis>=5.0.0",
+    "uvloop>=0.19.0",
+    "httptools>=0.6.0",
+    "asyncpg>=0.29.0",
+    "motor>=3.3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/example/kafka-messaging-internal"
+Documentation = "https://github.com/example/kafka-messaging-internal#readme"
+Repository = "https://github.com/example/kafka-messaging-internal.git"
+Issues = "https://github.com/example/kafka-messaging-internal/issues"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["kafka_messaging_internal*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+"kafka_messaging_internal" = ["py.typed"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311']
+include = '\.pyi?$'
+
+[tool.ruff]
+line-length = 100
+select = ["ALL"]
+ignore = ["E501"]  # Line length handled by black
+target-version = "py38"
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --cov=src --cov-report=html --cov-fail-under=80"
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "contract: Contract tests",
+    "e2e: End-to-end tests",
+    "performance: Performance tests",
+]

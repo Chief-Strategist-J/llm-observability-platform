@@ -1,0 +1,89 @@
+package:
+  name: kafka-messaging-internal
+  version: 1.0.0
+  description: Internal Kafka messaging SDK following hexagonal architecture
+  language: python
+  stage: 0  # Prototype stage
+
+architecture:
+  pattern: hexagonal
+  layers:
+    - api
+    - features
+    - infra
+    - shared
+  isolation: strict  # No cross-package imports
+
+dependencies:
+  runtime:
+    - pydantic>=2.0.0
+    - fastapi>=0.100.0
+    - opentelemetry-sdk>=1.0.0
+  optional:
+    schema-registry:
+      - confluent-kafka>=2.0.0
+      - fastavro>=1.0.0
+    app:
+      - temporalio>=1.0.0
+      - redis>=5.0.0
+
+contracts:
+  openapi:
+    version: v1
+    path: contracts/openapi/v1.yaml
+    generator: openapi-python-client
+    client_path: src/infra/clients/
+
+ports:
+  database:
+    interface: src/shared/ports/database_port.py
+    adapters:
+      - src/infra/adapters/postgresql/
+      - src/infra/adapters/mongodb/
+  schema_registry:
+    interface: src/shared/ports/schema_registry_port.py
+    adapters:
+      - src/infra/adapters/confluent/
+  messaging:
+    interface: src/shared/ports/messaging_port.py
+    adapters:
+      - src/infra/adapters/kafka/
+
+features:
+  - name: event-processing
+    responsibility: Process and store Kafka events
+    entry_point: src/features/event-processing/index.py
+  - name: schema-registry
+    responsibility: Schema registration and validation
+    entry_point: src/features/schema-registry/index.py
+  - name: database-operations
+    responsibility: Database query and persistence operations
+    entry_point: src/features/database-operations/index.py
+
+tracing:
+  enabled: true
+  exporter: otlp
+  required_attributes:
+    - service.name
+    - service.version
+    - feature.name
+    - api.version
+    - deployment.env
+    - host.name
+
+testing:
+  coverage_threshold: 80
+  types:
+    - unit
+    - integration
+    - contract
+    - e2e
+    - performance
+  contract_tool: schemathesis
+
+compliance:
+  layer_call_rules: enforced
+  coupling_rules: enforced
+  import_guards: enabled
+  tracing_required: true
+  migrations_required: true
