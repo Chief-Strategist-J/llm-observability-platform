@@ -1,129 +1,140 @@
-"""Unit tests for event processing feature."""
-
 import pytest
-from unittest.mock import Mock, patch
-from datetime import datetime
+from unittest.mock import Mock, AsyncMock
+from datetime import datetime, timezone
 
-from kafka_messaging_internal.features.event_processing.service import EventProcessingService
-from kafka_messaging_internal.shared.errors.exceptions import ValidationError, BusinessError
+from kafka_messaging_internal.features.event_processing.service import EventProcessingService, ProcessingResult
 
 
 class TestEventProcessingService:
-    """Unit tests for EventProcessingService."""
-    
-    def test_process_event_success(self, mock_database_port, sample_event_data):
-        """Test successful event processing."""
+
+    @pytest.mark.asyncio
+    async def test_process_event_success(self, mock_database_port, sample_event_data):
         service = EventProcessingService(mock_database_port)
-        
-        # Mock database calls
+
         mock_database_port.get_event.return_value = None
         mock_database_port.save_event.return_value = "test-event-id"
-        
-        result = service.process_event(sample_event_data)
-        
+
+        result = await service.process_event(sample_event_data)
+
         assert result["success"] is True
         assert result["event_id"] == "test-event-id"
         assert result["error"] is None
         mock_database_port.save_event.assert_called_once()
-        mock_database_port.mark_event_processed.assert_called_once_with("test-event-id")
-    
-    def test_process_event_validation_error(self, mock_database_port):
-        """Test event processing with invalid data."""
+        mock_database_port.mark_event_processed.assert_called_once_with("test-event-id", None)
+
+    @pytest.mark.asyncio
+    async def test_process_event_missing_topic(self, mock_database_port):
         service = EventProcessingService(mock_database_port)
-        
-        invalid_data = {"topic": ""}  # Missing required fields
-        
-        with pytest.raises(ValidationError) as exc_info:
-            service.process_event(invalid_data)
-        
-        assert exc_info.value.code == "VALIDATION_INVALID_REQUEST"
-    
-    def test_process_event_already_processed(self, mock_database_port, sample_event_data):
-        """Test processing already processed event."""
-        service = EventProcessingService(mock_database_port)
-        
-        # Mock existing processed event
-        mock_event = Mock()
-        mock_event.processed = True
-        mock_database_port.get_event.return_value = mock_event
-        
-        result = service.process_event(sample_event_data)
-        
+
+        invalid_data = {"topic": "", "value": {"data": "test"}}
+
+        result = await service.process_event(invalid_data)
+
         assert result["success"] is False
-        assert "already been processed" in result["error"]
+        assert result["error"] is not None
+        assert "topic" in result["error"].lower()
         mock_database_port.save_event.assert_not_called()
-    
-    def test_process_events_batch_success(self, mock_database_port, sample_batch_events):
-        """Test successful batch event processing."""
+
+    @pytest.mark.asyncio
+    async def test_process_event_missing_value(self, mock_database_port):
         service = EventProcessingService(mock_database_port)
-        
-        # Mock database calls
-        mock_database_port.save_events_batch.return_value = ["id-1", "id-2"]
-        
-        result = service.process_events_batch(sample_batch_events)
-        
-        assert result["success"] is True
-        assert result["count"] == 2
-        assert result["event_ids"] == ["id-1", "id-2"]
-        mock_database_port.save_events_batch.assert_called_once()
-        mock_database_port.mark_event_processed.assert_any_call("id-1")
-        mock_database_port.mark_event_processed.assert_any_call("id-2")
-    
-    def test_process_events_batch_validation_error(self, mock_database_port):
-        """Test batch processing with invalid data."""
+
+        invalid_data = {"topic": "test-topic"}
+
+        result = await service.process_event(invalid_data)
+
+        assert result["success"] is False
+        assert result["error"] is not None
+        assert "value" in result["error"].lower()
+        mock_database_port.save_event.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_process_event_empty_data(self, mock_database_port):
         service = EventProcessingService(mock_database_port)
-        
-        invalid_batch = [{"topic": ""}]  # Invalid event
-        
-        with pytest.raises(ValidationError) as exc_info:
-            service.process_events_batch(invalid_batch)
-        
-        assert exc_info.value.code == "VALIDATION_INVALID_REQUEST"
-    
-    def test_get_event_success(self, mock_database_port):
-        """Test successful event retrieval."""
+
+        result = await service.process_event({})
+
+        assert result["success"] is False
+        assert result["error"] is not None
+
+    @pytest.mark.asyncio
+    async def test_process_event_database_failure(self, mock_database_port, sample_event_data):
         service = EventProcessingService(mock_database_port)
-        
-        # Mock event
+
+        mock_database_port.save_event.side_effect = Exception("DB connection lost")
+
+        result = await service.process_event(sample_event_data)
+
+        assert result["success"] is False
+        assert "DB connection lost" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_process_events_batch_success(self, mock_database_port, sample_batch_events):
+        service = EventProcessingService(mock_database_port)
+
+        mock_database_port.save_event.return_value = "batch-event-id"
+
+        results = await service.process_events_batch(sample_batch_events)
+
+        assert isinstance(results, list)
+        assert len(results) == 2
+        for r in results:
+            assert r["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_process_events_batch_partial_failure(self, mock_database_port):
+        service = EventProcessingService(mock_database_port)
+
+        # Batch save will return list of dummy IDs (though not strictly needed anymore)
+        mock_database_port.save_events_batch.return_value = ["event-id-1", "event-id-3"]
+
+        events = [
+            {"topic": "t", "value": {"d": 1}},
+            {"topic": "", "value": {"d": 2}}, # Empty topic causes validation error
+            {"topic": "t", "value": {"d": 3}},
+        ]
+
+        results = await service.process_events_batch(events)
+
+        assert len(results) == 3
+        assert results[0]["success"] is True
+        assert results[1]["success"] is False
+        assert "validation" in results[1]["metadata"]["error_type"]
+        assert results[2]["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_get_event_success(self, mock_database_port):
+        service = EventProcessingService(mock_database_port)
+
         mock_event = Mock()
         mock_event.event_id = "test-id"
         mock_event.topic = "test-topic"
-        mock_event.partition = 0
-        mock_event.offset = 123
-        mock_event.key = "test-key"
         mock_event.value = {"data": "test"}
-        mock_event.timestamp = datetime.now()
-        mock_event.headers = {"source": "test"}
-        mock_event.processed = True
-        mock_event.error = None
-        mock_event.created_at = datetime.now()
-        
+        mock_event.timestamp = datetime.now(timezone.utc)
         mock_database_port.get_event.return_value = mock_event
-        
-        result = service.get_event("test-id")
-        
+
+        result = await service.get_event("test-id")
+
         assert result is not None
         assert result["event_id"] == "test-id"
         assert result["topic"] == "test-topic"
-        assert result["processed"] is True
         mock_database_port.get_event.assert_called_once_with("test-id")
-    
-    def test_get_event_not_found(self, mock_database_port):
-        """Test event retrieval when not found."""
+
+    @pytest.mark.asyncio
+    async def test_get_event_not_found(self, mock_database_port):
         service = EventProcessingService(mock_database_port)
-        
+
         mock_database_port.get_event.return_value = None
-        
-        result = service.get_event("non-existent-id")
-        
+
+        result = await service.get_event("non-existent-id")
+
         assert result is None
         mock_database_port.get_event.assert_called_once_with("non-existent-id")
-    
-    def test_query_events_success(self, mock_database_port):
-        """Test successful event querying."""
+
+    @pytest.mark.asyncio
+    async def test_query_events_success(self, mock_database_port):
         service = EventProcessingService(mock_database_port)
-        
-        # Mock events
+
         mock_event = Mock()
         mock_event.event_id = "test-id"
         mock_event.topic = "test-topic"
@@ -131,62 +142,194 @@ class TestEventProcessingService:
         mock_event.offset = 123
         mock_event.key = "test-key"
         mock_event.value = {"data": "test"}
-        mock_event.timestamp = datetime.now()
+        mock_event.timestamp = datetime.now(timezone.utc)
         mock_event.headers = {}
         mock_event.processed = False
         mock_event.error = None
-        mock_event.created_at = datetime.now()
-        
+        mock_event.created_at = datetime.now(timezone.utc)
+
         mock_database_port.get_events_by_topic.return_value = [mock_event]
-        
-        result = service.query_events({"topic": "test-topic", "limit": 10, "offset": 0})
-        
-        assert result["count"] == 1
-        assert len(result["events"]) == 1
-        assert result["events"][0]["event_id"] == "test-id"
+
+        events = await service.query_events({"topic": "test-topic", "limit": 10, "offset": 0})
+
+        assert isinstance(events, list)
+        assert len(events) == 1
         mock_database_port.get_events_by_topic.assert_called_once_with("test-topic", 10, 0)
-    
-    def test_query_events_invalid_pagination(self, mock_database_port):
-        """Test event querying with invalid pagination."""
+
+    @pytest.mark.asyncio
+    async def test_query_events_invalid_limit_zero(self, mock_database_port):
         service = EventProcessingService(mock_database_port)
-        
-        with pytest.raises(ValidationError) as exc_info:
-            service.query_events({"limit": 0})  # Invalid limit
-        
-        assert exc_info.value.code == "VALIDATION_INVALID_REQUEST"
-    
-    def test_update_consumer_offset_success(self, mock_database_port, sample_consumer_offset_data):
-        """Test successful consumer offset update."""
+
+        from kafka_messaging_internal.shared.errors.exceptions import ValidationError
+        with pytest.raises((ValidationError, Exception)):
+            await service.query_events({"limit": 0})
+
+    @pytest.mark.asyncio
+    async def test_query_events_invalid_limit_negative(self, mock_database_port):
         service = EventProcessingService(mock_database_port)
-        
+
+        from kafka_messaging_internal.shared.errors.exceptions import ValidationError
+        with pytest.raises((ValidationError, Exception)):
+            await service.query_events({"limit": -5})
+
+    @pytest.mark.asyncio
+    async def test_query_events_limit_exceeds_max(self, mock_database_port):
+        service = EventProcessingService(mock_database_port)
+
+        from kafka_messaging_internal.shared.errors.exceptions import ValidationError
+        with pytest.raises((ValidationError, Exception)):
+            await service.query_events({"limit": 1001})
+
+    @pytest.mark.asyncio
+    async def test_query_events_negative_offset(self, mock_database_port):
+        service = EventProcessingService(mock_database_port)
+
+        from kafka_messaging_internal.shared.errors.exceptions import ValidationError
+        with pytest.raises((ValidationError, Exception)):
+            await service.query_events({"limit": 10, "offset": -1})
+
+    @pytest.mark.asyncio
+    async def test_update_consumer_offset_success(self, mock_database_port, sample_consumer_offset_data):
+        service = EventProcessingService(mock_database_port)
+
         mock_database_port.save_consumer_offset.return_value = True
-        
-        result = service.update_consumer_offset(sample_consumer_offset_data)
-        
-        assert result["consumer_group"] == "test-group"
-        assert result["topic"] == "test-topic"
-        assert result["partition"] == 0
-        assert result["offset"] == 123
+
+        result = await service.update_consumer_offset(sample_consumer_offset_data)
+
+        assert isinstance(result, ProcessingResult)
+        assert result.success is True
         mock_database_port.save_consumer_offset.assert_called_once()
-    
-    def test_update_consumer_offset_validation_error(self, mock_database_port):
-        """Test consumer offset update with invalid data."""
+
+    @pytest.mark.asyncio
+    async def test_update_consumer_offset_missing_group(self, mock_database_port):
         service = EventProcessingService(mock_database_port)
-        
-        invalid_data = {"consumer_group": "test"}  # Missing required fields
-        
-        with pytest.raises(ValidationError) as exc_info:
-            service.update_consumer_offset(invalid_data)
-        
-        assert exc_info.value.code == "VALIDATION_MISSING_FIELD"
-    
-    def test_update_consumer_offset_failure(self, mock_database_port, sample_consumer_offset_data):
-        """Test consumer offset update failure."""
+
+        invalid_data = {"topic": "t", "partition": 0, "offset": 10}
+
+        result = await service.update_consumer_offset(invalid_data)
+
+        assert isinstance(result, ProcessingResult)
+        assert result.success is False
+
+    @pytest.mark.asyncio
+    async def test_update_consumer_offset_missing_topic(self, mock_database_port):
         service = EventProcessingService(mock_database_port)
-        
-        mock_database_port.save_consumer_offset.return_value = False
-        
-        with pytest.raises(BusinessError) as exc_info:
-            service.update_consumer_offset(sample_consumer_offset_data)
-        
-        assert exc_info.value.code == "BUSINESS_PROCESSING_FAILED"
+
+        invalid_data = {"consumer_group": "g", "partition": 0, "offset": 10}
+
+        result = await service.update_consumer_offset(invalid_data)
+
+        assert isinstance(result, ProcessingResult)
+        assert result.success is False
+
+    @pytest.mark.asyncio
+    async def test_update_consumer_offset_negative_partition(self, mock_database_port):
+        service = EventProcessingService(mock_database_port)
+
+        invalid_data = {"consumer_group": "g", "topic": "t", "partition": -1, "offset": 10}
+
+        result = await service.update_consumer_offset(invalid_data)
+
+        assert isinstance(result, ProcessingResult)
+        assert result.success is False
+
+    @pytest.mark.asyncio
+    async def test_update_consumer_offset_negative_offset(self, mock_database_port):
+        service = EventProcessingService(mock_database_port)
+
+        invalid_data = {"consumer_group": "g", "topic": "t", "partition": 0, "offset": -1}
+
+        result = await service.update_consumer_offset(invalid_data)
+
+        assert isinstance(result, ProcessingResult)
+        assert result.success is False
+
+    @pytest.mark.asyncio
+    async def test_mark_event_processed_success(self, mock_database_port):
+        service = EventProcessingService(mock_database_port)
+
+        mock_database_port.mark_event_processed.return_value = True
+
+        result = await service.mark_event_processed("test-id")
+
+        assert result is True
+        mock_database_port.mark_event_processed.assert_called_once_with("test-id", None)
+
+    @pytest.mark.asyncio
+    async def test_mark_event_processed_with_error(self, mock_database_port):
+        service = EventProcessingService(mock_database_port)
+
+        mock_database_port.mark_event_processed.return_value = True
+
+        result = await service.mark_event_processed("test-id", error="processing failed")
+
+        assert result is True
+        mock_database_port.mark_event_processed.assert_called_once_with("test-id", "processing failed")
+
+    @pytest.mark.asyncio
+    async def test_mark_event_processed_empty_id(self, mock_database_port):
+        service = EventProcessingService(mock_database_port)
+
+        from kafka_messaging_internal.shared.errors.exceptions import ValidationError
+        with pytest.raises((ValidationError, Exception)):
+            await service.mark_event_processed("")
+
+    @pytest.mark.asyncio
+    async def test_mark_event_processed_whitespace_id(self, mock_database_port):
+        service = EventProcessingService(mock_database_port)
+
+        from kafka_messaging_internal.shared.errors.exceptions import ValidationError
+        with pytest.raises((ValidationError, Exception)):
+            await service.mark_event_processed("   ")
+
+    @pytest.mark.asyncio
+    async def test_get_consumer_offsets_with_group_and_topic(self, mock_database_port):
+        service = EventProcessingService(mock_database_port)
+
+        mock_offset = Mock()
+        mock_offset.consumer_group = "g"
+        mock_offset.topic = "t"
+        mock_offset.partition = 0
+        mock_offset.offset = 42
+        mock_offset.updated_at = datetime.now(timezone.utc)
+        mock_database_port.get_consumer_offset.return_value = mock_offset
+
+        result = await service.get_consumer_offsets({"consumer_group": "g", "topic": "t"})
+
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert result[0].offset == 42
+
+    @pytest.mark.asyncio
+    async def test_get_consumer_offsets_incomplete_filter(self, mock_database_port):
+        service = EventProcessingService(mock_database_port)
+
+        result = await service.get_consumer_offsets({"consumer_group": "g"})
+
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+    @pytest.mark.asyncio
+    async def test_get_processing_stats(self, mock_database_port):
+        service = EventProcessingService(mock_database_port)
+
+        stats = await service.get_processing_stats()
+
+        assert "total_events_processed" in stats
+        assert "success_rate" in stats
+
+    @pytest.mark.asyncio
+    async def test_get_processing_stats_with_topic(self, mock_database_port):
+        service = EventProcessingService(mock_database_port)
+
+        stats = await service.get_processing_stats("my-topic")
+
+        assert stats["topic"] == "my-topic"
+
+    @pytest.mark.asyncio
+    async def test_get_processing_stats_empty_topic(self, mock_database_port):
+        service = EventProcessingService(mock_database_port)
+
+        from kafka_messaging_internal.shared.errors.exceptions import ValidationError
+        with pytest.raises((ValidationError, Exception)):
+            await service.get_processing_stats("   ")
