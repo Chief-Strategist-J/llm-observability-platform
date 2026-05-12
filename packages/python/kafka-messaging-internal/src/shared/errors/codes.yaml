@@ -1,0 +1,102 @@
+# Error Codes Mapping
+# Maps vendor-specific errors to standardized error codes
+
+errors:
+  # Database Errors
+  database_connection_failed:
+    code: "DB_CONN_001"
+    message: "Database connection failed"
+    http_status: 503
+    retryable: true
+    
+  database_query_failed:
+    code: "DB_QUERY_001"
+    message: "Database query failed"
+    http_status: 500
+    retryable: false
+    
+  database_constraint_violation:
+    code: "DB_CONS_001"
+    message: "Database constraint violation"
+    http_status: 409
+    retryable: false
+    
+  # Schema Registry Errors
+  schema_not_found:
+    code: "SR_NOT_FOUND"
+    message: "Schema not found"
+    http_status: 404
+    retryable: false
+    
+  schema_incompatible:
+    code: "SR_INCOMPATIBLE"
+    message: "Schema is incompatible"
+    http_status: 400
+    retryable: false
+    
+  schema_registration_failed:
+    code: "SR_REG_FAILED"
+    message: "Schema registration failed"
+    http_status: 500
+    retryable: false
+    
+  # Kafka Errors
+  kafka_connection_failed:
+    code: "KAFKA_CONN_001"
+    message: "Kafka connection failed"
+    http_status: 503
+    retryable: true
+    
+  kafka_produce_failed:
+    code: "KAFKA_PROD_001"
+    message: "Kafka message production failed"
+    http_status: 500
+    retryable: true
+    
+  kafka_consume_failed:
+    code: "KAFKA_CONS_001"
+    message: "Kafka message consumption failed"
+    http_status: 500
+    retryable: true
+    
+  # Validation Errors
+  validation_failed:
+    code: "VALID_001"
+    message: "Request validation failed"
+    http_status: 422
+    retryable: false
+    
+  # Authentication Errors
+  authentication_failed:
+    code: "AUTH_001"
+    message: "Authentication failed"
+    http_status: 401
+    retryable: false
+    
+  # Authorization Errors
+  authorization_failed:
+    code: "AUTHZ_001"
+    message: "Authorization failed"
+    http_status: 403
+    retryable: false
+    
+  # Rate Limiting Errors
+  rate_limit_exceeded:
+    code: "RATE_001"
+    message: "Rate limit exceeded"
+    http_status: 429
+    retryable: true
+    retry_after: 60
+    
+  # General Errors
+  internal_server_error:
+    code: "INTERNAL_001"
+    message: "Internal server error"
+    http_status: 500
+    retryable: false
+    
+  service_unavailable:
+    code: "SVC_UNAVAIL_001"
+    message: "Service temporarily unavailable"
+    http_status: 503
+    retryable: true

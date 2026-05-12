@@ -1,0 +1,1004 @@
+openapi: 3.0.3
+info:
+  title: Kafka Messaging Internal API
+  description: REST API for messaging operations including database, schema registry, and event handling
+  version: 1.0.0
+  contact:
+    name: LLM Observability Platform
+    email: dev@example.com
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.example.com
+    description: Production server
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns the health status of the messaging API
+      operationId: healthCheck
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Healthy status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  service:
+                    type: string
+                    example: messaging-api
+
+  /:
+    get:
+      summary: Root endpoint
+      description: Returns basic API information
+      operationId: root
+      tags:
+        - Health
+      responses:
+        '200':
+          description: API information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Messaging API
+                  version:
+                    type: string
+                    example: 1.0.0
+                  docs:
+                    type: string
+                    example: /docs
+                  redoc:
+                    type: string
+                    example: /redoc
+
+  /api/v1/database/events:
+    post:
+      summary: Store event in database
+      description: Stores a single event record in the database
+      operationId: storeEvent
+      tags:
+        - Database
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventRecordRequest'
+      responses:
+        '201':
+          description: Event stored successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  event_id:
+                    type: string
+                    example: "evt_123456789"
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    get:
+      summary: Query events from database
+      description: Retrieves events based on query parameters
+      operationId: queryEvents
+      tags:
+        - Database
+      parameters:
+        - name: topic
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by topic name
+        - name: partition
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Filter by partition number
+        - name: offset_from
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Start offset (inclusive)
+        - name: offset_to
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: End offset (inclusive)
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+          description: Maximum number of events to return
+      responses:
+        '200':
+          description: Events retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EventRecord'
+                  count:
+                    type: integer
+                    example: 42
+                  has_more:
+                    type: boolean
+                    example: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/database/events/batch:
+    post:
+      summary: Store multiple events in database
+      description: Stores multiple event records in a single batch operation
+      operationId: storeEventsBatch
+      tags:
+        - Database
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                events:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/EventRecordRequest'
+                  minItems: 1
+                  maxItems: 1000
+              required:
+                - events
+      responses:
+        '201':
+          description: Events stored successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  event_ids:
+                    type: array
+                    items:
+                      type: string
+                    example: ["evt_123", "evt_456"]
+                  count:
+                    type: integer
+                    example: 2
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/database/offsets:
+    get:
+      summary: Get consumer offsets
+      description: Retrieves consumer offset information
+      operationId: getConsumerOffsets
+      tags:
+        - Database
+      parameters:
+        - name: consumer_group
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Consumer group name
+        - name: topic
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by topic name
+      responses:
+        '200':
+          description: Consumer offsets retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  offsets:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConsumerOffset'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Update consumer offset
+      description: Updates consumer offset for a specific topic/partition
+      operationId: updateConsumerOffset
+      tags:
+        - Database
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsumerOffsetRequest'
+      responses:
+        '200':
+          description: Offset updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsumerOffsetResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/schema-registry/schemas:
+    post:
+      summary: Register new schema
+      description: Registers a new schema in the schema registry
+      operationId: registerSchema
+      tags:
+        - Schema Registry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchemaRegisterRequest'
+      responses:
+        '201':
+          description: Schema registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  schema_id:
+                    type: integer
+                    example: 123
+                  subject:
+                    type: string
+                    example: "user-events"
+                  version:
+                    type: integer
+                    example: 1
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    get:
+      summary: List all subjects
+      description: Retrieves all available schema subjects
+      operationId: listSubjects
+      tags:
+        - Schema Registry
+      responses:
+        '200':
+          description: Subjects retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subjects:
+                    type: array
+                    items:
+                      type: string
+                    example: ["user-events", "order-events"]
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/schema-registry/schemas/{subject}:
+    get:
+      summary: Get schema by subject
+      description: Retrieves schema information for a specific subject
+      operationId: getSchemaBySubject
+      tags:
+        - Schema Registry
+      parameters:
+        - name: subject
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Schema subject name
+        - name: version
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Specific version to retrieve (latest if not specified)
+      responses:
+        '200':
+          description: Schema retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaInfoResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/schema-registry/compatibility:
+    post:
+      summary: Check schema compatibility
+      description: Checks if a schema is compatible with existing versions
+      operationId: checkCompatibility
+      tags:
+        - Schema Registry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchemaCompatibilityRequest'
+      responses:
+        '200':
+          description: Compatibility check completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  is_compatible:
+                    type: boolean
+                    example: true
+                  compatibility_level:
+                    type: string
+                    example: "BACKWARD"
+                  message:
+                    type: string
+                    example: "Schema is compatible"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/schema-registry/compatibility/{subject}:
+    put:
+      summary: Update compatibility level
+      description: Updates the compatibility level for a subject
+      operationId: updateCompatibility
+      tags:
+        - Schema Registry
+      parameters:
+        - name: subject
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Schema subject name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompatibilityUpdateRequest'
+      responses:
+        '200':
+          description: Compatibility updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subject:
+                    type: string
+                    example: "user-events"
+                  compatibility:
+                    type: string
+                    example: "BACKWARD"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/schema-registry/serialize:
+    post:
+      summary: Serialize data
+      description: Serializes data using a registered schema
+      operationId: serializeData
+      tags:
+        - Schema Registry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SerializationRequest'
+      responses:
+        '200':
+          description: Data serialized successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SerializationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/schema-registry/deserialize:
+    post:
+      summary: Deserialize data
+      description: Deserializes data using a registered schema
+      operationId: deserializeData
+      tags:
+        - Schema Registry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeserializationRequest'
+      responses:
+        '200':
+          description: Data deserialized successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    additionalProperties: true
+                  schema_id:
+                    type: integer
+                    example: 123
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/event-handler/process:
+    post:
+      summary: Process single event
+      description: Processes a single consumer record through the event handler
+      operationId: processEvent
+      tags:
+        - Event Handler
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsumerRecordRequest'
+      responses:
+        '200':
+          description: Event processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessEventResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/event-handler/process/batch:
+    post:
+      summary: Process multiple events
+      description: Processes multiple consumer records in a batch
+      operationId: processEventsBatch
+      tags:
+        - Event Handler
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchConsumerRecordRequest'
+      responses:
+        '200':
+          description: Events processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchProcessEventResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    EventRecordRequest:
+      type: object
+      properties:
+        event_id:
+          type: string
+          description: Unique event identifier for idempotency
+          example: "evt_123456789"
+        topic:
+          type: string
+          description: Kafka topic name
+          example: "user-events"
+        partition:
+          type: integer
+          description: Kafka partition number
+          example: 0
+        offset:
+          type: integer
+          description: Kafka message offset
+          example: 123
+        key:
+          type: string
+          description: Message key
+          example: "user-123"
+          nullable: true
+        value:
+          description: Message value (any JSON-serializable type)
+          example:
+            user_id: "user-123"
+            action: "login"
+            timestamp: "2023-01-01T12:00:00Z"
+        timestamp:
+          type: string
+          format: date-time
+          description: Event timestamp
+          example: "2023-01-01T12:00:00Z"
+          nullable: true
+      required:
+        - topic
+        - partition
+        - offset
+        - value
+
+    EventRecord:
+      type: object
+      properties:
+        event_id:
+          type: string
+          description: Unique event identifier
+          example: "evt_123456789"
+        topic:
+          type: string
+          description: Kafka topic name
+          example: "user-events"
+        partition:
+          type: integer
+          description: Kafka partition number
+          example: 0
+        offset:
+          type: integer
+          description: Kafka message offset
+          example: 123
+        key:
+          type: string
+          description: Message key
+          example: "user-123"
+          nullable: true
+        value:
+          description: Message value
+          example:
+            user_id: "user-123"
+            action: "login"
+        timestamp:
+          type: string
+          format: date-time
+          description: Event timestamp
+          example: "2023-01-01T12:00:00Z"
+        created_at:
+          type: string
+          format: date-time
+          description: Record creation timestamp
+          example: "2023-01-01T12:00:01Z"
+
+    ConsumerRecordRequest:
+      type: object
+      properties:
+        topic:
+          type: string
+          description: Kafka topic name
+          example: "user-events"
+        partition:
+          type: integer
+          description: Kafka partition number
+          example: 0
+        offset:
+          type: integer
+          description: Kafka message offset
+          example: 123
+        key:
+          type: string
+          description: Message key
+          example: "user-123"
+          nullable: true
+        value:
+          description: Message value (any JSON-serializable type)
+          example:
+            user_id: "user-123"
+            action: "login"
+        timestamp:
+          type: integer
+          description: Kafka timestamp (milliseconds since epoch)
+          example: 1672574400000
+        headers:
+          type: object
+          additionalProperties: true
+          description: Message headers
+          example:
+            content-type: "application/json"
+            trace-id: "trace-123"
+          nullable: true
+      required:
+        - topic
+        - partition
+        - offset
+        - value
+        - timestamp
+
+    BatchConsumerRecordRequest:
+      type: object
+      properties:
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsumerRecordRequest'
+          description: List of consumer records
+          minItems: 1
+          maxItems: 1000
+      required:
+        - records
+
+    ProcessEventResponse:
+      type: object
+      properties:
+        event_id:
+          type: string
+          description: Processed event ID
+          example: "evt_123456789"
+        success:
+          type: boolean
+          description: Processing success status
+          example: true
+        result:
+          description: Processing result (if successful)
+          example:
+            stored: true
+            database_id: 456
+          nullable: true
+        error:
+          type: string
+          description: Error message (if failed)
+          example: "Invalid event format"
+          nullable: true
+
+    BatchProcessEventResponse:
+      type: object
+      properties:
+        event_ids:
+          type: array
+          items:
+            type: string
+          description: List of processed event IDs
+          example: ["evt_123", "evt_456"]
+        count:
+          type: integer
+          description: Number of events processed
+          example: 2
+        success:
+          type: boolean
+          description: Overall batch success status
+          example: true
+
+    ConsumerOffsetRequest:
+      type: object
+      properties:
+        consumer_group:
+          type: string
+          description: Consumer group name
+          example: "user-processor"
+        topic:
+          type: string
+          description: Kafka topic name
+          example: "user-events"
+        partition:
+          type: integer
+          description: Kafka partition number
+          example: 0
+        offset:
+          type: integer
+          description: Consumer offset value
+          example: 456
+      required:
+        - consumer_group
+        - topic
+        - partition
+        - offset
+
+    ConsumerOffsetResponse:
+      type: object
+      properties:
+        consumer_group:
+          type: string
+          description: Consumer group name
+          example: "user-processor"
+        topic:
+          type: string
+          description: Kafka topic name
+          example: "user-events"
+        partition:
+          type: integer
+          description: Kafka partition number
+          example: 0
+        offset:
+          type: integer
+          description: Consumer offset value
+          example: 456
+
+    ConsumerOffset:
+      type: object
+      properties:
+        consumer_group:
+          type: string
+          description: Consumer group name
+          example: "user-processor"
+        topic:
+          type: string
+          description: Kafka topic name
+          example: "user-events"
+        partition:
+          type: integer
+          description: Kafka partition number
+          example: 0
+        offset:
+          type: integer
+          description: Current offset value
+          example: 456
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2023-01-01T12:00:00Z"
+
+    SchemaRegisterRequest:
+      type: object
+      properties:
+        subject:
+          type: string
+          description: Schema subject name
+          example: "user-events"
+        schema:
+          type: string
+          description: Schema definition (AVRO/JSON/PROTOBUF)
+          example: '{"type":"record","name":"UserEvent","fields":[{"name":"user_id","type":"string"},{"name":"action","type":"string"}]}'
+        schema_type:
+          $ref: '#/components/schemas/SchemaType'
+      required:
+        - subject
+        - schema
+        - schema_type
+
+    SchemaType:
+      type: string
+      enum:
+        - AVRO
+        - JSON
+        - PROTOBUF
+      description: Schema type
+
+    SchemaInfoResponse:
+      type: object
+      properties:
+        subject:
+          type: string
+          description: Schema subject name
+          example: "user-events"
+        schema_id:
+          type: integer
+          description: Schema ID
+          example: 123
+        schema_type:
+          type: string
+          description: Schema type
+          example: "AVRO"
+        schema:
+          type: string
+          description: Schema definition
+          example: '{"type":"record","name":"UserEvent","fields":[{"name":"user_id","type":"string"},{"name":"action","type":"string"}]}'
+        version:
+          type: integer
+          description: Schema version
+          example: 1
+        compatibility:
+          type: string
+          description: Compatibility level
+          example: "BACKWARD"
+          nullable: true
+
+    SchemaCompatibilityRequest:
+      type: object
+      properties:
+        subject:
+          type: string
+          description: Schema subject name
+          example: "user-events"
+        schema:
+          type: string
+          description: Schema definition to check compatibility
+          example: '{"type":"record","name":"UserEvent","fields":[{"name":"user_id","type":"string"},{"name":"action","type":"string"},{"name":"timestamp","type":"long"}]}'
+        schema_type:
+          $ref: '#/components/schemas/SchemaType'
+      required:
+        - subject
+        - schema
+        - schema_type
+
+    CompatibilityUpdateRequest:
+      type: object
+      properties:
+        subject:
+          type: string
+          description: Subject to update compatibility for
+          example: "user-events"
+        compatibility:
+          type: string
+          description: Compatibility level
+          enum:
+            - BACKWARD
+            - FORWARD
+            - FULL
+            - NONE
+          example: "BACKWARD"
+      required:
+        - subject
+        - compatibility
+
+    SerializationRequest:
+      type: object
+      properties:
+        subject:
+          type: string
+          description: Subject for serialization
+          example: "user-events"
+        data:
+          description: Data to serialize
+          example:
+            user_id: "user-123"
+            action: "login"
+        schema_id:
+          type: integer
+          description: Optional schema ID to use
+          example: 123
+          nullable: true
+      required:
+        - subject
+        - data
+
+    SerializationResponse:
+      type: object
+      properties:
+        data:
+          type: string
+          description: Serialized data (base64 encoded)
+          example: "eyJ1c2VyX2lkIjoidXNlci0xMjMiLCJhY3Rpb24iOiJsb2dpbiJ9"
+        schema_id:
+          type: integer
+          description: Schema ID used for serialization
+          example: 123
+          nullable: true
+
+    DeserializationRequest:
+      type: object
+      properties:
+        data:
+          type: string
+          description: Base64-encoded data to deserialize
+          example: "eyJ1c2VyX2lkIjoidXNlci0xMjMiLCJhY3Rpb24iOiJsb2dpbiJ9"
+        schema_id:
+          type: integer
+          description: Schema ID to use for deserialization
+          example: 123
+      required:
+        - data
+        - schema_id
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Invalid request format"
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error details
+          example:
+            field: "topic"
+            reason: "Topic name is required"
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp
+          example: "2023-01-01T12:00:00Z"
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []

@@ -1,0 +1,91 @@
+# Port Interface Registry
+# This file documents all port interfaces and their implementations
+
+## Database Ports
+### DatabasePort
+- Interface: src/shared/ports/database_port.py
+- Description: Complete database operations for events and offsets
+- Adapters:
+  - PostgreSQL: src/infra/adapters/postgresql/postgres_adapter.py
+  - MongoDB: src/infra/adapters/mongodb/mongo_adapter.py
+
+### EventReaderPort
+- Interface: src/shared/ports/database_port.py
+- Description: Read events from database
+- Adapters:
+  - PostgreSQL: src/infra/adapters/postgresql/event_reader_adapter.py
+  - MongoDB: src/infra/adapters/mongodb/event_reader_adapter.py
+
+### EventManagementPort
+- Interface: src/shared/ports/database_port.py
+- Description: Manage event lifecycle operations
+- Adapters:
+  - PostgreSQL: src/infra/adapters/postgresql/event_management_adapter.py
+  - MongoDB: src/infra/adapters/mongodb/event_management_adapter.py
+
+### OffsetPort
+- Interface: src/shared/ports/database_port.py
+- Description: Manage consumer offsets
+- Adapters:
+  - PostgreSQL: src/infra/adapters/postgresql/offset_adapter.py
+  - MongoDB: src/infra/adapters/mongodb/offset_adapter.py
+
+### CountPort
+- Interface: src/shared/ports/database_port.py
+- Description: Count operations on events
+- Adapters:
+  - PostgreSQL: src/infra/adapters/postgresql/count_adapter.py
+  - MongoDB: src/infra/adapters/mongodb/count_adapter.py
+
+## Schema Registry Ports
+### SchemaRegistryPort
+- Interface: src/shared/ports/schema_registry_port.py
+- Description: Schema registration and retrieval operations
+- Adapters:
+  - Confluent: src/infra/adapters/confluent/schema_registry_adapter.py
+
+## Messaging Ports
+### ProducerPort
+- Interface: src/shared/ports/messaging_port.py
+- Description: Kafka message production
+- Adapters:
+  - Kafka: src/infra/adapters/kafka/producer_adapter.py
+
+### ConsumerPort
+- Interface: src/shared/ports/messaging_port.py
+- Description: Kafka message consumption
+- Adapters:
+  - Kafka: src/infra/adapters/kafka/consumer_adapter.py
+
+## Utility Ports
+### QueuePort
+- Interface: src/shared/ports/queue_port.py
+- Description: Queue operations for async processing
+- Adapters:
+  - Redis: src/infra/adapters/redis/queue_adapter.py (optional)
+
+### IdempotencyPort
+- Interface: src/shared/ports/idempotency_port.py
+- Description: Idempotency checking for duplicate events
+- Adapters:
+  - PostgreSQL: src/infra/adapters/postgresql/idempotency_adapter.py
+  - MongoDB: src/infra/adapters/mongodb/idempotency_adapter.py
+  - Redis: src/infra/adapters/redis/idempotency_adapter.py (optional)
+
+### MetricsPort
+- Interface: src/shared/ports/metrics_port.py
+- Description: Metrics collection and reporting
+- Adapters:
+  - OpenTelemetry: src/infra/adapters/otel/metrics_adapter.py
+
+## DI Configuration
+- Container: src/shared/di/container.py
+- Environment-based adapter selection
+- Configuration: .env.example
+
+## Port Implementation Rules
+1. All adapters must implement exactly one port interface
+2. Adapters contain zero business logic
+3. Adapters wrap vendor calls in trace spans
+4. Adapters map vendor errors to shared/errors/codes.yaml
+5. Business logic uses ports only, never adapters directly
