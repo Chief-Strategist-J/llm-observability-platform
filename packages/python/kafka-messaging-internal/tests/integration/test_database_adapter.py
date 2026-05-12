@@ -1,6 +1,7 @@
 """Integration tests for PostgreSQL adapter."""
 
 import pytest
+import pytest_asyncio
 import os
 from unittest.mock import patch
 
@@ -17,26 +18,28 @@ class TestPostgresAdapter:
     def test_config(self):
         """Test configuration for PostgreSQL."""
         return {
-            'POSTGRES_DSN': os.getenv('TEST_DATABASE_URL', 'postgresql://test:test@localhost:5432/kafka_events_test'),
+            'POSTGRES_DSN': os.getenv('POSTGRES_DSN', 'postgresql://test:test@localhost:5433/kafka_events_test'),
             'POSTGRES_MIN_CONNECTIONS': '1',
             'POSTGRES_MAX_CONNECTIONS': '2'
         }
     
-    @pytest.fixture
-    def adapter(self, test_config):
+    @pytest_asyncio.fixture
+    async def adapter(self, test_config):
         """PostgreSQL adapter fixture."""
         adapter = PostgresAdapter(test_config)
         yield adapter
-        adapter.close()
+        await adapter.close()
     
-    def test_adapter_initialization_success(self, test_config):
+    @pytest.mark.asyncio
+    async def test_adapter_initialization_success(self, test_config):
         """Test successful adapter initialization."""
         adapter = PostgresAdapter(test_config)
         assert adapter is not None
         assert adapter.dsn == test_config['POSTGRES_DSN']
-        adapter.close()
+        await adapter.close()
     
-    def test_adapter_initialization_failure(self):
+    @pytest.mark.asyncio
+    async def test_adapter_initialization_failure(self):
         """Test adapter initialization with invalid DSN."""
         invalid_config = {
             'POSTGRES_DSN': 'postgresql://invalid:invalid@invalid:5432/invalid',
@@ -47,9 +50,10 @@ class TestPostgresAdapter:
         with pytest.raises(DatabaseError) as exc_info:
             PostgresAdapter(invalid_config)
         
-        assert exc_info.value.code == "DB_CONNECTION_FAILED"
+        assert exc_info.value.code == "DATABASE_ERROR"
     
-    def test_save_event_success(self, adapter):
+    @pytest.mark.asyncio
+    async def test_save_event_success(self, adapter):
         """Test successful event saving."""
         import datetime
         event = EventRecord(
@@ -63,11 +67,12 @@ class TestPostgresAdapter:
             headers={"source": "test"}
         )
         
-        event_id = adapter.save_event(event)
+        event_id = await adapter.save_event(event)
         assert event_id is not None
         assert isinstance(event_id, str)
     
-    def test_save_event_duplicate(self, adapter):
+    @pytest.mark.asyncio
+    async def test_save_event_duplicate(self, adapter):
         """Test saving duplicate event."""
         import datetime
         event = EventRecord(
@@ -81,14 +86,15 @@ class TestPostgresAdapter:
         )
         
         # Save first time
-        event_id_1 = adapter.save_event(event)
+        event_id_1 = await adapter.save_event(event)
         assert event_id_1 is not None
         
         # Save second time (should update)
-        event_id_2 = adapter.save_event(event)
+        event_id_2 = await adapter.save_event(event)
         assert event_id_2 == event_id_1
     
-    def test_save_events_batch_success(self, adapter):
+    @pytest.mark.asyncio
+    async def test_save_events_batch_success(self, adapter):
         """Test successful batch event saving."""
         import datetime
         events = [
@@ -104,11 +110,12 @@ class TestPostgresAdapter:
             for i in range(3)
         ]
         
-        event_ids = adapter.save_events_batch(events)
+        event_ids = await adapter.save_events_batch(events)
         assert len(event_ids) == 3
         assert all(event_id is not None for event_id in event_ids)
     
-    def test_get_event_success(self, adapter):
+    @pytest.mark.asyncio
+    async def test_get_event_success(self, adapter):
         """Test successful event retrieval."""
         import datetime
         event = EventRecord(
@@ -122,10 +129,10 @@ class TestPostgresAdapter:
         )
         
         # Save event first
-        saved_event_id = adapter.save_event(event)
+        saved_event_id = await adapter.save_event(event)
         
         # Retrieve event
-        retrieved_event = adapter.get_event(saved_event_id)
+        retrieved_event = await adapter.get_event(saved_event_id)
         
         assert retrieved_event is not None
         assert retrieved_event.event_id == saved_event_id
@@ -135,12 +142,14 @@ class TestPostgresAdapter:
         assert retrieved_event.key == "test-key"
         assert retrieved_event.value == {"message": "test data"}
     
-    def test_get_event_not_found(self, adapter):
+    @pytest.mark.asyncio
+    async def test_get_event_not_found(self, adapter):
         """Test event retrieval when not found."""
-        event = adapter.get_event("non-existent-event-id")
+        event = await adapter.get_event("non-existent-event-id")
         assert event is None
     
-    def test_get_events_by_topic_success(self, adapter):
+    @pytest.mark.asyncio
+    async def test_get_events_by_topic_success(self, adapter):
         """Test successful events retrieval by topic."""
         import datetime
         
@@ -156,17 +165,18 @@ class TestPostgresAdapter:
                 value={"message": f"test data {i}"},
                 timestamp=datetime.datetime.now(datetime.timezone.utc)
             )
-            adapter.save_event(event)
+            await adapter.save_event(event)
             events.append(event)
         
         # Retrieve events by topic
-        retrieved_events = adapter.get_events_by_topic("test-query-topic", limit=3)
+        retrieved_events = await adapter.get_events_by_topic("test-query-topic", limit=3)
         
         assert len(retrieved_events) == 3
         for event in retrieved_events:
             assert event.topic == "test-query-topic"
     
-    def test_mark_event_processed_success(self, adapter):
+    @pytest.mark.asyncio
+    async def test_mark_event_processed_success(self, adapter):
         """Test successful event processing mark."""
         import datetime
         event = EventRecord(
@@ -180,17 +190,18 @@ class TestPostgresAdapter:
         )
         
         # Save event first
-        saved_event_id = adapter.save_event(event)
+        saved_event_id = await adapter.save_event(event)
         
         # Mark as processed
-        success = adapter.mark_event_processed(saved_event_id)
+        success = await adapter.mark_event_processed(saved_event_id)
         assert success is True
         
         # Verify it's marked as processed
-        retrieved_event = adapter.get_event(saved_event_id)
+        retrieved_event = await adapter.get_event(saved_event_id)
         assert retrieved_event.processed is True
     
-    def test_save_consumer_offset_success(self, adapter):
+    @pytest.mark.asyncio
+    async def test_save_consumer_offset_success(self, adapter):
         """Test successful consumer offset saving."""
         import datetime
         offset = ConsumerOffset(
@@ -201,10 +212,11 @@ class TestPostgresAdapter:
             updated_at=datetime.datetime.now(datetime.timezone.utc)
         )
         
-        success = adapter.save_consumer_offset(offset)
+        success = await adapter.save_consumer_offset(offset)
         assert success is True
     
-    def test_get_consumer_offset_success(self, adapter):
+    @pytest.mark.asyncio
+    async def test_get_consumer_offset_success(self, adapter):
         """Test successful consumer offset retrieval."""
         import datetime
         offset = ConsumerOffset(
@@ -216,10 +228,10 @@ class TestPostgresAdapter:
         )
         
         # Save offset first
-        adapter.save_consumer_offset(offset)
+        await adapter.save_consumer_offset(offset)
         
         # Retrieve offset
-        retrieved_offset = adapter.get_consumer_offset("test-get-group", "test-get-offset-topic", 0)
+        retrieved_offset = await adapter.get_consumer_offset("test-get-group", "test-get-offset-topic", 0)
         
         assert retrieved_offset is not None
         assert retrieved_offset.consumer_group == "test-get-group"
@@ -227,12 +239,14 @@ class TestPostgresAdapter:
         assert retrieved_offset.partition == 0
         assert retrieved_offset.offset == 5678
     
-    def test_get_consumer_offset_not_found(self, adapter):
+    @pytest.mark.asyncio
+    async def test_get_consumer_offset_not_found(self, adapter):
         """Test consumer offset retrieval when not found."""
-        offset = adapter.get_consumer_offset("non-existent-group", "non-existent-topic", 0)
+        offset = await adapter.get_consumer_offset("non-existent-group", "non-existent-topic", 0)
         assert offset is None
     
-    def test_get_event_count_success(self, adapter):
+    @pytest.mark.asyncio
+    async def test_get_event_count_success(self, adapter):
         """Test successful event count retrieval."""
         import datetime
         
@@ -247,17 +261,18 @@ class TestPostgresAdapter:
                 value={"message": f"test data {i}"},
                 timestamp=datetime.datetime.now(datetime.timezone.utc)
             )
-            adapter.save_event(event)
+            await adapter.save_event(event)
         
         # Get count for specific topic
-        count = adapter.get_event_count("test-count-topic")
+        count = await adapter.get_event_count("test-count-topic")
         assert count >= 3
         
         # Get total count
-        total_count = adapter.get_event_count()
+        total_count = await adapter.get_event_count()
         assert total_count >= 3
     
-    def test_delete_events_by_topic_success(self, adapter):
+    @pytest.mark.asyncio
+    async def test_delete_events_by_topic_success(self, adapter):
         """Test successful events deletion by topic."""
         import datetime
         
@@ -272,12 +287,12 @@ class TestPostgresAdapter:
                 value={"message": f"test data {i}"},
                 timestamp=datetime.datetime.now(datetime.timezone.utc)
             )
-            adapter.save_event(event)
+            await adapter.save_event(event)
         
         # Delete events
-        deleted_count = adapter.delete_events_by_topic("test-delete-topic")
+        deleted_count = await adapter.delete_events_by_topic("test-delete-topic")
         assert deleted_count >= 2
         
         # Verify events are deleted
-        remaining_events = adapter.get_events_by_topic("test-delete-topic")
+        remaining_events = await adapter.get_events_by_topic("test-delete-topic")
         assert len(remaining_events) == 0

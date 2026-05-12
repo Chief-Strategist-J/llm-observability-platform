@@ -4,9 +4,9 @@ import pytest
 from unittest.mock import Mock, AsyncMock
 from datetime import datetime
 
-from features.events.service import EventService
-from infra.ports.database_port import DatabasePort
-from shared.types.events import EventRecord
+from kafka_messaging_internal.features.events.service import EventService
+from kafka_messaging_internal.shared.ports.database_port import DatabasePort
+from kafka_messaging_internal.shared.types.events import EventRecord
 
 
 class TestEventService:
@@ -19,9 +19,12 @@ class TestEventService:
         database.save_event = AsyncMock(return_value="test_event_id")
         database.save_events_batch = AsyncMock(return_value=["id1", "id2"])
         database.mark_event_processed = AsyncMock(return_value=True)
+        database.save_consumer_offset = AsyncMock(return_value=True)
+        database.get_consumer_offset = Mock(return_value=None)
         database.get_events_by_topic = Mock(return_value=[])
         database.get_event_count = Mock(return_value=0)
         database.delete_events_by_topic = Mock(return_value=5)
+        database.get_unprocessed_events = Mock(return_value=[])
         database.close = Mock()
         return database
 
@@ -144,7 +147,7 @@ class TestEventService:
     @pytest.mark.asyncio
     async def test_get_consumer_offset(self, event_service, mock_database):
         """Test getting consumer offset"""
-        from shared.types.events import ConsumerOffset
+        from kafka_messaging_internal.shared.types.events import ConsumerOffset
         mock_offset = ConsumerOffset("test-group", "test-topic", 0, 456)
         mock_database.get_consumer_offset.return_value = mock_offset
         
