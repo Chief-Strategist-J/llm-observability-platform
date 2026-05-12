@@ -1,0 +1,6 @@
+# Schema Lock File
+# This file records the last applied migration number
+# Format: <migration_number>
+# NEVER edit this file manually - it's managed by migrate.sh
+
+0001
