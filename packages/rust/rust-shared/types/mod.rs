@@ -1,0 +1,1 @@
+// Shared Rust types only.
