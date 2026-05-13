@@ -1,0 +1,155 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schema.llm-observability.local/v1/span.json",
+  "title": "LLMSpan",
+  "description": "Output contract for an LLM observability span.",
+  "type": "object",
+  "properties": {
+    "span_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Generated before API call"
+    },
+    "trace_id": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "description": "Propagated from caller"
+    },
+    "parent_span_id": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "description": "For tool-call chains"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bump on breaking change"
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1
+    },
+    "provider": {
+      "type": "string"
+    },
+    "service_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "endpoint": {
+      "type": "string"
+    },
+    "environment": {
+      "type": "string",
+      "enum": ["production", "staging", "dev"]
+    },
+    "user_id": {
+      "type": ["string", "null"]
+    },
+    "session_id": {
+      "type": ["string", "null"]
+    },
+    "prompt_tokens": {
+      "type": "integer",
+      "exclusiveMinimum": 0
+    },
+    "completion_tokens": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "latency_ms_ttft": {
+      "type": ["integer", "null"]
+    },
+    "latency_ms_total": {
+      "type": "integer",
+      "exclusiveMinimum": 0
+    },
+    "finish_reason": {
+      "type": "string",
+      "enum": [
+        "stop",
+        "length",
+        "content_filter",
+        "timeout",
+        "tool_calls",
+        "cache_hit",
+        "client_disconnect"
+      ]
+    },
+    "cost_usd_micro": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "price_version": {
+      "type": "string"
+    },
+    "token_count_method": {
+      "type": "string",
+      "enum": ["tiktoken", "estimated"]
+    },
+    "is_sampled": {
+      "type": "boolean"
+    },
+    "retry_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "attempted_models": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string"
+      }
+    },
+    "pii_detected": {
+      "type": "boolean"
+    },
+    "injection_attempt": {
+      "type": "boolean"
+    },
+    "timestamp_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "prompt_hash": {
+      "type": ["string", "null"],
+      "maxLength": 64
+    },
+    "prompt_embedding": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "number"
+      },
+      "minItems": 384,
+      "maxItems": 384
+    },
+    "response_embedding": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "number"
+      },
+      "minItems": 384,
+      "maxItems": 384
+    }
+  },
+  "required": [
+    "span_id",
+    "schema_version",
+    "model",
+    "provider",
+    "service_name",
+    "endpoint",
+    "environment",
+    "prompt_tokens",
+    "completion_tokens",
+    "latency_ms_total",
+    "finish_reason",
+    "cost_usd_micro",
+    "price_version",
+    "token_count_method",
+    "is_sampled",
+    "retry_count",
+    "pii_detected",
+    "injection_attempt",
+    "timestamp_utc"
+  ]
+}
