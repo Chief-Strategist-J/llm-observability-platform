@@ -1,0 +1,124 @@
+enum FinishReason {
+  STOP
+  LENGTH
+  CONTENT_FILTER
+  TIMEOUT
+  TOOL_CALLS
+  CACHE_HIT
+  CLIENT_DISCONNECT
+}
+
+enum TokenCountMethod {
+  TIKTOKEN
+  ESTIMATED
+}
+
+enum Environment {
+  PRODUCTION
+  STAGING
+  DEV
+}
+
+"""
+LLMSpan represents a single, raw observability span for an LLM call.
+"""
+input LLMSpanInput {
+  "Generated before API call"
+  span_id: ID!
+
+  "Propagated from caller"
+  trace_id: ID
+
+  "For tool-call chains"
+  parent_span_id: ID
+
+  "Bump on breaking change. Hardcoded = 1"
+  schema_version: Int!
+
+  "SDK config ('gpt-4o', etc)"
+  model: String!
+
+  "SDK config ('openai', 'anthropic', etc)"
+  provider: String!
+
+  "SDK config ('checkout-service')"
+  service_name: String!
+
+  "SDK decorator arg ('/api/summarize')"
+  endpoint: String!
+
+  "SDK config"
+  environment: Environment!
+
+  "SDK call arg. Null for anonymous"
+  user_id: String
+
+  "SDK call arg. Null for stateless"
+  session_id: String
+
+  "Exact BPE count, > 0"
+  prompt_tokens: Int!
+
+  "Exact BPE count, >= 0"
+  completion_tokens: Int!
+
+  "Time to first chunk byte"
+  latency_ms_ttft: Int
+
+  "Full wall clock, > 0"
+  latency_ms_total: Int!
+
+  "Provider response finish reason"
+  finish_reason: FinishReason!
+
+  "SDK computed cost in micro-USD, >= 0"
+  cost_usd_micro: Int!
+
+  "SDK config price version date"
+  price_version: String!
+
+  "SDK token method"
+  token_count_method: TokenCountMethod!
+
+  "TRUE if hash(span_id) % 100 == 0"
+  is_sampled: Boolean!
+
+  "0 for first-attempt calls"
+  retry_count: Int!
+
+  "Fallback chains"
+  attempted_models: [String!]
+
+  "Aho-Corasick computed inline before emit"
+  pii_detected: Boolean!
+
+  "Aho-Corasick jailbreak/injection pattern matched"
+  injection_attempt: Boolean!
+
+  "SDK (client clock) UTC, ISO 8601 string."
+  timestamp_utc: String!
+
+  "SHA256(prompt_text) 64-char hex. Null if pii_detected."
+  prompt_hash: String
+
+  "MiniLM-L6-v2 384-dim vector. Null if pii_detected."
+  prompt_embedding: [Float!]
+
+  "MiniLM-L6-v2 384-dim vector. Null if pii_detected."
+  response_embedding: [Float!]
+}
+
+type RecordSpanPayload {
+  success: Boolean!
+  "Populated if the span passes V-rules but triggers W-rules."
+  span_warnings: [String!]!
+}
+
+type Mutation {
+  recordSpan(input: LLMSpanInput!): RecordSpanPayload!
+}
+
+type Query {
+  "Placeholder query to satisfy GraphQL syntax"
+  _dummy: Boolean
+}
