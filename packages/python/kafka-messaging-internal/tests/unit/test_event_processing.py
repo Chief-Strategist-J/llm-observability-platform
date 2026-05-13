@@ -148,6 +148,7 @@ class TestEventProcessingService:
         mock_event.error = None
         mock_event.created_at = datetime.now(timezone.utc)
 
+        mock_database_port.get_events_by_topic.side_effect = None
         mock_database_port.get_events_by_topic.return_value = [mock_event]
 
         events = await service.query_events({"topic": "test-topic", "limit": 10, "offset": 0})
