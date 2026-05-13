@@ -2,6 +2,7 @@
 
 from opentelemetry import trace
 from typing import Type, TypeVar, Dict, Any
+import os
 from .container import DIContainer, get_container
 from ..ports.database_port import DatabasePort
 from ..ports.schema_registry_port import SchemaRegistryPort
@@ -47,7 +48,7 @@ def register_production_services() -> DIContainer:
             span.set_status(trace.Status(trace.StatusCode.OK))
             
         except Exception as e:
-            span.record_error(e)
+            span.record_exception(e)
             span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
             raise
     
@@ -72,7 +73,7 @@ def register_test_services(database_port: DatabasePort, schema_registry_port: Sc
             span.set_status(trace.Status(trace.StatusCode.OK))
             
         except Exception as e:
-            span.record_error(e)
+            span.record_exception(e)
             span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
             raise
     
