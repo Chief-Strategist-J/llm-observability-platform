@@ -79,7 +79,7 @@ def test_w03_ttft_gt_total():
 def test_pii_detected_nullifies_sampled_fields():
     data = get_valid_span_data()
     data["pii_detected"] = True
-    data["prompt_hash"] = "some-hash"
+    data["prompt_hash"] = "a" * 64
     data["prompt_embedding"] = [0.1] * 384
     span = LLMSpan(**data)
     assert span.prompt_hash is None
