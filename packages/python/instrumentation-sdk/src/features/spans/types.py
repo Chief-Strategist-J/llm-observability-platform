@@ -48,7 +48,7 @@ class LLMSpan(BaseModel):
     price_version: str
     token_count_method: TokenCountMethod = TokenCountMethod.UNSPECIFIED
     is_sampled: bool = False
-    retry_count: int = 0
+    retry_count: int = Field(0, ge=0)
     attempted_models: List[str] = Field(default_factory=list)
     pii_detected: bool = False
     injection_attempt: bool = False
