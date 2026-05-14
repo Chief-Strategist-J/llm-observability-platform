@@ -1,0 +1,28 @@
+asyncapi: 2.6.0
+info:
+  title: LLM Observability Raw Spans
+  version: 1.0.0
+  description: Asynchronous contract for emitting raw LLM observability spans to Kafka.
+
+servers:
+  production:
+    url: kafka.prod.internal:9092
+    protocol: kafka
+    description: Production Kafka Cluster
+
+channels:
+  llm.spans.raw:
+    description: Topic for raw, unaggregated LLM spans emitted by instrumentation SDKs.
+    publish:
+      message:
+        $ref: '#/components/messages/SpanMessage'
+
+components:
+  messages:
+    SpanMessage:
+      name: LLMSpan
+      title: LLM Observability Span
+      summary: A single observability span capturing token counts, latency, and costs.
+      contentType: application/json
+      payload:
+        $ref: 'schemas/span.json'

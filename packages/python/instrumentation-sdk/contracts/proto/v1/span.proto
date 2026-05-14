@@ -1,0 +1,131 @@
+syntax = "proto3";
+
+package llm.observability.v1;
+
+option go_package = "github.com/llm-observability/platform/proto/v1";
+option java_package = "com.llmobservability.platform.v1";
+
+// FinishReasonEnum captures the possible ways an LLM generation can complete.
+enum FinishReason {
+  FINISH_REASON_UNSPECIFIED = 0;
+  FINISH_REASON_STOP = 1;
+  FINISH_REASON_LENGTH = 2;
+  FINISH_REASON_CONTENT_FILTER = 3;
+  FINISH_REASON_TIMEOUT = 4;
+  FINISH_REASON_TOOL_CALLS = 5;
+  FINISH_REASON_CACHE_HIT = 6;
+  FINISH_REASON_CLIENT_DISCONNECT = 7;
+}
+
+// TokenCountMethod captures how the token counts were determined.
+enum TokenCountMethod {
+  TOKEN_COUNT_METHOD_UNSPECIFIED = 0;
+  TOKEN_COUNT_METHOD_TIKTOKEN = 1;
+  TOKEN_COUNT_METHOD_ESTIMATED = 2;
+}
+
+// Environment Enum captures the deployment environment.
+enum Environment {
+  ENVIRONMENT_UNSPECIFIED = 0;
+  ENVIRONMENT_PRODUCTION = 1;
+  ENVIRONMENT_STAGING = 2;
+  ENVIRONMENT_DEV = 3;
+}
+
+// LLMSpan represents a single, raw observability span for an LLM call.
+message LLMSpan {
+  // Generated before API call (UUID v4)
+  string span_id = 1;
+
+  // Propagated from caller (UUID v4), nullable
+  optional string trace_id = 2;
+
+  // For tool-call chains (UUID v4), nullable
+  optional string parent_span_id = 3;
+
+  // Bump on breaking change. Hardcoded = 1
+  int32 schema_version = 4;
+
+  // SDK config ('gpt-4o', etc)
+  string model = 5;
+
+  // SDK config ('openai', 'anthropic', etc)
+  string provider = 6;
+
+  // SDK config ('checkout-service')
+  string service_name = 7;
+
+  // SDK decorator arg ('/api/summarize')
+  string endpoint = 8;
+
+  // SDK config
+  Environment environment = 9;
+
+  // SDK call arg. Null for anonymous
+  optional string user_id = 10;
+
+  // SDK call arg. Null for stateless
+  optional string session_id = 11;
+
+  // Exact BPE count, > 0
+  int32 prompt_tokens = 12;
+
+  // Exact BPE count, >= 0
+  int32 completion_tokens = 13;
+
+  // Time to first chunk byte
+  optional int32 latency_ms_ttft = 14;
+
+  // Full wall clock, > 0
+  int32 latency_ms_total = 15;
+
+  // Provider response finish reason
+  FinishReason finish_reason = 16;
+
+  // SDK computed cost in micro-USD, >= 0
+  int64 cost_usd_micro = 17;
+
+  // SDK config price version date
+  string price_version = 18;
+
+  // SDK token method
+  TokenCountMethod token_count_method = 19;
+
+  // TRUE if hash(span_id) % 100 == 0
+  bool is_sampled = 20;
+
+  // 0 for first-attempt calls
+  int32 retry_count = 21;
+
+  // Fallback chains
+  repeated string attempted_models = 22;
+
+  // Aho-Corasick computed inline before emit
+  bool pii_detected = 23;
+
+  // Aho-Corasick jailbreak/injection pattern matched
+  bool injection_attempt = 24;
+
+  // SDK (client clock) UTC, ISO 8601 string or Unix nanoseconds.
+  string timestamp_utc = 25;
+
+  // SAMPLED-ONLY FIELDS
+  // SHA256(prompt_text) 64-char hex. Null if pii_detected.
+  optional string prompt_hash = 26;
+
+  // MiniLM-L6-v2 384-dim vector. Null if pii_detected.
+  repeated float prompt_embedding = 27;
+
+  // MiniLM-L6-v2 384-dim vector. Null if pii_detected.
+  repeated float response_embedding = 28;
+}
+
+// Service definition for direct gRPC ingestion
+service SpanIngestionService {
+  rpc RecordSpan(LLMSpan) returns (RecordSpanResponse);
+}
+
+message RecordSpanResponse {
+  bool success = 1;
+  repeated string span_warnings = 2; // For returning W-series warnings
+}

@@ -1,0 +1,54 @@
+openapi: 3.1.0
+info:
+  title: LLM Observability Raw Spans API
+  version: 1.0.0
+  description: REST API for synchronous ingestion of raw LLM observability spans.
+
+servers:
+  - url: https://api.llm-observability.local/v1
+    description: Ingestion endpoint
+
+paths:
+  /spans:
+    post:
+      summary: Ingest a new LLM observability span
+      operationId: recordSpan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LLMSpan'
+      responses:
+        '202':
+          description: Span accepted and enqueued for processing.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: true
+                  span_warnings:
+                    type: array
+                    items:
+                      type: string
+                    description: Populated if the span passes V-rules but triggers W-rules.
+        '400':
+          description: Span rejected due to V-series validation rule failure.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  rule:
+                    type: string
+                    example: "RULE-V-02"
+
+components:
+  schemas:
+    LLMSpan:
+      $ref: '../asyncapi/schemas/span.json'
