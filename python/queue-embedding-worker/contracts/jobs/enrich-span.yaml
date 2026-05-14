@@ -1,0 +1,25 @@
+job: enrich-span
+version: 2
+queue: span-enrichment
+timeout_seconds: 30
+retry:
+  max_attempts: 5
+  backoff_ms: 500
+payload:
+  type: object
+  required: [trace_id, span_id, model, text]
+  properties:
+    trace_id: {type: string, minLength: 1}
+    span_id: {type: string, minLength: 1}
+    model: {type: string, minLength: 1}
+    text: {type: string, minLength: 1}
+result:
+  type: object
+  required: [trace_id, span_id, embedding_key, dimensions, model, provider]
+  properties:
+    trace_id: {type: string}
+    span_id: {type: string}
+    embedding_key: {type: string, pattern: '^emb_[a-f0-9]{24}$'}
+    dimensions: {type: integer, minimum: 1}
+    model: {type: string}
+    provider: {type: string, enum: [cloudflare, openai, mock]}

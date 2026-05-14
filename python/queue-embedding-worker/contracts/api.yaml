@@ -1,0 +1,20 @@
+openapi: 3.0.3
+info:
+  title: Queue Embedding Worker API
+  version: 0.1.0
+paths:
+  /health:
+    get:
+      responses:
+        '200':
+          description: health
+  /execute/{jobName}:
+    post:
+      parameters:
+        - in: path
+          name: jobName
+          required: true
+          schema: {type: string}
+      responses:
+        '200': {description: processed}
+        '400': {description: validation error}
