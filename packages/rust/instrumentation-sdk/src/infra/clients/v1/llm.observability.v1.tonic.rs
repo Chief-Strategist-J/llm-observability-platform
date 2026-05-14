@@ -4,8 +4,6 @@ pub mod span_ingestion_service_client {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
     use tonic::codegen::http::Uri;
-    /** Service definition for direct gRPC ingestion
-*/
     #[derive(Debug, Clone)]
     pub struct SpanIngestionServiceClient<T> {
         inner: tonic::client::Grpc<T>,
@@ -86,10 +84,9 @@ pub mod span_ingestion_service_client {
             self.inner = self.inner.max_encoding_message_size(limit);
             self
         }
-        ///
         pub async fn record_span(
             &mut self,
-            request: impl tonic::IntoRequest<super::LlmSpan>,
+            request: impl tonic::IntoRequest<super::RecordSpanRequest>,
         ) -> std::result::Result<
             tonic::Response<super::RecordSpanResponse>,
             tonic::Status,
@@ -126,17 +123,14 @@ pub mod span_ingestion_service_server {
     /// Generated trait containing gRPC methods that should be implemented for use with SpanIngestionServiceServer.
     #[async_trait]
     pub trait SpanIngestionService: Send + Sync + 'static {
-        ///
         async fn record_span(
             &self,
-            request: tonic::Request<super::LlmSpan>,
+            request: tonic::Request<super::RecordSpanRequest>,
         ) -> std::result::Result<
             tonic::Response<super::RecordSpanResponse>,
             tonic::Status,
         >;
     }
-    /** Service definition for direct gRPC ingestion
-*/
     #[derive(Debug)]
     pub struct SpanIngestionServiceServer<T: SpanIngestionService> {
         inner: _Inner<T>,
@@ -222,7 +216,8 @@ pub mod span_ingestion_service_server {
                     struct RecordSpanSvc<T: SpanIngestionService>(pub Arc<T>);
                     impl<
                         T: SpanIngestionService,
-                    > tonic::server::UnaryService<super::LlmSpan> for RecordSpanSvc<T> {
+                    > tonic::server::UnaryService<super::RecordSpanRequest>
+                    for RecordSpanSvc<T> {
                         type Response = super::RecordSpanResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
@@ -230,7 +225,7 @@ pub mod span_ingestion_service_server {
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::LlmSpan>,
+                            request: tonic::Request<super::RecordSpanRequest>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {

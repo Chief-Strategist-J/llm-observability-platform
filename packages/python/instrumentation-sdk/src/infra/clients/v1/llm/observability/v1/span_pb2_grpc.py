@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import span_pb2 as span__pb2
+from llm.observability.v1 import span_pb2 as llm_dot_observability_dot_v1_dot_span__pb2
 
 
 class SpanIngestionServiceStub(object):
@@ -17,8 +17,8 @@ class SpanIngestionServiceStub(object):
         """
         self.RecordSpan = channel.unary_unary(
                 '/llm.observability.v1.SpanIngestionService/RecordSpan',
-                request_serializer=span__pb2.LLMSpan.SerializeToString,
-                response_deserializer=span__pb2.RecordSpanResponse.FromString,
+                request_serializer=llm_dot_observability_dot_v1_dot_span__pb2.RecordSpanRequest.SerializeToString,
+                response_deserializer=llm_dot_observability_dot_v1_dot_span__pb2.RecordSpanResponse.FromString,
                 )
 
 
@@ -37,8 +37,8 @@ def add_SpanIngestionServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'RecordSpan': grpc.unary_unary_rpc_method_handler(
                     servicer.RecordSpan,
-                    request_deserializer=span__pb2.LLMSpan.FromString,
-                    response_serializer=span__pb2.RecordSpanResponse.SerializeToString,
+                    request_deserializer=llm_dot_observability_dot_v1_dot_span__pb2.RecordSpanRequest.FromString,
+                    response_serializer=llm_dot_observability_dot_v1_dot_span__pb2.RecordSpanResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -63,7 +63,7 @@ class SpanIngestionService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/llm.observability.v1.SpanIngestionService/RecordSpan',
-            span__pb2.LLMSpan.SerializeToString,
-            span__pb2.RecordSpanResponse.FromString,
+            llm_dot_observability_dot_v1_dot_span__pb2.RecordSpanRequest.SerializeToString,
+            llm_dot_observability_dot_v1_dot_span__pb2.RecordSpanResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
