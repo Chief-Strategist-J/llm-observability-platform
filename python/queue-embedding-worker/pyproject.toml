@@ -1,0 +1,13 @@
+[project]
+name = "queue-embedding-worker"
+version = "0.1.0"
+description = "Cloudflare Queue worker for span enrichment"
+requires-python = ">=3.11"
+dependencies = ["opentelemetry-sdk>=1.26.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

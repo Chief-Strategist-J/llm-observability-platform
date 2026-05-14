@@ -1,0 +1,4 @@
+name: queue-embedding-worker
+runtime: python
+platform: cloudflare-workers
+entrypoint: src/worker/index.py
