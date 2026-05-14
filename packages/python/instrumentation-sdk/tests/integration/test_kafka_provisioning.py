@@ -9,7 +9,7 @@ class TestKafkaProvisioning(unittest.TestCase):
     Ensures that topics and partitions match the centralized Topics Registry.
     """
     def setUp(self):
-        self.topics_file = "packages/python/instrumentation-sdk/contracts/registries/topics.yaml"
+        self.topics_file = "contracts/registries/topics.yaml"
         self.kafka_container = "docker-kafka-1"
         self.bootstrap_server = "kafka:29092"
         
