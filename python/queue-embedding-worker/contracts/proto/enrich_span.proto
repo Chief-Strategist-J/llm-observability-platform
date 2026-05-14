@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package queue_embedding_worker.v1;
+
+message EnrichSpanRequest {
+  string trace_id = 1;
+  string span_id = 2;
+  string model = 3;
+  string text = 4;
+}
+
+message EnrichSpanResponse {
+  string trace_id = 1;
+  string span_id = 2;
+  string embedding_key = 3;
+  int32 dimensions = 4;
+  string model = 5;
+  string provider = 6;
+}
+
+service EnrichSpanService {
+  rpc EnrichSpan(EnrichSpanRequest) returns (EnrichSpanResponse);
+}
