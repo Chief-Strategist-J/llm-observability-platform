@@ -18,12 +18,12 @@ class SpanIngestionServiceClient extends \Grpc\BaseStub {
     }
 
     /**
-     * @param \LlmObservability\Platform\V1\LLMSpan $argument input argument
+     * @param \LlmObservability\Platform\V1\RecordSpanRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options
      * @return \Grpc\UnaryCall
      */
-    public function RecordSpan(\LlmObservability\Platform\V1\LLMSpan $argument,
+    public function RecordSpan(\LlmObservability\Platform\V1\RecordSpanRequest $argument,
       $metadata = [], $options = []) {
         return $this->_simpleRequest('/llm.observability.v1.SpanIngestionService/RecordSpan',
         $argument,

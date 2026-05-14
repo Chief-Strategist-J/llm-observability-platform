@@ -4,7 +4,7 @@ import os
 
 # Add relevant directories to sys.path
 sys.path.append(os.path.abspath("packages/python/instrumentation-sdk/src"))
-sys.path.append(os.path.abspath("packages/python/instrumentation-sdk/src/infra/clients/v1"))
+sys.path.append(os.path.abspath("packages/python/instrumentation-sdk/src/infra/clients/v1/llm/observability/v1"))
 
 import uuid
 from datetime import datetime, timezone

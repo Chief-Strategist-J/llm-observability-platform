@@ -1,6 +1,6 @@
 //
 //  Generated code. Do not modify.
-//  source: span.proto
+//  source: llm/observability/v1/span.proto
 //
 // @dart = 2.12
 
@@ -459,6 +459,58 @@ class LLMSpan extends $pb.GeneratedMessage {
   $core.List<$core.double> get responseEmbedding => $_getList(27);
 }
 
+class RecordSpanRequest extends $pb.GeneratedMessage {
+  factory RecordSpanRequest({
+    LLMSpan? span,
+  }) {
+    final $result = create();
+    if (span != null) {
+      $result.span = span;
+    }
+    return $result;
+  }
+  RecordSpanRequest._() : super();
+  factory RecordSpanRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory RecordSpanRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'RecordSpanRequest', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..aOM<LLMSpan>(1, _omitFieldNames ? '' : 'span', subBuilder: LLMSpan.create)
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  RecordSpanRequest clone() => RecordSpanRequest()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  RecordSpanRequest copyWith(void Function(RecordSpanRequest) updates) => super.copyWith((message) => updates(message as RecordSpanRequest)) as RecordSpanRequest;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static RecordSpanRequest create() => RecordSpanRequest._();
+  RecordSpanRequest createEmptyInstance() => create();
+  static $pb.PbList<RecordSpanRequest> createRepeated() => $pb.PbList<RecordSpanRequest>();
+  @$core.pragma('dart2js:noInline')
+  static RecordSpanRequest getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<RecordSpanRequest>(create);
+  static RecordSpanRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  LLMSpan get span => $_getN(0);
+  @$pb.TagNumber(1)
+  set span(LLMSpan v) { setField(1, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasSpan() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSpan() => clearField(1);
+  @$pb.TagNumber(1)
+  LLMSpan ensureSpan() => $_ensure(0);
+}
+
 class RecordSpanResponse extends $pb.GeneratedMessage {
   factory RecordSpanResponse({
     $core.bool? success,
@@ -521,7 +573,7 @@ class SpanIngestionServiceApi {
   $pb.RpcClient _client;
   SpanIngestionServiceApi(this._client);
 
-  $async.Future<RecordSpanResponse> recordSpan($pb.ClientContext? ctx, LLMSpan request) =>
+  $async.Future<RecordSpanResponse> recordSpan($pb.ClientContext? ctx, RecordSpanRequest request) =>
     _client.invoke<RecordSpanResponse>(ctx, 'SpanIngestionService', 'RecordSpan', request, RecordSpanResponse())
   ;
 }

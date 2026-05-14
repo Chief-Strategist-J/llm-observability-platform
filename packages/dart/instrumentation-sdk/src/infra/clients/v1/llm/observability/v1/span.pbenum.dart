@@ -1,6 +1,6 @@
 //
 //  Generated code. Do not modify.
-//  source: span.proto
+//  source: llm/observability/v1/span.proto
 //
 // @dart = 2.12
 
