@@ -1,4 +1,4 @@
-name: Contract Enforcement (Instrumentation SDK Caller)
+name: Contract Enforcement (Instrumentation SDK)
 
 on:
   push:
@@ -9,6 +9,22 @@ on:
       - 'packages/python/instrumentation-sdk/**'
 
 jobs:
-  call-contract-check:
-    uses: ./packages/python/instrumentation-sdk/.github/workflows/contract-enforcement.yml
-    secrets: inherit
+  check-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          cd packages/python/instrumentation-sdk
+          pip install pydantic
+
+      - name: Run contract check
+        run: |
+          cd packages/python/instrumentation-sdk
+          python scripts/check_contract.py
