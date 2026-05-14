@@ -92,6 +92,12 @@ pub struct LlmSpan {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct RecordSpanRequest {
+    #[prost(message, optional, tag="1")]
+    pub span: ::core::option::Option<LlmSpan>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RecordSpanResponse {
     #[prost(bool, tag="1")]
     pub success: bool,

@@ -2,14 +2,12 @@ name: Generate Protobuf SDKs
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, feature/polyglot-sdk-pipeline ]
     paths:
       - 'packages/python/instrumentation-sdk/contracts/proto/v1/**'
-      - 'buf.gen.yaml'
   pull_request:
     paths:
       - 'packages/python/instrumentation-sdk/contracts/proto/v1/**'
-      - 'buf.gen.yaml'
   workflow_dispatch:
 
 jobs:
@@ -41,7 +39,7 @@ jobs:
         continue-on-error: true
 
       - name: Run Code Generation
-        run: buf generate packages/python/instrumentation-sdk/contracts/proto/v1
+        run: buf generate --template packages/python/instrumentation-sdk/contracts/proto/v1/buf.gen.yaml packages/python/instrumentation-sdk/contracts/proto/v1
 
       - name: Commit and Push Generated Changes
         uses: stefanzweifel/git-auto-commit-action@v5
