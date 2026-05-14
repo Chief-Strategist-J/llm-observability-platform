@@ -1,4 +1,4 @@
-name: Contract Enforcement (Instrumentation SDK Caller)
+name: Contract Enforcement (Trigger)
 
 on:
   push:
@@ -10,5 +10,5 @@ on:
 
 jobs:
   call-contract-check:
-    uses: ./packages/python/instrumentation-sdk/.github/workflows/contract-enforcement.yml
+    uses: ./.github/workflows/reusable-contract-enforcement.yml
     secrets: inherit
