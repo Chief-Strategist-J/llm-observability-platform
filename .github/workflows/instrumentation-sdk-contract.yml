@@ -1,0 +1,14 @@
+name: Contract Enforcement (Instrumentation SDK Caller)
+
+on:
+  push:
+    paths:
+      - 'packages/python/instrumentation-sdk/**'
+  pull_request:
+    paths:
+      - 'packages/python/instrumentation-sdk/**'
+
+jobs:
+  call-contract-check:
+    uses: ./packages/python/instrumentation-sdk/.github/workflows/contract-enforcement.yml
+    secrets: inherit
