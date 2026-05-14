@@ -4,6 +4,7 @@ import sys
 import os
 
 def run_command(cmd):
+    """Executes a shell command and prints its output."""
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         print(result.stderr)
@@ -12,10 +13,15 @@ def run_command(cmd):
     return result.returncode
 
 def main():
+    """
+    Synchronizes Kafka topics defined in the registry with the live cluster.
+    Enforces the configurations (partitions, replication, cleanup policy).
+    """
     topics_file = "contracts/registries/topics.yaml"
     bootstrap_server = os.getenv("KAFKA_BOOTSTRAP_SERVER", "localhost:9094")
     
     if not os.path.exists(topics_file):
+        print(f"Error: Registry file not found: {topics_file}")
         sys.exit(1)
 
     with open(topics_file, 'r') as f:
@@ -25,6 +31,8 @@ def main():
         name = topic['name']
         partitions = str(topic['partitions'])
         replication = str(topic['replication_factor'])
+        
+        print(f"Syncing topic: {name}")
         
         cmd = [
             "kafka-topics",

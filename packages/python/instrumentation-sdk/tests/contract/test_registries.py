@@ -3,12 +3,17 @@ import yaml
 import os
 
 class TestRegistries(unittest.TestCase):
+    """
+    Contract tests for the Instrumentation SDK registries.
+    Ensures that Topics and Events are consistently defined and linked.
+    """
     def setUp(self):
         self.base_dir = "packages/python/instrumentation-sdk"
         self.topics_path = os.path.join(self.base_dir, "contracts/registries/topics.yaml")
         self.events_path = os.path.join(self.base_dir, "contracts/registries/events.yaml")
 
     def test_topic_registry_integrity(self):
+        """Verify that topics.yaml is valid and unique."""
         self.assertTrue(os.path.exists(self.topics_path))
         with open(self.topics_path, 'r') as f:
             config = yaml.safe_load(f)
@@ -26,10 +31,12 @@ class TestRegistries(unittest.TestCase):
             self.assertIn('description', topic)
             self.assertGreater(topic['partitions'], 0)
             
+            # DLQ topics must be single-partition for ordering and simplicity
             if name.endswith('.dlq'):
                 self.assertEqual(topic['partitions'], 1)
 
     def test_event_registry_integrity(self):
+        """Verify that events.yaml maps to valid topics and existing schemas."""
         self.assertTrue(os.path.exists(self.events_path))
         self.assertTrue(os.path.exists(self.topics_path))
         
@@ -52,8 +59,10 @@ class TestRegistries(unittest.TestCase):
             self.assertIn('schema_path', event)
             self.assertIn('description', event)
             
+            # Event topic must be defined in topics.yaml
             self.assertIn(event['topic'], registered_topics)
             
+            # Schema path must exist and be within contracts directory
             full_schema_path = os.path.join(self.base_dir, event['schema_path'])
             self.assertTrue(os.path.exists(full_schema_path))
             

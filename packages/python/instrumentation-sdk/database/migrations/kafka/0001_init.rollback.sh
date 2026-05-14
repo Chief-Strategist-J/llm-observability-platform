@@ -1,4 +1,13 @@
 #!/bin/bash
+# migration:      0001
+# description:    rollback kafka topics
+# author:         Antigravity
+# date:           2026-05-14
+# depends_on:     NONE
+# reversible:     YES
+# lock_risk:      LOW
+# rows_affected:  schema only
+# reason:         revert initial messaging infrastructure
 
 set -e
 
