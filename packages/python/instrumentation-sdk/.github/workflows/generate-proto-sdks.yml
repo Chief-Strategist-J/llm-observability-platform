@@ -1,7 +1,7 @@
 name: Generate Protobuf SDKs
 
 on:
-  workflow_call: # This makes it a reusable workflow
+  workflow_call:
 
 jobs:
   generate:
