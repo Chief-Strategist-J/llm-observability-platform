@@ -1,12 +1,7 @@
 name: Contract Enforcement (Instrumentation SDK)
 
 on:
-  push:
-    paths:
-      - 'packages/python/instrumentation-sdk/**'
-  pull_request:
-    paths:
-      - 'packages/python/instrumentation-sdk/**'
+  workflow_call:
 
 jobs:
   check-contract:
