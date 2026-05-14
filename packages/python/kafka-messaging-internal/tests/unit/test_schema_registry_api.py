@@ -1,11 +1,12 @@
 """Unit tests for Schema Registry API handlers."""
 
 import pytest
+from typing import Dict
 from unittest.mock import Mock
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
 
-from api.rest.v1.handlers.schema_registry import (
+from kafka_messaging_internal.api.rest.v1.handlers.schema_registry import (
     SchemaRegistryAPI, 
     SchemaRegisterRequest, 
     SchemaCompatibilityRequest,
@@ -13,8 +14,8 @@ from api.rest.v1.handlers.schema_registry import (
     SerializationRequest,
     DeserializationRequest
 )
-from infra.ports.schema_registry_port import SchemaRegistryPort
-from shared.types.schema import SchemaType, SchemaInfo
+from kafka_messaging_internal.shared.ports.schema_registry_port import SchemaRegistryPort
+from kafka_messaging_internal.shared.types.schema import SchemaType, SchemaInfo
 
 
 class TestSchemaRegistryAPI:
@@ -57,10 +58,9 @@ class TestSchemaRegistryAPI:
         return TestClient(app)
 
     def test_register_schema_success(self, client, mock_schema_registry):
-        """Test successful schema registration"""
         request_data = {
             "subject": "test-subject",
-            "schema": '{"type": "object"}',
+            "schema_definition": '{"type": "object"}',
             "schema_type": "JSON"
         }
         
@@ -76,16 +76,14 @@ class TestSchemaRegistryAPI:
         )
 
     def test_register_schema_validation_error(self, client):
-        """Test schema registration with invalid data"""
         request_data = {
-            "schema": '{"type": "object"}',
+            "schema_definition": '{"type": "object"}',
             "schema_type": "JSON"
-            # Missing required 'subject' field
         }
         
         response = client.post("/api/v1/schema-registry/schemas", json=request_data)
         
-        assert response.status_code == 422  # Validation error
+        assert response.status_code == 422
 
     def test_list_subjects_success(self, client, mock_schema_registry):
         """Test successful subject listing"""
@@ -124,10 +122,9 @@ class TestSchemaRegistryAPI:
         assert response.status_code == 404
 
     def test_check_compatibility_success(self, client, mock_schema_registry):
-        """Test successful compatibility check"""
         request_data = {
             "subject": "test-subject",
-            "schema": '{"type": "object", "properties": {"new_field": {"type": "string"}}}',
+            "schema_definition": '{"type": "object", "properties": {"new_field": {"type": "string"}}}',
             "schema_type": "JSON"
         }
         
@@ -141,12 +138,11 @@ class TestSchemaRegistryAPI:
         mock_schema_registry.check_compatibility.assert_called_once()
 
     def test_check_compatibility_incompatible(self, client, mock_schema_registry):
-        """Test compatibility check with incompatible schema"""
         mock_schema_registry.check_compatibility.return_value = False
         
         request_data = {
             "subject": "test-subject",
-            "schema": '{"type": "string"}',  # Different type
+            "schema_definition": '{"type": "string"}',
             "schema_type": "JSON"
         }
         

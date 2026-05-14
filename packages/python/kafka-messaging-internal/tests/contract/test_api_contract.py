@@ -1,7 +1,7 @@
 """Contract tests for API endpoints."""
 
 import pytest
-import httpx
+from fastapi.testclient import TestClient
 import json
 import base64
 from typing import Dict, Any
@@ -17,7 +17,7 @@ class TestAPIContract:
     def client(self):
         """FastAPI test client."""
         app = create_app()
-        return httpx.Client(app=app, base_url="http://test")
+        return TestClient(app)
     
     def test_health_check_contract(self, client):
         """Test health check endpoint contract."""
@@ -316,7 +316,7 @@ class TestAPIContract:
             json=sample_event_data
         )
         
-        assert response.status_code == 403
+        assert response.status_code == 401
     
     def test_rate_limiting_contract(self, client):
         """Test rate limiting contract (basic check)."""

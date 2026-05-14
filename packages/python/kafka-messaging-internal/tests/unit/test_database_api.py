@@ -5,8 +5,8 @@ from unittest.mock import Mock, AsyncMock
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
 
-from api.rest.v1.handlers.database import DatabaseAPI, EventRecordRequest, BatchEventRequest, ConsumerOffsetRequest
-from infra.ports.database_port import DatabasePort
+from kafka_messaging_internal.api.rest.v1.handlers.database import DatabaseAPI, EventRecordRequest, BatchEventRequest, ConsumerOffsetRequest
+from kafka_messaging_internal.shared.ports.database_port import DatabasePort
 
 
 class TestDatabaseAPI:
@@ -82,7 +82,7 @@ class TestDatabaseAPI:
             }
         ]
         
-        response = client.get("/api/v1/database/events?topic=test-topic&limit=10")
+        response = client.get("/api/v1/database/events", params={"topic": "test-topic", "limit": 10})
         
         assert response.status_code == 200
         data = response.json()
