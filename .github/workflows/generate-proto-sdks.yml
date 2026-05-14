@@ -2,7 +2,7 @@ name: Generate Protobuf SDKs
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, feature/polyglot-sdk-pipeline ]
     paths:
       - 'packages/python/instrumentation-sdk/contracts/proto/v1/**'
       - 'buf.gen.yaml'
