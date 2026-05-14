@@ -1,6 +1,3 @@
-# PII and Injection Pattern Configuration (PRE-DEP-04)
-# Used for Aho-Corasick based scanning of prompts and responses.
-
 patterns:
   - name: email
     regex: "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"
