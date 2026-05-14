@@ -4,6 +4,10 @@ import subprocess
 import os
 
 class TestKafkaProvisioning(unittest.TestCase):
+    """
+    Integration test to verify live Kafka provisioning state.
+    Ensures that topics and partitions match the centralized Topics Registry.
+    """
     def setUp(self):
         self.topics_file = "packages/python/instrumentation-sdk/contracts/registries/topics.yaml"
         self.kafka_container = "docker-kafka-1"
@@ -21,6 +25,7 @@ class TestKafkaProvisioning(unittest.TestCase):
         return result
 
     def test_live_topics_match_registry(self):
+        """Verify that all topics in the registry exist in the live cluster."""
         result = self._run_kafka_cmd(["kafka-topics", "--list", "--bootstrap-server", self.bootstrap_server])
         
         if result.returncode != 0:
@@ -34,6 +39,7 @@ class TestKafkaProvisioning(unittest.TestCase):
                 self.assertIn(name, actual_topics, f"Topic '{name}' exists in registry but was not found in Kafka")
 
     def test_topic_partition_integrity(self):
+        """Verify partition counts against the registry specification."""
         for topic in self.registry['topics']:
             name = topic['name']
             expected_partitions = topic['partitions']

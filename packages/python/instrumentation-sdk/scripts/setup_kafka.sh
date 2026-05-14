@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Kafka Topic Provisioning Utility
+# Directly manages topic creation for the development environment.
+# Called by migrations to ensure idempotency.
+
 set -e
 
 KAFKA_BIN=$(which kafka-topics || echo "/usr/bin/kafka-topics")
@@ -17,6 +21,7 @@ function create_topic() {
         --replication-factor $replication
 }
 
+# Initial topic set defined in topics.yaml registry
 create_topic "llm.spans.raw.unvalidated" 3 1
 create_topic "llm.spans.raw" 3 1
 create_topic "llm.spans.raw.dlq" 1 1
