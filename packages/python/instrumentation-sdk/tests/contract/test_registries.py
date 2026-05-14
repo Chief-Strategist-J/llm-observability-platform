@@ -8,9 +8,10 @@ class TestRegistries(unittest.TestCase):
     Ensures that Topics and Events are consistently defined and linked.
     """
     def setUp(self):
-        self.base_dir = "packages/python/instrumentation-sdk"
-        self.topics_path = os.path.join(self.base_dir, "contracts/registries/topics.yaml")
-        self.events_path = os.path.join(self.base_dir, "contracts/registries/events.yaml")
+        # Paths are relative to the package root where tests are executed
+        self.topics_path = "contracts/registries/topics.yaml"
+        self.events_path = "contracts/registries/events.yaml"
+        self.base_dir = "."
 
     def test_topic_registry_integrity(self):
         """Verify that topics.yaml is valid and unique."""
