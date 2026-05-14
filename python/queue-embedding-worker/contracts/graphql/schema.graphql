@@ -1,0 +1,35 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+type Query {
+  health: Health!
+}
+
+type Mutation {
+  executeEnrichSpan(input: EnrichSpanInput!): EnrichSpanResult!
+}
+
+type Health {
+  status: String!
+  queue: String!
+  concurrency: Int!
+  rateLimitPerSec: Int!
+}
+
+input EnrichSpanInput {
+  traceId: String!
+  spanId: String!
+  model: String!
+  text: String!
+}
+
+type EnrichSpanResult {
+  traceId: String!
+  spanId: String!
+  embeddingKey: String!
+  dimensions: Int!
+  model: String!
+  provider: String!
+}
