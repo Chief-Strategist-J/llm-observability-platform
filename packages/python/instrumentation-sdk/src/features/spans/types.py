@@ -1,10 +1,11 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Any
 from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 
 class FinishReason(str, Enum):
+    UNSPECIFIED = "unspecified"
     STOP = "stop"
     LENGTH = "length"
     CONTENT_FILTER = "content_filter"
@@ -14,10 +15,12 @@ class FinishReason(str, Enum):
     CLIENT_DISCONNECT = "client_disconnect"
 
 class TokenCountMethod(str, Enum):
+    UNSPECIFIED = "unspecified"
     TIKTOKEN = "tiktoken"
     ESTIMATED = "estimated"
 
 class Environment(str, Enum):
+    UNSPECIFIED = "unspecified"
     PRODUCTION = "production"
     STAGING = "staging"
     DEV = "dev"
@@ -33,7 +36,7 @@ class LLMSpan(BaseModel):
     provider: str
     service_name: str = Field(min_length=1)
     endpoint: str
-    environment: Environment
+    environment: Environment = Environment.UNSPECIFIED
     user_id: Optional[str] = None
     session_id: Optional[str] = None
     prompt_tokens: int = Field(gt=0)
@@ -43,12 +46,12 @@ class LLMSpan(BaseModel):
     finish_reason: FinishReason
     cost_usd_micro: int = Field(ge=0)
     price_version: str
-    token_count_method: TokenCountMethod
-    is_sampled: bool
-    retry_count: int = Field(ge=0)
-    attempted_models: Optional[List[str]] = None
-    pii_detected: bool
-    injection_attempt: bool
+    token_count_method: TokenCountMethod = TokenCountMethod.UNSPECIFIED
+    is_sampled: bool = False
+    retry_count: int = Field(0, ge=0)
+    attempted_models: List[str] = Field(default_factory=list)
+    pii_detected: bool = False
+    injection_attempt: bool = False
     timestamp_utc: datetime
     
     # Sampled-only fields
@@ -57,7 +60,15 @@ class LLMSpan(BaseModel):
     response_embedding: Optional[List[float]] = Field(None, min_length=384, max_length=384)
 
     # Warning field (not part of the input, but part of the output after validation)
-    span_warnings: List[str] = Field(default_factory=list)
+    span_warnings: List[str] = Field(default_factory=list, exclude=True)
+
+    @field_validator("finish_reason", "token_count_method", "environment", mode="before")
+    @classmethod
+    def normalize_proto_enums(cls, v: Any) -> Any:
+        if isinstance(v, str) and "_" in v:
+            # Maps "FINISH_REASON_STOP" -> "stop"
+            return v.split("_")[-1].lower()
+        return v
 
     @field_validator("timestamp_utc")
     @classmethod

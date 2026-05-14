@@ -1,0 +1,15 @@
+name: Generate Protobuf SDKs (Caller)
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'packages/python/instrumentation-sdk/contracts/proto/v1/**'
+      - 'buf.gen.yaml'
+  workflow_dispatch:
+
+jobs:
+  call-generate:
+    # We call the workflow managed inside the package directory
+    uses: ./packages/python/instrumentation-sdk/.github/workflows/generate-proto-sdks.yml
+    secrets: inherit

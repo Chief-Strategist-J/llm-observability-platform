@@ -1,0 +1,55 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package
+      value: github.com/llm-observability/platform/proto/v1
+    - file_option: java_package
+      value: com.llmobservability.platform.v1
+    - file_option: php_namespace
+      value: "LlmObservability\\Platform\\V1"
+
+plugins:
+  # Python: Messages + gRPC
+  - remote: buf.build/protocolbuffers/python:v25.1
+    out: packages/python/instrumentation-sdk/src/infra/clients/v1
+  - remote: buf.build/grpc/python:v1.60.0
+    out: packages/python/instrumentation-sdk/src/infra/clients/v1
+
+  # Go: Messages + Connect (gRPC compatible)
+  - remote: buf.build/protocolbuffers/go:v1.31.0
+    out: packages/go/instrumentation-sdk/src/infra/clients/v1
+    opt: paths=source_relative
+  - remote: buf.build/connectrpc/go:v1.12.0
+    out: packages/go/instrumentation-sdk/src/infra/clients/v1
+    opt: paths=source_relative
+
+  # Rust: Messages + Tonic (gRPC)
+  - remote: buf.build/community/neoeinstein-prost:v0.4.0
+    out: packages/rust/instrumentation-sdk/src/infra/clients/v1
+  - remote: buf.build/community/neoeinstein-tonic:v0.4.0
+    out: packages/rust/instrumentation-sdk/src/infra/clients/v1
+
+  # Java/Kotlin: Messages + gRPC
+  - remote: buf.build/protocolbuffers/java:v25.1
+    out: packages/java/instrumentation-sdk/src/infra/clients/v1
+  - remote: buf.build/grpc/java:v1.60.0
+    out: packages/java/instrumentation-sdk/src/infra/clients/v1
+  - remote: buf.build/protocolbuffers/kotlin:v25.1
+    out: packages/kotlin/instrumentation-sdk/src/infra/clients/v1
+  - remote: buf.build/grpc/kotlin:v1.4.1
+    out: packages/kotlin/instrumentation-sdk/src/infra/clients/v1
+
+  # Node/TypeScript: All-in-one plugin
+  - remote: buf.build/community/timostamm-protobuf-ts:v2.9.1
+    out: packages/node/instrumentation-sdk/src/infra/clients/v1
+
+  # PHP: Messages + gRPC
+  - remote: buf.build/protocolbuffers/php:v25.1
+    out: packages/php/instrumentation-sdk/src/infra/clients/v1
+  - remote: buf.build/grpc/php:v1.60.0
+    out: packages/php/instrumentation-sdk/src/infra/clients/v1
+
+  # Dart: All-in-one plugin
+  - remote: buf.build/protocolbuffers/dart:v21.1.2
+    out: packages/dart/instrumentation-sdk/src/infra/clients/v1

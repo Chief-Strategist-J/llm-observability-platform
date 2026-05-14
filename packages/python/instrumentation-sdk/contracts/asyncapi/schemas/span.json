@@ -41,7 +41,7 @@
     },
     "environment": {
       "type": "string",
-      "enum": ["production", "staging", "dev"]
+      "enum": ["unspecified", "production", "staging", "dev"]
     },
     "user_id": {
       "type": ["string", "null"]
@@ -67,6 +67,7 @@
     "finish_reason": {
       "type": "string",
       "enum": [
+        "unspecified",
         "stop",
         "length",
         "content_filter",
@@ -85,7 +86,7 @@
     },
     "token_count_method": {
       "type": "string",
-      "enum": ["tiktoken", "estimated"]
+      "enum": ["unspecified", "tiktoken", "estimated"]
     },
     "is_sampled": {
       "type": "boolean"
@@ -95,7 +96,7 @@
       "minimum": 0
     },
     "attempted_models": {
-      "type": ["array", "null"],
+      "type": "array",
       "items": {
         "type": "string"
       }
