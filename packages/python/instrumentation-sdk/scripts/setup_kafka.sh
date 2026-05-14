@@ -1,29 +1,23 @@
 #!/bin/bash
+
 set -e
 
-# Kafka broker address (internal Docker network address)
-KAFKA_BROKER=${1:-"localhost:9094"}
+KAFKA_BIN=$(which kafka-topics || echo "/usr/bin/kafka-topics")
+BOOTSTRAP_SERVER=${KAFKA_BOOTSTRAP_SERVER:-"kafka:29092"}
 
-echo "Initializing Kafka topics for Instrumentation Layer..."
+function create_topic() {
+    local name=$1
+    local partitions=$2
+    local replication=$3
 
-# Topic format: "name:partitions:replication_factor"
-TOPICS=(
-  "llm.spans.raw.unvalidated:3:1"
-  "llm.spans.raw:3:1"
-  "llm.spans.raw.dlq:1:1"
-  "llm.spans.sampled:3:1"
-)
+    $KAFKA_BIN --create --if-not-exists \
+        --bootstrap-server $BOOTSTRAP_SERVER \
+        --topic $name \
+        --partitions $partitions \
+        --replication-factor $replication
+}
 
-for topic_config in "${TOPICS[@]}"; do
-  IFS=':' read -r name partitions replication <<< "$topic_config"
-  
-  echo "Checking topic: $name"
-  # We use --if-not-exists to ensure we don't error if it's already there
-  docker exec -t docker-kafka-1 kafka-topics --create --if-not-exists \
-    --bootstrap-server kafka:29092 \
-    --topic "$name" \
-    --partitions "$partitions" \
-    --replication-factor "$replication"
-done
-
-echo "Kafka topic initialization completed."
+create_topic "llm.spans.raw.unvalidated" 3 1
+create_topic "llm.spans.raw" 3 1
+create_topic "llm.spans.raw.dlq" 1 1
+create_topic "llm.spans.sampled" 3 1

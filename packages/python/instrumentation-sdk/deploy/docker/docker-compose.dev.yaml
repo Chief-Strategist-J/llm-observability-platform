@@ -67,7 +67,6 @@ services:
     container_name: docker-init-kafka-1
     depends_on:
       - kafka
-    entrypoint: [ "/bin/bash", "-c" ]
     command: |
       bash -c "
       echo 'Waiting for Kafka to be ready...'

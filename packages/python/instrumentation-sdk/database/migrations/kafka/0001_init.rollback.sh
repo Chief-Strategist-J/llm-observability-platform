@@ -1,22 +1,16 @@
 #!/bin/bash
-# migration:      0001
-# description:    rollback initial kafka topics
-# author:         antigravity
-# date:           2026-05-14
-# reversible:     YES
 
 set -e
 
-TOPICS=(
-  "llm.spans.raw.unvalidated"
-  "llm.spans.raw"
-  "llm.spans.raw.dlq"
-  "llm.spans.sampled"
-)
+KAFKA_BIN=$(which kafka-topics || echo "/usr/bin/kafka-topics")
+BOOTSTRAP_SERVER=${KAFKA_BOOTSTRAP_SERVER:-"kafka:29092"}
 
-for name in "${TOPICS[@]}"; do
-  echo "Deleting topic: $name"
-  docker exec -t docker-kafka-1 kafka-topics --delete --if-exists --bootstrap-server kafka:29092 --topic "$name"
-done
+function delete_topic() {
+    local name=$1
+    $KAFKA_BIN --delete --if-exists --bootstrap-server $BOOTSTRAP_SERVER --topic $name
+}
 
-echo "Kafka rollback completed."
+delete_topic "llm.spans.raw.unvalidated"
+delete_topic "llm.spans.raw"
+delete_topic "llm.spans.raw.dlq"
+delete_topic "llm.spans.sampled"

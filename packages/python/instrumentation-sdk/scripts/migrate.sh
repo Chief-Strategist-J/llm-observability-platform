@@ -1,66 +1,46 @@
 #!/bin/bash
+
 set -e
 
-# Usage: ./scripts/migrate.sh [up|rollback] [clickhouse|postgres|kafka] [version]
+COMMAND=$1
+TYPE=$2
+VERSION=$3
 
-COMMAND=${1:-up}
-DB_TYPE=${2:-postgres}
-VERSION=${3:-0001}
+BASE_DIR=$(dirname "$0")/..
+MIGRATIONS_DIR="$BASE_DIR/database/migrations"
 
-# Container names
-PG_CONTAINER="docker-postgres-1"
-CH_CONTAINER="docker-clickhouse-1"
-KAFKA_CONTAINER="docker-kafka-1"
-
-DB_DIR="database/migrations"
-
-case "$DB_TYPE" in
-  postgres)
-    MIGRATION_FILE="$DB_DIR/postgres/${VERSION}_init.sql"
-    ROLLBACK_FILE="$DB_DIR/postgres/${VERSION}_init.rollback.sql"
+function run_kafka_migration() {
+    local cmd=$1
+    local version=$2
+    local dir="$MIGRATIONS_DIR/kafka"
     
-    if [ "$COMMAND" == "up" ]; then
-        echo "Applying Postgres migration $VERSION..."
-        docker exec -i "$PG_CONTAINER" psql -U admin -d llm_observability < "$MIGRATION_FILE"
-    else
-        echo "Rolling back Postgres migration $VERSION..."
-        docker exec -i "$PG_CONTAINER" psql -U admin -d llm_observability < "$ROLLBACK_FILE"
+    if [ "$cmd" == "up" ]; then
+        local file=$(ls $dir/${version}_*.sh | grep -v rollback | head -n 1)
+        if [ -f "$file" ]; then
+            bash "$file"
+            echo $version > "$dir/schema.lock"
+        fi
+    elif [ "$cmd" == "rollback" ]; then
+        local file=$(ls $dir/${version}_*.rollback.sh | head -n 1)
+        if [ -f "$file" ]; then
+            bash "$file"
+            echo "0000" > "$dir/schema.lock"
+        fi
     fi
-    ;;
-    
-  clickhouse)
-    MIGRATION_FILE="$DB_DIR/clickhouse/${VERSION}_init.sql"
-    ROLLBACK_FILE="$DB_DIR/clickhouse/${VERSION}_init.rollback.sql"
+}
 
-    if [ "$COMMAND" == "up" ]; then
-        echo "Applying ClickHouse migration $VERSION..."
-        docker exec -i "$CH_CONTAINER" clickhouse-client --database default < "$MIGRATION_FILE"
-    else
-        echo "Rolling back ClickHouse migration $VERSION..."
-        docker exec -i "$CH_CONTAINER" clickhouse-client --database default < "$ROLLBACK_FILE"
-    fi
-    ;;
-    
-  kafka)
-    SUFFIX=""
-    if [ "$COMMAND" == "rollback" ]; then
-        SUFFIX=".rollback"
-    fi
-    MIGRATION_FILE="$DB_DIR/kafka/${VERSION}_init${SUFFIX}.sh"
-    
-    echo "Executing Kafka migration $VERSION ($COMMAND)..."
-    if [ -f "$MIGRATION_FILE" ]; then
-        bash "$MIGRATION_FILE"
-    else
-        echo "Migration file not found: $MIGRATION_FILE"
+case $TYPE in
+    "postgres")
+        echo "Running PG migration $COMMAND $VERSION"
+        ;;
+    "clickhouse")
+        echo "Running CH migration $COMMAND $VERSION"
+        ;;
+    "kafka")
+        run_kafka_migration $COMMAND $VERSION
+        ;;
+    *)
+        echo "Usage: $0 [up|rollback] [postgres|clickhouse|kafka] [version]"
         exit 1
-    fi
-    ;;
-    
-  *)
-    echo "Unknown database type: $DB_TYPE"
-    exit 1
-    ;;
+        ;;
 esac
-
-echo "Migration $COMMAND for $DB_TYPE ($VERSION) completed."

@@ -1,6 +1,3 @@
-# Model Pricing Configuration (PRE-DEP-03)
-# Used for cost_usd_micro calculation in LLM spans.
-
 - model: gpt-4o
   provider: openai
   input_price_per_1m: 5.00

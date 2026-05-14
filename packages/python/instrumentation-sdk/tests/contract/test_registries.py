@@ -9,7 +9,6 @@ class TestRegistries(unittest.TestCase):
         self.events_path = os.path.join(self.base_dir, "contracts/registries/events.yaml")
 
     def test_topic_registry_integrity(self):
-        """Verify that the topics.yaml is well-formed and follows architectural rules."""
         self.assertTrue(os.path.exists(self.topics_path))
         with open(self.topics_path, 'r') as f:
             config = yaml.safe_load(f)
@@ -18,21 +17,19 @@ class TestRegistries(unittest.TestCase):
         topic_names = set()
         for topic in config['topics']:
             name = topic.get('name')
-            self.assertIsNotNone(name, "Topic name must not be null")
-            self.assertNotIn(name, topic_names, f"Duplicate topic name detected: {name}")
+            self.assertIsNotNone(name)
+            self.assertNotIn(name, topic_names)
             topic_names.add(name)
 
             self.assertIn('partitions', topic)
             self.assertIn('replication_factor', topic)
-            self.assertIn('description', topic, f"Topic {name} is missing a description")
+            self.assertIn('description', topic)
             self.assertGreater(topic['partitions'], 0)
             
-            # Architectural rule: DLQ topics should have exactly 1 partition to preserve ordering
             if name.endswith('.dlq'):
-                self.assertEqual(topic['partitions'], 1, f"DLQ topic {name} must have exactly 1 partition")
+                self.assertEqual(topic['partitions'], 1)
 
     def test_event_registry_integrity(self):
-        """Verify that the events.yaml points to valid topics and existing schemas."""
         self.assertTrue(os.path.exists(self.events_path))
         self.assertTrue(os.path.exists(self.topics_path))
         
@@ -47,23 +44,20 @@ class TestRegistries(unittest.TestCase):
         self.assertIn('events', event_config)
         for event in event_config['events']:
             name = event.get('name')
-            self.assertIsNotNone(name, "Event name must not be null")
-            self.assertNotIn(name, event_names, f"Duplicate event name detected: {name}")
+            self.assertIsNotNone(name)
+            self.assertNotIn(name, event_names)
             event_names.add(name)
 
             self.assertIn('topic', event)
             self.assertIn('schema_path', event)
-            self.assertIn('description', event, f"Event {name} is missing a description")
+            self.assertIn('description', event)
             
-            # Check that topic exists in topic registry
-            self.assertIn(event['topic'], registered_topics, f"Event {name} points to unregistered topic {event['topic']}")
+            self.assertIn(event['topic'], registered_topics)
             
-            # Check that schema file exists
             full_schema_path = os.path.join(self.base_dir, event['schema_path'])
-            self.assertTrue(os.path.exists(full_schema_path), f"Schema not found for event {name} at {full_schema_path}")
+            self.assertTrue(os.path.exists(full_schema_path))
             
-            # Check schema path convention
-            self.assertTrue(event['schema_path'].startswith('contracts/'), f"Schema path for {name} must be within contracts/ directory")
+            self.assertTrue(event['schema_path'].startswith('contracts/'))
 
 if __name__ == "__main__":
     unittest.main()
