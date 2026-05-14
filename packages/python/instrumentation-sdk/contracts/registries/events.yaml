@@ -1,0 +1,15 @@
+# Event Registry (Single Source of Truth for Schemas)
+events:
+  - name: LLMSpan
+    topic: llm.spans.raw
+    schema_type: protobuf
+    schema_path: contracts/proto/v1/llm/observability/v1/span.proto
+    version: v1
+    description: Core observability span capturing token counts, latency, cost, and provider details.
+
+  - name: SampledLLMSpan
+    topic: llm.spans.sampled
+    schema_type: protobuf
+    schema_path: contracts/proto/v1/llm/observability/v1/span.proto
+    version: v1
+    description: Sampled version of the span, typically including full prompt/response text for intelligence layers.
