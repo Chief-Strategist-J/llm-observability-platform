@@ -9,7 +9,7 @@ import static io.grpc.MethodDescriptor.generateFullMethodName;
  */
 @javax.annotation.Generated(
     value = "by gRPC proto compiler (version 1.60.0)",
-    comments = "Source: span.proto")
+    comments = "Source: llm/observability/v1/span.proto")
 @io.grpc.stub.annotations.GrpcGenerated
 public final class SpanIngestionServiceGrpc {
 
@@ -18,27 +18,27 @@ public final class SpanIngestionServiceGrpc {
   public static final java.lang.String SERVICE_NAME = "llm.observability.v1.SpanIngestionService";
 
   // Static method descriptors that strictly reflect the proto.
-  private static volatile io.grpc.MethodDescriptor<com.llmobservability.platform.v1.LLMSpan,
+  private static volatile io.grpc.MethodDescriptor<com.llmobservability.platform.v1.RecordSpanRequest,
       com.llmobservability.platform.v1.RecordSpanResponse> getRecordSpanMethod;
 
   @io.grpc.stub.annotations.RpcMethod(
       fullMethodName = SERVICE_NAME + '/' + "RecordSpan",
-      requestType = com.llmobservability.platform.v1.LLMSpan.class,
+      requestType = com.llmobservability.platform.v1.RecordSpanRequest.class,
       responseType = com.llmobservability.platform.v1.RecordSpanResponse.class,
       methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
-  public static io.grpc.MethodDescriptor<com.llmobservability.platform.v1.LLMSpan,
+  public static io.grpc.MethodDescriptor<com.llmobservability.platform.v1.RecordSpanRequest,
       com.llmobservability.platform.v1.RecordSpanResponse> getRecordSpanMethod() {
-    io.grpc.MethodDescriptor<com.llmobservability.platform.v1.LLMSpan, com.llmobservability.platform.v1.RecordSpanResponse> getRecordSpanMethod;
+    io.grpc.MethodDescriptor<com.llmobservability.platform.v1.RecordSpanRequest, com.llmobservability.platform.v1.RecordSpanResponse> getRecordSpanMethod;
     if ((getRecordSpanMethod = SpanIngestionServiceGrpc.getRecordSpanMethod) == null) {
       synchronized (SpanIngestionServiceGrpc.class) {
         if ((getRecordSpanMethod = SpanIngestionServiceGrpc.getRecordSpanMethod) == null) {
           SpanIngestionServiceGrpc.getRecordSpanMethod = getRecordSpanMethod =
-              io.grpc.MethodDescriptor.<com.llmobservability.platform.v1.LLMSpan, com.llmobservability.platform.v1.RecordSpanResponse>newBuilder()
+              io.grpc.MethodDescriptor.<com.llmobservability.platform.v1.RecordSpanRequest, com.llmobservability.platform.v1.RecordSpanResponse>newBuilder()
               .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
               .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RecordSpan"))
               .setSampledToLocalTracing(true)
               .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
-                  com.llmobservability.platform.v1.LLMSpan.getDefaultInstance()))
+                  com.llmobservability.platform.v1.RecordSpanRequest.getDefaultInstance()))
               .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
                   com.llmobservability.platform.v1.RecordSpanResponse.getDefaultInstance()))
               .setSchemaDescriptor(new SpanIngestionServiceMethodDescriptorSupplier("RecordSpan"))
@@ -102,7 +102,7 @@ public final class SpanIngestionServiceGrpc {
 
     /**
      */
-    default void recordSpan(com.llmobservability.platform.v1.LLMSpan request,
+    default void recordSpan(com.llmobservability.platform.v1.RecordSpanRequest request,
         io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.RecordSpanResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRecordSpanMethod(), responseObserver);
     }
@@ -143,7 +143,7 @@ public final class SpanIngestionServiceGrpc {
 
     /**
      */
-    public void recordSpan(com.llmobservability.platform.v1.LLMSpan request,
+    public void recordSpan(com.llmobservability.platform.v1.RecordSpanRequest request,
         io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.RecordSpanResponse> responseObserver) {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getRecordSpanMethod(), getCallOptions()), request, responseObserver);
@@ -171,7 +171,7 @@ public final class SpanIngestionServiceGrpc {
 
     /**
      */
-    public com.llmobservability.platform.v1.RecordSpanResponse recordSpan(com.llmobservability.platform.v1.LLMSpan request) {
+    public com.llmobservability.platform.v1.RecordSpanResponse recordSpan(com.llmobservability.platform.v1.RecordSpanRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getRecordSpanMethod(), getCallOptions(), request);
     }
@@ -199,7 +199,7 @@ public final class SpanIngestionServiceGrpc {
     /**
      */
     public com.google.common.util.concurrent.ListenableFuture<com.llmobservability.platform.v1.RecordSpanResponse> recordSpan(
-        com.llmobservability.platform.v1.LLMSpan request) {
+        com.llmobservability.platform.v1.RecordSpanRequest request) {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getRecordSpanMethod(), getCallOptions()), request);
     }
@@ -225,7 +225,7 @@ public final class SpanIngestionServiceGrpc {
     public void invoke(Req request, io.grpc.stub.StreamObserver<Resp> responseObserver) {
       switch (methodId) {
         case METHODID_RECORD_SPAN:
-          serviceImpl.recordSpan((com.llmobservability.platform.v1.LLMSpan) request,
+          serviceImpl.recordSpan((com.llmobservability.platform.v1.RecordSpanRequest) request,
               (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.RecordSpanResponse>) responseObserver);
           break;
         default:
@@ -250,7 +250,7 @@ public final class SpanIngestionServiceGrpc {
           getRecordSpanMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
             new MethodHandlers<
-              com.llmobservability.platform.v1.LLMSpan,
+              com.llmobservability.platform.v1.RecordSpanRequest,
               com.llmobservability.platform.v1.RecordSpanResponse>(
                 service, METHODID_RECORD_SPAN)))
         .build();

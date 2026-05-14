@@ -1,4 +1,5 @@
 syntax = "proto3";
+// Trigger: Automated SDK Generation Pipeline
 
 package llm.observability.v1;
 
@@ -122,7 +123,11 @@ message LLMSpan {
 
 // Service definition for direct gRPC ingestion
 service SpanIngestionService {
-  rpc RecordSpan(LLMSpan) returns (RecordSpanResponse);
+  rpc RecordSpan(RecordSpanRequest) returns (RecordSpanResponse);
+}
+
+message RecordSpanRequest {
+  LLMSpan span = 1;
 }
 
 message RecordSpanResponse {

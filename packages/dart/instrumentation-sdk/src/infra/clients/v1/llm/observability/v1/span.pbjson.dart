@@ -1,6 +1,6 @@
 //
 //  Generated code. Do not modify.
-//  source: span.proto
+//  source: llm/observability/v1/span.proto
 //
 // @dart = 2.12
 
@@ -138,6 +138,19 @@ final $typed_data.Uint8List lLMSpanDescriptor = $convert.base64Decode(
     'EKD19wYXJlbnRfc3Bhbl9pZEIKCghfdXNlcl9pZEINCgtfc2Vzc2lvbl9pZEISChBfbGF0ZW5j'
     'eV9tc190dGZ0Qg4KDF9wcm9tcHRfaGFzaA==');
 
+@$core.Deprecated('Use recordSpanRequestDescriptor instead')
+const RecordSpanRequest$json = {
+  '1': 'RecordSpanRequest',
+  '2': [
+    {'1': 'span', '3': 1, '4': 1, '5': 11, '6': '.llm.observability.v1.LLMSpan', '10': 'span'},
+  ],
+};
+
+/// Descriptor for `RecordSpanRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List recordSpanRequestDescriptor = $convert.base64Decode(
+    'ChFSZWNvcmRTcGFuUmVxdWVzdBIxCgRzcGFuGAEgASgLMh0ubGxtLm9ic2VydmFiaWxpdHkudj'
+    'EuTExNU3BhblIEc3Bhbg==');
+
 @$core.Deprecated('Use recordSpanResponseDescriptor instead')
 const RecordSpanResponse$json = {
   '1': 'RecordSpanResponse',
@@ -155,18 +168,20 @@ final $typed_data.Uint8List recordSpanResponseDescriptor = $convert.base64Decode
 const $core.Map<$core.String, $core.dynamic> SpanIngestionServiceBase$json = {
   '1': 'SpanIngestionService',
   '2': [
-    {'1': 'RecordSpan', '2': '.llm.observability.v1.LLMSpan', '3': '.llm.observability.v1.RecordSpanResponse'},
+    {'1': 'RecordSpan', '2': '.llm.observability.v1.RecordSpanRequest', '3': '.llm.observability.v1.RecordSpanResponse'},
   ],
 };
 
 @$core.Deprecated('Use spanIngestionServiceDescriptor instead')
 const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>> SpanIngestionServiceBase$messageJson = {
+  '.llm.observability.v1.RecordSpanRequest': RecordSpanRequest$json,
   '.llm.observability.v1.LLMSpan': LLMSpan$json,
   '.llm.observability.v1.RecordSpanResponse': RecordSpanResponse$json,
 };
 
 /// Descriptor for `SpanIngestionService`. Decode as a `google.protobuf.ServiceDescriptorProto`.
 final $typed_data.Uint8List spanIngestionServiceDescriptor = $convert.base64Decode(
-    'ChRTcGFuSW5nZXN0aW9uU2VydmljZRJVCgpSZWNvcmRTcGFuEh0ubGxtLm9ic2VydmFiaWxpdH'
-    'kudjEuTExNU3BhbhooLmxsbS5vYnNlcnZhYmlsaXR5LnYxLlJlY29yZFNwYW5SZXNwb25zZQ==');
+    'ChRTcGFuSW5nZXN0aW9uU2VydmljZRJfCgpSZWNvcmRTcGFuEicubGxtLm9ic2VydmFiaWxpdH'
+    'kudjEuUmVjb3JkU3BhblJlcXVlc3QaKC5sbG0ub2JzZXJ2YWJpbGl0eS52MS5SZWNvcmRTcGFu'
+    'UmVzcG9uc2U=');
 

@@ -1,6 +1,6 @@
 //
 //  Generated code. Do not modify.
-//  source: span.proto
+//  source: llm/observability/v1/span.proto
 //
 // @dart = 2.12
 
@@ -21,18 +21,18 @@ import 'span.pbjson.dart';
 export 'span.pb.dart';
 
 abstract class SpanIngestionServiceBase extends $pb.GeneratedService {
-  $async.Future<$0.RecordSpanResponse> recordSpan($pb.ServerContext ctx, $0.LLMSpan request);
+  $async.Future<$0.RecordSpanResponse> recordSpan($pb.ServerContext ctx, $0.RecordSpanRequest request);
 
   $pb.GeneratedMessage createRequest($core.String methodName) {
     switch (methodName) {
-      case 'RecordSpan': return $0.LLMSpan();
+      case 'RecordSpan': return $0.RecordSpanRequest();
       default: throw $core.ArgumentError('Unknown method: $methodName');
     }
   }
 
   $async.Future<$pb.GeneratedMessage> handleCall($pb.ServerContext ctx, $core.String methodName, $pb.GeneratedMessage request) {
     switch (methodName) {
-      case 'RecordSpan': return this.recordSpan(ctx, request as $0.LLMSpan);
+      case 'RecordSpan': return this.recordSpan(ctx, request as $0.RecordSpanRequest);
       default: throw $core.ArgumentError('Unknown method: $methodName');
     }
   }

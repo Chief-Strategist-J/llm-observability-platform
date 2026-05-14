@@ -33,7 +33,7 @@ public object SpanIngestionServiceGrpcKt {
   public val serviceDescriptor: ServiceDescriptor
     get() = getServiceDescriptor()
 
-  public val recordSpanMethod: MethodDescriptor<LLMSpan, RecordSpanResponse>
+  public val recordSpanMethod: MethodDescriptor<RecordSpanRequest, RecordSpanResponse>
     @JvmStatic
     get() = SpanIngestionServiceGrpc.getRecordSpanMethod()
 
@@ -62,7 +62,7 @@ public object SpanIngestionServiceGrpcKt {
      *
      * @return The single response from the server.
      */
-    public suspend fun recordSpan(request: LLMSpan, headers: Metadata = Metadata()):
+    public suspend fun recordSpan(request: RecordSpanRequest, headers: Metadata = Metadata()):
         RecordSpanResponse = unaryRpc(
       channel,
       SpanIngestionServiceGrpc.getRecordSpanMethod(),
@@ -90,7 +90,7 @@ public object SpanIngestionServiceGrpcKt {
      *
      * @param request The request from the client.
      */
-    public open suspend fun recordSpan(request: LLMSpan): RecordSpanResponse = throw
+    public open suspend fun recordSpan(request: RecordSpanRequest): RecordSpanResponse = throw
         StatusException(UNIMPLEMENTED.withDescription("Method llm.observability.v1.SpanIngestionService.RecordSpan is unimplemented"))
 
     final override fun bindService(): ServerServiceDefinition = builder(getServiceDescriptor())
