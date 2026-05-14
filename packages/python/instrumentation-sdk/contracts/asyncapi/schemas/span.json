@@ -96,7 +96,7 @@
       "minimum": 0
     },
     "attempted_models": {
-      "type": ["array", "null"],
+      "type": "array",
       "items": {
         "type": "string"
       }
