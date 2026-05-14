@@ -1,4 +1,4 @@
-name: Generate Protobuf SDKs (Caller)
+name: Generate Protobuf SDKs (Trigger)
 
 on:
   push:
@@ -10,6 +10,5 @@ on:
 
 jobs:
   call-generate:
-    # We call the workflow managed inside the package directory
-    uses: ./packages/python/instrumentation-sdk/.github/workflows/generate-proto-sdks.yml
+    uses: ./.github/workflows/reusable-generate-proto-sdks.yml
     secrets: inherit
