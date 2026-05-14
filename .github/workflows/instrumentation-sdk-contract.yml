@@ -19,12 +19,39 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
       - name: Install dependencies
         run: |
           cd packages/python/instrumentation-sdk
-          pip install pydantic
+          pip install pydantic PyYAML
 
-      - name: Run contract check
+      - name: Start Kafka Infrastructure
+        run: |
+          docker compose -f packages/python/instrumentation-sdk/deploy/docker/docker-compose.dev.yaml up -d kafka init-kafka
+          docker wait docker-init-kafka-1
+
+      - name: Run contract enforcement
         run: |
           cd packages/python/instrumentation-sdk
-          python scripts/check_contract.py
+          python3 scripts/check_contract.py
+          python3 tests/contract/test_registries.py
+
+      - name: Run integration tests
+        run: |
+          cd packages/python/instrumentation-sdk
+          python3 tests/integration/test_kafka_provisioning.py
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose -f packages/python/instrumentation-sdk/deploy/docker/docker-compose.dev.yaml down -v

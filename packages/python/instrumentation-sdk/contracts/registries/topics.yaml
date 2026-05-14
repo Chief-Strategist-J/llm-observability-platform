@@ -1,0 +1,25 @@
+# Kafka Topic Registry (Single Source of Truth for Provisioning)
+topics:
+  - name: llm.spans.raw.unvalidated
+    partitions: 3
+    replication_factor: 1
+    cleanup_policy: delete
+    description: Initial landing zone for raw spans from SDKs before structural validation.
+    
+  - name: llm.spans.raw
+    partitions: 3
+    replication_factor: 1
+    cleanup_policy: delete
+    description: Validated raw spans ready for downstream ingestion and sharding.
+    
+  - name: llm.spans.raw.dlq
+    partitions: 1
+    replication_factor: 1
+    cleanup_policy: delete
+    description: Dead Letter Queue for spans that failed structural or business validation.
+    
+  - name: llm.spans.sampled
+    partitions: 3
+    replication_factor: 1
+    cleanup_policy: delete
+    description: High-value sampled spans designated for quality analysis and embedding generation.

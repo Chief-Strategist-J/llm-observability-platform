@@ -1,0 +1,11 @@
+- model: gpt-4o
+  provider: openai
+  input_price_per_1m: 5.00
+  output_price_per_1m: 15.00
+  version: "2025-01-15"
+
+- model: gpt-3.5-turbo
+  provider: openai
+  input_price_per_1m: 0.50
+  output_price_per_1m: 1.50
+  version: "2024-05-13"
