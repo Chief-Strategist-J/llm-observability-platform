@@ -6,6 +6,10 @@ on:
     paths:
       - 'packages/python/instrumentation-sdk/contracts/proto/v1/**'
       - 'buf.gen.yaml'
+  pull_request:
+    paths:
+      - 'packages/python/instrumentation-sdk/contracts/proto/v1/**'
+      - 'buf.gen.yaml'
   workflow_dispatch:
 
 jobs:
