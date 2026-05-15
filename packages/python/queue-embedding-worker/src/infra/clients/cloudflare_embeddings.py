@@ -14,7 +14,7 @@ class CloudflareEmbeddingClient(EmbeddingProviderPort):
              return EmbeddingResponse(
                 embedding_key=stable_embedding_key(request.trace_id, request.span_id, request.text, prefix="emb_"),
                 dimensions=dimensions,
-                provider="cloudflare-mock",
+                provider="cloudflare",
             )
 
         model = request.model or "@cf/baai/bge-small-en-v1.5"
