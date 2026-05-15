@@ -33,12 +33,17 @@ jobs:
       - name: Install dependencies
         run: |
           cd packages/python/instrumentation-sdk
-          pip install pydantic PyYAML
+          pip install pydantic PyYAML pytest pytest-asyncio
 
       - name: Start Kafka Infrastructure
         run: |
           docker compose -f packages/python/instrumentation-sdk/deploy/docker/docker-compose.dev.yaml up -d kafka init-kafka
           docker wait docker-init-kafka-1
+
+      - name: Run unit tests
+        run: |
+          cd packages/python/instrumentation-sdk
+          python3 -m pytest tests/unit/ src/features/*/tests/unit/
 
       - name: Run contract enforcement
         run: |
