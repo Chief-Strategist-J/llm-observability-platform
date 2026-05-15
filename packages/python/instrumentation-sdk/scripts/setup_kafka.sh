@@ -26,3 +26,4 @@ create_topic "llm.spans.raw.unvalidated" 3 1
 create_topic "llm.spans.raw" 3 1
 create_topic "llm.spans.raw.dlq" 1 1
 create_topic "llm.spans.sampled" 3 1
+create_topic "llm.instrumentation.events" 3 1
