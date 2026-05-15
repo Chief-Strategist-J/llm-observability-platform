@@ -11,9 +11,12 @@ _PROVIDER_MAP = {
 }
 
 
-def resolve_embedding_provider(name: str) -> EmbeddingProviderPort:
+def resolve_embedding_provider(name: str, account_id: str = "", api_token: str = "") -> EmbeddingProviderPort:
     key = (name or "cloudflare").strip().lower()
     provider_cls = _PROVIDER_MAP.get(key)
     if provider_cls is None:
         raise ValueError(f"Unknown embedding provider '{name}'")
+    
+    if key == "cloudflare":
+        return provider_cls(account_id=account_id, api_token=api_token)
     return provider_cls()

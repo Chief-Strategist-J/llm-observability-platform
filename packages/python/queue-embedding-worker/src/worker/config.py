@@ -13,6 +13,7 @@ DEFAULT_EMBEDDING_PROVIDER = "cloudflare"
 @dataclass(frozen=True)
 class WorkerConfig:
     account_id: str
+    api_token: str
     queue_name: str
     embedding_dimensions: int
     concurrency: int
@@ -35,6 +36,7 @@ def load_config(env: dict[str, str] | None = None) -> WorkerConfig:
     source = env or os.environ
     return WorkerConfig(
         account_id=source.get("CF_ACCOUNT_ID", "local-account"),
+        api_token=source.get("CF_API_TOKEN", ""),
         queue_name=source.get("CF_QUEUE_NAME", "span-enrichment"),
         embedding_dimensions=_positive_int(source.get("EMBEDDING_DIMENSIONS", str(DEFAULT_EMBEDDING_DIMENSIONS)), "EMBEDDING_DIMENSIONS"),
         concurrency=_positive_int(source.get("WORKER_CONCURRENCY", str(DEFAULT_CONCURRENCY)), "WORKER_CONCURRENCY"),
