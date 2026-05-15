@@ -10,9 +10,7 @@ def create_app() -> FastAPI:
     instrument_app(app)
     return app
 
-# The global app instance is created here for ASGI servers.
-# To avoid side effects during tests, we can check for an environment variable.
-if os.getenv("SKIP_APP_INIT") != "true":
-    app = create_app()
+# Always define the app instance for ASGI servers like uvicorn
+app = create_app()
 
 # Build cache test
