@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Architecture**: Migrated to a feature-isolated structure following Hexagonal Architecture principles.
 - **Middleware**: Refactored `tracer_provider` isolation to support side-effect-free testing.
 
+### Fixed
+- **Kafka Provisioning**: Added missing `llm.instrumentation.events` topic to the automated setup scripts and docker-compose configurations, resolving integration test failures.
+
 ### Security
 - Added manual span attribute injection for protected services.
 - Isolated test telemetry using `InMemorySpanExporter` to prevent global state contamination.
