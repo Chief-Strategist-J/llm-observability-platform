@@ -1,7 +1,12 @@
-from pathlib import Path
+import os
 import re
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parents[3]
+CONTRACT_FILE = os.getenv("CONTRACTS_PATH", BASE_DIR / "contracts" / "jobs" / "enrich-span.yaml")
 
-CONTRACT_FILE = Path(__file__).resolve().parents[3] / "contracts" / "jobs" / "enrich-span.yaml"
+if not Path(CONTRACT_FILE).exists():
+    # Fallback for site-packages installation where contracts/ might be at /app/contracts
+    CONTRACT_FILE = Path("/app/contracts/jobs/enrich-span.yaml")
 
 
 class ContractValidationError(ValueError):

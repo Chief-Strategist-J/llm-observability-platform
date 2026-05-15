@@ -16,8 +16,9 @@ COPY pyproject.toml .
 RUN mkdir -p src/worker && touch src/worker/__init__.py
 RUN pip install . uvicorn fastapi
 
-# Now copy the real source code
+# Now copy the real source code and contracts
 COPY src/ src/
+COPY contracts/ contracts/
 RUN pip install . --no-deps
 
 # Expose the API port (for health/remote execution)
