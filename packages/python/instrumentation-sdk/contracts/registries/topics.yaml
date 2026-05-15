@@ -23,3 +23,9 @@ topics:
     replication_factor: 1
     cleanup_policy: delete
     description: High-value sampled spans designated for quality analysis and embedding generation.
+        
+  - name: llm.instrumentation.events
+    partitions: 1
+    replication_factor: 1
+    cleanup_policy: delete
+    description: Audit trail of instrumentation state changes across the fleet.
