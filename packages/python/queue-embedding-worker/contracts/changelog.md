@@ -13,5 +13,6 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - **Build System**: Migrated to a feature-isolated build structure to support efficient caching of dependencies.
 
-### Security
-- Isolated test environments using dedicated `Dockerfile.test`.
+### Fixed
+- **Contract Resolution**: Resolved a `FileNotFoundError` in containerized environments by implementing a resilient contract path resolution strategy.
+- **Image Completeness**: Ensured the `contracts/` directory is bundled in the Docker image to support runtime schema validation.
