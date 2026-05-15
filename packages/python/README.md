@@ -9,7 +9,8 @@ This guide covers the technical architecture and end-user usage for the Python-b
 - [2. End-User Usage Guide](#2-end-user-usage-guide)
   - [Installation](#installation)
   - [Basic Usage](#basic-usage)
-  - [Advanced: Manual Reporting](#advanced-manual-reporting)
+  - [Advanced Usage: Context Manager](#advanced-usage-context-manager)
+  - [Manual Reporting](#manual-reporting)
 - [3. Implementation Call Chain](#3-implementation-call-chain)
 
 ## 1. System Architecture
@@ -90,8 +91,27 @@ async def get_async_response(prompt: str):
     return await client.completions.create(...)
 ```
 
-### Advanced: Manual Reporting
-If you prefer not to use decorators, you can use the reporter manually.
+### Advanced Usage: Context Manager
+For callers who need to set metadata mid-call (e.g., after routing to a specific model or determining usage), use the `llm_span` context manager. It supports both synchronous and asynchronous usage.
+
+```python
+from instrumentation_sdk import llm_span
+
+async def my_handler(req):
+    # (1) Start a span with initial metadata
+    async with llm_span(model="gpt-4o", user_id=req.user_id) as span:
+        # (2) Perform your LLM call
+        response = await client.chat.completions.create(...)
+        
+        # (3) Update metadata mid-call
+        span.set_metadata("actual_model", response.model)
+        span.set_metadata("prompt_tokens", response.usage.prompt_tokens)
+        
+    # Span is automatically reported on exit (even if an error occurs)
+```
+
+### Manual Reporting
+If you prefer direct control over the span data, you can use the reporter manually.
 
 ```python
 from instrumentation_sdk import get_reporter
@@ -110,6 +130,7 @@ reporter.report({
 | Pipeline Stage | Method Call | Primary File |
 | :--- | :--- | :--- |
 | **Capture** | `@llm_observe` | `features/spans/decorator.py` |
+| **Manual Capture** | `llm_span()` | `features/manual_instrumentation/service.py` |
 | **Orchestration**| `handle_job()` | `worker/index.py` |
 | **Logic** | `enrich_span()` | `features/enrich_span/service.py` |
 | **Integration** | `create_embedding()` | `infra/clients/cloudflare_embeddings.py` |
