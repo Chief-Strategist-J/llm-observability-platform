@@ -13,3 +13,10 @@ events:
     schema_path: contracts/proto/v1/llm/observability/v1/span.proto
     version: v1
     description: Sampled version of the span, typically including full prompt/response text for intelligence layers.
+
+  - name: InstrumentationEvent
+    topic: llm.instrumentation.events
+    schema_type: protobuf
+    schema_path: contracts/proto/v1/llm/observability/v1/instrumentation.proto
+    version: v1
+    description: Lifecycle events for the instrumentation SDK (init, shutdown, errors).

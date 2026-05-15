@@ -62,6 +62,23 @@ services:
     volumes:
       - redis_data:/data
 
+  instrumentation-api:
+    build:
+      context: ../../../
+      dockerfile: packages/python/instrumentation-sdk/build/Dockerfile.dev
+    container_name: instrumentation-sdk-api-dev
+    volumes:
+      - ../../../packages/python/instrumentation-sdk:/app
+    ports:
+      - "8001:8000"
+    environment:
+      - DEPLOYMENT_ENV=dev
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    depends_on:
+      - kafka
+      - redis
+
+
   init-kafka:
     image: confluentinc/cp-kafka:7.4.0
     container_name: docker-init-kafka-1
@@ -76,6 +93,7 @@ services:
       kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --topic llm.spans.raw --partitions 3 --replication-factor 1
       kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --topic llm.spans.raw.dlq --partitions 1 --replication-factor 1
       kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --topic llm.spans.sampled --partitions 3 --replication-factor 1
+      kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --topic llm.instrumentation.events --partitions 1 --replication-factor 1
       echo 'Topics created successfully.'
       "
 

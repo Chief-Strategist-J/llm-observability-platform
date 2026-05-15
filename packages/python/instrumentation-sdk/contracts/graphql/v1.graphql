@@ -114,9 +114,27 @@ type RecordSpanPayload {
   span_warnings: [String!]!
 }
 
+type DetectionPayload {
+  provider: String!
+  model: String!
+}
+
 type Mutation {
   recordSpan(input: LLMSpanInput!): RecordSpanPayload!
+  
+  "Initialize auto-instrumentation"
+  initInstrumentation: RecordSpanPayload!
+  
+  "Disable all auto-instrumentation"
+  uninstrumentAll: RecordSpanPayload!
+  
+  "Detect provider and model from a sample request"
+  detectProvider(url: String!, body: String!): DetectionPayload!
+  
+  "Trigger a sample LLM call to verify instrumentation"
+  triggerTestCall(method: String!, provider: String!): RecordSpanPayload!
 }
+
 
 type Query {
   "Placeholder query to satisfy GraphQL syntax"
