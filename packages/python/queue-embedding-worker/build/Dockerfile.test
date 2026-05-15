@@ -14,8 +14,9 @@ COPY pyproject.toml .
 RUN mkdir -p src/worker && touch src/worker/__init__.py
 RUN pip install ".[dev]" uvicorn fastapi pytest-asyncio
 
-# Copy the real source code and tests
+# Copy the real source code, contracts, and tests
 COPY src/ src/
+COPY contracts/ contracts/
 COPY tests/ tests/
 
 RUN pip install . --no-deps

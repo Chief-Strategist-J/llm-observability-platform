@@ -15,8 +15,9 @@ COPY pyproject.toml .
 RUN mkdir -p src/worker && touch src/worker/__init__.py
 RUN pip install ".[dev]" uvicorn fastapi
 
-# Expose the API port
-EXPOSE 8000
+# Copy code and contracts
+COPY src/ src/
+COPY contracts/ contracts/
 
 # Command to run the API with hot-reload
 CMD ["uvicorn", "src.api.rest.v1.app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
