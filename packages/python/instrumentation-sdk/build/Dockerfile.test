@@ -1,0 +1,24 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml .
+
+# Create a dummy src directory to cache dependencies
+RUN mkdir -p src/instrumentation_sdk && touch src/instrumentation_sdk/__init__.py
+RUN pip install . pytest pytest-asyncio
+
+COPY src/ src/
+RUN pip install . --no-deps
+COPY tests/ tests/
+
+
+# Set environment variable to skip console exporter for cleaner test logs
+ENV SKIP_CONSOLE_EXPORTER=true
+ENV SKIP_APP_INIT=true
+
+CMD ["pytest"]

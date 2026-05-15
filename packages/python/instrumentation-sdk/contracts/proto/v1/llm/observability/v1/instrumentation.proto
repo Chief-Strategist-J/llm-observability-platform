@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package llm.observability.v1;
+
+option go_package = "github.com/llm-observability/platform/proto/v1";
+option java_package = "com.llmobservability.platform.v1";
+
+// InstrumentationStatus represents the current state of auto-instrumentation.
+enum InstrumentationStatus {
+  INSTRUMENTATION_STATUS_UNSPECIFIED = 0;
+  INSTRUMENTATION_STATUS_INITIALIZED = 1;
+  INSTRUMENTATION_STATUS_DISABLED = 2;
+  INSTRUMENTATION_STATUS_PARTIAL = 3;
+}
+
+// Service definition for remote instrumentation control
+service InstrumentationControlService {
+  rpc InitInstrumentation(InitInstrumentationRequest) returns (InstrumentationResponse);
+  rpc DisableInstrumentation(DisableInstrumentationRequest) returns (InstrumentationResponse);
+  rpc GetStatus(GetStatusRequest) returns (InstrumentationResponse);
+  rpc DetectProvider(DetectProviderRequest) returns (DetectProviderResponse);
+  rpc TriggerTestCall(TriggerTestCallRequest) returns (InstrumentationResponse);
+}
+
+message InitInstrumentationRequest {
+  string service_name = 1;
+  string environment = 2;
+}
+
+message DisableInstrumentationRequest {}
+
+message GetStatusRequest {}
+
+message DetectProviderRequest {
+  string url = 1;
+  string body = 2;
+}
+
+message DetectProviderResponse {
+  string provider = 1;
+  string model = 2;
+}
+
+message TriggerTestCallRequest {
+  string method = 1;
+  string provider = 2;
+}
+
+message InstrumentationResponse {
+
+  bool success = 1;
+  string message = 2;
+  InstrumentationStatus status = 3;
+}
+
+// Event for publishing instrumentation state changes to Kafka
+message InstrumentationEvent {
+  string event_id = 1;
+  string timestamp_utc = 2;
+  string service_name = 3;
+  InstrumentationStatus action = 4;
+  string metadata = 5; // JSON blob for extra details
+}

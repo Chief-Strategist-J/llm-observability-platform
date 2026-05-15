@@ -8,27 +8,29 @@ This guide covers the technical architecture and end-user usage for the Python-b
   - [Technical Sequence](#technical-sequence)
 - [2. End-User Usage Guide](#2-end-user-usage-guide)
   - [Installation](#installation)
-  - [Basic Usage](#basic-usage)
+  - [Auto-Instrumentation (Zero-Code Changes)](#auto-instrumentation-zero-code-changes)
+  - [Remote Management API (REST)](#remote-management-api-rest)
+  - [Basic Usage: Decorators](#basic-usage-decorators)
   - [Advanced Usage: Context Manager](#advanced-usage-context-manager)
-  - [Manual Reporting](#manual-reporting)
+  - [Docker Deployment](#docker-deployment)
 - [3. Implementation Call Chain](#3-implementation-call-chain)
 
 ## 1. System Architecture
 
 ### High-Level Data Flow
-This diagram illustrates the lifecycle of a span from application capture to background enrichment.
+This diagram illustrates the lifecycle of a span from application capture to background enrichment. The SDK now includes a REST Management API for remote control and discovery.
 
 ```text
 ┌────────────────┐          ┌──────────────────┐          ┌───────────────────┐
 │   User App     │ capture  │ instrumentation  │  queue   │  Cloudflare Queue │
 │  (Python/JS)   ├─────────>│      -sdk        ├─────────>│ (span-enrichment) │
-└────────────────┘          └──────────────────┘          └─────────┬─────────┘
-                                                                    │
-                                                                    │ trigger
-                                                                    v
+└────────────────┘          └─────────┬────────┘          └─────────┬─────────┘
+                                      │                             │
+                                      │ REST API (8000)             │ trigger
+                                      v                             v
 ┌────────────────┐          ┌──────────────────┐          ┌───────────────────┐
-│ Analytics DB   │ storage  │ Enrichment Result│ response │  queue-embedding  │
-│ (ClickHouse)   │<─────────┤(EnrichSpanResult)│<─────────┤      -worker      │
+│ Analytics DB   │ storage  │  Remote Control  │ response │  queue-embedding  │
+│ (ClickHouse)   │<─────────┤  (Init/Detect)   │<─────────┤      -worker      │
 └────────────────┘          └──────────────────┘          └─────────┬─────────┘
                                                                     │
                                                                     │ HTTP call
@@ -40,27 +42,25 @@ This diagram illustrates the lifecycle of a span from application capture to bac
 ```
 
 ### Technical Sequence
+The SDK integrates with OpenTelemetry (OTEL) for standardized telemetry collection.
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant App as Application
-    participant SDK as instrumentation-sdk
+    participant SDK as instrumentation-sdk (REST)
+    participant OTEL as OTEL Collector
     participant CFQ as Cloudflare Queue
-    participant WRK as embedding-worker
-    participant AI as Cloudflare Workers AI
 
-    Note over App, SDK: Capture Phase
+    Note over App, SDK: Management Phase
+    App->>SDK: POST /instrumentation/detect
+    SDK-->>App: {provider: "openai", model: "gpt-4"}
+    App->>SDK: POST /instrumentation/init
+
+    Note over App, OTEL: Capture Phase
     App->>SDK: @llm_observe()
-    SDK->>SDK: Construct EnrichSpanPayload
+    SDK->>OTEL: Export Span (OTLP/gRPC)
     SDK->>CFQ: push_to_queue(payload)
-
-    Note over CFQ, WRK: Enrichment Phase
-    CFQ->>WRK: Job Trigger (enrich_span)
-    WRK->>AI: httpx.post(/ai/run/model)
-    AI-->>WRK: Vector Response
-    WRK->>WRK: Generate stable_embedding_key
-    WRK-->>App: Save EnrichSpanResult to Analytics
 ```
 
 ## 2. End-User Usage Guide
@@ -72,8 +72,39 @@ The `instrumentation-sdk` is designed to be developer-friendly, requiring minima
 pip install instrumentation-sdk
 ```
 
-### Basic Usage
-Use the `@llm_observe` decorator to automatically track latency, status, and metadata for any LLM interaction.
+### Auto-Instrumentation (Zero-Code Changes)
+The fastest way to get observability is to use auto-instrumentation. This patches the underlying HTTP calls of popular LLM clients transparently.
+
+```python
+from instrumentation_sdk import init_auto_instrumentation
+
+# Initialize at the start of your application
+init_auto_instrumentation()
+
+# Now any call to OpenAI, Anthropic, LiteLLM, or LangChain is tracked automatically
+import openai
+client = openai.AsyncOpenAI()
+response = await client.chat.completions.create(model="gpt-4o", messages=[...])
+```
+
+**Supported Providers:**
+- **OpenAI**: `openai.AsyncOpenAI`
+- **Anthropic**: `anthropic.AsyncAnthropic`
+- **LiteLLM**: `litellm.acompletion`
+- **LangChain**: Any model inheriting from `BaseChatModel` (via `ainvoke`)
+
+### Remote Management API (REST)
+The SDK provides a built-in FastAPI-based management layer for remote orchestration.
+
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/instrumentation/init` | POST | Remotely initialize auto-instrumentation. |
+| `/instrumentation/uninstrument` | POST | Disable all active instrumentation. |
+| `/instrumentation/detect` | POST | Discovery: Detect provider/model from a sample request body. |
+| `/instrumentation/test-call` | POST | Verification: Trigger a sample LLM call to verify end-to-end tracing. |
+
+### Basic Usage: Decorators
+Use the `@llm_observe` decorator to manually track functions.
 
 ```python
 from instrumentation_sdk import llm_observe
@@ -125,13 +156,36 @@ reporter.report({
 })
 ```
 
+### Docker Deployment
+The instrumentation SDK API is available as a **Public Docker Image**.
+
+**Image Name:** `chiefj/instrumentation-sdk-api:latest`
+
+To run the management API locally:
+```bash
+docker run -p 8000:8000 \
+  -e DEPLOYMENT_ENV=production \
+  -e KAFKA_BOOTSTRAP_SERVERS=your-kafka:9092 \
+  chiefj/instrumentation-sdk-api:latest
+```
+
+For development with hot-reloading, use the provided Docker Compose:
+```bash
+docker compose -f packages/python/instrumentation-sdk/deploy/docker/docker-compose.dev.yaml up instrumentation-api
+```
+
 ## 3. Implementation Call Chain
 
 | Pipeline Stage | Method Call | Primary File |
 | :--- | :--- | :--- |
-| **Capture** | `@llm_observe` | `features/spans/decorator.py` |
-| **Manual Capture** | `llm_span()` | `features/manual_instrumentation/service.py` |
+| **REST API** | `create_app()` | `api/rest/v1/app.py` |
+| **Management** | `init_instrumentation()` | `api/rest/v1/handlers/instrumentation.py` |
+| **Tracing** | `instrument_app()` | `infra/tracing/middleware.py` |
+| **Auto-Capture** | `init_auto_instrumentation()` | `features/auto_instrumentation/index.py` |
+| **Decorator** | `@llm_observe` | `features/spans/decorator.py` |
+| **Context Manager** | `llm_span()` | `features/manual_instrumentation/service.py` |
 | **Orchestration**| `handle_job()` | `worker/index.py` |
 | **Logic** | `enrich_span()` | `features/enrich_span/service.py` |
 | **Integration** | `create_embedding()` | `infra/clients/cloudflare_embeddings.py` |
 | **Identity** | `stable_embedding_key()`| `shared/utils/hash.py` |
+

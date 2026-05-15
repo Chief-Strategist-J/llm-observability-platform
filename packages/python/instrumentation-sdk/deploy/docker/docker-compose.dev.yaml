@@ -62,6 +62,23 @@ services:
     volumes:
       - redis_data:/data
 
+  instrumentation-api:
+    build:
+      context: ../../../
+      dockerfile: packages/python/instrumentation-sdk/build/Dockerfile.dev
+    container_name: instrumentation-sdk-api-dev
+    volumes:
+      - ../../../packages/python/instrumentation-sdk:/app
+    ports:
+      - "8001:8000"
+    environment:
+      - DEPLOYMENT_ENV=dev
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    depends_on:
+      - kafka
+      - redis
+
+
   init-kafka:
     image: confluentinc/cp-kafka:7.4.0
     container_name: docker-init-kafka-1
