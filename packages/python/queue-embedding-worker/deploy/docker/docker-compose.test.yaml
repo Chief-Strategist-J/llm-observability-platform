@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  test-runner:
+    build:
+      context: ../../../
+      dockerfile: packages/python/queue-embedding-worker/build/Dockerfile.test
+    container_name: queue-embedding-worker-test-runner
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SKIP_CONSOLE_EXPORTER=true

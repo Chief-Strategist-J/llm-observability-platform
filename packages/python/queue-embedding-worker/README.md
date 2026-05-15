@@ -205,20 +205,53 @@ Use tests in `tests/contracts/` to catch schema drift.
 
 ---
 
-## Docker
+---
 
-### Build
+## Deployment (Docker)
+
+### Build & Deploy
+The worker is fully containerized and pushed to Docker Hub.
 
 ```bash
-cd python/queue-embedding-worker
-docker build -t queue-embedding-worker:local .
+# Set your PAT
+export DOCKER_PAT=your_pat
+
+# Run deployment script (builds, tags, and pushes)
+bash scripts/deploy_docker.sh
 ```
 
-### Run with compose
+### Run Locally (Docker Compose)
+Use the development compose file for hot-reloading:
 
 ```bash
-cd python/queue-embedding-worker
-docker compose up --build
+docker compose -f deploy/docker/docker-compose.dev.yaml up --build
+```
+
+The management API will be available at `http://localhost:8002`.
+
+---
+
+## Remote Management API (REST)
+The worker now includes a FastAPI management layer (port 8000 in prod).
+
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/health` | GET | Check worker status and config. |
+| `/execute` | POST | Trigger a dry-run job execution. |
+
+### Example Execution
+```bash
+curl -X POST http://localhost:8002/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "job_name": "enrich-span",
+    "message": {
+      "trace_id": "t1",
+      "span_id": "s1",
+      "model": "text-embedding-3-small",
+      "text": "hello world"
+    }
+  }'
 ```
 
 ---

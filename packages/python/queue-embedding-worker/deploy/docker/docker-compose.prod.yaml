@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  embedding-worker:
+    build:
+      context: ../../../
+      dockerfile: packages/python/queue-embedding-worker/build/Dockerfile
+    container_name: queue-embedding-worker
+    ports:
+      - "8000:8000"
+    environment:
+      - DEPLOYMENT_ENV=production
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
+    restart: always
