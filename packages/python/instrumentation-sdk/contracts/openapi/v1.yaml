@@ -13,6 +13,8 @@ paths:
     post:
       summary: Ingest a new LLM observability span
       operationId: recordSpan
+      tags:
+        - Ingestion
       requestBody:
         required: true
         content:
@@ -48,7 +50,108 @@ paths:
                     type: string
                     example: "RULE-V-02"
 
+  /instrumentation/init:
+    post:
+      summary: Initialize auto-instrumentation
+      operationId: initInstrumentation
+      tags:
+        - Management
+      responses:
+        '200':
+          description: Auto-instrumentation initialized successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+
+  /instrumentation/uninstrument:
+    post:
+      summary: Disable all auto-instrumentation
+      operationId: uninstrumentAll
+      tags:
+        - Management
+      responses:
+        '200':
+          description: All instrumentation disabled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+
+  /instrumentation/detect:
+    post:
+      summary: Detect provider and model from a sample request
+      operationId: detectProvider
+      tags:
+        - Discovery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  example: "https://api.openai.com/v1/chat/completions"
+                body:
+                  type: string
+                  example: '{"model": "gpt-4"}'
+      responses:
+        '200':
+          description: Detection result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  provider:
+                    type: string
+                    example: "openai"
+                  model:
+                    type: string
+                    example: "gpt-4"
+
+  /instrumentation/test-call:
+    post:
+      summary: Trigger a sample LLM call to verify instrumentation
+      operationId: triggerTestCall
+      tags:
+        - Verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                method:
+                  type: string
+                  enum: [sdk, httpx, requests]
+                provider:
+                  type: string
+                  enum: [openai, anthropic]
+      responses:
+        '200':
+          description: Test call completed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
 components:
   schemas:
+    StatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
     LLMSpan:
       $ref: '../asyncapi/schemas/span.json'

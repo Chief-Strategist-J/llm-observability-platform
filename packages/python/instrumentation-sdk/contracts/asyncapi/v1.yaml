@@ -16,6 +16,11 @@ channels:
     publish:
       message:
         $ref: '#/components/messages/SpanMessage'
+  llm.instrumentation.events:
+    description: Topic for instrumentation state changes and management events.
+    publish:
+      message:
+        $ref: '#/components/messages/InstrumentationEvent'
 
 components:
   messages:
@@ -26,3 +31,17 @@ components:
       contentType: application/json
       payload:
         $ref: 'schemas/span.json'
+    InstrumentationEvent:
+      name: InstrumentationEvent
+      title: Instrumentation State Change
+      summary: Emitted when auto-instrumentation is initialized or disabled.
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          event_id: { type: string }
+          timestamp_utc: { type: string }
+          service_name: { type: string }
+          action: { type: string, enum: [INITIALIZED, DISABLED] }
+          metadata: { type: string }
+

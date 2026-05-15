@@ -33,7 +33,8 @@ jobs:
       - name: Install dependencies
         run: |
           cd packages/python/instrumentation-sdk
-          pip install pydantic PyYAML pytest pytest-asyncio
+          pip install .
+          pip install pytest pytest-asyncio
 
       - name: Start Kafka Infrastructure
         run: |
@@ -50,11 +51,14 @@ jobs:
           cd packages/python/instrumentation-sdk
           python3 scripts/check_contract.py
           python3 tests/contract/test_registries.py
+          python3 -m pytest tests/contract/api/
 
       - name: Run integration tests
         run: |
           cd packages/python/instrumentation-sdk
           python3 tests/integration/test_kafka_provisioning.py
+          SKIP_CONSOLE_EXPORTER=true python3 -m pytest tests/integration/api/
+
 
       - name: Cleanup
         if: always()
