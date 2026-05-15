@@ -101,18 +101,24 @@ Client / Queue Event
 
 ---
 
-## Configuration
-
 | Variable | Default | Description |
 |---|---|---|
-| `CF_ACCOUNT_ID` | `local-account` | Cloudflare account identifier for deployment context |
-| `CF_QUEUE_NAME` | `span-enrichment` | Queue name consumed by worker |
-| `EMBEDDING_DIMENSIONS` | `1536` | Output dimensions metadata |
-| `WORKER_CONCURRENCY` | `5` | Max concurrent worker slots |
-| `WORKER_RATE_LIMIT_PER_SEC` | `50` | Rate guardrail |
-| `WORKER_BACKOFF_MS` | `500` | Retry backoff metadata |
+| `CF_ACCOUNT_ID` | `local-account` | Cloudflare account identifier for Workers AI |
+| `CF_API_TOKEN` | - | Cloudflare API Token with Workers AI permissions |
 | `EMBEDDING_PROVIDER` | `cloudflare` | Provider adapter key: `cloudflare` / `openai` / `mock` |
+| `EMBEDDING_DIMENSIONS` | `1536` | Output dimensions (default for text-embedding-3-small) |
 | `DEPLOYMENT_ENV` | `dev` | Tracing attribute value |
+
+### Cloudflare Setup
+To use the `cloudflare` provider, you must provide your account credentials:
+
+```bash
+docker run -d \
+  -e CF_ACCOUNT_ID="your_account_id" \
+  -e CF_API_TOKEN="your_api_token" \
+  -e EMBEDDING_PROVIDER="cloudflare" \
+  chiefj/queue-embedding-worker:latest
+```
 
 ---
 
