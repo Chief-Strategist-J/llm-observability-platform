@@ -20,6 +20,7 @@ service InstrumentationControlService {
   rpc GetStatus(GetStatusRequest) returns (InstrumentationResponse);
   rpc DetectProvider(DetectProviderRequest) returns (DetectProviderResponse);
   rpc TriggerTestCall(TriggerTestCallRequest) returns (InstrumentationResponse);
+  rpc CountTokens(CountTokensRequest) returns (CountTokensResponse);
 }
 
 message InitInstrumentationRequest {
@@ -60,4 +61,15 @@ message InstrumentationEvent {
   string service_name = 3;
   InstrumentationStatus action = 4;
   string metadata = 5; // JSON blob for extra details
+}
+
+message CountTokensRequest {
+  string prompt = 1;
+  string model = 2;
+  string provider = 3;
+}
+
+message CountTokensResponse {
+  int32 tokens = 1;
+  string method = 2;
 }

@@ -136,7 +136,13 @@ type Mutation {
 }
 
 
+type TokenCountPayload {
+  tokens: Int!
+  method: String!
+}
+
 type Query {
   "Placeholder query to satisfy GraphQL syntax"
   _dummy: Boolean
+  countTokens(prompt: String!, model: String!, provider: String): TokenCountPayload!
 }

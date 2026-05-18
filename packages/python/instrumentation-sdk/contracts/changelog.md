@@ -4,6 +4,18 @@ All notable changes to the `instrumentation-sdk` package will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-05-18
+
+### Added
+- **Token Counting**: Implemented pre-call token counting utilizing `tiktoken` with fallback character-based heuristics.
+  - Supports plain text string prompts, complex nested chat message lists, and OpenAI tile-based vision token calculation with pure-Python PNG/JPEG/GIF dimension parsing.
+  - Automatically records `prompt_tokens` and `token_count_method` inside manual spans via `llm_span_with_tokens`.
+- **REST API Endpoint**: Exposed `POST /v1/token-counting/count` to allow remote token calculation.
+- **Contract-First Support**: Added `/token-counting/count` path definition to the OpenAPI v1.yaml contract.
+
+### Changed
+- **Public API Namespace**: Exposed `count_tokens` and `llm_span_with_tokens` directly at the package root level.
+
 ## [1.1.0] - 2026-05-15
 
 ### Added

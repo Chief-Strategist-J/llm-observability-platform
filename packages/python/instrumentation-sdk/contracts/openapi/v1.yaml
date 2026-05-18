@@ -141,8 +141,49 @@ paths:
                 properties:
                   success:
                     type: boolean
-                  message:
+  /token-counting/count:
+    post:
+      summary: Count prompt tokens using tiktoken or model family heuristics
+      operationId: countTokens
+      tags:
+        - Utilities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - prompt
+                - model
+              properties:
+                prompt:
+                  oneOf:
+                    - type: string
+                    - type: array
+                      items:
+                        type: object
+                  description: Prompt string or list of chat messages or image contents
+                model:
+                  type: string
+                  example: "gpt-4"
+                provider:
+                  type: string
+                  example: "openai"
+      responses:
+        '200':
+          description: Successful token count calculation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tokens:
+                    type: integer
+                    example: 10
+                  method:
                     type: string
+                    example: "tiktoken"
 
 components:
   schemas:
