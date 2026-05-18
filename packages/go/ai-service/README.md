@@ -4,6 +4,96 @@ This service acts as an AI Orchestrator that integrates with Cloudflare's AI Gat
 
 ---
 
+## Architecture Flow
+
+The following diagram illustrates the HTTP request routing, Dependency Injection layout, Port/Adapter boundary, and external integration points of the AI Orchestrator:
+
+```
+                               +---------------------------------------------+
+                               |                 HTTP Client                 |
+                               +---------------------------------------------+
+                                      |                               ^
+                   POST /chat/persistent                              | Response JSON
+                                      v                               |
++------------------------------------------------------------------------------------+
+|  AI SERVICE                                                                        |
+|                                                                                    |
+|  +--------------------+             +------------------+             +----------+  |
+|  |    HTTP Router     |------------>|   AI Handlers    |------------>| Provider |  |
+|  |     (Router)       |             |   (Controller)   |             |   (DI)   |  |
+|  +--------------------+             +------------------+             +----------+  |
+|                                              |                                     |
+|                                              v                                     |
+|                                 +-------------------------+                        |
+|                                 |     AI Orchestrator     |                        |
+|                                 |        (Service)        |                        |
+|                                 +-------------------------+                        |
+|                                    /                     \                         |
+|                      1. Cosine Similarity           2. Chat Inference & Embedding  |
+|                                 /                           \                      |
+|                                v                             v                     |
+|                   +-------------------------+   +-------------------------+        |
+|                   |       Memory Repo       |   |   Cloudflare Adapter    |        |
+|                   |     (In-Memory DB)      |   |    (HTTP Rest Client)   |        |
+|                   +-------------------------+   +-------------------------+        |
++------------------------------------------------------------------------------------+
+                                                               |
+                                                       HTTP / HTTPS API
+                                                               v
+                                                      +------------------+
+                                                      |  Cloudflare AI   |
+                                                      |  Gateway/Workers |
+                                                      +------------------+
+```
+
+---
+
+## Decision Tree (Chat Flow Execution)
+
+This decision flowchart outlines the execution path of stateless vs. stateful chat requests:
+
+```
+                       [ Incoming Chat Request ]
+                                   |
+                          Is Route Persistent?
+                         /                    \
+                       No                     Yes
+                       /                        \
+           +----------------------+       +------------------------------------+
+           | Stateless Chat Flow  |       |        Stateful Chat Flow          |
+           +----------------------+       +------------------------------------+
+                      |                                      |
+                      |                         Extract user_id & message
+                      |                                      |
+                      |                         Generate embedding for message
+                      |                                      |
+                      v                         Query Memory Repo for user_id
+           Send prompt to Cloudflare            (Fetch historical context)
+                      |                                      |
+                      |                         Retrieve top K similar memories
+                      |                         (Cosine Similarity Threshold)
+                      v                                      |
+              Return AI response                 Inject memories as context
+                      |                         into prompt message history
+                      |                                      |
+                      v                         Send prompt + history to Cloudflare
+                 [ End Chat ]                                |
+                                                Receive LLM AI response
+                                                             |
+                                                Generate embedding for response
+                                                             |
+                                                Store both User & Assistant
+                                                turns in Memory Repo
+                                                             |
+                                                             v
+                                                     Return AI response
+                                                             |
+                                                             v
+                                                        [ End Chat ]
+```
+
+---
+
 ## Folder Structure
 
 ```
