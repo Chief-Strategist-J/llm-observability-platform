@@ -15,24 +15,24 @@ import 'dart:core' as $core;
 
 import 'package:protobuf/protobuf.dart' as $pb;
 
-import 'span.pb.dart' as $0;
+import 'span.pb.dart' as $1;
 import 'span.pbjson.dart';
 
 export 'span.pb.dart';
 
 abstract class SpanIngestionServiceBase extends $pb.GeneratedService {
-  $async.Future<$0.RecordSpanResponse> recordSpan($pb.ServerContext ctx, $0.RecordSpanRequest request);
+  $async.Future<$1.RecordSpanResponse> recordSpan($pb.ServerContext ctx, $1.RecordSpanRequest request);
 
   $pb.GeneratedMessage createRequest($core.String methodName) {
     switch (methodName) {
-      case 'RecordSpan': return $0.RecordSpanRequest();
+      case 'RecordSpan': return $1.RecordSpanRequest();
       default: throw $core.ArgumentError('Unknown method: $methodName');
     }
   }
 
   $async.Future<$pb.GeneratedMessage> handleCall($pb.ServerContext ctx, $core.String methodName, $pb.GeneratedMessage request) {
     switch (methodName) {
-      case 'RecordSpan': return this.recordSpan(ctx, request as $0.RecordSpanRequest);
+      case 'RecordSpan': return this.recordSpan(ctx, request as $1.RecordSpanRequest);
       default: throw $core.ArgumentError('Unknown method: $methodName');
     }
   }
