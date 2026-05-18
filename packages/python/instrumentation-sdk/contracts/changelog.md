@@ -4,6 +4,15 @@ All notable changes to the `instrumentation-sdk` package will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-05-18
+
+### Added
+- **All-in-One Standalone Telemetry & API Container**: Bundled the FastAPI API server, Grafana, and Tempo inside a single, unified Docker image.
+  - Automatically provisions Tempo as a read-only trace datasource at container startup.
+  - Ephemeral block and WAL storage configured under `/tmp/tempo` inside the container.
+  - Orchestrates background Tempo, Grafana, and frontend Uvicorn processes seamlessly via `entrypoint.sh`.
+  - Pushed to Docker Hub registry as a production-ready image under the tag `chiefj/instrumentation-sdk-api:unstable` for one-command user deployment.
+
 ## [1.3.0] - 2026-05-18
 
 ### Added
