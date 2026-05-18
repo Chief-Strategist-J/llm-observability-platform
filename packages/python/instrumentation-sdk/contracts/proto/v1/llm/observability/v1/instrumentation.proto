@@ -15,11 +15,12 @@ enum InstrumentationStatus {
 
 // Service definition for remote instrumentation control
 service InstrumentationControlService {
-  rpc InitInstrumentation(InitInstrumentationRequest) returns (InstrumentationResponse);
-  rpc DisableInstrumentation(DisableInstrumentationRequest) returns (InstrumentationResponse);
-  rpc GetStatus(GetStatusRequest) returns (InstrumentationResponse);
+  rpc InitInstrumentation(InitInstrumentationRequest) returns (InitInstrumentationResponse);
+  rpc DisableInstrumentation(DisableInstrumentationRequest) returns (DisableInstrumentationResponse);
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
   rpc DetectProvider(DetectProviderRequest) returns (DetectProviderResponse);
-  rpc TriggerTestCall(TriggerTestCallRequest) returns (InstrumentationResponse);
+  rpc TriggerTestCall(TriggerTestCallRequest) returns (TriggerTestCallResponse);
+  rpc TriggerTestStreamCall(TriggerTestStreamCallRequest) returns (TriggerTestStreamCallResponse);
   rpc CountTokens(CountTokensRequest) returns (CountTokensResponse);
 }
 
@@ -47,8 +48,43 @@ message TriggerTestCallRequest {
   string provider = 2;
 }
 
+message TriggerTestStreamCallRequest {
+  string provider = 1;
+  repeated string chunks = 2;
+}
+
 message InstrumentationResponse {
 
+  bool success = 1;
+  string message = 2;
+  InstrumentationStatus status = 3;
+}
+
+message InitInstrumentationResponse {
+  bool success = 1;
+  string message = 2;
+  InstrumentationStatus status = 3;
+}
+
+message DisableInstrumentationResponse {
+  bool success = 1;
+  string message = 2;
+  InstrumentationStatus status = 3;
+}
+
+message GetStatusResponse {
+  bool success = 1;
+  string message = 2;
+  InstrumentationStatus status = 3;
+}
+
+message TriggerTestCallResponse {
+  bool success = 1;
+  string message = 2;
+  InstrumentationStatus status = 3;
+}
+
+message TriggerTestStreamCallResponse {
   bool success = 1;
   string message = 2;
   InstrumentationStatus status = 3;

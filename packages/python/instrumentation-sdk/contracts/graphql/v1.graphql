@@ -133,6 +133,9 @@ type Mutation {
   
   "Trigger a sample LLM call to verify instrumentation"
   triggerTestCall(method: String!, provider: String!): RecordSpanPayload!
+
+  "Trigger a mock streaming call to verify streaming instrumentation"
+  triggerTestStreamCall(provider: String!, chunks: [String!]): RecordSpanPayload!
 }
 
 
