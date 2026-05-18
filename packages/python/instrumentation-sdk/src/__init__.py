@@ -10,6 +10,7 @@ from .features.auto_instrumentation import (
     trigger_test_call
 )
 from .features.token_counting import count_tokens, llm_span_with_tokens
+from .features.streaming import llm_streaming_span, wrap_stream, wrap_async_stream
 
 __all__ = [
     "llm_observe",
@@ -24,5 +25,8 @@ __all__ = [
     "detect_llm_call",
     "trigger_test_call",
     "count_tokens",
-    "llm_span_with_tokens"
+    "llm_span_with_tokens",
+    "llm_streaming_span",
+    "wrap_stream",
+    "wrap_async_stream"
 ]
