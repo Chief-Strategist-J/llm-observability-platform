@@ -1,5 +1,6 @@
 import time
 from typing import Any, Callable, Optional
+from opentelemetry import trace
 from ..manual_instrumentation.service import LLMSpanContext
 from ..spans.globals import get_reporter
 from .ports import TokenCounterPort, ObservableSpanPort
@@ -37,22 +38,38 @@ class LLMStreamingSpanContext(LLMSpanContext):
         self._stream_finalized = False
 
     def __enter__(self) -> "LLMStreamingSpanContext":
+        super().__enter__()
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        pass
+        if exc_type is not None:
+            self.finalize_stream(exc_type=exc_type)
 
     async def __aenter__(self) -> "LLMStreamingSpanContext":
+        await super().__aenter__()
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        pass
+        if exc_type is not None:
+            await self.finalize_stream_async(exc_type=exc_type)
 
     def finalize_stream(self, exc_type: Any = None) -> None:
         if self._stream_finalized:
             return
         self._stream_finalized = True
         self._finish(exc_type)
+        if self._otel_span:
+            if exc_type:
+                self._otel_span.set_status(trace.Status(trace.StatusCode.ERROR, str(exc_type)))
+            else:
+                self._otel_span.set_status(trace.Status(trace.StatusCode.OK))
+            latency_ms = self._data.get("latency_ms_total", 0)
+            self._otel_span.set_attribute("llm.latency_ms_total", latency_ms)
+            self._otel_span.set_attribute("llm.status", self._data["status"])
+            for k, v in self._data.items():
+                if isinstance(v, (str, bool, int, float)):
+                    self._otel_span.set_attribute(f"llm.{k}", v)
+            self._otel_context.__exit__(None, None, None)
         reporter = get_reporter()
         reporter.report(self._data)
 
@@ -61,6 +78,18 @@ class LLMStreamingSpanContext(LLMSpanContext):
             return
         self._stream_finalized = True
         self._finish(exc_type)
+        if self._otel_span:
+            if exc_type:
+                self._otel_span.set_status(trace.Status(trace.StatusCode.ERROR, str(exc_type)))
+            else:
+                self._otel_span.set_status(trace.Status(trace.StatusCode.OK))
+            latency_ms = self._data.get("latency_ms_total", 0)
+            self._otel_span.set_attribute("llm.latency_ms_total", latency_ms)
+            self._otel_span.set_attribute("llm.status", self._data["status"])
+            for k, v in self._data.items():
+                if isinstance(v, (str, bool, int, float)):
+                    self._otel_span.set_attribute(f"llm.{k}", v)
+            self._otel_context.__exit__(None, None, None)
         reporter = get_reporter()
         await reporter.report_async(self._data)
 

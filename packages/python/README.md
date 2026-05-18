@@ -159,17 +159,26 @@ reporter.report({
 ```
 
 ### Docker Deployment
-The instrumentation SDK API is available as a **Public Docker Image**.
+The instrumentation SDK API is available as a production-ready, fully self-contained **All-in-One Standalone Observability Container**. This container bundles the FastAPI application, Grafana, and Tempo into a single image, eliminating the need to set up external databases or visualizers manually.
 
-**Image Name:** `chiefj/instrumentation-sdk-api:latest`
+**Image Name:** `chiefj/instrumentation-sdk-api:unstable` (or `chiefj/instrumentation-sdk-api:latest`)
 
-To run the management API locally:
+To pull and run the fully integrated all-in-one container locally:
 ```bash
-docker run -p 8000:8000 \
-  -e DEPLOYMENT_ENV=production \
-  -e KAFKA_BOOTSTRAP_SERVERS=your-kafka:9092 \
-  chiefj/instrumentation-sdk-api:latest
+# Pull the latest standalone image
+docker pull chiefj/instrumentation-sdk-api:unstable
+
+# Run the unified all-in-one telemetry stack
+docker run -d \
+  -p 8002:8000 \
+  -p 3002:3000 \
+  --name instrumentation-api-allinone \
+  chiefj/instrumentation-sdk-api:unstable
 ```
+
+Once running:
+* **API Endpoints**: Accessible at `http://localhost:8002`
+* **Grafana Portal**: Accessible at `http://localhost:3002` (Tempo is automatically provisioned as a read-only datasource and ready to query!)
 
 For development with hot-reloading, use the provided Docker Compose:
 ```bash
