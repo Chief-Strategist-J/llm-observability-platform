@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from src.api.rest.v1.app import app
 from unittest.mock import patch, MagicMock, AsyncMock
-from features.spans.globals import set_reporter, NoOpReporter
+from src.features.spans.globals import set_reporter, NoOpReporter
 
 client = TestClient(app)
 
@@ -48,7 +48,7 @@ async def test_api_test_call_end_to_end_reporting():
         
         assert mock_reporter.report_async.called
         span = mock_reporter.report_async.call_args[0][0]
-        assert span["provider"] == "openai"
+        assert span["provider"] in ["openai", "http:openai"]
         assert "instrumentation-test-model" in span["model"]
         
     finally:

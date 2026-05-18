@@ -2,14 +2,15 @@ import unittest
 import sys
 import os
 
-# Add relevant directories to sys.path
-sys.path.append(os.path.abspath("packages/python/instrumentation-sdk/src"))
-sys.path.append(os.path.abspath("packages/python/instrumentation-sdk/src/infra/clients/v1/llm/observability/v1"))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+package_root = os.path.abspath(os.path.join(current_dir, "../.."))
+sys.path.append(os.path.join(package_root, "src"))
+sys.path.append(os.path.join(package_root, "src/infra/clients/v1/llm/observability/v1"))
 
 import uuid
 from datetime import datetime, timezone
 from google.protobuf import json_format
-from features.spans.types import LLMSpan, FinishReason, Environment, TokenCountMethod
+from src.features.spans.types import LLMSpan, FinishReason, Environment, TokenCountMethod
 import span_pb2
 
 class TestProtoParity(unittest.TestCase):
