@@ -4,6 +4,19 @@ All notable changes to the `instrumentation-sdk` package will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-05-18
+
+### Added
+- **Streaming Observability (TTFT & Token Tracking)**: Implemented specialized utilities for tracking streaming LLM calls (both sync and async generators).
+  - Automatically captures **Time-to-First-Token (TTFT)** latency at the exact moment of the first yielded chunk.
+  - Accumulates yielded chunks and calculates completed completion tokens upon stream completion, close, or failure.
+  - Defers manual span finalization until the stream has completed, offering full resilience to early consumer aborts (`.close()` and `.aclose()`).
+- **REST API Endpoint**: Exposed `POST /v1/streaming/test-stream-call` to verify streaming and TTFT tracking.
+- **Contract-First Support**:
+  - **GraphQL**: Added `triggerTestStreamCall` mutation.
+  - **Protobuf**: Added `TriggerTestStreamCall` RPC and `TriggerTestStreamCallRequest` message structure.
+  - **OpenAPI**: Added `/streaming/test-stream-call` path definition to `v1.yaml`.
+
 ## [1.2.0] - 2026-05-18
 
 ### Added
