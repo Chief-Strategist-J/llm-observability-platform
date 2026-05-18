@@ -50,46 +50,33 @@ The following diagram illustrates the HTTP request routing, Dependency Injection
 
 ## Decision Tree (Chat Flow Execution)
 
-This decision flowchart outlines the execution path of stateless vs. stateful chat requests:
+This hierarchical decision tree outlines the conditional execution paths for stateless vs. stateful chat requests:
 
 ```
-                       [ Incoming Chat Request ]
-                                   |
-                          Is Route Persistent?
-                         /                    \
-                       No                     Yes
-                       /                        \
-           +----------------------+       +------------------------------------+
-           | Stateless Chat Flow  |       |        Stateful Chat Flow          |
-           +----------------------+       +------------------------------------+
-                      |                                      |
-                      |                         Extract user_id & message
-                      |                                      |
-                      |                         Generate embedding for message
-                      |                                      |
-                      v                         Query Memory Repo for user_id
-           Send prompt to Cloudflare            (Fetch historical context)
-                      |                                      |
-                      |                         Retrieve top K similar memories
-                      |                         (Cosine Similarity Threshold)
-                      v                                      |
-              Return AI response                 Inject memories as context
-                      |                         into prompt message history
-                      |                                      |
-                      v                         Send prompt + history to Cloudflare
-                 [ End Chat ]                                |
-                                                Receive LLM AI response
-                                                             |
-                                                Generate embedding for response
-                                                             |
-                                                Store both User & Assistant
-                                                turns in Memory Repo
-                                                             |
-                                                             v
-                                                     Return AI response
-                                                             |
-                                                             v
-                                                        [ End Chat ]
+└── Incoming Chat Request
+    ├── Route: /api/v1/chat (Stateless Flow)
+    │   ├── [Step 1] Parse payload (messages list)
+    │   ├── [Step 2] Send messages directly to Cloudflare LLM
+    │   └── [Step 3] Return AI assistant response to the client
+    │
+    └── Route: /api/v1/chat/persistent (Stateful Flow)
+        ├── [Step 1] Parse payload (user_id, message text)
+        ├── [Step 2] Generate embedding vector for user message via Cloudflare AI
+        ├── [Step 3] Fetch user memory history from In-Memory Memory Repository
+        ├── [Decision] Does user have past conversational memory?
+        │   ├── YES (Retrieve Context)
+        │   │   ├── [Sub-Step] Compute Cosine Similarity between user message vector and all past vectors
+        │   │   ├── [Sub-Step] Filter and sort memories where similarity >= threshold (default: 0.7)
+        │   │   ├── [Sub-Step] Select top K context-rich memories (default: 5)
+        │   │   └── [Sub-Step] Prepend retrieved context to the prompt as system instructions
+        │   └── NO (Skip Context Retrieval)
+        │       └── [Sub-Step] Proceed with empty conversational history context
+        │
+        ├── [Step 4] Send complete prompt (context + current message) to Cloudflare LLM
+        ├── [Step 5] Receive LLM AI response text
+        ├── [Step 6] Generate embedding vector for assistant response text via Cloudflare AI
+        ├── [Step 7] Atomically store both User and Assistant turns in the Memory Repository
+        └── [Step 8] Return AI response + semantic context metadata to the client
 ```
 
 ---
