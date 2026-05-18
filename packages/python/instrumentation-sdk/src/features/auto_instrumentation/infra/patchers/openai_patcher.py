@@ -21,8 +21,7 @@ class OpenAIPatcher(PatcherPort):
 
         import openai
         from openai.resources.chat.completions import AsyncCompletions, Completions
-
-        # Patch Async
+        
         self._original_async_create = AsyncCompletions.create
         @functools.wraps(self._original_async_create)
         async def patched_async_create(instance, *args, **kwargs):

@@ -2,8 +2,8 @@ import pytest
 import asyncio
 from unittest.mock import MagicMock, AsyncMock, patch
 import sys
-from features.auto_instrumentation.index import init_auto_instrumentation, uninstrument_all
-from features.spans.globals import set_reporter, NoOpReporter
+from src.features.auto_instrumentation.index import init_auto_instrumentation, uninstrument_all
+from src.features.spans.globals import set_reporter, NoOpReporter
 
 @pytest.fixture
 def mock_openai_sdk():
@@ -29,15 +29,14 @@ def mock_http_lib():
     mock_httpx = MagicMock()
     mock_httpx.AsyncClient.send = AsyncMock()
     mock_openai = MagicMock()
-    # Mock as package
     mock_openai.__path__ = []
     with patch("importlib.util.find_spec", side_effect=lambda name: MagicMock() if name in ["httpx", "openai", "openai.resources", "openai.resources.chat", "openai.resources.chat.completions"] else None):
         with patch.dict(sys.modules, {
             "httpx": mock_httpx, 
-            "openai": mock_openai,
-            "openai.resources": MagicMock(),
-            "openai.resources.chat": MagicMock(),
-            "openai.resources.chat.completions": MagicMock()
+            "openai": sys.modules.get("openai", mock_openai),
+            "openai.resources": sys.modules.get("openai.resources", MagicMock()),
+            "openai.resources.chat": sys.modules.get("openai.resources.chat", MagicMock()),
+            "openai.resources.chat.completions": sys.modules.get("openai.resources.chat.completions", MagicMock())
         }):
             yield mock_httpx
 
@@ -50,7 +49,6 @@ async def test_sdk_and_http_patcher_interop(mock_openai_sdk, mock_http_lib):
     try:
         init_auto_instrumentation()
         
-        # 1. Call via SDK (should trigger SDK patcher)
         instance = MagicMock()
         await mock_openai_sdk.create(instance, model="gpt-sdk", messages=[])
         
