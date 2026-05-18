@@ -103,6 +103,7 @@ The SDK provides a built-in FastAPI-based management layer for remote orchestrat
 | `/instrumentation/uninstrument` | POST | Disable all active instrumentation. |
 | `/instrumentation/detect` | POST | Discovery: Detect provider/model from a sample request body. |
 | `/instrumentation/test-call` | POST | Verification: Trigger a sample LLM call to verify end-to-end tracing. |
+| `/streaming/test-stream-call` | POST | Verification: Trigger a mock streaming call to verify streaming/TTFT. |
 
 ### Basic Usage: Decorators
 Use the `@llm_observe` decorator to manually track functions.
@@ -211,6 +212,51 @@ curl -X POST http://localhost:8000/v1/token-counting/count \
   -d '{"prompt": "hello world", "model": "gpt-4"}'
 ```
 
+### Streaming Observability (TTFT & Token Tracking)
+
+The SDK provides specialized utilities for tracking streaming LLM calls. It wraps generators/iterators to:
+- Capture the **Time-to-First-Token (TTFT)** latency when the first chunk is yielded.
+- Accumulate the streamed chunks and automatically compute the completion token count (using Tiktoken/heuristics) upon stream completion or cancellation.
+- Finalize and report the manual span only when the stream is exhausted, closed, or encounters an exception.
+
+#### Basic Streaming Usage
+
+Use `llm_streaming_span`, `wrap_stream` (for synchronous generators), and `wrap_async_stream` (for asynchronous generators):
+
+```python
+from instrumentation_sdk import llm_streaming_span, wrap_stream, wrap_async_stream
+
+# 1. Synchronous Streaming
+with llm_streaming_span(model="gpt-4", provider="openai", prompt="Say hello") as span_ctx:
+    raw_generator = ["Hello", " world", "!"]
+    wrapped_stream = wrap_stream(raw_generator, span_context=span_ctx, model="gpt-4")
+    for chunk in wrapped_stream:
+        print(chunk)
+
+# 2. Asynchronous Streaming
+async with llm_streaming_span(model="gpt-4", provider="openai", prompt="Say hello") as span_ctx:
+    async def async_generator():
+        yield "Hello"
+        yield " world"
+    wrapped_stream = wrap_async_stream(async_generator(), span_context=span_ctx, model="gpt-4")
+    async for chunk in wrapped_stream:
+        print(chunk)
+```
+
+#### Mid-Stream Updates & Abort Resilience
+- You can dynamically update span metadata using `span_ctx.set_metadata("custom_field", "value")` mid-stream.
+- If the stream is closed early (via `wrapped_stream.close()` or `.aclose()`), the SDK captures and reports all completion tokens generated up to that point.
+
+#### REST Verification Endpoint
+
+The `/v1/streaming/test-stream-call` endpoint streams SSE events back to the client while validating end-to-end streaming tracing:
+
+```bash
+curl -X POST http://localhost:8000/v1/streaming/test-stream-call \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "openai", "chunks": ["A", "B", "C"]}'
+```
+
 ## 3. Implementation Call Chain
 
 | Pipeline Stage | Method Call | Primary File |
@@ -226,4 +272,6 @@ curl -X POST http://localhost:8000/v1/token-counting/count \
 | **Integration** | `create_embedding()` | `infra/clients/cloudflare_embeddings.py` |
 | **Identity** | `stable_embedding_key()`| `shared/utils/hash.py` |
 | **Token Counting** | `count_tokens()` | `features/token_counting/service.py` |
+| **Streaming SDK** | `wrap_async_stream()` | `features/streaming/index.py` |
+| **Streaming Logic** | `finalize_stream()` | `features/streaming/service.py` |
 

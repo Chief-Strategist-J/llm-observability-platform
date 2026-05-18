@@ -20,6 +20,7 @@ service InstrumentationControlService {
   rpc GetStatus(GetStatusRequest) returns (InstrumentationResponse);
   rpc DetectProvider(DetectProviderRequest) returns (DetectProviderResponse);
   rpc TriggerTestCall(TriggerTestCallRequest) returns (InstrumentationResponse);
+  rpc TriggerTestStreamCall(TriggerTestStreamCallRequest) returns (InstrumentationResponse);
   rpc CountTokens(CountTokensRequest) returns (CountTokensResponse);
 }
 
@@ -45,6 +46,11 @@ message DetectProviderResponse {
 message TriggerTestCallRequest {
   string method = 1;
   string provider = 2;
+}
+
+message TriggerTestStreamCallRequest {
+  string provider = 1;
+  repeated string chunks = 2;
 }
 
 message InstrumentationResponse {
