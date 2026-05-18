@@ -9,6 +9,7 @@ from .features.auto_instrumentation import (
     detect_llm_call,
     trigger_test_call
 )
+from .features.token_counting import count_tokens, llm_span_with_tokens
 
 __all__ = [
     "llm_observe",
@@ -21,5 +22,7 @@ __all__ = [
     "instrument_client",
     "instrument_http_client",
     "detect_llm_call",
-    "trigger_test_call"
+    "trigger_test_call",
+    "count_tokens",
+    "llm_span_with_tokens"
 ]
