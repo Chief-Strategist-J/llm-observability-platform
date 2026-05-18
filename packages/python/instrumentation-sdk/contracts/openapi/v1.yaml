@@ -184,6 +184,36 @@ paths:
                   method:
                     type: string
                     example: "tiktoken"
+  /streaming/test-stream-call:
+    post:
+      summary: Trigger a mock streaming call to verify streaming instrumentation
+      operationId: triggerTestStreamCall
+      tags:
+        - Verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - provider
+              properties:
+                provider:
+                  type: string
+                  enum: [openai, anthropic]
+                chunks:
+                  type: array
+                  items:
+                    type: string
+                  description: Custom chunks to yield in the mock stream
+      responses:
+        '200':
+          description: Streaming chunks response.
+          content:
+            text/event-stream:
+              schema:
+                type: string
 
 components:
   schemas:
