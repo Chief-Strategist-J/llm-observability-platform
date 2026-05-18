@@ -6,44 +6,25 @@ This service acts as an AI Orchestrator that integrates with Cloudflare's AI Gat
 
 ## Architecture Flow
 
-The following diagram illustrates the HTTP request routing, Dependency Injection layout, Port/Adapter boundary, and external integration points of the AI Orchestrator:
+The following hierarchical structure illustrates the HTTP request routing, Dependency Injection layout, Port/Adapter boundary, and external integration points of the AI Orchestrator:
 
 ```
-                               +---------------------------------------------+
-                               |                 HTTP Client                 |
-                               +---------------------------------------------+
-                                      |                               ^
-                   POST /chat/persistent                              | Response JSON
-                                      v                               |
-+------------------------------------------------------------------------------------+
-|  AI SERVICE                                                                        |
-|                                                                                    |
-|  +--------------------+             +------------------+             +----------+  |
-|  |    HTTP Router     |------------>|   AI Handlers    |------------>| Provider |  |
-|  |     (Router)       |             |   (Controller)   |             |   (DI)   |  |
-|  +--------------------+             +------------------+             +----------+  |
-|                                              |                                     |
-|                                              v                                     |
-|                                 +-------------------------+                        |
-|                                 |     AI Orchestrator     |                        |
-|                                 |        (Service)        |                        |
-|                                 +-------------------------+                        |
-|                                    /                     \                         |
-|                      1. Cosine Similarity           2. Chat Inference & Embedding  |
-|                                 /                           \                      |
-|                                v                             v                     |
-|                   +-------------------------+   +-------------------------+        |
-|                   |       Memory Repo       |   |   Cloudflare Adapter    |        |
-|                   |     (In-Memory DB)      |   |    (HTTP Rest Client)   |        |
-|                   +-------------------------+   +-------------------------+        |
-+------------------------------------------------------------------------------------+
-                                                               |
-                                                       HTTP / HTTPS API
-                                                               v
-                                                      +------------------+
-                                                      |  Cloudflare AI   |
-                                                      |  Gateway/Workers |
-                                                      +------------------+
+└── HTTP Client (Frontend / API consumer)
+    └── [POST /api/v1/chat or /chat/persistent]
+        └── HTTP Router (src/api/rest/v1/router.go)
+            └── Route Matching & Middleware Injection
+                └── AI Handlers (src/api/rest/v1/handlers/ai_handlers.go)
+                    ├── Dependency Injection Container (src/shared/di/providers.go)
+                    │   └── Resolves and injects the Orchestrator Service
+                    │
+                    └── AI Orchestrator Service (src/features/ai_orchestrator/service.go)
+                        ├── Port: CloudflareClient (src/features/ai_orchestrator/ports.go)
+                        │   └── Adapter: CloudflareAdapter (src/infra/adapters/cloudflare_adapter.go)
+                        │       └── REST Calls -> External Cloudflare AI Gateway/Workers API
+                        │
+                        └── Port: MemoryRepository (src/features/ai_orchestrator/ports.go)
+                            └── Adapter: MemoryRepository (src/infra/adapters/memory_repo.go)
+                                └── Thread-safe In-Memory Vector DB (Cosine Similarity retrieval)
 ```
 
 ---
