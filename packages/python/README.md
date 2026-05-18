@@ -12,6 +12,7 @@ This guide covers the technical architecture and end-user usage for the Python-b
   - [Remote Management API (REST)](#remote-management-api-rest)
   - [Basic Usage: Decorators](#basic-usage-decorators)
   - [Advanced Usage: Context Manager](#advanced-usage-context-manager)
+  - [Token Counting (Pre-Call Token Counting)](#token-counting-pre-call-token-counting)
   - [Docker Deployment](#docker-deployment)
 - [3. Implementation Call Chain](#3-implementation-call-chain)
 
@@ -174,6 +175,42 @@ For development with hot-reloading, use the provided Docker Compose:
 docker compose -f packages/python/instrumentation-sdk/deploy/docker/docker-compose.dev.yaml up instrumentation-api
 ```
 
+### Token Counting (Pre-Call Token Counting)
+
+The SDK provides automatic pre-call token counting utilizing `tiktoken` with fallback character-based heuristics for non-OpenAI models. It supports plain text strings, complex chat message list schemas, and OpenAI's tile-based vision token calculation.
+
+#### Direct Token Counting
+
+Use `count_tokens` to calculate tokens directly:
+
+```python
+from instrumentation_sdk import count_tokens
+
+tokens, method = count_tokens("hello world", "gpt-4")
+```
+
+#### Context Manager with Automated Token Tracking
+
+Use `llm_span_with_tokens` to automatically record `prompt_tokens` and `token_count_method` inside manual spans:
+
+```python
+from instrumentation_sdk import llm_span_with_tokens
+
+async def handle_request(req):
+    async with llm_span_with_tokens(model="gpt-4", provider="openai", prompt="hello world") as span:
+        pass
+```
+
+#### REST Management API (REST)
+
+The `/v1/token-counting/count` REST API endpoint supports counting prompt tokens:
+
+```bash
+curl -X POST http://localhost:8000/v1/token-counting/count \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "hello world", "model": "gpt-4"}'
+```
+
 ## 3. Implementation Call Chain
 
 | Pipeline Stage | Method Call | Primary File |
@@ -188,4 +225,5 @@ docker compose -f packages/python/instrumentation-sdk/deploy/docker/docker-compo
 | **Logic** | `enrich_span()` | `features/enrich_span/service.py` |
 | **Integration** | `create_embedding()` | `infra/clients/cloudflare_embeddings.py` |
 | **Identity** | `stable_embedding_key()`| `shared/utils/hash.py` |
+| **Token Counting** | `count_tokens()` | `features/token_counting/service.py` |
 
