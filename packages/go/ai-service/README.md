@@ -66,42 +66,44 @@ This hierarchical decision tree outlines the conditional execution paths for sta
 
 ```
 .
-├── Dockerfile                  # Multi-stage Docker build configuration
-├── docker-compose.yaml         # Local container orchestration
-├── go.mod                      # Go module dependencies
-├── go.sum                      # Go dependency verification checksums
-├── test_api.sh                 # Local integration test script using mock adapters
-├── test_cloudflare_real.sh     # Live integration test script using real Cloudflare credentials
+├── Dockerfile
+├── docker-compose.yaml
+├── go.mod
+├── go.sum
+├── test_api.sh
+├── test_cloudflare_real.sh
 ├── contracts/
-│   ├── changelog.md            # API contract version history
+│   ├── changelog.md
 │   └── openapi/
-│       └── v1.yaml             # OpenAPI v1 contract specification
+│       └── v1.yaml
 ├── scripts/
-│   └── deploy_docker.sh        # Docker deployment script (build, tag, registry push)
+│   └── deploy_docker.sh
 └── src/
-    ├── main.go                 # App entrypoint (initializes tracing, HTTP server, DI container)
+    ├── main.go
     ├── api/
     │   └── rest/
     │       └── v1/
-    │           ├── router.go   # HTTP request routing definitions
+    │           ├── router.go
     │           └── handlers/
-    │               └── ai_handlers.go # HTTP controllers/request handlers
+    │               └── ai_handlers.go
     ├── features/
-    │   └── ai_orchestrator/    # Domain layer (Hexagonal Architecture)
-    │       ├── index.go        # Feature initialization
-    │       ├── ports.go        # Port interface definitions (Service, Client, Repo)
-    │       ├── service.go      # Core Orchestrator implementation (coordinate LLM, Embedding, Memory retrieval)
-    │       └── types.go        # Domain entity models (ModelInfo, ChatMessage, MemoryItem)
+    │   └── ai_orchestrator/
+    │       ├── index.go
+    │       ├── ports.go
+    │       ├── service.go
+    │       └── types.go
     ├── infra/
-    │   └── adapters/           # Infrastructure adapter implementations
-    │       ├── cloudflare_adapter.go # HTTP client communicating with Cloudflare AI
-    │       └── memory_repo.go  # Concurrent-safe storage and cosine similarity retriever
+    │   └── adapters/
+    │       ├── cloudflare_adapter.go
+    │       └── memory_repo.go
     └── shared/
         ├── di/
-        │   └── providers.go    # Wire-up of application dependencies (Dependency Injection)
+        │   └── providers.go
         └── tracing/
-            └── otel.go         # OpenTelemetry tracer provider setup
+            └── otel.go
 ```
+
+**Key components:** Multi-stage `Dockerfile`, OpenAPI `contracts`, automated `deploy_docker.sh` release script, Hexagonal Domain layer `ai_orchestrator`, and Cloudflare API + In-Memory Vector `adapters`.
 
 ---
 
