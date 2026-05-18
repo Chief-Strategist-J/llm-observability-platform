@@ -352,3 +352,5 @@ docs/site/
 *.bz2
 node_modules/
 infrastructure/observability/distributedTraceAnalysisEngine/web/node_modules/
+packages/go/ai-service/.toolchain/
+packages/go/ai-service/bin/

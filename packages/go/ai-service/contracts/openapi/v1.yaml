@@ -1,0 +1,128 @@
+openapi: 3.0.3
+info:
+  title: AI Service API
+  version: 1.0.0
+  description: API first interface for accessing AI models and dynamic persistent chat.
+paths:
+  /api/v1/models:
+    get:
+      summary: List available AI models
+      description: Returns a list of all models retrieved dynamically from the AI provider or from local catalog.
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array:
+                items:
+                  $ref: "#/components/schemas/ModelInfo"
+        "500":
+          description: Internal Server Error
+
+  /api/v1/chat:
+    post:
+      summary: Execute single AI inference
+      description: Run a single prompt or conversation context using a specific model.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - model
+                - messages
+              properties:
+                model:
+                  type: string
+                  example: "@cf/meta/llama-3.1-8b-instruct"
+                messages:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/ChatMessage"
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+        "400":
+          description: Bad Request
+        "500":
+          description: Internal Server Error
+
+  /api/v1/chat/persistent:
+    post:
+      summary: In-memory persistent chat session
+      description: Continues an in-memory conversation for a UserID with cosine similarity-based embedding memory.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+                - message
+              properties:
+                user_id:
+                  type: string
+                  example: "user_123"
+                message:
+                  type: string
+                  example: "How can I implement Hexagonal Architecture?"
+                model:
+                  type: string
+                  example: "@cf/meta/llama-3.1-8b-instruct"
+                embedding_model:
+                  type: string
+                  example: "@cf/baai/bge-small-en-v1.5"
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                  history:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ChatMessage"
+        "400":
+          description: Bad Request
+        "500":
+          description: Internal Server Error
+
+components:
+  schemas:
+    ModelInfo:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        provider:
+          type: string
+
+    ChatMessage:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum: [system, user, assistant]
+        content:
+          type: string
