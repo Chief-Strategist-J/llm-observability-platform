@@ -2,9 +2,7 @@ version: '3.8'
 
 services:
   instrumentation-api:
-    build:
-      context: ../../
-      dockerfile: build/Dockerfile
+    image: chiefj/instrumentation-sdk-api:latest
     container_name: instrumentation-sdk-api
     ports:
       - "8000:8000"
