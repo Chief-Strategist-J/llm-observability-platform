@@ -263,6 +263,32 @@ final $typed_data.Uint8List countTokensResponseDescriptor = $convert.base64Decod
     'ChNDb3VudFRva2Vuc1Jlc3BvbnNlEhYKBnRva2VucxgBIAEoBVIGdG9rZW5zEhYKBm1ldGhvZB'
     'gCIAEoCVIGbWV0aG9k');
 
+@$core.Deprecated('Use scanPiiInjectionRequestDescriptor instead')
+const ScanPiiInjectionRequest$json = {
+  '1': 'ScanPiiInjectionRequest',
+  '2': [
+    {'1': 'prompt', '3': 1, '4': 1, '5': 9, '10': 'prompt'},
+  ],
+};
+
+/// Descriptor for `ScanPiiInjectionRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List scanPiiInjectionRequestDescriptor = $convert.base64Decode(
+    'ChdTY2FuUGlpSW5qZWN0aW9uUmVxdWVzdBIWCgZwcm9tcHQYASABKAlSBnByb21wdA==');
+
+@$core.Deprecated('Use scanPiiInjectionResponseDescriptor instead')
+const ScanPiiInjectionResponse$json = {
+  '1': 'ScanPiiInjectionResponse',
+  '2': [
+    {'1': 'pii_detected', '3': 1, '4': 1, '5': 8, '10': 'piiDetected'},
+    {'1': 'injection_attempt', '3': 2, '4': 1, '5': 8, '10': 'injectionAttempt'},
+  ],
+};
+
+/// Descriptor for `ScanPiiInjectionResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List scanPiiInjectionResponseDescriptor = $convert.base64Decode(
+    'ChhTY2FuUGlpSW5qZWN0aW9uUmVzcG9uc2USIQoMcGlpX2RldGVjdGVkGAEgASgIUgtwaWlEZX'
+    'RlY3RlZBIrChFpbmplY3Rpb25fYXR0ZW1wdBgCIAEoCFIQaW5qZWN0aW9uQXR0ZW1wdA==');
+
 const $core.Map<$core.String, $core.dynamic> InstrumentationControlServiceBase$json = {
   '1': 'InstrumentationControlService',
   '2': [
@@ -273,6 +299,7 @@ const $core.Map<$core.String, $core.dynamic> InstrumentationControlServiceBase$j
     {'1': 'TriggerTestCall', '2': '.llm.observability.v1.TriggerTestCallRequest', '3': '.llm.observability.v1.TriggerTestCallResponse'},
     {'1': 'TriggerTestStreamCall', '2': '.llm.observability.v1.TriggerTestStreamCallRequest', '3': '.llm.observability.v1.TriggerTestStreamCallResponse'},
     {'1': 'CountTokens', '2': '.llm.observability.v1.CountTokensRequest', '3': '.llm.observability.v1.CountTokensResponse'},
+    {'1': 'ScanPiiInjection', '2': '.llm.observability.v1.ScanPiiInjectionRequest', '3': '.llm.observability.v1.ScanPiiInjectionResponse'},
   ],
 };
 
@@ -292,6 +319,8 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>> Instrument
   '.llm.observability.v1.TriggerTestStreamCallResponse': TriggerTestStreamCallResponse$json,
   '.llm.observability.v1.CountTokensRequest': CountTokensRequest$json,
   '.llm.observability.v1.CountTokensResponse': CountTokensResponse$json,
+  '.llm.observability.v1.ScanPiiInjectionRequest': ScanPiiInjectionRequest$json,
+  '.llm.observability.v1.ScanPiiInjectionResponse': ScanPiiInjectionResponse$json,
 };
 
 /// Descriptor for `InstrumentationControlService`. Decode as a `google.protobuf.ServiceDescriptorProto`.
@@ -311,5 +340,7 @@ final $typed_data.Uint8List instrumentationControlServiceDescriptor = $convert.b
     'dHJlYW1DYWxsUmVxdWVzdBozLmxsbS5vYnNlcnZhYmlsaXR5LnYxLlRyaWdnZXJUZXN0U3RyZW'
     'FtQ2FsbFJlc3BvbnNlEmIKC0NvdW50VG9rZW5zEigubGxtLm9ic2VydmFiaWxpdHkudjEuQ291'
     'bnRUb2tlbnNSZXF1ZXN0GikubGxtLm9ic2VydmFiaWxpdHkudjEuQ291bnRUb2tlbnNSZXNwb2'
-    '5zZQ==');
+    '5zZRJxChBTY2FuUGlpSW5qZWN0aW9uEi0ubGxtLm9ic2VydmFiaWxpdHkudjEuU2NhblBpaUlu'
+    'amVjdGlvblJlcXVlc3QaLi5sbG0ub2JzZXJ2YWJpbGl0eS52MS5TY2FuUGlpSW5qZWN0aW9uUm'
+    'VzcG9uc2U=');
 

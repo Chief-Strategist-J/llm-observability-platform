@@ -65,6 +65,11 @@ public object InstrumentationControlServiceGrpcKt {
     @JvmStatic
     get() = InstrumentationControlServiceGrpc.getCountTokensMethod()
 
+  public val scanPiiInjectionMethod:
+      MethodDescriptor<ScanPiiInjectionRequest, ScanPiiInjectionResponse>
+    @JvmStatic
+    get() = InstrumentationControlServiceGrpc.getScanPiiInjectionMethod()
+
   /**
    * A stub for issuing RPCs to a(n) llm.observability.v1.InstrumentationControlService service as
    * suspending coroutines.
@@ -231,6 +236,28 @@ public object InstrumentationControlServiceGrpcKt {
       callOptions,
       headers
     )
+
+    /**
+     * Executes this RPC and returns the response message, suspending until the RPC completes
+     * with [`Status.OK`][io.grpc.Status].  If the RPC completes with another status, a
+     * corresponding
+     * [StatusException] is thrown.  If this coroutine is cancelled, the RPC is also cancelled
+     * with the corresponding exception as a cause.
+     *
+     * @param request The request message to send to the server.
+     *
+     * @param headers Metadata to attach to the request.  Most users will not need this.
+     *
+     * @return The single response from the server.
+     */
+    public suspend fun scanPiiInjection(request: ScanPiiInjectionRequest, headers: Metadata =
+        Metadata()): ScanPiiInjectionResponse = unaryRpc(
+      channel,
+      InstrumentationControlServiceGrpc.getScanPiiInjectionMethod(),
+      request,
+      callOptions,
+      headers
+    )
   }
 
   /**
@@ -350,6 +377,22 @@ public object InstrumentationControlServiceGrpcKt {
     public open suspend fun countTokens(request: CountTokensRequest): CountTokensResponse = throw
         StatusException(UNIMPLEMENTED.withDescription("Method llm.observability.v1.InstrumentationControlService.CountTokens is unimplemented"))
 
+    /**
+     * Returns the response to an RPC for
+     * llm.observability.v1.InstrumentationControlService.ScanPiiInjection.
+     *
+     * If this method fails with a [StatusException], the RPC will fail with the corresponding
+     * [io.grpc.Status].  If this method fails with a [java.util.concurrent.CancellationException],
+     * the RPC will fail
+     * with status `Status.CANCELLED`.  If this method fails for any other reason, the RPC will
+     * fail with `Status.UNKNOWN` with the exception as a cause.
+     *
+     * @param request The request from the client.
+     */
+    public open suspend fun scanPiiInjection(request: ScanPiiInjectionRequest):
+        ScanPiiInjectionResponse = throw
+        StatusException(UNIMPLEMENTED.withDescription("Method llm.observability.v1.InstrumentationControlService.ScanPiiInjection is unimplemented"))
+
     final override fun bindService(): ServerServiceDefinition = builder(getServiceDescriptor())
       .addMethod(unaryServerMethodDefinition(
       context = this.context,
@@ -385,6 +428,11 @@ public object InstrumentationControlServiceGrpcKt {
       context = this.context,
       descriptor = InstrumentationControlServiceGrpc.getCountTokensMethod(),
       implementation = ::countTokens
+    ))
+      .addMethod(unaryServerMethodDefinition(
+      context = this.context,
+      descriptor = InstrumentationControlServiceGrpc.getScanPiiInjectionMethod(),
+      implementation = ::scanPiiInjection
     )).build()
   }
 }

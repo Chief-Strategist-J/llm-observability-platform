@@ -115,4 +115,18 @@ class InstrumentationControlServiceClient extends \Grpc\BaseStub {
         $metadata, $options);
     }
 
+    /**
+     * @param \LlmObservability\Platform\V1\ScanPiiInjectionRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall
+     */
+    public function ScanPiiInjection(\LlmObservability\Platform\V1\ScanPiiInjectionRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/llm.observability.v1.InstrumentationControlService/ScanPiiInjection',
+        $argument,
+        ['\LlmObservability\Platform\V1\ScanPiiInjectionResponse', 'decode'],
+        $metadata, $options);
+    }
+
 }
