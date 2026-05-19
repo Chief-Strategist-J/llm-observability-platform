@@ -3,6 +3,7 @@ from typing import Any, Callable, Optional
 from opentelemetry import trace
 from ..manual_instrumentation.service import LLMSpanContext
 from ..spans.globals import get_reporter
+from ..metrics.index import record_span_metrics
 from .ports import TokenCounterPort, ObservableSpanPort
 
 def default_extract_text(chunk: Any) -> str:
@@ -70,6 +71,7 @@ class LLMStreamingSpanContext(LLMSpanContext):
                 if isinstance(v, (str, bool, int, float)):
                     self._otel_span.set_attribute(f"llm.{k}", v)
             self._otel_context.__exit__(None, None, None)
+        record_span_metrics(self._data)
         reporter = get_reporter()
         reporter.report(self._data)
 
@@ -90,6 +92,7 @@ class LLMStreamingSpanContext(LLMSpanContext):
                 if isinstance(v, (str, bool, int, float)):
                     self._otel_span.set_attribute(f"llm.{k}", v)
             self._otel_context.__exit__(None, None, None)
+        record_span_metrics(self._data)
         reporter = get_reporter()
         await reporter.report_async(self._data)
 

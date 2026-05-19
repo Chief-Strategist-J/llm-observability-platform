@@ -1,0 +1,104 @@
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from typing import Optional, Dict, Any, List
+import os
+from opentelemetry import trace
+from .....features.metrics.index import record_span_metrics, init_metrics_pipeline
+
+
+router = APIRouter(prefix="/metrics", tags=["Metrics"])
+
+
+class MetricsStatusResponse(BaseModel):
+    initialized: bool
+    message: str
+
+
+class MetricsInitRequest(BaseModel):
+    port: Optional[int] = None
+
+
+class RecordSpanMetricsRequest(BaseModel):
+    model: str = "unknown"
+    provider: str = "unknown"
+    service_name: str = "unknown"
+    prompt_tokens: Optional[int] = None
+    completion_tokens: Optional[int] = None
+    cost_usd_micro: Optional[int] = None
+    latency_ms_total: Optional[int] = None
+    latency_ms_ttft: Optional[int] = None
+    finish_reason: Optional[str] = None
+    status: str = "success"
+    pii_detected: bool = False
+    injection_attempt: bool = False
+    retry_count: int = 0
+
+
+class RecordSpanMetricsResponse(BaseModel):
+    recorded: bool
+    cost_usd_micro: Optional[int] = None
+    price_version: Optional[str] = None
+
+
+class BatchRecordRequest(BaseModel):
+    spans: List[RecordSpanMetricsRequest]
+
+
+class BatchRecordResponse(BaseModel):
+    recorded_count: int
+
+
+def _set_span_attributes() -> None:
+    span = trace.get_current_span()
+    span.set_attribute("service.name", "instrumentation-sdk-api")
+    span.set_attribute("deployment.env", os.getenv("DEPLOYMENT_ENV", "dev"))
+    span.set_attribute("feature.name", "metrics")
+
+
+@router.post("/init", response_model=MetricsStatusResponse)
+def init_metrics(request: MetricsInitRequest = MetricsInitRequest()):
+    _set_span_attributes()
+    try:
+        init_metrics_pipeline(request.port)
+        return MetricsStatusResponse(initialized=True, message="Metrics pipeline initialized")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/health", response_model=MetricsStatusResponse)
+def metrics_health():
+    _set_span_attributes()
+    from .....features.metrics.index import _initialized
+    return MetricsStatusResponse(
+        initialized=_initialized,
+        message="Metrics pipeline is active" if _initialized else "Metrics pipeline not initialized"
+    )
+
+
+@router.post("/record", response_model=RecordSpanMetricsResponse)
+def record_metrics(request: RecordSpanMetricsRequest):
+    _set_span_attributes()
+    try:
+        span_data = request.model_dump(exclude_none=True)
+        record_span_metrics(span_data)
+        return RecordSpanMetricsResponse(
+            recorded=True,
+            cost_usd_micro=span_data.get("cost_usd_micro"),
+            price_version=span_data.get("price_version"),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/record-batch", response_model=BatchRecordResponse)
+def record_batch(request: BatchRecordRequest):
+    _set_span_attributes()
+    count = 0
+    for span_req in request.spans:
+        try:
+            span_data = span_req.model_dump(exclude_none=True)
+            record_span_metrics(span_data)
+            count += 1
+        except Exception:
+            pass
+    return BatchRecordResponse(recorded_count=count)
