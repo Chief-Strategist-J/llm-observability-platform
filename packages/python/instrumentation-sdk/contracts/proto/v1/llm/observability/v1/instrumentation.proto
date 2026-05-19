@@ -22,6 +22,7 @@ service InstrumentationControlService {
   rpc TriggerTestCall(TriggerTestCallRequest) returns (TriggerTestCallResponse);
   rpc TriggerTestStreamCall(TriggerTestStreamCallRequest) returns (TriggerTestStreamCallResponse);
   rpc CountTokens(CountTokensRequest) returns (CountTokensResponse);
+  rpc ScanPiiInjection(ScanPiiInjectionRequest) returns (ScanPiiInjectionResponse);
 }
 
 message InitInstrumentationRequest {
@@ -108,4 +109,13 @@ message CountTokensRequest {
 message CountTokensResponse {
   int32 tokens = 1;
   string method = 2;
+}
+
+message ScanPiiInjectionRequest {
+  string prompt = 1;
+}
+
+message ScanPiiInjectionResponse {
+  bool pii_detected = 1;
+  bool injection_attempt = 2;
 }

@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **PII & Injection Scanning (Aho-Corasick & Regex Fallback)**: Added prompt scanning for structural PII patterns and jailbreak/injection phrases.
 - **REST API Endpoint**: Exposed `POST /v1/pii-injection/scan` to allow remote scanning.
-- **Contract-First Support**: Added `/pii-injection/scan` path definition to the OpenAPI v1.yaml contract.  
+- **Contract-First Support**:
+  - **OpenAPI**: Added `/pii-injection/scan` path definition to the OpenAPI `v1.yaml` contract.
+  - **GraphQL**: Added `scanPiiInjection` query and `PiiInjectionScanPayload` structure to `v1.graphql`.
+  - **Protobuf**: Added `ScanPiiInjection` RPC, request, and response message schemas to `instrumentation.proto`.
 
 ## [1.4.0] - 2026-05-18
 
