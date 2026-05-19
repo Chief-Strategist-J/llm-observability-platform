@@ -25,6 +25,7 @@ RUN mkdir -p src/instrumentation_sdk && touch src/instrumentation_sdk/__init__.p
 RUN pip install . uvicorn
 
 COPY src/ src/
+COPY config/ /app/config/
 RUN pip install . --no-deps
 
 COPY build/tempo-config.yaml /app/build/tempo-config.yaml

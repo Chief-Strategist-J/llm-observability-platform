@@ -1113,6 +1113,120 @@ class CountTokensResponse extends $pb.GeneratedMessage {
   void clearMethod() => clearField(2);
 }
 
+class ScanPiiInjectionRequest extends $pb.GeneratedMessage {
+  factory ScanPiiInjectionRequest({
+    $core.String? prompt,
+  }) {
+    final $result = create();
+    if (prompt != null) {
+      $result.prompt = prompt;
+    }
+    return $result;
+  }
+  ScanPiiInjectionRequest._() : super();
+  factory ScanPiiInjectionRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory ScanPiiInjectionRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'ScanPiiInjectionRequest', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'prompt')
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  ScanPiiInjectionRequest clone() => ScanPiiInjectionRequest()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  ScanPiiInjectionRequest copyWith(void Function(ScanPiiInjectionRequest) updates) => super.copyWith((message) => updates(message as ScanPiiInjectionRequest)) as ScanPiiInjectionRequest;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ScanPiiInjectionRequest create() => ScanPiiInjectionRequest._();
+  ScanPiiInjectionRequest createEmptyInstance() => create();
+  static $pb.PbList<ScanPiiInjectionRequest> createRepeated() => $pb.PbList<ScanPiiInjectionRequest>();
+  @$core.pragma('dart2js:noInline')
+  static ScanPiiInjectionRequest getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ScanPiiInjectionRequest>(create);
+  static ScanPiiInjectionRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get prompt => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set prompt($core.String v) { $_setString(0, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasPrompt() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPrompt() => clearField(1);
+}
+
+class ScanPiiInjectionResponse extends $pb.GeneratedMessage {
+  factory ScanPiiInjectionResponse({
+    $core.bool? piiDetected,
+    $core.bool? injectionAttempt,
+  }) {
+    final $result = create();
+    if (piiDetected != null) {
+      $result.piiDetected = piiDetected;
+    }
+    if (injectionAttempt != null) {
+      $result.injectionAttempt = injectionAttempt;
+    }
+    return $result;
+  }
+  ScanPiiInjectionResponse._() : super();
+  factory ScanPiiInjectionResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory ScanPiiInjectionResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'ScanPiiInjectionResponse', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..aOB(1, _omitFieldNames ? '' : 'piiDetected')
+    ..aOB(2, _omitFieldNames ? '' : 'injectionAttempt')
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  ScanPiiInjectionResponse clone() => ScanPiiInjectionResponse()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  ScanPiiInjectionResponse copyWith(void Function(ScanPiiInjectionResponse) updates) => super.copyWith((message) => updates(message as ScanPiiInjectionResponse)) as ScanPiiInjectionResponse;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ScanPiiInjectionResponse create() => ScanPiiInjectionResponse._();
+  ScanPiiInjectionResponse createEmptyInstance() => create();
+  static $pb.PbList<ScanPiiInjectionResponse> createRepeated() => $pb.PbList<ScanPiiInjectionResponse>();
+  @$core.pragma('dart2js:noInline')
+  static ScanPiiInjectionResponse getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ScanPiiInjectionResponse>(create);
+  static ScanPiiInjectionResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get piiDetected => $_getBF(0);
+  @$pb.TagNumber(1)
+  set piiDetected($core.bool v) { $_setBool(0, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasPiiDetected() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPiiDetected() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.bool get injectionAttempt => $_getBF(1);
+  @$pb.TagNumber(2)
+  set injectionAttempt($core.bool v) { $_setBool(1, v); }
+  @$pb.TagNumber(2)
+  $core.bool hasInjectionAttempt() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearInjectionAttempt() => clearField(2);
+}
+
 class InstrumentationControlServiceApi {
   $pb.RpcClient _client;
   InstrumentationControlServiceApi(this._client);
@@ -1137,6 +1251,9 @@ class InstrumentationControlServiceApi {
   ;
   $async.Future<CountTokensResponse> countTokens($pb.ClientContext? ctx, CountTokensRequest request) =>
     _client.invoke<CountTokensResponse>(ctx, 'InstrumentationControlService', 'CountTokens', request, CountTokensResponse())
+  ;
+  $async.Future<ScanPiiInjectionResponse> scanPiiInjection($pb.ClientContext? ctx, ScanPiiInjectionRequest request) =>
+    _client.invoke<ScanPiiInjectionResponse>(ctx, 'InstrumentationControlService', 'ScanPiiInjection', request, ScanPiiInjectionResponse())
   ;
 }
 

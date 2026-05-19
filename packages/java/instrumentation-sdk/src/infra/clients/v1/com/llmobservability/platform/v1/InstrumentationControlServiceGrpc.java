@@ -235,6 +235,37 @@ public final class InstrumentationControlServiceGrpc {
     return getCountTokensMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.llmobservability.platform.v1.ScanPiiInjectionRequest,
+      com.llmobservability.platform.v1.ScanPiiInjectionResponse> getScanPiiInjectionMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ScanPiiInjection",
+      requestType = com.llmobservability.platform.v1.ScanPiiInjectionRequest.class,
+      responseType = com.llmobservability.platform.v1.ScanPiiInjectionResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.llmobservability.platform.v1.ScanPiiInjectionRequest,
+      com.llmobservability.platform.v1.ScanPiiInjectionResponse> getScanPiiInjectionMethod() {
+    io.grpc.MethodDescriptor<com.llmobservability.platform.v1.ScanPiiInjectionRequest, com.llmobservability.platform.v1.ScanPiiInjectionResponse> getScanPiiInjectionMethod;
+    if ((getScanPiiInjectionMethod = InstrumentationControlServiceGrpc.getScanPiiInjectionMethod) == null) {
+      synchronized (InstrumentationControlServiceGrpc.class) {
+        if ((getScanPiiInjectionMethod = InstrumentationControlServiceGrpc.getScanPiiInjectionMethod) == null) {
+          InstrumentationControlServiceGrpc.getScanPiiInjectionMethod = getScanPiiInjectionMethod =
+              io.grpc.MethodDescriptor.<com.llmobservability.platform.v1.ScanPiiInjectionRequest, com.llmobservability.platform.v1.ScanPiiInjectionResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ScanPiiInjection"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.ScanPiiInjectionRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.ScanPiiInjectionResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new InstrumentationControlServiceMethodDescriptorSupplier("ScanPiiInjection"))
+              .build();
+        }
+      }
+    }
+    return getScanPiiInjectionMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -334,6 +365,13 @@ public final class InstrumentationControlServiceGrpc {
         io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.CountTokensResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCountTokensMethod(), responseObserver);
     }
+
+    /**
+     */
+    default void scanPiiInjection(com.llmobservability.platform.v1.ScanPiiInjectionRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.ScanPiiInjectionResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getScanPiiInjectionMethod(), responseObserver);
+    }
   }
 
   /**
@@ -424,6 +462,14 @@ public final class InstrumentationControlServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getCountTokensMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     */
+    public void scanPiiInjection(com.llmobservability.platform.v1.ScanPiiInjectionRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.ScanPiiInjectionResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getScanPiiInjectionMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -492,6 +538,13 @@ public final class InstrumentationControlServiceGrpc {
     public com.llmobservability.platform.v1.CountTokensResponse countTokens(com.llmobservability.platform.v1.CountTokensRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getCountTokensMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.llmobservability.platform.v1.ScanPiiInjectionResponse scanPiiInjection(com.llmobservability.platform.v1.ScanPiiInjectionRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getScanPiiInjectionMethod(), getCallOptions(), request);
     }
   }
 
@@ -569,6 +622,14 @@ public final class InstrumentationControlServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getCountTokensMethod(), getCallOptions()), request);
     }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.llmobservability.platform.v1.ScanPiiInjectionResponse> scanPiiInjection(
+        com.llmobservability.platform.v1.ScanPiiInjectionRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getScanPiiInjectionMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_INIT_INSTRUMENTATION = 0;
@@ -578,6 +639,7 @@ public final class InstrumentationControlServiceGrpc {
   private static final int METHODID_TRIGGER_TEST_CALL = 4;
   private static final int METHODID_TRIGGER_TEST_STREAM_CALL = 5;
   private static final int METHODID_COUNT_TOKENS = 6;
+  private static final int METHODID_SCAN_PII_INJECTION = 7;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -623,6 +685,10 @@ public final class InstrumentationControlServiceGrpc {
         case METHODID_COUNT_TOKENS:
           serviceImpl.countTokens((com.llmobservability.platform.v1.CountTokensRequest) request,
               (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.CountTokensResponse>) responseObserver);
+          break;
+        case METHODID_SCAN_PII_INJECTION:
+          serviceImpl.scanPiiInjection((com.llmobservability.platform.v1.ScanPiiInjectionRequest) request,
+              (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.ScanPiiInjectionResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -691,6 +757,13 @@ public final class InstrumentationControlServiceGrpc {
               com.llmobservability.platform.v1.CountTokensRequest,
               com.llmobservability.platform.v1.CountTokensResponse>(
                 service, METHODID_COUNT_TOKENS)))
+        .addMethod(
+          getScanPiiInjectionMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.llmobservability.platform.v1.ScanPiiInjectionRequest,
+              com.llmobservability.platform.v1.ScanPiiInjectionResponse>(
+                service, METHODID_SCAN_PII_INJECTION)))
         .build();
   }
 
@@ -746,6 +819,7 @@ public final class InstrumentationControlServiceGrpc {
               .addMethod(getTriggerTestCallMethod())
               .addMethod(getTriggerTestStreamCallMethod())
               .addMethod(getCountTokensMethod())
+              .addMethod(getScanPiiInjectionMethod())
               .build();
         }
       }

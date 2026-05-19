@@ -55,6 +55,9 @@ const (
 	// InstrumentationControlServiceCountTokensProcedure is the fully-qualified name of the
 	// InstrumentationControlService's CountTokens RPC.
 	InstrumentationControlServiceCountTokensProcedure = "/llm.observability.v1.InstrumentationControlService/CountTokens"
+	// InstrumentationControlServiceScanPiiInjectionProcedure is the fully-qualified name of the
+	// InstrumentationControlService's ScanPiiInjection RPC.
+	InstrumentationControlServiceScanPiiInjectionProcedure = "/llm.observability.v1.InstrumentationControlService/ScanPiiInjection"
 )
 
 // InstrumentationControlServiceClient is a client for the
@@ -67,6 +70,7 @@ type InstrumentationControlServiceClient interface {
 	TriggerTestCall(context.Context, *connect.Request[v1.TriggerTestCallRequest]) (*connect.Response[v1.TriggerTestCallResponse], error)
 	TriggerTestStreamCall(context.Context, *connect.Request[v1.TriggerTestStreamCallRequest]) (*connect.Response[v1.TriggerTestStreamCallResponse], error)
 	CountTokens(context.Context, *connect.Request[v1.CountTokensRequest]) (*connect.Response[v1.CountTokensResponse], error)
+	ScanPiiInjection(context.Context, *connect.Request[v1.ScanPiiInjectionRequest]) (*connect.Response[v1.ScanPiiInjectionResponse], error)
 }
 
 // NewInstrumentationControlServiceClient constructs a client for the
@@ -115,6 +119,11 @@ func NewInstrumentationControlServiceClient(httpClient connect.HTTPClient, baseU
 			baseURL+InstrumentationControlServiceCountTokensProcedure,
 			opts...,
 		),
+		scanPiiInjection: connect.NewClient[v1.ScanPiiInjectionRequest, v1.ScanPiiInjectionResponse](
+			httpClient,
+			baseURL+InstrumentationControlServiceScanPiiInjectionProcedure,
+			opts...,
+		),
 	}
 }
 
@@ -127,6 +136,7 @@ type instrumentationControlServiceClient struct {
 	triggerTestCall        *connect.Client[v1.TriggerTestCallRequest, v1.TriggerTestCallResponse]
 	triggerTestStreamCall  *connect.Client[v1.TriggerTestStreamCallRequest, v1.TriggerTestStreamCallResponse]
 	countTokens            *connect.Client[v1.CountTokensRequest, v1.CountTokensResponse]
+	scanPiiInjection       *connect.Client[v1.ScanPiiInjectionRequest, v1.ScanPiiInjectionResponse]
 }
 
 // InitInstrumentation calls llm.observability.v1.InstrumentationControlService.InitInstrumentation.
@@ -166,6 +176,11 @@ func (c *instrumentationControlServiceClient) CountTokens(ctx context.Context, r
 	return c.countTokens.CallUnary(ctx, req)
 }
 
+// ScanPiiInjection calls llm.observability.v1.InstrumentationControlService.ScanPiiInjection.
+func (c *instrumentationControlServiceClient) ScanPiiInjection(ctx context.Context, req *connect.Request[v1.ScanPiiInjectionRequest]) (*connect.Response[v1.ScanPiiInjectionResponse], error) {
+	return c.scanPiiInjection.CallUnary(ctx, req)
+}
+
 // InstrumentationControlServiceHandler is an implementation of the
 // llm.observability.v1.InstrumentationControlService service.
 type InstrumentationControlServiceHandler interface {
@@ -176,6 +191,7 @@ type InstrumentationControlServiceHandler interface {
 	TriggerTestCall(context.Context, *connect.Request[v1.TriggerTestCallRequest]) (*connect.Response[v1.TriggerTestCallResponse], error)
 	TriggerTestStreamCall(context.Context, *connect.Request[v1.TriggerTestStreamCallRequest]) (*connect.Response[v1.TriggerTestStreamCallResponse], error)
 	CountTokens(context.Context, *connect.Request[v1.CountTokensRequest]) (*connect.Response[v1.CountTokensResponse], error)
+	ScanPiiInjection(context.Context, *connect.Request[v1.ScanPiiInjectionRequest]) (*connect.Response[v1.ScanPiiInjectionResponse], error)
 }
 
 // NewInstrumentationControlServiceHandler builds an HTTP handler from the service implementation.
@@ -219,6 +235,11 @@ func NewInstrumentationControlServiceHandler(svc InstrumentationControlServiceHa
 		svc.CountTokens,
 		opts...,
 	)
+	instrumentationControlServiceScanPiiInjectionHandler := connect.NewUnaryHandler(
+		InstrumentationControlServiceScanPiiInjectionProcedure,
+		svc.ScanPiiInjection,
+		opts...,
+	)
 	return "/llm.observability.v1.InstrumentationControlService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case InstrumentationControlServiceInitInstrumentationProcedure:
@@ -235,6 +256,8 @@ func NewInstrumentationControlServiceHandler(svc InstrumentationControlServiceHa
 			instrumentationControlServiceTriggerTestStreamCallHandler.ServeHTTP(w, r)
 		case InstrumentationControlServiceCountTokensProcedure:
 			instrumentationControlServiceCountTokensHandler.ServeHTTP(w, r)
+		case InstrumentationControlServiceScanPiiInjectionProcedure:
+			instrumentationControlServiceScanPiiInjectionHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -270,4 +293,8 @@ func (UnimplementedInstrumentationControlServiceHandler) TriggerTestStreamCall(c
 
 func (UnimplementedInstrumentationControlServiceHandler) CountTokens(context.Context, *connect.Request[v1.CountTokensRequest]) (*connect.Response[v1.CountTokensResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.CountTokens is not implemented"))
+}
+
+func (UnimplementedInstrumentationControlServiceHandler) ScanPiiInjection(context.Context, *connect.Request[v1.ScanPiiInjectionRequest]) (*connect.Response[v1.ScanPiiInjectionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.ScanPiiInjection is not implemented"))
 }
