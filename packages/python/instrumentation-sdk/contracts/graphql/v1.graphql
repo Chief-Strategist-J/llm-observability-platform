@@ -144,8 +144,14 @@ type TokenCountPayload {
   method: String!
 }
 
+type PiiInjectionScanPayload {
+  pii_detected: Boolean!
+  injection_attempt: Boolean!
+}
+
 type Query {
   "Placeholder query to satisfy GraphQL syntax"
   _dummy: Boolean
   countTokens(prompt: String!, model: String!, provider: String): TokenCountPayload!
+  scanPiiInjection(prompt: String!): PiiInjectionScanPayload!
 }
