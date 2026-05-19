@@ -21,8 +21,14 @@ class TestKafkaProvisioning(unittest.TestCase):
 
     def _run_kafka_cmd(self, args):
         cmd = ["docker", "exec", self.kafka_container] + args
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        return result
+        try:
+            return subprocess.run(cmd, capture_output=True, text=True)
+        except FileNotFoundError:
+            class DummyResult:
+                returncode = -1
+                stderr = "docker command not found"
+                stdout = ""
+            return DummyResult()
 
     def test_live_topics_match_registry(self):
         """Verify that all topics in the registry exist in the live cluster."""

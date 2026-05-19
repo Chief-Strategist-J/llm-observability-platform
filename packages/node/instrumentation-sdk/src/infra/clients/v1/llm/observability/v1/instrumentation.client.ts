@@ -4,6 +4,8 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { InstrumentationControlService } from "./instrumentation";
+import type { ScanPiiInjectionResponse } from "./instrumentation";
+import type { ScanPiiInjectionRequest } from "./instrumentation";
 import type { CountTokensResponse } from "./instrumentation";
 import type { CountTokensRequest } from "./instrumentation";
 import type { TriggerTestStreamCallResponse } from "./instrumentation";
@@ -55,6 +57,10 @@ export interface IInstrumentationControlServiceClient {
      * @generated from protobuf rpc: CountTokens(llm.observability.v1.CountTokensRequest) returns (llm.observability.v1.CountTokensResponse);
      */
     countTokens(input: CountTokensRequest, options?: RpcOptions): UnaryCall<CountTokensRequest, CountTokensResponse>;
+    /**
+     * @generated from protobuf rpc: ScanPiiInjection(llm.observability.v1.ScanPiiInjectionRequest) returns (llm.observability.v1.ScanPiiInjectionResponse);
+     */
+    scanPiiInjection(input: ScanPiiInjectionRequest, options?: RpcOptions): UnaryCall<ScanPiiInjectionRequest, ScanPiiInjectionResponse>;
 }
 /**
  * Service definition for remote instrumentation control
@@ -115,5 +121,12 @@ export class InstrumentationControlServiceClient implements IInstrumentationCont
     countTokens(input: CountTokensRequest, options?: RpcOptions): UnaryCall<CountTokensRequest, CountTokensResponse> {
         const method = this.methods[6], opt = this._transport.mergeOptions(options);
         return stackIntercept<CountTokensRequest, CountTokensResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: ScanPiiInjection(llm.observability.v1.ScanPiiInjectionRequest) returns (llm.observability.v1.ScanPiiInjectionResponse);
+     */
+    scanPiiInjection(input: ScanPiiInjectionRequest, options?: RpcOptions): UnaryCall<ScanPiiInjectionRequest, ScanPiiInjectionResponse> {
+        const method = this.methods[7], opt = this._transport.mergeOptions(options);
+        return stackIntercept<ScanPiiInjectionRequest, ScanPiiInjectionResponse>("unary", this._transport, method, opt, input);
     }
 }

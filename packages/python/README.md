@@ -13,6 +13,8 @@ This guide covers the technical architecture and end-user usage for the Python-b
   - [Basic Usage: Decorators](#basic-usage-decorators)
   - [Advanced Usage: Context Manager](#advanced-usage-context-manager)
   - [Token Counting (Pre-Call Token Counting)](#token-counting-pre-call-token-counting)
+  - [Streaming Observability (TTFT & Token Tracking)](#streaming-observability-ttft--token-tracking)
+  - [PII & Injection Scan (Aho-Corasick Redaction)](#pii--injection-scan-aho-corasick-redaction)
   - [Docker Deployment](#docker-deployment)
 - [3. Implementation Call Chain](#3-implementation-call-chain)
 
@@ -266,6 +268,35 @@ curl -X POST http://localhost:8000/v1/streaming/test-stream-call \
   -d '{"provider": "openai", "chunks": ["A", "B", "C"]}'
 ```
 
+### PII & Injection Scan (Aho-Corasick Redaction)
+
+The SDK features an inline Aho-Corasick trie-based scanner that runs on all prompts inside manual span contexts (`LLMSpanContext` and `LLMSpanWithTokensContext`). It intercepts prompts, detects PII and SQL/prompt injection, and updates telemetry accordingly.
+
+#### Redaction & Interception Behavior
+- **PII Detected**: The prompt and downstream fields (like hashes and embeddings) are completely redacted (`None` or empty). The custom span attribute `llm.pii_detected` is set to `True`.
+- **Injection Detected**: The prompt is preserved, but the custom span attribute `llm.injection_attempt` is set to `True`.
+- **Fail-Safe execution**: Any exception raised inside the scanning engine is caught internally, allowing client code or FastAPI handler to execute without crashes.
+
+#### Programmatic Scan Usage
+You can import and call `scan_prompt` directly to inspect a prompt:
+
+```python
+from instrumentation_sdk import scan_prompt
+
+# Returns (pii_detected: bool, injection_attempt: bool)
+pii, inj = scan_prompt("my email is test@example.com")
+print(f"PII: {pii}, Injection: {inj}")
+```
+
+#### REST Scanning Endpoint
+The `/v1/pii-injection/scan` REST API endpoint supports checking prompt contents:
+
+```bash
+curl -X POST http://localhost:8000/v1/pii-injection/scan \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "my email is user@example.com"}'
+```
+
 ## 3. Implementation Call Chain
 
 | Pipeline Stage | Method Call | Primary File |
@@ -283,4 +314,6 @@ curl -X POST http://localhost:8000/v1/streaming/test-stream-call \
 | **Token Counting** | `count_tokens()` | `features/token_counting/service.py` |
 | **Streaming SDK** | `wrap_async_stream()` | `features/streaming/index.py` |
 | **Streaming Logic** | `finalize_stream()` | `features/streaming/service.py` |
+| **PII & Injection Scan**| `scan_prompt()` | `features/pii_injection_scan/index.py` |
+
 
