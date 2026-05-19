@@ -6,6 +6,7 @@ import inspect
 from typing import Optional, Callable, Any
 from datetime import datetime, timezone
 from .globals import get_reporter
+from ..metrics.index import record_span_metrics
 
 def llm_observe(service: str, endpoint: str):
     def decorator(func: Callable):
@@ -34,6 +35,7 @@ def llm_observe(service: str, endpoint: str):
                         "status": status
                     }
                     reporter = get_reporter()
+                    record_span_metrics(span_data)
                     await reporter.report_async(span_data)
             return async_wrapper
         else:
@@ -61,6 +63,7 @@ def llm_observe(service: str, endpoint: str):
                         "status": status
                     }
                     reporter = get_reporter()
+                    record_span_metrics(span_data)
                     reporter.report(span_data)
             return sync_wrapper
     return decorator
