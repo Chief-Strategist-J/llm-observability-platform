@@ -8,7 +8,7 @@ from ..spans.index import TokenCountMethod
 
 class LLMSpanWithTokensContext(LLMSpanContext):
     def __init__(self, service: "TokenCountingService", prompt: Any, **kwargs: Any):
-        super().__init__(**kwargs)
+        super().__init__(prompt=prompt, **kwargs)
         model = kwargs.get("model", "")
         tokens, method = service.count_tokens(prompt, model)
         self.set_metadata("prompt_tokens", tokens)

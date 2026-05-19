@@ -215,6 +215,43 @@ paths:
               schema:
                 type: string
 
+  /pii-injection/scan:
+    post:
+      summary: Scan prompt for PII and injections
+      operationId: scanPrompt
+      tags:
+        - Utilities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - prompt
+              properties:
+                prompt:
+                  oneOf:
+                    - type: string
+                    - type: array
+                      items:
+                        type: object
+                  description: Prompt string or list of chat messages
+      responses:
+        '200':
+          description: Successful scan result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pii_detected:
+                    type: boolean
+                    example: false
+                  injection_attempt:
+                    type: boolean
+                    example: false
+
 components:
   schemas:
     StatusResponse:

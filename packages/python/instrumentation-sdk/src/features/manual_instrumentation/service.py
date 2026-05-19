@@ -11,16 +11,57 @@ class LLMSpanContext:
     def __init__(self, **kwargs: Any):
         self._span_id = uuid.uuid4()
         self._start_time = time.perf_counter()
+        pii_detected = False
+        injection_attempt = False
+        prompt = kwargs.get("prompt")
+        if prompt is not None:
+            try:
+                from ..pii_injection_scan.index import scan_prompt
+                pii_detected, injection_attempt = scan_prompt(prompt)
+                if pii_detected:
+                    kwargs["prompt"] = None
+                    if "prompt_hash" in kwargs:
+                        kwargs["prompt_hash"] = None
+                    if "prompt_embedding" in kwargs:
+                        kwargs["prompt_embedding"] = None
+                    if "response_embedding" in kwargs:
+                        kwargs["response_embedding"] = None
+            except Exception:
+                pass
         self._data: Dict[str, Any] = {
             "span_id": self._span_id,
             "timestamp_utc": datetime.now(timezone.utc),
             "status": "success",
+            "pii_detected": pii_detected,
+            "injection_attempt": injection_attempt,
             **kwargs
         }
         self._otel_span = None
         self._otel_context = None
 
     def set_metadata(self, key: str, value: Any) -> None:
+        if key == "prompt" and value is not None:
+            try:
+                from ..pii_injection_scan.index import scan_prompt
+                pii_detected, injection_attempt = scan_prompt(value)
+                self._data["pii_detected"] = pii_detected or self._data.get("pii_detected", False)
+                self._data["injection_attempt"] = injection_attempt or self._data.get("injection_attempt", False)
+                if pii_detected:
+                    self._data["prompt"] = None
+                    if "prompt_hash" in self._data:
+                        self._data["prompt_hash"] = None
+                    if "prompt_embedding" in self._data:
+                        self._data["prompt_embedding"] = None
+                    if "response_embedding" in self._data:
+                        self._data["response_embedding"] = None
+                    if self._otel_span and self._otel_span.is_recording():
+                        self._otel_span.set_attribute("llm.pii_detected", True)
+                        self._otel_span.set_attribute("llm.prompt_hash", "")
+                        self._otel_span.set_attribute("llm.prompt_embedding", "")
+                        self._otel_span.set_attribute("llm.response_embedding", "")
+                    return
+            except Exception:
+                pass
         self._data[key] = value
         if self._otel_span and self._otel_span.is_recording():
             if isinstance(value, (str, bool, int, float)):
