@@ -142,6 +142,20 @@ pub struct CountTokensResponse {
     #[prost(string, tag="2")]
     pub method: ::prost::alloc::string::String,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ScanPiiInjectionRequest {
+    #[prost(string, tag="1")]
+    pub prompt: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct ScanPiiInjectionResponse {
+    #[prost(bool, tag="1")]
+    pub pii_detected: bool,
+    #[prost(bool, tag="2")]
+    pub injection_attempt: bool,
+}
 /// InstrumentationStatus represents the current state of auto-instrumentation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]

@@ -28,6 +28,7 @@ abstract class InstrumentationControlServiceBase extends $pb.GeneratedService {
   $async.Future<$0.TriggerTestCallResponse> triggerTestCall($pb.ServerContext ctx, $0.TriggerTestCallRequest request);
   $async.Future<$0.TriggerTestStreamCallResponse> triggerTestStreamCall($pb.ServerContext ctx, $0.TriggerTestStreamCallRequest request);
   $async.Future<$0.CountTokensResponse> countTokens($pb.ServerContext ctx, $0.CountTokensRequest request);
+  $async.Future<$0.ScanPiiInjectionResponse> scanPiiInjection($pb.ServerContext ctx, $0.ScanPiiInjectionRequest request);
 
   $pb.GeneratedMessage createRequest($core.String methodName) {
     switch (methodName) {
@@ -38,6 +39,7 @@ abstract class InstrumentationControlServiceBase extends $pb.GeneratedService {
       case 'TriggerTestCall': return $0.TriggerTestCallRequest();
       case 'TriggerTestStreamCall': return $0.TriggerTestStreamCallRequest();
       case 'CountTokens': return $0.CountTokensRequest();
+      case 'ScanPiiInjection': return $0.ScanPiiInjectionRequest();
       default: throw $core.ArgumentError('Unknown method: $methodName');
     }
   }
@@ -51,6 +53,7 @@ abstract class InstrumentationControlServiceBase extends $pb.GeneratedService {
       case 'TriggerTestCall': return this.triggerTestCall(ctx, request as $0.TriggerTestCallRequest);
       case 'TriggerTestStreamCall': return this.triggerTestStreamCall(ctx, request as $0.TriggerTestStreamCallRequest);
       case 'CountTokens': return this.countTokens(ctx, request as $0.CountTokensRequest);
+      case 'ScanPiiInjection': return this.scanPiiInjection(ctx, request as $0.ScanPiiInjectionRequest);
       default: throw $core.ArgumentError('Unknown method: $methodName');
     }
   }

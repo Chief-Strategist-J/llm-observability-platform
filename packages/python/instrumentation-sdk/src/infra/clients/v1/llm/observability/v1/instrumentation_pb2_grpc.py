@@ -50,6 +50,11 @@ class InstrumentationControlServiceStub(object):
                 request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.CountTokensRequest.SerializeToString,
                 response_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.CountTokensResponse.FromString,
                 )
+        self.ScanPiiInjection = channel.unary_unary(
+                '/llm.observability.v1.InstrumentationControlService/ScanPiiInjection',
+                request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ScanPiiInjectionRequest.SerializeToString,
+                response_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ScanPiiInjectionResponse.FromString,
+                )
 
 
 class InstrumentationControlServiceServicer(object):
@@ -98,6 +103,12 @@ class InstrumentationControlServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ScanPiiInjection(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_InstrumentationControlServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -135,6 +146,11 @@ def add_InstrumentationControlServiceServicer_to_server(servicer, server):
                     servicer.CountTokens,
                     request_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.CountTokensRequest.FromString,
                     response_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.CountTokensResponse.SerializeToString,
+            ),
+            'ScanPiiInjection': grpc.unary_unary_rpc_method_handler(
+                    servicer.ScanPiiInjection,
+                    request_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ScanPiiInjectionRequest.FromString,
+                    response_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ScanPiiInjectionResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -263,5 +279,22 @@ class InstrumentationControlService(object):
         return grpc.experimental.unary_unary(request, target, '/llm.observability.v1.InstrumentationControlService/CountTokens',
             llm_dot_observability_dot_v1_dot_instrumentation__pb2.CountTokensRequest.SerializeToString,
             llm_dot_observability_dot_v1_dot_instrumentation__pb2.CountTokensResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def ScanPiiInjection(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/llm.observability.v1.InstrumentationControlService/ScanPiiInjection',
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.ScanPiiInjectionRequest.SerializeToString,
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.ScanPiiInjectionResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

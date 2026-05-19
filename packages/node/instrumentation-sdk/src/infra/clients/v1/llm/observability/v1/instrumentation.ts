@@ -247,6 +247,28 @@ export interface CountTokensResponse {
     method: string;
 }
 /**
+ * @generated from protobuf message llm.observability.v1.ScanPiiInjectionRequest
+ */
+export interface ScanPiiInjectionRequest {
+    /**
+     * @generated from protobuf field: string prompt = 1;
+     */
+    prompt: string;
+}
+/**
+ * @generated from protobuf message llm.observability.v1.ScanPiiInjectionResponse
+ */
+export interface ScanPiiInjectionResponse {
+    /**
+     * @generated from protobuf field: bool pii_detected = 1;
+     */
+    piiDetected: boolean;
+    /**
+     * @generated from protobuf field: bool injection_attempt = 2;
+     */
+    injectionAttempt: boolean;
+}
+/**
  * InstrumentationStatus represents the current state of auto-instrumentation.
  *
  * @generated from protobuf enum llm.observability.v1.InstrumentationStatus
@@ -1147,6 +1169,107 @@ class CountTokensResponse$Type extends MessageType<CountTokensResponse> {
  * @generated MessageType for protobuf message llm.observability.v1.CountTokensResponse
  */
 export const CountTokensResponse = new CountTokensResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ScanPiiInjectionRequest$Type extends MessageType<ScanPiiInjectionRequest> {
+    constructor() {
+        super("llm.observability.v1.ScanPiiInjectionRequest", [
+            { no: 1, name: "prompt", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ScanPiiInjectionRequest>): ScanPiiInjectionRequest {
+        const message = { prompt: "" };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<ScanPiiInjectionRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ScanPiiInjectionRequest): ScanPiiInjectionRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string prompt */ 1:
+                    message.prompt = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ScanPiiInjectionRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string prompt = 1; */
+        if (message.prompt !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.prompt);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.ScanPiiInjectionRequest
+ */
+export const ScanPiiInjectionRequest = new ScanPiiInjectionRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ScanPiiInjectionResponse$Type extends MessageType<ScanPiiInjectionResponse> {
+    constructor() {
+        super("llm.observability.v1.ScanPiiInjectionResponse", [
+            { no: 1, name: "pii_detected", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 2, name: "injection_attempt", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ScanPiiInjectionResponse>): ScanPiiInjectionResponse {
+        const message = { piiDetected: false, injectionAttempt: false };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<ScanPiiInjectionResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ScanPiiInjectionResponse): ScanPiiInjectionResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* bool pii_detected */ 1:
+                    message.piiDetected = reader.bool();
+                    break;
+                case /* bool injection_attempt */ 2:
+                    message.injectionAttempt = reader.bool();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ScanPiiInjectionResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* bool pii_detected = 1; */
+        if (message.piiDetected !== false)
+            writer.tag(1, WireType.Varint).bool(message.piiDetected);
+        /* bool injection_attempt = 2; */
+        if (message.injectionAttempt !== false)
+            writer.tag(2, WireType.Varint).bool(message.injectionAttempt);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.ScanPiiInjectionResponse
+ */
+export const ScanPiiInjectionResponse = new ScanPiiInjectionResponse$Type();
 /**
  * @generated ServiceType for protobuf service llm.observability.v1.InstrumentationControlService
  */
@@ -1157,5 +1280,6 @@ export const InstrumentationControlService = new ServiceType("llm.observability.
     { name: "DetectProvider", options: {}, I: DetectProviderRequest, O: DetectProviderResponse },
     { name: "TriggerTestCall", options: {}, I: TriggerTestCallRequest, O: TriggerTestCallResponse },
     { name: "TriggerTestStreamCall", options: {}, I: TriggerTestStreamCallRequest, O: TriggerTestStreamCallResponse },
-    { name: "CountTokens", options: {}, I: CountTokensRequest, O: CountTokensResponse }
+    { name: "CountTokens", options: {}, I: CountTokensRequest, O: CountTokensResponse },
+    { name: "ScanPiiInjection", options: {}, I: ScanPiiInjectionRequest, O: ScanPiiInjectionResponse }
 ]);
