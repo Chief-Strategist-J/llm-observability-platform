@@ -1,0 +1,120 @@
+{
+  "uid": "llm-latency-ttft-dashboard",
+  "title": "LLM Latency & TTFT Dashboard",
+  "tags": ["llm", "latency", "ttft", "observability"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Latency Percentiles (p50 / p95 / p99)",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "scheme",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(llm_latency_ms_total_bucket[5m])) by (le, model))",
+          "legendFormat": "p50 — {{model}}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(llm_latency_ms_total_bucket[5m])) by (le, model))",
+          "legendFormat": "p95 — {{model}}",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(llm_latency_ms_total_bucket[5m])) by (le, model))",
+          "legendFormat": "p99 — {{model}}",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Time-to-First-Token Percentiles (p50 / p95 / p99)",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 10 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "scheme",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(llm_latency_ms_ttft_bucket[5m])) by (le, model))",
+          "legendFormat": "TTFT p50 — {{model}}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(llm_latency_ms_ttft_bucket[5m])) by (le, model))",
+          "legendFormat": "TTFT p95 — {{model}}",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(llm_latency_ms_ttft_bucket[5m])) by (le, model))",
+          "legendFormat": "TTFT p99 — {{model}}",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Average Latency vs Average TTFT",
+      "type": "barchart",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "fillOpacity": 60,
+            "gradientMode": "scheme"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(llm_latency_ms_total_sum[5m])) by (model) / sum(rate(llm_latency_ms_total_count[5m])) by (model)",
+          "legendFormat": "Avg Latency — {{model}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(llm_latency_ms_ttft_sum[5m])) by (model) / sum(rate(llm_latency_ms_ttft_count[5m])) by (model)",
+          "legendFormat": "Avg TTFT — {{model}}",
+          "refId": "B"
+        }
+      ]
+    }
+  ]
+}
