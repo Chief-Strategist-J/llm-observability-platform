@@ -1,0 +1,163 @@
+name: Validate Grafana Config
+
+on:
+  push:
+    paths:
+      - 'packages/python/instrumentation-sdk/build/grafana-datasource.yaml'
+      - 'packages/python/instrumentation-sdk/build/grafana-dashboard-provider.yaml'
+      - 'packages/python/instrumentation-sdk/build/prometheus.yml'
+      - 'packages/python/instrumentation-sdk/build/dashboards/llm-cost-dashboard.json'
+      - 'packages/python/instrumentation-sdk/build/dashboards/llm-latency-ttft-dashboard.json'
+      - 'packages/python/instrumentation-sdk/build/dashboards/llm-security-safety-dashboard.json'
+      - 'packages/python/instrumentation-sdk/build/dashboards/llm-error-retry-dashboard.json'
+  pull_request:
+    paths:
+      - 'packages/python/instrumentation-sdk/build/grafana-datasource.yaml'
+      - 'packages/python/instrumentation-sdk/build/grafana-dashboard-provider.yaml'
+      - 'packages/python/instrumentation-sdk/build/prometheus.yml'
+      - 'packages/python/instrumentation-sdk/build/dashboards/llm-cost-dashboard.json'
+      - 'packages/python/instrumentation-sdk/build/dashboards/llm-latency-ttft-dashboard.json'
+      - 'packages/python/instrumentation-sdk/build/dashboards/llm-security-safety-dashboard.json'
+      - 'packages/python/instrumentation-sdk/build/dashboards/llm-error-retry-dashboard.json'
+
+jobs:
+  validate:
+    name: Validate Grafana Config Files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pyyaml
+        run: pip install pyyaml --quiet
+
+      - name: Validate YAML files are parseable
+        run: |
+          python - <<'EOF'
+          import yaml, sys, pathlib
+
+          files = [
+            "packages/python/instrumentation-sdk/build/grafana-datasource.yaml",
+            "packages/python/instrumentation-sdk/build/grafana-dashboard-provider.yaml",
+            "packages/python/instrumentation-sdk/build/prometheus.yml",
+          ]
+
+          for f in files:
+            try:
+              yaml.safe_load(pathlib.Path(f).read_text())
+              print(f"  OK  {f}")
+            except yaml.YAMLError as e:
+              print(f"  FAIL  {f}: {e}", file=sys.stderr)
+              sys.exit(1)
+          EOF
+
+      - name: Validate grafana-datasource.yaml structure
+        run: |
+          python - <<'EOF'
+          import yaml, sys, pathlib
+
+          raw = yaml.safe_load(pathlib.Path(
+            "packages/python/instrumentation-sdk/build/grafana-datasource.yaml"
+          ).read_text())
+
+          assert raw.get("apiVersion") == 1, "apiVersion must be 1"
+          ds_list = raw.get("datasources", [])
+          assert ds_list, "datasources list must not be empty"
+
+          names = set()
+          for ds in ds_list:
+            assert "name" in ds, f"datasource missing name: {ds}"
+            assert "type" in ds, f"datasource missing type: {ds}"
+            assert "url"  in ds, f"datasource missing url: {ds}"
+            assert ds["name"] not in names, f"duplicate datasource name: {ds['name']}"
+            names.add(ds["name"])
+
+          assert "Prometheus" in names, "Prometheus datasource is required"
+          print(f"  OK  datasource.yaml — {len(ds_list)} datasource(s) validated")
+          EOF
+
+      - name: Validate grafana-dashboard-provider.yaml structure
+        run: |
+          python - <<'EOF'
+          import yaml, sys, pathlib
+
+          raw = yaml.safe_load(pathlib.Path(
+            "packages/python/instrumentation-sdk/build/grafana-dashboard-provider.yaml"
+          ).read_text())
+
+          assert raw.get("apiVersion") == 1, "apiVersion must be 1"
+          providers = raw.get("providers", [])
+          assert providers, "providers list must not be empty"
+
+          for p in providers:
+            assert "name" in p, f"provider missing name: {p}"
+            assert "type" in p, f"provider missing type: {p}"
+            assert p.get("options", {}).get("path"), f"provider missing options.path: {p}"
+
+          print(f"  OK  dashboard-provider.yaml — {len(providers)} provider(s) validated")
+          EOF
+
+      - name: Validate prometheus.yml structure
+        run: |
+          python - <<'EOF'
+          import yaml, sys, pathlib
+
+          raw = yaml.safe_load(pathlib.Path(
+            "packages/python/instrumentation-sdk/build/prometheus.yml"
+          ).read_text())
+
+          assert "scrape_configs" in raw, "prometheus.yml must have scrape_configs"
+          assert raw["scrape_configs"], "scrape_configs must not be empty"
+
+          for sc in raw["scrape_configs"]:
+            assert "job_name" in sc, f"scrape_config missing job_name: {sc}"
+
+          print(f"  OK  prometheus.yml — {len(raw['scrape_configs'])} scrape job(s) validated")
+          EOF
+
+      - name: Validate dashboard JSON files
+        run: |
+          python - <<'EOF'
+          import json, sys, pathlib
+
+          dashboard_dir = pathlib.Path(
+            "packages/python/instrumentation-sdk/build/dashboards"
+          )
+          files = sorted(dashboard_dir.glob("*.json"))
+          assert files, "No dashboard JSON files found"
+
+          uids = {}
+          required_keys = {"title", "panels", "schemaVersion"}
+
+          for f in files:
+            try:
+              data = json.loads(f.read_text())
+            except json.JSONDecodeError as e:
+              print(f"  FAIL  {f.name}: invalid JSON — {e}", file=sys.stderr)
+              sys.exit(1)
+
+            missing = required_keys - data.keys()
+            if missing:
+              print(f"  FAIL  {f.name}: missing keys {missing}", file=sys.stderr)
+              sys.exit(1)
+
+            uid = data.get("uid")
+            if uid:
+              if uid in uids:
+                print(f"  FAIL  {f.name}: duplicate UID '{uid}' (also in {uids[uid]})", file=sys.stderr)
+                sys.exit(1)
+              uids[uid] = f.name
+
+            assert data.get("panels") is not None, f"{f.name}: panels must not be null"
+
+            print(f"  OK  {f.name} — title={data.get('title')!r}  uid={uid!r}  panels={len(data['panels'])}")
+
+          print(f"\nAll {len(files)} dashboard(s) passed.")
+          EOF
