@@ -6,19 +6,25 @@ on:
       - 'packages/python/instrumentation-sdk/build/grafana-datasource.yaml'
       - 'packages/python/instrumentation-sdk/build/grafana-dashboard-provider.yaml'
       - 'packages/python/instrumentation-sdk/build/prometheus.yml'
+      - 'packages/python/instrumentation-sdk/build/tempo-config.yaml'
       - 'packages/python/instrumentation-sdk/build/dashboards/llm-cost-dashboard.json'
       - 'packages/python/instrumentation-sdk/build/dashboards/llm-latency-ttft-dashboard.json'
       - 'packages/python/instrumentation-sdk/build/dashboards/llm-security-safety-dashboard.json'
       - 'packages/python/instrumentation-sdk/build/dashboards/llm-error-retry-dashboard.json'
+      - 'packages/python/instrumentation-sdk/config/model_prices.yaml'
+      - 'packages/python/instrumentation-sdk/config/patterns.yaml'
   pull_request:
     paths:
       - 'packages/python/instrumentation-sdk/build/grafana-datasource.yaml'
       - 'packages/python/instrumentation-sdk/build/grafana-dashboard-provider.yaml'
       - 'packages/python/instrumentation-sdk/build/prometheus.yml'
+      - 'packages/python/instrumentation-sdk/build/tempo-config.yaml'
       - 'packages/python/instrumentation-sdk/build/dashboards/llm-cost-dashboard.json'
       - 'packages/python/instrumentation-sdk/build/dashboards/llm-latency-ttft-dashboard.json'
       - 'packages/python/instrumentation-sdk/build/dashboards/llm-security-safety-dashboard.json'
       - 'packages/python/instrumentation-sdk/build/dashboards/llm-error-retry-dashboard.json'
+      - 'packages/python/instrumentation-sdk/config/model_prices.yaml'
+      - 'packages/python/instrumentation-sdk/config/patterns.yaml'
 
 jobs:
   validate:
@@ -160,4 +166,105 @@ jobs:
             print(f"  OK  {f.name} — title={data.get('title')!r}  uid={uid!r}  panels={len(data['panels'])}")
 
           print(f"\nAll {len(files)} dashboard(s) passed.")
+          EOF
+
+      - name: Validate tempo-config.yaml structure
+        run: |
+          python - <<'EOF'
+          import yaml, sys, pathlib
+
+          raw = yaml.safe_load(pathlib.Path(
+            "packages/python/instrumentation-sdk/build/tempo-config.yaml"
+          ).read_text())
+
+          assert "server" in raw, "tempo-config.yaml must have 'server' section"
+          assert "http_listen_port" in raw["server"], "server.http_listen_port is required"
+
+          assert "distributor" in raw, "tempo-config.yaml must have 'distributor' section"
+          receivers = raw.get("distributor", {}).get("receivers", {})
+          assert "otlp" in receivers, "distributor.receivers.otlp is required"
+
+          assert "storage" in raw, "tempo-config.yaml must have 'storage' section"
+          backend = raw.get("storage", {}).get("trace", {}).get("backend")
+          assert backend, "storage.trace.backend is required"
+
+          print(f"  OK  tempo-config.yaml — backend={backend!r}  port={raw['server']['http_listen_port']}")
+          EOF
+
+      - name: Validate model_prices.yaml structure
+        run: |
+          python - <<'EOF'
+          import yaml, sys, pathlib
+
+          raw = yaml.safe_load(pathlib.Path(
+            "packages/python/instrumentation-sdk/config/model_prices.yaml"
+          ).read_text())
+
+          assert isinstance(raw, list), "model_prices.yaml must be a list"
+          assert raw, "model_prices.yaml must not be empty"
+
+          required = {"model", "provider", "input_price_per_1m", "output_price_per_1m", "version"}
+          seen = set()
+
+          for entry in raw:
+            missing = required - entry.keys()
+            if missing:
+              print(f"  FAIL  entry {entry}: missing fields {missing}", file=sys.stderr)
+              sys.exit(1)
+
+            assert isinstance(entry["input_price_per_1m"], (int, float)), \
+              f"input_price_per_1m must be numeric in {entry}"
+            assert isinstance(entry["output_price_per_1m"], (int, float)), \
+              f"output_price_per_1m must be numeric in {entry}"
+            assert entry["input_price_per_1m"] >= 0, f"input_price_per_1m must be >= 0 in {entry}"
+            assert entry["output_price_per_1m"] >= 0, f"output_price_per_1m must be >= 0 in {entry}"
+
+            key = (entry["model"], entry["provider"])
+            if key in seen:
+              print(f"  FAIL  duplicate (model, provider) pair: {key}", file=sys.stderr)
+              sys.exit(1)
+            seen.add(key)
+
+            print(f"  OK  {entry['provider']}/{entry['model']}  in={entry['input_price_per_1m']}  out={entry['output_price_per_1m']}  v={entry['version']}")
+
+          print(f"\nAll {len(raw)} model price entries valid.")
+          EOF
+
+      - name: Validate patterns.yaml structure
+        run: |
+          python - <<'EOF'
+          import yaml, re, sys, pathlib
+
+          raw = yaml.safe_load(pathlib.Path(
+            "packages/python/instrumentation-sdk/config/patterns.yaml"
+          ).read_text())
+
+          assert "patterns" in raw, "patterns.yaml must have top-level 'patterns' key"
+          entries = raw["patterns"]
+          assert entries, "patterns list must not be empty"
+
+          valid_types = {"PII_STRUCTURAL", "INJECTION_ATTEMPT"}
+          names = set()
+
+          for p in entries:
+            assert "name" in p, f"pattern missing 'name': {p}"
+            assert "regex" in p, f"pattern missing 'regex': {p}"
+            assert "type" in p, f"pattern missing 'type': {p}"
+            assert p["type"] in valid_types, \
+              f"pattern type must be one of {valid_types}, got {p['type']!r}"
+
+            if p["name"] in names:
+              print(f"  FAIL  duplicate pattern name: {p['name']}", file=sys.stderr)
+              sys.exit(1)
+            names.add(p["name"])
+
+            try:
+              re.compile(p["regex"])
+            except re.error as e:
+              print(f"  FAIL  {p['name']}: invalid regex — {e}", file=sys.stderr)
+              sys.exit(1)
+
+            print(f"  OK  {p['name']} ({p['type']})")
+
+          print(f"\nAll {len(entries)} pattern(s) valid.")
           EOF

@@ -15,6 +15,8 @@ This guide covers the technical architecture and end-user usage for the Python-b
   - [Token Counting (Pre-Call Token Counting)](#token-counting-pre-call-token-counting)
   - [Streaming Observability (TTFT & Token Tracking)](#streaming-observability-ttft--token-tracking)
   - [PII & Injection Scan (Aho-Corasick Redaction)](#pii--injection-scan-aho-corasick-redaction)
+  - [Prometheus Metrics & Grafana Dashboard](#prometheus-metrics--grafana-dashboard)
+  - [Updating Config Files (Model Prices, PII Patterns, Infra)](#updating-config-files-model-prices-pii-patterns-infra)
   - [Docker Deployment](#docker-deployment)
 - [3. Implementation Call Chain](#3-implementation-call-chain)
 
@@ -326,7 +328,96 @@ The dashboard is built-in and automatically provisioned on port `3000` (or `3002
 - **Cost Analysis**: Live cost calculation in micro-USD.
 - **Security Scans**: Record rates of PII exposure and prompt injections.
 
+### Updating Config Files (Model Prices, PII Patterns, Infra)
+
+The SDK reads config files once at startup. After any change, a container restart is required (except dashboard JSON files which are hot-reloaded).
+
+#### Adding or updating a model price
+
+Edit `config/model_prices.yaml`:
+
+```yaml
+- model: gpt-5
+  provider: openai
+  input_price_per_1m: 10.00
+  output_price_per_1m: 30.00
+  version: "2026-01-01"
+```
+
+Required fields: `model`, `provider`, `input_price_per_1m`, `output_price_per_1m`, `version`.  
+Prices must be `>= 0`. Duplicate `(model, provider)` pairs are rejected by CI.
+
+Then restart:
+```bash
+docker restart instrumentation-sdk-api
+```
+
+#### Adding or updating a PII / Injection pattern
+
+Edit `config/patterns.yaml`:
+
+```yaml
+patterns:
+  - name: phone_number
+    regex: "\\b\\d{3}[-.]?\\d{3}[-.]?\\d{4}\\b"
+    type: PII_STRUCTURAL   # or INJECTION_ATTEMPT
+```
+
+Valid `type` values: `PII_STRUCTURAL`, `INJECTION_ATTEMPT`.  
+The CI validates that every regex compiles and no pattern name is duplicated.
+
+Then restart:
+```bash
+docker restart instrumentation-sdk-api
+```
+
+#### Updating a Grafana dashboard
+
+Edit any file under `build/dashboards/*.json`.  
+**No restart required** — Grafana polls and hot-reloads dashboards every 30 seconds automatically.
+
+#### Updating infra configs (Grafana datasource, Prometheus, Tempo)
+
+Edit:
+- `build/grafana-datasource.yaml` — add/change datasources
+- `build/grafana-dashboard-provider.yaml` — change dashboard provider path/folder
+- `build/prometheus.yml` — add scrape targets
+- `build/tempo-config.yaml` — change Tempo storage or OTLP port
+
+After editing, rebuild the image and restart:
+```bash
+DOCKER_PAT=<your-pat> ./scripts/deploy_docker.sh
+docker stop instrumentation-sdk-api && docker rm instrumentation-sdk-api
+docker pull chiefj/instrumentation-sdk-api:latest
+docker run -d -p 8000:8000 -p 3000:3000 -p 4317:4317 -p 9464:9464 \
+  --name instrumentation-sdk-api chiefj/instrumentation-sdk-api:latest
+```
+
+#### CI — what runs automatically
+
+The `grafana-config-validate.yml` workflow triggers **only** when one of the 10 watched files changes. It validates:
+
+| File | What is checked |
+|---|---|
+| `grafana-datasource.yaml` | YAML valid, `name`/`type`/`url` present, Prometheus datasource exists |
+| `grafana-dashboard-provider.yaml` | YAML valid, `options.path` present |
+| `prometheus.yml` | YAML valid, `scrape_configs` non-empty |
+| `tempo-config.yaml` | `server.http_listen_port`, `distributor.receivers.otlp`, `storage.trace.backend` |
+| `dashboards/*.json` | JSON valid, `title`/`panels`/`schemaVersion` present, no duplicate UIDs |
+| `model_prices.yaml` | List non-empty, all required fields, prices `>= 0`, no duplicate pairs |
+| `patterns.yaml` | All required fields, valid `type`, no duplicate names, regex compiles |
+
+#### Running the load test locally
+
+```bash
+cd packages/python/instrumentation-sdk
+.venv/bin/python -m pytest tests/performance/ -m performance -v
+```
+
+This sends **1000 spans** (100 individual + 10×50 batch) covering all 6 model/provider combos, error ratios, PII flags, and high token counts.
+
 ## 3. Implementation Call Chain
+
 
 | Pipeline Stage | Method Call | Primary File |
 | :--- | :--- | :--- |
