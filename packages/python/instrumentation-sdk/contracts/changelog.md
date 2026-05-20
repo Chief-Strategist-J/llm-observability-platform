@@ -4,6 +4,42 @@ All notable changes to the `instrumentation-sdk` package will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-05-20
+
+### Added
+- **Performance Load Test Suite** (`tests/performance/test_metrics_load.py`): 7 pytest cases covering 100 individual spans, 10×50 batch spans, mixed error ratios, PII/injection flags, all model/provider combos, and high token counts. Marked `@pytest.mark.performance` — excluded from unit/integration CI by default.
+- **Grafana Config CI** (`.github/workflows/grafana-config-validate.yml`): File-targeted CI that triggers **only** on changes to these exact 10 files: `grafana-datasource.yaml`, `grafana-dashboard-provider.yaml`, `prometheus.yml`, `tempo-config.yaml`, all 4 dashboard JSON files, `model_prices.yaml`, and `patterns.yaml`. Validates YAML syntax, required fields, dashboard UID uniqueness, regex compilability, and price-entry integrity. No Docker — runs in ~60 s.
+
+### Fixed
+- **Grafana "database is locked" crash**: Set `GF_DATABASE_WAL=true` permanently in `entrypoint.sh`. Root cause: a manual debug run had initialised the SQLite DB in WAL mode; subsequent container starts without WAL=true caused the migration service to crash silently, leaving port 3000 unreachable.
+- **Proto buf lint failures**: Split shared `MetricsStatusResponse` into `InitMetricsResponse` and `GetMetricsHealthResponse` so each RPC has a uniquely named response type — satisfying `buf lint` naming and reuse rules.
+
+### Runbook — Config File Changes Require Container Restart
+
+> **No database migration is needed.** These are static YAML files read once at startup.
+
+| File changed | Action required |
+|---|---|
+| `config/model_prices.yaml` | Restart container: `docker restart instrumentation-sdk-api` |
+| `config/patterns.yaml` | Restart container: `docker restart instrumentation-sdk-api` |
+| `build/grafana-datasource.yaml` | Restart container |
+| `build/grafana-dashboard-provider.yaml` | Restart container |
+| `build/prometheus.yml` | Restart container |
+| `build/tempo-config.yaml` | Restart container |
+| `build/dashboards/*.json` | Hot-reloaded by Grafana every 30 s — no restart needed |
+
+## [1.6.0] - 2026-05-20
+
+
+### Added
+- **Prometheus Metrics collection & scraping**: Integrated OpenTelemetry Prometheus adapter to collect operational metrics from LLM call lifecycles.
+- **REST Metrics API**: Exposed endpoints `POST /v1/metrics/init`, `GET /v1/metrics/health`, `POST /v1/metrics/record`, and `POST /v1/metrics/record-batch` for metrics orchestration.
+- **Grafana Dashboard**: Provisioned Grafana dashboard visualizing LLM latency, TTFT, token usage, cost, and error rates.
+- **Contract-First Support**:
+  - **OpenAPI**: Added OpenAPI routes and schemas for the metrics endpoints.
+  - **GraphQL**: Exposed `initMetrics`, `recordMetrics`, `recordMetricsBatch` mutations and `metricsHealth` query.
+  - **Protobuf**: Added `InitMetrics`, `GetMetricsHealth`, `RecordMetrics`, `RecordMetricsBatch` RPCs to `InstrumentationControlService`.
+
 ## [1.5.0] - 2026-05-19
 
 ### Added

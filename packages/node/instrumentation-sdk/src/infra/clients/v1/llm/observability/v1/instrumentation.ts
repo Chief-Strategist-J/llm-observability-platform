@@ -269,6 +269,138 @@ export interface ScanPiiInjectionResponse {
     injectionAttempt: boolean;
 }
 /**
+ * @generated from protobuf message llm.observability.v1.InitMetricsRequest
+ */
+export interface InitMetricsRequest {
+    /**
+     * @generated from protobuf field: optional int32 port = 1;
+     */
+    port?: number;
+}
+/**
+ * @generated from protobuf message llm.observability.v1.GetMetricsHealthRequest
+ */
+export interface GetMetricsHealthRequest {
+}
+/**
+ * @generated from protobuf message llm.observability.v1.InitMetricsResponse
+ */
+export interface InitMetricsResponse {
+    /**
+     * @generated from protobuf field: bool initialized = 1;
+     */
+    initialized: boolean;
+    /**
+     * @generated from protobuf field: string message = 2;
+     */
+    message: string;
+}
+/**
+ * @generated from protobuf message llm.observability.v1.GetMetricsHealthResponse
+ */
+export interface GetMetricsHealthResponse {
+    /**
+     * @generated from protobuf field: bool initialized = 1;
+     */
+    initialized: boolean;
+    /**
+     * @generated from protobuf field: string message = 2;
+     */
+    message: string;
+}
+/**
+ * @generated from protobuf message llm.observability.v1.RecordMetricsRequest
+ */
+export interface RecordMetricsRequest {
+    /**
+     * @generated from protobuf field: string model = 1;
+     */
+    model: string;
+    /**
+     * @generated from protobuf field: string provider = 2;
+     */
+    provider: string;
+    /**
+     * @generated from protobuf field: string service_name = 3;
+     */
+    serviceName: string;
+    /**
+     * @generated from protobuf field: optional int32 prompt_tokens = 4;
+     */
+    promptTokens?: number;
+    /**
+     * @generated from protobuf field: optional int32 completion_tokens = 5;
+     */
+    completionTokens?: number;
+    /**
+     * @generated from protobuf field: optional int64 cost_usd_micro = 6;
+     */
+    costUsdMicro?: bigint;
+    /**
+     * @generated from protobuf field: optional int32 latency_ms_total = 7;
+     */
+    latencyMsTotal?: number;
+    /**
+     * @generated from protobuf field: optional int32 latency_ms_ttft = 8;
+     */
+    latencyMsTtft?: number;
+    /**
+     * @generated from protobuf field: optional string finish_reason = 9;
+     */
+    finishReason?: string;
+    /**
+     * @generated from protobuf field: string status = 10;
+     */
+    status: string;
+    /**
+     * @generated from protobuf field: bool pii_detected = 11;
+     */
+    piiDetected: boolean;
+    /**
+     * @generated from protobuf field: bool injection_attempt = 12;
+     */
+    injectionAttempt: boolean;
+    /**
+     * @generated from protobuf field: int32 retry_count = 13;
+     */
+    retryCount: number;
+}
+/**
+ * @generated from protobuf message llm.observability.v1.RecordMetricsResponse
+ */
+export interface RecordMetricsResponse {
+    /**
+     * @generated from protobuf field: bool recorded = 1;
+     */
+    recorded: boolean;
+    /**
+     * @generated from protobuf field: optional int64 cost_usd_micro = 2;
+     */
+    costUsdMicro?: bigint;
+    /**
+     * @generated from protobuf field: optional string price_version = 3;
+     */
+    priceVersion?: string;
+}
+/**
+ * @generated from protobuf message llm.observability.v1.RecordMetricsBatchRequest
+ */
+export interface RecordMetricsBatchRequest {
+    /**
+     * @generated from protobuf field: repeated llm.observability.v1.RecordMetricsRequest spans = 1;
+     */
+    spans: RecordMetricsRequest[];
+}
+/**
+ * @generated from protobuf message llm.observability.v1.RecordMetricsBatchResponse
+ */
+export interface RecordMetricsBatchResponse {
+    /**
+     * @generated from protobuf field: int32 recorded_count = 1;
+     */
+    recordedCount: number;
+}
+/**
  * InstrumentationStatus represents the current state of auto-instrumentation.
  *
  * @generated from protobuf enum llm.observability.v1.InstrumentationStatus
@@ -1270,6 +1402,473 @@ class ScanPiiInjectionResponse$Type extends MessageType<ScanPiiInjectionResponse
  * @generated MessageType for protobuf message llm.observability.v1.ScanPiiInjectionResponse
  */
 export const ScanPiiInjectionResponse = new ScanPiiInjectionResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class InitMetricsRequest$Type extends MessageType<InitMetricsRequest> {
+    constructor() {
+        super("llm.observability.v1.InitMetricsRequest", [
+            { no: 1, name: "port", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ }
+        ]);
+    }
+    create(value?: PartialMessage<InitMetricsRequest>): InitMetricsRequest {
+        const message = {};
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<InitMetricsRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: InitMetricsRequest): InitMetricsRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* optional int32 port */ 1:
+                    message.port = reader.int32();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: InitMetricsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* optional int32 port = 1; */
+        if (message.port !== undefined)
+            writer.tag(1, WireType.Varint).int32(message.port);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.InitMetricsRequest
+ */
+export const InitMetricsRequest = new InitMetricsRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetMetricsHealthRequest$Type extends MessageType<GetMetricsHealthRequest> {
+    constructor() {
+        super("llm.observability.v1.GetMetricsHealthRequest", []);
+    }
+    create(value?: PartialMessage<GetMetricsHealthRequest>): GetMetricsHealthRequest {
+        const message = {};
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<GetMetricsHealthRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetMetricsHealthRequest): GetMetricsHealthRequest {
+        return target ?? this.create();
+    }
+    internalBinaryWrite(message: GetMetricsHealthRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.GetMetricsHealthRequest
+ */
+export const GetMetricsHealthRequest = new GetMetricsHealthRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class InitMetricsResponse$Type extends MessageType<InitMetricsResponse> {
+    constructor() {
+        super("llm.observability.v1.InitMetricsResponse", [
+            { no: 1, name: "initialized", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 2, name: "message", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<InitMetricsResponse>): InitMetricsResponse {
+        const message = { initialized: false, message: "" };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<InitMetricsResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: InitMetricsResponse): InitMetricsResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* bool initialized */ 1:
+                    message.initialized = reader.bool();
+                    break;
+                case /* string message */ 2:
+                    message.message = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: InitMetricsResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* bool initialized = 1; */
+        if (message.initialized !== false)
+            writer.tag(1, WireType.Varint).bool(message.initialized);
+        /* string message = 2; */
+        if (message.message !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.message);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.InitMetricsResponse
+ */
+export const InitMetricsResponse = new InitMetricsResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetMetricsHealthResponse$Type extends MessageType<GetMetricsHealthResponse> {
+    constructor() {
+        super("llm.observability.v1.GetMetricsHealthResponse", [
+            { no: 1, name: "initialized", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 2, name: "message", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<GetMetricsHealthResponse>): GetMetricsHealthResponse {
+        const message = { initialized: false, message: "" };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<GetMetricsHealthResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetMetricsHealthResponse): GetMetricsHealthResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* bool initialized */ 1:
+                    message.initialized = reader.bool();
+                    break;
+                case /* string message */ 2:
+                    message.message = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetMetricsHealthResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* bool initialized = 1; */
+        if (message.initialized !== false)
+            writer.tag(1, WireType.Varint).bool(message.initialized);
+        /* string message = 2; */
+        if (message.message !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.message);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.GetMetricsHealthResponse
+ */
+export const GetMetricsHealthResponse = new GetMetricsHealthResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class RecordMetricsRequest$Type extends MessageType<RecordMetricsRequest> {
+    constructor() {
+        super("llm.observability.v1.RecordMetricsRequest", [
+            { no: 1, name: "model", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "provider", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "service_name", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "prompt_tokens", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
+            { no: 5, name: "completion_tokens", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
+            { no: 6, name: "cost_usd_micro", kind: "scalar", opt: true, T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 7, name: "latency_ms_total", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
+            { no: 8, name: "latency_ms_ttft", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
+            { no: 9, name: "finish_reason", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 10, name: "status", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 11, name: "pii_detected", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 12, name: "injection_attempt", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 13, name: "retry_count", kind: "scalar", T: 5 /*ScalarType.INT32*/ }
+        ]);
+    }
+    create(value?: PartialMessage<RecordMetricsRequest>): RecordMetricsRequest {
+        const message = { model: "", provider: "", serviceName: "", status: "", piiDetected: false, injectionAttempt: false, retryCount: 0 };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<RecordMetricsRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: RecordMetricsRequest): RecordMetricsRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string model */ 1:
+                    message.model = reader.string();
+                    break;
+                case /* string provider */ 2:
+                    message.provider = reader.string();
+                    break;
+                case /* string service_name */ 3:
+                    message.serviceName = reader.string();
+                    break;
+                case /* optional int32 prompt_tokens */ 4:
+                    message.promptTokens = reader.int32();
+                    break;
+                case /* optional int32 completion_tokens */ 5:
+                    message.completionTokens = reader.int32();
+                    break;
+                case /* optional int64 cost_usd_micro */ 6:
+                    message.costUsdMicro = reader.int64().toBigInt();
+                    break;
+                case /* optional int32 latency_ms_total */ 7:
+                    message.latencyMsTotal = reader.int32();
+                    break;
+                case /* optional int32 latency_ms_ttft */ 8:
+                    message.latencyMsTtft = reader.int32();
+                    break;
+                case /* optional string finish_reason */ 9:
+                    message.finishReason = reader.string();
+                    break;
+                case /* string status */ 10:
+                    message.status = reader.string();
+                    break;
+                case /* bool pii_detected */ 11:
+                    message.piiDetected = reader.bool();
+                    break;
+                case /* bool injection_attempt */ 12:
+                    message.injectionAttempt = reader.bool();
+                    break;
+                case /* int32 retry_count */ 13:
+                    message.retryCount = reader.int32();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: RecordMetricsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string model = 1; */
+        if (message.model !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.model);
+        /* string provider = 2; */
+        if (message.provider !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.provider);
+        /* string service_name = 3; */
+        if (message.serviceName !== "")
+            writer.tag(3, WireType.LengthDelimited).string(message.serviceName);
+        /* optional int32 prompt_tokens = 4; */
+        if (message.promptTokens !== undefined)
+            writer.tag(4, WireType.Varint).int32(message.promptTokens);
+        /* optional int32 completion_tokens = 5; */
+        if (message.completionTokens !== undefined)
+            writer.tag(5, WireType.Varint).int32(message.completionTokens);
+        /* optional int64 cost_usd_micro = 6; */
+        if (message.costUsdMicro !== undefined)
+            writer.tag(6, WireType.Varint).int64(message.costUsdMicro);
+        /* optional int32 latency_ms_total = 7; */
+        if (message.latencyMsTotal !== undefined)
+            writer.tag(7, WireType.Varint).int32(message.latencyMsTotal);
+        /* optional int32 latency_ms_ttft = 8; */
+        if (message.latencyMsTtft !== undefined)
+            writer.tag(8, WireType.Varint).int32(message.latencyMsTtft);
+        /* optional string finish_reason = 9; */
+        if (message.finishReason !== undefined)
+            writer.tag(9, WireType.LengthDelimited).string(message.finishReason);
+        /* string status = 10; */
+        if (message.status !== "")
+            writer.tag(10, WireType.LengthDelimited).string(message.status);
+        /* bool pii_detected = 11; */
+        if (message.piiDetected !== false)
+            writer.tag(11, WireType.Varint).bool(message.piiDetected);
+        /* bool injection_attempt = 12; */
+        if (message.injectionAttempt !== false)
+            writer.tag(12, WireType.Varint).bool(message.injectionAttempt);
+        /* int32 retry_count = 13; */
+        if (message.retryCount !== 0)
+            writer.tag(13, WireType.Varint).int32(message.retryCount);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.RecordMetricsRequest
+ */
+export const RecordMetricsRequest = new RecordMetricsRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class RecordMetricsResponse$Type extends MessageType<RecordMetricsResponse> {
+    constructor() {
+        super("llm.observability.v1.RecordMetricsResponse", [
+            { no: 1, name: "recorded", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 2, name: "cost_usd_micro", kind: "scalar", opt: true, T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 3, name: "price_version", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<RecordMetricsResponse>): RecordMetricsResponse {
+        const message = { recorded: false };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<RecordMetricsResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: RecordMetricsResponse): RecordMetricsResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* bool recorded */ 1:
+                    message.recorded = reader.bool();
+                    break;
+                case /* optional int64 cost_usd_micro */ 2:
+                    message.costUsdMicro = reader.int64().toBigInt();
+                    break;
+                case /* optional string price_version */ 3:
+                    message.priceVersion = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: RecordMetricsResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* bool recorded = 1; */
+        if (message.recorded !== false)
+            writer.tag(1, WireType.Varint).bool(message.recorded);
+        /* optional int64 cost_usd_micro = 2; */
+        if (message.costUsdMicro !== undefined)
+            writer.tag(2, WireType.Varint).int64(message.costUsdMicro);
+        /* optional string price_version = 3; */
+        if (message.priceVersion !== undefined)
+            writer.tag(3, WireType.LengthDelimited).string(message.priceVersion);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.RecordMetricsResponse
+ */
+export const RecordMetricsResponse = new RecordMetricsResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class RecordMetricsBatchRequest$Type extends MessageType<RecordMetricsBatchRequest> {
+    constructor() {
+        super("llm.observability.v1.RecordMetricsBatchRequest", [
+            { no: 1, name: "spans", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => RecordMetricsRequest }
+        ]);
+    }
+    create(value?: PartialMessage<RecordMetricsBatchRequest>): RecordMetricsBatchRequest {
+        const message = { spans: [] };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<RecordMetricsBatchRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: RecordMetricsBatchRequest): RecordMetricsBatchRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated llm.observability.v1.RecordMetricsRequest spans */ 1:
+                    message.spans.push(RecordMetricsRequest.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: RecordMetricsBatchRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated llm.observability.v1.RecordMetricsRequest spans = 1; */
+        for (let i = 0; i < message.spans.length; i++)
+            RecordMetricsRequest.internalBinaryWrite(message.spans[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.RecordMetricsBatchRequest
+ */
+export const RecordMetricsBatchRequest = new RecordMetricsBatchRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class RecordMetricsBatchResponse$Type extends MessageType<RecordMetricsBatchResponse> {
+    constructor() {
+        super("llm.observability.v1.RecordMetricsBatchResponse", [
+            { no: 1, name: "recorded_count", kind: "scalar", T: 5 /*ScalarType.INT32*/ }
+        ]);
+    }
+    create(value?: PartialMessage<RecordMetricsBatchResponse>): RecordMetricsBatchResponse {
+        const message = { recordedCount: 0 };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<RecordMetricsBatchResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: RecordMetricsBatchResponse): RecordMetricsBatchResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* int32 recorded_count */ 1:
+                    message.recordedCount = reader.int32();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: RecordMetricsBatchResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* int32 recorded_count = 1; */
+        if (message.recordedCount !== 0)
+            writer.tag(1, WireType.Varint).int32(message.recordedCount);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.RecordMetricsBatchResponse
+ */
+export const RecordMetricsBatchResponse = new RecordMetricsBatchResponse$Type();
 /**
  * @generated ServiceType for protobuf service llm.observability.v1.InstrumentationControlService
  */
@@ -1281,5 +1880,9 @@ export const InstrumentationControlService = new ServiceType("llm.observability.
     { name: "TriggerTestCall", options: {}, I: TriggerTestCallRequest, O: TriggerTestCallResponse },
     { name: "TriggerTestStreamCall", options: {}, I: TriggerTestStreamCallRequest, O: TriggerTestStreamCallResponse },
     { name: "CountTokens", options: {}, I: CountTokensRequest, O: CountTokensResponse },
-    { name: "ScanPiiInjection", options: {}, I: ScanPiiInjectionRequest, O: ScanPiiInjectionResponse }
+    { name: "ScanPiiInjection", options: {}, I: ScanPiiInjectionRequest, O: ScanPiiInjectionResponse },
+    { name: "InitMetrics", options: {}, I: InitMetricsRequest, O: InitMetricsResponse },
+    { name: "GetMetricsHealth", options: {}, I: GetMetricsHealthRequest, O: GetMetricsHealthResponse },
+    { name: "RecordMetrics", options: {}, I: RecordMetricsRequest, O: RecordMetricsResponse },
+    { name: "RecordMetricsBatch", options: {}, I: RecordMetricsBatchRequest, O: RecordMetricsBatchResponse }
 ]);

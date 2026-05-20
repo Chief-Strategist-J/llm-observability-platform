@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional
 from opentelemetry import trace
 from ..spans.index import LLMSpan, FinishReason, TokenCountMethod, Environment
 from ..spans.globals import get_reporter
+from ..metrics.index import record_span_metrics
 
 class LLMSpanContext:
     def __init__(self, **kwargs: Any):
@@ -89,6 +90,7 @@ class LLMSpanContext:
             self._otel_span.set_attribute("llm.latency_ms_total", latency_ms)
             self._otel_span.set_attribute("llm.status", self._data["status"])
             self._otel_context.__exit__(exc_type, exc_val, exc_tb)
+        record_span_metrics(self._data)
         reporter = get_reporter()
         reporter.report(self._data)
 
@@ -114,6 +116,7 @@ class LLMSpanContext:
             self._otel_span.set_attribute("llm.latency_ms_total", latency_ms)
             self._otel_span.set_attribute("llm.status", self._data["status"])
             self._otel_context.__exit__(exc_type, exc_val, exc_tb)
+        record_span_metrics(self._data)
         reporter = get_reporter()
         await reporter.report_async(self._data)
 

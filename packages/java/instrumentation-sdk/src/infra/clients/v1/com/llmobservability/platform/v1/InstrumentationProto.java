@@ -105,6 +105,46 @@ public final class InstrumentationProto {
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_llm_observability_v1_ScanPiiInjectionResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_llm_observability_v1_InitMetricsRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_llm_observability_v1_InitMetricsRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_llm_observability_v1_GetMetricsHealthRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_llm_observability_v1_GetMetricsHealthRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_llm_observability_v1_InitMetricsResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_llm_observability_v1_InitMetricsResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_llm_observability_v1_GetMetricsHealthResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_llm_observability_v1_GetMetricsHealthResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_llm_observability_v1_RecordMetricsRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_llm_observability_v1_RecordMetricsRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_llm_observability_v1_RecordMetricsResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_llm_observability_v1_RecordMetricsResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_llm_observability_v1_RecordMetricsBatchRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_llm_observability_v1_RecordMetricsBatchRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_llm_observability_v1_RecordMetricsBatchResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_llm_observability_v1_RecordMetricsBatchResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -163,41 +203,83 @@ public final class InstrumentationProto {
       "\026\n\006prompt\030\001 \001(\tR\006prompt\"j\n\030ScanPiiInject" +
       "ionResponse\022!\n\014pii_detected\030\001 \001(\010R\013piiDe" +
       "tected\022+\n\021injection_attempt\030\002 \001(\010R\020injec" +
-      "tionAttempt*\260\001\n\025InstrumentationStatus\022&\n" +
-      "\"INSTRUMENTATION_STATUS_UNSPECIFIED\020\000\022&\n" +
-      "\"INSTRUMENTATION_STATUS_INITIALIZED\020\001\022#\n" +
-      "\037INSTRUMENTATION_STATUS_DISABLED\020\002\022\"\n\036IN" +
-      "STRUMENTATION_STATUS_PARTIAL\020\0032\266\007\n\035Instr" +
-      "umentationControlService\022z\n\023InitInstrume" +
-      "ntation\0220.llm.observability.v1.InitInstr" +
-      "umentationRequest\0321.llm.observability.v1" +
-      ".InitInstrumentationResponse\022\203\001\n\026Disable" +
-      "Instrumentation\0223.llm.observability.v1.D" +
-      "isableInstrumentationRequest\0324.llm.obser" +
-      "vability.v1.DisableInstrumentationRespon" +
-      "se\022\\\n\tGetStatus\022&.llm.observability.v1.G" +
-      "etStatusRequest\032\'.llm.observability.v1.G" +
-      "etStatusResponse\022k\n\016DetectProvider\022+.llm" +
-      ".observability.v1.DetectProviderRequest\032" +
-      ",.llm.observability.v1.DetectProviderRes" +
-      "ponse\022n\n\017TriggerTestCall\022,.llm.observabi" +
-      "lity.v1.TriggerTestCallRequest\032-.llm.obs" +
-      "ervability.v1.TriggerTestCallResponse\022\200\001" +
-      "\n\025TriggerTestStreamCall\0222.llm.observabil" +
-      "ity.v1.TriggerTestStreamCallRequest\0323.ll" +
-      "m.observability.v1.TriggerTestStreamCall" +
-      "Response\022b\n\013CountTokens\022(.llm.observabil" +
-      "ity.v1.CountTokensRequest\032).llm.observab" +
-      "ility.v1.CountTokensResponse\022q\n\020ScanPiiI" +
-      "njection\022-.llm.observability.v1.ScanPiiI" +
-      "njectionRequest\032..llm.observability.v1.S" +
-      "canPiiInjectionResponseB\342\001\n com.llmobser" +
-      "vability.platform.v1B\024InstrumentationPro" +
-      "toP\001Z.github.com/llm-observability/platf" +
-      "orm/proto/v1\242\002\003LOX\252\002\024Llm.Observability.V" +
-      "1\312\002\034LlmObservability\\Platform\\V1\342\002 Llm\\O" +
-      "bservability\\V1\\GPBMetadata\352\002\026Llm::Obser" +
-      "vability::V1b\006proto3"
+      "tionAttempt\"6\n\022InitMetricsRequest\022\027\n\004por" +
+      "t\030\001 \001(\005H\000R\004port\210\001\001B\007\n\005_port\"\031\n\027GetMetric" +
+      "sHealthRequest\"Q\n\023InitMetricsResponse\022 \n" +
+      "\013initialized\030\001 \001(\010R\013initialized\022\030\n\007messa" +
+      "ge\030\002 \001(\tR\007message\"V\n\030GetMetricsHealthRes" +
+      "ponse\022 \n\013initialized\030\001 \001(\010R\013initialized\022" +
+      "\030\n\007message\030\002 \001(\tR\007message\"\367\004\n\024RecordMetr" +
+      "icsRequest\022\024\n\005model\030\001 \001(\tR\005model\022\032\n\010prov" +
+      "ider\030\002 \001(\tR\010provider\022!\n\014service_name\030\003 \001" +
+      "(\tR\013serviceName\022(\n\rprompt_tokens\030\004 \001(\005H\000" +
+      "R\014promptTokens\210\001\001\0220\n\021completion_tokens\030\005" +
+      " \001(\005H\001R\020completionTokens\210\001\001\022)\n\016cost_usd_" +
+      "micro\030\006 \001(\003H\002R\014costUsdMicro\210\001\001\022-\n\020latenc" +
+      "y_ms_total\030\007 \001(\005H\003R\016latencyMsTotal\210\001\001\022+\n" +
+      "\017latency_ms_ttft\030\010 \001(\005H\004R\rlatencyMsTtft\210" +
+      "\001\001\022(\n\rfinish_reason\030\t \001(\tH\005R\014finishReaso" +
+      "n\210\001\001\022\026\n\006status\030\n \001(\tR\006status\022!\n\014pii_dete" +
+      "cted\030\013 \001(\010R\013piiDetected\022+\n\021injection_att" +
+      "empt\030\014 \001(\010R\020injectionAttempt\022\037\n\013retry_co" +
+      "unt\030\r \001(\005R\nretryCountB\020\n\016_prompt_tokensB" +
+      "\024\n\022_completion_tokensB\021\n\017_cost_usd_micro" +
+      "B\023\n\021_latency_ms_totalB\022\n\020_latency_ms_ttf" +
+      "tB\020\n\016_finish_reason\"\255\001\n\025RecordMetricsRes" +
+      "ponse\022\032\n\010recorded\030\001 \001(\010R\010recorded\022)\n\016cos" +
+      "t_usd_micro\030\002 \001(\003H\000R\014costUsdMicro\210\001\001\022(\n\r" +
+      "price_version\030\003 \001(\tH\001R\014priceVersion\210\001\001B\021" +
+      "\n\017_cost_usd_microB\020\n\016_price_version\"]\n\031R" +
+      "ecordMetricsBatchRequest\022@\n\005spans\030\001 \003(\0132" +
+      "*.llm.observability.v1.RecordMetricsRequ" +
+      "estR\005spans\"C\n\032RecordMetricsBatchResponse" +
+      "\022%\n\016recorded_count\030\001 \001(\005R\rrecordedCount*" +
+      "\260\001\n\025InstrumentationStatus\022&\n\"INSTRUMENTA" +
+      "TION_STATUS_UNSPECIFIED\020\000\022&\n\"INSTRUMENTA" +
+      "TION_STATUS_INITIALIZED\020\001\022#\n\037INSTRUMENTA" +
+      "TION_STATUS_DISABLED\020\002\022\"\n\036INSTRUMENTATIO" +
+      "N_STATUS_PARTIAL\020\0032\360\n\n\035InstrumentationCo" +
+      "ntrolService\022z\n\023InitInstrumentation\0220.ll" +
+      "m.observability.v1.InitInstrumentationRe" +
+      "quest\0321.llm.observability.v1.InitInstrum" +
+      "entationResponse\022\203\001\n\026DisableInstrumentat" +
+      "ion\0223.llm.observability.v1.DisableInstru" +
+      "mentationRequest\0324.llm.observability.v1." +
+      "DisableInstrumentationResponse\022\\\n\tGetSta" +
+      "tus\022&.llm.observability.v1.GetStatusRequ" +
+      "est\032\'.llm.observability.v1.GetStatusResp" +
+      "onse\022k\n\016DetectProvider\022+.llm.observabili" +
+      "ty.v1.DetectProviderRequest\032,.llm.observ" +
+      "ability.v1.DetectProviderResponse\022n\n\017Tri" +
+      "ggerTestCall\022,.llm.observability.v1.Trig" +
+      "gerTestCallRequest\032-.llm.observability.v" +
+      "1.TriggerTestCallResponse\022\200\001\n\025TriggerTes" +
+      "tStreamCall\0222.llm.observability.v1.Trigg" +
+      "erTestStreamCallRequest\0323.llm.observabil" +
+      "ity.v1.TriggerTestStreamCallResponse\022b\n\013" +
+      "CountTokens\022(.llm.observability.v1.Count" +
+      "TokensRequest\032).llm.observability.v1.Cou" +
+      "ntTokensResponse\022q\n\020ScanPiiInjection\022-.l" +
+      "lm.observability.v1.ScanPiiInjectionRequ" +
+      "est\032..llm.observability.v1.ScanPiiInject" +
+      "ionResponse\022b\n\013InitMetrics\022(.llm.observa" +
+      "bility.v1.InitMetricsRequest\032).llm.obser" +
+      "vability.v1.InitMetricsResponse\022q\n\020GetMe" +
+      "tricsHealth\022-.llm.observability.v1.GetMe" +
+      "tricsHealthRequest\032..llm.observability.v" +
+      "1.GetMetricsHealthResponse\022h\n\rRecordMetr" +
+      "ics\022*.llm.observability.v1.RecordMetrics" +
+      "Request\032+.llm.observability.v1.RecordMet" +
+      "ricsResponse\022w\n\022RecordMetricsBatch\022/.llm" +
+      ".observability.v1.RecordMetricsBatchRequ" +
+      "est\0320.llm.observability.v1.RecordMetrics" +
+      "BatchResponseB\342\001\n com.llmobservability.p" +
+      "latform.v1B\024InstrumentationProtoP\001Z.gith" +
+      "ub.com/llm-observability/platform/proto/" +
+      "v1\242\002\003LOX\252\002\024Llm.Observability.V1\312\002\034LlmObs" +
+      "ervability\\Platform\\V1\342\002 Llm\\Observabili" +
+      "ty\\V1\\GPBMetadata\352\002\026Llm::Observability::" +
+      "V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -311,6 +393,54 @@ public final class InstrumentationProto {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_llm_observability_v1_ScanPiiInjectionResponse_descriptor,
         new java.lang.String[] { "PiiDetected", "InjectionAttempt", });
+    internal_static_llm_observability_v1_InitMetricsRequest_descriptor =
+      getDescriptor().getMessageTypes().get(18);
+    internal_static_llm_observability_v1_InitMetricsRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_llm_observability_v1_InitMetricsRequest_descriptor,
+        new java.lang.String[] { "Port", });
+    internal_static_llm_observability_v1_GetMetricsHealthRequest_descriptor =
+      getDescriptor().getMessageTypes().get(19);
+    internal_static_llm_observability_v1_GetMetricsHealthRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_llm_observability_v1_GetMetricsHealthRequest_descriptor,
+        new java.lang.String[] { });
+    internal_static_llm_observability_v1_InitMetricsResponse_descriptor =
+      getDescriptor().getMessageTypes().get(20);
+    internal_static_llm_observability_v1_InitMetricsResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_llm_observability_v1_InitMetricsResponse_descriptor,
+        new java.lang.String[] { "Initialized", "Message", });
+    internal_static_llm_observability_v1_GetMetricsHealthResponse_descriptor =
+      getDescriptor().getMessageTypes().get(21);
+    internal_static_llm_observability_v1_GetMetricsHealthResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_llm_observability_v1_GetMetricsHealthResponse_descriptor,
+        new java.lang.String[] { "Initialized", "Message", });
+    internal_static_llm_observability_v1_RecordMetricsRequest_descriptor =
+      getDescriptor().getMessageTypes().get(22);
+    internal_static_llm_observability_v1_RecordMetricsRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_llm_observability_v1_RecordMetricsRequest_descriptor,
+        new java.lang.String[] { "Model", "Provider", "ServiceName", "PromptTokens", "CompletionTokens", "CostUsdMicro", "LatencyMsTotal", "LatencyMsTtft", "FinishReason", "Status", "PiiDetected", "InjectionAttempt", "RetryCount", });
+    internal_static_llm_observability_v1_RecordMetricsResponse_descriptor =
+      getDescriptor().getMessageTypes().get(23);
+    internal_static_llm_observability_v1_RecordMetricsResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_llm_observability_v1_RecordMetricsResponse_descriptor,
+        new java.lang.String[] { "Recorded", "CostUsdMicro", "PriceVersion", });
+    internal_static_llm_observability_v1_RecordMetricsBatchRequest_descriptor =
+      getDescriptor().getMessageTypes().get(24);
+    internal_static_llm_observability_v1_RecordMetricsBatchRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_llm_observability_v1_RecordMetricsBatchRequest_descriptor,
+        new java.lang.String[] { "Spans", });
+    internal_static_llm_observability_v1_RecordMetricsBatchResponse_descriptor =
+      getDescriptor().getMessageTypes().get(25);
+    internal_static_llm_observability_v1_RecordMetricsBatchResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_llm_observability_v1_RecordMetricsBatchResponse_descriptor,
+        new java.lang.String[] { "RecordedCount", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

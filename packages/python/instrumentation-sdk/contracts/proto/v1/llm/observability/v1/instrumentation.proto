@@ -23,6 +23,10 @@ service InstrumentationControlService {
   rpc TriggerTestStreamCall(TriggerTestStreamCallRequest) returns (TriggerTestStreamCallResponse);
   rpc CountTokens(CountTokensRequest) returns (CountTokensResponse);
   rpc ScanPiiInjection(ScanPiiInjectionRequest) returns (ScanPiiInjectionResponse);
+  rpc InitMetrics(InitMetricsRequest) returns (InitMetricsResponse);
+  rpc GetMetricsHealth(GetMetricsHealthRequest) returns (GetMetricsHealthResponse);
+  rpc RecordMetrics(RecordMetricsRequest) returns (RecordMetricsResponse);
+  rpc RecordMetricsBatch(RecordMetricsBatchRequest) returns (RecordMetricsBatchResponse);
 }
 
 message InitInstrumentationRequest {
@@ -119,3 +123,50 @@ message ScanPiiInjectionResponse {
   bool pii_detected = 1;
   bool injection_attempt = 2;
 }
+
+message InitMetricsRequest {
+  optional int32 port = 1;
+}
+
+message GetMetricsHealthRequest {}
+
+message InitMetricsResponse {
+  bool initialized = 1;
+  string message = 2;
+}
+
+message GetMetricsHealthResponse {
+  bool initialized = 1;
+  string message = 2;
+}
+
+message RecordMetricsRequest {
+  string model = 1;
+  string provider = 2;
+  string service_name = 3;
+  optional int32 prompt_tokens = 4;
+  optional int32 completion_tokens = 5;
+  optional int64 cost_usd_micro = 6;
+  optional int32 latency_ms_total = 7;
+  optional int32 latency_ms_ttft = 8;
+  optional string finish_reason = 9;
+  string status = 10;
+  bool pii_detected = 11;
+  bool injection_attempt = 12;
+  int32 retry_count = 13;
+}
+
+message RecordMetricsResponse {
+  bool recorded = 1;
+  optional int64 cost_usd_micro = 2;
+  optional string price_version = 3;
+}
+
+message RecordMetricsBatchRequest {
+  repeated RecordMetricsRequest spans = 1;
+}
+
+message RecordMetricsBatchResponse {
+  int32 recorded_count = 1;
+}
+
