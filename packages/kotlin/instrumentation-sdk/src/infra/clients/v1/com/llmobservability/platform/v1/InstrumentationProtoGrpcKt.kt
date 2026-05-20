@@ -70,6 +70,24 @@ public object InstrumentationControlServiceGrpcKt {
     @JvmStatic
     get() = InstrumentationControlServiceGrpc.getScanPiiInjectionMethod()
 
+  public val initMetricsMethod: MethodDescriptor<InitMetricsRequest, InitMetricsResponse>
+    @JvmStatic
+    get() = InstrumentationControlServiceGrpc.getInitMetricsMethod()
+
+  public val getMetricsHealthMethod:
+      MethodDescriptor<GetMetricsHealthRequest, GetMetricsHealthResponse>
+    @JvmStatic
+    get() = InstrumentationControlServiceGrpc.getGetMetricsHealthMethod()
+
+  public val recordMetricsMethod: MethodDescriptor<RecordMetricsRequest, RecordMetricsResponse>
+    @JvmStatic
+    get() = InstrumentationControlServiceGrpc.getRecordMetricsMethod()
+
+  public val recordMetricsBatchMethod:
+      MethodDescriptor<RecordMetricsBatchRequest, RecordMetricsBatchResponse>
+    @JvmStatic
+    get() = InstrumentationControlServiceGrpc.getRecordMetricsBatchMethod()
+
   /**
    * A stub for issuing RPCs to a(n) llm.observability.v1.InstrumentationControlService service as
    * suspending coroutines.
@@ -258,6 +276,94 @@ public object InstrumentationControlServiceGrpcKt {
       callOptions,
       headers
     )
+
+    /**
+     * Executes this RPC and returns the response message, suspending until the RPC completes
+     * with [`Status.OK`][io.grpc.Status].  If the RPC completes with another status, a
+     * corresponding
+     * [StatusException] is thrown.  If this coroutine is cancelled, the RPC is also cancelled
+     * with the corresponding exception as a cause.
+     *
+     * @param request The request message to send to the server.
+     *
+     * @param headers Metadata to attach to the request.  Most users will not need this.
+     *
+     * @return The single response from the server.
+     */
+    public suspend fun initMetrics(request: InitMetricsRequest, headers: Metadata = Metadata()):
+        InitMetricsResponse = unaryRpc(
+      channel,
+      InstrumentationControlServiceGrpc.getInitMetricsMethod(),
+      request,
+      callOptions,
+      headers
+    )
+
+    /**
+     * Executes this RPC and returns the response message, suspending until the RPC completes
+     * with [`Status.OK`][io.grpc.Status].  If the RPC completes with another status, a
+     * corresponding
+     * [StatusException] is thrown.  If this coroutine is cancelled, the RPC is also cancelled
+     * with the corresponding exception as a cause.
+     *
+     * @param request The request message to send to the server.
+     *
+     * @param headers Metadata to attach to the request.  Most users will not need this.
+     *
+     * @return The single response from the server.
+     */
+    public suspend fun getMetricsHealth(request: GetMetricsHealthRequest, headers: Metadata =
+        Metadata()): GetMetricsHealthResponse = unaryRpc(
+      channel,
+      InstrumentationControlServiceGrpc.getGetMetricsHealthMethod(),
+      request,
+      callOptions,
+      headers
+    )
+
+    /**
+     * Executes this RPC and returns the response message, suspending until the RPC completes
+     * with [`Status.OK`][io.grpc.Status].  If the RPC completes with another status, a
+     * corresponding
+     * [StatusException] is thrown.  If this coroutine is cancelled, the RPC is also cancelled
+     * with the corresponding exception as a cause.
+     *
+     * @param request The request message to send to the server.
+     *
+     * @param headers Metadata to attach to the request.  Most users will not need this.
+     *
+     * @return The single response from the server.
+     */
+    public suspend fun recordMetrics(request: RecordMetricsRequest, headers: Metadata = Metadata()):
+        RecordMetricsResponse = unaryRpc(
+      channel,
+      InstrumentationControlServiceGrpc.getRecordMetricsMethod(),
+      request,
+      callOptions,
+      headers
+    )
+
+    /**
+     * Executes this RPC and returns the response message, suspending until the RPC completes
+     * with [`Status.OK`][io.grpc.Status].  If the RPC completes with another status, a
+     * corresponding
+     * [StatusException] is thrown.  If this coroutine is cancelled, the RPC is also cancelled
+     * with the corresponding exception as a cause.
+     *
+     * @param request The request message to send to the server.
+     *
+     * @param headers Metadata to attach to the request.  Most users will not need this.
+     *
+     * @return The single response from the server.
+     */
+    public suspend fun recordMetricsBatch(request: RecordMetricsBatchRequest, headers: Metadata =
+        Metadata()): RecordMetricsBatchResponse = unaryRpc(
+      channel,
+      InstrumentationControlServiceGrpc.getRecordMetricsBatchMethod(),
+      request,
+      callOptions,
+      headers
+    )
   }
 
   /**
@@ -393,6 +499,69 @@ public object InstrumentationControlServiceGrpcKt {
         ScanPiiInjectionResponse = throw
         StatusException(UNIMPLEMENTED.withDescription("Method llm.observability.v1.InstrumentationControlService.ScanPiiInjection is unimplemented"))
 
+    /**
+     * Returns the response to an RPC for
+     * llm.observability.v1.InstrumentationControlService.InitMetrics.
+     *
+     * If this method fails with a [StatusException], the RPC will fail with the corresponding
+     * [io.grpc.Status].  If this method fails with a [java.util.concurrent.CancellationException],
+     * the RPC will fail
+     * with status `Status.CANCELLED`.  If this method fails for any other reason, the RPC will
+     * fail with `Status.UNKNOWN` with the exception as a cause.
+     *
+     * @param request The request from the client.
+     */
+    public open suspend fun initMetrics(request: InitMetricsRequest): InitMetricsResponse = throw
+        StatusException(UNIMPLEMENTED.withDescription("Method llm.observability.v1.InstrumentationControlService.InitMetrics is unimplemented"))
+
+    /**
+     * Returns the response to an RPC for
+     * llm.observability.v1.InstrumentationControlService.GetMetricsHealth.
+     *
+     * If this method fails with a [StatusException], the RPC will fail with the corresponding
+     * [io.grpc.Status].  If this method fails with a [java.util.concurrent.CancellationException],
+     * the RPC will fail
+     * with status `Status.CANCELLED`.  If this method fails for any other reason, the RPC will
+     * fail with `Status.UNKNOWN` with the exception as a cause.
+     *
+     * @param request The request from the client.
+     */
+    public open suspend fun getMetricsHealth(request: GetMetricsHealthRequest):
+        GetMetricsHealthResponse = throw
+        StatusException(UNIMPLEMENTED.withDescription("Method llm.observability.v1.InstrumentationControlService.GetMetricsHealth is unimplemented"))
+
+    /**
+     * Returns the response to an RPC for
+     * llm.observability.v1.InstrumentationControlService.RecordMetrics.
+     *
+     * If this method fails with a [StatusException], the RPC will fail with the corresponding
+     * [io.grpc.Status].  If this method fails with a [java.util.concurrent.CancellationException],
+     * the RPC will fail
+     * with status `Status.CANCELLED`.  If this method fails for any other reason, the RPC will
+     * fail with `Status.UNKNOWN` with the exception as a cause.
+     *
+     * @param request The request from the client.
+     */
+    public open suspend fun recordMetrics(request: RecordMetricsRequest): RecordMetricsResponse =
+        throw
+        StatusException(UNIMPLEMENTED.withDescription("Method llm.observability.v1.InstrumentationControlService.RecordMetrics is unimplemented"))
+
+    /**
+     * Returns the response to an RPC for
+     * llm.observability.v1.InstrumentationControlService.RecordMetricsBatch.
+     *
+     * If this method fails with a [StatusException], the RPC will fail with the corresponding
+     * [io.grpc.Status].  If this method fails with a [java.util.concurrent.CancellationException],
+     * the RPC will fail
+     * with status `Status.CANCELLED`.  If this method fails for any other reason, the RPC will
+     * fail with `Status.UNKNOWN` with the exception as a cause.
+     *
+     * @param request The request from the client.
+     */
+    public open suspend fun recordMetricsBatch(request: RecordMetricsBatchRequest):
+        RecordMetricsBatchResponse = throw
+        StatusException(UNIMPLEMENTED.withDescription("Method llm.observability.v1.InstrumentationControlService.RecordMetricsBatch is unimplemented"))
+
     final override fun bindService(): ServerServiceDefinition = builder(getServiceDescriptor())
       .addMethod(unaryServerMethodDefinition(
       context = this.context,
@@ -433,6 +602,26 @@ public object InstrumentationControlServiceGrpcKt {
       context = this.context,
       descriptor = InstrumentationControlServiceGrpc.getScanPiiInjectionMethod(),
       implementation = ::scanPiiInjection
+    ))
+      .addMethod(unaryServerMethodDefinition(
+      context = this.context,
+      descriptor = InstrumentationControlServiceGrpc.getInitMetricsMethod(),
+      implementation = ::initMetrics
+    ))
+      .addMethod(unaryServerMethodDefinition(
+      context = this.context,
+      descriptor = InstrumentationControlServiceGrpc.getGetMetricsHealthMethod(),
+      implementation = ::getMetricsHealth
+    ))
+      .addMethod(unaryServerMethodDefinition(
+      context = this.context,
+      descriptor = InstrumentationControlServiceGrpc.getRecordMetricsMethod(),
+      implementation = ::recordMetrics
+    ))
+      .addMethod(unaryServerMethodDefinition(
+      context = this.context,
+      descriptor = InstrumentationControlServiceGrpc.getRecordMetricsBatchMethod(),
+      implementation = ::recordMetricsBatch
     )).build()
   }
 }

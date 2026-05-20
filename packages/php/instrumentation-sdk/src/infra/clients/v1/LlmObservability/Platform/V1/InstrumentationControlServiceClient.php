@@ -129,4 +129,60 @@ class InstrumentationControlServiceClient extends \Grpc\BaseStub {
         $metadata, $options);
     }
 
+    /**
+     * @param \LlmObservability\Platform\V1\InitMetricsRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall
+     */
+    public function InitMetrics(\LlmObservability\Platform\V1\InitMetricsRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/llm.observability.v1.InstrumentationControlService/InitMetrics',
+        $argument,
+        ['\LlmObservability\Platform\V1\InitMetricsResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \LlmObservability\Platform\V1\GetMetricsHealthRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall
+     */
+    public function GetMetricsHealth(\LlmObservability\Platform\V1\GetMetricsHealthRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/llm.observability.v1.InstrumentationControlService/GetMetricsHealth',
+        $argument,
+        ['\LlmObservability\Platform\V1\GetMetricsHealthResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \LlmObservability\Platform\V1\RecordMetricsRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall
+     */
+    public function RecordMetrics(\LlmObservability\Platform\V1\RecordMetricsRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/llm.observability.v1.InstrumentationControlService/RecordMetrics',
+        $argument,
+        ['\LlmObservability\Platform\V1\RecordMetricsResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \LlmObservability\Platform\V1\RecordMetricsBatchRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall
+     */
+    public function RecordMetricsBatch(\LlmObservability\Platform\V1\RecordMetricsBatchRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/llm.observability.v1.InstrumentationControlService/RecordMetricsBatch',
+        $argument,
+        ['\LlmObservability\Platform\V1\RecordMetricsBatchResponse', 'decode'],
+        $metadata, $options);
+    }
+
 }

@@ -55,6 +55,26 @@ class InstrumentationControlServiceStub(object):
                 request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ScanPiiInjectionRequest.SerializeToString,
                 response_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ScanPiiInjectionResponse.FromString,
                 )
+        self.InitMetrics = channel.unary_unary(
+                '/llm.observability.v1.InstrumentationControlService/InitMetrics',
+                request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.InitMetricsRequest.SerializeToString,
+                response_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.InitMetricsResponse.FromString,
+                )
+        self.GetMetricsHealth = channel.unary_unary(
+                '/llm.observability.v1.InstrumentationControlService/GetMetricsHealth',
+                request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.GetMetricsHealthRequest.SerializeToString,
+                response_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.GetMetricsHealthResponse.FromString,
+                )
+        self.RecordMetrics = channel.unary_unary(
+                '/llm.observability.v1.InstrumentationControlService/RecordMetrics',
+                request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.RecordMetricsRequest.SerializeToString,
+                response_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.RecordMetricsResponse.FromString,
+                )
+        self.RecordMetricsBatch = channel.unary_unary(
+                '/llm.observability.v1.InstrumentationControlService/RecordMetricsBatch',
+                request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.RecordMetricsBatchRequest.SerializeToString,
+                response_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.RecordMetricsBatchResponse.FromString,
+                )
 
 
 class InstrumentationControlServiceServicer(object):
@@ -109,6 +129,30 @@ class InstrumentationControlServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def InitMetrics(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetMetricsHealth(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RecordMetrics(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RecordMetricsBatch(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_InstrumentationControlServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -151,6 +195,26 @@ def add_InstrumentationControlServiceServicer_to_server(servicer, server):
                     servicer.ScanPiiInjection,
                     request_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ScanPiiInjectionRequest.FromString,
                     response_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ScanPiiInjectionResponse.SerializeToString,
+            ),
+            'InitMetrics': grpc.unary_unary_rpc_method_handler(
+                    servicer.InitMetrics,
+                    request_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.InitMetricsRequest.FromString,
+                    response_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.InitMetricsResponse.SerializeToString,
+            ),
+            'GetMetricsHealth': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetMetricsHealth,
+                    request_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.GetMetricsHealthRequest.FromString,
+                    response_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.GetMetricsHealthResponse.SerializeToString,
+            ),
+            'RecordMetrics': grpc.unary_unary_rpc_method_handler(
+                    servicer.RecordMetrics,
+                    request_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.RecordMetricsRequest.FromString,
+                    response_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.RecordMetricsResponse.SerializeToString,
+            ),
+            'RecordMetricsBatch': grpc.unary_unary_rpc_method_handler(
+                    servicer.RecordMetricsBatch,
+                    request_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.RecordMetricsBatchRequest.FromString,
+                    response_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.RecordMetricsBatchResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -296,5 +360,73 @@ class InstrumentationControlService(object):
         return grpc.experimental.unary_unary(request, target, '/llm.observability.v1.InstrumentationControlService/ScanPiiInjection',
             llm_dot_observability_dot_v1_dot_instrumentation__pb2.ScanPiiInjectionRequest.SerializeToString,
             llm_dot_observability_dot_v1_dot_instrumentation__pb2.ScanPiiInjectionResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def InitMetrics(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/llm.observability.v1.InstrumentationControlService/InitMetrics',
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.InitMetricsRequest.SerializeToString,
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.InitMetricsResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetMetricsHealth(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/llm.observability.v1.InstrumentationControlService/GetMetricsHealth',
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.GetMetricsHealthRequest.SerializeToString,
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.GetMetricsHealthResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def RecordMetrics(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/llm.observability.v1.InstrumentationControlService/RecordMetrics',
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.RecordMetricsRequest.SerializeToString,
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.RecordMetricsResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def RecordMetricsBatch(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/llm.observability.v1.InstrumentationControlService/RecordMetricsBatch',
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.RecordMetricsBatchRequest.SerializeToString,
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.RecordMetricsBatchResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

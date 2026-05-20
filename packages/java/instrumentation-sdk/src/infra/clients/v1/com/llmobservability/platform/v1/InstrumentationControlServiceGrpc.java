@@ -266,6 +266,130 @@ public final class InstrumentationControlServiceGrpc {
     return getScanPiiInjectionMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.llmobservability.platform.v1.InitMetricsRequest,
+      com.llmobservability.platform.v1.InitMetricsResponse> getInitMetricsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "InitMetrics",
+      requestType = com.llmobservability.platform.v1.InitMetricsRequest.class,
+      responseType = com.llmobservability.platform.v1.InitMetricsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.llmobservability.platform.v1.InitMetricsRequest,
+      com.llmobservability.platform.v1.InitMetricsResponse> getInitMetricsMethod() {
+    io.grpc.MethodDescriptor<com.llmobservability.platform.v1.InitMetricsRequest, com.llmobservability.platform.v1.InitMetricsResponse> getInitMetricsMethod;
+    if ((getInitMetricsMethod = InstrumentationControlServiceGrpc.getInitMetricsMethod) == null) {
+      synchronized (InstrumentationControlServiceGrpc.class) {
+        if ((getInitMetricsMethod = InstrumentationControlServiceGrpc.getInitMetricsMethod) == null) {
+          InstrumentationControlServiceGrpc.getInitMetricsMethod = getInitMetricsMethod =
+              io.grpc.MethodDescriptor.<com.llmobservability.platform.v1.InitMetricsRequest, com.llmobservability.platform.v1.InitMetricsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "InitMetrics"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.InitMetricsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.InitMetricsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new InstrumentationControlServiceMethodDescriptorSupplier("InitMetrics"))
+              .build();
+        }
+      }
+    }
+    return getInitMetricsMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.llmobservability.platform.v1.GetMetricsHealthRequest,
+      com.llmobservability.platform.v1.GetMetricsHealthResponse> getGetMetricsHealthMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetMetricsHealth",
+      requestType = com.llmobservability.platform.v1.GetMetricsHealthRequest.class,
+      responseType = com.llmobservability.platform.v1.GetMetricsHealthResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.llmobservability.platform.v1.GetMetricsHealthRequest,
+      com.llmobservability.platform.v1.GetMetricsHealthResponse> getGetMetricsHealthMethod() {
+    io.grpc.MethodDescriptor<com.llmobservability.platform.v1.GetMetricsHealthRequest, com.llmobservability.platform.v1.GetMetricsHealthResponse> getGetMetricsHealthMethod;
+    if ((getGetMetricsHealthMethod = InstrumentationControlServiceGrpc.getGetMetricsHealthMethod) == null) {
+      synchronized (InstrumentationControlServiceGrpc.class) {
+        if ((getGetMetricsHealthMethod = InstrumentationControlServiceGrpc.getGetMetricsHealthMethod) == null) {
+          InstrumentationControlServiceGrpc.getGetMetricsHealthMethod = getGetMetricsHealthMethod =
+              io.grpc.MethodDescriptor.<com.llmobservability.platform.v1.GetMetricsHealthRequest, com.llmobservability.platform.v1.GetMetricsHealthResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetMetricsHealth"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.GetMetricsHealthRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.GetMetricsHealthResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new InstrumentationControlServiceMethodDescriptorSupplier("GetMetricsHealth"))
+              .build();
+        }
+      }
+    }
+    return getGetMetricsHealthMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.llmobservability.platform.v1.RecordMetricsRequest,
+      com.llmobservability.platform.v1.RecordMetricsResponse> getRecordMetricsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "RecordMetrics",
+      requestType = com.llmobservability.platform.v1.RecordMetricsRequest.class,
+      responseType = com.llmobservability.platform.v1.RecordMetricsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.llmobservability.platform.v1.RecordMetricsRequest,
+      com.llmobservability.platform.v1.RecordMetricsResponse> getRecordMetricsMethod() {
+    io.grpc.MethodDescriptor<com.llmobservability.platform.v1.RecordMetricsRequest, com.llmobservability.platform.v1.RecordMetricsResponse> getRecordMetricsMethod;
+    if ((getRecordMetricsMethod = InstrumentationControlServiceGrpc.getRecordMetricsMethod) == null) {
+      synchronized (InstrumentationControlServiceGrpc.class) {
+        if ((getRecordMetricsMethod = InstrumentationControlServiceGrpc.getRecordMetricsMethod) == null) {
+          InstrumentationControlServiceGrpc.getRecordMetricsMethod = getRecordMetricsMethod =
+              io.grpc.MethodDescriptor.<com.llmobservability.platform.v1.RecordMetricsRequest, com.llmobservability.platform.v1.RecordMetricsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RecordMetrics"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.RecordMetricsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.RecordMetricsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new InstrumentationControlServiceMethodDescriptorSupplier("RecordMetrics"))
+              .build();
+        }
+      }
+    }
+    return getRecordMetricsMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.llmobservability.platform.v1.RecordMetricsBatchRequest,
+      com.llmobservability.platform.v1.RecordMetricsBatchResponse> getRecordMetricsBatchMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "RecordMetricsBatch",
+      requestType = com.llmobservability.platform.v1.RecordMetricsBatchRequest.class,
+      responseType = com.llmobservability.platform.v1.RecordMetricsBatchResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.llmobservability.platform.v1.RecordMetricsBatchRequest,
+      com.llmobservability.platform.v1.RecordMetricsBatchResponse> getRecordMetricsBatchMethod() {
+    io.grpc.MethodDescriptor<com.llmobservability.platform.v1.RecordMetricsBatchRequest, com.llmobservability.platform.v1.RecordMetricsBatchResponse> getRecordMetricsBatchMethod;
+    if ((getRecordMetricsBatchMethod = InstrumentationControlServiceGrpc.getRecordMetricsBatchMethod) == null) {
+      synchronized (InstrumentationControlServiceGrpc.class) {
+        if ((getRecordMetricsBatchMethod = InstrumentationControlServiceGrpc.getRecordMetricsBatchMethod) == null) {
+          InstrumentationControlServiceGrpc.getRecordMetricsBatchMethod = getRecordMetricsBatchMethod =
+              io.grpc.MethodDescriptor.<com.llmobservability.platform.v1.RecordMetricsBatchRequest, com.llmobservability.platform.v1.RecordMetricsBatchResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RecordMetricsBatch"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.RecordMetricsBatchRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.RecordMetricsBatchResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new InstrumentationControlServiceMethodDescriptorSupplier("RecordMetricsBatch"))
+              .build();
+        }
+      }
+    }
+    return getRecordMetricsBatchMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -372,6 +496,34 @@ public final class InstrumentationControlServiceGrpc {
         io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.ScanPiiInjectionResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getScanPiiInjectionMethod(), responseObserver);
     }
+
+    /**
+     */
+    default void initMetrics(com.llmobservability.platform.v1.InitMetricsRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.InitMetricsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getInitMetricsMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void getMetricsHealth(com.llmobservability.platform.v1.GetMetricsHealthRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.GetMetricsHealthResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetMetricsHealthMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void recordMetrics(com.llmobservability.platform.v1.RecordMetricsRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.RecordMetricsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRecordMetricsMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void recordMetricsBatch(com.llmobservability.platform.v1.RecordMetricsBatchRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.RecordMetricsBatchResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRecordMetricsBatchMethod(), responseObserver);
+    }
   }
 
   /**
@@ -470,6 +622,38 @@ public final class InstrumentationControlServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getScanPiiInjectionMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     */
+    public void initMetrics(com.llmobservability.platform.v1.InitMetricsRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.InitMetricsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getInitMetricsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void getMetricsHealth(com.llmobservability.platform.v1.GetMetricsHealthRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.GetMetricsHealthResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetMetricsHealthMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void recordMetrics(com.llmobservability.platform.v1.RecordMetricsRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.RecordMetricsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRecordMetricsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void recordMetricsBatch(com.llmobservability.platform.v1.RecordMetricsBatchRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.RecordMetricsBatchResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRecordMetricsBatchMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -545,6 +729,34 @@ public final class InstrumentationControlServiceGrpc {
     public com.llmobservability.platform.v1.ScanPiiInjectionResponse scanPiiInjection(com.llmobservability.platform.v1.ScanPiiInjectionRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getScanPiiInjectionMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.llmobservability.platform.v1.InitMetricsResponse initMetrics(com.llmobservability.platform.v1.InitMetricsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getInitMetricsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.llmobservability.platform.v1.GetMetricsHealthResponse getMetricsHealth(com.llmobservability.platform.v1.GetMetricsHealthRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetMetricsHealthMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.llmobservability.platform.v1.RecordMetricsResponse recordMetrics(com.llmobservability.platform.v1.RecordMetricsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRecordMetricsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.llmobservability.platform.v1.RecordMetricsBatchResponse recordMetricsBatch(com.llmobservability.platform.v1.RecordMetricsBatchRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRecordMetricsBatchMethod(), getCallOptions(), request);
     }
   }
 
@@ -630,6 +842,38 @@ public final class InstrumentationControlServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getScanPiiInjectionMethod(), getCallOptions()), request);
     }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.llmobservability.platform.v1.InitMetricsResponse> initMetrics(
+        com.llmobservability.platform.v1.InitMetricsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getInitMetricsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.llmobservability.platform.v1.GetMetricsHealthResponse> getMetricsHealth(
+        com.llmobservability.platform.v1.GetMetricsHealthRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetMetricsHealthMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.llmobservability.platform.v1.RecordMetricsResponse> recordMetrics(
+        com.llmobservability.platform.v1.RecordMetricsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRecordMetricsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.llmobservability.platform.v1.RecordMetricsBatchResponse> recordMetricsBatch(
+        com.llmobservability.platform.v1.RecordMetricsBatchRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRecordMetricsBatchMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_INIT_INSTRUMENTATION = 0;
@@ -640,6 +884,10 @@ public final class InstrumentationControlServiceGrpc {
   private static final int METHODID_TRIGGER_TEST_STREAM_CALL = 5;
   private static final int METHODID_COUNT_TOKENS = 6;
   private static final int METHODID_SCAN_PII_INJECTION = 7;
+  private static final int METHODID_INIT_METRICS = 8;
+  private static final int METHODID_GET_METRICS_HEALTH = 9;
+  private static final int METHODID_RECORD_METRICS = 10;
+  private static final int METHODID_RECORD_METRICS_BATCH = 11;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -689,6 +937,22 @@ public final class InstrumentationControlServiceGrpc {
         case METHODID_SCAN_PII_INJECTION:
           serviceImpl.scanPiiInjection((com.llmobservability.platform.v1.ScanPiiInjectionRequest) request,
               (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.ScanPiiInjectionResponse>) responseObserver);
+          break;
+        case METHODID_INIT_METRICS:
+          serviceImpl.initMetrics((com.llmobservability.platform.v1.InitMetricsRequest) request,
+              (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.InitMetricsResponse>) responseObserver);
+          break;
+        case METHODID_GET_METRICS_HEALTH:
+          serviceImpl.getMetricsHealth((com.llmobservability.platform.v1.GetMetricsHealthRequest) request,
+              (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.GetMetricsHealthResponse>) responseObserver);
+          break;
+        case METHODID_RECORD_METRICS:
+          serviceImpl.recordMetrics((com.llmobservability.platform.v1.RecordMetricsRequest) request,
+              (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.RecordMetricsResponse>) responseObserver);
+          break;
+        case METHODID_RECORD_METRICS_BATCH:
+          serviceImpl.recordMetricsBatch((com.llmobservability.platform.v1.RecordMetricsBatchRequest) request,
+              (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.RecordMetricsBatchResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -764,6 +1028,34 @@ public final class InstrumentationControlServiceGrpc {
               com.llmobservability.platform.v1.ScanPiiInjectionRequest,
               com.llmobservability.platform.v1.ScanPiiInjectionResponse>(
                 service, METHODID_SCAN_PII_INJECTION)))
+        .addMethod(
+          getInitMetricsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.llmobservability.platform.v1.InitMetricsRequest,
+              com.llmobservability.platform.v1.InitMetricsResponse>(
+                service, METHODID_INIT_METRICS)))
+        .addMethod(
+          getGetMetricsHealthMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.llmobservability.platform.v1.GetMetricsHealthRequest,
+              com.llmobservability.platform.v1.GetMetricsHealthResponse>(
+                service, METHODID_GET_METRICS_HEALTH)))
+        .addMethod(
+          getRecordMetricsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.llmobservability.platform.v1.RecordMetricsRequest,
+              com.llmobservability.platform.v1.RecordMetricsResponse>(
+                service, METHODID_RECORD_METRICS)))
+        .addMethod(
+          getRecordMetricsBatchMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.llmobservability.platform.v1.RecordMetricsBatchRequest,
+              com.llmobservability.platform.v1.RecordMetricsBatchResponse>(
+                service, METHODID_RECORD_METRICS_BATCH)))
         .build();
   }
 
@@ -820,6 +1112,10 @@ public final class InstrumentationControlServiceGrpc {
               .addMethod(getTriggerTestStreamCallMethod())
               .addMethod(getCountTokensMethod())
               .addMethod(getScanPiiInjectionMethod())
+              .addMethod(getInitMetricsMethod())
+              .addMethod(getGetMetricsHealthMethod())
+              .addMethod(getRecordMetricsMethod())
+              .addMethod(getRecordMetricsBatchMethod())
               .build();
         }
       }

@@ -156,6 +156,84 @@ pub struct ScanPiiInjectionResponse {
     #[prost(bool, tag="2")]
     pub injection_attempt: bool,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct InitMetricsRequest {
+    #[prost(int32, optional, tag="1")]
+    pub port: ::core::option::Option<i32>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct GetMetricsHealthRequest {
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct InitMetricsResponse {
+    #[prost(bool, tag="1")]
+    pub initialized: bool,
+    #[prost(string, tag="2")]
+    pub message: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetMetricsHealthResponse {
+    #[prost(bool, tag="1")]
+    pub initialized: bool,
+    #[prost(string, tag="2")]
+    pub message: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct RecordMetricsRequest {
+    #[prost(string, tag="1")]
+    pub model: ::prost::alloc::string::String,
+    #[prost(string, tag="2")]
+    pub provider: ::prost::alloc::string::String,
+    #[prost(string, tag="3")]
+    pub service_name: ::prost::alloc::string::String,
+    #[prost(int32, optional, tag="4")]
+    pub prompt_tokens: ::core::option::Option<i32>,
+    #[prost(int32, optional, tag="5")]
+    pub completion_tokens: ::core::option::Option<i32>,
+    #[prost(int64, optional, tag="6")]
+    pub cost_usd_micro: ::core::option::Option<i64>,
+    #[prost(int32, optional, tag="7")]
+    pub latency_ms_total: ::core::option::Option<i32>,
+    #[prost(int32, optional, tag="8")]
+    pub latency_ms_ttft: ::core::option::Option<i32>,
+    #[prost(string, optional, tag="9")]
+    pub finish_reason: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(string, tag="10")]
+    pub status: ::prost::alloc::string::String,
+    #[prost(bool, tag="11")]
+    pub pii_detected: bool,
+    #[prost(bool, tag="12")]
+    pub injection_attempt: bool,
+    #[prost(int32, tag="13")]
+    pub retry_count: i32,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct RecordMetricsResponse {
+    #[prost(bool, tag="1")]
+    pub recorded: bool,
+    #[prost(int64, optional, tag="2")]
+    pub cost_usd_micro: ::core::option::Option<i64>,
+    #[prost(string, optional, tag="3")]
+    pub price_version: ::core::option::Option<::prost::alloc::string::String>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct RecordMetricsBatchRequest {
+    #[prost(message, repeated, tag="1")]
+    pub spans: ::prost::alloc::vec::Vec<RecordMetricsRequest>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct RecordMetricsBatchResponse {
+    #[prost(int32, tag="1")]
+    pub recorded_count: i32,
+}
 /// InstrumentationStatus represents the current state of auto-instrumentation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]

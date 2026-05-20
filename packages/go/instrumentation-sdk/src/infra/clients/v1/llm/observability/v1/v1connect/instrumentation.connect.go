@@ -58,6 +58,18 @@ const (
 	// InstrumentationControlServiceScanPiiInjectionProcedure is the fully-qualified name of the
 	// InstrumentationControlService's ScanPiiInjection RPC.
 	InstrumentationControlServiceScanPiiInjectionProcedure = "/llm.observability.v1.InstrumentationControlService/ScanPiiInjection"
+	// InstrumentationControlServiceInitMetricsProcedure is the fully-qualified name of the
+	// InstrumentationControlService's InitMetrics RPC.
+	InstrumentationControlServiceInitMetricsProcedure = "/llm.observability.v1.InstrumentationControlService/InitMetrics"
+	// InstrumentationControlServiceGetMetricsHealthProcedure is the fully-qualified name of the
+	// InstrumentationControlService's GetMetricsHealth RPC.
+	InstrumentationControlServiceGetMetricsHealthProcedure = "/llm.observability.v1.InstrumentationControlService/GetMetricsHealth"
+	// InstrumentationControlServiceRecordMetricsProcedure is the fully-qualified name of the
+	// InstrumentationControlService's RecordMetrics RPC.
+	InstrumentationControlServiceRecordMetricsProcedure = "/llm.observability.v1.InstrumentationControlService/RecordMetrics"
+	// InstrumentationControlServiceRecordMetricsBatchProcedure is the fully-qualified name of the
+	// InstrumentationControlService's RecordMetricsBatch RPC.
+	InstrumentationControlServiceRecordMetricsBatchProcedure = "/llm.observability.v1.InstrumentationControlService/RecordMetricsBatch"
 )
 
 // InstrumentationControlServiceClient is a client for the
@@ -71,6 +83,10 @@ type InstrumentationControlServiceClient interface {
 	TriggerTestStreamCall(context.Context, *connect.Request[v1.TriggerTestStreamCallRequest]) (*connect.Response[v1.TriggerTestStreamCallResponse], error)
 	CountTokens(context.Context, *connect.Request[v1.CountTokensRequest]) (*connect.Response[v1.CountTokensResponse], error)
 	ScanPiiInjection(context.Context, *connect.Request[v1.ScanPiiInjectionRequest]) (*connect.Response[v1.ScanPiiInjectionResponse], error)
+	InitMetrics(context.Context, *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error)
+	GetMetricsHealth(context.Context, *connect.Request[v1.GetMetricsHealthRequest]) (*connect.Response[v1.GetMetricsHealthResponse], error)
+	RecordMetrics(context.Context, *connect.Request[v1.RecordMetricsRequest]) (*connect.Response[v1.RecordMetricsResponse], error)
+	RecordMetricsBatch(context.Context, *connect.Request[v1.RecordMetricsBatchRequest]) (*connect.Response[v1.RecordMetricsBatchResponse], error)
 }
 
 // NewInstrumentationControlServiceClient constructs a client for the
@@ -124,6 +140,26 @@ func NewInstrumentationControlServiceClient(httpClient connect.HTTPClient, baseU
 			baseURL+InstrumentationControlServiceScanPiiInjectionProcedure,
 			opts...,
 		),
+		initMetrics: connect.NewClient[v1.InitMetricsRequest, v1.InitMetricsResponse](
+			httpClient,
+			baseURL+InstrumentationControlServiceInitMetricsProcedure,
+			opts...,
+		),
+		getMetricsHealth: connect.NewClient[v1.GetMetricsHealthRequest, v1.GetMetricsHealthResponse](
+			httpClient,
+			baseURL+InstrumentationControlServiceGetMetricsHealthProcedure,
+			opts...,
+		),
+		recordMetrics: connect.NewClient[v1.RecordMetricsRequest, v1.RecordMetricsResponse](
+			httpClient,
+			baseURL+InstrumentationControlServiceRecordMetricsProcedure,
+			opts...,
+		),
+		recordMetricsBatch: connect.NewClient[v1.RecordMetricsBatchRequest, v1.RecordMetricsBatchResponse](
+			httpClient,
+			baseURL+InstrumentationControlServiceRecordMetricsBatchProcedure,
+			opts...,
+		),
 	}
 }
 
@@ -137,6 +173,10 @@ type instrumentationControlServiceClient struct {
 	triggerTestStreamCall  *connect.Client[v1.TriggerTestStreamCallRequest, v1.TriggerTestStreamCallResponse]
 	countTokens            *connect.Client[v1.CountTokensRequest, v1.CountTokensResponse]
 	scanPiiInjection       *connect.Client[v1.ScanPiiInjectionRequest, v1.ScanPiiInjectionResponse]
+	initMetrics            *connect.Client[v1.InitMetricsRequest, v1.InitMetricsResponse]
+	getMetricsHealth       *connect.Client[v1.GetMetricsHealthRequest, v1.GetMetricsHealthResponse]
+	recordMetrics          *connect.Client[v1.RecordMetricsRequest, v1.RecordMetricsResponse]
+	recordMetricsBatch     *connect.Client[v1.RecordMetricsBatchRequest, v1.RecordMetricsBatchResponse]
 }
 
 // InitInstrumentation calls llm.observability.v1.InstrumentationControlService.InitInstrumentation.
@@ -181,6 +221,26 @@ func (c *instrumentationControlServiceClient) ScanPiiInjection(ctx context.Conte
 	return c.scanPiiInjection.CallUnary(ctx, req)
 }
 
+// InitMetrics calls llm.observability.v1.InstrumentationControlService.InitMetrics.
+func (c *instrumentationControlServiceClient) InitMetrics(ctx context.Context, req *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error) {
+	return c.initMetrics.CallUnary(ctx, req)
+}
+
+// GetMetricsHealth calls llm.observability.v1.InstrumentationControlService.GetMetricsHealth.
+func (c *instrumentationControlServiceClient) GetMetricsHealth(ctx context.Context, req *connect.Request[v1.GetMetricsHealthRequest]) (*connect.Response[v1.GetMetricsHealthResponse], error) {
+	return c.getMetricsHealth.CallUnary(ctx, req)
+}
+
+// RecordMetrics calls llm.observability.v1.InstrumentationControlService.RecordMetrics.
+func (c *instrumentationControlServiceClient) RecordMetrics(ctx context.Context, req *connect.Request[v1.RecordMetricsRequest]) (*connect.Response[v1.RecordMetricsResponse], error) {
+	return c.recordMetrics.CallUnary(ctx, req)
+}
+
+// RecordMetricsBatch calls llm.observability.v1.InstrumentationControlService.RecordMetricsBatch.
+func (c *instrumentationControlServiceClient) RecordMetricsBatch(ctx context.Context, req *connect.Request[v1.RecordMetricsBatchRequest]) (*connect.Response[v1.RecordMetricsBatchResponse], error) {
+	return c.recordMetricsBatch.CallUnary(ctx, req)
+}
+
 // InstrumentationControlServiceHandler is an implementation of the
 // llm.observability.v1.InstrumentationControlService service.
 type InstrumentationControlServiceHandler interface {
@@ -192,6 +252,10 @@ type InstrumentationControlServiceHandler interface {
 	TriggerTestStreamCall(context.Context, *connect.Request[v1.TriggerTestStreamCallRequest]) (*connect.Response[v1.TriggerTestStreamCallResponse], error)
 	CountTokens(context.Context, *connect.Request[v1.CountTokensRequest]) (*connect.Response[v1.CountTokensResponse], error)
 	ScanPiiInjection(context.Context, *connect.Request[v1.ScanPiiInjectionRequest]) (*connect.Response[v1.ScanPiiInjectionResponse], error)
+	InitMetrics(context.Context, *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error)
+	GetMetricsHealth(context.Context, *connect.Request[v1.GetMetricsHealthRequest]) (*connect.Response[v1.GetMetricsHealthResponse], error)
+	RecordMetrics(context.Context, *connect.Request[v1.RecordMetricsRequest]) (*connect.Response[v1.RecordMetricsResponse], error)
+	RecordMetricsBatch(context.Context, *connect.Request[v1.RecordMetricsBatchRequest]) (*connect.Response[v1.RecordMetricsBatchResponse], error)
 }
 
 // NewInstrumentationControlServiceHandler builds an HTTP handler from the service implementation.
@@ -240,6 +304,26 @@ func NewInstrumentationControlServiceHandler(svc InstrumentationControlServiceHa
 		svc.ScanPiiInjection,
 		opts...,
 	)
+	instrumentationControlServiceInitMetricsHandler := connect.NewUnaryHandler(
+		InstrumentationControlServiceInitMetricsProcedure,
+		svc.InitMetrics,
+		opts...,
+	)
+	instrumentationControlServiceGetMetricsHealthHandler := connect.NewUnaryHandler(
+		InstrumentationControlServiceGetMetricsHealthProcedure,
+		svc.GetMetricsHealth,
+		opts...,
+	)
+	instrumentationControlServiceRecordMetricsHandler := connect.NewUnaryHandler(
+		InstrumentationControlServiceRecordMetricsProcedure,
+		svc.RecordMetrics,
+		opts...,
+	)
+	instrumentationControlServiceRecordMetricsBatchHandler := connect.NewUnaryHandler(
+		InstrumentationControlServiceRecordMetricsBatchProcedure,
+		svc.RecordMetricsBatch,
+		opts...,
+	)
 	return "/llm.observability.v1.InstrumentationControlService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case InstrumentationControlServiceInitInstrumentationProcedure:
@@ -258,6 +342,14 @@ func NewInstrumentationControlServiceHandler(svc InstrumentationControlServiceHa
 			instrumentationControlServiceCountTokensHandler.ServeHTTP(w, r)
 		case InstrumentationControlServiceScanPiiInjectionProcedure:
 			instrumentationControlServiceScanPiiInjectionHandler.ServeHTTP(w, r)
+		case InstrumentationControlServiceInitMetricsProcedure:
+			instrumentationControlServiceInitMetricsHandler.ServeHTTP(w, r)
+		case InstrumentationControlServiceGetMetricsHealthProcedure:
+			instrumentationControlServiceGetMetricsHealthHandler.ServeHTTP(w, r)
+		case InstrumentationControlServiceRecordMetricsProcedure:
+			instrumentationControlServiceRecordMetricsHandler.ServeHTTP(w, r)
+		case InstrumentationControlServiceRecordMetricsBatchProcedure:
+			instrumentationControlServiceRecordMetricsBatchHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -297,4 +389,20 @@ func (UnimplementedInstrumentationControlServiceHandler) CountTokens(context.Con
 
 func (UnimplementedInstrumentationControlServiceHandler) ScanPiiInjection(context.Context, *connect.Request[v1.ScanPiiInjectionRequest]) (*connect.Response[v1.ScanPiiInjectionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.ScanPiiInjection is not implemented"))
+}
+
+func (UnimplementedInstrumentationControlServiceHandler) InitMetrics(context.Context, *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.InitMetrics is not implemented"))
+}
+
+func (UnimplementedInstrumentationControlServiceHandler) GetMetricsHealth(context.Context, *connect.Request[v1.GetMetricsHealthRequest]) (*connect.Response[v1.GetMetricsHealthResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.GetMetricsHealth is not implemented"))
+}
+
+func (UnimplementedInstrumentationControlServiceHandler) RecordMetrics(context.Context, *connect.Request[v1.RecordMetricsRequest]) (*connect.Response[v1.RecordMetricsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.RecordMetrics is not implemented"))
+}
+
+func (UnimplementedInstrumentationControlServiceHandler) RecordMetricsBatch(context.Context, *connect.Request[v1.RecordMetricsBatchRequest]) (*connect.Response[v1.RecordMetricsBatchResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.RecordMetricsBatch is not implemented"))
 }

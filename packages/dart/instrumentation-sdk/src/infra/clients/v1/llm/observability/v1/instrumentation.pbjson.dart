@@ -289,6 +289,148 @@ final $typed_data.Uint8List scanPiiInjectionResponseDescriptor = $convert.base64
     'ChhTY2FuUGlpSW5qZWN0aW9uUmVzcG9uc2USIQoMcGlpX2RldGVjdGVkGAEgASgIUgtwaWlEZX'
     'RlY3RlZBIrChFpbmplY3Rpb25fYXR0ZW1wdBgCIAEoCFIQaW5qZWN0aW9uQXR0ZW1wdA==');
 
+@$core.Deprecated('Use initMetricsRequestDescriptor instead')
+const InitMetricsRequest$json = {
+  '1': 'InitMetricsRequest',
+  '2': [
+    {'1': 'port', '3': 1, '4': 1, '5': 5, '9': 0, '10': 'port', '17': true},
+  ],
+  '8': [
+    {'1': '_port'},
+  ],
+};
+
+/// Descriptor for `InitMetricsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List initMetricsRequestDescriptor = $convert.base64Decode(
+    'ChJJbml0TWV0cmljc1JlcXVlc3QSFwoEcG9ydBgBIAEoBUgAUgRwb3J0iAEBQgcKBV9wb3J0');
+
+@$core.Deprecated('Use getMetricsHealthRequestDescriptor instead')
+const GetMetricsHealthRequest$json = {
+  '1': 'GetMetricsHealthRequest',
+};
+
+/// Descriptor for `GetMetricsHealthRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getMetricsHealthRequestDescriptor = $convert.base64Decode(
+    'ChdHZXRNZXRyaWNzSGVhbHRoUmVxdWVzdA==');
+
+@$core.Deprecated('Use initMetricsResponseDescriptor instead')
+const InitMetricsResponse$json = {
+  '1': 'InitMetricsResponse',
+  '2': [
+    {'1': 'initialized', '3': 1, '4': 1, '5': 8, '10': 'initialized'},
+    {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
+  ],
+};
+
+/// Descriptor for `InitMetricsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List initMetricsResponseDescriptor = $convert.base64Decode(
+    'ChNJbml0TWV0cmljc1Jlc3BvbnNlEiAKC2luaXRpYWxpemVkGAEgASgIUgtpbml0aWFsaXplZB'
+    'IYCgdtZXNzYWdlGAIgASgJUgdtZXNzYWdl');
+
+@$core.Deprecated('Use getMetricsHealthResponseDescriptor instead')
+const GetMetricsHealthResponse$json = {
+  '1': 'GetMetricsHealthResponse',
+  '2': [
+    {'1': 'initialized', '3': 1, '4': 1, '5': 8, '10': 'initialized'},
+    {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
+  ],
+};
+
+/// Descriptor for `GetMetricsHealthResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getMetricsHealthResponseDescriptor = $convert.base64Decode(
+    'ChhHZXRNZXRyaWNzSGVhbHRoUmVzcG9uc2USIAoLaW5pdGlhbGl6ZWQYASABKAhSC2luaXRpYW'
+    'xpemVkEhgKB21lc3NhZ2UYAiABKAlSB21lc3NhZ2U=');
+
+@$core.Deprecated('Use recordMetricsRequestDescriptor instead')
+const RecordMetricsRequest$json = {
+  '1': 'RecordMetricsRequest',
+  '2': [
+    {'1': 'model', '3': 1, '4': 1, '5': 9, '10': 'model'},
+    {'1': 'provider', '3': 2, '4': 1, '5': 9, '10': 'provider'},
+    {'1': 'service_name', '3': 3, '4': 1, '5': 9, '10': 'serviceName'},
+    {'1': 'prompt_tokens', '3': 4, '4': 1, '5': 5, '9': 0, '10': 'promptTokens', '17': true},
+    {'1': 'completion_tokens', '3': 5, '4': 1, '5': 5, '9': 1, '10': 'completionTokens', '17': true},
+    {'1': 'cost_usd_micro', '3': 6, '4': 1, '5': 3, '9': 2, '10': 'costUsdMicro', '17': true},
+    {'1': 'latency_ms_total', '3': 7, '4': 1, '5': 5, '9': 3, '10': 'latencyMsTotal', '17': true},
+    {'1': 'latency_ms_ttft', '3': 8, '4': 1, '5': 5, '9': 4, '10': 'latencyMsTtft', '17': true},
+    {'1': 'finish_reason', '3': 9, '4': 1, '5': 9, '9': 5, '10': 'finishReason', '17': true},
+    {'1': 'status', '3': 10, '4': 1, '5': 9, '10': 'status'},
+    {'1': 'pii_detected', '3': 11, '4': 1, '5': 8, '10': 'piiDetected'},
+    {'1': 'injection_attempt', '3': 12, '4': 1, '5': 8, '10': 'injectionAttempt'},
+    {'1': 'retry_count', '3': 13, '4': 1, '5': 5, '10': 'retryCount'},
+  ],
+  '8': [
+    {'1': '_prompt_tokens'},
+    {'1': '_completion_tokens'},
+    {'1': '_cost_usd_micro'},
+    {'1': '_latency_ms_total'},
+    {'1': '_latency_ms_ttft'},
+    {'1': '_finish_reason'},
+  ],
+};
+
+/// Descriptor for `RecordMetricsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List recordMetricsRequestDescriptor = $convert.base64Decode(
+    'ChRSZWNvcmRNZXRyaWNzUmVxdWVzdBIUCgVtb2RlbBgBIAEoCVIFbW9kZWwSGgoIcHJvdmlkZX'
+    'IYAiABKAlSCHByb3ZpZGVyEiEKDHNlcnZpY2VfbmFtZRgDIAEoCVILc2VydmljZU5hbWUSKAoN'
+    'cHJvbXB0X3Rva2VucxgEIAEoBUgAUgxwcm9tcHRUb2tlbnOIAQESMAoRY29tcGxldGlvbl90b2'
+    'tlbnMYBSABKAVIAVIQY29tcGxldGlvblRva2Vuc4gBARIpCg5jb3N0X3VzZF9taWNybxgGIAEo'
+    'A0gCUgxjb3N0VXNkTWljcm+IAQESLQoQbGF0ZW5jeV9tc190b3RhbBgHIAEoBUgDUg5sYXRlbm'
+    'N5TXNUb3RhbIgBARIrCg9sYXRlbmN5X21zX3R0ZnQYCCABKAVIBFINbGF0ZW5jeU1zVHRmdIgB'
+    'ARIoCg1maW5pc2hfcmVhc29uGAkgASgJSAVSDGZpbmlzaFJlYXNvbogBARIWCgZzdGF0dXMYCi'
+    'ABKAlSBnN0YXR1cxIhCgxwaWlfZGV0ZWN0ZWQYCyABKAhSC3BpaURldGVjdGVkEisKEWluamVj'
+    'dGlvbl9hdHRlbXB0GAwgASgIUhBpbmplY3Rpb25BdHRlbXB0Eh8KC3JldHJ5X2NvdW50GA0gAS'
+    'gFUgpyZXRyeUNvdW50QhAKDl9wcm9tcHRfdG9rZW5zQhQKEl9jb21wbGV0aW9uX3Rva2Vuc0IR'
+    'Cg9fY29zdF91c2RfbWljcm9CEwoRX2xhdGVuY3lfbXNfdG90YWxCEgoQX2xhdGVuY3lfbXNfdH'
+    'RmdEIQCg5fZmluaXNoX3JlYXNvbg==');
+
+@$core.Deprecated('Use recordMetricsResponseDescriptor instead')
+const RecordMetricsResponse$json = {
+  '1': 'RecordMetricsResponse',
+  '2': [
+    {'1': 'recorded', '3': 1, '4': 1, '5': 8, '10': 'recorded'},
+    {'1': 'cost_usd_micro', '3': 2, '4': 1, '5': 3, '9': 0, '10': 'costUsdMicro', '17': true},
+    {'1': 'price_version', '3': 3, '4': 1, '5': 9, '9': 1, '10': 'priceVersion', '17': true},
+  ],
+  '8': [
+    {'1': '_cost_usd_micro'},
+    {'1': '_price_version'},
+  ],
+};
+
+/// Descriptor for `RecordMetricsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List recordMetricsResponseDescriptor = $convert.base64Decode(
+    'ChVSZWNvcmRNZXRyaWNzUmVzcG9uc2USGgoIcmVjb3JkZWQYASABKAhSCHJlY29yZGVkEikKDm'
+    'Nvc3RfdXNkX21pY3JvGAIgASgDSABSDGNvc3RVc2RNaWNyb4gBARIoCg1wcmljZV92ZXJzaW9u'
+    'GAMgASgJSAFSDHByaWNlVmVyc2lvbogBAUIRCg9fY29zdF91c2RfbWljcm9CEAoOX3ByaWNlX3'
+    'ZlcnNpb24=');
+
+@$core.Deprecated('Use recordMetricsBatchRequestDescriptor instead')
+const RecordMetricsBatchRequest$json = {
+  '1': 'RecordMetricsBatchRequest',
+  '2': [
+    {'1': 'spans', '3': 1, '4': 3, '5': 11, '6': '.llm.observability.v1.RecordMetricsRequest', '10': 'spans'},
+  ],
+};
+
+/// Descriptor for `RecordMetricsBatchRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List recordMetricsBatchRequestDescriptor = $convert.base64Decode(
+    'ChlSZWNvcmRNZXRyaWNzQmF0Y2hSZXF1ZXN0EkAKBXNwYW5zGAEgAygLMioubGxtLm9ic2Vydm'
+    'FiaWxpdHkudjEuUmVjb3JkTWV0cmljc1JlcXVlc3RSBXNwYW5z');
+
+@$core.Deprecated('Use recordMetricsBatchResponseDescriptor instead')
+const RecordMetricsBatchResponse$json = {
+  '1': 'RecordMetricsBatchResponse',
+  '2': [
+    {'1': 'recorded_count', '3': 1, '4': 1, '5': 5, '10': 'recordedCount'},
+  ],
+};
+
+/// Descriptor for `RecordMetricsBatchResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List recordMetricsBatchResponseDescriptor = $convert.base64Decode(
+    'ChpSZWNvcmRNZXRyaWNzQmF0Y2hSZXNwb25zZRIlCg5yZWNvcmRlZF9jb3VudBgBIAEoBVINcm'
+    'Vjb3JkZWRDb3VudA==');
+
 const $core.Map<$core.String, $core.dynamic> InstrumentationControlServiceBase$json = {
   '1': 'InstrumentationControlService',
   '2': [
@@ -300,6 +442,10 @@ const $core.Map<$core.String, $core.dynamic> InstrumentationControlServiceBase$j
     {'1': 'TriggerTestStreamCall', '2': '.llm.observability.v1.TriggerTestStreamCallRequest', '3': '.llm.observability.v1.TriggerTestStreamCallResponse'},
     {'1': 'CountTokens', '2': '.llm.observability.v1.CountTokensRequest', '3': '.llm.observability.v1.CountTokensResponse'},
     {'1': 'ScanPiiInjection', '2': '.llm.observability.v1.ScanPiiInjectionRequest', '3': '.llm.observability.v1.ScanPiiInjectionResponse'},
+    {'1': 'InitMetrics', '2': '.llm.observability.v1.InitMetricsRequest', '3': '.llm.observability.v1.InitMetricsResponse'},
+    {'1': 'GetMetricsHealth', '2': '.llm.observability.v1.GetMetricsHealthRequest', '3': '.llm.observability.v1.GetMetricsHealthResponse'},
+    {'1': 'RecordMetrics', '2': '.llm.observability.v1.RecordMetricsRequest', '3': '.llm.observability.v1.RecordMetricsResponse'},
+    {'1': 'RecordMetricsBatch', '2': '.llm.observability.v1.RecordMetricsBatchRequest', '3': '.llm.observability.v1.RecordMetricsBatchResponse'},
   ],
 };
 
@@ -321,6 +467,14 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>> Instrument
   '.llm.observability.v1.CountTokensResponse': CountTokensResponse$json,
   '.llm.observability.v1.ScanPiiInjectionRequest': ScanPiiInjectionRequest$json,
   '.llm.observability.v1.ScanPiiInjectionResponse': ScanPiiInjectionResponse$json,
+  '.llm.observability.v1.InitMetricsRequest': InitMetricsRequest$json,
+  '.llm.observability.v1.InitMetricsResponse': InitMetricsResponse$json,
+  '.llm.observability.v1.GetMetricsHealthRequest': GetMetricsHealthRequest$json,
+  '.llm.observability.v1.GetMetricsHealthResponse': GetMetricsHealthResponse$json,
+  '.llm.observability.v1.RecordMetricsRequest': RecordMetricsRequest$json,
+  '.llm.observability.v1.RecordMetricsResponse': RecordMetricsResponse$json,
+  '.llm.observability.v1.RecordMetricsBatchRequest': RecordMetricsBatchRequest$json,
+  '.llm.observability.v1.RecordMetricsBatchResponse': RecordMetricsBatchResponse$json,
 };
 
 /// Descriptor for `InstrumentationControlService`. Decode as a `google.protobuf.ServiceDescriptorProto`.
@@ -342,5 +496,13 @@ final $typed_data.Uint8List instrumentationControlServiceDescriptor = $convert.b
     'bnRUb2tlbnNSZXF1ZXN0GikubGxtLm9ic2VydmFiaWxpdHkudjEuQ291bnRUb2tlbnNSZXNwb2'
     '5zZRJxChBTY2FuUGlpSW5qZWN0aW9uEi0ubGxtLm9ic2VydmFiaWxpdHkudjEuU2NhblBpaUlu'
     'amVjdGlvblJlcXVlc3QaLi5sbG0ub2JzZXJ2YWJpbGl0eS52MS5TY2FuUGlpSW5qZWN0aW9uUm'
-    'VzcG9uc2U=');
+    'VzcG9uc2USYgoLSW5pdE1ldHJpY3MSKC5sbG0ub2JzZXJ2YWJpbGl0eS52MS5Jbml0TWV0cmlj'
+    'c1JlcXVlc3QaKS5sbG0ub2JzZXJ2YWJpbGl0eS52MS5Jbml0TWV0cmljc1Jlc3BvbnNlEnEKEE'
+    'dldE1ldHJpY3NIZWFsdGgSLS5sbG0ub2JzZXJ2YWJpbGl0eS52MS5HZXRNZXRyaWNzSGVhbHRo'
+    'UmVxdWVzdBouLmxsbS5vYnNlcnZhYmlsaXR5LnYxLkdldE1ldHJpY3NIZWFsdGhSZXNwb25zZR'
+    'JoCg1SZWNvcmRNZXRyaWNzEioubGxtLm9ic2VydmFiaWxpdHkudjEuUmVjb3JkTWV0cmljc1Jl'
+    'cXVlc3QaKy5sbG0ub2JzZXJ2YWJpbGl0eS52MS5SZWNvcmRNZXRyaWNzUmVzcG9uc2USdwoSUm'
+    'Vjb3JkTWV0cmljc0JhdGNoEi8ubGxtLm9ic2VydmFiaWxpdHkudjEuUmVjb3JkTWV0cmljc0Jh'
+    'dGNoUmVxdWVzdBowLmxsbS5vYnNlcnZhYmlsaXR5LnYxLlJlY29yZE1ldHJpY3NCYXRjaFJlc3'
+    'BvbnNl');
 

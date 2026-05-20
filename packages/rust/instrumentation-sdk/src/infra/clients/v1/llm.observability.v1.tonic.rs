@@ -326,6 +326,126 @@ pub mod instrumentation_control_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        pub async fn init_metrics(
+            &mut self,
+            request: impl tonic::IntoRequest<super::InitMetricsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::InitMetricsResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/llm.observability.v1.InstrumentationControlService/InitMetrics",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "llm.observability.v1.InstrumentationControlService",
+                        "InitMetrics",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn get_metrics_health(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetMetricsHealthRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetMetricsHealthResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/llm.observability.v1.InstrumentationControlService/GetMetricsHealth",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "llm.observability.v1.InstrumentationControlService",
+                        "GetMetricsHealth",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn record_metrics(
+            &mut self,
+            request: impl tonic::IntoRequest<super::RecordMetricsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::RecordMetricsResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/llm.observability.v1.InstrumentationControlService/RecordMetrics",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "llm.observability.v1.InstrumentationControlService",
+                        "RecordMetrics",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn record_metrics_batch(
+            &mut self,
+            request: impl tonic::IntoRequest<super::RecordMetricsBatchRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::RecordMetricsBatchResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/llm.observability.v1.InstrumentationControlService/RecordMetricsBatch",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "llm.observability.v1.InstrumentationControlService",
+                        "RecordMetricsBatch",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
     }
 }
 /// Generated server implementations.
@@ -389,6 +509,34 @@ pub mod instrumentation_control_service_server {
             request: tonic::Request<super::ScanPiiInjectionRequest>,
         ) -> std::result::Result<
             tonic::Response<super::ScanPiiInjectionResponse>,
+            tonic::Status,
+        >;
+        async fn init_metrics(
+            &self,
+            request: tonic::Request<super::InitMetricsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::InitMetricsResponse>,
+            tonic::Status,
+        >;
+        async fn get_metrics_health(
+            &self,
+            request: tonic::Request<super::GetMetricsHealthRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetMetricsHealthResponse>,
+            tonic::Status,
+        >;
+        async fn record_metrics(
+            &self,
+            request: tonic::Request<super::RecordMetricsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::RecordMetricsResponse>,
+            tonic::Status,
+        >;
+        async fn record_metrics_batch(
+            &self,
+            request: tonic::Request<super::RecordMetricsBatchRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::RecordMetricsBatchResponse>,
             tonic::Status,
         >;
     }
@@ -869,6 +1017,212 @@ pub mod instrumentation_control_service_server {
                     let fut = async move {
                         let inner = inner.0;
                         let method = ScanPiiInjectionSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/llm.observability.v1.InstrumentationControlService/InitMetrics" => {
+                    #[allow(non_camel_case_types)]
+                    struct InitMetricsSvc<T: InstrumentationControlService>(pub Arc<T>);
+                    impl<
+                        T: InstrumentationControlService,
+                    > tonic::server::UnaryService<super::InitMetricsRequest>
+                    for InitMetricsSvc<T> {
+                        type Response = super::InitMetricsResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::InitMetricsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as InstrumentationControlService>::init_metrics(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = InitMetricsSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/llm.observability.v1.InstrumentationControlService/GetMetricsHealth" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetMetricsHealthSvc<T: InstrumentationControlService>(
+                        pub Arc<T>,
+                    );
+                    impl<
+                        T: InstrumentationControlService,
+                    > tonic::server::UnaryService<super::GetMetricsHealthRequest>
+                    for GetMetricsHealthSvc<T> {
+                        type Response = super::GetMetricsHealthResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetMetricsHealthRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as InstrumentationControlService>::get_metrics_health(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = GetMetricsHealthSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/llm.observability.v1.InstrumentationControlService/RecordMetrics" => {
+                    #[allow(non_camel_case_types)]
+                    struct RecordMetricsSvc<T: InstrumentationControlService>(
+                        pub Arc<T>,
+                    );
+                    impl<
+                        T: InstrumentationControlService,
+                    > tonic::server::UnaryService<super::RecordMetricsRequest>
+                    for RecordMetricsSvc<T> {
+                        type Response = super::RecordMetricsResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::RecordMetricsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as InstrumentationControlService>::record_metrics(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = RecordMetricsSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/llm.observability.v1.InstrumentationControlService/RecordMetricsBatch" => {
+                    #[allow(non_camel_case_types)]
+                    struct RecordMetricsBatchSvc<T: InstrumentationControlService>(
+                        pub Arc<T>,
+                    );
+                    impl<
+                        T: InstrumentationControlService,
+                    > tonic::server::UnaryService<super::RecordMetricsBatchRequest>
+                    for RecordMetricsBatchSvc<T> {
+                        type Response = super::RecordMetricsBatchResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::RecordMetricsBatchRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as InstrumentationControlService>::record_metrics_batch(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = RecordMetricsBatchSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
