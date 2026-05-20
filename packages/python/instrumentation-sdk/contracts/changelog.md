@@ -4,6 +4,17 @@ All notable changes to the `instrumentation-sdk` package will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-05-20
+
+### Added
+- **Prometheus Metrics collection & scraping**: Integrated OpenTelemetry Prometheus adapter to collect operational metrics from LLM call lifecycles.
+- **REST Metrics API**: Exposed endpoints `POST /v1/metrics/init`, `GET /v1/metrics/health`, `POST /v1/metrics/record`, and `POST /v1/metrics/record-batch` for metrics orchestration.
+- **Grafana Dashboard**: Provisioned Grafana dashboard visualizing LLM latency, TTFT, token usage, cost, and error rates.
+- **Contract-First Support**:
+  - **OpenAPI**: Added OpenAPI routes and schemas for the metrics endpoints.
+  - **GraphQL**: Exposed `initMetrics`, `recordMetrics`, `recordMetricsBatch` mutations and `metricsHealth` query.
+  - **Protobuf**: Added `InitMetrics`, `GetMetricsHealth`, `RecordMetrics`, `RecordMetricsBatch` RPCs to `InstrumentationControlService`.
+
 ## [1.5.0] - 2026-05-19
 
 ### Added

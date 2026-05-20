@@ -297,6 +297,35 @@ curl -X POST http://localhost:8000/v1/pii-injection/scan \
   -d '{"prompt": "my email is user@example.com"}'
 ```
 
+### Prometheus Metrics & Grafana Dashboard
+
+The SDK integrates a Prometheus metrics collection pipeline to track operational metrics for LLM calls (latency, TTFT, token usage, cost, and security violations).
+
+#### Configuration & Initialization
+
+Initialize the Prometheus metrics scraping endpoint:
+
+```bash
+curl -X POST http://localhost:8000/v1/metrics/init \
+  -H "Content-Type: application/json" \
+  -d '{"port": 9464}'
+```
+
+#### Metrics Endpoints
+
+- **Initialize Pipeline**: `POST /v1/metrics/init`
+- **Health Check**: `GET /v1/metrics/health`
+- **Record Single Span Metrics**: `POST /v1/metrics/record`
+- **Record Batch Spans Metrics**: `POST /v1/metrics/record-batch`
+
+#### Grafana Dashboard
+
+The dashboard is built-in and automatically provisioned on port `3000` (or `3002` in standalone mode). It includes:
+- **LLM Latency & TTFT**: Histogram distribution of request latency and time-to-first-token.
+- **Token Usage**: Track prompt and completion tokens.
+- **Cost Analysis**: Live cost calculation in micro-USD.
+- **Security Scans**: Record rates of PII exposure and prompt injections.
+
 ## 3. Implementation Call Chain
 
 | Pipeline Stage | Method Call | Primary File |

@@ -20,13 +20,13 @@ class PrometheusMetricsAdapter:
 
         self._latency_histogram = meter.create_histogram(
             "llm_latency_ms_total",
-            unit="ms",
+            unit="",
             description="LLM call total latency",
         )
 
         self._ttft_histogram = meter.create_histogram(
             "llm_latency_ms_ttft",
-            unit="ms",
+            unit="",
             description="LLM time to first token",
         )
 

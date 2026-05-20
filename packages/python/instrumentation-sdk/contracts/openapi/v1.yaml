@@ -252,6 +252,95 @@ paths:
                     type: boolean
                     example: false
 
+  /metrics/init:
+    post:
+      summary: Initialize metrics pipeline
+      operationId: initMetrics
+      tags:
+        - Metrics
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                port:
+                  type: integer
+                  nullable: true
+      responses:
+        '200':
+          description: Metrics pipeline initialization status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricsStatusResponse'
+
+  /metrics/health:
+    get:
+      summary: Check metrics pipeline health
+      operationId: metricsHealth
+      tags:
+        - Metrics
+      responses:
+        '200':
+          description: Health status of the metrics pipeline.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricsStatusResponse'
+
+  /metrics/record:
+    post:
+      summary: Record metrics for a single span
+      operationId: recordMetrics
+      tags:
+        - Metrics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordSpanMetricsRequest'
+      responses:
+        '200':
+          description: Metrics successfully recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordSpanMetricsResponse'
+
+  /metrics/record-batch:
+    post:
+      summary: Record metrics for a batch of spans
+      operationId: recordMetricsBatch
+      tags:
+        - Metrics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - spans
+              properties:
+                spans:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/RecordSpanMetricsRequest'
+      responses:
+        '200':
+          description: Batch metrics recording result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - recorded_count
+                properties:
+                  recorded_count:
+                    type: integer
+
 components:
   schemas:
     StatusResponse:
@@ -261,5 +350,78 @@ components:
           type: boolean
         message:
           type: string
+    MetricsStatusResponse:
+      type: object
+      required:
+        - initialized
+        - message
+      properties:
+        initialized:
+          type: boolean
+        message:
+          type: string
+    RecordSpanMetricsRequest:
+      type: object
+      required:
+        - model
+        - provider
+        - service_name
+        - status
+        - pii_detected
+        - injection_attempt
+        - retry_count
+      properties:
+        model:
+          type: string
+          default: "unknown"
+        provider:
+          type: string
+          default: "unknown"
+        service_name:
+          type: string
+          default: "unknown"
+        prompt_tokens:
+          type: integer
+          nullable: true
+        completion_tokens:
+          type: integer
+          nullable: true
+        cost_usd_micro:
+          type: integer
+          nullable: true
+        latency_ms_total:
+          type: integer
+          nullable: true
+        latency_ms_ttft:
+          type: integer
+          nullable: true
+        finish_reason:
+          type: string
+          nullable: true
+        status:
+          type: string
+          default: "success"
+        pii_detected:
+          type: boolean
+          default: false
+        injection_attempt:
+          type: boolean
+          default: false
+        retry_count:
+          type: integer
+          default: 0
+    RecordSpanMetricsResponse:
+      type: object
+      required:
+        - recorded
+      properties:
+        recorded:
+          type: boolean
+        cost_usd_micro:
+          type: integer
+          nullable: true
+        price_version:
+          type: string
+          nullable: true
     LLMSpan:
       $ref: '../asyncapi/schemas/span.json'

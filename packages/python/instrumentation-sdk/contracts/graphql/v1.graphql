@@ -119,6 +119,48 @@ type DetectionPayload {
   model: String!
 }
 
+
+type TokenCountPayload {
+  tokens: Int!
+  method: String!
+}
+
+type PiiInjectionScanPayload {
+  pii_detected: Boolean!
+  injection_attempt: Boolean!
+}
+
+input RecordSpanMetricsInput {
+  model: String!
+  provider: String!
+  service_name: String!
+  prompt_tokens: Int
+  completion_tokens: Int
+  cost_usd_micro: Int
+  latency_ms_total: Int
+  latency_ms_ttft: Int
+  finish_reason: String
+  status: String!
+  pii_detected: Boolean!
+  injection_attempt: Boolean!
+  retry_count: Int!
+}
+
+type RecordSpanMetricsPayload {
+  recorded: Boolean!
+  cost_usd_micro: Int
+  price_version: String
+}
+
+type BatchRecordMetricsPayload {
+  recorded_count: Int!
+}
+
+type MetricsStatusPayload {
+  initialized: Boolean!
+  message: String!
+}
+
 type Mutation {
   recordSpan(input: LLMSpanInput!): RecordSpanPayload!
   
@@ -136,17 +178,10 @@ type Mutation {
 
   "Trigger a mock streaming call to verify streaming instrumentation"
   triggerTestStreamCall(provider: String!, chunks: [String!]): RecordSpanPayload!
-}
 
-
-type TokenCountPayload {
-  tokens: Int!
-  method: String!
-}
-
-type PiiInjectionScanPayload {
-  pii_detected: Boolean!
-  injection_attempt: Boolean!
+  initMetrics(port: Int): MetricsStatusPayload!
+  recordMetrics(input: RecordSpanMetricsInput!): RecordSpanMetricsPayload!
+  recordMetricsBatch(spans: [RecordSpanMetricsInput!]!): BatchRecordMetricsPayload!
 }
 
 type Query {
@@ -154,4 +189,6 @@ type Query {
   _dummy: Boolean
   countTokens(prompt: String!, model: String!, provider: String): TokenCountPayload!
   scanPiiInjection(prompt: String!): PiiInjectionScanPayload!
+  metricsHealth: MetricsStatusPayload!
 }
+
