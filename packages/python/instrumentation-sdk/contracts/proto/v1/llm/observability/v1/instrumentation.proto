@@ -23,8 +23,8 @@ service InstrumentationControlService {
   rpc TriggerTestStreamCall(TriggerTestStreamCallRequest) returns (TriggerTestStreamCallResponse);
   rpc CountTokens(CountTokensRequest) returns (CountTokensResponse);
   rpc ScanPiiInjection(ScanPiiInjectionRequest) returns (ScanPiiInjectionResponse);
-  rpc InitMetrics(InitMetricsRequest) returns (MetricsStatusResponse);
-  rpc GetMetricsHealth(GetMetricsHealthRequest) returns (MetricsStatusResponse);
+  rpc InitMetrics(InitMetricsRequest) returns (InitMetricsResponse);
+  rpc GetMetricsHealth(GetMetricsHealthRequest) returns (GetMetricsHealthResponse);
   rpc RecordMetrics(RecordMetricsRequest) returns (RecordMetricsResponse);
   rpc RecordMetricsBatch(RecordMetricsBatchRequest) returns (RecordMetricsBatchResponse);
 }
@@ -130,7 +130,12 @@ message InitMetricsRequest {
 
 message GetMetricsHealthRequest {}
 
-message MetricsStatusResponse {
+message InitMetricsResponse {
+  bool initialized = 1;
+  string message = 2;
+}
+
+message GetMetricsHealthResponse {
   bool initialized = 1;
   string message = 2;
 }

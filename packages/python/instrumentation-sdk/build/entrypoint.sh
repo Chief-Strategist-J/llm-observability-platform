@@ -7,7 +7,7 @@ tempo -config.file=/app/build/tempo-config.yaml > /var/log/app/tempo.log 2>&1 &
 echo "Tempo started successfully!"
 
 cd /usr/share/grafana
-GF_DATABASE_MIGRATION_LOCKING=false GF_DATABASE_WAL=false grafana-server --homepath=/usr/share/grafana --config=/etc/grafana/grafana.ini > /var/log/app/grafana.log 2>&1 &
+GF_DATABASE_WAL=true grafana-server --homepath=/usr/share/grafana --config=/etc/grafana/grafana.ini > /var/log/app/grafana.log 2>&1 &
 cd /app
 echo "Grafana started successfully!"
 
