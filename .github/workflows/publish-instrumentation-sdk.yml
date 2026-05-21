@@ -7,6 +7,7 @@ on:
       - '.github/workflows/publish-instrumentation-sdk.yml'
     branches:
       - main
+      - feature/f-08-minilm-embedding
   release:
     types: [published]
   workflow_dispatch:
