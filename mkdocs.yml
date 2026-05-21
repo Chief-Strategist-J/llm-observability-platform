@@ -15,7 +15,7 @@ theme:
   favicon: assets/favicon.svg
 
   font:
-    text: Outfit
+    text: Inter
     code: JetBrains Mono
 
   icon:
