@@ -1,0 +1,7 @@
+[2026-05-21T10:20:00+05:30] Fix package versioning and align Docker tags for release 1.6.0
+└── File: packages/python/instrumentation-sdk/pyproject.toml, packages/python/instrumentation-sdk/contracts/changelog.md, packages/python/instrumentation-sdk/scripts/deploy_docker.sh
+    ├── Choice: Deploy package with corrected version 1.6.0 instead of 1.8.0
+    └── Changes:
+        ├── pyproject.toml -> Bump version to 1.6.0
+        ├── contracts/changelog.md -> Consolidate recent changelog entries under 1.6.0
+        └── scripts/deploy_docker.sh -> Build and tag image with latest, v1.6.0, 1.6.0, stable, unstable
