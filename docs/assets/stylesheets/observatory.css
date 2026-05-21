@@ -174,13 +174,11 @@
 }
 
 
-/* ─── 3. BASE TYPOGRAPHY — mobile-first fluid sizing ─────── */
 
 body,
 .md-typeset {
   font-family: var(--md-text-font);
-  /* 14px on mobile → 15px on desktop */
-  font-size: clamp(14px, 1.5vw, 15px);
+  font-size: 15px;
   line-height: 1.72;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -188,44 +186,73 @@ body,
   font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
 }
 
+@media screen and (max-width: 59.9375em) {
+  body,
+  .md-typeset {
+    font-size: 14px;
+  }
+}
+
 .md-typeset h1 {
-  /* 1.6rem mobile → 2rem desktop */
-  font-size: clamp(1.55rem, 4vw, 2rem);
+  font-size: 30px;
   font-weight: 700;
-  line-height: 1.18;
-  letter-spacing: -0.022em;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
   margin-bottom: 0.6rem;
   color: var(--md-default-fg-color);
 }
 
+@media screen and (max-width: 59.9375em) {
+  .md-typeset h1 {
+    font-size: 25px;
+  }
+}
+
 .md-typeset h2 {
-  /* 1.2rem mobile → 1.35rem desktop */
-  font-size: clamp(1.15rem, 2.5vw, 1.35rem);
+  font-size: 22px;
   font-weight: 600;
-  line-height: 1.28;
-  letter-spacing: -0.016em;
-  margin-top: 2.2rem;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  margin-top: 2rem;
   margin-bottom: 0.5rem;
-  padding-bottom: 0.45rem;
+  padding-bottom: 0.4rem;
   border-bottom: 1px solid var(--obs-border-subtle);
 }
 
+@media screen and (max-width: 59.9375em) {
+  .md-typeset h2 {
+    font-size: 19px;
+  }
+}
+
 .md-typeset h3 {
-  font-size: clamp(1rem, 2vw, 1.08rem);
+  font-size: 17px;
   font-weight: 600;
-  letter-spacing: -0.01em;
   line-height: 1.35;
+  letter-spacing: -0.01em;
   margin-top: 1.6rem;
   margin-bottom: 0.4rem;
 }
 
+@media screen and (max-width: 59.9375em) {
+  .md-typeset h3 {
+    font-size: 15px;
+  }
+}
+
 .md-typeset h4 {
-  font-size: 0.88rem;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--md-default-fg-color--light);
   margin-top: 1.3rem;
+}
+
+@media screen and (max-width: 59.9375em) {
+  .md-typeset h4 {
+    font-size: 12px;
+  }
 }
 
 .md-typeset p {
@@ -476,9 +503,9 @@ body,
   padding: 1.2rem 1rem 0.4rem;
 }
 
-/* Nav items */
+
 .md-nav__item .md-nav__link {
-  font-size: 0.82rem;
+  font-size: 14px;
   font-weight: 400;
   line-height: 1.5;
   padding: 0.36rem 1rem;
@@ -487,6 +514,12 @@ body,
   border-left: 2px solid transparent;
   transition: color 0.12s, background-color 0.12s, border-color 0.12s;
   margin: 0;
+}
+
+@media screen and (max-width: 59.9375em) {
+  .md-nav__item .md-nav__link {
+    font-size: 13.5px;
+  }
 }
 
 .md-nav__item .md-nav__link:hover {
@@ -514,17 +547,17 @@ body,
 }
 
 
-/* ─── 7. CODE BLOCKS ──────────────────────────────────────── */
 
 .md-typeset code,
 .md-typeset kbd,
 .md-typeset pre {
   font-family: var(--md-code-font);
-  /* slightly smaller on mobile */
-  font-size: clamp(0.78em, 1.8vw, 0.84em);
 }
 
-/* Inline code */
+.md-typeset kbd {
+  font-size: 0.825em;
+}
+
 .md-typeset :not(pre)>code {
   background: var(--obs-bg-overlay);
   color: var(--obs-text-accent2);
@@ -532,19 +565,17 @@ body,
   border-radius: var(--obs-radius-sm);
   padding: 0.09em 0.38em;
   font-weight: 500;
-  /* prevent very long tokens from breaking layout */
+  font-size: 0.825em;
   word-break: break-word;
   overflow-wrap: break-word;
 }
 
-/* Code block wrapper */
 .md-typeset pre {
   border-radius: var(--obs-radius-lg);
   border: 1px solid var(--obs-border-subtle);
   box-shadow: var(--obs-shadow-sm);
   overflow: hidden;
   margin: 1.1rem 0;
-  /* always scrollable, never overflow parent */
   max-width: 100%;
 }
 
@@ -552,24 +583,17 @@ body,
   display: block;
   padding: 1rem 1.2rem;
   overflow-x: auto;
+  font-size: 0.825em;
   line-height: 1.7;
   scrollbar-width: thin;
   scrollbar-color: var(--obs-border-default) transparent;
-  /* prevent code from stretching the page width on mobile */
   word-break: normal;
   white-space: pre;
 }
 
-/* Tighter code padding on mobile */
 @media screen and (max-width: 59.9375em) {
   .md-typeset pre>code {
     padding: 0.85rem 0.9rem;
-    font-size: 0.78em;
-    line-height: 1.65;
-  }
-
-  .md-typeset :not(pre)>code {
-    font-size: 0.8em;
   }
 }
 
@@ -1003,12 +1027,19 @@ body,
   box-shadow: none;
 }
 
+
 .md-nav--secondary .md-nav__link {
   color: var(--md-default-fg-color--light);
-  font-size: 0.78rem;
+  font-size: 13px;
   padding: 0.26rem 0;
   transition: color 0.12s;
   border-left: none;
+}
+
+@media screen and (max-width: 59.9375em) {
+  .md-nav--secondary .md-nav__link {
+    font-size: 12.5px;
+  }
 }
 
 .md-nav--secondary .md-nav__link:hover {
