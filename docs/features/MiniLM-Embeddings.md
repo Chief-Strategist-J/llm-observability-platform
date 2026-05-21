@@ -116,4 +116,4 @@ LIMIT 5;
 ## Next Steps
 
 - [Prometheus Metrics & Grafana](Prometheus-Metrics-and-Grafana.md) - Visualize span volume and costs.
-- [REST Management API](REST-Management-API.md) - Embed and scan prompts using HTTP endpoints.
+- [REST Management API](../reference/REST-Management-API.md) - Embed and scan prompts using HTTP endpoints.

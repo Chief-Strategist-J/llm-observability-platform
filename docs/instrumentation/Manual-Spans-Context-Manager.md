@@ -172,4 +172,4 @@ Response:
 ## Next Steps
 
 - [Streaming Observability](Streaming-Observability.md) — Tracking generators, async iterators, and TTFT.
-- [PII & Injection Scanning](PII-and-Injection-Scanning.md) — Masking sensitive data and preventing prompt exploits.
+- [PII & Injection Scanning](../features/PII-and-Injection-Scanning.md) — Masking sensitive data and preventing prompt exploits.

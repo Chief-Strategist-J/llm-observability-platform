@@ -55,7 +55,7 @@ Then add **one line** to your app:
 
 ```python
 from instrumentation_sdk import init_auto_instrumentation
-init_auto_instrumentation()   # every LLM call is now tracked
+init_auto_instrumentation()
 ```
 
 Open Grafana at `http://localhost:3002` — spans appear within 5–10 seconds.
@@ -104,21 +104,21 @@ instrumentation-sdk
 
 | Page | What it covers |
 |---|---|
-| [Installation & Quick Start](Installation-and-Quick-Start.md) | Install, first span, verify it works |
-| [Auto-Instrumentation](Auto-Instrumentation.md) | Zero-code patching for OpenAI, Anthropic, LiteLLM, LangChain |
-| [Manual Spans — Decorator](Manual-Spans-Decorator.md) | `@llm_observe` decorator usage |
-| [Manual Spans — Context Manager](Manual-Spans-Context-Manager.md) | `llm_span` / `llm_span_with_tokens` context managers |
-| [Streaming Observability](Streaming-Observability.md) | TTFT tracking, `wrap_stream`, `wrap_async_stream` |
-| [PII & Injection Scanning](PII-and-Injection-Scanning.md) | Aho-Corasick redaction, scan API |
-| [Deterministic Sampling](Deterministic-Sampling.md) | SHA-256 modulo-100 gate |
-| [MiniLM Embeddings](MiniLM-Embeddings.md) | Async 384-dim prompt embeddings |
-| [Prometheus Metrics & Grafana](Prometheus-Metrics-and-Grafana.md) | Cost, latency, TTFT dashboards |
-| [REST Management API](REST-Management-API.md) | Full endpoint reference |
-| [Docker & CLI Deployment](Docker-and-CLI-Deployment.md) | `llm-observe` CLI, all-in-one container |
-| [Config Files Reference](Config-Files-Reference.md) | Model prices, PII patterns, infra configs |
+| [Installation & Quick Start](getting-started/Installation-and-Quick-Start.md) | Install, first span, verify it works |
+| [Auto-Instrumentation](instrumentation/Auto-Instrumentation.md) | Zero-code patching for OpenAI, Anthropic, LiteLLM, LangChain |
+| [Manual Spans — Decorator](instrumentation/Manual-Spans-Decorator.md) | `@llm_observe` decorator usage |
+| [Manual Spans — Context Manager](instrumentation/Manual-Spans-Context-Manager.md) | `llm_span` / `llm_span_with_tokens` context managers |
+| [Streaming Observability](instrumentation/Streaming-Observability.md) | TTFT tracking, `wrap_stream`, `wrap_async_stream` |
+| [PII & Injection Scanning](features/PII-and-Injection-Scanning.md) | Aho-Corasick redaction, scan API |
+| [Deterministic Sampling](features/Deterministic-Sampling.md) | SHA-256 modulo-100 gate |
+| [MiniLM Embeddings](features/MiniLM-Embeddings.md) | Async 384-dim prompt embeddings |
+| [Prometheus Metrics & Grafana](features/Prometheus-Metrics-and-Grafana.md) | Cost, latency, TTFT dashboards |
+| [REST Management API](reference/REST-Management-API.md) | Full endpoint reference |
+| [Docker & CLI Deployment](reference/Docker-and-CLI-Deployment.md) | `llm-observe` CLI, all-in-one container |
+| [Config Files Reference](reference/Config-Files-Reference.md) | Model prices, PII patterns, infra configs |
 
 ---
 
 ## Current Version
 
-`1.7.2` — see [Changelog](https://github.com/Chief-Strategist-J/llm-observability-platform/blob/main/packages/python/instrumentation-sdk/contracts/changelog.md)
+`1.7.2` — see [Changelog](changelog.md)

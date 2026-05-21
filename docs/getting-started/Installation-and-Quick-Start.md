@@ -123,7 +123,7 @@ Expected response:
 Open `http://localhost:3002` → **LLM Observability** folder → pick any dashboard.
 Spans appear within **5–10 seconds**.
 
-![Grafana Metrics Dashboard](assets/promothes.png)
+![Grafana Metrics Dashboard](../assets/promothes.png)
 *Grafana showing LLM latency, token usage and cost metrics*
 
 ---
@@ -142,6 +142,6 @@ Spans appear within **5–10 seconds**.
 
 ## Next Steps
 
-- [Auto-Instrumentation](Auto-Instrumentation.md) — detailed provider config
-- [Manual Spans — Context Manager](Manual-Spans-Context-Manager.md) — set metadata mid-call
-- [Docker & CLI Deployment](Docker-and-CLI-Deployment.md) — production deployment
+- [Auto-Instrumentation](../instrumentation/Auto-Instrumentation.md) — detailed provider config
+- [Manual Spans — Context Manager](../instrumentation/Manual-Spans-Context-Manager.md) — set metadata mid-call
+- [Docker & CLI Deployment](../reference/Docker-and-CLI-Deployment.md) — production deployment

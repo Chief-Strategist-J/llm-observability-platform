@@ -187,7 +187,7 @@ curl -X POST http://localhost:8002/v1/instrumentation/test-call \
 
 Then open Grafana at `http://localhost:3002` to see the span appear within 5–10 seconds.
 
-![Tracing Dashboard](assets/tracing.png)
+![Tracing Dashboard](../assets/tracing.png)
 *Distributed traces flowing from your app through to Grafana Tempo*
 
 ---

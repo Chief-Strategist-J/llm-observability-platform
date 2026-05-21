@@ -1,0 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;700;800&display=swap');
+
+:root,
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color:        #63b3ed;
+  --md-primary-fg-color--light: #90cdf4;
+  --md-primary-fg-color--dark:  #2b6cb0;
+  --md-accent-fg-color:         #4fd1c5;
+
+  --md-default-bg-color:        #080c14;
+  --md-default-fg-color:        #e2e8f0;
+  --md-default-fg-color--light: #718096;
+  --md-default-fg-color--lighter: #4a5568;
+  --md-default-fg-color--lightest: #2d3748;
+
+  --md-code-bg-color:           #0d1220;
+  --md-code-fg-color:           #e2e8f0;
+
+  --md-admonition-bg-color:     #111827;
+}
+
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color:        #2b6cb0;
+  --md-accent-fg-color:         #0f6e56;
+}
+
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3 {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+code, pre, .md-typeset code {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.md-nav__title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.md-nav__item .md-nav__link {
+  font-size: 0.78rem;
+}
+
+.tx-hero {
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.tx-hero h1 {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 2.8rem;
+}
+
+.tx-hero .tx-hero__content p {
+  color: var(--md-default-fg-color--light);
+  max-width: 560px;
+  margin: 0 auto 1.5rem;
+}

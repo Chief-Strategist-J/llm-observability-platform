@@ -72,13 +72,13 @@ Navigate to **Dashboards → LLM Observability** to see all four dashboards.
 
 ## Screenshots
 
-![Prometheus Metrics](assets/promothes.png)
+![Prometheus Metrics](../assets/promothes.png)
 *Prometheus scraping LLM metrics every 5 seconds*
 
-![Distributed Tracing](assets/tracing.png)
+![Distributed Tracing](../assets/tracing.png)
 *Grafana Tempo showing distributed traces from LLM calls*
 
-![Loki Logs Dashboard](assets/loki-logs.png)
+![Loki Logs Dashboard](../assets/loki-logs.png)
 *Structured logs aggregated via Loki*
 
 ---
@@ -168,4 +168,4 @@ docker restart instrumentation-sdk-api
 
 ---
 
-## Next: [REST Management API](REST-Management-API.md)
+## Next: [REST Management API](../reference/REST-Management-API.md)

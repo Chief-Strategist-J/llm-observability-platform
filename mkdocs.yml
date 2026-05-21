@@ -1,52 +1,168 @@
 site_name: LLM Observability SDK
 site_url: https://llm-observability-platform.readthedocs.io
-site_description: Python SDK for capturing, enriching, and analyzing LLM call telemetry with zero-to-minimal code changes.
+site_description: >-
+  Python SDK for capturing, enriching, and analyzing LLM call telemetry
+  with zero-to-minimal code changes. OpenTelemetry-native, Kafka-ready.
 site_author: Jaydeep Wagh
 repo_url: https://github.com/Chief-Strategist-J/llm-observability-platform
 repo_name: Chief-Strategist-J/llm-observability-platform
+edit_uri: edit/main/docs/
 
 theme:
   name: material
+  custom_dir: docs/overrides
+
+  logo: assets/logo.svg
+  favicon: assets/favicon.svg
+
+  font:
+    text: Syne
+    code: JetBrains Mono
+
+  icon:
+    repo: fontawesome/brands/github
+    admonition:
+      note: octicons/tag-16
+      tip: octicons/squirrel-16
+      warning: octicons/alert-16
+      danger: octicons/zap-16
+
   palette:
-    - scheme: default
-      primary: indigo
-      accent: indigo
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
       toggle:
-        icon: material/brightness-7
-        name: Switch to dark mode
-    - scheme: slate
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/brightness-4
+        icon: material/weather-sunny
         name: Switch to light mode
+
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+
   features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tracking
     - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.indexes
     - navigation.top
+    - navigation.footer
     - search.highlight
     - search.suggest
+    - search.share
     - content.code.copy
-    - admonition
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+    - toc.follow
+    - toc.integrate
+
+extra_css:
+  - assets/stylesheets/observatory.css
+
+extra_javascript:
+  - assets/javascripts/mathjax.js
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Chief-Strategist-J/llm-observability-platform
+      name: GitHub
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/llm-obs-sdk/
+      name: PyPI
+
+  version:
+    provider: mike
+    default: stable
+
+  analytics:
+    provider: google
+    property: G-XXXXXXXXXX
+
+  consent:
+    title: Cookie consent
+    description: >-
+      We use cookies to recognize your repeat visits and measure
+      documentation usefulness. With your consent, you help us improve.
 
 plugins:
-  - search
+  - search:
+      separator: '[\s\-\.]+'
+      lang: en
+  - minify:
+      minify_html: true
+  - git-revision-date-localized:
+      enable_creation_date: true
+      type: timeago
+  - tags:
+      tags_file: tags.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.keys
+  - pymdownx.smartsymbols
+  - pymdownx.critic
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.tilde
+  - meta
+  - footnotes
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: "#"
+      title: On this page
 
 nav:
   - Home: index.md
   - Getting Started:
-    - Installation & Quick Start: Installation-and-Quick-Start.md
+    - getting-started/index.md
+    - Installation & Quick Start: getting-started/Installation-and-Quick-Start.md
   - Instrumentation:
-    - Auto-Instrumentation: Auto-Instrumentation.md
-    - Manual Spans — Decorator: Manual-Spans-Decorator.md
-    - Manual Spans — Context Manager: Manual-Spans-Context-Manager.md
-    - Streaming Observability: Streaming-Observability.md
+    - instrumentation/index.md
+    - Auto-Instrumentation: instrumentation/Auto-Instrumentation.md
+    - Manual Spans — Decorator: instrumentation/Manual-Spans-Decorator.md
+    - Manual Spans — Context Manager: instrumentation/Manual-Spans-Context-Manager.md
+    - Streaming Observability: instrumentation/Streaming-Observability.md
   - Features:
-    - PII & Injection Scanning: PII-and-Injection-Scanning.md
-    - Deterministic Sampling: Deterministic-Sampling.md
-    - MiniLM Embeddings: MiniLM-Embeddings.md
-    - Prometheus Metrics & Grafana: Prometheus-Metrics-and-Grafana.md
+    - features/index.md
+    - PII & Injection Scanning: features/PII-and-Injection-Scanning.md
+    - Deterministic Sampling: features/Deterministic-Sampling.md
+    - MiniLM Embeddings: features/MiniLM-Embeddings.md
+    - Prometheus Metrics & Grafana: features/Prometheus-Metrics-and-Grafana.md
   - Reference:
-    - REST Management API: REST-Management-API.md
-    - Docker & CLI Deployment: Docker-and-CLI-Deployment.md
-    - Config Files Reference: Config-Files-Reference.md
+    - reference/index.md
+    - REST Management API: reference/REST-Management-API.md
+    - Docker & CLI Deployment: reference/Docker-and-CLI-Deployment.md
+    - Config Files Reference: reference/Config-Files-Reference.md
+  - Changelog: changelog.md
+  - Tags: tags.md

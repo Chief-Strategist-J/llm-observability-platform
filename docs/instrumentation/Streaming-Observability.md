@@ -135,5 +135,5 @@ Streaming spans capture the following core metrics:
 
 ## Next Steps
 
-- [PII & Injection Scanning](PII-and-Injection-Scanning.md) — Prevent data leaks and input injections.
-- [Deterministic Sampling](Deterministic-Sampling.md) — Optimize resource usage with the 1% gate.
+- [PII & Injection Scanning](../features/PII-and-Injection-Scanning.md) — Prevent data leaks and input injections.
+- [Deterministic Sampling](../features/Deterministic-Sampling.md) — Optimize resource usage with the 1% gate.
