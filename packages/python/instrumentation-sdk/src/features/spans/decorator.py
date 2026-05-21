@@ -36,8 +36,8 @@ def llm_observe(service: str, endpoint: str):
                         "status": status,
                         "is_sampled": should_sample(span_id)
                     }
-                    from ..minilm_embedding.index import enrich_and_report_span
-                    enrich_and_report_span(span_data)
+                    from ..minilm_embedding.index import enrich_and_report_span_async
+                    await enrich_and_report_span_async(span_data)
             return async_wrapper
         else:
             @functools.wraps(func)

@@ -45,13 +45,23 @@ def enrich_and_report_span(span_data: Dict[str, Any]) -> None:
             loop = asyncio.get_running_loop()
             loop.create_task(reporter.report_async(span_data))
         except RuntimeError:
-            try:
-                reporter.report(span_data)
-            except Exception:
-                pass
+            reporter.report(span_data)
         return
     try:
         loop = asyncio.get_running_loop()
         loop.create_task(_async_enrich_and_report(span_data))
     except RuntimeError:
         threading.Thread(target=_sync_enrich_and_report, args=(span_data,)).start()
+
+async def enrich_and_report_span_async(span_data: Dict[str, Any]) -> None:
+    record_span_metrics(span_data)
+    if not span_data.get("is_sampled", False) or span_data.get("pii_detected", False) or not span_data.get("prompt"):
+        reporter = get_reporter()
+        await reporter.report_async(span_data)
+        return
+    prompt = span_data.get("prompt")
+    if prompt:
+        embedding = await _SERVICE.get_embedding(prompt)
+        span_data["prompt_embedding"] = embedding
+    reporter = get_reporter()
+    await reporter.report_async(span_data)
