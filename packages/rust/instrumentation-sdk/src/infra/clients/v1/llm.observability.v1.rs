@@ -246,6 +246,18 @@ pub struct RecordMetricsBatchResponse {
     #[prost(int32, tag="1")]
     pub recorded_count: i32,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetEmbeddingRequest {
+    #[prost(string, tag="1")]
+    pub text: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetEmbeddingResponse {
+    #[prost(float, repeated, tag="1")]
+    pub embedding: ::prost::alloc::vec::Vec<f32>,
+}
 /// InstrumentationStatus represents the current state of auto-instrumentation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]

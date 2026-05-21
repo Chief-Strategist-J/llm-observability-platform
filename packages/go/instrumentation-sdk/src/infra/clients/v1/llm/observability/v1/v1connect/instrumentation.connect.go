@@ -61,6 +61,9 @@ const (
 	// InstrumentationControlServiceShouldSampleProcedure is the fully-qualified name of the
 	// InstrumentationControlService's ShouldSample RPC.
 	InstrumentationControlServiceShouldSampleProcedure = "/llm.observability.v1.InstrumentationControlService/ShouldSample"
+	// InstrumentationControlServiceGetEmbeddingProcedure is the fully-qualified name of the
+	// InstrumentationControlService's GetEmbedding RPC.
+	InstrumentationControlServiceGetEmbeddingProcedure = "/llm.observability.v1.InstrumentationControlService/GetEmbedding"
 	// InstrumentationControlServiceInitMetricsProcedure is the fully-qualified name of the
 	// InstrumentationControlService's InitMetrics RPC.
 	InstrumentationControlServiceInitMetricsProcedure = "/llm.observability.v1.InstrumentationControlService/InitMetrics"
@@ -87,6 +90,7 @@ type InstrumentationControlServiceClient interface {
 	CountTokens(context.Context, *connect.Request[v1.CountTokensRequest]) (*connect.Response[v1.CountTokensResponse], error)
 	ScanPiiInjection(context.Context, *connect.Request[v1.ScanPiiInjectionRequest]) (*connect.Response[v1.ScanPiiInjectionResponse], error)
 	ShouldSample(context.Context, *connect.Request[v1.ShouldSampleRequest]) (*connect.Response[v1.ShouldSampleResponse], error)
+	GetEmbedding(context.Context, *connect.Request[v1.GetEmbeddingRequest]) (*connect.Response[v1.GetEmbeddingResponse], error)
 	InitMetrics(context.Context, *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error)
 	GetMetricsHealth(context.Context, *connect.Request[v1.GetMetricsHealthRequest]) (*connect.Response[v1.GetMetricsHealthResponse], error)
 	RecordMetrics(context.Context, *connect.Request[v1.RecordMetricsRequest]) (*connect.Response[v1.RecordMetricsResponse], error)
@@ -149,6 +153,11 @@ func NewInstrumentationControlServiceClient(httpClient connect.HTTPClient, baseU
 			baseURL+InstrumentationControlServiceShouldSampleProcedure,
 			opts...,
 		),
+		getEmbedding: connect.NewClient[v1.GetEmbeddingRequest, v1.GetEmbeddingResponse](
+			httpClient,
+			baseURL+InstrumentationControlServiceGetEmbeddingProcedure,
+			opts...,
+		),
 		initMetrics: connect.NewClient[v1.InitMetricsRequest, v1.InitMetricsResponse](
 			httpClient,
 			baseURL+InstrumentationControlServiceInitMetricsProcedure,
@@ -183,6 +192,7 @@ type instrumentationControlServiceClient struct {
 	countTokens            *connect.Client[v1.CountTokensRequest, v1.CountTokensResponse]
 	scanPiiInjection       *connect.Client[v1.ScanPiiInjectionRequest, v1.ScanPiiInjectionResponse]
 	shouldSample           *connect.Client[v1.ShouldSampleRequest, v1.ShouldSampleResponse]
+	getEmbedding           *connect.Client[v1.GetEmbeddingRequest, v1.GetEmbeddingResponse]
 	initMetrics            *connect.Client[v1.InitMetricsRequest, v1.InitMetricsResponse]
 	getMetricsHealth       *connect.Client[v1.GetMetricsHealthRequest, v1.GetMetricsHealthResponse]
 	recordMetrics          *connect.Client[v1.RecordMetricsRequest, v1.RecordMetricsResponse]
@@ -236,6 +246,11 @@ func (c *instrumentationControlServiceClient) ShouldSample(ctx context.Context, 
 	return c.shouldSample.CallUnary(ctx, req)
 }
 
+// GetEmbedding calls llm.observability.v1.InstrumentationControlService.GetEmbedding.
+func (c *instrumentationControlServiceClient) GetEmbedding(ctx context.Context, req *connect.Request[v1.GetEmbeddingRequest]) (*connect.Response[v1.GetEmbeddingResponse], error) {
+	return c.getEmbedding.CallUnary(ctx, req)
+}
+
 // InitMetrics calls llm.observability.v1.InstrumentationControlService.InitMetrics.
 func (c *instrumentationControlServiceClient) InitMetrics(ctx context.Context, req *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error) {
 	return c.initMetrics.CallUnary(ctx, req)
@@ -268,6 +283,7 @@ type InstrumentationControlServiceHandler interface {
 	CountTokens(context.Context, *connect.Request[v1.CountTokensRequest]) (*connect.Response[v1.CountTokensResponse], error)
 	ScanPiiInjection(context.Context, *connect.Request[v1.ScanPiiInjectionRequest]) (*connect.Response[v1.ScanPiiInjectionResponse], error)
 	ShouldSample(context.Context, *connect.Request[v1.ShouldSampleRequest]) (*connect.Response[v1.ShouldSampleResponse], error)
+	GetEmbedding(context.Context, *connect.Request[v1.GetEmbeddingRequest]) (*connect.Response[v1.GetEmbeddingResponse], error)
 	InitMetrics(context.Context, *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error)
 	GetMetricsHealth(context.Context, *connect.Request[v1.GetMetricsHealthRequest]) (*connect.Response[v1.GetMetricsHealthResponse], error)
 	RecordMetrics(context.Context, *connect.Request[v1.RecordMetricsRequest]) (*connect.Response[v1.RecordMetricsResponse], error)
@@ -325,6 +341,11 @@ func NewInstrumentationControlServiceHandler(svc InstrumentationControlServiceHa
 		svc.ShouldSample,
 		opts...,
 	)
+	instrumentationControlServiceGetEmbeddingHandler := connect.NewUnaryHandler(
+		InstrumentationControlServiceGetEmbeddingProcedure,
+		svc.GetEmbedding,
+		opts...,
+	)
 	instrumentationControlServiceInitMetricsHandler := connect.NewUnaryHandler(
 		InstrumentationControlServiceInitMetricsProcedure,
 		svc.InitMetrics,
@@ -365,6 +386,8 @@ func NewInstrumentationControlServiceHandler(svc InstrumentationControlServiceHa
 			instrumentationControlServiceScanPiiInjectionHandler.ServeHTTP(w, r)
 		case InstrumentationControlServiceShouldSampleProcedure:
 			instrumentationControlServiceShouldSampleHandler.ServeHTTP(w, r)
+		case InstrumentationControlServiceGetEmbeddingProcedure:
+			instrumentationControlServiceGetEmbeddingHandler.ServeHTTP(w, r)
 		case InstrumentationControlServiceInitMetricsProcedure:
 			instrumentationControlServiceInitMetricsHandler.ServeHTTP(w, r)
 		case InstrumentationControlServiceGetMetricsHealthProcedure:
@@ -416,6 +439,10 @@ func (UnimplementedInstrumentationControlServiceHandler) ScanPiiInjection(contex
 
 func (UnimplementedInstrumentationControlServiceHandler) ShouldSample(context.Context, *connect.Request[v1.ShouldSampleRequest]) (*connect.Response[v1.ShouldSampleResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.ShouldSample is not implemented"))
+}
+
+func (UnimplementedInstrumentationControlServiceHandler) GetEmbedding(context.Context, *connect.Request[v1.GetEmbeddingRequest]) (*connect.Response[v1.GetEmbeddingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.GetEmbedding is not implemented"))
 }
 
 func (UnimplementedInstrumentationControlServiceHandler) InitMetrics(context.Context, *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error) {

@@ -285,6 +285,41 @@ paths:
                     type: boolean
                     example: true
 
+  /embeddings/embed:
+    post:
+      summary: Generate MiniLM embeddings for a given text
+      operationId: getEmbedding
+      tags:
+        - Utilities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  example: "test prompt text"
+      responses:
+        '200':
+          description: Successful embedding generation
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - embedding
+                properties:
+                  embedding:
+                    type: array
+                    items:
+                      type: number
+                    minItems: 384
+                    maxItems: 384
+
   /metrics/init:
     post:
       summary: Initialize metrics pipeline

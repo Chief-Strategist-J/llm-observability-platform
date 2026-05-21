@@ -24,6 +24,7 @@ service InstrumentationControlService {
   rpc CountTokens(CountTokensRequest) returns (CountTokensResponse);
   rpc ScanPiiInjection(ScanPiiInjectionRequest) returns (ScanPiiInjectionResponse);
   rpc ShouldSample(ShouldSampleRequest) returns (ShouldSampleResponse);
+  rpc GetEmbedding(GetEmbeddingRequest) returns (GetEmbeddingResponse);
   rpc InitMetrics(InitMetricsRequest) returns (InitMetricsResponse);
   rpc GetMetricsHealth(GetMetricsHealthRequest) returns (GetMetricsHealthResponse);
   rpc RecordMetrics(RecordMetricsRequest) returns (RecordMetricsResponse);
@@ -177,5 +178,13 @@ message RecordMetricsBatchRequest {
 
 message RecordMetricsBatchResponse {
   int32 recorded_count = 1;
+}
+
+message GetEmbeddingRequest {
+  string text = 1;
+}
+
+message GetEmbeddingResponse {
+  repeated float embedding = 1;
 }
 
