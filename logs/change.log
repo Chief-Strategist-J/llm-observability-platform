@@ -5,3 +5,18 @@
         ├── pyproject.toml -> Bump version to 1.6.0
         ├── contracts/changelog.md -> Consolidate recent changelog entries under 1.6.0
         └── scripts/deploy_docker.sh -> Build and tag image with latest, v1.6.0, 1.6.0, stable, unstable
+
+[2026-05-21T12:40:10+05:30] Configure README description and bump version to 1.7.1
+└── File: packages/python/instrumentation-sdk/pyproject.toml, packages/python/instrumentation-sdk/README.md
+    ├── Choice: Specify readme in pyproject.toml and bump version to 1.7.1 to upload package description to PyPI
+    └── Changes:
+        ├── pyproject.toml -> Bump version to 1.7.1, add readme property
+        └── README.md -> Copy main Python package README into SDK directory
+
+[2026-05-21T12:44:00+05:30] Implement CLI observability stack launcher 'llm-observe'
+└── File: packages/python/instrumentation-sdk/pyproject.toml, packages/python/instrumentation-sdk/src/api/cli/controller.py, packages/python/instrumentation-sdk/tests/unit/test_cli.py
+    ├── Choice: Build an easy CLI start/stop/status tool mapping local host ports to all-in-one container
+    └── Changes:
+        ├── pyproject.toml -> Register 'llm-observe' script entrypoint
+        ├── src/api/cli/controller.py -> Add controller using Ports & Adapters architecture to execute docker commands
+        └── tests/unit/test_cli.py -> Add unit tests verifying CLI controller execution logic via fakes
