@@ -188,6 +188,10 @@ type Mutation {
   recordMetricsBatch(spans: [RecordSpanMetricsInput!]!): BatchRecordMetricsPayload!
 }
 
+type GetEmbeddingPayload {
+  embedding: [Float!]!
+}
+
 type Query {
   "Placeholder query to satisfy GraphQL syntax"
   _dummy: Boolean
@@ -195,5 +199,6 @@ type Query {
   scanPiiInjection(prompt: String!): PiiInjectionScanPayload!
   metricsHealth: MetricsStatusPayload!
   shouldSample(span_id: ID!): SamplingGatePayload!
+  getEmbedding(text: String!): GetEmbeddingPayload!
 }
 

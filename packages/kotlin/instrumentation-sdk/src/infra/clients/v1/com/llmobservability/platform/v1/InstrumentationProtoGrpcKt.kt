@@ -74,6 +74,10 @@ public object InstrumentationControlServiceGrpcKt {
     @JvmStatic
     get() = InstrumentationControlServiceGrpc.getShouldSampleMethod()
 
+  public val getEmbeddingMethod: MethodDescriptor<GetEmbeddingRequest, GetEmbeddingResponse>
+    @JvmStatic
+    get() = InstrumentationControlServiceGrpc.getGetEmbeddingMethod()
+
   public val initMetricsMethod: MethodDescriptor<InitMetricsRequest, InitMetricsResponse>
     @JvmStatic
     get() = InstrumentationControlServiceGrpc.getInitMetricsMethod()
@@ -298,6 +302,28 @@ public object InstrumentationControlServiceGrpcKt {
         ShouldSampleResponse = unaryRpc(
       channel,
       InstrumentationControlServiceGrpc.getShouldSampleMethod(),
+      request,
+      callOptions,
+      headers
+    )
+
+    /**
+     * Executes this RPC and returns the response message, suspending until the RPC completes
+     * with [`Status.OK`][io.grpc.Status].  If the RPC completes with another status, a
+     * corresponding
+     * [StatusException] is thrown.  If this coroutine is cancelled, the RPC is also cancelled
+     * with the corresponding exception as a cause.
+     *
+     * @param request The request message to send to the server.
+     *
+     * @param headers Metadata to attach to the request.  Most users will not need this.
+     *
+     * @return The single response from the server.
+     */
+    public suspend fun getEmbedding(request: GetEmbeddingRequest, headers: Metadata = Metadata()):
+        GetEmbeddingResponse = unaryRpc(
+      channel,
+      InstrumentationControlServiceGrpc.getGetEmbeddingMethod(),
       request,
       callOptions,
       headers
@@ -542,6 +568,21 @@ public object InstrumentationControlServiceGrpcKt {
 
     /**
      * Returns the response to an RPC for
+     * llm.observability.v1.InstrumentationControlService.GetEmbedding.
+     *
+     * If this method fails with a [StatusException], the RPC will fail with the corresponding
+     * [io.grpc.Status].  If this method fails with a [java.util.concurrent.CancellationException],
+     * the RPC will fail
+     * with status `Status.CANCELLED`.  If this method fails for any other reason, the RPC will
+     * fail with `Status.UNKNOWN` with the exception as a cause.
+     *
+     * @param request The request from the client.
+     */
+    public open suspend fun getEmbedding(request: GetEmbeddingRequest): GetEmbeddingResponse = throw
+        StatusException(UNIMPLEMENTED.withDescription("Method llm.observability.v1.InstrumentationControlService.GetEmbedding is unimplemented"))
+
+    /**
+     * Returns the response to an RPC for
      * llm.observability.v1.InstrumentationControlService.InitMetrics.
      *
      * If this method fails with a [StatusException], the RPC will fail with the corresponding
@@ -648,6 +689,11 @@ public object InstrumentationControlServiceGrpcKt {
       context = this.context,
       descriptor = InstrumentationControlServiceGrpc.getShouldSampleMethod(),
       implementation = ::shouldSample
+    ))
+      .addMethod(unaryServerMethodDefinition(
+      context = this.context,
+      descriptor = InstrumentationControlServiceGrpc.getGetEmbeddingMethod(),
+      implementation = ::getEmbedding
     ))
       .addMethod(unaryServerMethodDefinition(
       context = this.context,

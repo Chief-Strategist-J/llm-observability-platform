@@ -1928,6 +1928,100 @@ class RecordMetricsBatchResponse extends $pb.GeneratedMessage {
   void clearRecordedCount() => clearField(1);
 }
 
+class GetEmbeddingRequest extends $pb.GeneratedMessage {
+  factory GetEmbeddingRequest({
+    $core.String? text,
+  }) {
+    final $result = create();
+    if (text != null) {
+      $result.text = text;
+    }
+    return $result;
+  }
+  GetEmbeddingRequest._() : super();
+  factory GetEmbeddingRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory GetEmbeddingRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'GetEmbeddingRequest', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'text')
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  GetEmbeddingRequest clone() => GetEmbeddingRequest()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  GetEmbeddingRequest copyWith(void Function(GetEmbeddingRequest) updates) => super.copyWith((message) => updates(message as GetEmbeddingRequest)) as GetEmbeddingRequest;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static GetEmbeddingRequest create() => GetEmbeddingRequest._();
+  GetEmbeddingRequest createEmptyInstance() => create();
+  static $pb.PbList<GetEmbeddingRequest> createRepeated() => $pb.PbList<GetEmbeddingRequest>();
+  @$core.pragma('dart2js:noInline')
+  static GetEmbeddingRequest getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetEmbeddingRequest>(create);
+  static GetEmbeddingRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get text => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set text($core.String v) { $_setString(0, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasText() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearText() => clearField(1);
+}
+
+class GetEmbeddingResponse extends $pb.GeneratedMessage {
+  factory GetEmbeddingResponse({
+    $core.Iterable<$core.double>? embedding,
+  }) {
+    final $result = create();
+    if (embedding != null) {
+      $result.embedding.addAll(embedding);
+    }
+    return $result;
+  }
+  GetEmbeddingResponse._() : super();
+  factory GetEmbeddingResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory GetEmbeddingResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'GetEmbeddingResponse', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..p<$core.double>(1, _omitFieldNames ? '' : 'embedding', $pb.PbFieldType.KF)
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  GetEmbeddingResponse clone() => GetEmbeddingResponse()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  GetEmbeddingResponse copyWith(void Function(GetEmbeddingResponse) updates) => super.copyWith((message) => updates(message as GetEmbeddingResponse)) as GetEmbeddingResponse;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static GetEmbeddingResponse create() => GetEmbeddingResponse._();
+  GetEmbeddingResponse createEmptyInstance() => create();
+  static $pb.PbList<GetEmbeddingResponse> createRepeated() => $pb.PbList<GetEmbeddingResponse>();
+  @$core.pragma('dart2js:noInline')
+  static GetEmbeddingResponse getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetEmbeddingResponse>(create);
+  static GetEmbeddingResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.List<$core.double> get embedding => $_getList(0);
+}
+
 class InstrumentationControlServiceApi {
   $pb.RpcClient _client;
   InstrumentationControlServiceApi(this._client);
@@ -1958,6 +2052,9 @@ class InstrumentationControlServiceApi {
   ;
   $async.Future<ShouldSampleResponse> shouldSample($pb.ClientContext? ctx, ShouldSampleRequest request) =>
     _client.invoke<ShouldSampleResponse>(ctx, 'InstrumentationControlService', 'ShouldSample', request, ShouldSampleResponse())
+  ;
+  $async.Future<GetEmbeddingResponse> getEmbedding($pb.ClientContext? ctx, GetEmbeddingRequest request) =>
+    _client.invoke<GetEmbeddingResponse>(ctx, 'InstrumentationControlService', 'GetEmbedding', request, GetEmbeddingResponse())
   ;
   $async.Future<InitMetricsResponse> initMetrics($pb.ClientContext? ctx, InitMetricsRequest request) =>
     _client.invoke<InitMetricsResponse>(ctx, 'InstrumentationControlService', 'InitMetrics', request, InitMetricsResponse())

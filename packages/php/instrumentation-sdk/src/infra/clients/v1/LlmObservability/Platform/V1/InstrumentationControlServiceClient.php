@@ -144,6 +144,20 @@ class InstrumentationControlServiceClient extends \Grpc\BaseStub {
     }
 
     /**
+     * @param \LlmObservability\Platform\V1\GetEmbeddingRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall
+     */
+    public function GetEmbedding(\LlmObservability\Platform\V1\GetEmbeddingRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/llm.observability.v1.InstrumentationControlService/GetEmbedding',
+        $argument,
+        ['\LlmObservability\Platform\V1\GetEmbeddingResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * @param \LlmObservability\Platform\V1\InitMetricsRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options
