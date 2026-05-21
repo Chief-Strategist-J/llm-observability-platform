@@ -130,6 +130,20 @@ class InstrumentationControlServiceClient extends \Grpc\BaseStub {
     }
 
     /**
+     * @param \LlmObservability\Platform\V1\ShouldSampleRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall
+     */
+    public function ShouldSample(\LlmObservability\Platform\V1\ShouldSampleRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/llm.observability.v1.InstrumentationControlService/ShouldSample',
+        $argument,
+        ['\LlmObservability\Platform\V1\ShouldSampleResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * @param \LlmObservability\Platform\V1\InitMetricsRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options

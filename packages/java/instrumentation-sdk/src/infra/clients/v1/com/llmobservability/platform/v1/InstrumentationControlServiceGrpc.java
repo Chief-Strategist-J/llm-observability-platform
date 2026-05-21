@@ -266,6 +266,37 @@ public final class InstrumentationControlServiceGrpc {
     return getScanPiiInjectionMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.llmobservability.platform.v1.ShouldSampleRequest,
+      com.llmobservability.platform.v1.ShouldSampleResponse> getShouldSampleMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ShouldSample",
+      requestType = com.llmobservability.platform.v1.ShouldSampleRequest.class,
+      responseType = com.llmobservability.platform.v1.ShouldSampleResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.llmobservability.platform.v1.ShouldSampleRequest,
+      com.llmobservability.platform.v1.ShouldSampleResponse> getShouldSampleMethod() {
+    io.grpc.MethodDescriptor<com.llmobservability.platform.v1.ShouldSampleRequest, com.llmobservability.platform.v1.ShouldSampleResponse> getShouldSampleMethod;
+    if ((getShouldSampleMethod = InstrumentationControlServiceGrpc.getShouldSampleMethod) == null) {
+      synchronized (InstrumentationControlServiceGrpc.class) {
+        if ((getShouldSampleMethod = InstrumentationControlServiceGrpc.getShouldSampleMethod) == null) {
+          InstrumentationControlServiceGrpc.getShouldSampleMethod = getShouldSampleMethod =
+              io.grpc.MethodDescriptor.<com.llmobservability.platform.v1.ShouldSampleRequest, com.llmobservability.platform.v1.ShouldSampleResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ShouldSample"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.ShouldSampleRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.ShouldSampleResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new InstrumentationControlServiceMethodDescriptorSupplier("ShouldSample"))
+              .build();
+        }
+      }
+    }
+    return getShouldSampleMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.llmobservability.platform.v1.InitMetricsRequest,
       com.llmobservability.platform.v1.InitMetricsResponse> getInitMetricsMethod;
 
@@ -499,6 +530,13 @@ public final class InstrumentationControlServiceGrpc {
 
     /**
      */
+    default void shouldSample(com.llmobservability.platform.v1.ShouldSampleRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.ShouldSampleResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getShouldSampleMethod(), responseObserver);
+    }
+
+    /**
+     */
     default void initMetrics(com.llmobservability.platform.v1.InitMetricsRequest request,
         io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.InitMetricsResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getInitMetricsMethod(), responseObserver);
@@ -625,6 +663,14 @@ public final class InstrumentationControlServiceGrpc {
 
     /**
      */
+    public void shouldSample(com.llmobservability.platform.v1.ShouldSampleRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.ShouldSampleResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getShouldSampleMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
     public void initMetrics(com.llmobservability.platform.v1.InitMetricsRequest request,
         io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.InitMetricsResponse> responseObserver) {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
@@ -729,6 +775,13 @@ public final class InstrumentationControlServiceGrpc {
     public com.llmobservability.platform.v1.ScanPiiInjectionResponse scanPiiInjection(com.llmobservability.platform.v1.ScanPiiInjectionRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getScanPiiInjectionMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.llmobservability.platform.v1.ShouldSampleResponse shouldSample(com.llmobservability.platform.v1.ShouldSampleRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getShouldSampleMethod(), getCallOptions(), request);
     }
 
     /**
@@ -845,6 +898,14 @@ public final class InstrumentationControlServiceGrpc {
 
     /**
      */
+    public com.google.common.util.concurrent.ListenableFuture<com.llmobservability.platform.v1.ShouldSampleResponse> shouldSample(
+        com.llmobservability.platform.v1.ShouldSampleRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getShouldSampleMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
     public com.google.common.util.concurrent.ListenableFuture<com.llmobservability.platform.v1.InitMetricsResponse> initMetrics(
         com.llmobservability.platform.v1.InitMetricsRequest request) {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
@@ -884,10 +945,11 @@ public final class InstrumentationControlServiceGrpc {
   private static final int METHODID_TRIGGER_TEST_STREAM_CALL = 5;
   private static final int METHODID_COUNT_TOKENS = 6;
   private static final int METHODID_SCAN_PII_INJECTION = 7;
-  private static final int METHODID_INIT_METRICS = 8;
-  private static final int METHODID_GET_METRICS_HEALTH = 9;
-  private static final int METHODID_RECORD_METRICS = 10;
-  private static final int METHODID_RECORD_METRICS_BATCH = 11;
+  private static final int METHODID_SHOULD_SAMPLE = 8;
+  private static final int METHODID_INIT_METRICS = 9;
+  private static final int METHODID_GET_METRICS_HEALTH = 10;
+  private static final int METHODID_RECORD_METRICS = 11;
+  private static final int METHODID_RECORD_METRICS_BATCH = 12;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -937,6 +999,10 @@ public final class InstrumentationControlServiceGrpc {
         case METHODID_SCAN_PII_INJECTION:
           serviceImpl.scanPiiInjection((com.llmobservability.platform.v1.ScanPiiInjectionRequest) request,
               (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.ScanPiiInjectionResponse>) responseObserver);
+          break;
+        case METHODID_SHOULD_SAMPLE:
+          serviceImpl.shouldSample((com.llmobservability.platform.v1.ShouldSampleRequest) request,
+              (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.ShouldSampleResponse>) responseObserver);
           break;
         case METHODID_INIT_METRICS:
           serviceImpl.initMetrics((com.llmobservability.platform.v1.InitMetricsRequest) request,
@@ -1029,6 +1095,13 @@ public final class InstrumentationControlServiceGrpc {
               com.llmobservability.platform.v1.ScanPiiInjectionResponse>(
                 service, METHODID_SCAN_PII_INJECTION)))
         .addMethod(
+          getShouldSampleMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.llmobservability.platform.v1.ShouldSampleRequest,
+              com.llmobservability.platform.v1.ShouldSampleResponse>(
+                service, METHODID_SHOULD_SAMPLE)))
+        .addMethod(
           getInitMetricsMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
             new MethodHandlers<
@@ -1112,6 +1185,7 @@ public final class InstrumentationControlServiceGrpc {
               .addMethod(getTriggerTestStreamCallMethod())
               .addMethod(getCountTokensMethod())
               .addMethod(getScanPiiInjectionMethod())
+              .addMethod(getShouldSampleMethod())
               .addMethod(getInitMetricsMethod())
               .addMethod(getGetMetricsHealthMethod())
               .addMethod(getRecordMetricsMethod())

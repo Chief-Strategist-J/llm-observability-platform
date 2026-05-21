@@ -55,6 +55,11 @@ class InstrumentationControlServiceStub(object):
                 request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ScanPiiInjectionRequest.SerializeToString,
                 response_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ScanPiiInjectionResponse.FromString,
                 )
+        self.ShouldSample = channel.unary_unary(
+                '/llm.observability.v1.InstrumentationControlService/ShouldSample',
+                request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ShouldSampleRequest.SerializeToString,
+                response_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ShouldSampleResponse.FromString,
+                )
         self.InitMetrics = channel.unary_unary(
                 '/llm.observability.v1.InstrumentationControlService/InitMetrics',
                 request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.InitMetricsRequest.SerializeToString,
@@ -129,6 +134,12 @@ class InstrumentationControlServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ShouldSample(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def InitMetrics(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -195,6 +206,11 @@ def add_InstrumentationControlServiceServicer_to_server(servicer, server):
                     servicer.ScanPiiInjection,
                     request_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ScanPiiInjectionRequest.FromString,
                     response_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ScanPiiInjectionResponse.SerializeToString,
+            ),
+            'ShouldSample': grpc.unary_unary_rpc_method_handler(
+                    servicer.ShouldSample,
+                    request_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ShouldSampleRequest.FromString,
+                    response_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ShouldSampleResponse.SerializeToString,
             ),
             'InitMetrics': grpc.unary_unary_rpc_method_handler(
                     servicer.InitMetrics,
@@ -360,6 +376,23 @@ class InstrumentationControlService(object):
         return grpc.experimental.unary_unary(request, target, '/llm.observability.v1.InstrumentationControlService/ScanPiiInjection',
             llm_dot_observability_dot_v1_dot_instrumentation__pb2.ScanPiiInjectionRequest.SerializeToString,
             llm_dot_observability_dot_v1_dot_instrumentation__pb2.ScanPiiInjectionResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def ShouldSample(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/llm.observability.v1.InstrumentationControlService/ShouldSample',
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.ShouldSampleRequest.SerializeToString,
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.ShouldSampleResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

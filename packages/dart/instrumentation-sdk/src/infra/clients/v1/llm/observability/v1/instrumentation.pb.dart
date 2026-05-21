@@ -1228,6 +1228,106 @@ class ScanPiiInjectionResponse extends $pb.GeneratedMessage {
   void clearInjectionAttempt() => clearField(2);
 }
 
+class ShouldSampleRequest extends $pb.GeneratedMessage {
+  factory ShouldSampleRequest({
+    $core.String? spanId,
+  }) {
+    final $result = create();
+    if (spanId != null) {
+      $result.spanId = spanId;
+    }
+    return $result;
+  }
+  ShouldSampleRequest._() : super();
+  factory ShouldSampleRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory ShouldSampleRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'ShouldSampleRequest', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'spanId')
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  ShouldSampleRequest clone() => ShouldSampleRequest()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  ShouldSampleRequest copyWith(void Function(ShouldSampleRequest) updates) => super.copyWith((message) => updates(message as ShouldSampleRequest)) as ShouldSampleRequest;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ShouldSampleRequest create() => ShouldSampleRequest._();
+  ShouldSampleRequest createEmptyInstance() => create();
+  static $pb.PbList<ShouldSampleRequest> createRepeated() => $pb.PbList<ShouldSampleRequest>();
+  @$core.pragma('dart2js:noInline')
+  static ShouldSampleRequest getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ShouldSampleRequest>(create);
+  static ShouldSampleRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get spanId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set spanId($core.String v) { $_setString(0, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasSpanId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSpanId() => clearField(1);
+}
+
+class ShouldSampleResponse extends $pb.GeneratedMessage {
+  factory ShouldSampleResponse({
+    $core.bool? isSampled,
+  }) {
+    final $result = create();
+    if (isSampled != null) {
+      $result.isSampled = isSampled;
+    }
+    return $result;
+  }
+  ShouldSampleResponse._() : super();
+  factory ShouldSampleResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory ShouldSampleResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'ShouldSampleResponse', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..aOB(1, _omitFieldNames ? '' : 'isSampled')
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  ShouldSampleResponse clone() => ShouldSampleResponse()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  ShouldSampleResponse copyWith(void Function(ShouldSampleResponse) updates) => super.copyWith((message) => updates(message as ShouldSampleResponse)) as ShouldSampleResponse;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ShouldSampleResponse create() => ShouldSampleResponse._();
+  ShouldSampleResponse createEmptyInstance() => create();
+  static $pb.PbList<ShouldSampleResponse> createRepeated() => $pb.PbList<ShouldSampleResponse>();
+  @$core.pragma('dart2js:noInline')
+  static ShouldSampleResponse getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ShouldSampleResponse>(create);
+  static ShouldSampleResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get isSampled => $_getBF(0);
+  @$pb.TagNumber(1)
+  set isSampled($core.bool v) { $_setBool(0, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasIsSampled() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearIsSampled() => clearField(1);
+}
+
 class InitMetricsRequest extends $pb.GeneratedMessage {
   factory InitMetricsRequest({
     $core.int? port,
@@ -1855,6 +1955,9 @@ class InstrumentationControlServiceApi {
   ;
   $async.Future<ScanPiiInjectionResponse> scanPiiInjection($pb.ClientContext? ctx, ScanPiiInjectionRequest request) =>
     _client.invoke<ScanPiiInjectionResponse>(ctx, 'InstrumentationControlService', 'ScanPiiInjection', request, ScanPiiInjectionResponse())
+  ;
+  $async.Future<ShouldSampleResponse> shouldSample($pb.ClientContext? ctx, ShouldSampleRequest request) =>
+    _client.invoke<ShouldSampleResponse>(ctx, 'InstrumentationControlService', 'ShouldSample', request, ShouldSampleResponse())
   ;
   $async.Future<InitMetricsResponse> initMetrics($pb.ClientContext? ctx, InitMetricsRequest request) =>
     _client.invoke<InitMetricsResponse>(ctx, 'InstrumentationControlService', 'InitMetrics', request, InitMetricsResponse())

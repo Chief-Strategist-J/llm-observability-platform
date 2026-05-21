@@ -13,6 +13,7 @@ from .features.token_counting import count_tokens, llm_span_with_tokens
 from .features.streaming import llm_streaming_span, wrap_stream, wrap_async_stream
 from .features.pii_injection_scan import scan_prompt
 from .features.metrics import init_metrics_pipeline, record_span_metrics
+from .features.deterministic_sampling import should_sample
 
 __all__ = [
     "llm_observe",
@@ -34,4 +35,5 @@ __all__ = [
     "scan_prompt",
     "init_metrics_pipeline",
     "record_span_metrics",
+    "should_sample",
 ]

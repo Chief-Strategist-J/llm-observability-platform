@@ -23,6 +23,7 @@ service InstrumentationControlService {
   rpc TriggerTestStreamCall(TriggerTestStreamCallRequest) returns (TriggerTestStreamCallResponse);
   rpc CountTokens(CountTokensRequest) returns (CountTokensResponse);
   rpc ScanPiiInjection(ScanPiiInjectionRequest) returns (ScanPiiInjectionResponse);
+  rpc ShouldSample(ShouldSampleRequest) returns (ShouldSampleResponse);
   rpc InitMetrics(InitMetricsRequest) returns (InitMetricsResponse);
   rpc GetMetricsHealth(GetMetricsHealthRequest) returns (GetMetricsHealthResponse);
   rpc RecordMetrics(RecordMetricsRequest) returns (RecordMetricsResponse);
@@ -122,6 +123,14 @@ message ScanPiiInjectionRequest {
 message ScanPiiInjectionResponse {
   bool pii_detected = 1;
   bool injection_attempt = 2;
+}
+
+message ShouldSampleRequest {
+  string span_id = 1;
+}
+
+message ShouldSampleResponse {
+  bool is_sampled = 1;
 }
 
 message InitMetricsRequest {

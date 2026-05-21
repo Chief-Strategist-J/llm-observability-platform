@@ -7,6 +7,7 @@ from typing import Optional, Callable, Any
 from datetime import datetime, timezone
 from .globals import get_reporter
 from ..metrics.index import record_span_metrics
+from ..deterministic_sampling.index import should_sample
 
 def llm_observe(service: str, endpoint: str):
     def decorator(func: Callable):
@@ -32,7 +33,8 @@ def llm_observe(service: str, endpoint: str):
                         "endpoint": endpoint,
                         "latency_ms_total": latency_ms,
                         "timestamp_utc": start_timestamp,
-                        "status": status
+                        "status": status,
+                        "is_sampled": should_sample(span_id)
                     }
                     reporter = get_reporter()
                     record_span_metrics(span_data)
@@ -60,7 +62,8 @@ def llm_observe(service: str, endpoint: str):
                         "endpoint": endpoint,
                         "latency_ms_total": latency_ms,
                         "timestamp_utc": start_timestamp,
-                        "status": status
+                        "status": status,
+                        "is_sampled": should_sample(span_id)
                     }
                     reporter = get_reporter()
                     record_span_metrics(span_data)

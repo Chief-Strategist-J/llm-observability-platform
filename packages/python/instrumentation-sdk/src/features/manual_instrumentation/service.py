@@ -12,6 +12,15 @@ class LLMSpanContext:
     def __init__(self, **kwargs: Any):
         self._span_id = uuid.uuid4()
         self._start_time = time.perf_counter()
+        from ..deterministic_sampling.index import should_sample
+        is_sampled = should_sample(self._span_id)
+        if not is_sampled:
+            if "prompt_hash" in kwargs:
+                kwargs["prompt_hash"] = None
+            if "prompt_embedding" in kwargs:
+                kwargs["prompt_embedding"] = None
+            if "response_embedding" in kwargs:
+                kwargs["response_embedding"] = None
         pii_detected = False
         injection_attempt = False
         prompt = kwargs.get("prompt")
@@ -35,12 +44,16 @@ class LLMSpanContext:
             "status": "success",
             "pii_detected": pii_detected,
             "injection_attempt": injection_attempt,
+            "is_sampled": is_sampled,
             **kwargs
         }
         self._otel_span = None
         self._otel_context = None
 
     def set_metadata(self, key: str, value: Any) -> None:
+        if not self._data.get("is_sampled", False):
+            if key in ("prompt_hash", "prompt_embedding", "response_embedding"):
+                return
         if key == "prompt" and value is not None:
             try:
                 from ..pii_injection_scan.index import scan_prompt
