@@ -8,8 +8,11 @@ repo_url: https://github.com/Chief-Strategist-J/llm-observability-platform
 repo_name: Chief-Strategist-J/llm-observability-platform
 edit_uri: edit/main/docs/
 
+# ─── THEME ─────────────────────────────────────────────────────────────────────
+
 theme:
   name: material
+  custom_dir: docs/overrides
 
   logo: assets/logo.svg
   favicon: assets/favicon.svg
@@ -21,17 +24,24 @@ theme:
   icon:
     repo: fontawesome/brands/github
     admonition:
-      note: octicons/tag-16
-      tip: octicons/squirrel-16
-      warning: octicons/alert-16
-      danger: octicons/zap-16
+      note:     octicons/info-16
+      tip:      octicons/light-bulb-16
+      warning:  octicons/alert-16
+      danger:   octicons/zap-16
+      success:  octicons/check-circle-16
+      example:  octicons/beaker-16
+      abstract: octicons/checklist-16
+      question: octicons/question-16
+      quote:    octicons/quote-16
 
+  # palette must be a list — single-item list locks to dark, no toggle shown
   palette:
-    scheme: slate
-    primary: custom
-    accent: custom
+    - scheme: slate
+      primary: custom
+      accent: custom
 
   features:
+    # ── Navigation
     - navigation.instant
     - navigation.instant.progress
     - navigation.tracking
@@ -43,21 +53,27 @@ theme:
     - navigation.indexes
     - navigation.top
     - navigation.footer
+    # ── Search
     - search.highlight
     - search.suggest
     - search.share
+    # ── Content
     - content.code.copy
     - content.code.annotate
     - content.tabs.link
     - content.tooltips
+    # ── ToC  (toc.integrate removed — conflicts with navigation.indexes)
     - toc.follow
-    - toc.integrate
+
+# ─── EXTRA CSS / JS ────────────────────────────────────────────────────────────
 
 extra_css:
   - assets/stylesheets/observatory.css
 
 extra_javascript:
   - assets/javascripts/mathjax.js
+
+# ─── EXTRA META ────────────────────────────────────────────────────────────────
 
 extra:
   social:
@@ -74,13 +90,15 @@ extra:
 
   analytics:
     provider: google
-    property: G-XXXXXXXXXX
+    property: G-XXXXXXXXXX      # replace with your GA4 measurement ID
 
   consent:
     title: Cookie consent
     description: >-
-      We use cookies to recognize your repeat visits and measure
+      We use cookies to recognise your repeat visits and measure
       documentation usefulness. With your consent, you help us improve.
+
+# ─── PLUGINS ───────────────────────────────────────────────────────────────────
 
 plugins:
   - search:
@@ -91,12 +109,18 @@ plugins:
   - git-revision-date-localized:
       enable_creation_date: true
       type: timeago
+      fallback_to_build_date: true
   - tags:
       tags_file: tags.md
 
+# ─── MARKDOWN EXTENSIONS ───────────────────────────────────────────────────────
+
 markdown_extensions:
+  # Callout blocks
   - admonition
   - pymdownx.details
+
+  # Code blocks — syntax highlighting + Mermaid diagrams
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
@@ -107,49 +131,65 @@ markdown_extensions:
       line_spans: __span
       pygments_lang_class: true
   - pymdownx.inlinehilite
+
+  # Content tabs (SDK / CLI / Docker toggles)
   - pymdownx.tabbed:
       alternate_style: true
+
+  # Task lists, emoji, keyboard keys
   - pymdownx.tasklist:
       custom_checkbox: true
   - pymdownx.emoji:
-      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_index:     !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.keys
+
+  # Typography helpers
   - pymdownx.smartsymbols
   - pymdownx.critic
   - pymdownx.caret
   - pymdownx.mark
   - pymdownx.tilde
+
+  # Document structure
   - meta
   - footnotes
   - attr_list
   - md_in_html
   - tables
   - toc:
-      permalink: "#"
+      permalink: true
+      permalink_title: Link to this section
       title: On this page
+
+# ─── NAVIGATION ────────────────────────────────────────────────────────────────
 
 nav:
   - Home: index.md
+
   - Getting Started:
     - getting-started/index.md
     - Installation & Quick Start: getting-started/Installation-and-Quick-Start.md
+
   - Instrumentation:
     - instrumentation/index.md
-    - Auto-Instrumentation: instrumentation/Auto-Instrumentation.md
-    - Manual Spans — Decorator: instrumentation/Manual-Spans-Decorator.md
-    - Manual Spans — Context Manager: instrumentation/Manual-Spans-Context-Manager.md
-    - Streaming Observability: instrumentation/Streaming-Observability.md
+    - Auto-Instrumentation:       instrumentation/Auto-Instrumentation.md
+    - Manual Spans — Decorator:   instrumentation/Manual-Spans-Decorator.md
+    - Manual Spans — Context Mgr: instrumentation/Manual-Spans-Context-Manager.md
+    - Streaming Observability:    instrumentation/Streaming-Observability.md
+
   - Features:
     - features/index.md
-    - PII & Injection Scanning: features/PII-and-Injection-Scanning.md
-    - Deterministic Sampling: features/Deterministic-Sampling.md
-    - MiniLM Embeddings: features/MiniLM-Embeddings.md
-    - Prometheus Metrics & Grafana: features/Prometheus-Metrics-and-Grafana.md
+    - PII & Injection Scanning:   features/PII-and-Injection-Scanning.md
+    - Deterministic Sampling:     features/Deterministic-Sampling.md
+    - MiniLM Embeddings:          features/MiniLM-Embeddings.md
+    - Prometheus & Grafana:       features/Prometheus-Metrics-and-Grafana.md
+
   - Reference:
     - reference/index.md
-    - REST Management API: reference/REST-Management-API.md
-    - Docker & CLI Deployment: reference/Docker-and-CLI-Deployment.md
-    - Config Files Reference: reference/Config-Files-Reference.md
+    - REST Management API:        reference/REST-Management-API.md
+    - Docker & CLI Deployment:    reference/Docker-and-CLI-Deployment.md
+    - Config Files Reference:     reference/Config-Files-Reference.md
+
   - Changelog: changelog.md
   - Tags: tags.md
