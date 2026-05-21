@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 :root,
 [data-md-color-scheme="slate"] {
@@ -19,17 +19,16 @@
   --md-admonition-bg-color:     #111827;
 }
 
-[data-md-color-scheme="default"] {
-  --md-primary-fg-color:        #2b6cb0;
-  --md-accent-fg-color:         #0f6e56;
+body, input {
+  font-family: 'Outfit', sans-serif;
 }
 
 .md-typeset h1,
 .md-typeset h2,
 .md-typeset h3 {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Outfit', sans-serif;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
 
 code, pre, .md-typeset code {
@@ -53,7 +52,7 @@ code, pre, .md-typeset code {
 }
 
 .tx-hero h1 {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Outfit', sans-serif;
   font-weight: 800;
   font-size: 2.8rem;
 }
