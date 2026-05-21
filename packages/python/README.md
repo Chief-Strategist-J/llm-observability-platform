@@ -16,6 +16,7 @@ This guide covers the technical architecture and end-user usage for the Python-b
   - [Streaming Observability (TTFT & Token Tracking)](#streaming-observability-ttft--token-tracking)
   - [PII & Injection Scan (Aho-Corasick Redaction)](#pii--injection-scan-aho-corasick-redaction)
   - [Deterministic Sampling Gate (Modulo 100)](#deterministic-sampling-gate-modulo-100)
+  - [MiniLM Embedding (Concurrent & Sampled)](#minilm-embedding-concurrent--sampled)
   - [Prometheus Metrics & Grafana Dashboard](#prometheus-metrics--grafana-dashboard)
   - [Updating Config Files (Model Prices, PII Patterns, Infra)](#updating-config-files-model-prices-pii-patterns-infra)
   - [Docker Deployment](#docker-deployment)
@@ -110,6 +111,7 @@ The SDK provides a built-in FastAPI-based management layer for remote orchestrat
 | `/instrumentation/test-call` | POST | Verification: Trigger a sample LLM call to verify end-to-end tracing. |
 | `/streaming/test-stream-call` | POST | Verification: Trigger a mock streaming call to verify streaming/TTFT. |
 | `/v1/sampling/should-sample` | POST | Verification: Check if a span should be sampled. |
+| `/v1/embeddings/embed` | POST | Verification: Generate MiniLM embeddings for a given text. |
 
 ### Basic Usage: Decorators
 Use the `@llm_observe` decorator to manually track functions.
@@ -323,6 +325,28 @@ curl -X POST http://localhost:8000/v1/sampling/should-sample \
   -d '{"span_id": "test-span-id"}'
 ```
 
+### MiniLM Embedding (Concurrent & Sampled)
+
+The SDK asynchronously calls the embedding-worker HTTP endpoint (`POST /embed`) to generate a 384-dimensional vector embedding of the prompt text.
+
+- **Concurrent Execution**: To prevent blocking client requests, the SDK uses `asyncio.create_task()` to fire the embedding generation concurrently with span finalization.
+- **Conditionality**: The embedding is only generated if the span is sampled (`is_sampled` is `True`) and no PII is detected in the prompt (`pii_detected` is `False`).
+- **Timeout and Resilience**: The embedding HTTP request has a timeout of 500ms. If the request times out or fails, the SDK falls back to `None` for the embedding field while the rest of the span details are still successfully emitted.
+
+#### Programmatic Usage
+```python
+from instrumentation_sdk import get_embedding
+
+embedding = await get_embedding("your text here")
+```
+
+#### REST Endpoint
+```bash
+curl -X POST http://localhost:8000/v1/embeddings/embed \
+  -H "Content-Type: application/json" \
+  -d '{"text": "your text here"}'
+```
+
 ### Prometheus Metrics & Grafana Dashboard
 
 The SDK integrates a Prometheus metrics collection pipeline to track operational metrics for LLM calls (latency, TTFT, token usage, cost, and security violations).
@@ -460,5 +484,6 @@ This sends **1000 spans** (100 individual + 10×50 batch) covering all 6 model/p
 | **Streaming Logic** | `finalize_stream()` | `features/streaming/service.py` |
 | **PII & Injection Scan**| `scan_prompt()` | `features/pii_injection_scan/index.py` |
 | **Deterministic Sampling**| `should_sample()` | `features/deterministic_sampling/index.py` |
+| **MiniLM Embedding** | `get_embedding()` | `features/minilm_embedding/index.py` |
 
 
