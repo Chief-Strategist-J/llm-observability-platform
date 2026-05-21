@@ -103,9 +103,8 @@ class LLMSpanContext:
             self._otel_span.set_attribute("llm.latency_ms_total", latency_ms)
             self._otel_span.set_attribute("llm.status", self._data["status"])
             self._otel_context.__exit__(exc_type, exc_val, exc_tb)
-        record_span_metrics(self._data)
-        reporter = get_reporter()
-        reporter.report(self._data)
+        from ..minilm_embedding.index import enrich_and_report_span
+        enrich_and_report_span(self._data)
 
     async def __aenter__(self) -> 'LLMSpanContext':
         tracer = trace.get_tracer("instrumentation-sdk")
@@ -129,9 +128,8 @@ class LLMSpanContext:
             self._otel_span.set_attribute("llm.latency_ms_total", latency_ms)
             self._otel_span.set_attribute("llm.status", self._data["status"])
             self._otel_context.__exit__(exc_type, exc_val, exc_tb)
-        record_span_metrics(self._data)
-        reporter = get_reporter()
-        await reporter.report_async(self._data)
+        from ..minilm_embedding.index import enrich_and_report_span_async
+        await enrich_and_report_span_async(self._data)
 
     def _finish(self, exc_type: Any) -> None:
         latency_ms = int((time.perf_counter() - self._start_time) * 1000)

@@ -4,6 +4,16 @@ All notable changes to the `instrumentation-sdk` package will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-05-21
+
+### Added
+- **MiniLM Embedding Integration**: Asynchronous, non-blocking fetch of MiniLM embeddings for prompts concurrently with span finalization using `asyncio.create_task()`.
+- **REST API Endpoint**: Exposed `POST /v1/embeddings/embed` to generate embeddings for arbitrary text via the embedding worker.
+- **Contract-First Support (Embedding)**:
+  - **OpenAPI**: Added `/embeddings/embed` endpoint to `v1.yaml`.
+  - **GraphQL**: Added `getEmbedding` query and `GetEmbeddingPayload` to `v1.graphql`.
+  - **Protobuf**: Added `GetEmbedding` RPC, request, and response message schemas to `instrumentation.proto`.
+
 ## [1.6.0] - 2026-05-21
 
 ### Added

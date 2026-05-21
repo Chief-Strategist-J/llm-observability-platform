@@ -419,6 +419,24 @@ export interface RecordMetricsBatchResponse {
     recordedCount: number;
 }
 /**
+ * @generated from protobuf message llm.observability.v1.GetEmbeddingRequest
+ */
+export interface GetEmbeddingRequest {
+    /**
+     * @generated from protobuf field: string text = 1;
+     */
+    text: string;
+}
+/**
+ * @generated from protobuf message llm.observability.v1.GetEmbeddingResponse
+ */
+export interface GetEmbeddingResponse {
+    /**
+     * @generated from protobuf field: repeated float embedding = 1;
+     */
+    embedding: number[];
+}
+/**
  * InstrumentationStatus represents the current state of auto-instrumentation.
  *
  * @generated from protobuf enum llm.observability.v1.InstrumentationStatus
@@ -1981,6 +1999,108 @@ class RecordMetricsBatchResponse$Type extends MessageType<RecordMetricsBatchResp
  * @generated MessageType for protobuf message llm.observability.v1.RecordMetricsBatchResponse
  */
 export const RecordMetricsBatchResponse = new RecordMetricsBatchResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetEmbeddingRequest$Type extends MessageType<GetEmbeddingRequest> {
+    constructor() {
+        super("llm.observability.v1.GetEmbeddingRequest", [
+            { no: 1, name: "text", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<GetEmbeddingRequest>): GetEmbeddingRequest {
+        const message = { text: "" };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<GetEmbeddingRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetEmbeddingRequest): GetEmbeddingRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string text */ 1:
+                    message.text = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetEmbeddingRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string text = 1; */
+        if (message.text !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.text);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.GetEmbeddingRequest
+ */
+export const GetEmbeddingRequest = new GetEmbeddingRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetEmbeddingResponse$Type extends MessageType<GetEmbeddingResponse> {
+    constructor() {
+        super("llm.observability.v1.GetEmbeddingResponse", [
+            { no: 1, name: "embedding", kind: "scalar", repeat: 1 /*RepeatType.PACKED*/, T: 2 /*ScalarType.FLOAT*/ }
+        ]);
+    }
+    create(value?: PartialMessage<GetEmbeddingResponse>): GetEmbeddingResponse {
+        const message = { embedding: [] };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<GetEmbeddingResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetEmbeddingResponse): GetEmbeddingResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated float embedding */ 1:
+                    if (wireType === WireType.LengthDelimited)
+                        for (let e = reader.int32() + reader.pos; reader.pos < e;)
+                            message.embedding.push(reader.float());
+                    else
+                        message.embedding.push(reader.float());
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetEmbeddingResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated float embedding = 1; */
+        if (message.embedding.length) {
+            writer.tag(1, WireType.LengthDelimited).fork();
+            for (let i = 0; i < message.embedding.length; i++)
+                writer.float(message.embedding[i]);
+            writer.join();
+        }
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.GetEmbeddingResponse
+ */
+export const GetEmbeddingResponse = new GetEmbeddingResponse$Type();
 /**
  * @generated ServiceType for protobuf service llm.observability.v1.InstrumentationControlService
  */
@@ -1994,6 +2114,7 @@ export const InstrumentationControlService = new ServiceType("llm.observability.
     { name: "CountTokens", options: {}, I: CountTokensRequest, O: CountTokensResponse },
     { name: "ScanPiiInjection", options: {}, I: ScanPiiInjectionRequest, O: ScanPiiInjectionResponse },
     { name: "ShouldSample", options: {}, I: ShouldSampleRequest, O: ShouldSampleResponse },
+    { name: "GetEmbedding", options: {}, I: GetEmbeddingRequest, O: GetEmbeddingResponse },
     { name: "InitMetrics", options: {}, I: InitMetricsRequest, O: InitMetricsResponse },
     { name: "GetMetricsHealth", options: {}, I: GetMetricsHealthRequest, O: GetMetricsHealthResponse },
     { name: "RecordMetrics", options: {}, I: RecordMetricsRequest, O: RecordMetricsResponse },

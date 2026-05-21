@@ -155,6 +155,16 @@ public final class InstrumentationProto {
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_llm_observability_v1_RecordMetricsBatchResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_llm_observability_v1_GetEmbeddingRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_llm_observability_v1_GetEmbeddingRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_llm_observability_v1_GetEmbeddingResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_llm_observability_v1_GetEmbeddingResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -246,38 +256,43 @@ public final class InstrumentationProto {
       "Request\022@\n\005spans\030\001 \003(\0132*.llm.observabili" +
       "ty.v1.RecordMetricsRequestR\005spans\"C\n\032Rec" +
       "ordMetricsBatchResponse\022%\n\016recorded_coun" +
-      "t\030\001 \001(\005R\rrecordedCount*\260\001\n\025Instrumentati" +
-      "onStatus\022&\n\"INSTRUMENTATION_STATUS_UNSPE" +
-      "CIFIED\020\000\022&\n\"INSTRUMENTATION_STATUS_INITI" +
-      "ALIZED\020\001\022#\n\037INSTRUMENTATION_STATUS_DISAB" +
-      "LED\020\002\022\"\n\036INSTRUMENTATION_STATUS_PARTIAL\020" +
-      "\0032\327\013\n\035InstrumentationControlService\022z\n\023I" +
-      "nitInstrumentation\0220.llm.observability.v" +
-      "1.InitInstrumentationRequest\0321.llm.obser" +
-      "vability.v1.InitInstrumentationResponse\022" +
-      "\203\001\n\026DisableInstrumentation\0223.llm.observa" +
-      "bility.v1.DisableInstrumentationRequest\032" +
-      "4.llm.observability.v1.DisableInstrument" +
-      "ationResponse\022\\\n\tGetStatus\022&.llm.observa" +
-      "bility.v1.GetStatusRequest\032\'.llm.observa" +
-      "bility.v1.GetStatusResponse\022k\n\016DetectPro" +
-      "vider\022+.llm.observability.v1.DetectProvi" +
-      "derRequest\032,.llm.observability.v1.Detect" +
-      "ProviderResponse\022n\n\017TriggerTestCall\022,.ll" +
-      "m.observability.v1.TriggerTestCallReques" +
-      "t\032-.llm.observability.v1.TriggerTestCall" +
-      "Response\022\200\001\n\025TriggerTestStreamCall\0222.llm" +
-      ".observability.v1.TriggerTestStreamCallR" +
-      "equest\0323.llm.observability.v1.TriggerTes" +
-      "tStreamCallResponse\022b\n\013CountTokens\022(.llm" +
-      ".observability.v1.CountTokensRequest\032).l" +
-      "lm.observability.v1.CountTokensResponse\022" +
-      "q\n\020ScanPiiInjection\022-.llm.observability." +
-      "v1.ScanPiiInjectionRequest\032..llm.observa" +
-      "bility.v1.ScanPiiInjectionResponse\022e\n\014Sh" +
-      "ouldSample\022).llm.observability.v1.Should" +
-      "SampleRequest\032*.llm.observability.v1.Sho" +
-      "uldSampleResponse\022b\n\013InitMetrics\022(.llm.o" +
+      "t\030\001 \001(\005R\rrecordedCount\")\n\023GetEmbeddingRe" +
+      "quest\022\022\n\004text\030\001 \001(\tR\004text\"4\n\024GetEmbeddin" +
+      "gResponse\022\034\n\tembedding\030\001 \003(\002R\tembedding*" +
+      "\260\001\n\025InstrumentationStatus\022&\n\"INSTRUMENTA" +
+      "TION_STATUS_UNSPECIFIED\020\000\022&\n\"INSTRUMENTA" +
+      "TION_STATUS_INITIALIZED\020\001\022#\n\037INSTRUMENTA" +
+      "TION_STATUS_DISABLED\020\002\022\"\n\036INSTRUMENTATIO" +
+      "N_STATUS_PARTIAL\020\0032\276\014\n\035InstrumentationCo" +
+      "ntrolService\022z\n\023InitInstrumentation\0220.ll" +
+      "m.observability.v1.InitInstrumentationRe" +
+      "quest\0321.llm.observability.v1.InitInstrum" +
+      "entationResponse\022\203\001\n\026DisableInstrumentat" +
+      "ion\0223.llm.observability.v1.DisableInstru" +
+      "mentationRequest\0324.llm.observability.v1." +
+      "DisableInstrumentationResponse\022\\\n\tGetSta" +
+      "tus\022&.llm.observability.v1.GetStatusRequ" +
+      "est\032\'.llm.observability.v1.GetStatusResp" +
+      "onse\022k\n\016DetectProvider\022+.llm.observabili" +
+      "ty.v1.DetectProviderRequest\032,.llm.observ" +
+      "ability.v1.DetectProviderResponse\022n\n\017Tri" +
+      "ggerTestCall\022,.llm.observability.v1.Trig" +
+      "gerTestCallRequest\032-.llm.observability.v" +
+      "1.TriggerTestCallResponse\022\200\001\n\025TriggerTes" +
+      "tStreamCall\0222.llm.observability.v1.Trigg" +
+      "erTestStreamCallRequest\0323.llm.observabil" +
+      "ity.v1.TriggerTestStreamCallResponse\022b\n\013" +
+      "CountTokens\022(.llm.observability.v1.Count" +
+      "TokensRequest\032).llm.observability.v1.Cou" +
+      "ntTokensResponse\022q\n\020ScanPiiInjection\022-.l" +
+      "lm.observability.v1.ScanPiiInjectionRequ" +
+      "est\032..llm.observability.v1.ScanPiiInject" +
+      "ionResponse\022e\n\014ShouldSample\022).llm.observ" +
+      "ability.v1.ShouldSampleRequest\032*.llm.obs" +
+      "ervability.v1.ShouldSampleResponse\022e\n\014Ge" +
+      "tEmbedding\022).llm.observability.v1.GetEmb" +
+      "eddingRequest\032*.llm.observability.v1.Get" +
+      "EmbeddingResponse\022b\n\013InitMetrics\022(.llm.o" +
       "bservability.v1.InitMetricsRequest\032).llm" +
       ".observability.v1.InitMetricsResponse\022q\n" +
       "\020GetMetricsHealth\022-.llm.observability.v1" +
@@ -468,6 +483,18 @@ public final class InstrumentationProto {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_llm_observability_v1_RecordMetricsBatchResponse_descriptor,
         new java.lang.String[] { "RecordedCount", });
+    internal_static_llm_observability_v1_GetEmbeddingRequest_descriptor =
+      getDescriptor().getMessageTypes().get(28);
+    internal_static_llm_observability_v1_GetEmbeddingRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_llm_observability_v1_GetEmbeddingRequest_descriptor,
+        new java.lang.String[] { "Text", });
+    internal_static_llm_observability_v1_GetEmbeddingResponse_descriptor =
+      getDescriptor().getMessageTypes().get(29);
+    internal_static_llm_observability_v1_GetEmbeddingResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_llm_observability_v1_GetEmbeddingResponse_descriptor,
+        new java.lang.String[] { "Embedding", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

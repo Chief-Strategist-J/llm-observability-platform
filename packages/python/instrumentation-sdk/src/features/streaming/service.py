@@ -71,9 +71,8 @@ class LLMStreamingSpanContext(LLMSpanContext):
                 if isinstance(v, (str, bool, int, float)):
                     self._otel_span.set_attribute(f"llm.{k}", v)
             self._otel_context.__exit__(None, None, None)
-        record_span_metrics(self._data)
-        reporter = get_reporter()
-        reporter.report(self._data)
+        from ..minilm_embedding.index import enrich_and_report_span
+        enrich_and_report_span(self._data)
 
     async def finalize_stream_async(self, exc_type: Any = None) -> None:
         if self._stream_finalized:
@@ -92,9 +91,8 @@ class LLMStreamingSpanContext(LLMSpanContext):
                 if isinstance(v, (str, bool, int, float)):
                     self._otel_span.set_attribute(f"llm.{k}", v)
             self._otel_context.__exit__(None, None, None)
-        record_span_metrics(self._data)
-        reporter = get_reporter()
-        await reporter.report_async(self._data)
+        from ..minilm_embedding.index import enrich_and_report_span
+        enrich_and_report_span(self._data)
 
 class ObservableAsyncIterator:
     def __init__(
