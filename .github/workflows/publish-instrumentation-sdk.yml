@@ -1,0 +1,43 @@
+name: Publish Instrumentation SDK
+
+on:
+  push:
+    paths:
+      - 'packages/python/instrumentation-sdk/**'
+      - '.github/workflows/publish-instrumentation-sdk.yml'
+    branches:
+      - main
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Build package
+        run: |
+          cd packages/python/instrumentation-sdk
+          python -m build
+
+      - name: Publish to PyPI
+        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: packages/python/instrumentation-sdk/dist/
