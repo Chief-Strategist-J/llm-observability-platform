@@ -6,6 +6,12 @@ from src.features.pii_injection_scan.infra.adapters.aho_corasick_scanner_adapter
 from src.features.manual_instrumentation.service import LLMSpanContext
 from src import scan_prompt
 
+@pytest.fixture(autouse=True)
+def mock_should_sample():
+    from unittest.mock import patch
+    with patch("src.features.deterministic_sampling.index.should_sample", return_value=True):
+        yield
+
 def test_aho_corasick_basic_match():
     automaton = AhoCorasickAutomaton()
     automaton.add_keyword("forbidden", "FORBIDDEN_TOPIC")

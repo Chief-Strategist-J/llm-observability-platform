@@ -4,6 +4,16 @@ All notable changes to the `instrumentation-sdk` package will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-05-21
+
+### Added
+- **Deterministic Sampling Gate**: Hashing of `span_id` using SHA256 modulo 100 to determine if span should be sampled (`is_sampled = True`). Prevents expensive operations (hashing/embeddings) when unsampled.
+- **REST API Endpoint**: Exposed `POST /v1/sampling/should-sample` to check if a span should be sampled.
+- **Contract-First Support**:
+  - **OpenAPI**: Added `/sampling/should-sample` path definition to `v1.yaml`.
+  - **GraphQL**: Added `shouldSample` query and `SamplingGatePayload` structure to `v1.graphql`.
+  - **Protobuf**: Added `ShouldSample` RPC, request, and response message schemas to `instrumentation.proto`.
+
 ## [1.7.0] - 2026-05-20
 
 ### Added

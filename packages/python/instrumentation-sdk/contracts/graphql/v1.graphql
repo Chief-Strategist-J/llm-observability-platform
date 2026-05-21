@@ -130,6 +130,10 @@ type PiiInjectionScanPayload {
   injection_attempt: Boolean!
 }
 
+type SamplingGatePayload {
+  is_sampled: Boolean!
+}
+
 input RecordSpanMetricsInput {
   model: String!
   provider: String!
@@ -190,5 +194,6 @@ type Query {
   countTokens(prompt: String!, model: String!, provider: String): TokenCountPayload!
   scanPiiInjection(prompt: String!): PiiInjectionScanPayload!
   metricsHealth: MetricsStatusPayload!
+  shouldSample(span_id: ID!): SamplingGatePayload!
 }
 

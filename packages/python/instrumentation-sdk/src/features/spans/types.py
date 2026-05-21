@@ -82,12 +82,8 @@ class LLMSpan(BaseModel):
 
     @model_validator(mode="after")
     def validate_sampled_fields(self) -> "LLMSpan":
-        if self.pii_detected:
+        if self.pii_detected or not self.is_sampled:
             if self.prompt_hash is not None or self.prompt_embedding is not None or self.response_embedding is not None:
-                # If PII is detected, sampled fields MUST be null
-                # We overwrite them to null and add a warning or just enforce it?
-                # The spec says "if TRUE -> prompt_hash and prompt_embedding are null"
-                # We'll enforce this as a rule.
                 object.__setattr__(self, "prompt_hash", None)
                 object.__setattr__(self, "prompt_embedding", None)
                 object.__setattr__(self, "response_embedding", None)

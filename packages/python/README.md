@@ -15,6 +15,7 @@ This guide covers the technical architecture and end-user usage for the Python-b
   - [Token Counting (Pre-Call Token Counting)](#token-counting-pre-call-token-counting)
   - [Streaming Observability (TTFT & Token Tracking)](#streaming-observability-ttft--token-tracking)
   - [PII & Injection Scan (Aho-Corasick Redaction)](#pii--injection-scan-aho-corasick-redaction)
+  - [Deterministic Sampling Gate (Modulo 100)](#deterministic-sampling-gate-modulo-100)
   - [Prometheus Metrics & Grafana Dashboard](#prometheus-metrics--grafana-dashboard)
   - [Updating Config Files (Model Prices, PII Patterns, Infra)](#updating-config-files-model-prices-pii-patterns-infra)
   - [Docker Deployment](#docker-deployment)
@@ -108,6 +109,7 @@ The SDK provides a built-in FastAPI-based management layer for remote orchestrat
 | `/instrumentation/detect` | POST | Discovery: Detect provider/model from a sample request body. |
 | `/instrumentation/test-call` | POST | Verification: Trigger a sample LLM call to verify end-to-end tracing. |
 | `/streaming/test-stream-call` | POST | Verification: Trigger a mock streaming call to verify streaming/TTFT. |
+| `/v1/sampling/should-sample` | POST | Verification: Check if a span should be sampled. |
 
 ### Basic Usage: Decorators
 Use the `@llm_observe` decorator to manually track functions.
@@ -299,6 +301,28 @@ curl -X POST http://localhost:8000/v1/pii-injection/scan \
   -d '{"prompt": "my email is user@example.com"}'
 ```
 
+### Deterministic Sampling Gate (Modulo 100)
+
+The SDK implements deterministic sampling decided at span creation time. It hashes the `span_id` using SHA256 and evaluates whether the hash value modulo 100 is equal to 0.
+- Sampled (`is_sampled` is `True`): The span is processed normally, performing prompt hashing and embedding generation.
+- Unsampled (`is_sampled` is `False`): The span drops/skips both the SHA256 hashing and the MiniLM embedding generation, saving computational resources.
+
+#### Programmatic Usage
+You can query the sampling logic directly:
+```python
+from instrumentation_sdk import should_sample
+
+sampled = should_sample("test-span-id")
+```
+
+#### REST Endpoint
+Query the `/v1/sampling/should-sample` endpoint to check sampling:
+```bash
+curl -X POST http://localhost:8000/v1/sampling/should-sample \
+  -H "Content-Type: application/json" \
+  -d '{"span_id": "test-span-id"}'
+```
+
 ### Prometheus Metrics & Grafana Dashboard
 
 The SDK integrates a Prometheus metrics collection pipeline to track operational metrics for LLM calls (latency, TTFT, token usage, cost, and security violations).
@@ -435,5 +459,6 @@ This sends **1000 spans** (100 individual + 10×50 batch) covering all 6 model/p
 | **Streaming SDK** | `wrap_async_stream()` | `features/streaming/index.py` |
 | **Streaming Logic** | `finalize_stream()` | `features/streaming/service.py` |
 | **PII & Injection Scan**| `scan_prompt()` | `features/pii_injection_scan/index.py` |
+| **Deterministic Sampling**| `should_sample()` | `features/deterministic_sampling/index.py` |
 
 

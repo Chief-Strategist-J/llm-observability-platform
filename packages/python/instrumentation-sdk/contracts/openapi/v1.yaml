@@ -252,6 +252,39 @@ paths:
                     type: boolean
                     example: false
 
+  /sampling/should-sample:
+    post:
+      summary: Determine if a span should be sampled
+      operationId: shouldSample
+      tags:
+        - Utilities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - span_id
+              properties:
+                span_id:
+                  type: string
+                  format: uuid
+                  example: "test-span-id"
+      responses:
+        '200':
+          description: Successful sampling determination
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - is_sampled
+                properties:
+                  is_sampled:
+                    type: boolean
+                    example: true
+
   /metrics/init:
     post:
       summary: Initialize metrics pipeline
