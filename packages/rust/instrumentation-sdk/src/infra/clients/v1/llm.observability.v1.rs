@@ -157,6 +157,18 @@ pub struct ScanPiiInjectionResponse {
     pub injection_attempt: bool,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ShouldSampleRequest {
+    #[prost(string, tag="1")]
+    pub span_id: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct ShouldSampleResponse {
+    #[prost(bool, tag="1")]
+    pub is_sampled: bool,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct InitMetricsRequest {
     #[prost(int32, optional, tag="1")]

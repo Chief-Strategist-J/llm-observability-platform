@@ -12,6 +12,8 @@ import type { GetMetricsHealthResponse } from "./instrumentation";
 import type { GetMetricsHealthRequest } from "./instrumentation";
 import type { InitMetricsResponse } from "./instrumentation";
 import type { InitMetricsRequest } from "./instrumentation";
+import type { ShouldSampleResponse } from "./instrumentation";
+import type { ShouldSampleRequest } from "./instrumentation";
 import type { ScanPiiInjectionResponse } from "./instrumentation";
 import type { ScanPiiInjectionRequest } from "./instrumentation";
 import type { CountTokensResponse } from "./instrumentation";
@@ -69,6 +71,10 @@ export interface IInstrumentationControlServiceClient {
      * @generated from protobuf rpc: ScanPiiInjection(llm.observability.v1.ScanPiiInjectionRequest) returns (llm.observability.v1.ScanPiiInjectionResponse);
      */
     scanPiiInjection(input: ScanPiiInjectionRequest, options?: RpcOptions): UnaryCall<ScanPiiInjectionRequest, ScanPiiInjectionResponse>;
+    /**
+     * @generated from protobuf rpc: ShouldSample(llm.observability.v1.ShouldSampleRequest) returns (llm.observability.v1.ShouldSampleResponse);
+     */
+    shouldSample(input: ShouldSampleRequest, options?: RpcOptions): UnaryCall<ShouldSampleRequest, ShouldSampleResponse>;
     /**
      * @generated from protobuf rpc: InitMetrics(llm.observability.v1.InitMetricsRequest) returns (llm.observability.v1.InitMetricsResponse);
      */
@@ -154,31 +160,38 @@ export class InstrumentationControlServiceClient implements IInstrumentationCont
         return stackIntercept<ScanPiiInjectionRequest, ScanPiiInjectionResponse>("unary", this._transport, method, opt, input);
     }
     /**
+     * @generated from protobuf rpc: ShouldSample(llm.observability.v1.ShouldSampleRequest) returns (llm.observability.v1.ShouldSampleResponse);
+     */
+    shouldSample(input: ShouldSampleRequest, options?: RpcOptions): UnaryCall<ShouldSampleRequest, ShouldSampleResponse> {
+        const method = this.methods[8], opt = this._transport.mergeOptions(options);
+        return stackIntercept<ShouldSampleRequest, ShouldSampleResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
      * @generated from protobuf rpc: InitMetrics(llm.observability.v1.InitMetricsRequest) returns (llm.observability.v1.InitMetricsResponse);
      */
     initMetrics(input: InitMetricsRequest, options?: RpcOptions): UnaryCall<InitMetricsRequest, InitMetricsResponse> {
-        const method = this.methods[8], opt = this._transport.mergeOptions(options);
+        const method = this.methods[9], opt = this._transport.mergeOptions(options);
         return stackIntercept<InitMetricsRequest, InitMetricsResponse>("unary", this._transport, method, opt, input);
     }
     /**
      * @generated from protobuf rpc: GetMetricsHealth(llm.observability.v1.GetMetricsHealthRequest) returns (llm.observability.v1.GetMetricsHealthResponse);
      */
     getMetricsHealth(input: GetMetricsHealthRequest, options?: RpcOptions): UnaryCall<GetMetricsHealthRequest, GetMetricsHealthResponse> {
-        const method = this.methods[9], opt = this._transport.mergeOptions(options);
+        const method = this.methods[10], opt = this._transport.mergeOptions(options);
         return stackIntercept<GetMetricsHealthRequest, GetMetricsHealthResponse>("unary", this._transport, method, opt, input);
     }
     /**
      * @generated from protobuf rpc: RecordMetrics(llm.observability.v1.RecordMetricsRequest) returns (llm.observability.v1.RecordMetricsResponse);
      */
     recordMetrics(input: RecordMetricsRequest, options?: RpcOptions): UnaryCall<RecordMetricsRequest, RecordMetricsResponse> {
-        const method = this.methods[10], opt = this._transport.mergeOptions(options);
+        const method = this.methods[11], opt = this._transport.mergeOptions(options);
         return stackIntercept<RecordMetricsRequest, RecordMetricsResponse>("unary", this._transport, method, opt, input);
     }
     /**
      * @generated from protobuf rpc: RecordMetricsBatch(llm.observability.v1.RecordMetricsBatchRequest) returns (llm.observability.v1.RecordMetricsBatchResponse);
      */
     recordMetricsBatch(input: RecordMetricsBatchRequest, options?: RpcOptions): UnaryCall<RecordMetricsBatchRequest, RecordMetricsBatchResponse> {
-        const method = this.methods[11], opt = this._transport.mergeOptions(options);
+        const method = this.methods[12], opt = this._transport.mergeOptions(options);
         return stackIntercept<RecordMetricsBatchRequest, RecordMetricsBatchResponse>("unary", this._transport, method, opt, input);
     }
 }

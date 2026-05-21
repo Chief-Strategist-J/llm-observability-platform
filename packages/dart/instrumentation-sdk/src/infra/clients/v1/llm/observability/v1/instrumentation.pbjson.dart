@@ -289,6 +289,30 @@ final $typed_data.Uint8List scanPiiInjectionResponseDescriptor = $convert.base64
     'ChhTY2FuUGlpSW5qZWN0aW9uUmVzcG9uc2USIQoMcGlpX2RldGVjdGVkGAEgASgIUgtwaWlEZX'
     'RlY3RlZBIrChFpbmplY3Rpb25fYXR0ZW1wdBgCIAEoCFIQaW5qZWN0aW9uQXR0ZW1wdA==');
 
+@$core.Deprecated('Use shouldSampleRequestDescriptor instead')
+const ShouldSampleRequest$json = {
+  '1': 'ShouldSampleRequest',
+  '2': [
+    {'1': 'span_id', '3': 1, '4': 1, '5': 9, '10': 'spanId'},
+  ],
+};
+
+/// Descriptor for `ShouldSampleRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List shouldSampleRequestDescriptor = $convert.base64Decode(
+    'ChNTaG91bGRTYW1wbGVSZXF1ZXN0EhcKB3NwYW5faWQYASABKAlSBnNwYW5JZA==');
+
+@$core.Deprecated('Use shouldSampleResponseDescriptor instead')
+const ShouldSampleResponse$json = {
+  '1': 'ShouldSampleResponse',
+  '2': [
+    {'1': 'is_sampled', '3': 1, '4': 1, '5': 8, '10': 'isSampled'},
+  ],
+};
+
+/// Descriptor for `ShouldSampleResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List shouldSampleResponseDescriptor = $convert.base64Decode(
+    'ChRTaG91bGRTYW1wbGVSZXNwb25zZRIdCgppc19zYW1wbGVkGAEgASgIUglpc1NhbXBsZWQ=');
+
 @$core.Deprecated('Use initMetricsRequestDescriptor instead')
 const InitMetricsRequest$json = {
   '1': 'InitMetricsRequest',
@@ -442,6 +466,7 @@ const $core.Map<$core.String, $core.dynamic> InstrumentationControlServiceBase$j
     {'1': 'TriggerTestStreamCall', '2': '.llm.observability.v1.TriggerTestStreamCallRequest', '3': '.llm.observability.v1.TriggerTestStreamCallResponse'},
     {'1': 'CountTokens', '2': '.llm.observability.v1.CountTokensRequest', '3': '.llm.observability.v1.CountTokensResponse'},
     {'1': 'ScanPiiInjection', '2': '.llm.observability.v1.ScanPiiInjectionRequest', '3': '.llm.observability.v1.ScanPiiInjectionResponse'},
+    {'1': 'ShouldSample', '2': '.llm.observability.v1.ShouldSampleRequest', '3': '.llm.observability.v1.ShouldSampleResponse'},
     {'1': 'InitMetrics', '2': '.llm.observability.v1.InitMetricsRequest', '3': '.llm.observability.v1.InitMetricsResponse'},
     {'1': 'GetMetricsHealth', '2': '.llm.observability.v1.GetMetricsHealthRequest', '3': '.llm.observability.v1.GetMetricsHealthResponse'},
     {'1': 'RecordMetrics', '2': '.llm.observability.v1.RecordMetricsRequest', '3': '.llm.observability.v1.RecordMetricsResponse'},
@@ -467,6 +492,8 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>> Instrument
   '.llm.observability.v1.CountTokensResponse': CountTokensResponse$json,
   '.llm.observability.v1.ScanPiiInjectionRequest': ScanPiiInjectionRequest$json,
   '.llm.observability.v1.ScanPiiInjectionResponse': ScanPiiInjectionResponse$json,
+  '.llm.observability.v1.ShouldSampleRequest': ShouldSampleRequest$json,
+  '.llm.observability.v1.ShouldSampleResponse': ShouldSampleResponse$json,
   '.llm.observability.v1.InitMetricsRequest': InitMetricsRequest$json,
   '.llm.observability.v1.InitMetricsResponse': InitMetricsResponse$json,
   '.llm.observability.v1.GetMetricsHealthRequest': GetMetricsHealthRequest$json,
@@ -496,13 +523,14 @@ final $typed_data.Uint8List instrumentationControlServiceDescriptor = $convert.b
     'bnRUb2tlbnNSZXF1ZXN0GikubGxtLm9ic2VydmFiaWxpdHkudjEuQ291bnRUb2tlbnNSZXNwb2'
     '5zZRJxChBTY2FuUGlpSW5qZWN0aW9uEi0ubGxtLm9ic2VydmFiaWxpdHkudjEuU2NhblBpaUlu'
     'amVjdGlvblJlcXVlc3QaLi5sbG0ub2JzZXJ2YWJpbGl0eS52MS5TY2FuUGlpSW5qZWN0aW9uUm'
-    'VzcG9uc2USYgoLSW5pdE1ldHJpY3MSKC5sbG0ub2JzZXJ2YWJpbGl0eS52MS5Jbml0TWV0cmlj'
-    'c1JlcXVlc3QaKS5sbG0ub2JzZXJ2YWJpbGl0eS52MS5Jbml0TWV0cmljc1Jlc3BvbnNlEnEKEE'
-    'dldE1ldHJpY3NIZWFsdGgSLS5sbG0ub2JzZXJ2YWJpbGl0eS52MS5HZXRNZXRyaWNzSGVhbHRo'
-    'UmVxdWVzdBouLmxsbS5vYnNlcnZhYmlsaXR5LnYxLkdldE1ldHJpY3NIZWFsdGhSZXNwb25zZR'
-    'JoCg1SZWNvcmRNZXRyaWNzEioubGxtLm9ic2VydmFiaWxpdHkudjEuUmVjb3JkTWV0cmljc1Jl'
-    'cXVlc3QaKy5sbG0ub2JzZXJ2YWJpbGl0eS52MS5SZWNvcmRNZXRyaWNzUmVzcG9uc2USdwoSUm'
-    'Vjb3JkTWV0cmljc0JhdGNoEi8ubGxtLm9ic2VydmFiaWxpdHkudjEuUmVjb3JkTWV0cmljc0Jh'
-    'dGNoUmVxdWVzdBowLmxsbS5vYnNlcnZhYmlsaXR5LnYxLlJlY29yZE1ldHJpY3NCYXRjaFJlc3'
-    'BvbnNl');
+    'VzcG9uc2USZQoMU2hvdWxkU2FtcGxlEikubGxtLm9ic2VydmFiaWxpdHkudjEuU2hvdWxkU2Ft'
+    'cGxlUmVxdWVzdBoqLmxsbS5vYnNlcnZhYmlsaXR5LnYxLlNob3VsZFNhbXBsZVJlc3BvbnNlEm'
+    'IKC0luaXRNZXRyaWNzEigubGxtLm9ic2VydmFiaWxpdHkudjEuSW5pdE1ldHJpY3NSZXF1ZXN0'
+    'GikubGxtLm9ic2VydmFiaWxpdHkudjEuSW5pdE1ldHJpY3NSZXNwb25zZRJxChBHZXRNZXRyaW'
+    'NzSGVhbHRoEi0ubGxtLm9ic2VydmFiaWxpdHkudjEuR2V0TWV0cmljc0hlYWx0aFJlcXVlc3Qa'
+    'Li5sbG0ub2JzZXJ2YWJpbGl0eS52MS5HZXRNZXRyaWNzSGVhbHRoUmVzcG9uc2USaAoNUmVjb3'
+    'JkTWV0cmljcxIqLmxsbS5vYnNlcnZhYmlsaXR5LnYxLlJlY29yZE1ldHJpY3NSZXF1ZXN0Gisu'
+    'bGxtLm9ic2VydmFiaWxpdHkudjEuUmVjb3JkTWV0cmljc1Jlc3BvbnNlEncKElJlY29yZE1ldH'
+    'JpY3NCYXRjaBIvLmxsbS5vYnNlcnZhYmlsaXR5LnYxLlJlY29yZE1ldHJpY3NCYXRjaFJlcXVl'
+    'c3QaMC5sbG0ub2JzZXJ2YWJpbGl0eS52MS5SZWNvcmRNZXRyaWNzQmF0Y2hSZXNwb25zZQ==');
 

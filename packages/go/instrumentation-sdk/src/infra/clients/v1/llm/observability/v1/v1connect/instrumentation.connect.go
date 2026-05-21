@@ -58,6 +58,9 @@ const (
 	// InstrumentationControlServiceScanPiiInjectionProcedure is the fully-qualified name of the
 	// InstrumentationControlService's ScanPiiInjection RPC.
 	InstrumentationControlServiceScanPiiInjectionProcedure = "/llm.observability.v1.InstrumentationControlService/ScanPiiInjection"
+	// InstrumentationControlServiceShouldSampleProcedure is the fully-qualified name of the
+	// InstrumentationControlService's ShouldSample RPC.
+	InstrumentationControlServiceShouldSampleProcedure = "/llm.observability.v1.InstrumentationControlService/ShouldSample"
 	// InstrumentationControlServiceInitMetricsProcedure is the fully-qualified name of the
 	// InstrumentationControlService's InitMetrics RPC.
 	InstrumentationControlServiceInitMetricsProcedure = "/llm.observability.v1.InstrumentationControlService/InitMetrics"
@@ -83,6 +86,7 @@ type InstrumentationControlServiceClient interface {
 	TriggerTestStreamCall(context.Context, *connect.Request[v1.TriggerTestStreamCallRequest]) (*connect.Response[v1.TriggerTestStreamCallResponse], error)
 	CountTokens(context.Context, *connect.Request[v1.CountTokensRequest]) (*connect.Response[v1.CountTokensResponse], error)
 	ScanPiiInjection(context.Context, *connect.Request[v1.ScanPiiInjectionRequest]) (*connect.Response[v1.ScanPiiInjectionResponse], error)
+	ShouldSample(context.Context, *connect.Request[v1.ShouldSampleRequest]) (*connect.Response[v1.ShouldSampleResponse], error)
 	InitMetrics(context.Context, *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error)
 	GetMetricsHealth(context.Context, *connect.Request[v1.GetMetricsHealthRequest]) (*connect.Response[v1.GetMetricsHealthResponse], error)
 	RecordMetrics(context.Context, *connect.Request[v1.RecordMetricsRequest]) (*connect.Response[v1.RecordMetricsResponse], error)
@@ -140,6 +144,11 @@ func NewInstrumentationControlServiceClient(httpClient connect.HTTPClient, baseU
 			baseURL+InstrumentationControlServiceScanPiiInjectionProcedure,
 			opts...,
 		),
+		shouldSample: connect.NewClient[v1.ShouldSampleRequest, v1.ShouldSampleResponse](
+			httpClient,
+			baseURL+InstrumentationControlServiceShouldSampleProcedure,
+			opts...,
+		),
 		initMetrics: connect.NewClient[v1.InitMetricsRequest, v1.InitMetricsResponse](
 			httpClient,
 			baseURL+InstrumentationControlServiceInitMetricsProcedure,
@@ -173,6 +182,7 @@ type instrumentationControlServiceClient struct {
 	triggerTestStreamCall  *connect.Client[v1.TriggerTestStreamCallRequest, v1.TriggerTestStreamCallResponse]
 	countTokens            *connect.Client[v1.CountTokensRequest, v1.CountTokensResponse]
 	scanPiiInjection       *connect.Client[v1.ScanPiiInjectionRequest, v1.ScanPiiInjectionResponse]
+	shouldSample           *connect.Client[v1.ShouldSampleRequest, v1.ShouldSampleResponse]
 	initMetrics            *connect.Client[v1.InitMetricsRequest, v1.InitMetricsResponse]
 	getMetricsHealth       *connect.Client[v1.GetMetricsHealthRequest, v1.GetMetricsHealthResponse]
 	recordMetrics          *connect.Client[v1.RecordMetricsRequest, v1.RecordMetricsResponse]
@@ -221,6 +231,11 @@ func (c *instrumentationControlServiceClient) ScanPiiInjection(ctx context.Conte
 	return c.scanPiiInjection.CallUnary(ctx, req)
 }
 
+// ShouldSample calls llm.observability.v1.InstrumentationControlService.ShouldSample.
+func (c *instrumentationControlServiceClient) ShouldSample(ctx context.Context, req *connect.Request[v1.ShouldSampleRequest]) (*connect.Response[v1.ShouldSampleResponse], error) {
+	return c.shouldSample.CallUnary(ctx, req)
+}
+
 // InitMetrics calls llm.observability.v1.InstrumentationControlService.InitMetrics.
 func (c *instrumentationControlServiceClient) InitMetrics(ctx context.Context, req *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error) {
 	return c.initMetrics.CallUnary(ctx, req)
@@ -252,6 +267,7 @@ type InstrumentationControlServiceHandler interface {
 	TriggerTestStreamCall(context.Context, *connect.Request[v1.TriggerTestStreamCallRequest]) (*connect.Response[v1.TriggerTestStreamCallResponse], error)
 	CountTokens(context.Context, *connect.Request[v1.CountTokensRequest]) (*connect.Response[v1.CountTokensResponse], error)
 	ScanPiiInjection(context.Context, *connect.Request[v1.ScanPiiInjectionRequest]) (*connect.Response[v1.ScanPiiInjectionResponse], error)
+	ShouldSample(context.Context, *connect.Request[v1.ShouldSampleRequest]) (*connect.Response[v1.ShouldSampleResponse], error)
 	InitMetrics(context.Context, *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error)
 	GetMetricsHealth(context.Context, *connect.Request[v1.GetMetricsHealthRequest]) (*connect.Response[v1.GetMetricsHealthResponse], error)
 	RecordMetrics(context.Context, *connect.Request[v1.RecordMetricsRequest]) (*connect.Response[v1.RecordMetricsResponse], error)
@@ -304,6 +320,11 @@ func NewInstrumentationControlServiceHandler(svc InstrumentationControlServiceHa
 		svc.ScanPiiInjection,
 		opts...,
 	)
+	instrumentationControlServiceShouldSampleHandler := connect.NewUnaryHandler(
+		InstrumentationControlServiceShouldSampleProcedure,
+		svc.ShouldSample,
+		opts...,
+	)
 	instrumentationControlServiceInitMetricsHandler := connect.NewUnaryHandler(
 		InstrumentationControlServiceInitMetricsProcedure,
 		svc.InitMetrics,
@@ -342,6 +363,8 @@ func NewInstrumentationControlServiceHandler(svc InstrumentationControlServiceHa
 			instrumentationControlServiceCountTokensHandler.ServeHTTP(w, r)
 		case InstrumentationControlServiceScanPiiInjectionProcedure:
 			instrumentationControlServiceScanPiiInjectionHandler.ServeHTTP(w, r)
+		case InstrumentationControlServiceShouldSampleProcedure:
+			instrumentationControlServiceShouldSampleHandler.ServeHTTP(w, r)
 		case InstrumentationControlServiceInitMetricsProcedure:
 			instrumentationControlServiceInitMetricsHandler.ServeHTTP(w, r)
 		case InstrumentationControlServiceGetMetricsHealthProcedure:
@@ -389,6 +412,10 @@ func (UnimplementedInstrumentationControlServiceHandler) CountTokens(context.Con
 
 func (UnimplementedInstrumentationControlServiceHandler) ScanPiiInjection(context.Context, *connect.Request[v1.ScanPiiInjectionRequest]) (*connect.Response[v1.ScanPiiInjectionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.ScanPiiInjection is not implemented"))
+}
+
+func (UnimplementedInstrumentationControlServiceHandler) ShouldSample(context.Context, *connect.Request[v1.ShouldSampleRequest]) (*connect.Response[v1.ShouldSampleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.ShouldSample is not implemented"))
 }
 
 func (UnimplementedInstrumentationControlServiceHandler) InitMetrics(context.Context, *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error) {
