@@ -20,6 +20,7 @@ This guide covers the technical architecture and end-user usage for the Python-b
   - [Prometheus Metrics & Grafana Dashboard](#prometheus-metrics--grafana-dashboard)
   - [Updating Config Files (Model Prices, PII Patterns, Infra)](#updating-config-files-model-prices-pii-patterns-infra)
   - [Docker Deployment](#docker-deployment)
+  - [Observability Launcher CLI (llm-observe)](#observability-launcher-cli-llm-observe)
 - [3. Implementation Call Chain](#3-implementation-call-chain)
 
 ## 1. System Architecture
@@ -184,9 +185,31 @@ docker run -d \
   chiefj/instrumentation-sdk-api:unstable
 ```
 
-Once running:
 * **API Endpoints**: Accessible at `http://localhost:8002`
 * **Grafana Portal**: Accessible at `http://localhost:3002` (Tempo is automatically provisioned as a read-only datasource and ready to query!)
+
+### Observability Launcher CLI (`llm-observe`)
+
+To simplify launching and managing the all-in-one container, the SDK provides a built-in command-line utility named `llm-observe`.
+
+Once `instrumentation-sdk` is installed, you can manage the observability stack with simple commands:
+
+```bash
+# Start the stack on host ports: API (8002), Grafana (3002), OTLP (4317), Prometheus (9090)
+llm-observe start
+
+# Check the status of the container stack
+llm-observe status
+
+# Stop and clean up the container stack
+llm-observe stop
+```
+
+#### Customizing Ports & Names
+You can customize the container name, ports, image, and tag:
+```bash
+llm-observe start --name my-observability --api-port 8005 --grafana-port 3005
+```
 
 For development with hot-reloading, use the provided Docker Compose:
 ```bash
