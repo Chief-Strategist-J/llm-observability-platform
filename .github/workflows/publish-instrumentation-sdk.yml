@@ -38,7 +38,7 @@ jobs:
           python -m build
 
       - name: Publish to PyPI
-        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: packages/python/instrumentation-sdk/dist/
