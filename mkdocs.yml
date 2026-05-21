@@ -15,8 +15,8 @@ theme:
   favicon: assets/favicon.svg
 
   font:
-    text: Inter
-    code: JetBrains Mono
+    text: IBM Plex Sans
+    code: IBM Plex Mono
 
   icon:
     repo: fontawesome/brands/github
