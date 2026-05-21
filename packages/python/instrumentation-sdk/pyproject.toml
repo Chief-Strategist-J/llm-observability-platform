@@ -1,6 +1,6 @@
 [project]
 name = "instrumentation-sdk"
-version = "1.7.1"
+version = "1.7.2"
 description = "LLM Observability Instrumentation SDK"
 readme = "README.md"
 authors = [
