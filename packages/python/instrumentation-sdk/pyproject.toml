@@ -1,7 +1,8 @@
 [project]
 name = "instrumentation-sdk"
-version = "1.7.0"
+version = "1.7.1"
 description = "LLM Observability Instrumentation SDK"
+readme = "README.md"
 authors = [
     { name = "LLM Observability Team" }
 ]
