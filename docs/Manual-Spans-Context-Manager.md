@@ -1,59 +1,76 @@
 # Manual Spans — Context Manager
 
-Use `llm_span` when you need to set metadata **after** the LLM responds — e.g. actual model used, token counts from the response, or custom fields. Use `llm_span_with_tokens` to also get automatic pre-call token counting.
+Use context managers when you need dynamic span properties or need to set metadata **after** the LLM responds (such as actual tokens consumed, custom session IDs, or embedding vectors).
 
 ---
 
-## `llm_span` — Basic
+## Token Pre-Counting & Logging Pipeline
+
+When using `llm_span_with_tokens`, the SDK performs token counting before making the outbound LLM call:
+
+```
+[Prompt Passed to Context Manager]
+                │
+                ▼
+      [Tiktoken Matcher] ──(Fails/Unknown Model)──► [Estimate (Char Heuristic)]
+                │                                             │
+                ├──(Success)                                  │
+                ▼                                             ▼
+       [Exact Token Count]                           [Heuristic Token Count]
+                │                                             │
+                └───────────────┬─────────────────────────────┘
+                                │
+                                ▼
+                   [Span Metadata Recorded]
+                    - prompt_tokens
+                    - token_count_method
+                                │
+                                ▼
+                      [Outbound LLM Call]
+```
+
+---
+
+## `llm_span` — Basic Usage
+
+The standard context manager lets you set metadata dynamically using `span.set_metadata(key, value)`.
 
 ```python
 from instrumentation_sdk import llm_span
 
 async def handle_request(user_id: str, prompt: str):
     async with llm_span(model="gpt-4o", provider="openai", user_id=user_id) as span:
-
+        # Outbound call to LLM
         response = await client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt}]
         )
 
-        # Set metadata from the actual response
+        # Log details retrieved from the response object
         span.set_metadata("prompt_tokens", response.usage.prompt_tokens)
         span.set_metadata("completion_tokens", response.usage.completion_tokens)
         span.set_metadata("actual_model", response.model)
 
-    # Span is reported here automatically (even on exception)
     return response.choices[0].message.content
 ```
 
-**`set_metadata` works for any key.** Common ones:
-
-| Key | Type | Notes |
-|---|---|---|
-| `prompt_tokens` | `int` | Exact count from response |
-| `completion_tokens` | `int` | Exact count from response |
-| `actual_model` | `str` | Model the provider actually used |
-| `session_id` | `str` | Conversation thread ID |
-| `finish_reason` | `str` | `stop`, `length`, `content_filter` |
-| `retry_count` | `int` | Number of retries before success |
-
----
-
-## `llm_span` — Sync
-
-Works identically without `async`:
-
-```python
-with llm_span(model="gpt-4o", provider="openai") as span:
-    response = client.chat.completions.create(...)
-    span.set_metadata("prompt_tokens", response.usage.prompt_tokens)
-```
+!!! note "Metadata Keys"
+    `set_metadata` accepts any string key. Standard dashboard keys are:
+    
+    | Key | Type | Description |
+    |---|---|---|
+    | `prompt_tokens` | `int` | Input token count |
+    | `completion_tokens` | `int` | Output token count |
+    | `actual_model` | `str` | Exact model name returned by the provider |
+    | `session_id` | `str` | Logical conversation/thread grouping |
+    | `finish_reason` | `str` | e.g. `stop`, `length`, `content_filter` |
+    | `retry_count` | `int` | Number of attempts made |
 
 ---
 
 ## `llm_span_with_tokens` — Automatic Token Pre-Counting
 
-Counts prompt tokens **before** the LLM call and records `prompt_tokens` and `token_count_method` automatically.
+Use `llm_span_with_tokens` to count prompt tokens locally **before** the LLM call is executed. This records `prompt_tokens` and `token_count_method` automatically.
 
 ```python
 from instrumentation_sdk import llm_span_with_tokens
@@ -62,121 +79,97 @@ async def handle(prompt: str):
     async with llm_span_with_tokens(
         model="gpt-4o",
         provider="openai",
-        prompt=prompt          # tokens are counted here, before the call
+        prompt=prompt  # String prompt passed directly
     ) as span:
         response = await client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt}]
         )
-        # prompt_tokens already set — just add completion side
+        # prompt_tokens is already computed — just log completion tokens
         span.set_metadata("completion_tokens", response.usage.completion_tokens)
 ```
 
-Token counting falls back to character-based heuristics if `tiktoken` doesn't recognise the model.
+!!! tip "Chat Message Support"
+    `llm_span_with_tokens` handles both plain strings and structured message lists:
+    
+    ```python
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Explain transformers in a sentence."}
+    ]
+    
+    async with llm_span_with_tokens(
+        model="gpt-4o",
+        provider="openai",
+        prompt=messages  # Supported automatically
+    ) as span:
+        ...
+    ```
 
 ---
 
-## With Chat Message Lists
+## Synchronous Context Manager
 
-Both `llm_span_with_tokens` and the REST endpoint handle structured message arrays:
+If you are not using `asyncio`, both context managers can be used in synchronous blocks without the `async` prefix:
 
 ```python
-messages = [
-    {"role": "system", "content": "You are a helpful assistant."},
-    {"role": "user", "content": "Explain transformers in one paragraph."}
-]
+from instrumentation_sdk import llm_span
 
-async with llm_span_with_tokens(
-    model="gpt-4o",
-    provider="openai",
-    prompt=messages          # list format accepted
-) as span:
-    response = await client.chat.completions.create(model="gpt-4o", messages=messages)
+with llm_span(model="gpt-4o", provider="openai") as span:
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "Hello!"}]
+    )
+    span.set_metadata("prompt_tokens", response.usage.prompt_tokens)
 ```
 
 ---
 
 ## Error Handling
 
-The span is always reported, even when the block raises:
+If an exception occurs within the context block, the span is automatically finalized, marked with `status="error"`, and reported before the exception bubbles up:
 
 ```python
 async with llm_span(model="gpt-4o", provider="openai") as span:
-    raise TimeoutError("Provider timeout")
-# span emitted with status="error"
+    # This will trigger an error span to be emitted
+    raise TimeoutError("Provider failed to respond")
 ```
 
 ---
 
-## Nested Spans
+## Nested Context Managers
+
+Context managers can be nested to capture hierarchical multi-agent or router-worker topologies:
 
 ```python
-async with llm_span(model="router", service_name="orchestrator") as parent:
-    async with llm_span(model="gpt-4o", service_name="worker") as child:
+async with llm_span(model="router-v2", service_name="agent-router") as parent:
+    # Router logic
+    async with llm_span(model="gpt-4o", service_name="writer-agent") as child:
+        # Worker logic
         response = await client.chat.completions.create(...)
         child.set_metadata("completion_tokens", response.usage.completion_tokens)
-    parent.set_metadata("child_model", "gpt-4o")
-# child span emitted first, parent span emitted second
 ```
 
 ---
 
-## Manual Reporter (Advanced)
+## Token Counting Endpoint
 
-If you need direct control over the span payload:
-
-```python
-from instrumentation_sdk import get_reporter
-
-reporter = get_reporter()
-await reporter.report_async({
-    "span_id": "550e8400-e29b-41d4-a716-446655440000",
-    "service_name": "my-service",
-    "model": "gpt-4o",
-    "provider": "openai",
-    "status": "success",
-    "latency_ms_total": 312,
-    "prompt_tokens": 45,
-    "completion_tokens": 120,
-})
-```
-
----
-
-## Try It via REST
-
-Count tokens without writing code:
+You can query the SDK's token counting engine directly via REST:
 
 ```bash
-# Plain string
 curl -X POST http://localhost:8002/v1/token-counting/count \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "Explain transformers in one paragraph.", "model": "gpt-4o"}'
+  -d '{"prompt": "Hello world!", "model": "gpt-4o"}'
 ```
 
 Response:
 ```json
-{"tokens": 9, "method": "tiktoken"}
-```
-
-```bash
-# Chat message list
-curl -X POST http://localhost:8002/v1/token-counting/count \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": [
-      {"role": "system", "content": "You are a helpful assistant."},
-      {"role": "user", "content": "Explain transformers."}
-    ],
-    "model": "gpt-4o"
-  }'
-```
-
-Response:
-```json
-{"tokens": 22, "method": "tiktoken"}
+{"tokens": 3, "method": "tiktoken"}
 ```
 
 ---
 
-## Next: [Streaming Observability](Streaming-Observability)
+## Next Steps
+
+- [Streaming Observability](Streaming-Observability.md) — Tracking generators, async iterators, and TTFT.
+- [PII & Injection Scanning](PII-and-Injection-Scanning.md) — Masking sensitive data and preventing prompt exploits.

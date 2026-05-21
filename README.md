@@ -1,6 +1,31 @@
 # LLM Observability Platform
 
+[![Documentation](https://img.shields.io/badge/docs-readthedocs-blue?logo=readthedocs)](https://llm-observability-platform.readthedocs.io/en/latest/)
+[![Wiki](https://img.shields.io/badge/wiki-GitHub-grey?logo=github)](https://github.com/Chief-Strategist-J/llm-observability-platform/wiki)
+[![PyPI](https://img.shields.io/badge/PyPI-instrumentation--sdk-orange?logo=pypi)](https://pypi.org/project/instrumentation-sdk/)
+
 A comprehensive Python-based observability platform for Large Language Models (LLMs) with chat interface, container orchestration, monitoring, and advanced analytics capabilities.
+
+## 📚 Documentation
+
+Full SDK documentation is available at:
+
+👉 **[https://llm-observability-platform.readthedocs.io/en/latest/](https://llm-observability-platform.readthedocs.io/en/latest/)**
+
+| Section | What it covers |
+|---|---|
+| [Installation & Quick Start](https://llm-observability-platform.readthedocs.io/en/latest/Installation-and-Quick-Start/) | Install, first span, verify it works |
+| [Auto-Instrumentation](https://llm-observability-platform.readthedocs.io/en/latest/Auto-Instrumentation/) | Zero-code patching for OpenAI, Anthropic, LiteLLM, LangChain |
+| [Manual Spans — Decorator](https://llm-observability-platform.readthedocs.io/en/latest/Manual-Spans-Decorator/) | `@llm_observe` decorator usage |
+| [Manual Spans — Context Manager](https://llm-observability-platform.readthedocs.io/en/latest/Manual-Spans-Context-Manager/) | `llm_span` / `llm_span_with_tokens` context managers |
+| [Streaming Observability](https://llm-observability-platform.readthedocs.io/en/latest/Streaming-Observability/) | TTFT tracking, `wrap_stream`, `wrap_async_stream` |
+| [PII & Injection Scanning](https://llm-observability-platform.readthedocs.io/en/latest/PII-and-Injection-Scanning/) | Aho-Corasick redaction, scan API |
+| [Deterministic Sampling](https://llm-observability-platform.readthedocs.io/en/latest/Deterministic-Sampling/) | SHA-256 modulo-100 gate |
+| [MiniLM Embeddings](https://llm-observability-platform.readthedocs.io/en/latest/MiniLM-Embeddings/) | Async 384-dim prompt embeddings |
+| [Prometheus Metrics & Grafana](https://llm-observability-platform.readthedocs.io/en/latest/Prometheus-Metrics-and-Grafana/) | Cost, latency, TTFT dashboards |
+| [REST Management API](https://llm-observability-platform.readthedocs.io/en/latest/REST-Management-API/) | Full endpoint reference |
+| [Docker & CLI Deployment](https://llm-observability-platform.readthedocs.io/en/latest/Docker-and-CLI-Deployment/) | `llm-observe` CLI, all-in-one container |
+| [Config Files Reference](https://llm-observability-platform.readthedocs.io/en/latest/Config-Files-Reference/) | Model prices, PII patterns, infra configs |
 
 ### Infrastructure Observability
 

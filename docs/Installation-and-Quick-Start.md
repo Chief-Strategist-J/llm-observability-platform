@@ -12,6 +12,26 @@ pip install instrumentation-sdk
 
 ---
 
+## How It Fits Together
+
+```
+pip install instrumentation-sdk
+         │
+         ▼
+Your Python App
+  + one line: init_auto_instrumentation()
+         │
+         ▼
+  instrumentation-sdk
+         │
+    ┌────┴────┐
+    ▼         ▼
+  API        Grafana
+localhost:8002  localhost:3002
+```
+
+---
+
 ## Option A — Auto-Instrumentation (Zero Code Changes)
 
 Drop this at the top of your app. Every OpenAI / Anthropic / LiteLLM / LangChain call is tracked automatically.
@@ -30,6 +50,9 @@ response = await client.chat.completions.create(
 )
 ```
 
+!!! tip "Best for"
+    Existing apps where you don't want to change any LLM call code.
+
 ---
 
 ## Option B — Manual Span (Decorator)
@@ -43,6 +66,9 @@ async def ask_llm(prompt: str):
     return response
 ```
 
+!!! tip "Best for"
+    When you want to tag specific functions with a service name and endpoint.
+
 ---
 
 ## Option C — Manual Span (Context Manager)
@@ -55,21 +81,31 @@ async with llm_span(model="gpt-4o", provider="openai") as span:
     span.set_metadata("prompt_tokens", response.usage.prompt_tokens)
 ```
 
+!!! tip "Best for"
+    When you need to attach token counts or custom metadata from the actual response.
+
 ---
 
-## Verify It's Working
-
-### 1. Start the all-in-one observability stack
+## Start the Observability Stack
 
 ```bash
 llm-observe start
 ```
 
-This launches:
-- **API** → `http://localhost:8002`
-- **Grafana** → `http://localhost:3002`
+This launches the all-in-one container:
 
-### 2. Trigger a test span via curl
+| Service | URL |
+|---|---|
+| FastAPI REST API | `http://localhost:8002` |
+| Grafana Dashboards | `http://localhost:3002` |
+| Prometheus | `http://localhost:9090` |
+| OTLP / Tempo | `localhost:4317` |
+
+---
+
+## Verify It's Working
+
+### 1. Trigger a test span
 
 ```bash
 curl -X POST http://localhost:8002/v1/instrumentation/test-call \
@@ -82,14 +118,17 @@ Expected response:
 {"success": true, "message": "Test call triggered via httpx for openai"}
 ```
 
-### 3. Check Grafana
+### 2. Check Grafana
 
-Open `http://localhost:3002` → **LLM Observability** folder → pick any dashboard.  
-Spans appear within 5–10 seconds.
+Open `http://localhost:3002` → **LLM Observability** folder → pick any dashboard.
+Spans appear within **5–10 seconds**.
+
+![Grafana Metrics Dashboard](assets/promothes.png)
+*Grafana showing LLM latency, token usage and cost metrics*
 
 ---
 
-## Supported LLM Providers (Auto-Instrumentation)
+## Supported LLM Providers
 
 | Provider | Client | What's patched |
 |---|---|---|
@@ -103,6 +142,6 @@ Spans appear within 5–10 seconds.
 
 ## Next Steps
 
-- [Auto-Instrumentation](Auto-Instrumentation) — detailed provider config
-- [Manual Spans — Context Manager](Manual-Spans-Context-Manager) — set metadata mid-call
-- [Docker & CLI Deployment](Docker-and-CLI-Deployment) — production deployment
+- [Auto-Instrumentation](Auto-Instrumentation.md) — detailed provider config
+- [Manual Spans — Context Manager](Manual-Spans-Context-Manager.md) — set metadata mid-call
+- [Docker & CLI Deployment](Docker-and-CLI-Deployment.md) — production deployment

@@ -4,58 +4,69 @@ Track streaming LLM responses with automatic **Time-to-First-Token (TTFT)** capt
 
 ---
 
-## How It Works
+## Streaming Lifecycle & Timeline
 
-The SDK wraps your generator/async-generator in a thin observable iterator that:
-1. Records **TTFT** the moment the first chunk is yielded
-2. Accumulates text chunks and counts completion tokens on the fly
-3. Finalizes and reports the span when the stream ends, is closed early, or raises
+The SDK wraps your stream generator/async-generator in a thin wrapper that captures metrics at key points in the stream's lifecycle:
 
-Your consumer code doesn't change — just wrap the stream.
+```
+[Start context: llm_streaming_span()]
+           │
+           ▼
+[Launch API Request]
+           │
+           ▼
+[Yield First Chunk]  ────────► Record TTFT (Time-to-First-Token)
+           │
+           ▼
+[Yield Next Chunks]  ────────► Accumulate content string in background
+           │
+           ▼
+[Stream Ends / Aborts] ──────► Count total completion tokens (tiktoken/est)
+           │                   Compute total request latency
+           ▼
+ [Span Emitted to API]
+```
 
 ---
 
 ## Sync Streaming
 
+Use `llm_streaming_span` along with `wrap_stream` to wrap a synchronous generator:
+
 ```python
 from instrumentation_sdk import llm_streaming_span, wrap_stream
 
 def stream_response(prompt: str):
-    with llm_streaming_span(
-        model="gpt-4o",
-        provider="openai",
-        prompt=prompt
-    ) as span_ctx:
-
+    with llm_streaming_span(model="gpt-4o", provider="openai", prompt=prompt) as span_ctx:
+        # Outbound call with stream=True
         raw_stream = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             stream=True
         )
 
+        # Wrap the stream to intercept yields
         wrapped = wrap_stream(raw_stream, span_context=span_ctx, model="gpt-4o")
 
         for chunk in wrapped:
             text = chunk.choices[0].delta.content or ""
             print(text, end="", flush=True)
 
-    # Span reported here: latency_ms_total, latency_ms_ttft, completion_tokens
+    # Span is reported at this point (including TTFT and completion tokens)
 ```
 
 ---
 
 ## Async Streaming
 
+Wrap async generators using `wrap_async_stream`:
+
 ```python
 from instrumentation_sdk import llm_streaming_span, wrap_async_stream
 
 async def stream_response(prompt: str):
-    async with llm_streaming_span(
-        model="gpt-4o",
-        provider="openai",
-        prompt=prompt
-    ) as span_ctx:
-
+    async with llm_streaming_span(model="gpt-4o", provider="openai", prompt=prompt) as span_ctx:
+        # Outbound async call
         raw_stream = await client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
@@ -71,11 +82,12 @@ async def stream_response(prompt: str):
 
 ---
 
-## Custom Text Extractor
+## Custom Text Extractors
 
-If your stream chunks aren't standard OpenAI objects, pass an extractor function:
+If you are using a provider whose stream chunks don't match standard OpenAI structures, pass a custom `extract_text_fn` handler:
 
 ```python
+# Custom extractor mapping chunk dictionary keys
 def my_extractor(chunk) -> str:
     return chunk.get("delta", {}).get("text", "")
 
@@ -89,83 +101,39 @@ wrapped = wrap_async_stream(
 
 ---
 
-## Set Metadata Mid-Stream
+## Early Aborts & Cleanups
 
-You can call `set_metadata` while the stream is still running:
-
-```python
-async with llm_streaming_span(model="gpt-4o", provider="openai") as span_ctx:
-    wrapped = wrap_async_stream(raw_stream, span_context=span_ctx, model="gpt-4o")
-    async for chunk in wrapped:
-        if chunk.model:
-            span_ctx.set_metadata("actual_model", chunk.model)
-        yield chunk.choices[0].delta.content or ""
-```
-
----
-
-## Early Close / Abort Resilience
-
-If a consumer closes the stream before it's exhausted, the SDK still captures all tokens generated up to that point:
+If a user or application closes the stream before it finishes, the SDK captures the partial output and emits the span immediately with the accrued token counts:
 
 ```python
 wrapped = wrap_stream(raw_stream, span_context=span_ctx, model="gpt-4o")
 
 for i, chunk in enumerate(wrapped):
     print(chunk)
-    if i == 2:
-        wrapped.close()   # span finalized here with partial token count
+    if i == 5:
+        wrapped.close()  # Finalizes the span and uploads collected telemetry
         break
 ```
 
-Async version:
-```bash
-await wrapped.aclose()
-```
+!!! note "Async Early Close"
+    For async generators, call `await wrapped.aclose()` to trigger the same finalization behavior.
 
 ---
 
-## What Gets Captured
+## Telemetry Attributes
 
-| Field | Description |
-|---|---|
-| `latency_ms_total` | Wall clock from span start to stream exhaustion |
-| `latency_ms_ttft` | Time from span start to first chunk yielded |
-| `completion_tokens` | Token count of accumulated text (tiktoken or estimated) |
-| `token_count_method` | `tiktoken` or `estimated` |
-| `status` | `success` or `error` |
+Streaming spans capture the following core metrics:
 
----
-
-## Try It via REST
-
-Trigger a mock streaming call and see SSE events:
-
-```bash
-curl -X POST http://localhost:8002/v1/streaming/test-stream-call \
-  -H "Content-Type: application/json" \
-  -d '{"provider": "openai", "chunks": ["Hello", " world", "!"]}'
-```
-
-Response (SSE):
-```
-data: Hello
-
-data:  world
-
-data: !
-```
-
-The SDK captures TTFT and token count for those chunks and reports the span.
+| Attribute | Type | Description |
+|---|---|---|
+| `latency_ms_total` | `int` | Duration from span start to stream exhaustion/closure |
+| `latency_ms_ttft` | `int` | Duration from span start to first yielded chunk |
+| `completion_tokens` | `int` | Computed from accumulated stream content |
+| `token_count_method` | `str` | `"tiktoken"` or `"estimated"` |
 
 ---
 
-## Notes
+## Next Steps
 
-- `llm_streaming_span` returns an `LLMStreamingSpanContext` — a subclass of `LLMSpanContext`, so all `set_metadata` calls work the same way.
-- Span finalization is idempotent — closing or exhausting the stream multiple times is safe.
-- Token counting uses `tiktoken` when the model is recognized, falls back to character heuristics otherwise.
-
----
-
-## Next: [PII & Injection Scanning](PII-and-Injection-Scanning)
+- [PII & Injection Scanning](PII-and-Injection-Scanning.md) — Prevent data leaks and input injections.
+- [Deterministic Sampling](Deterministic-Sampling.md) — Optimize resource usage with the 1% gate.

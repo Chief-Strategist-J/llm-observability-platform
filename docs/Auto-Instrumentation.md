@@ -6,7 +6,24 @@ Patch popular LLM clients globally with a single call — no changes to your exi
 
 ## How It Works
 
-`init_auto_instrumentation()` monkey-patches the underlying `create` / `invoke` / `completion` methods of each supported client at import time. Every call automatically gets a span with latency, token counts, provider, model, and status.
+```
+Your App starts
+      │
+      ▼
+init_auto_instrumentation()
+      │
+      ├──► Patches openai.AsyncOpenAI.chat.completions.create
+      ├──► Patches anthropic.AsyncAnthropic.messages.create
+      ├──► Patches litellm.acompletion / completion
+      ├──► Patches LangChain BaseChatModel.ainvoke / invoke
+      └──► Patches httpx / requests (catch-all for any LLM URL)
+                    │
+                    ▼
+         Every LLM call now emits a span automatically:
+         model · provider · tokens · latency · finish_reason
+```
+
+`init_auto_instrumentation()` monkey-patches the underlying methods at import time. Every call automatically gets a span with latency, token counts, provider, model, and status.
 
 ---
 
@@ -18,6 +35,9 @@ from instrumentation_sdk import init_auto_instrumentation
 # Call once at application startup (e.g. in main.py or app factory)
 init_auto_instrumentation()
 ```
+
+!!! tip
+    Calling `init_auto_instrumentation()` twice is safe — it is idempotent.
 
 ---
 
@@ -153,8 +173,6 @@ Response from `/detect`:
 
 ## Verify End-to-End Tracing
 
-Trigger a test call to confirm spans are flowing:
-
 ```bash
 # Verify with httpx
 curl -X POST http://localhost:8002/v1/instrumentation/test-call \
@@ -167,14 +185,18 @@ curl -X POST http://localhost:8002/v1/instrumentation/test-call \
   -d '{"method": "requests", "provider": "anthropic"}'
 ```
 
+Then open Grafana at `http://localhost:3002` to see the span appear within 5–10 seconds.
+
+![Tracing Dashboard](assets/tracing.png)
+*Distributed traces flowing from your app through to Grafana Tempo*
+
 ---
 
 ## Notes
 
-- Calling `init_auto_instrumentation()` twice is safe — it's idempotent.
 - HTTP-level patching (`httpx`, `requests`) catches any LLM provider not explicitly supported.
 - To add a custom patcher, implement the `PatcherPort` protocol in `src/features/auto_instrumentation/ports.py`.
 
 ---
 
-## Next: [Manual Spans — Decorator](Manual-Spans-Decorator)
+## Next: [Manual Spans — Decorator](Manual-Spans-Decorator.md)

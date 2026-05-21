@@ -27,6 +27,7 @@ theme:
     - search.highlight
     - search.suggest
     - content.code.copy
+    - admonition
 
 plugins:
   - search
