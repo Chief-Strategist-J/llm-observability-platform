@@ -17,26 +17,19 @@
   --md-code-fg-color:           #e2e8f0;
 
   --md-admonition-bg-color:     #111827;
-}
 
-body, input {
-  font-family: 'Inter', sans-serif;
+  --md-text-font:               'Inter', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+  --md-code-font:               'JetBrains Mono', SFMono-Regular, Consolas, Menlo, monospace;
 }
 
 .md-typeset h1,
 .md-typeset h2,
 .md-typeset h3 {
-  font-family: 'Inter', sans-serif;
   font-weight: 700;
   letter-spacing: -0.022em;
 }
 
-code, pre, .md-typeset code {
-  font-family: 'JetBrains Mono', monospace;
-}
-
 .md-nav__title {
-  font-family: 'JetBrains Mono', monospace;
   font-size: 0.65rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -52,7 +45,6 @@ code, pre, .md-typeset code {
 }
 
 .tx-hero h1 {
-  font-family: 'Inter', sans-serif;
   font-weight: 800;
   font-size: 2.8rem;
   letter-spacing: -0.03em;
