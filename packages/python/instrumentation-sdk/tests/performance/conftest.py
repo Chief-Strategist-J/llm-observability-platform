@@ -8,7 +8,8 @@ def pytest_configure(config):
         "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
         "in_memory": None,
         "wal_fallback": None,
-        "wal_replay": None
+        "wal_replay": None,
+        "otel_comparison": None
     }
 
 def pytest_sessionfinish(session, exitstatus):
@@ -21,112 +22,134 @@ def pytest_sessionfinish(session, exitstatus):
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>LLM Observability SDK Performance Report</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <title>LLM Observability SDK Performance Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      background-color: #0f172a;
-      color: #f1f5f9;
-      font-family: 'Inter', sans-serif;
+      background: radial-gradient(circle at top right, #1e1b4b 0%, #0f172a 100%);
+      color: #f8fafc;
+      font-family: 'Outfit', sans-serif;
       margin: 0;
-      padding: 2rem;
+      padding: 2.5rem;
+      min-height: 100vh;
     }
     .container {
-      max-width: 1100px;
+      max-width: 1200px;
       margin: 0 auto;
     }
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 2rem;
-      border-bottom: 1px solid #334155;
-      padding-bottom: 1rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 1.5rem;
     }
     .title h1 {
       margin: 0;
-      font-size: 2.25rem;
+      font-size: 2.5rem;
       font-weight: 700;
-      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      background: linear-gradient(135deg, #38bdf8, #818cf8, #a78bfa);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
     .title p {
       margin: 0.5rem 0 0;
       color: #94a3b8;
+      font-size: 1.1rem;
     }
     .meta-badge {
-      background-color: #1e293b;
-      padding: 0.5rem 1rem;
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(10px);
+      padding: 0.75rem 1.25rem;
       border-radius: 9999px;
-      font-size: 0.875rem;
-      border: 1px solid #334155;
+      font-size: 0.9rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
     }
-    .grid {
+    .grid-4 {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 1.5rem;
-      margin-bottom: 2rem;
+      margin-bottom: 2.5rem;
     }
     .card {
-      background-color: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 0.75rem;
+      background: rgba(30, 41, 59, 0.6);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 1rem;
       padding: 1.5rem;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(56, 189, 248, 0.4);
     }
     .card-title {
-      font-size: 0.875rem;
+      font-size: 0.85rem;
       color: #94a3b8;
       text-transform: uppercase;
       font-weight: 600;
-      margin-bottom: 0.5rem;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
     }
     .card-value {
-      font-size: 1.75rem;
+      font-size: 1.85rem;
       font-weight: 700;
+      margin-bottom: 0.25rem;
     }
-    .card-value.green { color: #10b981; }
-    .card-value.blue { color: #3b82f6; }
-    .card-value.purple { color: #8b5cf6; }
+    .card-value.green { color: #34d399; text-shadow: 0 0 10px rgba(52, 211, 153, 0.2); }
+    .card-value.blue { color: #60a5fa; text-shadow: 0 0 10px rgba(96, 165, 250, 0.2); }
+    .card-value.purple { color: #a78bfa; text-shadow: 0 0 10px rgba(167, 139, 250, 0.2); }
+    .card-value.pink { color: #f472b6; text-shadow: 0 0 10px rgba(244, 114, 182, 0.2); }
     .card-subtitle {
-      font-size: 0.75rem;
-      color: #64748b;
+      font-size: 0.8rem;
+      color: #cbd5e1;
       margin-top: 0.5rem;
+      line-height: 1.4;
+    }
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
     }
     .chart-container {
-      background-color: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 0.75rem;
-      padding: 1.5rem;
-      margin-bottom: 2rem;
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 1rem;
+      padding: 1.75rem;
     }
     .chart-header {
       font-size: 1.25rem;
       font-weight: 600;
-      margin-bottom: 1rem;
+      margin-bottom: 1.25rem;
+      color: #f1f5f9;
     }
     .table-container {
-      background-color: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 0.75rem;
-      padding: 1.5rem;
-      margin-bottom: 2rem;
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 1rem;
+      padding: 1.75rem;
+      margin-bottom: 2.5rem;
     }
     .table-header {
       font-size: 1.25rem;
       font-weight: 600;
-      margin-bottom: 1rem;
+      margin-bottom: 1.25rem;
+      color: #f1f5f9;
     }
     table {
       width: 100%;
       border-collapse: collapse;
     }
     th, td {
-      padding: 0.75rem 1rem;
+      padding: 1rem 1.25rem;
       text-align: left;
-      border-bottom: 1px solid #334155;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.95rem;
     }
     th {
       color: #94a3b8;
@@ -135,6 +158,9 @@ def pytest_sessionfinish(session, exitstatus):
     tr:last-child td {
       border-bottom: none;
     }
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
   </style>
 </head>
 <body>
@@ -142,14 +168,14 @@ def pytest_sessionfinish(session, exitstatus):
     <div class="header">
       <div class="title">
         <h1>LLM Observability SDK</h1>
-        <p>Performance Benchmark Report</p>
+        <p>Performance & Resource Benchmark Report</p>
       </div>
       <div class="meta-badge">
-        Generated on: <span id="timestamp"></span>
+        Generated: <span id="timestamp"></span>
       </div>
     </div>
     
-    <div class="grid">
+    <div class="grid-4">
       <div class="card">
         <div class="card-title">In-Memory Ingestion</div>
         <div class="card-value green" id="in-memory-val">--</div>
@@ -165,12 +191,25 @@ def pytest_sessionfinish(session, exitstatus):
         <div class="card-value purple" id="wal-replay-val">--</div>
         <div class="card-subtitle" id="wal-replay-sub">--</div>
       </div>
+      <div class="card">
+        <div class="card-title">OTel SDK Baseline</div>
+        <div class="card-value pink" id="otel-val">--</div>
+        <div class="card-subtitle" id="otel-sub">--</div>
+      </div>
     </div>
     
-    <div class="chart-container">
-      <div class="chart-header">Throughput Comparison (Logarithmic Scale)</div>
-      <div style="height: 300px; position: relative;">
-        <canvas id="throughputChart"></canvas>
+    <div class="charts-grid">
+      <div class="chart-container">
+        <div class="chart-header">Throughput Comparison (spans/second)</div>
+        <div style="height: 320px; position: relative;">
+          <canvas id="throughputChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-container">
+        <div class="chart-header">Tail Latency Profile (ms)</div>
+        <div style="height: 320px; position: relative;">
+          <canvas id="latencyChart"></canvas>
+        </div>
       </div>
     </div>
 
@@ -181,28 +220,49 @@ def pytest_sessionfinish(session, exitstatus):
           <tr>
             <th>Scenario</th>
             <th>Throughput (spans/sec)</th>
-            <th>Total Duration</th>
-            <th>Number of Spans</th>
+            <th>p50 Latency</th>
+            <th>p95 Latency</th>
+            <th>p99 Latency</th>
+            <th>CPU Time</th>
+            <th>Peak RSS Memory</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>In-Memory Ingestion (Kafka Online)</td>
             <td id="table-in-memory-tp">--</td>
-            <td id="table-in-memory-dur">--</td>
-            <td id="table-in-memory-count">--</td>
+            <td id="table-in-memory-p50">--</td>
+            <td id="table-in-memory-p95">--</td>
+            <td id="table-in-memory-p99">--</td>
+            <td id="table-in-memory-cpu">--</td>
+            <td id="table-in-memory-mem">--</td>
           </tr>
           <tr>
             <td>WAL Fallback Ingestion (Kafka Offline)</td>
             <td id="table-wal-fallback-tp">--</td>
-            <td id="table-wal-fallback-dur">--</td>
-            <td id="table-wal-fallback-count">--</td>
+            <td id="table-wal-fallback-p50">--</td>
+            <td id="table-wal-fallback-p95">--</td>
+            <td id="table-wal-fallback-p99">--</td>
+            <td id="table-wal-fallback-cpu">--</td>
+            <td id="table-wal-fallback-mem">--</td>
           </tr>
           <tr>
             <td>WAL Replay Recovery (Re-established)</td>
             <td id="table-wal-replay-tp">--</td>
-            <td id="table-wal-replay-dur">--</td>
-            <td id="table-wal-replay-count">--</td>
+            <td id="table-wal-replay-p50">N/A</td>
+            <td id="table-wal-replay-p95">N/A</td>
+            <td id="table-wal-replay-p99">N/A</td>
+            <td id="table-wal-replay-cpu">--</td>
+            <td id="table-wal-replay-mem">--</td>
+          </tr>
+          <tr>
+            <td>OpenTelemetry SDK (Baseline)</td>
+            <td id="table-otel-tp">--</td>
+            <td id="table-otel-p50">--</td>
+            <td id="table-otel-p95">--</td>
+            <td id="table-otel-p99">--</td>
+            <td id="table-otel-cpu">--</td>
+            <td id="table-otel-mem">--</td>
           </tr>
         </tbody>
       </table>
@@ -213,51 +273,54 @@ def pytest_sessionfinish(session, exitstatus):
     const data = __METRICS_DATA__;
     document.getElementById('timestamp').innerText = data.timestamp;
     
-    if (data.in_memory) {
-      document.getElementById('in-memory-val').innerText = data.in_memory.throughput.toLocaleString(undefined, {maximumFractionDigits: 2}) + ' spans/s';
-      document.getElementById('in-memory-sub').innerText = data.in_memory.spans + ' spans in ' + data.in_memory.duration.toFixed(4) + 's';
-      document.getElementById('table-in-memory-tp').innerText = data.in_memory.throughput.toLocaleString(undefined, {maximumFractionDigits: 2});
-      document.getElementById('table-in-memory-dur').innerText = data.in_memory.duration.toFixed(4) + 's';
-      document.getElementById('table-in-memory-count').innerText = data.in_memory.spans;
-    }
-    if (data.wal_fallback) {
-      document.getElementById('wal-fallback-val').innerText = data.wal_fallback.throughput.toLocaleString(undefined, {maximumFractionDigits: 2}) + ' spans/s';
-      document.getElementById('wal-fallback-sub').innerText = data.wal_fallback.spans + ' spans in ' + data.wal_fallback.duration.toFixed(4) + 's';
-      document.getElementById('table-wal-fallback-tp').innerText = data.wal_fallback.throughput.toLocaleString(undefined, {maximumFractionDigits: 2});
-      document.getElementById('table-wal-fallback-dur').innerText = data.wal_fallback.duration.toFixed(4) + 's';
-      document.getElementById('table-wal-fallback-count').innerText = data.wal_fallback.spans;
-    }
-    if (data.wal_replay) {
-      document.getElementById('wal-replay-val').innerText = data.wal_replay.throughput.toLocaleString(undefined, {maximumFractionDigits: 2}) + ' spans/s';
-      document.getElementById('wal-replay-sub').innerText = data.wal_replay.spans + ' spans in ' + data.wal_replay.duration.toFixed(4) + 's';
-      document.getElementById('table-wal-replay-tp').innerText = data.wal_replay.throughput.toLocaleString(undefined, {maximumFractionDigits: 2});
-      document.getElementById('table-wal-replay-dur').innerText = data.wal_replay.duration.toFixed(4) + 's';
-      document.getElementById('table-wal-replay-count').innerText = data.wal_replay.spans;
+    function populateMetrics(key, valId, subId, tpId, p50Id, p95Id, p99Id, cpuId, memId) {
+      const metric = data[key];
+      if (!metric) return;
+      document.getElementById(valId).innerText = metric.throughput.toLocaleString(undefined, {maximumFractionDigits: 2}) + ' spans/s';
+      let subText = metric.spans + ' spans in ' + metric.duration.toFixed(4) + 's';
+      if (metric.p95 !== undefined && metric.p95 > 0) {
+        subText += '<br>p95: ' + metric.p95.toFixed(2) + 'ms';
+      }
+      document.getElementById(subId).innerHTML = subText;
+      document.getElementById(tpId).innerText = metric.throughput.toLocaleString(undefined, {maximumFractionDigits: 2});
+      if (p50Id && metric.p50 !== undefined) document.getElementById(p50Id).innerText = metric.p50.toFixed(2) + ' ms';
+      if (p95Id && metric.p95 !== undefined) document.getElementById(p95Id).innerText = metric.p95.toFixed(2) + ' ms';
+      if (p99Id && metric.p99 !== undefined) document.getElementById(p99Id).innerText = metric.p99.toFixed(2) + ' ms';
+      if (cpuId && metric.cpu_time !== undefined) document.getElementById(cpuId).innerText = metric.cpu_time.toFixed(4) + ' s';
+      if (memId && metric.max_rss !== undefined) document.getElementById(memId).innerText = metric.max_rss.toFixed(2) + ' MB';
     }
     
-    const ctx = document.getElementById('throughputChart').getContext('2d');
-    new Chart(ctx, {
+    populateMetrics('in_memory', 'in-memory-val', 'in-memory-sub', 'table-in-memory-tp', 'table-in-memory-p50', 'table-in-memory-p95', 'table-in-memory-p99', 'table-in-memory-cpu', 'table-in-memory-mem');
+    populateMetrics('wal_fallback', 'wal-fallback-val', 'wal-fallback-sub', 'table-wal-fallback-tp', 'table-wal-fallback-p50', 'table-wal-fallback-p95', 'table-wal-fallback-p99', 'table-wal-fallback-cpu', 'table-wal-fallback-mem');
+    populateMetrics('wal_replay', 'wal-replay-val', 'wal-replay-sub', 'table-wal-replay-tp', null, null, null, 'table-wal-replay-cpu', 'table-wal-replay-mem');
+    populateMetrics('otel_comparison', 'otel-val', 'otel-sub', 'table-otel-tp', 'table-otel-p50', 'table-otel-p95', 'table-otel-p99', 'table-otel-cpu', 'table-otel-mem');
+    
+    const tpCtx = document.getElementById('throughputChart').getContext('2d');
+    new Chart(tpCtx, {
       type: 'bar',
       data: {
-        labels: ['In-Memory Ingestion', 'WAL Fallback Ingestion', 'WAL Replay Recovery'],
+        labels: ['In-Memory Ingestion', 'WAL Fallback Ingestion', 'WAL Replay Recovery', 'OTel Baseline'],
         datasets: [{
-          label: 'Throughput (spans/second)',
           data: [
             data.in_memory ? data.in_memory.throughput : 0,
             data.wal_fallback ? data.wal_fallback.throughput : 0,
-            data.wal_replay ? data.wal_replay.throughput : 0
+            data.wal_replay ? data.wal_replay.throughput : 0,
+            data.otel_comparison ? data.otel_comparison.throughput : 0
           ],
           backgroundColor: [
-            'rgba(16, 185, 129, 0.6)',
-            'rgba(59, 130, 246, 0.6)',
-            'rgba(139, 92, 246, 0.6)'
+            'rgba(52, 211, 153, 0.45)',
+            'rgba(96, 165, 250, 0.45)',
+            'rgba(167, 139, 250, 0.45)',
+            'rgba(244, 114, 182, 0.45)'
           ],
           borderColor: [
-            'rgb(16, 185, 129)',
-            'rgb(59, 130, 246)',
-            'rgb(139, 92, 246)'
+            'rgb(52, 211, 153)',
+            'rgb(96, 165, 250)',
+            'rgb(167, 139, 250)',
+            'rgb(244, 114, 182)'
           ],
-          borderWidth: 1
+          borderWidth: 1.5,
+          borderRadius: 8
         }]
       },
       options: {
@@ -267,16 +330,81 @@ def pytest_sessionfinish(session, exitstatus):
           y: {
             type: 'logarithmic',
             min: 1,
-            grid: { color: '#334155' },
+            grid: { color: 'rgba(255, 255, 255, 0.08)' },
             ticks: { color: '#94a3b8' }
           },
           x: {
-            grid: { color: '#334155' },
+            grid: { display: false },
             ticks: { color: '#94a3b8' }
           }
         },
         plugins: {
           legend: { display: false }
+        }
+      }
+    });
+
+    const latCtx = document.getElementById('latencyChart').getContext('2d');
+    new Chart(latCtx, {
+      type: 'bar',
+      data: {
+        labels: ['p50 Latency', 'p95 Latency', 'p99 Latency'],
+        datasets: [
+          {
+            label: 'In-Memory',
+            data: [
+              data.in_memory ? data.in_memory.p50 : 0,
+              data.in_memory ? data.in_memory.p95 : 0,
+              data.in_memory ? data.in_memory.p99 : 0
+            ],
+            backgroundColor: 'rgba(52, 211, 153, 0.55)',
+            borderColor: 'rgb(52, 211, 153)',
+            borderWidth: 1.5,
+            borderRadius: 6
+          },
+          {
+            label: 'WAL Fallback',
+            data: [
+              data.wal_fallback ? data.wal_fallback.p50 : 0,
+              data.wal_fallback ? data.wal_fallback.p95 : 0,
+              data.wal_fallback ? data.wal_fallback.p99 : 0
+            ],
+            backgroundColor: 'rgba(96, 165, 250, 0.55)',
+            borderColor: 'rgb(96, 165, 250)',
+            borderWidth: 1.5,
+            borderRadius: 6
+          },
+          {
+            label: 'OTel SDK',
+            data: [
+              data.otel_comparison ? data.otel_comparison.p50 : 0,
+              data.otel_comparison ? data.otel_comparison.p95 : 0,
+              data.otel_comparison ? data.otel_comparison.p99 : 0
+            ],
+            backgroundColor: 'rgba(244, 114, 182, 0.55)',
+            borderColor: 'rgb(244, 114, 182)',
+            borderWidth: 1.5,
+            borderRadius: 6
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.08)' },
+            ticks: { color: '#94a3b8' }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: '#94a3b8' }
+          }
+        },
+        plugins: {
+          legend: {
+            labels: { color: '#f8fafc' }
+          }
         }
       }
     });
@@ -287,3 +415,4 @@ def pytest_sessionfinish(session, exitstatus):
     html_report_path = os.path.join(reports_dir, "performance-report.html")
     with open(html_report_path, "w") as f:
         f.write(rendered)
+
