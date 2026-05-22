@@ -4,7 +4,13 @@ All notable changes to the `instrumentation-sdk` package will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.1] - 2026-05-22
+
+### Fixed
+- Bumped version to 1.8.1 to resolve PyPI package release collision.
+
 ## [1.8.0] - 2026-05-22
+
 
 ### Added
 - **Reliable Kafka Span Reporter**: An asynchronous, fault-tolerant span reporter (`ReliableKafkaSpanReporter`) implementing the `SpanReporter` contract. Features an in-process 100k-message queue and automatic SQLite WAL fallback (`/tmp/llm-obs-wal.db`) when Kafka is down or the queue is full. Uses a background worker thread to replay pending WAL logs on reconnection and guarantees zero-exception span emission to the caller. Deferring Protobuf serialization (`_dict_to_proto_bytes`) to the background worker thread achieves in-memory ingestion throughput of **~91.7k spans/sec**, outperforming the standard OpenTelemetry SDK baseline by **~9.6x** under high-load ingestion tests.
