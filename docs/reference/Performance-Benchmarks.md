@@ -4,9 +4,12 @@ This page documents the performance characteristics of the LLM Observability SDK
 
 ## Performance Dashboard
 
-An interactive dark-mode HTML dashboard featuring throughput comparisons and tail latency profiles is generated automatically on test completion.
+An interactive dark-mode HTML dashboard featuring throughput comparisons and tail latency profiles is generated automatically on every test run and is committed to the repository.
 
-👉 **[Open Interactive Performance Dashboard](performance-report.html)**
+!!! tip "How the dashboard is generated"
+    Running `PYTHONPATH=. .venv/bin/pytest tests/performance/test_reporter_performance.py` inside `packages/python/instrumentation-sdk/` automatically writes the latest benchmark data into both `reports/performance-report.html` (local) and `docs/reference/performance-report.html` (committed to docs). Commit the updated file to publish new results.
+
+👉 **[Open Interactive Performance Dashboard](../performance-report.html)**
 
 ---
 
