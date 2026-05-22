@@ -3,6 +3,22 @@ set -e
 
 mkdir -p /var/log/app
 
+if [ "$WITH_KAFKA" = "true" ]; then
+    service postgresql start
+    sleep 3
+    su - postgres -c "psql -c \"CREATE USER admin WITH PASSWORD 'password' SUPERUSER;\"" || true
+    su - postgres -c "psql -c \"CREATE DATABASE llm_observability OWNER admin;\"" || true
+    PGPASSWORD=password psql -h localhost -U admin -d llm_observability -f /app/database/migrations/postgres/0001_init.sql
+    KAFKA_CLUSTER_ID=$(/opt/kafka/bin/kafka-storage.sh random-uuid)
+    /opt/kafka/bin/kafka-storage.sh format -t "$KAFKA_CLUSTER_ID" -c /opt/kafka/config/kraft/server.properties
+    /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kraft/server.properties > /var/log/app/kafka.log 2>&1 &
+    sleep 5
+    if [ -z "$KAFKA_BOOTSTRAP_SERVERS" ]; then
+        export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"
+    fi
+    KAFKA_BOOTSTRAP_SERVER="localhost:9092" /app/scripts/setup_kafka.sh
+fi
+
 tempo -config.file=/app/build/tempo-config.yaml > /var/log/app/tempo.log 2>&1 &
 echo "Tempo started successfully!"
 

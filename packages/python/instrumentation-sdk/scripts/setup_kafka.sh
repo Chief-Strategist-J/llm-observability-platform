@@ -6,7 +6,7 @@
 
 set -e
 
-KAFKA_BIN=$(which kafka-topics || echo "/usr/bin/kafka-topics")
+KAFKA_BIN=$(command -v kafka-topics.sh || command -v kafka-topics || echo "/opt/kafka/bin/kafka-topics.sh")
 BOOTSTRAP_SERVER=${KAFKA_BOOTSTRAP_SERVER:-"kafka:29092"}
 
 function create_topic() {

@@ -1,6 +1,6 @@
 import pytest
 import asyncio
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock, AsyncMock, patch
 from fastapi.testclient import TestClient
 from src import (
     llm_streaming_span,
@@ -10,6 +10,19 @@ from src import (
 )
 from src.features.spans.globals import NoOpReporter
 from src.api.rest.v1.app import app
+
+@pytest.fixture(autouse=True)
+def mock_sync_thread():
+    class SyncThread:
+        def __init__(self, target, args=(), kwargs=None):
+            self.target = target
+            self.args = args
+            self.kwargs = kwargs or {}
+        def start(self):
+            self.target(*self.args, **self.kwargs)
+    with patch("threading.Thread", SyncThread):
+        yield
+
 
 def test_sync_streaming_success():
     mock_reporter = MagicMock()

@@ -87,7 +87,7 @@ docker run -d \
 |---|---|
 | `latest` / `stable` | Production-ready stable builds |
 | `unstable` | Bleeding-edge master builds |
-| `v1.7.2` | Version-pinned builds |
+| `v1.8.0` | Version-pinned builds |
 
 ---
 

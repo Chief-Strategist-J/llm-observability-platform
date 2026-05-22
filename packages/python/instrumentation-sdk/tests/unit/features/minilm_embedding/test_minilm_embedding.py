@@ -135,10 +135,18 @@ def test_enrich_and_report_span_success_sync():
     }
     with patch("src.features.minilm_embedding.index._SERVICE.get_embedding", new_callable=AsyncMock) as mock_get:
         mock_get.return_value = [0.1, 0.2]
-        enrich_and_report_span(span_data)
-        time.sleep(0.2)
+        class SyncThread:
+            def __init__(self, target, args=(), kwargs=None):
+                self.target = target
+                self.args = args
+                self.kwargs = kwargs or {}
+            def start(self):
+                self.target(*self.args, **self.kwargs)
+        with patch("threading.Thread", SyncThread):
+            enrich_and_report_span(span_data)
         assert len(reporter.spans) == 1
         assert reporter.spans[0]["prompt_embedding"] == [0.1, 0.2]
+
 
 def test_api_endpoint_success():
     app = create_app()

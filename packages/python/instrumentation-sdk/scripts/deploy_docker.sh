@@ -3,7 +3,6 @@ set -e
 
 USERNAME="chiefj"
 IMAGE_NAME="instrumentation-sdk-api"
-VERSION="v1.7.2"
 DOCKERFILE="build/Dockerfile"
 
 if [ -z "$DOCKER_PAT" ]; then
@@ -11,17 +10,26 @@ if [ -z "$DOCKER_PAT" ]; then
     exit 1
 fi
 
+VERSION=$(grep -oP 'version = "\K[^"]+' pyproject.toml)
+
 echo "$DOCKER_PAT" | docker login -u "$USERNAME" --password-stdin
 
-docker build -f "$DOCKERFILE" -t "$USERNAME/$IMAGE_NAME:latest" .
-
+docker build -f "$DOCKERFILE" --build-arg WITH_KAFKA="true" -t "$USERNAME/$IMAGE_NAME:latest" .
 docker tag "$USERNAME/$IMAGE_NAME:latest" "$USERNAME/$IMAGE_NAME:$VERSION"
-docker tag "$USERNAME/$IMAGE_NAME:latest" "$USERNAME/$IMAGE_NAME:1.7.2"
+docker tag "$USERNAME/$IMAGE_NAME:latest" "$USERNAME/$IMAGE_NAME:v$VERSION"
 docker tag "$USERNAME/$IMAGE_NAME:latest" "$USERNAME/$IMAGE_NAME:stable"
-docker tag "$USERNAME/$IMAGE_NAME:latest" "$USERNAME/$IMAGE_NAME:unstable"
+
+docker build -f "$DOCKERFILE" --build-arg WITH_KAFKA="false" -t "$USERNAME/$IMAGE_NAME-nokafka:latest" .
+docker tag "$USERNAME/$IMAGE_NAME-nokafka:latest" "$USERNAME/$IMAGE_NAME-nokafka:$VERSION"
+docker tag "$USERNAME/$IMAGE_NAME-nokafka:latest" "$USERNAME/$IMAGE_NAME-nokafka:v$VERSION"
+docker tag "$USERNAME/$IMAGE_NAME-nokafka:latest" "$USERNAME/$IMAGE_NAME-nokafka:stable"
 
 docker push "$USERNAME/$IMAGE_NAME:latest"
 docker push "$USERNAME/$IMAGE_NAME:$VERSION"
-docker push "$USERNAME/$IMAGE_NAME:1.7.2"
+docker push "$USERNAME/$IMAGE_NAME:v$VERSION"
 docker push "$USERNAME/$IMAGE_NAME:stable"
-docker push "$USERNAME/$IMAGE_NAME:unstable"
+
+docker push "$USERNAME/$IMAGE_NAME-nokafka:latest"
+docker push "$USERNAME/$IMAGE_NAME-nokafka:$VERSION"
+docker push "$USERNAME/$IMAGE_NAME-nokafka:v$VERSION"
+docker push "$USERNAME/$IMAGE_NAME-nokafka:stable"
