@@ -204,7 +204,7 @@
             <th>p95 Latency</th>
             <th>p99 Latency</th>
             <th>CPU Time</th>
-            <th>Peak RSS Memory</th>
+            <th>Net Memory Delta</th>
           </tr>
         </thead>
         <tbody>
@@ -250,7 +250,7 @@
   </div>
   
   <script>
-    const data = {"timestamp": "2026-05-22 05:47:22 UTC", "in_memory": {"throughput": 5142.342117608354, "duration": 0.9723195939996003, "spans": 5000, "p50": 0.14100600037636468, "p95": 0.33640589963397416, "p99": 1.887743589340971, "cpu_time": 0.774751, "max_rss": 725.109375}, "wal_fallback": {"throughput": 6364.162203115795, "duration": 0.7856493660001433, "spans": 5000, "p50": 0.07961549999890849, "p95": 0.2086124007291801, "p99": 0.2708509702461018, "cpu_time": 0.5657179999999999, "max_rss": 725.109375}, "wal_replay": {"throughput": 27194.33643345534, "duration": 0.1838618130004761, "spans": 5000, "p50": 0.0, "p95": 0.0, "p99": 0.0, "cpu_time": 0.08555900000000038, "max_rss": 725.109375}, "otel_comparison": {"throughput": 10277.160148436247, "duration": 0.48651572299968393, "spans": 5000, "p50": 0.07170250000854139, "p95": 0.1576408504661231, "p99": 0.27264764986284745, "cpu_time": 0.4803229999999994, "max_rss": 725.109375}};
+    const data = {"timestamp": "2026-05-22 05:54:34 UTC", "in_memory": {"throughput": 91745.06863730878, "duration": 0.05449884200061206, "spans": 5000, "p50": 0.004677999640989583, "p95": 0.008523050382791553, "p99": 0.018681020337680994, "cpu_time": 0.043554000000000315, "max_rss": 2.7734375}, "wal_fallback": {"throughput": 7743.089637839825, "duration": 0.6457370680000167, "spans": 5000, "p50": 0.0021100004232721403, "p95": 0.005662399280481624, "p99": 0.011130730526929273, "cpu_time": 0.5222650000000004, "max_rss": 2.30078125}, "wal_replay": {"throughput": 942705.3833500515, "duration": 0.00530388400056836, "spans": 5000, "p50": 0.0, "p95": 0.0, "p99": 0.0, "cpu_time": 0.015721000000000096, "max_rss": 0.0}, "otel_comparison": {"throughput": 9539.743075263736, "duration": 0.5241231299996798, "spans": 5000, "p50": 0.10068700021292898, "p95": 0.1558603002195014, "p99": 0.26579810988550895, "cpu_time": 0.5039989999999994, "max_rss": 8.359375}};
     document.getElementById('timestamp').innerText = data.timestamp;
     
     function populateMetrics(key, valId, subId, tpId, p50Id, p95Id, p99Id, cpuId, memId) {

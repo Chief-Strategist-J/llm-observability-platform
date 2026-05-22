@@ -35,11 +35,21 @@ def calculate_percentile(data, q):
     d1 = sorted_data[int(c)] * (k - f)
     return d0 + d1
 
+def get_current_rss():
+    try:
+        with open("/proc/self/status") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    return float(line.split()[1]) / 1024.0
+    except Exception:
+        pass
+    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
+
 def get_resources():
     usage = resource.getrusage(resource.RUSAGE_SELF)
     return {
         "cpu_time": usage.ru_utime + usage.ru_stime,
-        "max_rss": usage.ru_maxrss / 1024.0
+        "rss": get_current_rss()
     }
 
 @pytest.mark.performance
@@ -97,7 +107,7 @@ def test_reporter_in_memory_throughput():
         p95 = calculate_percentile(latencies_ms, 95)
         p99 = calculate_percentile(latencies_ms, 99)
         cpu_spent = res_end["cpu_time"] - res_start["cpu_time"]
-        max_rss = res_end["max_rss"]
+        max_rss = max(0.0, res_end["rss"] - res_start["rss"])
         if hasattr(pytest, "performance_metrics"):
             pytest.performance_metrics["in_memory"] = {
                 "throughput": throughput,
@@ -183,7 +193,7 @@ def test_reporter_wal_fallback_throughput():
         p95 = calculate_percentile(latencies_ms, 95)
         p99 = calculate_percentile(latencies_ms, 99)
         cpu_spent = res_end["cpu_time"] - res_start["cpu_time"]
-        max_rss = res_end["max_rss"]
+        max_rss = max(0.0, res_end["rss"] - res_start["rss"])
         if hasattr(pytest, "performance_metrics"):
             pytest.performance_metrics["wal_fallback"] = {
                 "throughput": throughput,
@@ -273,7 +283,7 @@ def test_reporter_wal_replay_throughput():
         duration = end_time - start_time
         throughput = num_spans / duration
         cpu_spent = res_end["cpu_time"] - res_start["cpu_time"]
-        max_rss = res_end["max_rss"]
+        max_rss = max(0.0, res_end["rss"] - res_start["rss"])
         if hasattr(pytest, "performance_metrics"):
             pytest.performance_metrics["wal_replay"] = {
                 "throughput": throughput,
@@ -334,7 +344,7 @@ def test_otel_sdk_comparison_throughput():
         p95 = calculate_percentile(latencies_ms, 95)
         p99 = calculate_percentile(latencies_ms, 99)
         cpu_spent = res_end["cpu_time"] - res_start["cpu_time"]
-        max_rss = res_end["max_rss"]
+        max_rss = max(0.0, res_end["rss"] - res_start["rss"])
         if hasattr(pytest, "performance_metrics"):
             pytest.performance_metrics["otel_comparison"] = {
                 "throughput": throughput,

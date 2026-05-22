@@ -224,7 +224,7 @@ def pytest_sessionfinish(session, exitstatus):
             <th>p95 Latency</th>
             <th>p99 Latency</th>
             <th>CPU Time</th>
-            <th>Peak RSS Memory</th>
+            <th>Net Memory Delta</th>
           </tr>
         </thead>
         <tbody>
