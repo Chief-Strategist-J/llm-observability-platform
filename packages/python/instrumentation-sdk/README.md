@@ -49,28 +49,6 @@ This diagram illustrates the lifecycle of a span from application capture to bac
                                                           └───────────────────┘
 ```
 
-### Technical Sequence
-The SDK integrates with OpenTelemetry (OTEL) for standardized telemetry collection.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant App as Application
-    participant SDK as instrumentation-sdk (REST)
-    participant OTEL as OTEL Collector
-    participant CFQ as Cloudflare Queue
-
-    Note over App, SDK: Management Phase
-    App->>SDK: POST /instrumentation/detect
-    SDK-->>App: {provider: "openai", model: "gpt-4"}
-    App->>SDK: POST /instrumentation/init
-
-    Note over App, OTEL: Capture Phase
-    App->>SDK: @llm_observe()
-    SDK->>OTEL: Export Span (OTLP/gRPC)
-    SDK->>CFQ: push_to_queue(payload)
-```
-
 ## 2. End-User Usage Guide
 
 The `instrumentation-sdk` is designed to be developer-friendly, requiring minimal code changes to start capturing observability data.
