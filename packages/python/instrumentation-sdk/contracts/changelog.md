@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Standalone Mode (`docker-compose.prod.yaml`)**: Runs only the API container, accepting configuration via standard environment variables for external Kafka and databases.
 - **Contract-First Support**:
   - **OpenAPI**: Fulfilled the `POST /spans` API route integration defined in the OpenAPI contract.
+- **Test Optimization & Telemetry Cleanup**:
+  - Resolved unit test race conditions and double-invocation assertions in `test_minilm_embedding.py` by mocking the background execution of `enrich_and_report_span` during deterministic sampling tests.
+  - Eliminated OpenTelemetry exporter noise and `ValueError: I/O operation on closed file` tracebacks in test outputs by automatically skipping console and OTLP exporters during unit test runs via `conftest.py`.
+
 
 ## [1.7.0] - 2026-05-21
 
