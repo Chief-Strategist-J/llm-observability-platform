@@ -415,4 +415,9 @@ def pytest_sessionfinish(session, exitstatus):
     html_report_path = os.path.join(reports_dir, "performance-report.html")
     with open(html_report_path, "w") as f:
         f.write(rendered)
+    docs_dir = os.path.abspath(os.path.join(session.config.rootdir, "../../../docs/reference"))
+    if os.path.exists(docs_dir):
+        doc_report_path = os.path.join(docs_dir, "performance-report.html")
+        with open(doc_report_path, "w") as f:
+            f.write(rendered)
 
