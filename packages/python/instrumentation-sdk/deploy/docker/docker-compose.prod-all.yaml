@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    restart: always
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    restart: always
+
+  postgres:
+    image: ankane/pgvector:v0.5.0
+    container_name: docker-postgres-prod
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: llm_observability
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    restart: always
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8
+    container_name: docker-clickhouse-prod
+    volumes:
+      - clickhouse_prod_data:/var/lib/clickhouse
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: docker-redis-prod
+    volumes:
+      - redis_prod_data:/data
+    restart: always
+
+  instrumentation-api:
+    build:
+      context: ../../
+      dockerfile: build/Dockerfile
+    container_name: instrumentation-sdk-api-prod
+    ports:
+      - "8000:8000"
+      - "3000:3000"
+      - "4317:4317"
+      - "9464:9464"
+    environment:
+      - DEPLOYMENT_ENV=production
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - POSTGRES_URL=postgresql://admin:password@postgres:5432/llm_observability
+      - CLICKHOUSE_HOST=clickhouse
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - kafka
+      - postgres
+      - clickhouse
+      - redis
+    restart: always
+
+  init-kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: docker-init-kafka-prod
+    depends_on:
+      - kafka
+    command: >
+      bash -c "
+      cub kafka-ready -b kafka:9092 1 30 &&
+      kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --topic llm.spans.raw.unvalidated --partitions 3 --replication-factor 1 &&
+      kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --topic llm.spans.raw --partitions 3 --replication-factor 1 &&
+      kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --topic llm.spans.raw.dlq --partitions 1 --replication-factor 1 &&
+      kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --topic llm.spans.sampled --partitions 3 --replication-factor 1 &&
+      kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --topic llm.instrumentation.events --partitions 1 --replication-factor 1
+      "
+    restart: "no"
+
+volumes:
+  postgres_prod_data:
+  clickhouse_prod_data:
+  redis_prod_data:

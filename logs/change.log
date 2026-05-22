@@ -20,3 +20,55 @@
         ├── pyproject.toml -> Register 'llm-observe' script entrypoint
         ├── src/api/cli/controller.py -> Add controller using Ports & Adapters architecture to execute docker commands
         └── tests/unit/test_cli.py -> Add unit tests verifying CLI controller execution logic via fakes
+
+[2026-05-22T09:46:00+05:30] Implement Reliable Kafka Span Reporter and /spans REST API handler
+└── File: packages/python/instrumentation-sdk/src/shared/ports/kafka.py, packages/python/instrumentation-sdk/src/shared/ports/wal.py, packages/python/instrumentation-sdk/src/infra/adapters/kafka/confluent_producer_adapter.py, packages/python/instrumentation-sdk/src/infra/adapters/wal/sqlite_wal_adapter.py, packages/python/instrumentation-sdk/src/infra/adapters/kafka/reliable_adapter.py, packages/python/instrumentation-sdk/src/infra/adapters/kafka/__init__.py, packages/python/instrumentation-sdk/src/api/rest/v1/handlers/spans.py, packages/python/instrumentation-sdk/src/api/rest/v1/router.py, packages/python/instrumentation-sdk/contracts/changelog.md
+    ├── Choice: Use Hexagonal architecture to decouple confluent-kafka and sqlite3 dependencies via Ports & Adapters, and add REST API spans handler using Pydantic validation mapping for OpenAPI contract.
+    └── Changes:
+        ├── shared-ports -> Add KafkaProducerPort and WalStoragePort
+        ├── infra-adapters -> Add ConfluentKafkaProducerAdapter, SqliteWalStorageAdapter, ReliableKafkaSpanReporter
+        ├── rest-api -> Add /spans POST endpoint and register spans router in v1 router
+        └── changelog -> Add [1.8.0] release notes in contracts/changelog.md
+
+[2026-05-22T10:30:00+05:30] Implement automated reporting, dual-mode Docker orchestration, and resolve test race conditions
+└── File: packages/python/instrumentation-sdk/scripts/generate_performance_report.py, packages/python/instrumentation-sdk/deploy/docker/docker-compose.prod.yaml, packages/python/instrumentation-sdk/deploy/docker/docker-compose.prod-all.yaml, packages/python/instrumentation-sdk/tests/unit/features/minilm_embedding/test_minilm_embedding.py, packages/python/instrumentation-sdk/tests/unit/features/streaming/test_streaming.py, packages/python/instrumentation-sdk/README.md, packages/python/instrumentation-sdk/contracts/changelog.md
+    ├── Choice: Replace manual performance reports with an automated python benchmarking generator, modularize Docker deployments to offer Standalone Mode versus All-in-One Mode, and patch threading in tests to eliminate test suites race conditions and leaks.
+    └── Changes:
+        ├── reporting -> Create scripts/generate_performance_report.py and output live stats to contracts/performance_report.md
+        ├── deployment -> Re-architect docker-compose.prod.yaml (standalone) and create docker-compose.prod-all.yaml (integrated batteries-included)
+        ├── testing -> Add autouse fixture in test_streaming.py and SyncThread patch in test_minilm_embedding.py to run async threads synchronously during test suites
+        └── documentation -> Update contracts/changelog.md and README.md with usage instructions
+
+[2026-05-22T10:35:00+05:30] Integrate allure-pytest for automated performance reporting
+└── File: packages/python/instrumentation-sdk/pyproject.toml, packages/python/instrumentation-sdk/tests/performance/test_reporter_performance.py
+    ├── Choice: Use standard allure-pytest integration to automatically capture execution and performance report details.
+    └── Changes:
+        ├── dependencies -> Add allure-pytest and configure addopts to direct outputs to reports/allure-results
+        ├── performance -> Decorate test_reporter_performance.py with @allure.feature, @allure.story, @allure.title, and allure.step context managers
+        └── cleanup -> Remove scripts/generate_performance_report.py and contracts/performance_report.md
+
+[2026-05-22T10:45:00+05:30] Implement premium HTML dashboard report with Chart.js visualization
+└── File: packages/python/instrumentation-sdk/tests/performance/conftest.py, packages/python/instrumentation-sdk/tests/performance/test_reporter_performance.py, packages/python/instrumentation-sdk/pyproject.toml
+    ├── Choice: Replace basic pytest-html output with a custom, premium, self-contained executive HTML dashboard report.
+    └── Changes:
+        ├── reports -> Create conftest.py hook to collect performance_metrics and export them to a modern dark-mode HTML report with interactive Chart.js charts
+        ├── instrumentation -> Save throughput and latency metrics during pytest benchmark runs
+        └── dependencies -> Add pytest-html to dependencies and configure pyproject.toml to avoid overwriting the custom dashboard
+
+[2026-05-22T11:00:00+05:30] Implement dual-mode Docker builds, automated PostgreSQL migrations, and Kafka topic provisioning
+└── File: packages/python/instrumentation-sdk/build/Dockerfile, packages/python/instrumentation-sdk/build/entrypoint.sh, packages/python/instrumentation-sdk/scripts/deploy_docker.sh, packages/python/instrumentation-sdk/pyproject.toml, packages/python/instrumentation-sdk/src/api/rest/v1/app.py, packages/python/instrumentation-sdk/README.md, docs/index.md, docs/reference/Docker-and-CLI-Deployment.md, packages/python/instrumentation-sdk/contracts/changelog.md
+    ├── Choice: Automate all database setup and message broker initialization inside the All-in-One Docker image using WITH_KAFKA conditional build arguments.
+    └── Changes:
+        ├── build -> Update Dockerfile to conditionally install PostgreSQL/pgvector/Kafka and copy database/scripts folders
+        ├── entrypoint -> Modify entrypoint.sh to start Postgres, create DB/user, run SQL migrations, start Kafka, and run setup_kafka.sh
+        ├── deploy -> Modify deploy_docker.sh to extract version dynamically, build/tag/push both with-kafka and nokafka images
+        ├── init -> Lazy-initialize ReliableKafkaSpanReporter in FastAPI app on startup if KAFKA_BOOTSTRAP_SERVERS is set
+        └── docs -> Update README.md, index.md, and Docker-and-CLI-Deployment.md with environment variables and integration flows
+
+[2026-05-22T11:15:00+05:30] Fix Docker pgvector dependency, shell executable pathing, and skip offline integration tests
+└── File: packages/python/instrumentation-sdk/build/Dockerfile, packages/python/instrumentation-sdk/scripts/setup_kafka.sh, packages/python/instrumentation-sdk/tests/integration/features/spans/test_kafka_integration.py
+    ├── Choice: Resolve pgvector version mismatch on Debian Trixie base image, fix Kafka executable location finding, and dynamically skip localhost integration tests when no external Kafka is running.
+    └── Changes:
+        ├── Dockerfile -> Change pgvector package dependency to postgresql-17-pgvector
+        ├── setup_kafka.sh -> Use command -v shell built-in and default to kafka-topics.sh to find Kafka CLI tools
+        └── test_kafka_integration.py -> Skip test_reliable_reporter_real_kafka_integration if port 9094 is unreachable

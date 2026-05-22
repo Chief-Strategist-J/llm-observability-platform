@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LLM Observability SDK Performance Report</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background-color: #0f172a;
+      color: #f1f5f9;
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 1rem;
+    }
+    .title h1 {
+      margin: 0;
+      font-size: 2.25rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .title p {
+      margin: 0.5rem 0 0;
+      color: #94a3b8;
+    }
+    .meta-badge {
+      background-color: #1e293b;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      border: 1px solid #334155;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .card {
+      background-color: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    }
+    .card-title {
+      font-size: 0.875rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .card-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+    }
+    .card-value.green { color: #10b981; }
+    .card-value.blue { color: #3b82f6; }
+    .card-value.purple { color: #8b5cf6; }
+    .card-subtitle {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 0.5rem;
+    }
+    .chart-container {
+      background-color: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .chart-header {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    .table-container {
+      background-color: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .table-header {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid #334155;
+    }
+    th {
+      color: #94a3b8;
+      font-weight: 600;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title">
+        <h1>LLM Observability SDK</h1>
+        <p>Performance Benchmark Report</p>
+      </div>
+      <div class="meta-badge">
+        Generated on: <span id="timestamp"></span>
+      </div>
+    </div>
+    
+    <div class="grid">
+      <div class="card">
+        <div class="card-title">In-Memory Ingestion</div>
+        <div class="card-value green" id="in-memory-val">--</div>
+        <div class="card-subtitle" id="in-memory-sub">--</div>
+      </div>
+      <div class="card">
+        <div class="card-title">WAL Fallback Ingestion</div>
+        <div class="card-value blue" id="wal-fallback-val">--</div>
+        <div class="card-subtitle" id="wal-fallback-sub">--</div>
+      </div>
+      <div class="card">
+        <div class="card-title">WAL Replay Recovery</div>
+        <div class="card-value purple" id="wal-replay-val">--</div>
+        <div class="card-subtitle" id="wal-replay-sub">--</div>
+      </div>
+    </div>
+    
+    <div class="chart-container">
+      <div class="chart-header">Throughput Comparison (Logarithmic Scale)</div>
+      <div style="height: 300px; position: relative;">
+        <canvas id="throughputChart"></canvas>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <div class="table-header">Test Execution Summary</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th>Throughput (spans/sec)</th>
+            <th>Total Duration</th>
+            <th>Number of Spans</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>In-Memory Ingestion (Kafka Online)</td>
+            <td id="table-in-memory-tp">--</td>
+            <td id="table-in-memory-dur">--</td>
+            <td id="table-in-memory-count">--</td>
+          </tr>
+          <tr>
+            <td>WAL Fallback Ingestion (Kafka Offline)</td>
+            <td id="table-wal-fallback-tp">--</td>
+            <td id="table-wal-fallback-dur">--</td>
+            <td id="table-wal-fallback-count">--</td>
+          </tr>
+          <tr>
+            <td>WAL Replay Recovery (Re-established)</td>
+            <td id="table-wal-replay-tp">--</td>
+            <td id="table-wal-replay-dur">--</td>
+            <td id="table-wal-replay-count">--</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <script>
+    const data = {"timestamp": "2026-05-22 05:21:15 UTC", "in_memory": {"throughput": 40760.65492202199, "duration": 0.12266731262207031, "spans": 5000}, "wal_fallback": {"throughput": 238.44509139448434, "duration": 4.193837642669678, "spans": 1000}, "wal_replay": {"throughput": 12264046.783625731, "duration": 4.076957702636719e-05, "spans": 500}};
+    document.getElementById('timestamp').innerText = data.timestamp;
+    
+    if (data.in_memory) {
+      document.getElementById('in-memory-val').innerText = data.in_memory.throughput.toLocaleString(undefined, {maximumFractionDigits: 2}) + ' spans/s';
+      document.getElementById('in-memory-sub').innerText = data.in_memory.spans + ' spans in ' + data.in_memory.duration.toFixed(4) + 's';
+      document.getElementById('table-in-memory-tp').innerText = data.in_memory.throughput.toLocaleString(undefined, {maximumFractionDigits: 2});
+      document.getElementById('table-in-memory-dur').innerText = data.in_memory.duration.toFixed(4) + 's';
+      document.getElementById('table-in-memory-count').innerText = data.in_memory.spans;
+    }
+    if (data.wal_fallback) {
+      document.getElementById('wal-fallback-val').innerText = data.wal_fallback.throughput.toLocaleString(undefined, {maximumFractionDigits: 2}) + ' spans/s';
+      document.getElementById('wal-fallback-sub').innerText = data.wal_fallback.spans + ' spans in ' + data.wal_fallback.duration.toFixed(4) + 's';
+      document.getElementById('table-wal-fallback-tp').innerText = data.wal_fallback.throughput.toLocaleString(undefined, {maximumFractionDigits: 2});
+      document.getElementById('table-wal-fallback-dur').innerText = data.wal_fallback.duration.toFixed(4) + 's';
+      document.getElementById('table-wal-fallback-count').innerText = data.wal_fallback.spans;
+    }
+    if (data.wal_replay) {
+      document.getElementById('wal-replay-val').innerText = data.wal_replay.throughput.toLocaleString(undefined, {maximumFractionDigits: 2}) + ' spans/s';
+      document.getElementById('wal-replay-sub').innerText = data.wal_replay.spans + ' spans in ' + data.wal_replay.duration.toFixed(4) + 's';
+      document.getElementById('table-wal-replay-tp').innerText = data.wal_replay.throughput.toLocaleString(undefined, {maximumFractionDigits: 2});
+      document.getElementById('table-wal-replay-dur').innerText = data.wal_replay.duration.toFixed(4) + 's';
+      document.getElementById('table-wal-replay-count').innerText = data.wal_replay.spans;
+    }
+    
+    const ctx = document.getElementById('throughputChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['In-Memory Ingestion', 'WAL Fallback Ingestion', 'WAL Replay Recovery'],
+        datasets: [{
+          label: 'Throughput (spans/second)',
+          data: [
+            data.in_memory ? data.in_memory.throughput : 0,
+            data.wal_fallback ? data.wal_fallback.throughput : 0,
+            data.wal_replay ? data.wal_replay.throughput : 0
+          ],
+          backgroundColor: [
+            'rgba(16, 185, 129, 0.6)',
+            'rgba(59, 130, 246, 0.6)',
+            'rgba(139, 92, 246, 0.6)'
+          ],
+          borderColor: [
+            'rgb(16, 185, 129)',
+            'rgb(59, 130, 246)',
+            'rgb(139, 92, 246)'
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            type: 'logarithmic',
+            min: 1,
+            grid: { color: '#334155' },
+            ticks: { color: '#94a3b8' }
+          },
+          x: {
+            grid: { color: '#334155' },
+            ticks: { color: '#94a3b8' }
+          }
+        },
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+  </script>
+</body>
+</html>

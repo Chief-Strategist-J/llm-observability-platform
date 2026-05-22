@@ -113,6 +113,7 @@ The SDK provides a built-in FastAPI-based management layer for remote orchestrat
 | `/streaming/test-stream-call` | POST | Verification: Trigger a mock streaming call to verify streaming/TTFT. |
 | `/v1/sampling/should-sample` | POST | Verification: Check if a span should be sampled. |
 | `/v1/embeddings/embed` | POST | Verification: Generate MiniLM embeddings for a given text. |
+| `/v1/spans` | POST | Ingestion: Submit a span to the reliable reporter for storage & delivery. |
 
 ### Basic Usage: Decorators
 Use the `@llm_observe` decorator to manually track functions.
@@ -455,28 +456,118 @@ Edit:
 - `build/prometheus.yml` — add scrape targets
 - `build/tempo-config.yaml` — change Tempo storage or OTLP port
 
-After editing, rebuild the image and restart:
+#### Running the Automated Performance Report Generator
+
+To benchmark the Reliable Kafka Reporter (evaluating in-memory queueing, offline SQLite WAL fallback writing, and recovery replay throughput) and automatically compile the premium HTML dashboard report, run the performance test suite:
+
 ```bash
-DOCKER_PAT=<your-pat> ./scripts/deploy_docker.sh
-docker stop instrumentation-sdk-api && docker rm instrumentation-sdk-api
-docker pull chiefj/instrumentation-sdk-api:latest
-docker run -d -p 8000:8000 -p 3000:3000 -p 4317:4317 -p 9464:9464 \
-  --name instrumentation-sdk-api chiefj/instrumentation-sdk-api:latest
+cd packages/python/instrumentation-sdk
+PYTHONPATH=. .venv/bin/pytest tests/performance/
 ```
 
-#### CI — what runs automatically
+This dynamically compiles and generates `reports/performance-report.html` with a modern dark-mode interface and interactive Chart.js visualization.
 
-The `grafana-config-validate.yml` workflow triggers **only** when one of the 10 watched files changes. It validates:
+#### Production Deployment Modes
 
-| File | What is checked |
-|---|---|
-| `grafana-datasource.yaml` | YAML valid, `name`/`type`/`url` present, Prometheus datasource exists |
-| `grafana-dashboard-provider.yaml` | YAML valid, `options.path` present |
-| `prometheus.yml` | YAML valid, `scrape_configs` non-empty |
-| `tempo-config.yaml` | `server.http_listen_port`, `distributor.receivers.otlp`, `storage.trace.backend` |
-| `dashboards/*.json` | JSON valid, `title`/`panels`/`schemaVersion` present, no duplicate UIDs |
-| `model_prices.yaml` | List non-empty, all required fields, prices `>= 0`, no duplicate pairs |
-| `patterns.yaml` | All required fields, valid `type`, no duplicate names, regex compiles |
+Two Docker Compose configurations are available under `deploy/docker/` depending on your setup:
+
+1. **All-in-One Mode (Zero Setup)**: Starts the FastAPI API, Kafka, Zookeeper, pgvector Postgres, Clickhouse, and Redis fully integrated and pre-configured out of the box:
+   ```bash
+   docker compose -f deploy/docker/docker-compose.prod-all.yaml up -d
+   ```
+
+2. **Standalone Mode (Plug-and-Play)**: Starts only the API container, allowing you to connect to your own existing Kafka cluster and databases by supplying environment variables:
+   ```bash
+   KAFKA_BOOTSTRAP_SERVERS="my-kafka:9092" docker compose -f deploy/docker/docker-compose.prod.yaml up -d
+   ```
+
+### Docker Deployments (v1.8.0)
+
+We publish two official Docker images:
+* **All-in-One Image (`chiefj/instrumentation-sdk-api`)**: Contains Java, Kafka, PostgreSQL, and pgvector. When started, it automatically initializes database users, databases, runs migrations, and provisions Kafka topics. No external setup required.
+* **Standalone Image (`chiefj/instrumentation-sdk-api-nokafka`)**: A lightweight container without the embedded databases and message queues. You supply your own external endpoints.
+
+#### Connection & Configuration Environment Variables
+
+| Environment Variable | Description | Default (All-in-One) | Default (Standalone) |
+| :--- | :--- | :--- | :--- |
+| `WITH_KAFKA` | Enable embedded Kafka & Postgres server inside container | `true` | `false` |
+| `KAFKA_BOOTSTRAP_SERVERS` | Kafka brokers connection string | `localhost:9092` | (None) |
+| `POSTGRES_URL` | PostgreSQL connection string | `postgresql://admin:password@localhost:5432/llm_observability` | (None) |
+| `DEPLOYMENT_ENV` | SDK deployment environment (`production`, `staging`, `dev`) | `production` | `production` |
+
+#### Architectural Integration Flow
+
+```
+                  [ SDK Telemetry Ingestion Decision Tree ]
+
+                         [ Initiate LLM API Call ]
+                                     │
+                                     ▼
+                          [ Capture Metrics/Span ]
+                                     │
+                                     ▼
+                          [ Check REST API Status ]
+                                   /   \
+                                 Online Offline
+                                 /       \
+                                ▼         ▼
+                     [ Send to REST API ] [ Write to SQLite WAL ]
+                      (POST /v1/spans)    (/tmp/llm-obs-wal.db)
+                             │                    │
+                             ▼                    ▼
+                    [ API Server Side ]    [ Retrying Connection ]
+                             │                    │
+                   [ Check DB/Kafka Config ]      │
+                             │                    │
+                     ┌───────┴───────┐            │
+                  Enabled         Disabled        │
+                     │               │            │
+                     ▼               ▼            │
+             [ Write to Kafka ] [ Log / NoOp ]    │
+          (llm.spans.raw topic)  (Prometheus/     │
+                     │            Tempo local)    │
+                     ▼                            │
+              [ Consumer reads ]                  │
+              [  from Kafka    ]                  │
+                     │                            │
+                     ▼                            │
+             [ Write to Postgres ]                │
+            (llm_spans partitioned)               │
+                     │                            │
+                     └────────────────────┬───────┘
+                                          │
+                                          ▼
+                               [ Spans Visualized ]
+                             (Grafana http://3000)
+```
+
+#### Ingestion Sequence Flow
+
+```
+                        [ SDK Telemetry Sequence Flow ]
+
+User App             SDK Client          REST Ingestion       Kafka Broker        PostgreSQL
+   │                      │                    │                   │                  │
+   │─── LLM Call ────────>│                    │                   │                  │
+   │                      │─── Format Span ───>│                   │                  │
+   │                      │                    │                   │                  │
+   │                      │─── POST /spans ───>│                   │                  │
+   │                      │    (HTTP 200 OK)   │                   │                  │
+   │                      │                    │─── Produce span ─>│                  │
+   │                      │                    │    to topic       │                  │
+   │                      │                    │                   │─── Consume ─────>│
+   │                      │                    │                   │    & Partition   │
+   │                      │                    │                   │    to DB         │
+   │                      │                    │                   │                  │
+   │ [If API Offline]     │                    │                   │                  │
+   │                      │─── Write to WAL ──>│                   │                  │
+   │                      │    (SQLite local)  │                   │                  │
+   │                      │                    │                   │                  │
+   │ [When API Restored]  │                    │                   │                  │
+   │                      │─── Replay Spans ──>│                   │                  │
+   │                      │    to REST API     │                   │                  │
+```
 
 #### Running the load test locally
 
@@ -485,7 +576,7 @@ cd packages/python/instrumentation-sdk
 .venv/bin/python -m pytest tests/performance/ -m performance -v
 ```
 
-This sends **1000 spans** (100 individual + 10×50 batch) covering all 6 model/provider combos, error ratios, PII flags, and high token counts.
+This sends spans covering all 6 model/provider combos, error ratios, PII flags, and high token counts.
 
 ## 3. Implementation Call Chain
 
@@ -508,5 +599,6 @@ This sends **1000 spans** (100 individual + 10×50 batch) covering all 6 model/p
 | **PII & Injection Scan**| `scan_prompt()` | `features/pii_injection_scan/index.py` |
 | **Deterministic Sampling**| `should_sample()` | `features/deterministic_sampling/index.py` |
 | **MiniLM Embedding** | `get_embedding()` | `features/minilm_embedding/index.py` |
+| **Reliable Reporter** | `report()` / `report_async()` | `infra/adapters/kafka/reliable_adapter.py` |
 
 

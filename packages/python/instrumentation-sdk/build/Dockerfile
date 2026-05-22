@@ -1,5 +1,8 @@
 FROM python:3.12-slim
 
+ARG WITH_KAFKA="false"
+ENV WITH_KAFKA=${WITH_KAFKA}
+
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
@@ -8,6 +11,16 @@ RUN apt-get update && apt-get install -y \
     curl \
     unzip \
     && rm -rf /var/lib/apt/lists/*
+
+RUN if [ "$WITH_KAFKA" = "true" ] ; then \
+        apt-get update && apt-get install -y default-jre-headless postgresql postgresql-contrib postgresql-17-pgvector && rm -rf /var/lib/apt/lists/* && \
+        wget https://archive.apache.org/dist/kafka/3.6.0/kafka_2.13-3.6.0.tgz && \
+        tar -xzf kafka_2.13-3.6.0.tgz -C /opt && \
+        mv /opt/kafka_2.13-3.6.0 /opt/kafka && \
+        rm kafka_2.13-3.6.0.tgz ; \
+    fi
+
+ENV PATH="/opt/kafka/bin:${PATH}"
 
 RUN wget https://github.com/grafana/tempo/releases/download/v2.3.0/tempo_2.3.0_linux_amd64.tar.gz && \
     tar -xvf tempo_2.3.0_linux_amd64.tar.gz && \
@@ -32,6 +45,8 @@ RUN pip install . uvicorn
 
 COPY src/ src/
 COPY config/ /app/config/
+COPY database/ /app/database/
+COPY scripts/ /app/scripts/
 RUN pip install . --no-deps
 
 COPY build/tempo-config.yaml /app/build/tempo-config.yaml
