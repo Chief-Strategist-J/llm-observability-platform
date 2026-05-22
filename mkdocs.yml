@@ -190,6 +190,7 @@ nav:
     - REST Management API:        reference/REST-Management-API.md
     - Docker & CLI Deployment:    reference/Docker-and-CLI-Deployment.md
     - Config Files Reference:     reference/Config-Files-Reference.md
+    - Performance Benchmarks:     reference/Performance-Benchmarks.md
 
   - Changelog: changelog.md
   - Tags: tags.md

@@ -49,7 +49,7 @@ class FakeKafkaProducer(KafkaProducerPort):
 
 class FakeWalStorage(WalStoragePort):
     def __init__(self) -> None:
-        self.records: List[Tuple[int, str, str]] = []
+        self.records: List[Tuple[int, str, Any]] = []
         self.counter = 0
         self.initialized = False
         self.fail_save = False
@@ -57,17 +57,25 @@ class FakeWalStorage(WalStoragePort):
     def initialize(self) -> None:
         self.initialized = True
 
-    def save(self, span_id: str, span_json: str) -> None:
+    def save(self, span_id: str, span_json: Any) -> None:
         if self.fail_save:
             raise Exception("WAL save error")
         self.counter += 1
         self.records.append((self.counter, span_id, span_json))
 
-    def fetch_batch(self, limit: int) -> List[Tuple[int, str, str]]:
+    def save_batch(self, spans: List[Tuple[str, Any]]) -> None:
+        if self.fail_save:
+            raise Exception("WAL save error")
+        for span_id, span_json in spans:
+            self.counter += 1
+            self.records.append((self.counter, span_id, span_json))
+
+    def fetch_batch(self, limit: int) -> List[Tuple[int, str, Any]]:
         return self.records[:limit]
 
     def delete_batch(self, ids: List[int]) -> None:
         self.records = [r for r in self.records if r[0] not in ids]
+
 
 def test_happy_path() -> None:
     producer = FakeKafkaProducer()

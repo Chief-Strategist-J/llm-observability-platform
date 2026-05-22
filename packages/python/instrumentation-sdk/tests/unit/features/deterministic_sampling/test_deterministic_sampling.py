@@ -34,14 +34,16 @@ def test_span_context_drops_sampled_fields():
             unsampled_id = u
 
     from unittest.mock import patch
-    with patch("src.features.manual_instrumentation.service.uuid.uuid4", return_value=sampled_id):
+    with patch("src.features.manual_instrumentation.service.uuid.uuid4", return_value=sampled_id), \
+         patch("src.features.minilm_embedding.index.enrich_and_report_span"):
         with llm_span(prompt="hello", prompt_hash="a"*64, prompt_embedding=[0.1]*384) as span:
             data = span._data
     assert data["is_sampled"] is True
     assert data["prompt_hash"] == "a"*64
     assert data["prompt_embedding"] == [0.1]*384
 
-    with patch("src.features.manual_instrumentation.service.uuid.uuid4", return_value=unsampled_id):
+    with patch("src.features.manual_instrumentation.service.uuid.uuid4", return_value=unsampled_id), \
+         patch("src.features.minilm_embedding.index.enrich_and_report_span"):
         with llm_span(prompt="hello", prompt_hash="a"*64, prompt_embedding=[0.1]*384) as span:
             data = span._data
     assert data["is_sampled"] is False
@@ -56,7 +58,8 @@ def test_span_context_prevents_setting_sampled_fields():
             unsampled_id = u
 
     from unittest.mock import patch
-    with patch("src.features.manual_instrumentation.service.uuid.uuid4", return_value=unsampled_id):
+    with patch("src.features.manual_instrumentation.service.uuid.uuid4", return_value=unsampled_id), \
+         patch("src.features.minilm_embedding.index.enrich_and_report_span"):
         with llm_span(prompt="hello") as span:
             span.set_metadata("prompt_hash", "a"*64)
             span.set_metadata("prompt_embedding", [0.1]*384)

@@ -72,3 +72,21 @@
         ├── Dockerfile -> Change pgvector package dependency to postgresql-17-pgvector
         ├── setup_kafka.sh -> Use command -v shell built-in and default to kafka-topics.sh to find Kafka CLI tools
         └── test_kafka_integration.py -> Skip test_reliable_reporter_real_kafka_integration if port 9094 is unreachable
+
+[2026-05-22T11:45:00+05:30] Optimize WAL write throughput, binary Protobuf storage, and introduce OpenTelemetry comparative profiling
+└── File: packages/python/instrumentation-sdk/src/shared/ports/wal.py, packages/python/instrumentation-sdk/src/infra/adapters/wal/sqlite_wal_adapter.py, packages/python/instrumentation-sdk/src/infra/adapters/kafka/reliable_adapter.py, packages/python/instrumentation-sdk/tests/performance/conftest.py, packages/python/instrumentation-sdk/tests/performance/test_reporter_performance.py, packages/python/instrumentation-sdk/tests/unit/features/spans/test_reliable_reporter.py
+    ├── Choice: Transition WAL storage from JSON to binary Protobuf bytes, enable bulk write batching, tune SQLite connection parameters, implement precise tail latency and resource usage profiling, and establish an OpenTelemetry SDK performance baseline.
+    └── Changes:
+        ├── wal-interface -> Modify WalStoragePort to support binary serialization payloads and save_batch operations
+        ├── sqlite-adapter -> Upgrade schema to store BLOB binary payloads, use executemany for bulk transactions, and set synchronous=OFF/locking_mode=EXCLUSIVE
+        ├── reliable-reporter -> Queue binary serialized spans, perform asynchronous WAL batching during offline phases, and avoid JSON serialization overheads
+        ├── benchmarks -> Correct replay benchmark logic to measure background thread time, track p50/p95/p99 tail latency and CPU/RSS resource usage
+        ├── otel-baseline -> Implement an in-memory exporter BatchSpanProcessor tracer benchmark to measure standard OTel throughput and latency
+        └── html-dashboard -> Enhance conftest.py hook to render a premium dark mode HTML dashboard showing tail latency profiles and resource statistics
+[2026-05-22T12:00:00+05:30] Resolve unit test interference and suppress telemetry warning logs
+└── File: packages/python/instrumentation-sdk/tests/unit/features/deterministic_sampling/test_deterministic_sampling.py, packages/python/instrumentation-sdk/tests/unit/conftest.py
+    ├── Choice: Patch manual instrumentation exit hooks to avoid background thread execution leaks during deterministic sampling tests, and set environment variables in unit tests conftest to skip OTLP and console telemetry exporters.
+    └── Changes:
+        ├── deterministic-sampling -> Mock enrich_and_report_span during context manager testing to block asynchronous embedding thread spawns
+        └── unit-conftest -> Create tests/unit/conftest.py to set SKIP_CONSOLE_EXPORTER and SKIP_OTLP_EXPORTER environment variables
+

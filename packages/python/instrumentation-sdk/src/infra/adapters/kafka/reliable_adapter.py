@@ -22,7 +22,7 @@ class ReliableKafkaSpanReporter(SpanReporter):
         wal_port: Optional[WalStoragePort] = None
     ) -> None:
         self.topic = topic
-        self._queue: queue.Queue[Dict[str, Any]] = queue.Queue(maxsize=max_buffer_size)
+        self._queue: queue.Queue[Tuple[str, Dict[str, Any]]] = queue.Queue(maxsize=max_buffer_size)
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
         
@@ -57,22 +57,30 @@ class ReliableKafkaSpanReporter(SpanReporter):
 
     def report(self, span_data: Dict[str, Any]) -> None:
         try:
-            write_wal = False
+            span_id = span_data["span_id"]
+            span_copy = dict(span_data)
+            
+            write_wal_sync = False
             with self._lock:
-                if not self._is_online or self._wal_has_pending:
-                    write_wal = True
-                else:
+                if self._is_online and not self._wal_has_pending:
                     try:
-                        self._queue.put_nowait(span_data)
+                        self._queue.put_nowait((span_id, span_copy))
+                        return
                     except queue.Full:
                         self._wal_has_pending = True
-                        write_wal = True
-                if write_wal:
+                
+                try:
+                    self._queue.put_nowait((span_id, span_copy))
+                except queue.Full:
+                    write_wal_sync = True
                     self._active_wal_writes += 1
 
-            if write_wal:
+            if write_wal_sync:
                 try:
-                    self._wal_port.save(span_data["span_id"], json.dumps(span_data))
+                    span_bytes = self._dict_to_proto_bytes(span_copy)
+                    self._wal_port.save(span_id, span_bytes)
+                    with self._lock:
+                        self._wal_has_pending = True
                 finally:
                     with self._lock:
                         self._active_wal_writes -= 1
@@ -112,7 +120,7 @@ class ReliableKafkaSpanReporter(SpanReporter):
         json_format.ParseDict(d, proto_span)
         return proto_span.SerializeToString()
 
-    def _make_delivery_callback(self, db_id: Optional[int], span_data: Dict[str, Any]) -> Callable[[Any, Any], None]:
+    def _make_delivery_callback(self, db_id: Optional[int], span_id: str, span_bytes: bytes) -> Callable[[Any, Any], None]:
         def callback(err: Any, msg: Any) -> None:
             try:
                 if err is not None:
@@ -120,7 +128,7 @@ class ReliableKafkaSpanReporter(SpanReporter):
                         self._is_online = False
                     if db_id is None:
                         try:
-                            self._wal_port.save(span_data["span_id"], json.dumps(span_data))
+                            self._wal_port.save(span_id, span_bytes)
                             with self._lock:
                                 self._wal_has_pending = True
                         except Exception:
@@ -160,12 +168,10 @@ class ReliableKafkaSpanReporter(SpanReporter):
                             pass
                 continue
 
-            for db_id, span_id, span_json in batch:
+            for db_id, span_id, span_bytes in batch:
                 try:
-                    span_data = json.loads(span_json)
-                    value = self._dict_to_proto_bytes(span_data)
-                    callback = self._make_delivery_callback(db_id, span_data)
-                    self._producer_port.produce(self.topic, key=span_id, value=value, on_delivery=callback)
+                    callback = self._make_delivery_callback(db_id, span_id, span_bytes)
+                    self._producer_port.produce(self.topic, key=span_id, value=span_bytes, on_delivery=callback)
                 except Exception:
                     try:
                         self._wal_port.delete_batch([db_id])
@@ -187,16 +193,23 @@ class ReliableKafkaSpanReporter(SpanReporter):
                     has_pending = self._wal_has_pending
 
                 if not online:
-                    drained: List[Dict[str, Any]] = []
+                    drained: List[Tuple[str, Dict[str, Any]]] = []
                     while not self._queue.empty():
                         try:
                             drained.append(self._queue.get_nowait())
                         except queue.Empty:
                             break
                     if drained:
-                        for span in drained:
+                        batch = []
+                        for span_id, span_copy in drained:
                             try:
-                                self._wal_port.save(span["span_id"], json.dumps(span))
+                                span_bytes = self._dict_to_proto_bytes(span_copy)
+                                batch.append((span_id, span_bytes))
+                            except Exception:
+                                pass
+                        if batch:
+                            try:
+                                self._wal_port.save_batch(batch)
                             except Exception:
                                 pass
                         with self._lock:
@@ -209,7 +222,7 @@ class ReliableKafkaSpanReporter(SpanReporter):
                                 self._is_online = True
                             continue
 
-                    time.sleep(0.5)
+                    time.sleep(0.1)
                     continue
 
                 if has_pending:
@@ -217,24 +230,26 @@ class ReliableKafkaSpanReporter(SpanReporter):
                     continue
 
                 try:
-                    span_data = self._queue.get(timeout=0.1)
+                    item = self._queue.get(timeout=0.1)
+                    span_id, span_copy = item
                     with self._lock:
                         if self._wal_has_pending:
-                            self._queue.put(span_data)
+                            self._queue.put(item)
                             continue
 
                     try:
-                        value = self._dict_to_proto_bytes(span_data)
-                        callback = self._make_delivery_callback(None, span_data)
+                        span_bytes = self._dict_to_proto_bytes(span_copy)
+                        callback = self._make_delivery_callback(None, span_id, span_bytes)
                         self._producer_port.produce(
                             self.topic,
-                            key=span_data["span_id"],
-                            value=value,
+                            key=span_id,
+                            value=span_bytes,
                             on_delivery=callback
                         )
                     except Exception:
                         try:
-                            self._wal_port.save(span_data["span_id"], json.dumps(span_data))
+                            span_bytes = self._dict_to_proto_bytes(span_copy)
+                            self._wal_port.save(span_id, span_bytes)
                             with self._lock:
                                 self._wal_has_pending = True
                         except Exception:
