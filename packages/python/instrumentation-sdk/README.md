@@ -17,6 +17,7 @@ This guide covers the technical architecture and end-user usage for the Python-b
   - [PII & Injection Scan (Aho-Corasick Redaction)](#pii--injection-scan-aho-corasick-redaction)
   - [Deterministic Sampling Gate (Modulo 100)](#deterministic-sampling-gate-modulo-100)
   - [MiniLM Embedding (Concurrent & Sampled)](#minilm-embedding-concurrent--sampled)
+  - [Multi-Model Fallback Chain Tracking](#multi-model-fallback-chain-tracking)
   - [Prometheus Metrics & Grafana Dashboard](#prometheus-metrics--grafana-dashboard)
   - [Updating Config Files (Model Prices, PII Patterns, Infra)](#updating-config-files-model-prices-pii-patterns-infra)
   - [Docker Deployment](#docker-deployment)
@@ -349,6 +350,28 @@ curl -X POST http://localhost:8000/v1/embeddings/embed \
   -d '{"text": "your text here"}'
 ```
 
+### Multi-Model Fallback Chain Tracking
+
+The SDK automatically correlates multiple retry attempts under the same `trace_id` to trace the fallback model chain.
+
+- **Attempted Models**: An array `attempted_models` containing the sequence of models attempted across retries.
+- **Retry Count**: An integer `retry_count` representing the number of retries for the given `trace_id`.
+- **Validation Rule (RULE-W-05)**: Spans with `retry_count > 0` represent intermediate retry attempts. They trigger the `RULE-W-05` validation warning warning flag, alerting you of fallback activity in the chain.
+
+#### Programmatic Usage
+
+The fallback history is automatically populated when reporting spans. You can also query or reset the tracker:
+
+```python
+from instrumentation_sdk import track_fallback, clear_fallback_tracker
+
+# Record attempt and get updated retry count and model sequence
+retry_count, models = track_fallback(trace_id="your-trace-id", model="gpt-4")
+
+# Reset fallback tracker (e.g. at the end of request lifecycle)
+clear_fallback_tracker()
+```
+
 ### Prometheus Metrics & Grafana Dashboard
 
 The SDK integrates a Prometheus metrics collection pipeline to track operational metrics for LLM calls (latency, TTFT, token usage, cost, and security violations).
@@ -577,6 +600,7 @@ This sends spans covering all 6 model/provider combos, error ratios, PII flags, 
 | **PII & Injection Scan**| `scan_prompt()` | `features/pii_injection_scan/index.py` |
 | **Deterministic Sampling**| `should_sample()` | `features/deterministic_sampling/index.py` |
 | **MiniLM Embedding** | `get_embedding()` | `features/minilm_embedding/index.py` |
+| **Fallback Tracking** | `track_fallback()` | `features/spans/fallback_tracker.py` |
 | **Reliable Reporter** | `report()` / `report_async()` | `infra/adapters/kafka/reliable_adapter.py` |
 
 

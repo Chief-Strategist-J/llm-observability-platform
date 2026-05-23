@@ -9,6 +9,15 @@ router = APIRouter(tags=["Ingestion"])
 
 @router.post("/spans", status_code=202)
 def record_span(span_data: Dict[str, Any]) -> JSONResponse:
+    trace_id = span_data.get("trace_id")
+    if trace_id:
+        from .....features.spans.fallback_tracker import track_fallback
+        retry_count, attempted_models = track_fallback(trace_id, span_data.get("model"))
+        span_data["attempted_models"] = attempted_models
+        span_data["retry_count"] = max(span_data.get("retry_count", 0), retry_count)
+    elif span_data.get("model") and not span_data.get("attempted_models"):
+        span_data["attempted_models"] = [span_data.get("model")]
+
     try:
         span = LLMSpan(**span_data)
     except ValidationError as e:

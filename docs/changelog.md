@@ -5,6 +5,13 @@ All notable changes to the `instrumentation-sdk` package will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.1] - 2026-05-23
+
+### Added
+- **Multi-Model Fallback Chain Tracking**: Correlates multiple retry attempts under a single request trace by passing `attempted_models` and `retry_count` through the SDK manual span enrichment pipeline and the REST API span ingestion endpoint.
+- **Optimization of Kafka Reporter WAL**: Offloaded Protobuf serialization to a background thread to prevent thread contention, and optimized local SQLite Write-Ahead Log (WAL) fallback writing.
+- **OTel Performance Benchmarking**: Added profiling tools to benchmark memory/CPU footprints of the telemetry pipeline.
+
 ## [1.7.0] - 2026-05-21
 
 ### Added

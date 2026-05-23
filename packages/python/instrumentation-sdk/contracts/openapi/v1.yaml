@@ -320,6 +320,68 @@ paths:
                     minItems: 384
                     maxItems: 384
 
+  /fallback/track:
+    post:
+      summary: Track fallback retry attempt for a trace ID
+      operationId: trackFallback
+      tags:
+        - Fallback Tracking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - trace_id
+                - model
+              properties:
+                trace_id:
+                  type: string
+                  example: "uuid-v4-string"
+                model:
+                  type: string
+                  example: "gpt-4"
+      responses:
+        '200':
+          description: Successful fallback tracking registration
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - retry_count
+                  - attempted_models
+                properties:
+                  retry_count:
+                    type: integer
+                    example: 1
+                  attempted_models:
+                    type: array
+                    items:
+                      type: string
+                    example: ["gpt-3.5", "gpt-4"]
+
+  /fallback/clear:
+    post:
+      summary: Clear fallback registry state
+      operationId: clearFallbackTracker
+      tags:
+        - Fallback Tracking
+      responses:
+        '200':
+          description: Successful registry clearing
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
   /metrics/init:
     post:
       summary: Initialize metrics pipeline
