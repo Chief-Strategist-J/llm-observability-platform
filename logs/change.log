@@ -90,3 +90,11 @@
         ├── deterministic-sampling -> Mock enrich_and_report_span during context manager testing to block asynchronous embedding thread spawns
         └── unit-conftest -> Create tests/unit/conftest.py to set SKIP_CONSOLE_EXPORTER and SKIP_OTLP_EXPORTER environment variables
 
+[2026-05-23T12:55:00+05:30] Implement multi-model fallback chain tracking and REST/GraphQL/Protobuf API endpoints
+└── File: packages/python/instrumentation-sdk/src/features/spans/fallback_tracker.py, packages/python/instrumentation-sdk/src/features/minilm_embedding/index.py, packages/python/instrumentation-sdk/src/api/rest/v1/handlers/spans.py, packages/python/instrumentation-sdk/src/api/rest/v1/handlers/fallback.py, packages/python/instrumentation-sdk/contracts/openapi/v1.yaml, packages/python/instrumentation-sdk/contracts/graphql/v1.graphql, packages/python/instrumentation-sdk/contracts/proto/v1/llm/observability/v1/instrumentation.proto, packages/python/instrumentation-sdk/tests/unit/features/spans/test_fallback_tracking.py
+    ├── Choice: Use thread-safe in-memory registry to correlate fallback retries sharing trace_id, enrich span payloads automatically prior to validation, and expose fallback endpoints across OpenAPI, GraphQL, and gRPC contracts.
+    └── Changes:
+        ├── fallback-tracker -> Add thread-safe fallback state store and tracking logic
+        ├── enrichment-middleware -> Intercept and populate attempted_models and retry_count on ingestion and embedding layers
+        ├── api-endpoints -> Add /fallback/track and /fallback/clear REST endpoints, and implement GraphQL mutations / gRPC RPCs
+        └── validation-rules -> Enable validation warnings (RULE-W-02/RULE-W-05) for fallback spans in LLMSpan model

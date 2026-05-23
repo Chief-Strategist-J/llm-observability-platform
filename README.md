@@ -1,435 +1,583 @@
-# LLM Observability Platform
+# LLM Observability Platform: Core Python Infrastructure
 
-[![Documentation](https://img.shields.io/badge/docs-readthedocs-blue?logo=readthedocs)](https://llm-observability-platform.readthedocs.io/en/latest/)
-[![Wiki](https://img.shields.io/badge/wiki-GitHub-grey?logo=github)](https://github.com/Chief-Strategist-J/llm-observability-platform/wiki)
-[![PyPI](https://img.shields.io/badge/PyPI-instrumentation--sdk-orange?logo=pypi)](https://pypi.org/project/instrumentation-sdk/)
+This guide covers the technical architecture and end-user usage for the Python-based observability components.
 
-A comprehensive Python-based observability platform for Large Language Models (LLMs) with chat interface, container orchestration, monitoring, and advanced analytics capabilities.
+## Table of Contents
+- [1. System Architecture](#1-system-architecture)
+  - [High-Level Data Flow](#high-level-data-flow)
+  - [Technical Sequence](#technical-sequence)
+- [2. End-User Usage Guide](#2-end-user-usage-guide)
+  - [Installation](#installation)
+  - [Auto-Instrumentation (Zero-Code Changes)](#auto-instrumentation-zero-code-changes)
+  - [Remote Management API (REST)](#remote-management-api-rest)
+  - [Basic Usage: Decorators](#basic-usage-decorators)
+  - [Advanced Usage: Context Manager](#advanced-usage-context-manager)
+  - [Token Counting (Pre-Call Token Counting)](#token-counting-pre-call-token-counting)
+  - [Streaming Observability (TTFT & Token Tracking)](#streaming-observability-ttft--token-tracking)
+  - [PII & Injection Scan (Aho-Corasick Redaction)](#pii--injection-scan-aho-corasick-redaction)
+  - [Deterministic Sampling Gate (Modulo 100)](#deterministic-sampling-gate-modulo-100)
+  - [MiniLM Embedding (Concurrent & Sampled)](#minilm-embedding-concurrent--sampled)
+  - [Prometheus Metrics & Grafana Dashboard](#prometheus-metrics--grafana-dashboard)
+  - [Updating Config Files (Model Prices, PII Patterns, Infra)](#updating-config-files-model-prices-pii-patterns-infra)
+  - [Docker Deployment](#docker-deployment)
+  - [Observability Launcher CLI (llm-observe)](#observability-launcher-cli-llm-observe)
+- [3. Implementation Call Chain](#3-implementation-call-chain)
 
-## 📚 Documentation
+## 1. System Architecture
 
-Full SDK documentation is available at:
+### High-Level Data Flow
+This diagram illustrates the lifecycle of a span from application capture to background enrichment. The SDK now includes a REST Management API for remote control and discovery.
 
-👉 **[https://llm-observability-platform.readthedocs.io/en/latest/](https://llm-observability-platform.readthedocs.io/en/latest/)**
-
-| Section | What it covers |
-|---|---|
-| [Installation & Quick Start](https://llm-observability-platform.readthedocs.io/en/latest/Installation-and-Quick-Start/) | Install, first span, verify it works |
-| [Auto-Instrumentation](https://llm-observability-platform.readthedocs.io/en/latest/Auto-Instrumentation/) | Zero-code patching for OpenAI, Anthropic, LiteLLM, LangChain |
-| [Manual Spans — Decorator](https://llm-observability-platform.readthedocs.io/en/latest/Manual-Spans-Decorator/) | `@llm_observe` decorator usage |
-| [Manual Spans — Context Manager](https://llm-observability-platform.readthedocs.io/en/latest/Manual-Spans-Context-Manager/) | `llm_span` / `llm_span_with_tokens` context managers |
-| [Streaming Observability](https://llm-observability-platform.readthedocs.io/en/latest/Streaming-Observability/) | TTFT tracking, `wrap_stream`, `wrap_async_stream` |
-| [PII & Injection Scanning](https://llm-observability-platform.readthedocs.io/en/latest/PII-and-Injection-Scanning/) | Aho-Corasick redaction, scan API |
-| [Deterministic Sampling](https://llm-observability-platform.readthedocs.io/en/latest/Deterministic-Sampling/) | SHA-256 modulo-100 gate |
-| [MiniLM Embeddings](https://llm-observability-platform.readthedocs.io/en/latest/MiniLM-Embeddings/) | Async 384-dim prompt embeddings |
-| [Prometheus Metrics & Grafana](https://llm-observability-platform.readthedocs.io/en/latest/Prometheus-Metrics-and-Grafana/) | Cost, latency, TTFT dashboards |
-| [REST Management API](https://llm-observability-platform.readthedocs.io/en/latest/REST-Management-API/) | Full endpoint reference |
-| [Docker & CLI Deployment](https://llm-observability-platform.readthedocs.io/en/latest/Docker-and-CLI-Deployment/) | `llm-observe` CLI, all-in-one container |
-| [Config Files Reference](https://llm-observability-platform.readthedocs.io/en/latest/Config-Files-Reference/) | Model prices, PII patterns, infra configs |
-
-### Infrastructure Observability
-
-**Log Management:**
-- Loki-based log aggregation
-- Structured logging with correlation IDs
-- Container log collection and processing
-
-**Metrics Collection:**
-- Prometheus metrics endpoint discovery
-- Grafana dashboard integration
-- Performance and usage tracking
-
-**Distributed Tracing:**
-- OpenTelemetry OTLP trace collection
-- Service dependency mapping
-- Request flow visualization
-
-### Visualizations
-
-
-  <h4>Loki Logs Dashboard</h4>
-  <img src="assets/loki-logs.png" alt="Loki Logs Dashboard" width="800" />
-  
-  <h4>Metrics (Prometheus/Grafana)</h4>
-  <img src="assets/matrices.png" alt="Metrics Dashboard" width="800" />
-  
-  <h4>Distributed Tracing (Jaeger)</h4>
-  <img src="assets/tracing.png" alt="Tracing Dashboard" width="800" />
-
-
-## Observability Setup Guide 🚀
-
-For a step-by-step guide on how to deploy, configure, and use the observability stack (even for non-developers), please refer to our detailed documentation:
-
-👉 **[Setup Observability Stack (Detailed Guide)](infrastructure/observability/SETUP_OBSERVABILITY_STACK.md)**
-
-This guide covers:
-- **One-Command Deployment**
-- **How to view Logs, Metrics, and Traces**
-- **How to create Alerts**
-- **Using the Python Client**
-
-## Infrastructure Documentation
-
-For comprehensive details on the underlying infrastructure orchestration:
-
-- **[Orchestrator Quickstart](infrastructure/orchestrator/QUICKSTART.md)** - Getting started with the orchestration layer.
-- **[Orchestrator Architecture](infrastructure/orchestrator/README.md)** - Deep dive into the orchestrator design.
-- **[Setup HTTPS for Traefik](infrastructure/orchestrator/SETUP_HTTPS_FOR_TRAEFIK.md)** - Guide on certificate generation and Traefik TLS.
-- **[Setup Virtual IPs](infrastructure/orchestrator/SETUP_VIRTUAL_IP.md)** - Understanding VIP management and routing.
-
-## LLM Web Interface
-
-Our platform features a modern, responsive web interface for interacting with LLM models. The interface includes advanced visualization and chat capabilities.
-
-
-  <h3>3D Discussion Interface</h3>
-  <img src="./assets/3d-all-descussion-ui.png" alt="3D Discussion Interface" width="800" />
-  <p>Interactive 3D visualization of chat discussions showing conversation flow and relationships</p>
-  
-  <h3>Chat Interface</h3>
-  <img src="./assets/chat-descussion-detailed.png" alt="Chat Interface" width="800" />
-  <p>Feature-rich chat interface with message threading, markdown support, and context-aware suggestions</p>
-
-
-## Features
-
-- **Interactive Chat Interface**: Streamlit-based web UI for chatting with LLM models
-- **Model Selection**: Support for multiple LLM categories and models from Cloudflare
-- **Conversation History**: Persistent chat history with user sessions
-- **Deep Analysis**: Advanced emotional and meta-analysis of conversations and LLM responses
-- **Container Orchestration**: Docker-based deployment with automatic scaling
-- **Observability Suite**: Comprehensive monitoring for LLM performance, usage metrics, and behavioral analytics
-- **Health Monitoring**: Real-time health checks and alerting for LLM services
-- **Performance Tracking**: Detailed metrics on response times, token usage, and model performance
-- **Multi-Cloud Support**: Deployment options for Fly.io and Render
-
-## Project Structure
-
-```
-llm-chatbot-python/
-├── service/llm_chat_app/          # Main application
-│   ├── app/                       # Streamlit web interface
-│   ├── core/                      # Core business logic
-│   ├── worker/                    # Background workers and workflows
-│   └── requirements.txt           # Python dependencies
-├── infrastructure/                # Infrastructure components
-│   ├── orchestrator/              # Container management
-│   └── observability/    # Monitoring and logging
-├── deployment/                    # Deployment configurations
-├── docs/                          # Documentation
-└── shared/                        # Shared utilities
+```text
+┌────────────────┐          ┌──────────────────┐          ┌───────────────────┐
+│   User App     │ capture  │ instrumentation  │  queue   │  Cloudflare Queue │
+│  (Python/JS)   ├─────────>│      -sdk        ├─────────>│ (span-enrichment) │
+└────────────────┘          └─────────┬────────┘          └─────────┬─────────┘
+                                      │                             │
+                                      │ REST API (8000)             │ trigger
+                                      v                             v
+┌────────────────┐          ┌──────────────────┐          ┌───────────────────┐
+│ Analytics DB   │ storage  │  Remote Control  │ response │  queue-embedding  │
+│ (ClickHouse)   │<─────────┤  (Init/Detect)   │<─────────┤      -worker      │
+└────────────────┘          └──────────────────┘          └─────────┬─────────┘
+                                                                    │
+                                                                    │ HTTP call
+                                                                    v
+                                                          ┌───────────────────┐
+                                                          │ Cloudflare AI     │
+                                                          │ (Workers AI API)  │
+                                                          └───────────────────┘
 ```
 
-## Quick Start
 
-### Prerequisites
+## 2. End-User Usage Guide
 
-- Python 3.10+
-- Docker and Docker Compose
-- MongoDB (see setup below)
+The `instrumentation-sdk` is designed to be developer-friendly, requiring minimal code changes to start capturing observability data.
 
-### MongoDB Setup
-
-1. **Create Docker Networks** (if they don't exist):
-   ```bash
-   docker network create --driver bridge observability-network || true
-   docker network create --driver bridge data-network || true
-   docker network create --driver bridge messaging-network || true
-   docker network create --driver bridge cicd-network || true
-   docker network create --driver bridge temporal-network || true
-   ```
-
-2. **Copy environment template**:
-   ```bash
-   cp .env.template .env
-   ```
-
-3. **Start MongoDB**:
-   ```bash
-   python infrastructure/orchestrator/trigger/setup/start_mongodb.py
-   ```
-
-4. **Setup Service Worker**:
-   ```bash
-   python infrastructure/orchestrator/workers/service_setup_worker.py
-   ```
-
-5. **Access MongoDB**:
-   - **Mongo Express**: https://scaibu.mongoexpress/
-     - Username: admin
-     - Password: MongoExpressPassword123!
-
-
-
-### Infrastructure Setup
-
-1. **Start Temporal Orchestrator:**
+### Installation
 ```bash
-cd infrastructure/orchestrator
-docker-compose -f temporal-orchestrator-compose.yaml up -d
+pip install instrumentation-sdk
 ```
 
-2. **Verify Temporal Services:**
-```bash
-curl http://localhost:7233/api/v1/namespaces/default  # Temporal API
-curl http://localhost:8080/namespaces/default/workflows  # Web UI
-docker exec temporal-postgresql psql -U temporal -d temporal -c "SELECT 1;"
+### Auto-Instrumentation (Zero-Code Changes)
+The fastest way to get observability is to use auto-instrumentation. This patches the underlying HTTP calls of popular LLM clients transparently.
+
+```python
+from instrumentation_sdk import init_auto_instrumentation
+
+# Initialize at the start of your application
+init_auto_instrumentation()
+
+# Now any call to OpenAI, Anthropic, LiteLLM, or LangChain is tracked automatically
+import openai
+client = openai.AsyncOpenAI()
+response = await client.chat.completions.create(model="gpt-4o", messages=[...])
 ```
 
-3. **Start Observability Components:**
-```bash
-# Start logging pipeline
-python infrastructure/orchestrator/trigger/logging_pipeline/start.py
+**Supported Providers:**
+- **OpenAI**: `openai.AsyncOpenAI`
+- **Anthropic**: `anthropic.AsyncAnthropic`
+- **LiteLLM**: `litellm.acompletion`
+- **LangChain**: Any model inheriting from `BaseChatModel` (via `ainvoke`)
+
+### Remote Management API (REST)
+The SDK provides a built-in FastAPI-based management layer for remote orchestration.
+
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/instrumentation/init` | POST | Remotely initialize auto-instrumentation. |
+| `/instrumentation/uninstrument` | POST | Disable all active instrumentation. |
+| `/instrumentation/detect` | POST | Discovery: Detect provider/model from a sample request body. |
+| `/instrumentation/test-call` | POST | Verification: Trigger a sample LLM call to verify end-to-end tracing. |
+| `/streaming/test-stream-call` | POST | Verification: Trigger a mock streaming call to verify streaming/TTFT. |
+| `/v1/sampling/should-sample` | POST | Verification: Check if a span should be sampled. |
+| `/v1/embeddings/embed` | POST | Verification: Generate MiniLM embeddings for a given text. |
+| `/v1/spans` | POST | Ingestion: Submit a span to the reliable reporter for storage & delivery. |
+
+### Basic Usage: Decorators
+Use the `@llm_observe` decorator to manually track functions.
+
+```python
+from instrumentation_sdk import llm_observe
+
+# (1) Decorate your LLM-calling functions
+@llm_observe(service="payment-bot", endpoint="gpt-4o")
+def get_llm_response(prompt: str):
+    # Your existing LLM logic here
+    # status, latency, and span_ids are captured automatically
+    return response
+
+# (2) Support for Async functions
+@llm_observe(service="search-agent", endpoint="claude-3")
+async def get_async_response(prompt: str):
+    return await client.completions.create(...)
 ```
 
-### Application Setup
+### Advanced Usage: Context Manager
+For callers who need to set metadata mid-call (e.g., after routing to a specific model or determining usage), use the `llm_span` context manager. It supports both synchronous and asynchronous usage.
 
-1. **Install Dependencies:**
-```bash
-cd service/llm_chat_app
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+```python
+from instrumentation_sdk import llm_span
+
+async def my_handler(req):
+    # (1) Start a span with initial metadata
+    async with llm_span(model="gpt-4o", user_id=req.user_id) as span:
+        # (2) Perform your LLM call
+        response = await client.chat.completions.create(...)
+        
+        # (3) Update metadata mid-call
+        span.set_metadata("actual_model", response.model)
+        span.set_metadata("prompt_tokens", response.usage.prompt_tokens)
+        
+    # Span is automatically reported on exit (even if an error occurs)
 ```
 
-2. **Configure Environment:**
-```bash
-cp .env.llm_chat_app.example .env.llm_chat_app
-# Required variables:
-# CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
-# NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
-# TEMPORAL_HOST=localhost:7233
+### Manual Reporting
+If you prefer direct control over the span data, you can use the reporter manually.
+
+```python
+from instrumentation_sdk import get_reporter
+
+reporter = get_reporter()
+reporter.report({
+    "span_id": "unique-id",
+    "service_name": "my-service",
+    "status": "success",
+    "text": "The prompt content to be enriched"
+})
 ```
-
-3. **Start LLM Chat Application:**
-```bash
-streamlit run app/streamlit_app.py --server.port 8501
-```
-
-## Configuration
-
-### Environment Variables
-
-**Core Application (.env.llm_chat_app):**
-- `CLOUDFLARE_API_TOKEN`: Cloudflare Workers AI API token
-- `CLOUDFLARE_ACCOUNT_ID`: Your Cloudflare account ID
-- `NEO4J_URI`: Neo4j database connection (bolt://localhost:7687)
-- `NEO4J_USER`: Neo4j username
-- `NEO4J_PASSWORD`: Neo4j password
-- `TEMPORAL_HOST`: Temporal server address (localhost:7233)
-- `LOKI_URL`: Loki endpoint for log aggregation
-- `PROMETHEUS_URL`: Prometheus endpoint for metrics
-
-**Infrastructure Configuration:**
-- **Temporal**: PostgreSQL backend with dynamic config in `dynamicconfig/development-sql.yaml`
-- **Docker Networks**: Isolated `observability-network` for service communication
-- **Resource Limits**: 256MB memory, 0.5 CPU per observability container
-- **Health Checks**: Automatic container health monitoring with retries
-
-### Service Discovery
-
-**Available Components:**
-- **Logging Pipeline**: Loki log aggregation with container discovery
-- **Metrics Pipeline**: Prometheus metrics collection and Grafana dashboards
-- **Tracing Pipeline**: OpenTelemetry tracing with distributed systems support
-- **AI Proxy Service**: Containerized LLM API proxy with monitoring
 
 ### Docker Deployment
+The instrumentation SDK API is available as a production-ready, fully self-contained **All-in-One Standalone Observability Container**. This container bundles the FastAPI application, Grafana, and Tempo into a single image, eliminating the need to set up external databases or visualizers manually.
 
-1. Build the container:
+**Image Name:** `chiefj/instrumentation-sdk-api:unstable` (or `chiefj/instrumentation-sdk-api:latest`)
+
+To pull and run the fully integrated all-in-one container locally:
 ```bash
-docker build -t llm-chatbot .
+# Pull the latest standalone image
+docker pull chiefj/instrumentation-sdk-api:unstable
+
+# Run the unified all-in-one telemetry stack
+docker run -d \
+  -p 8002:8000 \
+  -p 3002:3000 \
+  --name instrumentation-api-allinone \
+  chiefj/instrumentation-sdk-api:unstable
 ```
 
-2. Run with Docker Compose:
+* **API Endpoints**: Accessible at `http://localhost:8002`
+* **Grafana Portal**: Accessible at `http://localhost:3002` (Tempo is automatically provisioned as a read-only datasource and ready to query!)
+
+### Observability Launcher CLI (`llm-observe`)
+
+To simplify launching and managing the all-in-one container, the SDK provides a built-in command-line utility named `llm-observe`.
+
+Once `instrumentation-sdk` is installed, you can manage the observability stack with simple commands:
+
 ```bash
-docker-compose up -d
+# Start the stack on host ports: API (8002), Grafana (3002), OTLP (4317), Prometheus (9090)
+llm-observe start
+
+# Check the status of the container stack
+llm-observe status
+
+# Stop and clean up the container stack
+llm-observe stop
 ```
 
-## Development
+#### Customizing Ports & Names
+You can customize the container name, ports, image, and tag:
+```bash
+llm-observe start --name my-observability --api-port 8005 --grafana-port 3005
+```
 
-### Workflow Development
+For development with hot-reloading, use the provided Docker Compose:
+```bash
+docker compose -f packages/python/instrumentation-sdk/deploy/docker/docker-compose.dev.yaml up instrumentation-api
+```
 
-**Adding New Activities:**
+### Token Counting (Pre-Call Token Counting)
+
+The SDK provides automatic pre-call token counting utilizing `tiktoken` with fallback character-based heuristics for non-OpenAI models. It supports plain text strings, complex chat message list schemas, and OpenAI's tile-based vision token calculation.
+
+#### Direct Token Counting
+
+Use `count_tokens` to calculate tokens directly:
+
 ```python
-# activities/my_new_activity.py
-from temporalio import activity
-import asyncio
+from instrumentation_sdk import count_tokens
 
-@activity.defn
-async def my_new_activity(arg: str) -> str:
-    await asyncio.sleep(0.1)
-    return f"done:{arg}"
+tokens, method = count_tokens("hello world", "gpt-4")
 ```
 
-**Creating Workflows:**
+#### Context Manager with Automated Token Tracking
+
+Use `llm_span_with_tokens` to automatically record `prompt_tokens` and `token_count_method` inside manual spans:
+
 ```python
-# workflows/my_new_workflow.py
-from datetime import timedelta
-from temporalio import workflow
-from temporalio.common import RetryPolicy
+from instrumentation_sdk import llm_span_with_tokens
 
-@workflow.defn
-class MyNewWorkflow:
-    @workflow.run
-    async def run(self, param: str) -> str:
-        result = await workflow.execute_activity(
-            my_new_activity,
-            param,
-            start_to_close_timeout=timedelta(minutes=2),
-            retry_policy=RetryPolicy(maximum_attempts=3),
-        )
-        return result
+async def handle_request(req):
+    async with llm_span_with_tokens(model="gpt-4", provider="openai", prompt="hello world") as span:
+        pass
 ```
 
-**Worker Implementation:**
+#### REST Management API (REST)
+
+The `/v1/token-counting/count` REST API endpoint supports counting prompt tokens:
+
+```bash
+curl -X POST http://localhost:8000/v1/token-counting/count \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "hello world", "model": "gpt-4"}'
+```
+
+### Streaming Observability (TTFT & Token Tracking)
+
+The SDK provides specialized utilities for tracking streaming LLM calls. It wraps generators/iterators to:
+- Capture the **Time-to-First-Token (TTFT)** latency when the first chunk is yielded.
+- Accumulate the streamed chunks and automatically compute the completion token count (using Tiktoken/heuristics) upon stream completion or cancellation.
+- Finalize and report the manual span only when the stream is exhausted, closed, or encounters an exception.
+
+#### Basic Streaming Usage
+
+Use `llm_streaming_span`, `wrap_stream` (for synchronous generators), and `wrap_async_stream` (for asynchronous generators):
+
 ```python
-# workers/my_new_worker.py
-async def main():
-    client = await Client.connect("localhost:7233")
-    worker = Worker(
-        client,
-        task_queue="my-new-task-queue",
-        workflows=[MyNewWorkflow],
-        activities=[my_new_activity]
-    )
-    await worker.run()
+from instrumentation_sdk import llm_streaming_span, wrap_stream, wrap_async_stream
+
+# 1. Synchronous Streaming
+with llm_streaming_span(model="gpt-4", provider="openai", prompt="Say hello") as span_ctx:
+    raw_generator = ["Hello", " world", "!"]
+    wrapped_stream = wrap_stream(raw_generator, span_context=span_ctx, model="gpt-4")
+    for chunk in wrapped_stream:
+        print(chunk)
+
+# 2. Asynchronous Streaming
+async with llm_streaming_span(model="gpt-4", provider="openai", prompt="Say hello") as span_ctx:
+    async def async_generator():
+        yield "Hello"
+        yield " world"
+    wrapped_stream = wrap_async_stream(async_generator(), span_context=span_ctx, model="gpt-4")
+    async for chunk in wrapped_stream:
+        print(chunk)
 ```
 
-### Code Style Requirements
+#### Mid-Stream Updates & Abort Resilience
+- You can dynamically update span metadata using `span_ctx.set_metadata("custom_field", "value")` mid-stream.
+- If the stream is closed early (via `wrapped_stream.close()` or `.aclose()`), the SDK captures and reports all completion tokens generated up to that point.
 
-**Python (Pylint):**
-- Naming: `snake_case` for variables/functions, `PascalCase` for classes
-- Limits: 5 function args, 50 statements per function, 12 branches
-- Python 3.12+ compatibility required
+#### REST Verification Endpoint
 
-**YAML:**
-- 2-space indentation, single quotes
-- 120 character line length maximum
-- No trailing spaces, max 2 consecutive empty lines
+The `/v1/streaming/test-stream-call` endpoint streams SSE events back to the client while validating end-to-end streaming tracing:
 
-### Git Workflow
-
-All changes follow automated workflow:
 ```bash
-git add .
-git commit -m "Auto-commit: $(date '+%Y-%m-%d %H:%M:%S')"
-git push
+curl -X POST http://localhost:8000/v1/streaming/test-stream-call \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "openai", "chunks": ["A", "B", "C"]}'
 ```
 
-Conflict handling:
+### PII & Injection Scan (Aho-Corasick Redaction)
+
+The SDK features an inline Aho-Corasick trie-based scanner that runs on all prompts inside manual span contexts (`LLMSpanContext` and `LLMSpanWithTokensContext`). It intercepts prompts, detects PII and SQL/prompt injection, and updates telemetry accordingly.
+
+#### Redaction & Interception Behavior
+- **PII Detected**: The prompt and downstream fields (like hashes and embeddings) are completely redacted (`None` or empty). The custom span attribute `llm.pii_detected` is set to `True`.
+- **Injection Detected**: The prompt is preserved, but the custom span attribute `llm.injection_attempt` is set to `True`.
+- **Fail-Safe execution**: Any exception raised inside the scanning engine is caught internally, allowing client code or FastAPI handler to execute without crashes.
+
+#### Programmatic Scan Usage
+You can import and call `scan_prompt` directly to inspect a prompt:
+
+```python
+from instrumentation_sdk import scan_prompt
+
+# Returns (pii_detected: bool, injection_attempt: bool)
+pii, inj = scan_prompt("my email is test@example.com")
+print(f"PII: {pii}, Injection: {inj}")
+```
+
+#### REST Scanning Endpoint
+The `/v1/pii-injection/scan` REST API endpoint supports checking prompt contents:
+
 ```bash
-git pull  # Auto-merge if possible
-# Manual review required if merge fails
+curl -X POST http://localhost:8000/v1/pii-injection/scan \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "my email is user@example.com"}'
 ```
 
-## Architecture Overview
+### Deterministic Sampling Gate (Modulo 100)
 
-This platform is built on **Temporal.io orchestration** for managing containerized services with a comprehensive observability stack.
+The SDK implements deterministic sampling decided at span creation time. It hashes the `span_id` using SHA256 and evaluates whether the hash value modulo 100 is equal to 0.
+- Sampled (`is_sampled` is `True`): The span is processed normally, performing prompt hashing and embedding generation.
+- Unsampled (`is_sampled` is `False`): The span drops/skips both the SHA256 hashing and the MiniLM embedding generation, saving computational resources.
 
-### Core Infrastructure Components
+#### Programmatic Usage
+You can query the sampling logic directly:
+```python
+from instrumentation_sdk import should_sample
 
-**Temporal Orchestration System:**
-- **Temporal Server**: Workflow state management and durability (PostgreSQL-backed)
-- **Activities**: Individual operations (container start/stop, monitoring, configuration)
-- **Workflows**: Orchestration logic coordinating activities with retry policies
-- **Workers**: Execute workflows on dedicated task queues per service
-- **Web UI**: Real-time workflow monitoring at http://localhost:8080
+sampled = should_sample("test-span-id")
+```
 
-**Observability Platform:**
-- **Loki**: Log aggregation with automatic Docker container discovery
-- **Prometheus**: Metrics collection with auto-discovery of endpoints
-- **Grafana**: Unified dashboards for logs, metrics, and traces
-- **OpenTelemetry**: Standardized telemetry collection and processing
-- **Tempo**: Distributed tracing with OTLP support
-
-**Container Management:**
-- **BaseContainerManager**: Thread-safe Docker client with resource limits
-- **ServiceManager**: Multi-container orchestration with dependency resolution
-- **Health Monitoring**: Real-time container health checks and alerting
-- **Network Management**: Isolated observability network for service communication
-
-### Service Architecture
-
-The platform follows a **microservices pattern** with:
-- **Conditional Service Activation**: Services only run when explicitly requested
-- **Shared Infrastructure**: Common databases and message brokers with isolation
-- **Event-Driven Communication**: Kafka for async, GraphQL for sync operations
-- **Auto-Discovery**: Automatic detection of Docker containers and K8s pods for observability
-
-### Key Features
-
-**LLM-Specific Observability:**
-- **Deep Analysis**: Emotional and meta-analysis of LLM conversations and responses
-- **Performance Tracking**: Response times, token usage, and model performance metrics
-- **Behavioral Analytics**: Pattern recognition in LLM interactions and outputs
-- **Health Monitoring**: Real-time LLM service health with automatic failover
-
-**Infrastructure Automation:**
-- **Temporal Workflows**: Orchestration of container lifecycle and configuration
-- **Service Management**: Multi-container orchestration with dependencies
-- **Resource Management**: Container scaling and resource allocation
-
-## Deployment Options
-
-### Docker Compose
+#### REST Endpoint
+Query the `/v1/sampling/should-sample` endpoint to check sampling:
 ```bash
-# Temporal orchestrator
-docker-compose -f infrastructure/orchestrator/temporal-orchestrator-compose.yaml up -d
-
-# Start specific services via Temporal workflows
-python infrastructure/orchestrator/trigger/logging_pipeline/start.py
-python infrastructure/orchestrator/trigger/metrics_pipeline/start.py
-python infrastructure/orchestrator/trigger/tracing_pipeline/start.py
+curl -X POST http://localhost:8000/v1/sampling/should-sample \
+  -H "Content-Type: application/json" \
+  -d '{"span_id": "test-span-id"}'
 ```
 
-### Cloud Platforms
+### MiniLM Embedding (Concurrent & Sampled)
 
-**Fly.io:**
+The SDK asynchronously calls the embedding-worker HTTP endpoint (`POST /embed`) to generate a 384-dimensional vector embedding of the prompt text.
+
+- **Concurrent Execution**: To prevent blocking client requests, the SDK uses `asyncio.create_task()` to fire the embedding generation concurrently with span finalization.
+- **Conditionality**: The embedding is only generated if the span is sampled (`is_sampled` is `True`) and no PII is detected in the prompt (`pii_detected` is `False`).
+- **Timeout and Resilience**: The embedding HTTP request has a timeout of 500ms. If the request times out or fails, the SDK falls back to `None` for the embedding field while the rest of the span details are still successfully emitted.
+
+#### Programmatic Usage
+```python
+from instrumentation_sdk import get_embedding
+
+embedding = await get_embedding("your text here")
+```
+
+#### REST Endpoint
 ```bash
-cd service/llm_chat_app
-fly launch --build-only
-fly deploy
+curl -X POST http://localhost:8000/v1/embeddings/embed \
+  -H "Content-Type: application/json" \
+  -d '{"text": "your text here"}'
 ```
 
-**Render:**
-- Automated deployment via `worker/workflows/render_deploy_workflow.py`
-- Zero-dockerfile deployment with automatic environment detection
+### Prometheus Metrics & Grafana Dashboard
 
-## Observability Features
+The SDK integrates a Prometheus metrics collection pipeline to track operational metrics for LLM calls (latency, TTFT, token usage, cost, and security violations).
 
-### LLM-Specific Monitoring
+#### Configuration & Initialization
 
-**Performance Metrics:**
-- Response time tracking and analysis
-- Token usage and cost monitoring
-- Error rates and failure pattern detection
-- User session management
+Initialize the Prometheus metrics scraping endpoint:
 
-**Deep Analysis:**
-- **Emotional State Analysis**: Core emotion detection with intensity scoring
-- **Meta-Cognitive Tracking**: Higher-level reasoning pattern analysis
-- **Conversation Flow**: Topic transitions and engagement metrics
-- **Quality Assessment**: Response coherence and relevance scoring
+```bash
+curl -X POST http://localhost:8000/v1/metrics/init \
+  -H "Content-Type: application/json" \
+  -d '{"port": 9464}'
+```
+
+#### Metrics Endpoints
+
+- **Initialize Pipeline**: `POST /v1/metrics/init`
+- **Health Check**: `GET /v1/metrics/health`
+- **Record Single Span Metrics**: `POST /v1/metrics/record`
+- **Record Batch Spans Metrics**: `POST /v1/metrics/record-batch`
+
+#### Grafana Dashboard
+
+The dashboard is built-in and automatically provisioned on port `3000` (or `3002` in standalone mode). It includes:
+- **LLM Latency & TTFT**: Histogram distribution of request latency and time-to-first-token.
+- **Token Usage**: Track prompt and completion tokens.
+- **Cost Analysis**: Live cost calculation in micro-USD.
+- **Security Scans**: Record rates of PII exposure and prompt injections.
+
+### Updating Config Files (Model Prices, PII Patterns, Infra)
+
+The SDK reads config files once at startup. After any change, a container restart is required (except dashboard JSON files which are hot-reloaded).
+
+#### Adding or updating a model price
+
+Edit `config/model_prices.yaml`:
+
+```yaml
+- model: gpt-5
+  provider: openai
+  input_price_per_1m: 10.00
+  output_price_per_1m: 30.00
+  version: "2026-01-01"
+```
+
+Required fields: `model`, `provider`, `input_price_per_1m`, `output_price_per_1m`, `version`.  
+Prices must be `>= 0`. Duplicate `(model, provider)` pairs are rejected by CI.
+
+Then restart:
+```bash
+docker restart instrumentation-sdk-api
+```
+
+#### Adding or updating a PII / Injection pattern
+
+Edit `config/patterns.yaml`:
+
+```yaml
+patterns:
+  - name: phone_number
+    regex: "\\b\\d{3}[-.]?\\d{3}[-.]?\\d{4}\\b"
+    type: PII_STRUCTURAL   # or INJECTION_ATTEMPT
+```
+
+Valid `type` values: `PII_STRUCTURAL`, `INJECTION_ATTEMPT`.  
+The CI validates that every regex compiles and no pattern name is duplicated.
+
+Then restart:
+```bash
+docker restart instrumentation-sdk-api
+```
+
+#### Updating a Grafana dashboard
+
+Edit any file under `build/dashboards/*.json`.  
+**No restart required** — Grafana polls and hot-reloads dashboards every 30 seconds automatically.
+
+#### Updating infra configs (Grafana datasource, Prometheus, Tempo)
+
+Edit:
+- `build/grafana-datasource.yaml` — add/change datasources
+- `build/grafana-dashboard-provider.yaml` — change dashboard provider path/folder
+- `build/prometheus.yml` — add scrape targets
+- `build/tempo-config.yaml` — change Tempo storage or OTLP port
+
+#### Running the Automated Performance Report Generator
+
+To benchmark the Reliable Kafka Reporter (evaluating in-memory queueing, offline SQLite WAL fallback writing, and recovery replay throughput) and automatically compile the premium HTML dashboard report, run the performance test suite:
+
+```bash
+cd packages/python/instrumentation-sdk
+PYTHONPATH=. .venv/bin/pytest tests/performance/
+```
+
+This dynamically compiles and generates `reports/performance-report.html` with a modern dark-mode interface and interactive Chart.js visualization.
+
+#### Production Deployment Modes
+
+Two Docker Compose configurations are available under `deploy/docker/` depending on your setup:
+
+1. **All-in-One Mode (Zero Setup)**: Starts the FastAPI API, Kafka, Zookeeper, pgvector Postgres, Clickhouse, and Redis fully integrated and pre-configured out of the box:
+   ```bash
+   docker compose -f deploy/docker/docker-compose.prod-all.yaml up -d
+   ```
+
+2. **Standalone Mode (Plug-and-Play)**: Starts only the API container, allowing you to connect to your own existing Kafka cluster and databases by supplying environment variables:
+   ```bash
+   KAFKA_BOOTSTRAP_SERVERS="my-kafka:9092" docker compose -f deploy/docker/docker-compose.prod.yaml up -d
+   ```
+
+### Docker Deployments (v1.8.1)
+
+We publish two official Docker images:
+* **All-in-One Image (`chiefj/instrumentation-sdk-api`)**: Contains Java, Kafka, PostgreSQL, and pgvector. When started, it automatically initializes database users, databases, runs migrations, and provisions Kafka topics. No external setup required.
+* **Standalone Image (`chiefj/instrumentation-sdk-api-nokafka`)**: A lightweight container without the embedded databases and message queues. You supply your own external endpoints.
+
+#### Connection & Configuration Environment Variables
+
+| Environment Variable | Description | Default (All-in-One) | Default (Standalone) |
+| :--- | :--- | :--- | :--- |
+| `WITH_KAFKA` | Enable embedded Kafka & Postgres server inside container | `true` | `false` |
+| `KAFKA_BOOTSTRAP_SERVERS` | Kafka brokers connection string | `localhost:9092` | (None) |
+| `POSTGRES_URL` | PostgreSQL connection string | `postgresql://admin:password@localhost:5432/llm_observability` | (None) |
+| `DEPLOYMENT_ENV` | SDK deployment environment (`production`, `staging`, `dev`) | `production` | `production` |
+
+#### Architectural Integration Flow
+
+```
+                  [ SDK Telemetry Ingestion Decision Tree ]
+
+                         [ Initiate LLM API Call ]
+                                     │
+                                     ▼
+                          [ Capture Metrics/Span ]
+                                     │
+                                     ▼
+                          [ Check REST API Status ]
+                                   /   \
+                                 Online Offline
+                                 /       \
+                                ▼         ▼
+                     [ Send to REST API ] [ Write to SQLite WAL ]
+                      (POST /v1/spans)    (/tmp/llm-obs-wal.db)
+                             │                    │
+                             ▼                    ▼
+                    [ API Server Side ]    [ Retrying Connection ]
+                             │                    │
+                   [ Check DB/Kafka Config ]      │
+                             │                    │
+                     ┌───────┴───────┐            │
+                  Enabled         Disabled        │
+                     │               │            │
+                     ▼               ▼            │
+             [ Write to Kafka ] [ Log / NoOp ]    │
+          (llm.spans.raw topic)  (Prometheus/     │
+                     │            Tempo local)    │
+                     ▼                            │
+              [ Consumer reads ]                  │
+              [  from Kafka    ]                  │
+                     │                            │
+                     ▼                            │
+             [ Write to Postgres ]                │
+            (llm_spans partitioned)               │
+                     │                            │
+                     └────────────────────┬───────┘
+                                          │
+                                          ▼
+                               [ Spans Visualized ]
+                             (Grafana http://3000)
+```
+
+#### Ingestion Sequence Flow
+
+```
+                        [ SDK Telemetry Sequence Flow ]
+
+User App             SDK Client          REST Ingestion       Kafka Broker        PostgreSQL
+   │                      │                    │                   │                  │
+   │─── LLM Call ────────>│                    │                   │                  │
+   │                      │─── Format Span ───>│                   │                  │
+   │                      │                    │                   │                  │
+   │                      │─── POST /spans ───>│                   │                  │
+   │                      │    (HTTP 200 OK)   │                   │                  │
+   │                      │                    │─── Produce span ─>│                  │
+   │                      │                    │    to topic       │                  │
+   │                      │                    │                   │─── Consume ─────>│
+   │                      │                    │                   │    & Partition   │
+   │                      │                    │                   │    to DB         │
+   │                      │                    │                   │                  │
+   │ [If API Offline]     │                    │                   │                  │
+   │                      │─── Write to WAL ──>│                   │                  │
+   │                      │    (SQLite local)  │                   │                  │
+   │                      │                    │                   │                  │
+   │ [When API Restored]  │                    │                   │                  │
+   │                      │─── Replay Spans ──>│                   │                  │
+   │                      │    to REST API     │                   │                  │
+```
+
+#### Running the load test locally
+
+```bash
+cd packages/python/instrumentation-sdk
+.venv/bin/python -m pytest tests/performance/ -m performance -v
+```
+
+This sends spans covering all 6 model/provider combos, error ratios, PII flags, and high token counts.
+
+## 3. Implementation Call Chain
 
 
-## Contributing
+| Pipeline Stage | Method Call | Primary File |
+| :--- | :--- | :--- |
+| **REST API** | `create_app()` | `api/rest/v1/app.py` |
+| **Management** | `init_instrumentation()` | `api/rest/v1/handlers/instrumentation.py` |
+| **Tracing** | `instrument_app()` | `infra/tracing/middleware.py` |
+| **Auto-Capture** | `init_auto_instrumentation()` | `features/auto_instrumentation/index.py` |
+| **Decorator** | `@llm_observe` | `features/spans/decorator.py` |
+| **Context Manager** | `llm_span()` | `features/manual_instrumentation/service.py` |
+| **Orchestration**| `handle_job()` | `worker/index.py` |
+| **Logic** | `enrich_span()` | `features/enrich_span/service.py` |
+| **Integration** | `create_embedding()` | `infra/clients/cloudflare_embeddings.py` |
+| **Identity** | `stable_embedding_key()`| `shared/utils/hash.py` |
+| **Token Counting** | `count_tokens()` | `features/token_counting/service.py` |
+| **Streaming SDK** | `wrap_async_stream()` | `features/streaming/index.py` |
+| **Streaming Logic** | `finalize_stream()` | `features/streaming/service.py` |
+| **PII & Injection Scan**| `scan_prompt()` | `features/pii_injection_scan/index.py` |
+| **Deterministic Sampling**| `should_sample()` | `features/deterministic_sampling/index.py` |
+| **MiniLM Embedding** | `get_embedding()` | `features/minilm_embedding/index.py` |
+| **Reliable Reporter** | `report()` / `report_async()` | `infra/adapters/kafka/reliable_adapter.py` |
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Ensure all linting rules pass
-5. Submit a pull request
 
-## Important Links
-
-**Connect with Scaibu:**
-- **Email**: chief.stategist.j@gmail.com
-- **Medium**: https://medium.com/@scaibu
-- **LinkedIn**: https://www.linkedin.com/in/chiefj/
-- **Twitter**: https://x.com/ChiefErj
-- **Instagram**: https://www.instagram.com/chief._.jaydeep/
-- **Discord Server**: https://discord.com/invite/FzZPnjZa
-- **Website**: https://scaibu.lovable.app/
-- **Service Booking**: https://topmate.io/jaydeep_wagh/1194002
