@@ -223,7 +223,12 @@ def test_api_spans_fallback():
         assert res1.status_code == 202
         data1 = res1.json()
         assert not any("RULE-W-05" in w for w in data1.get("span_warnings", []))
-        reported1 = mock_reporter.report.call_args[0][0]
+        reported1 = None
+        for call in mock_reporter.report.call_args_list:
+            if call[0][0].get("span_id") == span_id1 or str(call[0][0].get("span_id")) == span_id1:
+                reported1 = call[0][0]
+                break
+        assert reported1 is not None
         assert reported1["retry_count"] == 0
         assert reported1["attempted_models"] == ["gpt-4"]
 
@@ -232,7 +237,12 @@ def test_api_spans_fallback():
         assert res2.status_code == 202
         data2 = res2.json()
         assert any("RULE-W-05" in w for w in data2.get("span_warnings", []))
-        reported2 = mock_reporter.report.call_args[0][0]
+        reported2 = None
+        for call in mock_reporter.report.call_args_list:
+            if call[0][0].get("span_id") == span_id2 or str(call[0][0].get("span_id")) == span_id2:
+                reported2 = call[0][0]
+                break
+        assert reported2 is not None
         assert reported2["retry_count"] == 1
         assert reported2["attempted_models"] == ["gpt-4", "claude-3"]
     finally:

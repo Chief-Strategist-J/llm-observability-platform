@@ -8,6 +8,7 @@ from .handlers.deterministic_sampling import router as deterministic_sampling_ro
 from .handlers.minilm_embedding import router as minilm_embedding_router
 from .handlers.spans import router as spans_router
 from .handlers.fallback import router as fallback_router
+from .handlers.tool_call import router as tool_call_router
 
 api_v1_router = APIRouter()
 api_v1_router.include_router(instrumentation_router)
@@ -19,6 +20,8 @@ api_v1_router.include_router(deterministic_sampling_router)
 api_v1_router.include_router(minilm_embedding_router)
 api_v1_router.include_router(spans_router)
 api_v1_router.include_router(fallback_router)
+api_v1_router.include_router(tool_call_router)
+
 
 
 
