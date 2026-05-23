@@ -21,11 +21,13 @@ fi
 
 tempo -config.file=/app/build/tempo-config.yaml > /var/log/app/tempo.log 2>&1 &
 echo "Tempo started successfully!"
+sleep 2
 
 cd /usr/share/grafana
-GF_DATABASE_WAL=true grafana-server --homepath=/usr/share/grafana --config=/etc/grafana/grafana.ini > /var/log/app/grafana.log 2>&1 &
+GF_DATABASE_WAL=true GF_DATABASE_TRANSACTION_RETRIES=100 GF_DATABASE_QUERY_RETRIES=100 grafana-server --homepath=/usr/share/grafana --config=/etc/grafana/grafana.ini > /var/log/app/grafana.log 2>&1 &
 cd /app
 echo "Grafana started successfully!"
+sleep 6
 
 prometheus --config.file=/etc/prometheus/prometheus.yml > /var/log/app/prometheus.log 2>&1 &
 echo "Prometheus started successfully!"
