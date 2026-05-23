@@ -1,8 +1,10 @@
 package di
 
 import (
+	"context"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	v1 "github.com/llm-observability/platform/packages/go/ai-service/src/api/rest/v1"
@@ -24,6 +26,34 @@ func BuildContainer() *Container {
 	repo := adapters.NewMemorySessionRepository(1 * time.Minute)
 
 	orch := aiorchestrator.New(provider, repo)
+
+	if qdrantURL := os.Getenv("QDRANT_URL"); qdrantURL != "" {
+		qdrantApiKey := os.Getenv("QDRANT_API_KEY")
+		qdrantCollection := os.Getenv("QDRANT_COLLECTION")
+
+		vectorSize := 384
+		if sizeStr := os.Getenv("QDRANT_VECTOR_SIZE"); sizeStr != "" {
+			if parsedSize, err := strconv.Atoi(sizeStr); err == nil {
+				vectorSize = parsedSize
+			}
+		}
+
+		distance := "Cosine"
+		if distStr := os.Getenv("QDRANT_DISTANCE"); distStr != "" {
+			distance = distStr
+		}
+
+		qdrantRepo := adapters.NewQdrantRepository(qdrantURL, qdrantApiKey, qdrantCollection)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = qdrantRepo.CreateCollectionIfNotExist(ctx, vectorSize, distance)
+
+		if service, ok := orch.(*aiorchestrator.AIService); ok {
+			service.SetVectorRepository(qdrantRepo)
+		}
+	}
+
 	h := handlers.NewAIHandlers(orch)
 	router := v1.NewRouter(h)
 

@@ -2,14 +2,19 @@ package aiorchestrator
 
 import (
 	"context"
+	"crypto/rand"
+	"errors"
+	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 )
 
 type AIService struct {
-	provider LLMProviderPort
-	repo     SessionRepositoryPort
+	provider   LLMProviderPort
+	repo       SessionRepositoryPort
+	vectorRepo VectorRepositoryPort
 }
 
 func NewAIService(provider LLMProviderPort, repo SessionRepositoryPort) *AIService {
@@ -17,6 +22,10 @@ func NewAIService(provider LLMProviderPort, repo SessionRepositoryPort) *AIServi
 		provider: provider,
 		repo:     repo,
 	}
+}
+
+func (s *AIService) SetVectorRepository(vr VectorRepositoryPort) {
+	s.vectorRepo = vr
 }
 
 func (s *AIService) ListModels(ctx context.Context) ([]ModelInfo, error) {
@@ -28,6 +37,16 @@ func (s *AIService) Chat(ctx context.Context, modelID string, messages []ChatMes
 }
 
 func (s *AIService) PersistentChat(ctx context.Context, userID string, userMessage string, modelID string, embeddingModel string) (string, []ChatMessage, error) {
+	if userID == "" {
+		return "", nil, errors.New("user ID is required")
+	}
+	if userMessage == "" {
+		return "", nil, errors.New("message is required")
+	}
+	if modelID == "" {
+		return "", nil, errors.New("model ID is required")
+	}
+
 	session, err := s.repo.GetSession(ctx, userID)
 	if err != nil {
 		return "", nil, err
@@ -50,8 +69,24 @@ func (s *AIService) PersistentChat(ctx context.Context, userID string, userMessa
 		}
 	}
 
-	var contextMessages []ChatMessage
-	if len(userEmbedding) > 0 && len(session.Messages) > 0 {
+	var apiMessages []ChatMessage
+
+	if s.vectorRepo != nil && len(userEmbedding) > 0 {
+		matches, err := s.vectorRepo.Search(ctx, userID, userEmbedding, 3)
+		if err == nil && len(matches) > 0 {
+			var contextBuilder strings.Builder
+			contextBuilder.WriteString("Relevant context from previous conversations:\n")
+			for _, match := range matches {
+				role := match.Payload["role"]
+				content := match.Payload["content"]
+				contextBuilder.WriteString(fmt.Sprintf("- %v: %v\n", role, content))
+			}
+			apiMessages = append(apiMessages, ChatMessage{
+				Role:    "system",
+				Content: contextBuilder.String(),
+			})
+		}
+	} else if len(userEmbedding) > 0 && len(session.Messages) > 0 {
 		type scoredMessage struct {
 			msg   ChatMessage
 			score float64
@@ -73,17 +108,20 @@ func (s *AIService) PersistentChat(ctx context.Context, userID string, userMessa
 			limit = len(scored)
 		}
 		for i := 0; i < limit; i++ {
-			contextMessages = append(contextMessages, scored[i].msg)
+			apiMessages = append(apiMessages, ChatMessage{
+				Role:    scored[i].msg.Role,
+				Content: scored[i].msg.Content,
+			})
 		}
 	}
 
-	var apiMessages []ChatMessage
-	for _, cm := range contextMessages {
+	for _, msg := range session.Messages {
 		apiMessages = append(apiMessages, ChatMessage{
-			Role:    cm.Role,
-			Content: cm.Content,
+			Role:    msg.Role,
+			Content: msg.Content,
 		})
 	}
+
 	apiMessages = append(apiMessages, ChatMessage{
 		Role:    "user",
 		Content: userMessage,
@@ -105,9 +143,11 @@ func (s *AIService) PersistentChat(ctx context.Context, userID string, userMessa
 		Content: completion,
 	}
 
+	var assistantEmbedding []float32
 	if embeddingModel != "" && len(userEmbedding) > 0 {
 		asstEmb, err := s.provider.GenerateEmbedding(ctx, embeddingModel, completion)
 		if err == nil {
+			assistantEmbedding = asstEmb
 			newAssistantMsg.Embedding = asstEmb
 		}
 	}
@@ -117,6 +157,28 @@ func (s *AIService) PersistentChat(ctx context.Context, userID string, userMessa
 	err = s.repo.SaveSession(ctx, session)
 	if err != nil {
 		return "", nil, err
+	}
+
+	if s.vectorRepo != nil && len(userEmbedding) > 0 {
+		userMsgID := generateUUID()
+		userPayload := map[string]interface{}{
+			"user_id":   userID,
+			"role":      "user",
+			"content":   userMessage,
+			"timestamp": time.Now().Unix(),
+		}
+		_ = s.vectorRepo.Upsert(ctx, userMsgID, userEmbedding, userPayload)
+
+		if len(assistantEmbedding) > 0 {
+			asstMsgID := generateUUID()
+			asstPayload := map[string]interface{}{
+				"user_id":   userID,
+				"role":      "assistant",
+				"content":   completion,
+				"timestamp": time.Now().Unix(),
+			}
+			_ = s.vectorRepo.Upsert(ctx, asstMsgID, assistantEmbedding, asstPayload)
+		}
 	}
 
 	return completion, session.Messages, nil
@@ -137,3 +199,12 @@ func cosineSimilarity(a, b []float32) float64 {
 	}
 	return dotProduct / (math.Sqrt(normA) * math.Sqrt(normB))
 }
+
+func generateUUID() string {
+	b := make([]byte, 16)
+	_, _ = rand.Read(b)
+	b[6] = (b[6] & 0x0f) | 0x40
+	b[8] = (b[8] & 0x3f) | 0x80
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+}
+

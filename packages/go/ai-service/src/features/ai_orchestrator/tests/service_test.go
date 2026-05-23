@@ -169,3 +169,78 @@ func TestGetSessionErrors(t *testing.T) {
 		t.Error("expected error, got nil")
 	}
 }
+
+type mockVectorRepository struct {
+	searchResult []aiorchestrator.SearchResult
+	searchCalled bool
+	upsertCalled int
+	upsertData   []struct {
+		id      string
+		vector  []float32
+		payload map[string]interface{}
+	}
+}
+
+func (m *mockVectorRepository) Search(ctx context.Context, userID string, vector []float32, limit int) ([]aiorchestrator.SearchResult, error) {
+	m.searchCalled = true
+	return m.searchResult, nil
+}
+
+func (m *mockVectorRepository) Upsert(ctx context.Context, id string, vector []float32, payload map[string]interface{}) error {
+	m.upsertCalled++
+	m.upsertData = append(m.upsertData, struct {
+		id      string
+		vector  []float32
+		payload map[string]interface{}
+	}{id: id, vector: vector, payload: payload})
+	return nil
+}
+
+func TestPersistentChatWithVectorRepo(t *testing.T) {
+	provider := &mockLLMProvider{
+		completion: "assistant response",
+		embedding:  []float32{0.5, 0.5},
+	}
+	repo := &mockSessionRepository{
+		sessions: make(map[string]*aiorchestrator.ChatSession),
+	}
+	vectorRepo := &mockVectorRepository{
+		searchResult: []aiorchestrator.SearchResult{
+			{
+				ID:    "old-uuid",
+				Score: 0.99,
+				Payload: map[string]interface{}{
+					"role":    "user",
+					"content": "past context",
+				},
+			},
+		},
+	}
+
+	service := aiorchestrator.New(provider, repo)
+	if s, ok := service.(*aiorchestrator.AIService); ok {
+		s.SetVectorRepository(vectorRepo)
+	}
+
+	resp, history, err := service.PersistentChat(context.Background(), "user-123", "new message", "test-model", "embed-model")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp != "assistant response" {
+		t.Errorf("expected 'assistant response', got '%s'", resp)
+	}
+
+	if !vectorRepo.searchCalled {
+		t.Error("expected vector search to be called")
+	}
+
+	if vectorRepo.upsertCalled != 2 {
+		t.Errorf("expected 2 upserts (user + assistant), got %d", vectorRepo.upsertCalled)
+	}
+
+	if len(history) != 2 {
+		t.Errorf("expected history length 2, got %d", len(history))
+	}
+}
+

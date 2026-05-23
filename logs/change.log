@@ -129,3 +129,30 @@
     └── Changes:
         ├── version-bump -> Bump package version in pyproject.toml to 1.8.2
         └── doc-alignment -> Update READMEs, changelogs, and indices to reflect v1.8.2
+
+[2026-05-23T18:30:00+05:30] Integrate Qdrant persistence layer and semantic search into AI service
+└── File: packages/go/ai-service/src/features/ai_orchestrator/ports.go, packages/go/ai-service/src/infra/adapters/qdrant_repo.go, packages/go/ai-service/src/features/ai_orchestrator/service.go, packages/go/ai-service/src/shared/di/providers.go, packages/go/ai-service/src/infra/adapters/tests/qdrant_repo_test.go, packages/go/ai-service/src/features/ai_orchestrator/tests/service_test.go
+    ├── Choice: Use Hexagonal architecture (Ports & Adapters) to define VectorRepositoryPort and implement the Qdrant REST Adapter to store/retrieve vector embeddings.
+    └── Changes:
+        ├── ports -> Define VectorRepositoryPort and SearchResult struct in ports.go
+        ├── qdrant-adapter -> Implement QdrantRepository communicating with Qdrant REST API in qdrant_repo.go
+        ├── orchestrator-service -> Integrate vector search/upsert in PersistentChat flow within service.go
+        ├── di-wiring -> Construct and wire QdrantRepository in providers.go if QDRANT_URL is set
+        └── testing -> Add mock unit tests for qdrant_repo.go and service.go validating vector flows
+
+[2026-05-23T18:40:00+05:30] Configure Qdrant in docker-compose and add live integration tests
+└── File: packages/go/ai-service/docker-compose.yaml, packages/go/ai-service/src/infra/adapters/tests/qdrant_repo_test.go
+    ├── Choice: Run Qdrant inside Docker Compose as a backend service for ai-service and add a live integration test case.
+    └── Changes:
+        ├── docker-compose -> Add Qdrant container service, persistent storage volume, and set QDRANT_URL environment variable
+        └── testing -> Implement TestLiveQdrantIntegration in qdrant_repo_test.go to test end-to-end vector queries
+
+[2026-05-23T18:45:00+05:30] Integrate test execution on image build and update AI service documentation
+└── File: packages/go/ai-service/Dockerfile, packages/go/ai-service/README.md
+    ├── Choice: Inject test runner inside multi-stage Docker build to fail builds on test regressions, and update documentation to cover vector layer.
+    └── Changes:
+        ├── dockerfile -> Add RUN go test step inside builder stage
+        └── documentation -> Update README.md architecture flow diagrams and env tables for Qdrant
+
+
+
