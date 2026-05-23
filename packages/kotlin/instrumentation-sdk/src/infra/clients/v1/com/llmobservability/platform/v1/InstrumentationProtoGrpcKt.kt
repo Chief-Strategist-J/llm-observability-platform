@@ -78,6 +78,15 @@ public object InstrumentationControlServiceGrpcKt {
     @JvmStatic
     get() = InstrumentationControlServiceGrpc.getGetEmbeddingMethod()
 
+  public val trackFallbackMethod: MethodDescriptor<TrackFallbackRequest, TrackFallbackResponse>
+    @JvmStatic
+    get() = InstrumentationControlServiceGrpc.getTrackFallbackMethod()
+
+  public val clearFallbackTrackerMethod:
+      MethodDescriptor<ClearFallbackTrackerRequest, ClearFallbackTrackerResponse>
+    @JvmStatic
+    get() = InstrumentationControlServiceGrpc.getClearFallbackTrackerMethod()
+
   public val initMetricsMethod: MethodDescriptor<InitMetricsRequest, InitMetricsResponse>
     @JvmStatic
     get() = InstrumentationControlServiceGrpc.getInitMetricsMethod()
@@ -342,6 +351,50 @@ public object InstrumentationControlServiceGrpcKt {
      *
      * @return The single response from the server.
      */
+    public suspend fun trackFallback(request: TrackFallbackRequest, headers: Metadata = Metadata()):
+        TrackFallbackResponse = unaryRpc(
+      channel,
+      InstrumentationControlServiceGrpc.getTrackFallbackMethod(),
+      request,
+      callOptions,
+      headers
+    )
+
+    /**
+     * Executes this RPC and returns the response message, suspending until the RPC completes
+     * with [`Status.OK`][io.grpc.Status].  If the RPC completes with another status, a
+     * corresponding
+     * [StatusException] is thrown.  If this coroutine is cancelled, the RPC is also cancelled
+     * with the corresponding exception as a cause.
+     *
+     * @param request The request message to send to the server.
+     *
+     * @param headers Metadata to attach to the request.  Most users will not need this.
+     *
+     * @return The single response from the server.
+     */
+    public suspend fun clearFallbackTracker(request: ClearFallbackTrackerRequest, headers: Metadata
+        = Metadata()): ClearFallbackTrackerResponse = unaryRpc(
+      channel,
+      InstrumentationControlServiceGrpc.getClearFallbackTrackerMethod(),
+      request,
+      callOptions,
+      headers
+    )
+
+    /**
+     * Executes this RPC and returns the response message, suspending until the RPC completes
+     * with [`Status.OK`][io.grpc.Status].  If the RPC completes with another status, a
+     * corresponding
+     * [StatusException] is thrown.  If this coroutine is cancelled, the RPC is also cancelled
+     * with the corresponding exception as a cause.
+     *
+     * @param request The request message to send to the server.
+     *
+     * @param headers Metadata to attach to the request.  Most users will not need this.
+     *
+     * @return The single response from the server.
+     */
     public suspend fun initMetrics(request: InitMetricsRequest, headers: Metadata = Metadata()):
         InitMetricsResponse = unaryRpc(
       channel,
@@ -583,6 +636,38 @@ public object InstrumentationControlServiceGrpcKt {
 
     /**
      * Returns the response to an RPC for
+     * llm.observability.v1.InstrumentationControlService.TrackFallback.
+     *
+     * If this method fails with a [StatusException], the RPC will fail with the corresponding
+     * [io.grpc.Status].  If this method fails with a [java.util.concurrent.CancellationException],
+     * the RPC will fail
+     * with status `Status.CANCELLED`.  If this method fails for any other reason, the RPC will
+     * fail with `Status.UNKNOWN` with the exception as a cause.
+     *
+     * @param request The request from the client.
+     */
+    public open suspend fun trackFallback(request: TrackFallbackRequest): TrackFallbackResponse =
+        throw
+        StatusException(UNIMPLEMENTED.withDescription("Method llm.observability.v1.InstrumentationControlService.TrackFallback is unimplemented"))
+
+    /**
+     * Returns the response to an RPC for
+     * llm.observability.v1.InstrumentationControlService.ClearFallbackTracker.
+     *
+     * If this method fails with a [StatusException], the RPC will fail with the corresponding
+     * [io.grpc.Status].  If this method fails with a [java.util.concurrent.CancellationException],
+     * the RPC will fail
+     * with status `Status.CANCELLED`.  If this method fails for any other reason, the RPC will
+     * fail with `Status.UNKNOWN` with the exception as a cause.
+     *
+     * @param request The request from the client.
+     */
+    public open suspend fun clearFallbackTracker(request: ClearFallbackTrackerRequest):
+        ClearFallbackTrackerResponse = throw
+        StatusException(UNIMPLEMENTED.withDescription("Method llm.observability.v1.InstrumentationControlService.ClearFallbackTracker is unimplemented"))
+
+    /**
+     * Returns the response to an RPC for
      * llm.observability.v1.InstrumentationControlService.InitMetrics.
      *
      * If this method fails with a [StatusException], the RPC will fail with the corresponding
@@ -694,6 +779,16 @@ public object InstrumentationControlServiceGrpcKt {
       context = this.context,
       descriptor = InstrumentationControlServiceGrpc.getGetEmbeddingMethod(),
       implementation = ::getEmbedding
+    ))
+      .addMethod(unaryServerMethodDefinition(
+      context = this.context,
+      descriptor = InstrumentationControlServiceGrpc.getTrackFallbackMethod(),
+      implementation = ::trackFallback
+    ))
+      .addMethod(unaryServerMethodDefinition(
+      context = this.context,
+      descriptor = InstrumentationControlServiceGrpc.getClearFallbackTrackerMethod(),
+      implementation = ::clearFallbackTracker
     ))
       .addMethod(unaryServerMethodDefinition(
       context = this.context,

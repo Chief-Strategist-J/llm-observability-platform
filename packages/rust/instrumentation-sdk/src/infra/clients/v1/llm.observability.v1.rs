@@ -258,6 +258,32 @@ pub struct GetEmbeddingResponse {
     #[prost(float, repeated, tag="1")]
     pub embedding: ::prost::alloc::vec::Vec<f32>,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct TrackFallbackRequest {
+    #[prost(string, tag="1")]
+    pub trace_id: ::prost::alloc::string::String,
+    #[prost(string, tag="2")]
+    pub model: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct TrackFallbackResponse {
+    #[prost(int32, tag="1")]
+    pub retry_count: i32,
+    #[prost(string, repeated, tag="2")]
+    pub attempted_models: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct ClearFallbackTrackerRequest {
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct ClearFallbackTrackerResponse {
+    #[prost(bool, tag="1")]
+    pub success: bool,
+}
 /// InstrumentationStatus represents the current state of auto-instrumentation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]

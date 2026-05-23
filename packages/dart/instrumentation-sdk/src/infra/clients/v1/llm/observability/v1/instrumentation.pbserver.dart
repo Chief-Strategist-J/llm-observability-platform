@@ -31,6 +31,8 @@ abstract class InstrumentationControlServiceBase extends $pb.GeneratedService {
   $async.Future<$0.ScanPiiInjectionResponse> scanPiiInjection($pb.ServerContext ctx, $0.ScanPiiInjectionRequest request);
   $async.Future<$0.ShouldSampleResponse> shouldSample($pb.ServerContext ctx, $0.ShouldSampleRequest request);
   $async.Future<$0.GetEmbeddingResponse> getEmbedding($pb.ServerContext ctx, $0.GetEmbeddingRequest request);
+  $async.Future<$0.TrackFallbackResponse> trackFallback($pb.ServerContext ctx, $0.TrackFallbackRequest request);
+  $async.Future<$0.ClearFallbackTrackerResponse> clearFallbackTracker($pb.ServerContext ctx, $0.ClearFallbackTrackerRequest request);
   $async.Future<$0.InitMetricsResponse> initMetrics($pb.ServerContext ctx, $0.InitMetricsRequest request);
   $async.Future<$0.GetMetricsHealthResponse> getMetricsHealth($pb.ServerContext ctx, $0.GetMetricsHealthRequest request);
   $async.Future<$0.RecordMetricsResponse> recordMetrics($pb.ServerContext ctx, $0.RecordMetricsRequest request);
@@ -48,6 +50,8 @@ abstract class InstrumentationControlServiceBase extends $pb.GeneratedService {
       case 'ScanPiiInjection': return $0.ScanPiiInjectionRequest();
       case 'ShouldSample': return $0.ShouldSampleRequest();
       case 'GetEmbedding': return $0.GetEmbeddingRequest();
+      case 'TrackFallback': return $0.TrackFallbackRequest();
+      case 'ClearFallbackTracker': return $0.ClearFallbackTrackerRequest();
       case 'InitMetrics': return $0.InitMetricsRequest();
       case 'GetMetricsHealth': return $0.GetMetricsHealthRequest();
       case 'RecordMetrics': return $0.RecordMetricsRequest();
@@ -68,6 +72,8 @@ abstract class InstrumentationControlServiceBase extends $pb.GeneratedService {
       case 'ScanPiiInjection': return this.scanPiiInjection(ctx, request as $0.ScanPiiInjectionRequest);
       case 'ShouldSample': return this.shouldSample(ctx, request as $0.ShouldSampleRequest);
       case 'GetEmbedding': return this.getEmbedding(ctx, request as $0.GetEmbeddingRequest);
+      case 'TrackFallback': return this.trackFallback(ctx, request as $0.TrackFallbackRequest);
+      case 'ClearFallbackTracker': return this.clearFallbackTracker(ctx, request as $0.ClearFallbackTrackerRequest);
       case 'InitMetrics': return this.initMetrics(ctx, request as $0.InitMetricsRequest);
       case 'GetMetricsHealth': return this.getMetricsHealth(ctx, request as $0.GetMetricsHealthRequest);
       case 'RecordMetrics': return this.recordMetrics(ctx, request as $0.RecordMetricsRequest);

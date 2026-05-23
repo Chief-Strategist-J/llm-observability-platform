@@ -158,6 +158,34 @@ class InstrumentationControlServiceClient extends \Grpc\BaseStub {
     }
 
     /**
+     * @param \LlmObservability\Platform\V1\TrackFallbackRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall
+     */
+    public function TrackFallback(\LlmObservability\Platform\V1\TrackFallbackRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/llm.observability.v1.InstrumentationControlService/TrackFallback',
+        $argument,
+        ['\LlmObservability\Platform\V1\TrackFallbackResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \LlmObservability\Platform\V1\ClearFallbackTrackerRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall
+     */
+    public function ClearFallbackTracker(\LlmObservability\Platform\V1\ClearFallbackTrackerRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/llm.observability.v1.InstrumentationControlService/ClearFallbackTracker',
+        $argument,
+        ['\LlmObservability\Platform\V1\ClearFallbackTrackerResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * @param \LlmObservability\Platform\V1\InitMetricsRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options

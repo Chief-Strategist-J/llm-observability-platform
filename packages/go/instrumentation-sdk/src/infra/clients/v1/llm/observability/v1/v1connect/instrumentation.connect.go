@@ -64,6 +64,12 @@ const (
 	// InstrumentationControlServiceGetEmbeddingProcedure is the fully-qualified name of the
 	// InstrumentationControlService's GetEmbedding RPC.
 	InstrumentationControlServiceGetEmbeddingProcedure = "/llm.observability.v1.InstrumentationControlService/GetEmbedding"
+	// InstrumentationControlServiceTrackFallbackProcedure is the fully-qualified name of the
+	// InstrumentationControlService's TrackFallback RPC.
+	InstrumentationControlServiceTrackFallbackProcedure = "/llm.observability.v1.InstrumentationControlService/TrackFallback"
+	// InstrumentationControlServiceClearFallbackTrackerProcedure is the fully-qualified name of the
+	// InstrumentationControlService's ClearFallbackTracker RPC.
+	InstrumentationControlServiceClearFallbackTrackerProcedure = "/llm.observability.v1.InstrumentationControlService/ClearFallbackTracker"
 	// InstrumentationControlServiceInitMetricsProcedure is the fully-qualified name of the
 	// InstrumentationControlService's InitMetrics RPC.
 	InstrumentationControlServiceInitMetricsProcedure = "/llm.observability.v1.InstrumentationControlService/InitMetrics"
@@ -91,6 +97,8 @@ type InstrumentationControlServiceClient interface {
 	ScanPiiInjection(context.Context, *connect.Request[v1.ScanPiiInjectionRequest]) (*connect.Response[v1.ScanPiiInjectionResponse], error)
 	ShouldSample(context.Context, *connect.Request[v1.ShouldSampleRequest]) (*connect.Response[v1.ShouldSampleResponse], error)
 	GetEmbedding(context.Context, *connect.Request[v1.GetEmbeddingRequest]) (*connect.Response[v1.GetEmbeddingResponse], error)
+	TrackFallback(context.Context, *connect.Request[v1.TrackFallbackRequest]) (*connect.Response[v1.TrackFallbackResponse], error)
+	ClearFallbackTracker(context.Context, *connect.Request[v1.ClearFallbackTrackerRequest]) (*connect.Response[v1.ClearFallbackTrackerResponse], error)
 	InitMetrics(context.Context, *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error)
 	GetMetricsHealth(context.Context, *connect.Request[v1.GetMetricsHealthRequest]) (*connect.Response[v1.GetMetricsHealthResponse], error)
 	RecordMetrics(context.Context, *connect.Request[v1.RecordMetricsRequest]) (*connect.Response[v1.RecordMetricsResponse], error)
@@ -158,6 +166,16 @@ func NewInstrumentationControlServiceClient(httpClient connect.HTTPClient, baseU
 			baseURL+InstrumentationControlServiceGetEmbeddingProcedure,
 			opts...,
 		),
+		trackFallback: connect.NewClient[v1.TrackFallbackRequest, v1.TrackFallbackResponse](
+			httpClient,
+			baseURL+InstrumentationControlServiceTrackFallbackProcedure,
+			opts...,
+		),
+		clearFallbackTracker: connect.NewClient[v1.ClearFallbackTrackerRequest, v1.ClearFallbackTrackerResponse](
+			httpClient,
+			baseURL+InstrumentationControlServiceClearFallbackTrackerProcedure,
+			opts...,
+		),
 		initMetrics: connect.NewClient[v1.InitMetricsRequest, v1.InitMetricsResponse](
 			httpClient,
 			baseURL+InstrumentationControlServiceInitMetricsProcedure,
@@ -193,6 +211,8 @@ type instrumentationControlServiceClient struct {
 	scanPiiInjection       *connect.Client[v1.ScanPiiInjectionRequest, v1.ScanPiiInjectionResponse]
 	shouldSample           *connect.Client[v1.ShouldSampleRequest, v1.ShouldSampleResponse]
 	getEmbedding           *connect.Client[v1.GetEmbeddingRequest, v1.GetEmbeddingResponse]
+	trackFallback          *connect.Client[v1.TrackFallbackRequest, v1.TrackFallbackResponse]
+	clearFallbackTracker   *connect.Client[v1.ClearFallbackTrackerRequest, v1.ClearFallbackTrackerResponse]
 	initMetrics            *connect.Client[v1.InitMetricsRequest, v1.InitMetricsResponse]
 	getMetricsHealth       *connect.Client[v1.GetMetricsHealthRequest, v1.GetMetricsHealthResponse]
 	recordMetrics          *connect.Client[v1.RecordMetricsRequest, v1.RecordMetricsResponse]
@@ -251,6 +271,17 @@ func (c *instrumentationControlServiceClient) GetEmbedding(ctx context.Context, 
 	return c.getEmbedding.CallUnary(ctx, req)
 }
 
+// TrackFallback calls llm.observability.v1.InstrumentationControlService.TrackFallback.
+func (c *instrumentationControlServiceClient) TrackFallback(ctx context.Context, req *connect.Request[v1.TrackFallbackRequest]) (*connect.Response[v1.TrackFallbackResponse], error) {
+	return c.trackFallback.CallUnary(ctx, req)
+}
+
+// ClearFallbackTracker calls
+// llm.observability.v1.InstrumentationControlService.ClearFallbackTracker.
+func (c *instrumentationControlServiceClient) ClearFallbackTracker(ctx context.Context, req *connect.Request[v1.ClearFallbackTrackerRequest]) (*connect.Response[v1.ClearFallbackTrackerResponse], error) {
+	return c.clearFallbackTracker.CallUnary(ctx, req)
+}
+
 // InitMetrics calls llm.observability.v1.InstrumentationControlService.InitMetrics.
 func (c *instrumentationControlServiceClient) InitMetrics(ctx context.Context, req *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error) {
 	return c.initMetrics.CallUnary(ctx, req)
@@ -284,6 +315,8 @@ type InstrumentationControlServiceHandler interface {
 	ScanPiiInjection(context.Context, *connect.Request[v1.ScanPiiInjectionRequest]) (*connect.Response[v1.ScanPiiInjectionResponse], error)
 	ShouldSample(context.Context, *connect.Request[v1.ShouldSampleRequest]) (*connect.Response[v1.ShouldSampleResponse], error)
 	GetEmbedding(context.Context, *connect.Request[v1.GetEmbeddingRequest]) (*connect.Response[v1.GetEmbeddingResponse], error)
+	TrackFallback(context.Context, *connect.Request[v1.TrackFallbackRequest]) (*connect.Response[v1.TrackFallbackResponse], error)
+	ClearFallbackTracker(context.Context, *connect.Request[v1.ClearFallbackTrackerRequest]) (*connect.Response[v1.ClearFallbackTrackerResponse], error)
 	InitMetrics(context.Context, *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error)
 	GetMetricsHealth(context.Context, *connect.Request[v1.GetMetricsHealthRequest]) (*connect.Response[v1.GetMetricsHealthResponse], error)
 	RecordMetrics(context.Context, *connect.Request[v1.RecordMetricsRequest]) (*connect.Response[v1.RecordMetricsResponse], error)
@@ -346,6 +379,16 @@ func NewInstrumentationControlServiceHandler(svc InstrumentationControlServiceHa
 		svc.GetEmbedding,
 		opts...,
 	)
+	instrumentationControlServiceTrackFallbackHandler := connect.NewUnaryHandler(
+		InstrumentationControlServiceTrackFallbackProcedure,
+		svc.TrackFallback,
+		opts...,
+	)
+	instrumentationControlServiceClearFallbackTrackerHandler := connect.NewUnaryHandler(
+		InstrumentationControlServiceClearFallbackTrackerProcedure,
+		svc.ClearFallbackTracker,
+		opts...,
+	)
 	instrumentationControlServiceInitMetricsHandler := connect.NewUnaryHandler(
 		InstrumentationControlServiceInitMetricsProcedure,
 		svc.InitMetrics,
@@ -388,6 +431,10 @@ func NewInstrumentationControlServiceHandler(svc InstrumentationControlServiceHa
 			instrumentationControlServiceShouldSampleHandler.ServeHTTP(w, r)
 		case InstrumentationControlServiceGetEmbeddingProcedure:
 			instrumentationControlServiceGetEmbeddingHandler.ServeHTTP(w, r)
+		case InstrumentationControlServiceTrackFallbackProcedure:
+			instrumentationControlServiceTrackFallbackHandler.ServeHTTP(w, r)
+		case InstrumentationControlServiceClearFallbackTrackerProcedure:
+			instrumentationControlServiceClearFallbackTrackerHandler.ServeHTTP(w, r)
 		case InstrumentationControlServiceInitMetricsProcedure:
 			instrumentationControlServiceInitMetricsHandler.ServeHTTP(w, r)
 		case InstrumentationControlServiceGetMetricsHealthProcedure:
@@ -443,6 +490,14 @@ func (UnimplementedInstrumentationControlServiceHandler) ShouldSample(context.Co
 
 func (UnimplementedInstrumentationControlServiceHandler) GetEmbedding(context.Context, *connect.Request[v1.GetEmbeddingRequest]) (*connect.Response[v1.GetEmbeddingResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.GetEmbedding is not implemented"))
+}
+
+func (UnimplementedInstrumentationControlServiceHandler) TrackFallback(context.Context, *connect.Request[v1.TrackFallbackRequest]) (*connect.Response[v1.TrackFallbackResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.TrackFallback is not implemented"))
+}
+
+func (UnimplementedInstrumentationControlServiceHandler) ClearFallbackTracker(context.Context, *connect.Request[v1.ClearFallbackTrackerRequest]) (*connect.Response[v1.ClearFallbackTrackerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.ClearFallbackTracker is not implemented"))
 }
 
 func (UnimplementedInstrumentationControlServiceHandler) InitMetrics(context.Context, *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error) {
