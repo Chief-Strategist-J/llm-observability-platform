@@ -1,4 +1,5 @@
 Git Commit Message Rules
+- One module, one commit and push
 - One commit = one logical change (feature, fix, refactor — not mixed)
 - Review before committing using git diff
 - Stage selectively (git add -p), avoid git add .
