@@ -189,6 +189,8 @@ type Mutation {
 
   trackFallback(trace_id: ID!, model: String!): TrackFallbackPayload!
   clearFallbackTracker: ClearFallbackPayload!
+  trackToolCall(trace_id: ID!, span_id: ID!, cost_usd_micro: Int!): TrackToolCallPayload!
+  clearToolCallTracker: ClearToolCallPayload!
 }
 
 type TrackFallbackPayload {
@@ -197,6 +199,14 @@ type TrackFallbackPayload {
 }
 
 type ClearFallbackPayload {
+  success: Boolean!
+}
+
+type TrackToolCallPayload {
+  total_cost: Int!
+}
+
+type ClearToolCallPayload {
   success: Boolean!
 }
 
