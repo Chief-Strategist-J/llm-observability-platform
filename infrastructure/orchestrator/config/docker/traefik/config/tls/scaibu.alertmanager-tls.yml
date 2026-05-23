@@ -1,4 +1,0 @@
-tls:
-  certificates:
-  - certFile: /certs/scaibu.alertmanager.pem
-    keyFile: /certs/scaibu.alertmanager-key.pem

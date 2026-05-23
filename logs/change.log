@@ -98,3 +98,27 @@
         ├── enrichment-middleware -> Intercept and populate attempted_models and retry_count on ingestion and embedding layers
         ├── api-endpoints -> Add /fallback/track and /fallback/clear REST endpoints, and implement GraphQL mutations / gRPC RPCs
         └── validation-rules -> Enable validation warnings (RULE-W-02/RULE-W-05) for fallback spans in LLMSpan model
+
+[2026-05-23T13:42:00+05:30] Implement tool-call chain linking and trace cost tracking
+└── File: packages/python/instrumentation-sdk/src/features/spans/tool_call_tracker.py, packages/python/instrumentation-sdk/src/features/minilm_embedding/index.py, packages/python/instrumentation-sdk/src/api/rest/v1/handlers/tool_call.py, packages/python/instrumentation-sdk/src/api/rest/v1/router.py, packages/python/instrumentation-sdk/src/api/rest/v1/handlers/spans.py, packages/python/instrumentation-sdk/tests/unit/features/spans/test_tool_call_linking.py, packages/python/instrumentation-sdk/tests/unit/features/spans/test_fallback_tracking.py
+    ├── Choice: Use a thread-safe in-memory cost tracker to accumulate costs per trace_id, intercept spans with finish_reason 'tool_calls' to emit intermediate spans, and expose tool-call tracking endpoints.
+    └── Changes:
+        ├── tool-call-tracker -> Add thread-safe cost tracking logic per trace_id and span_id
+        ├── span-linking -> Intercept 'tool_calls' finish reason to generate and emit intermediate transitions
+        ├── rest-api -> Expose v1 /tool-call/track and /tool-call/clear endpoints and register router
+        ├── test-coverage -> Add unit tests verifying tracker, intermediate spans, cost tracking, and API endpoints
+        └── robust-assertions -> Lookup reported spans by span_id in fallback tests to avoid background task noise
+
+[2026-05-23T13:46:00+05:30] Update OpenAPI, GraphQL, and Protobuf contracts to include tool-call tracking endpoints
+└── File: packages/python/instrumentation-sdk/contracts/openapi/v1.yaml, packages/python/instrumentation-sdk/contracts/graphql/v1.graphql, packages/python/instrumentation-sdk/contracts/proto/v1/llm/observability/v1/instrumentation.proto
+    ├── Choice: Maintain parity between REST, GraphQL, and Protobuf contracts by exposing tool-call track/clear endpoints.
+    └── Changes:
+        ├── openapi -> Add /tool-call/track and /tool-call/clear REST specifications
+        ├── graphql -> Expose trackToolCall and clearToolCallTracker mutations and return payloads
+        └── protobuf -> Add TrackToolCall and ClearToolCallTracker RPCs and request/response message definitions
+
+[2026-05-23T13:24:00+05:30] Add sleeps between service startups in docker entrypoint
+└── File: packages/python/instrumentation-sdk/build/entrypoint.sh
+    ├── Choice: Delay startup of downstream services to allow Grafana to complete database migrations without resource contention.
+    └── Changes:
+        └── entrypoint -> Add sleep 2 after Tempo, and sleep 6 after Grafana startup commands

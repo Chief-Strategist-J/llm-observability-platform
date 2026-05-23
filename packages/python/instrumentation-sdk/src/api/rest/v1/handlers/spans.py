@@ -12,9 +12,11 @@ def record_span(span_data: Dict[str, Any]) -> JSONResponse:
     trace_id = span_data.get("trace_id")
     if trace_id:
         from .....features.spans.fallback_tracker import track_fallback
+        from .....features.spans.tool_call_tracker import track_tool_call
         retry_count, attempted_models = track_fallback(trace_id, span_data.get("model"))
         span_data["attempted_models"] = attempted_models
         span_data["retry_count"] = max(span_data.get("retry_count", 0), retry_count)
+        track_tool_call(trace_id, span_data.get("span_id"), span_data.get("cost_usd_micro", 0))
     elif span_data.get("model") and not span_data.get("attempted_models"):
         span_data["attempted_models"] = [span_data.get("model")]
 

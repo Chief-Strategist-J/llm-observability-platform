@@ -382,6 +382,66 @@ paths:
                     type: boolean
                     example: true
 
+  /tool-call/track:
+    post:
+      summary: Track tool call span cost and return trace cumulative cost
+      operationId: trackToolCall
+      tags:
+        - Tool Call Tracking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - trace_id
+                - span_id
+                - cost_usd_micro
+              properties:
+                trace_id:
+                  type: string
+                  example: "uuid-v4-string"
+                span_id:
+                  type: string
+                  example: "uuid-v4-string"
+                cost_usd_micro:
+                  type: integer
+                  example: 1500
+      responses:
+        '200':
+          description: Successful tool call cost tracking registration
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - total_cost
+                properties:
+                  total_cost:
+                    type: integer
+                    example: 3000
+
+  /tool-call/clear:
+    post:
+      summary: Clear tool call registry state
+      operationId: clearToolCallTracker
+      tags:
+        - Tool Call Tracking
+      responses:
+        '200':
+          description: Successful registry clearing
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
   /metrics/init:
     post:
       summary: Initialize metrics pipeline

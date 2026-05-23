@@ -1,4 +1,0 @@
-tls:
-  certificates:
-  - certFile: /certs/scaibu.grafana.pem
-    keyFile: /certs/scaibu.grafana-key.pem

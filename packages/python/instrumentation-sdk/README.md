@@ -18,6 +18,7 @@ This guide covers the technical architecture and end-user usage for the Python-b
   - [Deterministic Sampling Gate (Modulo 100)](#deterministic-sampling-gate-modulo-100)
   - [MiniLM Embedding (Concurrent & Sampled)](#minilm-embedding-concurrent--sampled)
   - [Multi-Model Fallback Chain Tracking](#multi-model-fallback-chain-tracking)
+  - [Tool-Call Chain Linking](#tool-call-chain-linking)
   - [Prometheus Metrics & Grafana Dashboard](#prometheus-metrics--grafana-dashboard)
   - [Updating Config Files (Model Prices, PII Patterns, Infra)](#updating-config-files-model-prices-pii-patterns-infra)
   - [Docker Deployment](#docker-deployment)
@@ -93,6 +94,10 @@ The SDK provides a built-in FastAPI-based management layer for remote orchestrat
 | `/v1/sampling/should-sample` | POST | Verification: Check if a span should be sampled. |
 | `/v1/embeddings/embed` | POST | Verification: Generate MiniLM embeddings for a given text. |
 | `/v1/spans` | POST | Ingestion: Submit a span to the reliable reporter for storage & delivery. |
+| `/v1/fallback/track` | POST | Ingestion: Track model fallback retry attempts for a trace ID. |
+| `/v1/fallback/clear` | POST | Clean up: Clear the fallback tracker memory. |
+| `/v1/tool-call/track` | POST | Ingestion: Track span cost and get trace cumulative cost. |
+| `/v1/tool-call/clear` | POST | Clean up: Clear the tool-call tracker memory. |
 
 ### Basic Usage: Decorators
 Use the `@llm_observe` decorator to manually track functions.
@@ -370,6 +375,44 @@ retry_count, models = track_fallback(trace_id="your-trace-id", model="gpt-4")
 
 # Reset fallback tracker (e.g. at the end of request lifecycle)
 clear_fallback_tracker()
+```
+
+### Tool-Call Chain Linking
+
+The SDK automatically detects when an LLM completion returns a `finish_reason` of `"tool_calls"`. When this occurs, it emits an intermediate span to represent the tool execution transition and aggregates token costs across all subsequent execution spans within the same trace.
+
+- **Intermediate Span Generation**: Automatically spawns and reports a transition span with `finish_reason=FinishReason.STOP`, `prompt_tokens=1`, `completion_tokens=0`, `cost_usd_micro=0`, and the parent span ID linked to the current span ID.
+- **Trace Cost Aggregation**: Automatically tracks the cumulative cost of all spans sharing the same `trace_id` using a thread-safe tracker, preventing duplicate cost addition for retried span IDs.
+
+#### Programmatic Usage
+
+You can query trace cumulative costs or track new spans manually:
+
+```python
+from src.features.spans.tool_call_tracker import track_tool_call, get_trace_total_cost, clear_tool_call_tracker
+
+# Record span cost and obtain the accumulated trace-wide total cost
+total_cost = track_tool_call(trace_id="your-trace-id", span_id="your-span-id", cost_usd_micro=1500)
+
+# Retrieve the current accumulated cost for a trace
+current_cost = get_trace_total_cost(trace_id="your-trace-id")
+
+# Clean up the tracker memory
+clear_tool_call_tracker()
+```
+
+#### REST Endpoint
+
+You can track span costs or clean up the registry via REST endpoints:
+
+```bash
+# Track a tool call span and get trace cumulative cost
+curl -X POST http://localhost:8000/v1/tool-call/track \
+  -H "Content-Type: application/json" \
+  -d '{"trace_id": "your-trace-id", "span_id": "your-span-id", "cost_usd_micro": 1500}'
+
+# Reset the tool call registry memory
+curl -X POST http://localhost:8000/v1/tool-call/clear
 ```
 
 ### Prometheus Metrics & Grafana Dashboard
