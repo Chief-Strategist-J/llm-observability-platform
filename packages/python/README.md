@@ -460,7 +460,7 @@ Two Docker Compose configurations are available under `deploy/docker/` depending
    KAFKA_BOOTSTRAP_SERVERS="my-kafka:9092" docker compose -f deploy/docker/docker-compose.prod.yaml up -d
    ```
 
-### Docker Deployments (v1.8.1)
+### Docker Deployments (v1.8.2)
 
 We publish two official Docker images:
 * **All-in-One Image (`chiefj/instrumentation-sdk-api`)**: Contains Java, Kafka, PostgreSQL, and pgvector. When started, it automatically initializes database users, databases, runs migrations, and provisions Kafka topics. No external setup required.

@@ -4,6 +4,15 @@ All notable changes to the `instrumentation-sdk` package will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.2] - 2026-05-23
+
+### Added
+- **Multi-Model Fallback Chain Tracking**: Expose /v1/fallback/track and /v1/fallback/clear API endpoints. Correlate attempted models and retry count on ingestion and embedding layers.
+- **Tool-Call Chain Linking**: Expose /v1/tool-call/track and /v1/tool-call/clear API endpoints. Intercept 'tool_calls' finish reason to emit intermediate transition spans and track cumulative trace cost.
+
+### Fixed
+- **Docker Startup Delay**: Delay downstream services startup in all-in-one entrypoint.sh to avoid resource contention during Grafana database migrations.
+
 ## [1.8.1] - 2026-05-22
 
 ### Fixed

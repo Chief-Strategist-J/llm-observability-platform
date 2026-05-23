@@ -122,3 +122,10 @@
     ├── Choice: Delay startup of downstream services to allow Grafana to complete database migrations without resource contention.
     └── Changes:
         └── entrypoint -> Add sleep 2 after Tempo, and sleep 6 after Grafana startup commands
+
+[2026-05-23T14:15:00+05:30] Bump SDK version to 1.8.2 and align documentation across repository
+└── File: packages/python/instrumentation-sdk/pyproject.toml, packages/python/instrumentation-sdk/contracts/changelog.md, packages/python/instrumentation-sdk/README.md, README.md, packages/python/README.md, docs/changelog.md, docs/index.md, docs/reference/Docker-and-CLI-Deployment.md
+    ├── Choice: Increment version to 1.8.2 to release tool-call linking and fallback chain tracking features, updating all markdown docs.
+    └── Changes:
+        ├── version-bump -> Bump package version in pyproject.toml to 1.8.2
+        └── doc-alignment -> Update READMEs, changelogs, and indices to reflect v1.8.2

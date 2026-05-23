@@ -121,4 +121,4 @@ instrumentation-sdk
 
 ## Current Version
 
-`1.8.1` — see [Changelog](changelog.md)
+`1.8.2` — see [Changelog](changelog.md)
