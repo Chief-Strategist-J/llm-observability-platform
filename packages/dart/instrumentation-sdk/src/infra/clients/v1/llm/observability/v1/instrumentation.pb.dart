@@ -2022,6 +2022,210 @@ class GetEmbeddingResponse extends $pb.GeneratedMessage {
   $core.List<$core.double> get embedding => $_getList(0);
 }
 
+class TrackFallbackRequest extends $pb.GeneratedMessage {
+  factory TrackFallbackRequest({
+    $core.String? traceId,
+    $core.String? model,
+  }) {
+    final $result = create();
+    if (traceId != null) {
+      $result.traceId = traceId;
+    }
+    if (model != null) {
+      $result.model = model;
+    }
+    return $result;
+  }
+  TrackFallbackRequest._() : super();
+  factory TrackFallbackRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory TrackFallbackRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'TrackFallbackRequest', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'traceId')
+    ..aOS(2, _omitFieldNames ? '' : 'model')
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  TrackFallbackRequest clone() => TrackFallbackRequest()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  TrackFallbackRequest copyWith(void Function(TrackFallbackRequest) updates) => super.copyWith((message) => updates(message as TrackFallbackRequest)) as TrackFallbackRequest;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static TrackFallbackRequest create() => TrackFallbackRequest._();
+  TrackFallbackRequest createEmptyInstance() => create();
+  static $pb.PbList<TrackFallbackRequest> createRepeated() => $pb.PbList<TrackFallbackRequest>();
+  @$core.pragma('dart2js:noInline')
+  static TrackFallbackRequest getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<TrackFallbackRequest>(create);
+  static TrackFallbackRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get traceId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set traceId($core.String v) { $_setString(0, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasTraceId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTraceId() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get model => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set model($core.String v) { $_setString(1, v); }
+  @$pb.TagNumber(2)
+  $core.bool hasModel() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearModel() => clearField(2);
+}
+
+class TrackFallbackResponse extends $pb.GeneratedMessage {
+  factory TrackFallbackResponse({
+    $core.int? retryCount,
+    $core.Iterable<$core.String>? attemptedModels,
+  }) {
+    final $result = create();
+    if (retryCount != null) {
+      $result.retryCount = retryCount;
+    }
+    if (attemptedModels != null) {
+      $result.attemptedModels.addAll(attemptedModels);
+    }
+    return $result;
+  }
+  TrackFallbackResponse._() : super();
+  factory TrackFallbackResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory TrackFallbackResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'TrackFallbackResponse', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..a<$core.int>(1, _omitFieldNames ? '' : 'retryCount', $pb.PbFieldType.O3)
+    ..pPS(2, _omitFieldNames ? '' : 'attemptedModels')
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  TrackFallbackResponse clone() => TrackFallbackResponse()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  TrackFallbackResponse copyWith(void Function(TrackFallbackResponse) updates) => super.copyWith((message) => updates(message as TrackFallbackResponse)) as TrackFallbackResponse;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static TrackFallbackResponse create() => TrackFallbackResponse._();
+  TrackFallbackResponse createEmptyInstance() => create();
+  static $pb.PbList<TrackFallbackResponse> createRepeated() => $pb.PbList<TrackFallbackResponse>();
+  @$core.pragma('dart2js:noInline')
+  static TrackFallbackResponse getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<TrackFallbackResponse>(create);
+  static TrackFallbackResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get retryCount => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set retryCount($core.int v) { $_setSignedInt32(0, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasRetryCount() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRetryCount() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.List<$core.String> get attemptedModels => $_getList(1);
+}
+
+class ClearFallbackTrackerRequest extends $pb.GeneratedMessage {
+  factory ClearFallbackTrackerRequest() => create();
+  ClearFallbackTrackerRequest._() : super();
+  factory ClearFallbackTrackerRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory ClearFallbackTrackerRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'ClearFallbackTrackerRequest', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  ClearFallbackTrackerRequest clone() => ClearFallbackTrackerRequest()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  ClearFallbackTrackerRequest copyWith(void Function(ClearFallbackTrackerRequest) updates) => super.copyWith((message) => updates(message as ClearFallbackTrackerRequest)) as ClearFallbackTrackerRequest;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ClearFallbackTrackerRequest create() => ClearFallbackTrackerRequest._();
+  ClearFallbackTrackerRequest createEmptyInstance() => create();
+  static $pb.PbList<ClearFallbackTrackerRequest> createRepeated() => $pb.PbList<ClearFallbackTrackerRequest>();
+  @$core.pragma('dart2js:noInline')
+  static ClearFallbackTrackerRequest getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ClearFallbackTrackerRequest>(create);
+  static ClearFallbackTrackerRequest? _defaultInstance;
+}
+
+class ClearFallbackTrackerResponse extends $pb.GeneratedMessage {
+  factory ClearFallbackTrackerResponse({
+    $core.bool? success,
+  }) {
+    final $result = create();
+    if (success != null) {
+      $result.success = success;
+    }
+    return $result;
+  }
+  ClearFallbackTrackerResponse._() : super();
+  factory ClearFallbackTrackerResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory ClearFallbackTrackerResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'ClearFallbackTrackerResponse', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..aOB(1, _omitFieldNames ? '' : 'success')
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  ClearFallbackTrackerResponse clone() => ClearFallbackTrackerResponse()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  ClearFallbackTrackerResponse copyWith(void Function(ClearFallbackTrackerResponse) updates) => super.copyWith((message) => updates(message as ClearFallbackTrackerResponse)) as ClearFallbackTrackerResponse;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ClearFallbackTrackerResponse create() => ClearFallbackTrackerResponse._();
+  ClearFallbackTrackerResponse createEmptyInstance() => create();
+  static $pb.PbList<ClearFallbackTrackerResponse> createRepeated() => $pb.PbList<ClearFallbackTrackerResponse>();
+  @$core.pragma('dart2js:noInline')
+  static ClearFallbackTrackerResponse getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ClearFallbackTrackerResponse>(create);
+  static ClearFallbackTrackerResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get success => $_getBF(0);
+  @$pb.TagNumber(1)
+  set success($core.bool v) { $_setBool(0, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasSuccess() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSuccess() => clearField(1);
+}
+
 class InstrumentationControlServiceApi {
   $pb.RpcClient _client;
   InstrumentationControlServiceApi(this._client);
@@ -2055,6 +2259,12 @@ class InstrumentationControlServiceApi {
   ;
   $async.Future<GetEmbeddingResponse> getEmbedding($pb.ClientContext? ctx, GetEmbeddingRequest request) =>
     _client.invoke<GetEmbeddingResponse>(ctx, 'InstrumentationControlService', 'GetEmbedding', request, GetEmbeddingResponse())
+  ;
+  $async.Future<TrackFallbackResponse> trackFallback($pb.ClientContext? ctx, TrackFallbackRequest request) =>
+    _client.invoke<TrackFallbackResponse>(ctx, 'InstrumentationControlService', 'TrackFallback', request, TrackFallbackResponse())
+  ;
+  $async.Future<ClearFallbackTrackerResponse> clearFallbackTracker($pb.ClientContext? ctx, ClearFallbackTrackerRequest request) =>
+    _client.invoke<ClearFallbackTrackerResponse>(ctx, 'InstrumentationControlService', 'ClearFallbackTracker', request, ClearFallbackTrackerResponse())
   ;
   $async.Future<InitMetricsResponse> initMetrics($pb.ClientContext? ctx, InitMetricsRequest request) =>
     _client.invoke<InitMetricsResponse>(ctx, 'InstrumentationControlService', 'InitMetrics', request, InitMetricsResponse())

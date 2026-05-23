@@ -437,6 +437,46 @@ export interface GetEmbeddingResponse {
     embedding: number[];
 }
 /**
+ * @generated from protobuf message llm.observability.v1.TrackFallbackRequest
+ */
+export interface TrackFallbackRequest {
+    /**
+     * @generated from protobuf field: string trace_id = 1;
+     */
+    traceId: string;
+    /**
+     * @generated from protobuf field: string model = 2;
+     */
+    model: string;
+}
+/**
+ * @generated from protobuf message llm.observability.v1.TrackFallbackResponse
+ */
+export interface TrackFallbackResponse {
+    /**
+     * @generated from protobuf field: int32 retry_count = 1;
+     */
+    retryCount: number;
+    /**
+     * @generated from protobuf field: repeated string attempted_models = 2;
+     */
+    attemptedModels: string[];
+}
+/**
+ * @generated from protobuf message llm.observability.v1.ClearFallbackTrackerRequest
+ */
+export interface ClearFallbackTrackerRequest {
+}
+/**
+ * @generated from protobuf message llm.observability.v1.ClearFallbackTrackerResponse
+ */
+export interface ClearFallbackTrackerResponse {
+    /**
+     * @generated from protobuf field: bool success = 1;
+     */
+    success: boolean;
+}
+/**
  * InstrumentationStatus represents the current state of auto-instrumentation.
  *
  * @generated from protobuf enum llm.observability.v1.InstrumentationStatus
@@ -2101,6 +2141,187 @@ class GetEmbeddingResponse$Type extends MessageType<GetEmbeddingResponse> {
  * @generated MessageType for protobuf message llm.observability.v1.GetEmbeddingResponse
  */
 export const GetEmbeddingResponse = new GetEmbeddingResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class TrackFallbackRequest$Type extends MessageType<TrackFallbackRequest> {
+    constructor() {
+        super("llm.observability.v1.TrackFallbackRequest", [
+            { no: 1, name: "trace_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "model", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<TrackFallbackRequest>): TrackFallbackRequest {
+        const message = { traceId: "", model: "" };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<TrackFallbackRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: TrackFallbackRequest): TrackFallbackRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string trace_id */ 1:
+                    message.traceId = reader.string();
+                    break;
+                case /* string model */ 2:
+                    message.model = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: TrackFallbackRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string trace_id = 1; */
+        if (message.traceId !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.traceId);
+        /* string model = 2; */
+        if (message.model !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.model);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.TrackFallbackRequest
+ */
+export const TrackFallbackRequest = new TrackFallbackRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class TrackFallbackResponse$Type extends MessageType<TrackFallbackResponse> {
+    constructor() {
+        super("llm.observability.v1.TrackFallbackResponse", [
+            { no: 1, name: "retry_count", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 2, name: "attempted_models", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<TrackFallbackResponse>): TrackFallbackResponse {
+        const message = { retryCount: 0, attemptedModels: [] };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<TrackFallbackResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: TrackFallbackResponse): TrackFallbackResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* int32 retry_count */ 1:
+                    message.retryCount = reader.int32();
+                    break;
+                case /* repeated string attempted_models */ 2:
+                    message.attemptedModels.push(reader.string());
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: TrackFallbackResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* int32 retry_count = 1; */
+        if (message.retryCount !== 0)
+            writer.tag(1, WireType.Varint).int32(message.retryCount);
+        /* repeated string attempted_models = 2; */
+        for (let i = 0; i < message.attemptedModels.length; i++)
+            writer.tag(2, WireType.LengthDelimited).string(message.attemptedModels[i]);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.TrackFallbackResponse
+ */
+export const TrackFallbackResponse = new TrackFallbackResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ClearFallbackTrackerRequest$Type extends MessageType<ClearFallbackTrackerRequest> {
+    constructor() {
+        super("llm.observability.v1.ClearFallbackTrackerRequest", []);
+    }
+    create(value?: PartialMessage<ClearFallbackTrackerRequest>): ClearFallbackTrackerRequest {
+        const message = {};
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<ClearFallbackTrackerRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ClearFallbackTrackerRequest): ClearFallbackTrackerRequest {
+        return target ?? this.create();
+    }
+    internalBinaryWrite(message: ClearFallbackTrackerRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.ClearFallbackTrackerRequest
+ */
+export const ClearFallbackTrackerRequest = new ClearFallbackTrackerRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ClearFallbackTrackerResponse$Type extends MessageType<ClearFallbackTrackerResponse> {
+    constructor() {
+        super("llm.observability.v1.ClearFallbackTrackerResponse", [
+            { no: 1, name: "success", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ClearFallbackTrackerResponse>): ClearFallbackTrackerResponse {
+        const message = { success: false };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<ClearFallbackTrackerResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ClearFallbackTrackerResponse): ClearFallbackTrackerResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* bool success */ 1:
+                    message.success = reader.bool();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ClearFallbackTrackerResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* bool success = 1; */
+        if (message.success !== false)
+            writer.tag(1, WireType.Varint).bool(message.success);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.ClearFallbackTrackerResponse
+ */
+export const ClearFallbackTrackerResponse = new ClearFallbackTrackerResponse$Type();
 /**
  * @generated ServiceType for protobuf service llm.observability.v1.InstrumentationControlService
  */
@@ -2115,6 +2336,8 @@ export const InstrumentationControlService = new ServiceType("llm.observability.
     { name: "ScanPiiInjection", options: {}, I: ScanPiiInjectionRequest, O: ScanPiiInjectionResponse },
     { name: "ShouldSample", options: {}, I: ShouldSampleRequest, O: ShouldSampleResponse },
     { name: "GetEmbedding", options: {}, I: GetEmbeddingRequest, O: GetEmbeddingResponse },
+    { name: "TrackFallback", options: {}, I: TrackFallbackRequest, O: TrackFallbackResponse },
+    { name: "ClearFallbackTracker", options: {}, I: ClearFallbackTrackerRequest, O: ClearFallbackTrackerResponse },
     { name: "InitMetrics", options: {}, I: InitMetricsRequest, O: InitMetricsResponse },
     { name: "GetMetricsHealth", options: {}, I: GetMetricsHealthRequest, O: GetMetricsHealthResponse },
     { name: "RecordMetrics", options: {}, I: RecordMetricsRequest, O: RecordMetricsResponse },

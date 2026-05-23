@@ -186,6 +186,18 @@ type Mutation {
   initMetrics(port: Int): MetricsStatusPayload!
   recordMetrics(input: RecordSpanMetricsInput!): RecordSpanMetricsPayload!
   recordMetricsBatch(spans: [RecordSpanMetricsInput!]!): BatchRecordMetricsPayload!
+
+  trackFallback(trace_id: ID!, model: String!): TrackFallbackPayload!
+  clearFallbackTracker: ClearFallbackPayload!
+}
+
+type TrackFallbackPayload {
+  retry_count: Int!
+  attempted_models: [String!]!
+}
+
+type ClearFallbackPayload {
+  success: Boolean!
 }
 
 type GetEmbeddingPayload {

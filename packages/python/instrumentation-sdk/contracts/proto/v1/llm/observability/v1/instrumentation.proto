@@ -25,6 +25,8 @@ service InstrumentationControlService {
   rpc ScanPiiInjection(ScanPiiInjectionRequest) returns (ScanPiiInjectionResponse);
   rpc ShouldSample(ShouldSampleRequest) returns (ShouldSampleResponse);
   rpc GetEmbedding(GetEmbeddingRequest) returns (GetEmbeddingResponse);
+  rpc TrackFallback(TrackFallbackRequest) returns (TrackFallbackResponse);
+  rpc ClearFallbackTracker(ClearFallbackTrackerRequest) returns (ClearFallbackTrackerResponse);
   rpc InitMetrics(InitMetricsRequest) returns (InitMetricsResponse);
   rpc GetMetricsHealth(GetMetricsHealthRequest) returns (GetMetricsHealthResponse);
   rpc RecordMetrics(RecordMetricsRequest) returns (RecordMetricsResponse);
@@ -186,5 +188,21 @@ message GetEmbeddingRequest {
 
 message GetEmbeddingResponse {
   repeated float embedding = 1;
+}
+
+message TrackFallbackRequest {
+  string trace_id = 1;
+  string model = 2;
+}
+
+message TrackFallbackResponse {
+  int32 retry_count = 1;
+  repeated string attempted_models = 2;
+}
+
+message ClearFallbackTrackerRequest {}
+
+message ClearFallbackTrackerResponse {
+  bool success = 1;
 }
 

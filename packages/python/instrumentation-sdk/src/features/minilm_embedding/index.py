@@ -38,6 +38,15 @@ def _sync_enrich_and_report(span_data: Dict[str, Any]) -> None:
         pass
 
 def enrich_and_report_span(span_data: Dict[str, Any]) -> None:
+    trace_id = span_data.get("trace_id")
+    if trace_id:
+        from ..spans.fallback_tracker import track_fallback
+        retry_count, attempted_models = track_fallback(trace_id, span_data.get("model"))
+        span_data["attempted_models"] = attempted_models
+        span_data["retry_count"] = max(span_data.get("retry_count", 0), retry_count)
+    elif span_data.get("model") and not span_data.get("attempted_models"):
+        span_data["attempted_models"] = [span_data.get("model")]
+
     record_span_metrics(span_data)
     if not span_data.get("is_sampled", False) or span_data.get("pii_detected", False) or not span_data.get("prompt"):
         reporter = get_reporter()
@@ -54,6 +63,15 @@ def enrich_and_report_span(span_data: Dict[str, Any]) -> None:
         threading.Thread(target=_sync_enrich_and_report, args=(span_data,)).start()
 
 async def enrich_and_report_span_async(span_data: Dict[str, Any]) -> None:
+    trace_id = span_data.get("trace_id")
+    if trace_id:
+        from ..spans.fallback_tracker import track_fallback
+        retry_count, attempted_models = track_fallback(trace_id, span_data.get("model"))
+        span_data["attempted_models"] = attempted_models
+        span_data["retry_count"] = max(span_data.get("retry_count", 0), retry_count)
+    elif span_data.get("model") and not span_data.get("attempted_models"):
+        span_data["attempted_models"] = [span_data.get("model")]
+
     record_span_metrics(span_data)
     if not span_data.get("is_sampled", False) or span_data.get("pii_detected", False) or not span_data.get("prompt"):
         reporter = get_reporter()
@@ -65,3 +83,4 @@ async def enrich_and_report_span_async(span_data: Dict[str, Any]) -> None:
         span_data["prompt_embedding"] = embedding
     reporter = get_reporter()
     await reporter.report_async(span_data)
+

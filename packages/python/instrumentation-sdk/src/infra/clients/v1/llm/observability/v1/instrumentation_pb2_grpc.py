@@ -65,6 +65,16 @@ class InstrumentationControlServiceStub(object):
                 request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.GetEmbeddingRequest.SerializeToString,
                 response_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.GetEmbeddingResponse.FromString,
                 )
+        self.TrackFallback = channel.unary_unary(
+                '/llm.observability.v1.InstrumentationControlService/TrackFallback',
+                request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.TrackFallbackRequest.SerializeToString,
+                response_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.TrackFallbackResponse.FromString,
+                )
+        self.ClearFallbackTracker = channel.unary_unary(
+                '/llm.observability.v1.InstrumentationControlService/ClearFallbackTracker',
+                request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ClearFallbackTrackerRequest.SerializeToString,
+                response_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ClearFallbackTrackerResponse.FromString,
+                )
         self.InitMetrics = channel.unary_unary(
                 '/llm.observability.v1.InstrumentationControlService/InitMetrics',
                 request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.InitMetricsRequest.SerializeToString,
@@ -151,6 +161,18 @@ class InstrumentationControlServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def TrackFallback(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ClearFallbackTracker(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def InitMetrics(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -227,6 +249,16 @@ def add_InstrumentationControlServiceServicer_to_server(servicer, server):
                     servicer.GetEmbedding,
                     request_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.GetEmbeddingRequest.FromString,
                     response_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.GetEmbeddingResponse.SerializeToString,
+            ),
+            'TrackFallback': grpc.unary_unary_rpc_method_handler(
+                    servicer.TrackFallback,
+                    request_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.TrackFallbackRequest.FromString,
+                    response_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.TrackFallbackResponse.SerializeToString,
+            ),
+            'ClearFallbackTracker': grpc.unary_unary_rpc_method_handler(
+                    servicer.ClearFallbackTracker,
+                    request_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ClearFallbackTrackerRequest.FromString,
+                    response_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ClearFallbackTrackerResponse.SerializeToString,
             ),
             'InitMetrics': grpc.unary_unary_rpc_method_handler(
                     servicer.InitMetrics,
@@ -426,6 +458,40 @@ class InstrumentationControlService(object):
         return grpc.experimental.unary_unary(request, target, '/llm.observability.v1.InstrumentationControlService/GetEmbedding',
             llm_dot_observability_dot_v1_dot_instrumentation__pb2.GetEmbeddingRequest.SerializeToString,
             llm_dot_observability_dot_v1_dot_instrumentation__pb2.GetEmbeddingResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def TrackFallback(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/llm.observability.v1.InstrumentationControlService/TrackFallback',
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.TrackFallbackRequest.SerializeToString,
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.TrackFallbackResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def ClearFallbackTracker(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/llm.observability.v1.InstrumentationControlService/ClearFallbackTracker',
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.ClearFallbackTrackerRequest.SerializeToString,
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.ClearFallbackTrackerResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

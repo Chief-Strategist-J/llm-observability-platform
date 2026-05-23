@@ -328,6 +328,68 @@ public final class InstrumentationControlServiceGrpc {
     return getGetEmbeddingMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.llmobservability.platform.v1.TrackFallbackRequest,
+      com.llmobservability.platform.v1.TrackFallbackResponse> getTrackFallbackMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "TrackFallback",
+      requestType = com.llmobservability.platform.v1.TrackFallbackRequest.class,
+      responseType = com.llmobservability.platform.v1.TrackFallbackResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.llmobservability.platform.v1.TrackFallbackRequest,
+      com.llmobservability.platform.v1.TrackFallbackResponse> getTrackFallbackMethod() {
+    io.grpc.MethodDescriptor<com.llmobservability.platform.v1.TrackFallbackRequest, com.llmobservability.platform.v1.TrackFallbackResponse> getTrackFallbackMethod;
+    if ((getTrackFallbackMethod = InstrumentationControlServiceGrpc.getTrackFallbackMethod) == null) {
+      synchronized (InstrumentationControlServiceGrpc.class) {
+        if ((getTrackFallbackMethod = InstrumentationControlServiceGrpc.getTrackFallbackMethod) == null) {
+          InstrumentationControlServiceGrpc.getTrackFallbackMethod = getTrackFallbackMethod =
+              io.grpc.MethodDescriptor.<com.llmobservability.platform.v1.TrackFallbackRequest, com.llmobservability.platform.v1.TrackFallbackResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "TrackFallback"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.TrackFallbackRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.TrackFallbackResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new InstrumentationControlServiceMethodDescriptorSupplier("TrackFallback"))
+              .build();
+        }
+      }
+    }
+    return getTrackFallbackMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.llmobservability.platform.v1.ClearFallbackTrackerRequest,
+      com.llmobservability.platform.v1.ClearFallbackTrackerResponse> getClearFallbackTrackerMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ClearFallbackTracker",
+      requestType = com.llmobservability.platform.v1.ClearFallbackTrackerRequest.class,
+      responseType = com.llmobservability.platform.v1.ClearFallbackTrackerResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.llmobservability.platform.v1.ClearFallbackTrackerRequest,
+      com.llmobservability.platform.v1.ClearFallbackTrackerResponse> getClearFallbackTrackerMethod() {
+    io.grpc.MethodDescriptor<com.llmobservability.platform.v1.ClearFallbackTrackerRequest, com.llmobservability.platform.v1.ClearFallbackTrackerResponse> getClearFallbackTrackerMethod;
+    if ((getClearFallbackTrackerMethod = InstrumentationControlServiceGrpc.getClearFallbackTrackerMethod) == null) {
+      synchronized (InstrumentationControlServiceGrpc.class) {
+        if ((getClearFallbackTrackerMethod = InstrumentationControlServiceGrpc.getClearFallbackTrackerMethod) == null) {
+          InstrumentationControlServiceGrpc.getClearFallbackTrackerMethod = getClearFallbackTrackerMethod =
+              io.grpc.MethodDescriptor.<com.llmobservability.platform.v1.ClearFallbackTrackerRequest, com.llmobservability.platform.v1.ClearFallbackTrackerResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ClearFallbackTracker"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.ClearFallbackTrackerRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.ClearFallbackTrackerResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new InstrumentationControlServiceMethodDescriptorSupplier("ClearFallbackTracker"))
+              .build();
+        }
+      }
+    }
+    return getClearFallbackTrackerMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.llmobservability.platform.v1.InitMetricsRequest,
       com.llmobservability.platform.v1.InitMetricsResponse> getInitMetricsMethod;
 
@@ -575,6 +637,20 @@ public final class InstrumentationControlServiceGrpc {
 
     /**
      */
+    default void trackFallback(com.llmobservability.platform.v1.TrackFallbackRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.TrackFallbackResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getTrackFallbackMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void clearFallbackTracker(com.llmobservability.platform.v1.ClearFallbackTrackerRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.ClearFallbackTrackerResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getClearFallbackTrackerMethod(), responseObserver);
+    }
+
+    /**
+     */
     default void initMetrics(com.llmobservability.platform.v1.InitMetricsRequest request,
         io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.InitMetricsResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getInitMetricsMethod(), responseObserver);
@@ -717,6 +793,22 @@ public final class InstrumentationControlServiceGrpc {
 
     /**
      */
+    public void trackFallback(com.llmobservability.platform.v1.TrackFallbackRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.TrackFallbackResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getTrackFallbackMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void clearFallbackTracker(com.llmobservability.platform.v1.ClearFallbackTrackerRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.ClearFallbackTrackerResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getClearFallbackTrackerMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
     public void initMetrics(com.llmobservability.platform.v1.InitMetricsRequest request,
         io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.InitMetricsResponse> responseObserver) {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
@@ -835,6 +927,20 @@ public final class InstrumentationControlServiceGrpc {
     public com.llmobservability.platform.v1.GetEmbeddingResponse getEmbedding(com.llmobservability.platform.v1.GetEmbeddingRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getGetEmbeddingMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.llmobservability.platform.v1.TrackFallbackResponse trackFallback(com.llmobservability.platform.v1.TrackFallbackRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getTrackFallbackMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.llmobservability.platform.v1.ClearFallbackTrackerResponse clearFallbackTracker(com.llmobservability.platform.v1.ClearFallbackTrackerRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getClearFallbackTrackerMethod(), getCallOptions(), request);
     }
 
     /**
@@ -967,6 +1073,22 @@ public final class InstrumentationControlServiceGrpc {
 
     /**
      */
+    public com.google.common.util.concurrent.ListenableFuture<com.llmobservability.platform.v1.TrackFallbackResponse> trackFallback(
+        com.llmobservability.platform.v1.TrackFallbackRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getTrackFallbackMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.llmobservability.platform.v1.ClearFallbackTrackerResponse> clearFallbackTracker(
+        com.llmobservability.platform.v1.ClearFallbackTrackerRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getClearFallbackTrackerMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
     public com.google.common.util.concurrent.ListenableFuture<com.llmobservability.platform.v1.InitMetricsResponse> initMetrics(
         com.llmobservability.platform.v1.InitMetricsRequest request) {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
@@ -1008,10 +1130,12 @@ public final class InstrumentationControlServiceGrpc {
   private static final int METHODID_SCAN_PII_INJECTION = 7;
   private static final int METHODID_SHOULD_SAMPLE = 8;
   private static final int METHODID_GET_EMBEDDING = 9;
-  private static final int METHODID_INIT_METRICS = 10;
-  private static final int METHODID_GET_METRICS_HEALTH = 11;
-  private static final int METHODID_RECORD_METRICS = 12;
-  private static final int METHODID_RECORD_METRICS_BATCH = 13;
+  private static final int METHODID_TRACK_FALLBACK = 10;
+  private static final int METHODID_CLEAR_FALLBACK_TRACKER = 11;
+  private static final int METHODID_INIT_METRICS = 12;
+  private static final int METHODID_GET_METRICS_HEALTH = 13;
+  private static final int METHODID_RECORD_METRICS = 14;
+  private static final int METHODID_RECORD_METRICS_BATCH = 15;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -1069,6 +1193,14 @@ public final class InstrumentationControlServiceGrpc {
         case METHODID_GET_EMBEDDING:
           serviceImpl.getEmbedding((com.llmobservability.platform.v1.GetEmbeddingRequest) request,
               (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.GetEmbeddingResponse>) responseObserver);
+          break;
+        case METHODID_TRACK_FALLBACK:
+          serviceImpl.trackFallback((com.llmobservability.platform.v1.TrackFallbackRequest) request,
+              (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.TrackFallbackResponse>) responseObserver);
+          break;
+        case METHODID_CLEAR_FALLBACK_TRACKER:
+          serviceImpl.clearFallbackTracker((com.llmobservability.platform.v1.ClearFallbackTrackerRequest) request,
+              (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.ClearFallbackTrackerResponse>) responseObserver);
           break;
         case METHODID_INIT_METRICS:
           serviceImpl.initMetrics((com.llmobservability.platform.v1.InitMetricsRequest) request,
@@ -1175,6 +1307,20 @@ public final class InstrumentationControlServiceGrpc {
               com.llmobservability.platform.v1.GetEmbeddingResponse>(
                 service, METHODID_GET_EMBEDDING)))
         .addMethod(
+          getTrackFallbackMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.llmobservability.platform.v1.TrackFallbackRequest,
+              com.llmobservability.platform.v1.TrackFallbackResponse>(
+                service, METHODID_TRACK_FALLBACK)))
+        .addMethod(
+          getClearFallbackTrackerMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.llmobservability.platform.v1.ClearFallbackTrackerRequest,
+              com.llmobservability.platform.v1.ClearFallbackTrackerResponse>(
+                service, METHODID_CLEAR_FALLBACK_TRACKER)))
+        .addMethod(
           getInitMetricsMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
             new MethodHandlers<
@@ -1260,6 +1406,8 @@ public final class InstrumentationControlServiceGrpc {
               .addMethod(getScanPiiInjectionMethod())
               .addMethod(getShouldSampleMethod())
               .addMethod(getGetEmbeddingMethod())
+              .addMethod(getTrackFallbackMethod())
+              .addMethod(getClearFallbackTrackerMethod())
               .addMethod(getInitMetricsMethod())
               .addMethod(getGetMetricsHealthMethod())
               .addMethod(getRecordMetricsMethod())

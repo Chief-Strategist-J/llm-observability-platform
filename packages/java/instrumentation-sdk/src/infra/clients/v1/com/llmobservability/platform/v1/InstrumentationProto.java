@@ -165,6 +165,26 @@ public final class InstrumentationProto {
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_llm_observability_v1_GetEmbeddingResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_llm_observability_v1_TrackFallbackRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_llm_observability_v1_TrackFallbackRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_llm_observability_v1_TrackFallbackResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_llm_observability_v1_TrackFallbackResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_llm_observability_v1_ClearFallbackTrackerRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_llm_observability_v1_ClearFallbackTrackerRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_llm_observability_v1_ClearFallbackTrackerResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_llm_observability_v1_ClearFallbackTrackerResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -258,58 +278,70 @@ public final class InstrumentationProto {
       "ordMetricsBatchResponse\022%\n\016recorded_coun" +
       "t\030\001 \001(\005R\rrecordedCount\")\n\023GetEmbeddingRe" +
       "quest\022\022\n\004text\030\001 \001(\tR\004text\"4\n\024GetEmbeddin" +
-      "gResponse\022\034\n\tembedding\030\001 \003(\002R\tembedding*" +
-      "\260\001\n\025InstrumentationStatus\022&\n\"INSTRUMENTA" +
-      "TION_STATUS_UNSPECIFIED\020\000\022&\n\"INSTRUMENTA" +
-      "TION_STATUS_INITIALIZED\020\001\022#\n\037INSTRUMENTA" +
-      "TION_STATUS_DISABLED\020\002\022\"\n\036INSTRUMENTATIO" +
-      "N_STATUS_PARTIAL\020\0032\276\014\n\035InstrumentationCo" +
-      "ntrolService\022z\n\023InitInstrumentation\0220.ll" +
-      "m.observability.v1.InitInstrumentationRe" +
-      "quest\0321.llm.observability.v1.InitInstrum" +
-      "entationResponse\022\203\001\n\026DisableInstrumentat" +
-      "ion\0223.llm.observability.v1.DisableInstru" +
-      "mentationRequest\0324.llm.observability.v1." +
-      "DisableInstrumentationResponse\022\\\n\tGetSta" +
-      "tus\022&.llm.observability.v1.GetStatusRequ" +
-      "est\032\'.llm.observability.v1.GetStatusResp" +
-      "onse\022k\n\016DetectProvider\022+.llm.observabili" +
-      "ty.v1.DetectProviderRequest\032,.llm.observ" +
-      "ability.v1.DetectProviderResponse\022n\n\017Tri" +
-      "ggerTestCall\022,.llm.observability.v1.Trig" +
-      "gerTestCallRequest\032-.llm.observability.v" +
-      "1.TriggerTestCallResponse\022\200\001\n\025TriggerTes" +
-      "tStreamCall\0222.llm.observability.v1.Trigg" +
-      "erTestStreamCallRequest\0323.llm.observabil" +
-      "ity.v1.TriggerTestStreamCallResponse\022b\n\013" +
-      "CountTokens\022(.llm.observability.v1.Count" +
-      "TokensRequest\032).llm.observability.v1.Cou" +
-      "ntTokensResponse\022q\n\020ScanPiiInjection\022-.l" +
-      "lm.observability.v1.ScanPiiInjectionRequ" +
-      "est\032..llm.observability.v1.ScanPiiInject" +
-      "ionResponse\022e\n\014ShouldSample\022).llm.observ" +
-      "ability.v1.ShouldSampleRequest\032*.llm.obs" +
-      "ervability.v1.ShouldSampleResponse\022e\n\014Ge" +
-      "tEmbedding\022).llm.observability.v1.GetEmb" +
-      "eddingRequest\032*.llm.observability.v1.Get" +
-      "EmbeddingResponse\022b\n\013InitMetrics\022(.llm.o" +
-      "bservability.v1.InitMetricsRequest\032).llm" +
-      ".observability.v1.InitMetricsResponse\022q\n" +
-      "\020GetMetricsHealth\022-.llm.observability.v1" +
-      ".GetMetricsHealthRequest\032..llm.observabi" +
-      "lity.v1.GetMetricsHealthResponse\022h\n\rReco" +
-      "rdMetrics\022*.llm.observability.v1.RecordM" +
-      "etricsRequest\032+.llm.observability.v1.Rec" +
-      "ordMetricsResponse\022w\n\022RecordMetricsBatch" +
-      "\022/.llm.observability.v1.RecordMetricsBat" +
-      "chRequest\0320.llm.observability.v1.RecordM" +
-      "etricsBatchResponseB\342\001\n com.llmobservabi" +
-      "lity.platform.v1B\024InstrumentationProtoP\001" +
-      "Z.github.com/llm-observability/platform/" +
-      "proto/v1\242\002\003LOX\252\002\024Llm.Observability.V1\312\002\034" +
-      "LlmObservability\\Platform\\V1\342\002 Llm\\Obser" +
-      "vability\\V1\\GPBMetadata\352\002\026Llm::Observabi" +
-      "lity::V1b\006proto3"
+      "gResponse\022\034\n\tembedding\030\001 \003(\002R\tembedding\"" +
+      "G\n\024TrackFallbackRequest\022\031\n\010trace_id\030\001 \001(" +
+      "\tR\007traceId\022\024\n\005model\030\002 \001(\tR\005model\"c\n\025Trac" +
+      "kFallbackResponse\022\037\n\013retry_count\030\001 \001(\005R\n" +
+      "retryCount\022)\n\020attempted_models\030\002 \003(\tR\017at" +
+      "temptedModels\"\035\n\033ClearFallbackTrackerReq" +
+      "uest\"8\n\034ClearFallbackTrackerResponse\022\030\n\007" +
+      "success\030\001 \001(\010R\007success*\260\001\n\025Instrumentati" +
+      "onStatus\022&\n\"INSTRUMENTATION_STATUS_UNSPE" +
+      "CIFIED\020\000\022&\n\"INSTRUMENTATION_STATUS_INITI" +
+      "ALIZED\020\001\022#\n\037INSTRUMENTATION_STATUS_DISAB" +
+      "LED\020\002\022\"\n\036INSTRUMENTATION_STATUS_PARTIAL\020" +
+      "\0032\247\016\n\035InstrumentationControlService\022z\n\023I" +
+      "nitInstrumentation\0220.llm.observability.v" +
+      "1.InitInstrumentationRequest\0321.llm.obser" +
+      "vability.v1.InitInstrumentationResponse\022" +
+      "\203\001\n\026DisableInstrumentation\0223.llm.observa" +
+      "bility.v1.DisableInstrumentationRequest\032" +
+      "4.llm.observability.v1.DisableInstrument" +
+      "ationResponse\022\\\n\tGetStatus\022&.llm.observa" +
+      "bility.v1.GetStatusRequest\032\'.llm.observa" +
+      "bility.v1.GetStatusResponse\022k\n\016DetectPro" +
+      "vider\022+.llm.observability.v1.DetectProvi" +
+      "derRequest\032,.llm.observability.v1.Detect" +
+      "ProviderResponse\022n\n\017TriggerTestCall\022,.ll" +
+      "m.observability.v1.TriggerTestCallReques" +
+      "t\032-.llm.observability.v1.TriggerTestCall" +
+      "Response\022\200\001\n\025TriggerTestStreamCall\0222.llm" +
+      ".observability.v1.TriggerTestStreamCallR" +
+      "equest\0323.llm.observability.v1.TriggerTes" +
+      "tStreamCallResponse\022b\n\013CountTokens\022(.llm" +
+      ".observability.v1.CountTokensRequest\032).l" +
+      "lm.observability.v1.CountTokensResponse\022" +
+      "q\n\020ScanPiiInjection\022-.llm.observability." +
+      "v1.ScanPiiInjectionRequest\032..llm.observa" +
+      "bility.v1.ScanPiiInjectionResponse\022e\n\014Sh" +
+      "ouldSample\022).llm.observability.v1.Should" +
+      "SampleRequest\032*.llm.observability.v1.Sho" +
+      "uldSampleResponse\022e\n\014GetEmbedding\022).llm." +
+      "observability.v1.GetEmbeddingRequest\032*.l" +
+      "lm.observability.v1.GetEmbeddingResponse" +
+      "\022h\n\rTrackFallback\022*.llm.observability.v1" +
+      ".TrackFallbackRequest\032+.llm.observabilit" +
+      "y.v1.TrackFallbackResponse\022}\n\024ClearFallb" +
+      "ackTracker\0221.llm.observability.v1.ClearF" +
+      "allbackTrackerRequest\0322.llm.observabilit" +
+      "y.v1.ClearFallbackTrackerResponse\022b\n\013Ini" +
+      "tMetrics\022(.llm.observability.v1.InitMetr" +
+      "icsRequest\032).llm.observability.v1.InitMe" +
+      "tricsResponse\022q\n\020GetMetricsHealth\022-.llm." +
+      "observability.v1.GetMetricsHealthRequest" +
+      "\032..llm.observability.v1.GetMetricsHealth" +
+      "Response\022h\n\rRecordMetrics\022*.llm.observab" +
+      "ility.v1.RecordMetricsRequest\032+.llm.obse" +
+      "rvability.v1.RecordMetricsResponse\022w\n\022Re" +
+      "cordMetricsBatch\022/.llm.observability.v1." +
+      "RecordMetricsBatchRequest\0320.llm.observab" +
+      "ility.v1.RecordMetricsBatchResponseB\342\001\n " +
+      "com.llmobservability.platform.v1B\024Instru" +
+      "mentationProtoP\001Z.github.com/llm-observa" +
+      "bility/platform/proto/v1\242\002\003LOX\252\002\024Llm.Obs" +
+      "ervability.V1\312\002\034LlmObservability\\Platfor" +
+      "m\\V1\342\002 Llm\\Observability\\V1\\GPBMetadata\352" +
+      "\002\026Llm::Observability::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -495,6 +527,30 @@ public final class InstrumentationProto {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_llm_observability_v1_GetEmbeddingResponse_descriptor,
         new java.lang.String[] { "Embedding", });
+    internal_static_llm_observability_v1_TrackFallbackRequest_descriptor =
+      getDescriptor().getMessageTypes().get(30);
+    internal_static_llm_observability_v1_TrackFallbackRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_llm_observability_v1_TrackFallbackRequest_descriptor,
+        new java.lang.String[] { "TraceId", "Model", });
+    internal_static_llm_observability_v1_TrackFallbackResponse_descriptor =
+      getDescriptor().getMessageTypes().get(31);
+    internal_static_llm_observability_v1_TrackFallbackResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_llm_observability_v1_TrackFallbackResponse_descriptor,
+        new java.lang.String[] { "RetryCount", "AttemptedModels", });
+    internal_static_llm_observability_v1_ClearFallbackTrackerRequest_descriptor =
+      getDescriptor().getMessageTypes().get(32);
+    internal_static_llm_observability_v1_ClearFallbackTrackerRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_llm_observability_v1_ClearFallbackTrackerRequest_descriptor,
+        new java.lang.String[] { });
+    internal_static_llm_observability_v1_ClearFallbackTrackerResponse_descriptor =
+      getDescriptor().getMessageTypes().get(33);
+    internal_static_llm_observability_v1_ClearFallbackTrackerResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_llm_observability_v1_ClearFallbackTrackerResponse_descriptor,
+        new java.lang.String[] { "Success", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)
