@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: code-quality
-  labels:
-    name: code-quality
-    purpose: code-quality-analysis

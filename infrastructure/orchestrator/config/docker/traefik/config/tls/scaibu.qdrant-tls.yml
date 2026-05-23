@@ -1,4 +1,0 @@
-tls:
-  certificates:
-  - certFile: /certs/scaibu.qdrant.pem
-    keyFile: /certs/scaibu.qdrant-key.pem

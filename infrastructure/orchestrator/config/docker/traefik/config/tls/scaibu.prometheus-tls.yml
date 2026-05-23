@@ -1,4 +1,0 @@
-tls:
-  certificates:
-  - certFile: /certs/scaibu.prometheus.pem
-    keyFile: /certs/scaibu.prometheus-key.pem

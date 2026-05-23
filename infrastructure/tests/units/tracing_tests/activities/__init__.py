@@ -1,1 +1,0 @@
-# Tracing activities tests init

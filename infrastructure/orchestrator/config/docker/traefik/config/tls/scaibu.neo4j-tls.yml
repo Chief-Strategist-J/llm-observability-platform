@@ -1,4 +1,0 @@
-tls:
-  certificates:
-  - certFile: /certs/scaibu.neo4j.pem
-    keyFile: /certs/scaibu.neo4j-key.pem

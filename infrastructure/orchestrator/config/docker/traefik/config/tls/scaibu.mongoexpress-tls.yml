@@ -1,4 +1,0 @@
-tls:
-  certificates:
-  - certFile: /certs/scaibu.mongoexpress.pem
-    keyFile: /certs/scaibu.mongoexpress-key.pem

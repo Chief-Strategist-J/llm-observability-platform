@@ -1,4 +1,0 @@
-tls:
-  certificates:
-  - certFile: /certs/scaibu.minio.pem
-    keyFile: /certs/scaibu.minio-key.pem

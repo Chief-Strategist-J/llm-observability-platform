@@ -1,4 +1,0 @@
-tls:
-  certificates:
-  - certFile: /certs/scaibu.attu.pem
-    keyFile: /certs/scaibu.attu-key.pem
