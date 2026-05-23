@@ -22,9 +22,13 @@ The following hierarchical structure illustrates the HTTP request routing, Depen
                         │   └── Adapter: CloudflareAdapter (src/infra/adapters/cloudflare_adapter.go)
                         │       └── REST Calls -> External Cloudflare AI Gateway/Workers API
                         │
-                        └── Port: MemoryRepository (src/features/ai_orchestrator/ports.go)
-                            └── Adapter: MemoryRepository (src/infra/adapters/memory_repo.go)
-                                └── Thread-safe In-Memory Vector DB (Cosine Similarity retrieval)
+                        ├── Port: MemoryRepository (src/features/ai_orchestrator/ports.go)
+                        │   └── Adapter: MemoryRepository (src/infra/adapters/memory_repo.go)
+                        │       └── Thread-safe In-Memory Vector DB (Cosine Similarity retrieval)
+                        │
+                        └── Port: VectorRepositoryPort (src/features/ai_orchestrator/ports.go)
+                            └── Adapter: QdrantRepository (src/infra/adapters/qdrant_repo.go)
+                                └── Qdrant REST API Vector Store (Semantic memory & point upserts)
 ```
 
 ---
@@ -43,10 +47,10 @@ This hierarchical decision tree outlines the conditional execution paths for sta
     └── Route: /api/v1/chat/persistent (Stateful Flow)
         ├── [Step 1] Parse payload (user_id, message text)
         ├── [Step 2] Generate embedding vector for user message via Cloudflare AI
-        ├── [Step 3] Fetch user memory history from In-Memory Memory Repository
+        ├── [Step 3] Fetch user memory history from In-Memory Memory Repository / Qdrant Vector Store
         ├── [Decision] Does user have past conversational memory?
         │   ├── YES (Retrieve Context)
-        │   │   ├── [Sub-Step] Compute Cosine Similarity between user message vector and all past vectors
+        │   │   ├── [Sub-Step] Query Memory Repository / Qdrant via cosine similarity with user_id filter
         │   │   ├── [Sub-Step] Filter and sort memories where similarity >= threshold (default: 0.7)
         │   │   ├── [Sub-Step] Select top K context-rich memories (default: 5)
         │   │   └── [Sub-Step] Prepend retrieved context to the prompt as system instructions
@@ -56,7 +60,7 @@ This hierarchical decision tree outlines the conditional execution paths for sta
         ├── [Step 4] Send complete prompt (context + current message) to Cloudflare LLM
         ├── [Step 5] Receive LLM AI response text
         ├── [Step 6] Generate embedding vector for assistant response text via Cloudflare AI
-        ├── [Step 7] Atomically store both User and Assistant turns in the Memory Repository
+        ├── [Step 7] Atomically store both User and Assistant turns in Memory Repository and Qdrant
         └── [Step 8] Return AI response + semantic context metadata to the client
 ```
 
@@ -95,7 +99,8 @@ This hierarchical decision tree outlines the conditional execution paths for sta
     ├── infra/
     │   └── adapters/
     │       ├── cloudflare_adapter.go
-    │       └── memory_repo.go
+    │       ├── memory_repo.go
+    │       └── qdrant_repo.go
     └── shared/
         ├── di/
         │   └── providers.go
@@ -103,7 +108,7 @@ This hierarchical decision tree outlines the conditional execution paths for sta
             └── otel.go
 ```
 
-**Key components:** Multi-stage `Dockerfile`, OpenAPI `contracts`, automated `deploy_docker.sh` release script, Hexagonal Domain layer `ai_orchestrator`, and Cloudflare API + In-Memory Vector `adapters`.
+**Key components:** Multi-stage `Dockerfile`, OpenAPI `contracts`, automated `deploy_docker.sh` release script, Hexagonal Domain layer `ai_orchestrator`, and Cloudflare API + In-Memory Vector / Qdrant `adapters`.
 
 ---
 
@@ -121,6 +126,11 @@ The service is configured using the following environment variables:
 | `CF_ACCESS_JWT_ASSERTION` | Cloudflare Access API Token (`cfat_...`) | Optional / None |
 | `CF_EMBEDDING_MODEL` | The default text embedding model ID | `@cf/baai/bge-small-en-v1.5` |
 | `AI_DEFAULT_MODEL` | The default chat/LLM model ID | `@cf/meta/llama-3.1-8b-instruct` |
+| `QDRANT_URL` | Qdrant REST API endpoint URL | Optional / None |
+| `QDRANT_API_KEY` | Optional API Key for Qdrant | Optional / None |
+| `QDRANT_COLLECTION` | Qdrant Collection name for storing vectors | `chat_messages` |
+| `QDRANT_VECTOR_SIZE` | Dimensions of the vector embedding | `384` |
+| `QDRANT_DISTANCE` | Distance metric algorithm for Qdrant collection | `Cosine` |
 
 ### Running Locally (Bare Metal)
 

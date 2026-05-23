@@ -13,3 +13,15 @@ type SessionRepositoryPort interface {
 	SaveSession(ctx context.Context, session *ChatSession) error
 	DeleteSession(ctx context.Context, userID string) error
 }
+
+type SearchResult struct {
+	ID      string                 `json:"id"`
+	Score   float32                `json:"score"`
+	Payload map[string]interface{} `json:"payload"`
+}
+
+type VectorRepositoryPort interface {
+	Search(ctx context.Context, userID string, vector []float32, limit int) ([]SearchResult, error)
+	Upsert(ctx context.Context, id string, vector []float32, payload map[string]interface{}) error
+}
+
