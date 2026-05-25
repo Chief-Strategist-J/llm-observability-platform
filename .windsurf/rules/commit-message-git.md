@@ -1,5 +1,5 @@
 Git Commit Message Rules
-- Must Per module, one commit and push with changes
+- Must Per module/feature, one commit and push with changes
 - One commit = one logical change (feature, fix, refactor — not mixed)
 - Review before committing using git diff
 - Stage selectively (git add -p), avoid git add .
@@ -12,3 +12,4 @@ Git Commit Message Rules
 - Use standard types (feat, fix, refactor, docs, etc.)
 - Separate subject and body with a blank line
 - Focus on intent, not implementation details
+- do not push secrets, api keys, or sensitive information

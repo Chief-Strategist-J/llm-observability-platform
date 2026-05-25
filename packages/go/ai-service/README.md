@@ -26,9 +26,17 @@ The following hierarchical structure illustrates the HTTP request routing, Depen
                         │   └── Adapter: MemoryRepository (src/infra/adapters/memory_repo.go)
                         │       └── Thread-safe In-Memory Vector DB (Cosine Similarity retrieval)
                         │
-                        └── Port: VectorRepositoryPort (src/features/ai_orchestrator/ports.go)
-                            └── Adapter: QdrantRepository (src/infra/adapters/qdrant_repo.go)
-                                └── Qdrant REST API Vector Store (Semantic memory & point upserts)
+                        ├── Port: VectorRepositoryPort (src/features/ai_orchestrator/ports.go)
+                        │   └── Adapter: QdrantRepository (src/infra/adapters/qdrant_repo.go)
+                        │       └── Qdrant REST API Vector Store (Semantic memory & point upserts)
+                        │
+                        ├── Port: ResponseCachePort (src/features/ai_orchestrator/ports.go)
+                        │   └── Adapter: MemoryResponseCache (src/infra/adapters/memory_cache.go)
+                        │       └── High-performance In-Memory Standard Caching (exact match)
+                        │
+                        └── Port: SemanticCachePort (src/features/ai_orchestrator/ports.go)
+                            └── Adapter: QdrantSemanticCache (src/infra/adapters/qdrant_cache.go)
+                                └── Vector-based Semantic Caching (Qdrant similarity search)
 ```
 
 ---
@@ -41,27 +49,79 @@ This hierarchical decision tree outlines the conditional execution paths for sta
 └── Incoming Chat Request
     ├── Route: /api/v1/chat (Stateless Flow)
     │   ├── [Step 1] Parse payload (messages list)
-    │   ├── [Step 2] Send messages directly to Cloudflare LLM
-    │   └── [Step 3] Return AI assistant response to the client
+    │   ├── [Step 2] Generate prompt fingerprint (system instructions + model ID)
+    │   ├── [Step 3] Lookup in standard cache via hash key of prompt history & fingerprint
+    │   │   ├── Hit -> Return cached response (cached: true, cache_type: "standard")
+    │   │   └── Miss -> Proceed to step 4
+    │   ├── [Step 4] Query semantic cache (threshold: 0.95) using embedding & fingerprint filter
+    │   │   ├── Hit -> Store in standard cache, return cached response (cached: true, cache_type: "semantic")
+    │   │   └── Miss -> Proceed to step 5
+    │   ├── [Step 5] Classify prompt complexity (routing check)
+    │   │   ├── Simple -> Route to small model (AI_SMALL_MODEL)
+    │   │   └── Complex -> Route to large model (AI_LARGE_MODEL)
+    │   ├── [Step 6] Send messages directly to selected Cloudflare LLM
+    │   └── [Step 7] Store response in standard and semantic cache with fingerprint, return response (cached: false)
     │
     └── Route: /api/v1/chat/persistent (Stateful Flow)
         ├── [Step 1] Parse payload (user_id, message text)
-        ├── [Step 2] Generate embedding vector for user message via Cloudflare AI
-        ├── [Step 3] Fetch user memory history from In-Memory Memory Repository / Qdrant Vector Store
+        ├── [Step 2] Check session message history length (Compaction Gating)
+        │   ├── If > 10 messages -> Query background LLM to collapse older messages into summary
+        │   └── If <= 10 messages -> Skip compaction
+        ├── [Step 3] Generate embedding vector for user message via Cloudflare AI
+        ├── [Step 4] Fetch user memory history from In-Memory Memory Repository / Qdrant Vector Store
         ├── [Decision] Does user have past conversational memory?
         │   ├── YES (Retrieve Context)
         │   │   ├── [Sub-Step] Query Memory Repository / Qdrant via cosine similarity with user_id filter
-        │   │   ├── [Sub-Step] Filter and sort memories where similarity >= threshold (default: 0.7)
+        │   │   ├── [Sub-Step] Calculate recency exponential decay weight (7-day half-life)
+        │   │   ├── [Sub-Step] Rank using combined score (0.7 * Similarity + 0.3 * Recency)
         │   │   ├── [Sub-Step] Select top K context-rich memories (default: 5)
         │   │   └── [Sub-Step] Prepend retrieved context to the prompt as system instructions
         │   └── NO (Skip Context Retrieval)
         │       └── [Sub-Step] Proceed with empty conversational history context
         │
-        ├── [Step 4] Send complete prompt (context + current message) to Cloudflare LLM
-        ├── [Step 5] Receive LLM AI response text
-        ├── [Step 6] Generate embedding vector for assistant response text via Cloudflare AI
-        ├── [Step 7] Atomically store both User and Assistant turns in Memory Repository and Qdrant
-        └── [Step 8] Return AI response + semantic context metadata to the client
+        ├── [Step 5] Generate fingerprint hash of the model ID and all compiled instructions/history context
+        ├── [Step 6] Lookup full compiled prompt in standard cache via hash key & fingerprint
+        │   ├── Hit -> Return cached response (cached: true, cache_type: "standard")
+        │   └── Miss -> Proceed to step 7
+        │
+        ├── [Step 7] Query semantic cache (threshold: 0.95) using embedding & fingerprint filter
+        │   ├── Hit -> Store in standard cache, return cached response (cached: true, cache_type: "semantic")
+        │   └── Miss -> Proceed to step 8
+        │
+        ├── [Step 8] Classify prompt complexity (routing check)
+        │   ├── Simple -> Route to small model (AI_SMALL_MODEL)
+        │   └── Complex -> Route to large model (AI_LARGE_MODEL)
+        │
+        ├── [Step 9] Send complete prompt (context + current message) to selected Cloudflare LLM
+        ├── [Step 10] Receive LLM AI response text
+        ├── [Step 11] Generate embedding vector for assistant response text via Cloudflare AI
+        ├── [Step 12] Store response in standard cache and semantic cache with prompt fingerprint
+        ├── [Step 13] Atomically store both User and Assistant turns in Memory Repository and Qdrant (with timestamp)
+        └── [Step 14] Return AI response + semantic context metadata to the client (cached: false)
+
+---
+
+## Production Optimizations & Caching Enhancements
+
+The AI Service employs several production-grade caching and routing mechanisms:
+
+### 1. Prompt Fingerprinting
+To prevent cross-session context contamination, the semantic cache generates a cryptographic hash/fingerprint of the model ID and all messages prior to the current user query (e.g. system instructions, history context). Semantic cache lookups and storage are strictly scoped to matching fingerprints.
+
+### 2. Confidence Gating
+A hard similarity threshold of `0.95` is enforced on semantic cache lookups. Any vector match with a similarity score below 0.95 is rejected and treated as a cache miss, ensuring high response accuracy and reducing false-positive cache hits.
+
+### 3. Memory Recency Weighting
+When retrieving context from stateful session memory or Qdrant vector storage, a temporal decay function is applied to re-rank results:
+$$\text{Score}_{\text{combined}} = \text{Similarity} \times 0.7 + e^{-\frac{\ln(2) \cdot \text{Age}}{604800}} \times 0.3$$
+This formula exponentially decays the weight of older messages over a 7-day half-life, prioritizing recent facts and context.
+
+### 4. Memory summarization Compaction
+If a stateful conversation session exceeds 10 messages, the service automatically triggers compaction. Older history messages (except the most recent 4 messages) are collapsed into a concise summary via a background LLM query and prepended as a single summary message, reclaiming token context window.
+
+### 5. Heuristic Model Routing
+Incoming prompt complexity is classified using a fast heuristic check and small-model routing classifier. Short or simple queries are served by a smaller, cost-effective model (`AI_SMALL_MODEL`, defaulting to `@cf/meta/llama-3-8b-instruct-awq`), whereas complex reasoning or long queries are automatically routed to a larger model (`AI_LARGE_MODEL`, defaulting to `@cf/google/gemma-3-12b-it`).
+
 ```
 
 ---
@@ -126,9 +186,12 @@ The service is configured using the following environment variables:
 | `CF_ACCESS_JWT_ASSERTION` | Cloudflare Access API Token (`cfat_...`) | Optional / None |
 | `CF_EMBEDDING_MODEL` | The default text embedding model ID | `@cf/baai/bge-small-en-v1.5` |
 | `AI_DEFAULT_MODEL` | The default chat/LLM model ID | `@cf/meta/llama-3.1-8b-instruct` |
+| `AI_SMALL_MODEL` | The model ID used for simple prompts | `@cf/meta/llama-3-8b-instruct-awq` |
+| `AI_LARGE_MODEL` | The model ID used for complex prompts | `@cf/google/gemma-3-12b-it` |
 | `QDRANT_URL` | Qdrant REST API endpoint URL | Optional / None |
 | `QDRANT_API_KEY` | Optional API Key for Qdrant | Optional / None |
 | `QDRANT_COLLECTION` | Qdrant Collection name for storing vectors | `chat_messages` |
+| `QDRANT_SEMANTIC_CACHE_COLLECTION` | Qdrant Collection name for storing semantic cache vectors | `semantic_cache` |
 | `QDRANT_VECTOR_SIZE` | Dimensions of the vector embedding | `384` |
 | `QDRANT_DISTANCE` | Distance metric algorithm for Qdrant collection | `Cosine` |
 
@@ -280,7 +343,9 @@ curl -s -f -X POST http://localhost:8080/api/v1/chat \
 
 ```json
 {
-  "response": "In Go, Hexagonal Architecture, also known as Ports and Adapters Architecture, is a design pattern where the application's business logic is encapsulated in a \"domain layer\" and interacts with external dependencies through \"ports\" and \"adapters\", allowing for loose coupling and testability."
+  "response": "In Go, Hexagonal Architecture, also known as Ports and Adapters Architecture, is a design pattern where the application's business logic is encapsulated in a \"domain layer\" and interacts with external dependencies through \"ports\" and \"adapters\", allowing for loose coupling and testability.",
+  "cached": false,
+  "cache_type": "none"
 }
 ```
 
@@ -315,7 +380,9 @@ curl -s -f -X POST http://localhost:8080/api/v1/chat/persistent \
       "role": "assistant",
       "content": "Hello there! I'm thrilled to hear that your favorite programming language is Go! As a cloud-based service, Cloudflare is heavily invested in the Go programming language..."
     }
-  ]
+  ],
+  "cached": false,
+  "cache_type": "none"
 }
 ```
 
@@ -358,6 +425,8 @@ curl -s -f -X POST http://localhost:8080/api/v1/chat/persistent \
       "role": "assistant",
       "content": "You told me earlier that your favorite programming language is Go!"
     }
-  ]
+  ],
+  "cached": false,
+  "cache_type": "none"
 }
 ```

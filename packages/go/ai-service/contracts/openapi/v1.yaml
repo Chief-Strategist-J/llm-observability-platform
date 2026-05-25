@@ -51,6 +51,10 @@ paths:
                 properties:
                   response:
                     type: string
+                  cached:
+                    type: boolean
+                  cache_type:
+                    type: string
         "400":
           description: Bad Request
         "500":
@@ -96,6 +100,10 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/ChatMessage"
+                  cached:
+                    type: boolean
+                  cache_type:
+                    type: string
         "400":
           description: Bad Request
         "500":

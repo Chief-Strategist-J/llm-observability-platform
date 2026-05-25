@@ -26,6 +26,7 @@ func main() {
 
 	container := di.BuildContainer()
 	defer container.MemoryRepo.Stop()
+	defer container.MemoryCache.Stop()
 
 	port := os.Getenv("PORT")
 	if port == "" {

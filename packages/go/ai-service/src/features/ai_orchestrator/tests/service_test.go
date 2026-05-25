@@ -3,6 +3,8 @@ package tests
 import (
 	"context"
 	"errors"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,12 +12,14 @@ import (
 )
 
 type mockLLMProvider struct {
-	models      []aiorchestrator.ModelInfo
-	completion  string
-	embedding   []float32
-	getErr      error
-	chatErr     error
-	embedErr    error
+	models             []aiorchestrator.ModelInfo
+	completion         string
+	embedding          []float32
+	getErr             error
+	chatErr            error
+	embedErr           error
+	lastModelID        string
+	completionsHistory []string
 }
 
 func (m *mockLLMProvider) GetModels(ctx context.Context) ([]aiorchestrator.ModelInfo, error) {
@@ -23,6 +27,18 @@ func (m *mockLLMProvider) GetModels(ctx context.Context) ([]aiorchestrator.Model
 }
 
 func (m *mockLLMProvider) GenerateCompletion(ctx context.Context, modelID string, messages []aiorchestrator.ChatMessage) (string, error) {
+	m.lastModelID = modelID
+	if len(messages) > 0 {
+		m.completionsHistory = append(m.completionsHistory, messages[len(messages)-1].Content)
+	}
+	if strings.Contains(modelID, "small") || strings.Contains(modelID, "awq") {
+		if len(messages) > 0 && strings.Contains(messages[0].Content, "Classify") {
+			if strings.Contains(messages[1].Content, "complex query") {
+				return "complex", nil
+			}
+			return "simple", nil
+		}
+	}
 	return m.completion, m.chatErr
 }
 
@@ -244,3 +260,266 @@ func TestPersistentChatWithVectorRepo(t *testing.T) {
 	}
 }
 
+type mockResponseCache struct {
+	store  map[string]string
+	getErr error
+	setErr error
+}
+
+func (m *mockResponseCache) Get(ctx context.Context, key string) (string, error) {
+	if m.getErr != nil {
+		return "", m.getErr
+	}
+	return m.store[key], nil
+}
+
+func (m *mockResponseCache) Set(ctx context.Context, key string, value string) error {
+	if m.setErr != nil {
+		return m.setErr
+	}
+	m.store[key] = value
+	return nil
+}
+
+type mockSemanticCache struct {
+	similarResponse string
+	getErr          error
+	saveErr         error
+	savedVector     []float32
+	savedPrompt     string
+	savedResponse   string
+	savedFingerprint string
+	lastFingerprint string
+}
+
+func (m *mockSemanticCache) GetSimilar(ctx context.Context, vector []float32, threshold float32, fingerprint string) (string, error) {
+	m.lastFingerprint = fingerprint
+	if m.getErr != nil {
+		return "", m.getErr
+	}
+	return m.similarResponse, nil
+}
+
+func (m *mockSemanticCache) Save(ctx context.Context, vector []float32, prompt string, response string, fingerprint string) error {
+	if m.saveErr != nil {
+		return m.saveErr
+	}
+	m.savedVector = vector
+	m.savedPrompt = prompt
+	m.savedResponse = response
+	m.savedFingerprint = fingerprint
+	return nil
+}
+
+func TestChatCache(t *testing.T) {
+	provider := &mockLLMProvider{
+		completion: "fresh response",
+		embedding:  []float32{0.1, 0.2},
+	}
+	repo := &mockSessionRepository{}
+	service := aiorchestrator.New(provider, repo)
+
+	cache := &mockResponseCache{store: make(map[string]string)}
+	semCache := &mockSemanticCache{}
+
+	if s, ok := service.(*aiorchestrator.AIService); ok {
+		s.SetResponseCache(cache)
+		s.SetSemanticCache(semCache)
+	}
+
+	ctx, cacheInfo := aiorchestrator.WithCacheInfo(context.Background())
+	resp, err := service.Chat(ctx, "test-model", []aiorchestrator.ChatMessage{{Role: "user", Content: "hello"}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp != "fresh response" {
+		t.Errorf("expected fresh response, got %s", resp)
+	}
+	if cacheInfo.Cached {
+		t.Error("expected cache miss")
+	}
+
+	ctx, cacheInfo = aiorchestrator.WithCacheInfo(context.Background())
+	resp, err = service.Chat(ctx, "test-model", []aiorchestrator.ChatMessage{{Role: "user", Content: "hello"}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp != "fresh response" {
+		t.Errorf("expected cached response to match, got %s", resp)
+	}
+	if !cacheInfo.Cached || cacheInfo.CacheType != "standard" {
+		t.Errorf("expected standard cache hit, got Cached=%t, Type=%s", cacheInfo.Cached, cacheInfo.CacheType)
+	}
+
+	semCache.similarResponse = "semantic similarity hit"
+	ctx, cacheInfo = aiorchestrator.WithCacheInfo(context.Background())
+	resp, err = service.Chat(ctx, "test-model", []aiorchestrator.ChatMessage{{Role: "user", Content: "hello brand new"}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp != "semantic similarity hit" {
+		t.Errorf("expected semantic similarity hit, got %s", resp)
+	}
+	if !cacheInfo.Cached || cacheInfo.CacheType != "semantic" {
+		t.Errorf("expected semantic cache hit, got Cached=%t, Type=%s", cacheInfo.Cached, cacheInfo.CacheType)
+	}
+}
+
+func TestPersistentChatCache(t *testing.T) {
+	provider := &mockLLMProvider{
+		completion: "chat raw response",
+		embedding:  []float32{0.5, 0.5},
+	}
+	repo := &mockSessionRepository{
+		sessions: make(map[string]*aiorchestrator.ChatSession),
+	}
+	service := aiorchestrator.New(provider, repo)
+
+	cache := &mockResponseCache{store: make(map[string]string)}
+	semCache := &mockSemanticCache{}
+
+	if s, ok := service.(*aiorchestrator.AIService); ok {
+		s.SetResponseCache(cache)
+		s.SetSemanticCache(semCache)
+	}
+
+	ctx, cacheInfo := aiorchestrator.WithCacheInfo(context.Background())
+	resp, _, err := service.PersistentChat(ctx, "user-1", "hello", "test-model", "embed-model")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp != "chat raw response" {
+		t.Errorf("expected raw response, got %s", resp)
+	}
+	if cacheInfo.Cached {
+		t.Error("expected cache miss")
+	}
+
+	ctx, cacheInfo = aiorchestrator.WithCacheInfo(context.Background())
+	resp, _, err = service.PersistentChat(ctx, "user-2", "hello", "test-model", "embed-model")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp != "chat raw response" {
+		t.Errorf("expected cached response, got %s", resp)
+	}
+	if !cacheInfo.Cached || cacheInfo.CacheType != "standard" {
+		t.Errorf("expected standard cache hit, got Cached=%t, Type=%s", cacheInfo.Cached, cacheInfo.CacheType)
+	}
+}
+
+func TestPromptFingerprintingAndGating(t *testing.T) {
+	provider := &mockLLMProvider{
+		completion: "fresh output",
+		embedding:  []float32{0.1, 0.2},
+	}
+	repo := &mockSessionRepository{}
+	service := aiorchestrator.New(provider, repo)
+
+	semCache := &mockSemanticCache{}
+	if s, ok := service.(*aiorchestrator.AIService); ok {
+		s.SetSemanticCache(semCache)
+	}
+
+	ctx := context.Background()
+	_, _ = service.Chat(ctx, "model-A", []aiorchestrator.ChatMessage{
+		{Role: "system", Content: "sys-A"},
+		{Role: "user", Content: "user-msg-content"},
+	})
+
+	fingerprintA := semCache.savedFingerprint
+	if fingerprintA == "" {
+		t.Error("expected fingerprint to be saved")
+	}
+
+	_, _ = service.Chat(ctx, "model-A", []aiorchestrator.ChatMessage{
+		{Role: "system", Content: "sys-B"},
+		{Role: "user", Content: "user-msg-content"},
+	})
+
+	fingerprintB := semCache.savedFingerprint
+	if fingerprintA == fingerprintB {
+		t.Error("expected different fingerprint for different system message")
+	}
+}
+
+func TestModelRoutingClassifierSimpleComplex(t *testing.T) {
+	_ = os.Setenv("AI_SMALL_MODEL", "model-small")
+	_ = os.Setenv("AI_LARGE_MODEL", "model-large")
+	defer func() {
+		_ = os.Unsetenv("AI_SMALL_MODEL")
+		_ = os.Unsetenv("AI_LARGE_MODEL")
+	}()
+
+	provider := &mockLLMProvider{
+		completion: "output-simple",
+		embedding:  []float32{0.1, 0.2},
+	}
+	repo := &mockSessionRepository{}
+	service := aiorchestrator.New(provider, repo)
+
+	ctx := context.Background()
+	_, _ = service.Chat(ctx, "default-model", []aiorchestrator.ChatMessage{
+		{Role: "user", Content: "short"},
+	})
+	if provider.lastModelID != "model-small" {
+		t.Errorf("expected routing to small model for short query, got %s", provider.lastModelID)
+	}
+
+	provider.completion = "output-complex"
+	_, _ = service.Chat(ctx, "default-model", []aiorchestrator.ChatMessage{
+		{Role: "user", Content: "this is a complex query to route"},
+	})
+	if provider.lastModelID != "model-large" {
+		t.Errorf("expected routing to large model for complex query, got %s", provider.lastModelID)
+	}
+}
+
+func TestHistoryCompaction(t *testing.T) {
+	provider := &mockLLMProvider{
+		completion: "summary content",
+		embedding:  []float32{0.1, 0.2},
+	}
+	repo := &mockSessionRepository{
+		sessions: map[string]*aiorchestrator.ChatSession{
+			"user-1": {
+				UserID: "user-1",
+				Messages: []aiorchestrator.ChatMessage{
+					{Role: "user", Content: "m1"},
+					{Role: "assistant", Content: "m2"},
+					{Role: "user", Content: "m3"},
+					{Role: "assistant", Content: "m4"},
+					{Role: "user", Content: "m5"},
+					{Role: "assistant", Content: "m6"},
+					{Role: "user", Content: "m7"},
+					{Role: "assistant", Content: "m8"},
+					{Role: "user", Content: "m9"},
+					{Role: "assistant", Content: "m10"},
+					{Role: "user", Content: "m11"},
+				},
+				LastAccessedAt: time.Now(),
+			},
+		},
+	}
+	service := aiorchestrator.New(provider, repo)
+
+	_, history, err := service.PersistentChat(context.Background(), "user-1", "m12", "model-A", "embed-model")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(history) <= 4 {
+		t.Errorf("unexpected short history: %d", len(history))
+	}
+
+	foundSummary := false
+	for _, msg := range history {
+		if strings.Contains(msg.Content, "Summary of older conversation") {
+			foundSummary = true
+			break
+		}
+	}
+	if !foundSummary {
+		t.Error("expected compacted summary message in history")
+	}
+}
