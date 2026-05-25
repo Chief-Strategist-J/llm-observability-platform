@@ -16,6 +16,7 @@ type ChatMessage struct {
 	Role      string    `json:"role"`
 	Content   string    `json:"content"`
 	Embedding []float32 `json:"-"`
+	Timestamp int64     `json:"timestamp,omitempty"`
 }
 
 type ChatSession struct {

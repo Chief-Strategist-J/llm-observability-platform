@@ -31,7 +31,6 @@ type ResponseCachePort interface {
 }
 
 type SemanticCachePort interface {
-	GetSimilar(ctx context.Context, vector []float32, threshold float32) (string, error)
-	Save(ctx context.Context, vector []float32, prompt string, response string) error
+	GetSimilar(ctx context.Context, vector []float32, threshold float32, fingerprint string) (string, error)
+	Save(ctx context.Context, vector []float32, prompt string, response string, fingerprint string) error
 }
-

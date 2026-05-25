@@ -93,7 +93,7 @@ func (c *QdrantSemanticCache) CreateCollectionIfNotExist(ctx context.Context, ve
 	return fmt.Errorf("unexpected status code checking collection: %d", resp.StatusCode)
 }
 
-func (c *QdrantSemanticCache) GetSimilar(ctx context.Context, vector []float32, threshold float32) (string, error) {
+func (c *QdrantSemanticCache) GetSimilar(ctx context.Context, vector []float32, threshold float32, fingerprint string) (string, error) {
 	tracer := otel.Tracer("qdrant-cache")
 	ctx, span := tracer.Start(ctx, "QdrantSemanticCache.GetSimilar")
 	defer span.End()
@@ -104,6 +104,16 @@ func (c *QdrantSemanticCache) GetSimilar(ctx context.Context, vector []float32, 
 		"limit":           1,
 		"with_payload":    true,
 		"score_threshold": threshold,
+		"filter": map[string]interface{}{
+			"must": []map[string]interface{}{
+				{
+					"key": "fingerprint",
+					"match": map[string]interface{}{
+						"value": fingerprint,
+					},
+				},
+			},
+		},
 	}
 	bodyBytes, err := json.Marshal(body)
 	if err != nil {
@@ -158,7 +168,7 @@ func (c *QdrantSemanticCache) GetSimilar(ctx context.Context, vector []float32, 
 	return "", nil
 }
 
-func (c *QdrantSemanticCache) Save(ctx context.Context, vector []float32, prompt string, response string) error {
+func (c *QdrantSemanticCache) Save(ctx context.Context, vector []float32, prompt string, response string, fingerprint string) error {
 	tracer := otel.Tracer("qdrant-cache")
 	ctx, span := tracer.Start(ctx, "QdrantSemanticCache.Save")
 	defer span.End()
@@ -166,9 +176,10 @@ func (c *QdrantSemanticCache) Save(ctx context.Context, vector []float32, prompt
 	url := fmt.Sprintf("%s/collections/%s/points?wait=true", c.url, c.collection)
 	id := GenerateUUID()
 	payload := map[string]interface{}{
-		"prompt":    prompt,
-		"response":  response,
-		"timestamp": time.Now().Unix(),
+		"prompt":      prompt,
+		"response":    response,
+		"timestamp":   time.Now().Unix(),
+		"fingerprint": fingerprint,
 	}
 	body := map[string]interface{}{
 		"points": []map[string]interface{}{

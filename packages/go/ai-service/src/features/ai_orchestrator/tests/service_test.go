@@ -3,6 +3,8 @@ package tests
 import (
 	"context"
 	"errors"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,12 +12,14 @@ import (
 )
 
 type mockLLMProvider struct {
-	models      []aiorchestrator.ModelInfo
-	completion  string
-	embedding   []float32
-	getErr      error
-	chatErr     error
-	embedErr    error
+	models             []aiorchestrator.ModelInfo
+	completion         string
+	embedding          []float32
+	getErr             error
+	chatErr            error
+	embedErr           error
+	lastModelID        string
+	completionsHistory []string
 }
 
 func (m *mockLLMProvider) GetModels(ctx context.Context) ([]aiorchestrator.ModelInfo, error) {
@@ -23,6 +27,18 @@ func (m *mockLLMProvider) GetModels(ctx context.Context) ([]aiorchestrator.Model
 }
 
 func (m *mockLLMProvider) GenerateCompletion(ctx context.Context, modelID string, messages []aiorchestrator.ChatMessage) (string, error) {
+	m.lastModelID = modelID
+	if len(messages) > 0 {
+		m.completionsHistory = append(m.completionsHistory, messages[len(messages)-1].Content)
+	}
+	if strings.Contains(modelID, "small") || strings.Contains(modelID, "awq") {
+		if len(messages) > 0 && strings.Contains(messages[0].Content, "Classify") {
+			if strings.Contains(messages[1].Content, "complex query") {
+				return "complex", nil
+			}
+			return "simple", nil
+		}
+	}
 	return m.completion, m.chatErr
 }
 
@@ -272,22 +288,26 @@ type mockSemanticCache struct {
 	savedVector     []float32
 	savedPrompt     string
 	savedResponse   string
+	savedFingerprint string
+	lastFingerprint string
 }
 
-func (m *mockSemanticCache) GetSimilar(ctx context.Context, vector []float32, threshold float32) (string, error) {
+func (m *mockSemanticCache) GetSimilar(ctx context.Context, vector []float32, threshold float32, fingerprint string) (string, error) {
+	m.lastFingerprint = fingerprint
 	if m.getErr != nil {
 		return "", m.getErr
 	}
 	return m.similarResponse, nil
 }
 
-func (m *mockSemanticCache) Save(ctx context.Context, vector []float32, prompt string, response string) error {
+func (m *mockSemanticCache) Save(ctx context.Context, vector []float32, prompt string, response string, fingerprint string) error {
 	if m.saveErr != nil {
 		return m.saveErr
 	}
 	m.savedVector = vector
 	m.savedPrompt = prompt
 	m.savedResponse = response
+	m.savedFingerprint = fingerprint
 	return nil
 }
 
@@ -388,4 +408,118 @@ func TestPersistentChatCache(t *testing.T) {
 	}
 }
 
+func TestPromptFingerprintingAndGating(t *testing.T) {
+	provider := &mockLLMProvider{
+		completion: "fresh output",
+		embedding:  []float32{0.1, 0.2},
+	}
+	repo := &mockSessionRepository{}
+	service := aiorchestrator.New(provider, repo)
 
+	semCache := &mockSemanticCache{}
+	if s, ok := service.(*aiorchestrator.AIService); ok {
+		s.SetSemanticCache(semCache)
+	}
+
+	ctx := context.Background()
+	_, _ = service.Chat(ctx, "model-A", []aiorchestrator.ChatMessage{
+		{Role: "system", Content: "sys-A"},
+		{Role: "user", Content: "user-msg-content"},
+	})
+
+	fingerprintA := semCache.savedFingerprint
+	if fingerprintA == "" {
+		t.Error("expected fingerprint to be saved")
+	}
+
+	_, _ = service.Chat(ctx, "model-A", []aiorchestrator.ChatMessage{
+		{Role: "system", Content: "sys-B"},
+		{Role: "user", Content: "user-msg-content"},
+	})
+
+	fingerprintB := semCache.savedFingerprint
+	if fingerprintA == fingerprintB {
+		t.Error("expected different fingerprint for different system message")
+	}
+}
+
+func TestModelRoutingClassifierSimpleComplex(t *testing.T) {
+	_ = os.Setenv("AI_SMALL_MODEL", "model-small")
+	_ = os.Setenv("AI_LARGE_MODEL", "model-large")
+	defer func() {
+		_ = os.Unsetenv("AI_SMALL_MODEL")
+		_ = os.Unsetenv("AI_LARGE_MODEL")
+	}()
+
+	provider := &mockLLMProvider{
+		completion: "output-simple",
+		embedding:  []float32{0.1, 0.2},
+	}
+	repo := &mockSessionRepository{}
+	service := aiorchestrator.New(provider, repo)
+
+	ctx := context.Background()
+	_, _ = service.Chat(ctx, "default-model", []aiorchestrator.ChatMessage{
+		{Role: "user", Content: "short"},
+	})
+	if provider.lastModelID != "model-small" {
+		t.Errorf("expected routing to small model for short query, got %s", provider.lastModelID)
+	}
+
+	provider.completion = "output-complex"
+	_, _ = service.Chat(ctx, "default-model", []aiorchestrator.ChatMessage{
+		{Role: "user", Content: "this is a complex query to route"},
+	})
+	if provider.lastModelID != "model-large" {
+		t.Errorf("expected routing to large model for complex query, got %s", provider.lastModelID)
+	}
+}
+
+func TestHistoryCompaction(t *testing.T) {
+	provider := &mockLLMProvider{
+		completion: "summary content",
+		embedding:  []float32{0.1, 0.2},
+	}
+	repo := &mockSessionRepository{
+		sessions: map[string]*aiorchestrator.ChatSession{
+			"user-1": {
+				UserID: "user-1",
+				Messages: []aiorchestrator.ChatMessage{
+					{Role: "user", Content: "m1"},
+					{Role: "assistant", Content: "m2"},
+					{Role: "user", Content: "m3"},
+					{Role: "assistant", Content: "m4"},
+					{Role: "user", Content: "m5"},
+					{Role: "assistant", Content: "m6"},
+					{Role: "user", Content: "m7"},
+					{Role: "assistant", Content: "m8"},
+					{Role: "user", Content: "m9"},
+					{Role: "assistant", Content: "m10"},
+					{Role: "user", Content: "m11"},
+				},
+				LastAccessedAt: time.Now(),
+			},
+		},
+	}
+	service := aiorchestrator.New(provider, repo)
+
+	_, history, err := service.PersistentChat(context.Background(), "user-1", "m12", "model-A", "embed-model")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(history) <= 4 {
+		t.Errorf("unexpected short history: %d", len(history))
+	}
+
+	foundSummary := false
+	for _, msg := range history {
+		if strings.Contains(msg.Content, "Summary of older conversation") {
+			foundSummary = true
+			break
+		}
+	}
+	if !foundSummary {
+		t.Error("expected compacted summary message in history")
+	}
+}

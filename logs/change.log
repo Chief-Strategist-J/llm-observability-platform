@@ -168,6 +168,17 @@
         ├── handlers -> Extract CacheInfo metadata from context and output to client response payload
         └── testing -> Add mock and unit/integration tests for memory cache, semantic cache, and orchestrator flows
 
+[2026-05-25T04:35:00Z] Implement production-grade caching and performance enhancements in AI Service
+└── File: packages/go/ai-service/src/features/ai_orchestrator/ports.go, packages/go/ai-service/src/features/ai_orchestrator/types.go, packages/go/ai-service/src/features/ai_orchestrator/service.go, packages/go/ai-service/src/infra/adapters/qdrant_cache.go, packages/go/ai-service/src/infra/adapters/tests/qdrant_cache_test.go, packages/go/ai-service/src/features/ai_orchestrator/tests/service_test.go
+    ├── Choice: Enhance standard and semantic caching with context fingerprinting, response confidence gating, memory recency weighting, history compaction, and dynamic model routing.
+    └── Changes:
+        ├── fingerprinting -> Add prompt fingerprint matching to SemanticCachePort and Qdrant adapter
+        ├── recency-weighting -> Implement exponential decay age re-ranking for retrieved history context
+        ├── compaction -> Summarize message sequences exceeding 10 messages with LLM-generated summaries
+        ├── routing -> Route prompts dynamically between small and large models based on length and classifier
+        ├── confidence-gating -> Gate semantic cache hits below 0.95 similarity score
+        └── unit-tests -> Add comprehensive test coverage for routing, gating, compaction, and recency decay
+
 
 
 

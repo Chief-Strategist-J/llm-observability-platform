@@ -52,7 +52,27 @@ func TestQdrantSemanticCache_GetSimilar(t *testing.T) {
 		if r.Method == http.MethodPost && r.URL.Path == "/collections/semantic_cache/points/search" {
 			var body map[string]interface{}
 			_ = json.NewDecoder(r.Body).Decode(&body)
-			if threshold, ok := body["score_threshold"].(float64); !ok || threshold != 0.92 {
+			if threshold, ok := body["score_threshold"].(float64); !ok || threshold != 0.95 {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			filterMap, ok := body["filter"].(map[string]interface{})
+			if !ok {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			mustList, ok := filterMap["must"].([]interface{})
+			if !ok || len(mustList) == 0 {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			mustMap, ok := mustList[0].(map[string]interface{})
+			if !ok || mustMap["key"] != "fingerprint" {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			matchMap, ok := mustMap["match"].(map[string]interface{})
+			if !ok || matchMap["value"] != "test-fingerprint" {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
@@ -60,10 +80,11 @@ func TestQdrantSemanticCache_GetSimilar(t *testing.T) {
 				"result": []map[string]interface{}{
 					{
 						"id":    "uuid-1",
-						"score": 0.95,
+						"score": 0.96,
 						"payload": map[string]interface{}{
-							"prompt":   "hello",
-							"response": "hi there",
+							"prompt":      "hello",
+							"response":    "hi there",
+							"fingerprint": "test-fingerprint",
 						},
 					},
 				},
@@ -80,7 +101,7 @@ func TestQdrantSemanticCache_GetSimilar(t *testing.T) {
 	cache := adapters.NewQdrantSemanticCache(server.URL, "my-key", "semantic_cache")
 	ctx := context.Background()
 
-	val, err := cache.GetSimilar(ctx, []float32{0.1, 0.2}, 0.92)
+	val, err := cache.GetSimilar(ctx, []float32{0.1, 0.2}, 0.95, "test-fingerprint")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -94,6 +115,23 @@ func TestQdrantSemanticCache_Save(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPut && r.URL.Path == "/collections/semantic_cache/points" {
 			calledPut = true
+			var body map[string]interface{}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			pointsList, ok := body["points"].([]interface{})
+			if !ok || len(pointsList) == 0 {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			pointMap, ok := pointsList[0].(map[string]interface{})
+			if !ok {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			payloadMap, ok := pointMap["payload"].(map[string]interface{})
+			if !ok || payloadMap["fingerprint"] != "test-fingerprint" {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{"status": "ok"}`))
 			return
@@ -105,7 +143,7 @@ func TestQdrantSemanticCache_Save(t *testing.T) {
 	cache := adapters.NewQdrantSemanticCache(server.URL, "my-key", "semantic_cache")
 	ctx := context.Background()
 
-	err := cache.Save(ctx, []float32{0.1, 0.2}, "hello", "hi there")
+	err := cache.Save(ctx, []float32{0.1, 0.2}, "hello", "hi there", "test-fingerprint")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -130,12 +168,12 @@ func TestLiveQdrantSemanticCacheIntegration(t *testing.T) {
 	}
 
 	vector := []float32{0.1, 0.2, 0.3, 0.4}
-	err = cache.Save(ctx, vector, "hello live", "hi live response")
+	err = cache.Save(ctx, vector, "hello live", "hi live response", "test-fingerprint-live")
 	if err != nil {
 		t.Fatalf("failed to save cache entry: %v", err)
 	}
 
-	val, err := cache.GetSimilar(ctx, vector, 0.9)
+	val, err := cache.GetSimilar(ctx, vector, 0.9, "test-fingerprint-live")
 	if err != nil {
 		t.Fatalf("failed to get similar entry: %v", err)
 	}
