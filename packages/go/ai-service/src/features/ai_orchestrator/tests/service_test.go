@@ -39,6 +39,9 @@ func (m *mockLLMProvider) GenerateCompletion(ctx context.Context, modelID string
 			return "simple", nil
 		}
 	}
+	if len(messages) > 0 && strings.Contains(messages[0].Content, "fact extraction assistant") {
+		return `[{"fact": "fact 1", "importance": 3}, {"fact": "fact 2", "importance": 5}]`, nil
+	}
 	return m.completion, m.chatErr
 }
 
@@ -251,8 +254,10 @@ func TestPersistentChatWithVectorRepo(t *testing.T) {
 		t.Error("expected vector search to be called")
 	}
 
+	time.Sleep(50 * time.Millisecond)
+
 	if vectorRepo.upsertCalled != 2 {
-		t.Errorf("expected 2 upserts (user + assistant), got %d", vectorRepo.upsertCalled)
+		t.Errorf("expected 2 upserts, got %d", vectorRepo.upsertCalled)
 	}
 
 	if len(history) != 2 {
@@ -468,7 +473,7 @@ func TestModelRoutingClassifierSimpleComplex(t *testing.T) {
 
 	provider.completion = "output-complex"
 	_, _ = service.Chat(ctx, "default-model", []aiorchestrator.ChatMessage{
-		{Role: "user", Content: "this is a complex query to route"},
+		{Role: "user", Content: "this is a complex query to route with architecture optimize"},
 	})
 	if provider.lastModelID != "model-large" {
 		t.Errorf("expected routing to large model for complex query, got %s", provider.lastModelID)
@@ -476,6 +481,11 @@ func TestModelRoutingClassifierSimpleComplex(t *testing.T) {
 }
 
 func TestHistoryCompaction(t *testing.T) {
+	_ = os.Setenv("AI_COMPACTION_THRESHOLD", "10")
+	defer func() {
+		_ = os.Unsetenv("AI_COMPACTION_THRESHOLD")
+	}()
+
 	provider := &mockLLMProvider{
 		completion: "summary content",
 		embedding:  []float32{0.1, 0.2},
@@ -503,10 +513,18 @@ func TestHistoryCompaction(t *testing.T) {
 	}
 	service := aiorchestrator.New(provider, repo)
 
-	_, history, err := service.PersistentChat(context.Background(), "user-1", "m12", "model-A", "embed-model")
+	_, _, err := service.PersistentChat(context.Background(), "user-1", "m12", "model-A", "embed-model")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
+	time.Sleep(50 * time.Millisecond)
+
+	session, err := repo.GetSession(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	history := session.Messages
 
 	if len(history) <= 4 {
 		t.Errorf("unexpected short history: %d", len(history))

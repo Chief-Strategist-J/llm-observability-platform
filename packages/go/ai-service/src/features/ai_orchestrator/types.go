@@ -19,10 +19,18 @@ type ChatMessage struct {
 	Timestamp int64     `json:"timestamp,omitempty"`
 }
 
+type UserFact struct {
+	Fact       string    `json:"fact"`
+	Importance int       `json:"importance"`
+	Timestamp  int64     `json:"timestamp"`
+	Embedding  []float32 `json:"-"`
+}
+
 type ChatSession struct {
 	UserID         string        `json:"user_id"`
 	Messages       []ChatMessage `json:"messages"`
 	LastAccessedAt time.Time     `json:"last_accessed_at"`
+	Facts          []UserFact    `json:"facts,omitempty"`
 }
 
 type CacheInfo struct {
