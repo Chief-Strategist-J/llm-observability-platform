@@ -188,3 +188,10 @@
         ├── memory-cache -> Enforce volatility cache TTLs (stateless: 24h, stateful: 1h) based on cache key prefixes
         ├── qdrant-cache -> Apply dynamic TTL range filters to GetSimilar vector search queries
         └── unit-tests -> Update test assertions to handle asynchronous compaction, fact extraction, and local routing
+
+[2026-05-25T04:55:00Z] Update AI Service README documentation with the refactored high-performance architecture
+└── File: packages/go/ai-service/README.md
+    ├── Choice: Document new asynchronous pipelines, zero-latency local routing, tiered volatility caching, and MMR-based fact retrieval.
+    └── Changes:
+        ├── decision-tree -> Update chat flow execution diagrams for stateless and stateful flows
+        └── optimizations -> Detail prefix-based TTL caching, MMR re-ranking, and heuristic model routing
