@@ -1,6 +1,8 @@
 API-First Folder Structure
 
 
+----
+while generating folder structure add .gitkeep in each folder
 
 Core Rule
 No file inside src/ is written until the contract file is merged. Contract type is chosen once per feature — not all types are generated.
