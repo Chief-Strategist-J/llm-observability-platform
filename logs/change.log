@@ -179,6 +179,19 @@
         ├── confidence-gating -> Gate semantic cache hits below 0.95 similarity score
         └── unit-tests -> Add comprehensive test coverage for routing, gating, compaction, and recency decay
 
+[2026-05-25T04:50:00Z] Optimize AI Service architecture for latency, costs, and memory retrieval quality
+└── File: packages/go/ai-service/src/features/ai_orchestrator/types.go, packages/go/ai-service/src/features/ai_orchestrator/service.go, packages/go/ai-service/src/infra/adapters/memory_cache.go, packages/go/ai-service/src/infra/adapters/qdrant_cache.go, packages/go/ai-service/src/infra/adapters/tests/qdrant_cache_test.go, packages/go/ai-service/src/features/ai_orchestrator/tests/service_test.go
+    ├── Choice: Parallelize hot-path workflows, migrate memory retrieval to structured fact extraction (UserFact) with MMR and score-based re-ranking, replace synchronous model routing with local rules, move history compaction to the background, and enforce dynamic, prefix-based cache TTLs.
+    └── Changes:
+        ├── types -> Add UserFact struct and Facts slice in ChatSession
+        ├── service -> Parallelize user embeddings and history fetches; implement local classifier (length/keywords/code patterns), asynchronous background pipeline for history compaction (raised threshold to 20) and UserFact extraction, and multi-factor ranking (similarity, recency, importance) with MMR re-ranking
+        ├── memory-cache -> Enforce volatility cache TTLs (stateless: 24h, stateful: 1h) based on cache key prefixes
+        ├── qdrant-cache -> Apply dynamic TTL range filters to GetSimilar vector search queries
+        └── unit-tests -> Update test assertions to handle asynchronous compaction, fact extraction, and local routing
 
-
-
+[2026-05-25T04:55:00Z] Update AI Service README documentation with the refactored high-performance architecture
+└── File: packages/go/ai-service/README.md
+    ├── Choice: Document new asynchronous pipelines, zero-latency local routing, tiered volatility caching, and MMR-based fact retrieval.
+    └── Changes:
+        ├── decision-tree -> Update chat flow execution diagrams for stateless and stateful flows
+        └── optimizations -> Detail prefix-based TTL caching, MMR re-ranking, and heuristic model routing

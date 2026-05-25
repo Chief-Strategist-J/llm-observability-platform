@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -98,6 +99,26 @@ func (c *QdrantSemanticCache) GetSimilar(ctx context.Context, vector []float32, 
 	ctx, span := tracer.Start(ctx, "QdrantSemanticCache.GetSimilar")
 	defer span.End()
 
+	ttl := 24 * time.Hour
+	if strings.HasPrefix(fingerprint, "stateless:") {
+		if valStr := os.Getenv("AI_STATELESS_TTL"); valStr != "" {
+			if d, err := time.ParseDuration(valStr); err == nil {
+				ttl = d
+			}
+		} else {
+			ttl = 24 * time.Hour
+		}
+	} else if strings.HasPrefix(fingerprint, "stateful:") {
+		if valStr := os.Getenv("AI_STATEFUL_TTL"); valStr != "" {
+			if d, err := time.ParseDuration(valStr); err == nil {
+				ttl = d
+			}
+		} else {
+			ttl = 1 * time.Hour
+		}
+	}
+	minTimestamp := time.Now().Add(-ttl).Unix()
+
 	url := fmt.Sprintf("%s/collections/%s/points/search", c.url, c.collection)
 	body := map[string]interface{}{
 		"vector":          vector,
@@ -110,6 +131,12 @@ func (c *QdrantSemanticCache) GetSimilar(ctx context.Context, vector []float32, 
 					"key": "fingerprint",
 					"match": map[string]interface{}{
 						"value": fingerprint,
+					},
+				},
+				{
+					"key": "timestamp",
+					"range": map[string]interface{}{
+						"gte": minTimestamp,
 					},
 				},
 			},

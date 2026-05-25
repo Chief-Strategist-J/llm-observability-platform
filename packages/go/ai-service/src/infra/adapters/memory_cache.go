@@ -2,6 +2,8 @@ package adapters
 
 import (
 	"context"
+	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -41,7 +43,26 @@ func (c *MemoryResponseCache) Get(ctx context.Context, key string) (string, erro
 		return "", nil
 	}
 
-	if time.Since(entry.createdAt) > c.ttl {
+	ttl := c.ttl
+	if strings.HasPrefix(key, "stateless:") {
+		if valStr := os.Getenv("AI_STATELESS_TTL"); valStr != "" {
+			if d, err := time.ParseDuration(valStr); err == nil {
+				ttl = d
+			}
+		} else {
+			ttl = 24 * time.Hour
+		}
+	} else if strings.HasPrefix(key, "stateful:") {
+		if valStr := os.Getenv("AI_STATEFUL_TTL"); valStr != "" {
+			if d, err := time.ParseDuration(valStr); err == nil {
+				ttl = d
+			}
+		} else {
+			ttl = 1 * time.Hour
+		}
+	}
+
+	if time.Since(entry.createdAt) > ttl {
 		return "", nil
 	}
 
@@ -69,7 +90,25 @@ func (c *MemoryResponseCache) startCleanupLoop(interval time.Duration) {
 			c.mu.Lock()
 			now := time.Now()
 			for k, entry := range c.entries {
-				if now.Sub(entry.createdAt) > c.ttl {
+				ttl := c.ttl
+				if strings.HasPrefix(k, "stateless:") {
+					if valStr := os.Getenv("AI_STATELESS_TTL"); valStr != "" {
+						if d, err := time.ParseDuration(valStr); err == nil {
+							ttl = d
+						}
+					} else {
+						ttl = 24 * time.Hour
+					}
+				} else if strings.HasPrefix(k, "stateful:") {
+					if valStr := os.Getenv("AI_STATEFUL_TTL"); valStr != "" {
+						if d, err := time.ParseDuration(valStr); err == nil {
+							ttl = d
+						}
+					} else {
+						ttl = 1 * time.Hour
+					}
+				}
+				if now.Sub(entry.createdAt) > ttl {
 					delete(c.entries, k)
 				}
 			}
