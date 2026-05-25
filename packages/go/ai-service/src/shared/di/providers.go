@@ -14,8 +14,9 @@ import (
 )
 
 type Container struct {
-	Router     http.Handler
-	MemoryRepo *adapters.MemorySessionRepository
+	Router      http.Handler
+	MemoryRepo  *adapters.MemorySessionRepository
+	MemoryCache *adapters.MemoryResponseCache
 }
 
 func BuildContainer() *Container {
@@ -24,8 +25,13 @@ func BuildContainer() *Container {
 
 	provider := adapters.NewCloudflareAdapter(accountID, apiToken)
 	repo := adapters.NewMemorySessionRepository(1 * time.Minute)
+	memoryCache := adapters.NewMemoryResponseCache(5*time.Minute, 1*time.Minute)
 
 	orch := aiorchestrator.New(provider, repo)
+
+	if service, ok := orch.(*aiorchestrator.AIService); ok {
+		service.SetResponseCache(memoryCache)
+	}
 
 	if qdrantURL := os.Getenv("QDRANT_URL"); qdrantURL != "" {
 		qdrantApiKey := os.Getenv("QDRANT_API_KEY")
@@ -52,13 +58,25 @@ func BuildContainer() *Container {
 		if service, ok := orch.(*aiorchestrator.AIService); ok {
 			service.SetVectorRepository(qdrantRepo)
 		}
+
+		semanticCollection := os.Getenv("QDRANT_SEMANTIC_CACHE_COLLECTION")
+		if semanticCollection == "" {
+			semanticCollection = "semantic_cache"
+		}
+		qdrantCache := adapters.NewQdrantSemanticCache(qdrantURL, qdrantApiKey, semanticCollection)
+		_ = qdrantCache.CreateCollectionIfNotExist(ctx, 384, distance)
+
+		if service, ok := orch.(*aiorchestrator.AIService); ok {
+			service.SetSemanticCache(qdrantCache)
+		}
 	}
 
 	h := handlers.NewAIHandlers(orch)
 	router := v1.NewRouter(h)
 
 	return &Container{
-		Router:     router,
-		MemoryRepo: repo,
+		Router:      router,
+		MemoryRepo:  repo,
+		MemoryCache: memoryCache,
 	}
 }

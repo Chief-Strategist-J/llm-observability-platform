@@ -244,3 +244,148 @@ func TestPersistentChatWithVectorRepo(t *testing.T) {
 	}
 }
 
+type mockResponseCache struct {
+	store  map[string]string
+	getErr error
+	setErr error
+}
+
+func (m *mockResponseCache) Get(ctx context.Context, key string) (string, error) {
+	if m.getErr != nil {
+		return "", m.getErr
+	}
+	return m.store[key], nil
+}
+
+func (m *mockResponseCache) Set(ctx context.Context, key string, value string) error {
+	if m.setErr != nil {
+		return m.setErr
+	}
+	m.store[key] = value
+	return nil
+}
+
+type mockSemanticCache struct {
+	similarResponse string
+	getErr          error
+	saveErr         error
+	savedVector     []float32
+	savedPrompt     string
+	savedResponse   string
+}
+
+func (m *mockSemanticCache) GetSimilar(ctx context.Context, vector []float32, threshold float32) (string, error) {
+	if m.getErr != nil {
+		return "", m.getErr
+	}
+	return m.similarResponse, nil
+}
+
+func (m *mockSemanticCache) Save(ctx context.Context, vector []float32, prompt string, response string) error {
+	if m.saveErr != nil {
+		return m.saveErr
+	}
+	m.savedVector = vector
+	m.savedPrompt = prompt
+	m.savedResponse = response
+	return nil
+}
+
+func TestChatCache(t *testing.T) {
+	provider := &mockLLMProvider{
+		completion: "fresh response",
+		embedding:  []float32{0.1, 0.2},
+	}
+	repo := &mockSessionRepository{}
+	service := aiorchestrator.New(provider, repo)
+
+	cache := &mockResponseCache{store: make(map[string]string)}
+	semCache := &mockSemanticCache{}
+
+	if s, ok := service.(*aiorchestrator.AIService); ok {
+		s.SetResponseCache(cache)
+		s.SetSemanticCache(semCache)
+	}
+
+	ctx, cacheInfo := aiorchestrator.WithCacheInfo(context.Background())
+	resp, err := service.Chat(ctx, "test-model", []aiorchestrator.ChatMessage{{Role: "user", Content: "hello"}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp != "fresh response" {
+		t.Errorf("expected fresh response, got %s", resp)
+	}
+	if cacheInfo.Cached {
+		t.Error("expected cache miss")
+	}
+
+	ctx, cacheInfo = aiorchestrator.WithCacheInfo(context.Background())
+	resp, err = service.Chat(ctx, "test-model", []aiorchestrator.ChatMessage{{Role: "user", Content: "hello"}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp != "fresh response" {
+		t.Errorf("expected cached response to match, got %s", resp)
+	}
+	if !cacheInfo.Cached || cacheInfo.CacheType != "standard" {
+		t.Errorf("expected standard cache hit, got Cached=%t, Type=%s", cacheInfo.Cached, cacheInfo.CacheType)
+	}
+
+	semCache.similarResponse = "semantic similarity hit"
+	ctx, cacheInfo = aiorchestrator.WithCacheInfo(context.Background())
+	resp, err = service.Chat(ctx, "test-model", []aiorchestrator.ChatMessage{{Role: "user", Content: "hello brand new"}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp != "semantic similarity hit" {
+		t.Errorf("expected semantic similarity hit, got %s", resp)
+	}
+	if !cacheInfo.Cached || cacheInfo.CacheType != "semantic" {
+		t.Errorf("expected semantic cache hit, got Cached=%t, Type=%s", cacheInfo.Cached, cacheInfo.CacheType)
+	}
+}
+
+func TestPersistentChatCache(t *testing.T) {
+	provider := &mockLLMProvider{
+		completion: "chat raw response",
+		embedding:  []float32{0.5, 0.5},
+	}
+	repo := &mockSessionRepository{
+		sessions: make(map[string]*aiorchestrator.ChatSession),
+	}
+	service := aiorchestrator.New(provider, repo)
+
+	cache := &mockResponseCache{store: make(map[string]string)}
+	semCache := &mockSemanticCache{}
+
+	if s, ok := service.(*aiorchestrator.AIService); ok {
+		s.SetResponseCache(cache)
+		s.SetSemanticCache(semCache)
+	}
+
+	ctx, cacheInfo := aiorchestrator.WithCacheInfo(context.Background())
+	resp, _, err := service.PersistentChat(ctx, "user-1", "hello", "test-model", "embed-model")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp != "chat raw response" {
+		t.Errorf("expected raw response, got %s", resp)
+	}
+	if cacheInfo.Cached {
+		t.Error("expected cache miss")
+	}
+
+	ctx, cacheInfo = aiorchestrator.WithCacheInfo(context.Background())
+	resp, _, err = service.PersistentChat(ctx, "user-2", "hello", "test-model", "embed-model")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp != "chat raw response" {
+		t.Errorf("expected cached response, got %s", resp)
+	}
+	if !cacheInfo.Cached || cacheInfo.CacheType != "standard" {
+		t.Errorf("expected standard cache hit, got Cached=%t, Type=%s", cacheInfo.Cached, cacheInfo.CacheType)
+	}
+}
+
+

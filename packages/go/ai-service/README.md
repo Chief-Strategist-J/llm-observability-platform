@@ -26,9 +26,17 @@ The following hierarchical structure illustrates the HTTP request routing, Depen
                         │   └── Adapter: MemoryRepository (src/infra/adapters/memory_repo.go)
                         │       └── Thread-safe In-Memory Vector DB (Cosine Similarity retrieval)
                         │
-                        └── Port: VectorRepositoryPort (src/features/ai_orchestrator/ports.go)
-                            └── Adapter: QdrantRepository (src/infra/adapters/qdrant_repo.go)
-                                └── Qdrant REST API Vector Store (Semantic memory & point upserts)
+                        ├── Port: VectorRepositoryPort (src/features/ai_orchestrator/ports.go)
+                        │   └── Adapter: QdrantRepository (src/infra/adapters/qdrant_repo.go)
+                        │       └── Qdrant REST API Vector Store (Semantic memory & point upserts)
+                        │
+                        ├── Port: ResponseCachePort (src/features/ai_orchestrator/ports.go)
+                        │   └── Adapter: MemoryResponseCache (src/infra/adapters/memory_cache.go)
+                        │       └── High-performance In-Memory Standard Caching (exact match)
+                        │
+                        └── Port: SemanticCachePort (src/features/ai_orchestrator/ports.go)
+                            └── Adapter: QdrantSemanticCache (src/infra/adapters/qdrant_cache.go)
+                                └── Vector-based Semantic Caching (Qdrant similarity search)
 ```
 
 ---
@@ -41,8 +49,14 @@ This hierarchical decision tree outlines the conditional execution paths for sta
 └── Incoming Chat Request
     ├── Route: /api/v1/chat (Stateless Flow)
     │   ├── [Step 1] Parse payload (messages list)
-    │   ├── [Step 2] Send messages directly to Cloudflare LLM
-    │   └── [Step 3] Return AI assistant response to the client
+    │   ├── [Step 2] Lookup in standard cache via hash key of prompt history
+    │   │   ├── Hit -> Return cached response (cached: true, cache_type: "standard")
+    │   │   └── Miss -> Proceed to step 3
+    │   ├── [Step 3] Query semantic cache (threshold: 0.92) using user message embedding
+    │   │   ├── Hit -> Store in standard cache, return cached response (cached: true, cache_type: "semantic")
+    │   │   └── Miss -> Proceed to step 4
+    │   ├── [Step 4] Send messages directly to Cloudflare LLM
+    │   └── [Step 5] Store response in standard and semantic cache, return response (cached: false)
     │
     └── Route: /api/v1/chat/persistent (Stateful Flow)
         ├── [Step 1] Parse payload (user_id, message text)
@@ -57,11 +71,20 @@ This hierarchical decision tree outlines the conditional execution paths for sta
         │   └── NO (Skip Context Retrieval)
         │       └── [Sub-Step] Proceed with empty conversational history context
         │
-        ├── [Step 4] Send complete prompt (context + current message) to Cloudflare LLM
-        ├── [Step 5] Receive LLM AI response text
-        ├── [Step 6] Generate embedding vector for assistant response text via Cloudflare AI
-        ├── [Step 7] Atomically store both User and Assistant turns in Memory Repository and Qdrant
-        └── [Step 8] Return AI response + semantic context metadata to the client
+        ├── [Step 4] Lookup full compiled prompt in standard cache via hash key
+        │   ├── Hit -> Return cached response (cached: true, cache_type: "standard")
+        │   └── Miss -> Proceed to step 5
+        │
+        ├── [Step 5] Query semantic cache (threshold: 0.92) using user message embedding
+        │   ├── Hit -> Store in standard cache, return cached response (cached: true, cache_type: "semantic")
+        │   └── Miss -> Proceed to step 6
+        │
+        ├── [Step 6] Send complete prompt (context + current message) to Cloudflare LLM
+        ├── [Step 7] Receive LLM AI response text
+        ├── [Step 8] Generate embedding vector for assistant response text via Cloudflare AI
+        ├── [Step 9] Store response in standard cache and semantic cache
+        ├── [Step 10] Atomically store both User and Assistant turns in Memory Repository and Qdrant
+        └── [Step 11] Return AI response + semantic context metadata to the client (cached: false)
 ```
 
 ---
@@ -129,6 +152,7 @@ The service is configured using the following environment variables:
 | `QDRANT_URL` | Qdrant REST API endpoint URL | Optional / None |
 | `QDRANT_API_KEY` | Optional API Key for Qdrant | Optional / None |
 | `QDRANT_COLLECTION` | Qdrant Collection name for storing vectors | `chat_messages` |
+| `QDRANT_SEMANTIC_CACHE_COLLECTION` | Qdrant Collection name for storing semantic cache vectors | `semantic_cache` |
 | `QDRANT_VECTOR_SIZE` | Dimensions of the vector embedding | `384` |
 | `QDRANT_DISTANCE` | Distance metric algorithm for Qdrant collection | `Cosine` |
 
@@ -280,7 +304,9 @@ curl -s -f -X POST http://localhost:8080/api/v1/chat \
 
 ```json
 {
-  "response": "In Go, Hexagonal Architecture, also known as Ports and Adapters Architecture, is a design pattern where the application's business logic is encapsulated in a \"domain layer\" and interacts with external dependencies through \"ports\" and \"adapters\", allowing for loose coupling and testability."
+  "response": "In Go, Hexagonal Architecture, also known as Ports and Adapters Architecture, is a design pattern where the application's business logic is encapsulated in a \"domain layer\" and interacts with external dependencies through \"ports\" and \"adapters\", allowing for loose coupling and testability.",
+  "cached": false,
+  "cache_type": "none"
 }
 ```
 
@@ -315,7 +341,9 @@ curl -s -f -X POST http://localhost:8080/api/v1/chat/persistent \
       "role": "assistant",
       "content": "Hello there! I'm thrilled to hear that your favorite programming language is Go! As a cloud-based service, Cloudflare is heavily invested in the Go programming language..."
     }
-  ]
+  ],
+  "cached": false,
+  "cache_type": "none"
 }
 ```
 
@@ -358,6 +386,8 @@ curl -s -f -X POST http://localhost:8080/api/v1/chat/persistent \
       "role": "assistant",
       "content": "You told me earlier that your favorite programming language is Go!"
     }
-  ]
+  ],
+  "cached": false,
+  "cache_type": "none"
 }
 ```

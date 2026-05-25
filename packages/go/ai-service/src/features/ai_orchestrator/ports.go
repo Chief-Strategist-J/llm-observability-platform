@@ -25,3 +25,13 @@ type VectorRepositoryPort interface {
 	Upsert(ctx context.Context, id string, vector []float32, payload map[string]interface{}) error
 }
 
+type ResponseCachePort interface {
+	Get(ctx context.Context, key string) (string, error)
+	Set(ctx context.Context, key string, value string) error
+}
+
+type SemanticCachePort interface {
+	GetSimilar(ctx context.Context, vector []float32, threshold float32) (string, error)
+	Save(ctx context.Context, vector []float32, prompt string, response string) error
+}
+

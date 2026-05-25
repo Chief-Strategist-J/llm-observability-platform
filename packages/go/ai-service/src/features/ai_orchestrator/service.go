@@ -3,6 +3,7 @@ package aiorchestrator
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"math"
@@ -12,9 +13,11 @@ import (
 )
 
 type AIService struct {
-	provider   LLMProviderPort
-	repo       SessionRepositoryPort
-	vectorRepo VectorRepositoryPort
+	provider      LLMProviderPort
+	repo          SessionRepositoryPort
+	vectorRepo    VectorRepositoryPort
+	cache         ResponseCachePort
+	semanticCache SemanticCachePort
 }
 
 func NewAIService(provider LLMProviderPort, repo SessionRepositoryPort) *AIService {
@@ -28,12 +31,101 @@ func (s *AIService) SetVectorRepository(vr VectorRepositoryPort) {
 	s.vectorRepo = vr
 }
 
+func (s *AIService) SetResponseCache(cache ResponseCachePort) {
+	s.cache = cache
+}
+
+func (s *AIService) SetSemanticCache(sc SemanticCachePort) {
+	s.semanticCache = sc
+}
+
 func (s *AIService) ListModels(ctx context.Context) ([]ModelInfo, error) {
 	return s.provider.GetModels(ctx)
 }
 
+func generateCacheKey(modelID string, messages []ChatMessage) string {
+	h := sha256.New()
+	h.Write([]byte(modelID))
+	for _, msg := range messages {
+		h.Write([]byte(msg.Role))
+		h.Write([]byte(msg.Content))
+	}
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
 func (s *AIService) Chat(ctx context.Context, modelID string, messages []ChatMessage) (string, error) {
-	return s.provider.GenerateCompletion(ctx, modelID, messages)
+	cacheInfo := GetCacheInfo(ctx)
+
+	var cacheKey string
+	if s.cache != nil {
+		cacheKey = generateCacheKey(modelID, messages)
+		cachedVal, err := s.cache.Get(ctx, cacheKey)
+		if err == nil && cachedVal != "" {
+			if cacheInfo != nil {
+				cacheInfo.Cached = true
+				cacheInfo.CacheType = "standard"
+			}
+			return cachedVal, nil
+		}
+	}
+
+	if s.semanticCache != nil {
+		var lastUserMsg string
+		for i := len(messages) - 1; i >= 0; i-- {
+			if messages[i].Role == "user" {
+				lastUserMsg = messages[i].Content
+				break
+			}
+		}
+		if lastUserMsg != "" {
+			emb, err := s.provider.GenerateEmbedding(ctx, "@cf/baai/bge-small-en-v1.5", lastUserMsg)
+			if err == nil && len(emb) > 0 {
+				similarVal, err := s.semanticCache.GetSimilar(ctx, emb, 0.92)
+				if err == nil && similarVal != "" {
+					if cacheInfo != nil {
+						cacheInfo.Cached = true
+						cacheInfo.CacheType = "semantic"
+					}
+					if s.cache != nil && cacheKey != "" {
+						_ = s.cache.Set(ctx, cacheKey, similarVal)
+					}
+					return similarVal, nil
+				}
+			}
+		}
+	}
+
+	resp, err := s.provider.GenerateCompletion(ctx, modelID, messages)
+	if err != nil {
+		return "", err
+	}
+
+	if s.cache != nil && cacheKey != "" {
+		_ = s.cache.Set(ctx, cacheKey, resp)
+	}
+
+	if s.semanticCache != nil {
+		var lastUserMsg string
+		for i := len(messages) - 1; i >= 0; i-- {
+			if messages[i].Role == "user" {
+				lastUserMsg = messages[i].Content
+				break
+			}
+		}
+		if lastUserMsg != "" {
+			emb, err := s.provider.GenerateEmbedding(ctx, "@cf/baai/bge-small-en-v1.5", lastUserMsg)
+			if err == nil && len(emb) > 0 {
+				_ = s.semanticCache.Save(ctx, emb, lastUserMsg, resp)
+			}
+		}
+	}
+
+	if cacheInfo != nil {
+		cacheInfo.Cached = false
+		cacheInfo.CacheType = "none"
+	}
+
+	return resp, nil
 }
 
 func (s *AIService) PersistentChat(ctx context.Context, userID string, userMessage string, modelID string, embeddingModel string) (string, []ChatMessage, error) {
@@ -127,9 +219,59 @@ func (s *AIService) PersistentChat(ctx context.Context, userID string, userMessa
 		Content: userMessage,
 	})
 
-	completion, err := s.provider.GenerateCompletion(ctx, modelID, apiMessages)
-	if err != nil {
-		return "", nil, err
+	cacheInfo := GetCacheInfo(ctx)
+	var cacheKey string
+	var cachedVal string
+	var cacheFound bool
+
+	if s.cache != nil {
+		cacheKey = generateCacheKey(modelID, apiMessages)
+		val, err := s.cache.Get(ctx, cacheKey)
+		if err == nil && val != "" {
+			cachedVal = val
+			cacheFound = true
+			if cacheInfo != nil {
+				cacheInfo.Cached = true
+				cacheInfo.CacheType = "standard"
+			}
+		}
+	}
+
+	if !cacheFound && s.semanticCache != nil && len(userEmbedding) > 0 {
+		val, err := s.semanticCache.GetSimilar(ctx, userEmbedding, 0.92)
+		if err == nil && val != "" {
+			cachedVal = val
+			cacheFound = true
+			if cacheInfo != nil {
+				cacheInfo.Cached = true
+				cacheInfo.CacheType = "semantic"
+			}
+			if s.cache != nil && cacheKey != "" {
+				_ = s.cache.Set(ctx, cacheKey, val)
+			}
+		}
+	}
+
+	var completion string
+	if cacheFound {
+		completion = cachedVal
+	} else {
+		comp, err := s.provider.GenerateCompletion(ctx, modelID, apiMessages)
+		if err != nil {
+			return "", nil, err
+		}
+		completion = comp
+
+		if s.cache != nil && cacheKey != "" {
+			_ = s.cache.Set(ctx, cacheKey, completion)
+		}
+		if s.semanticCache != nil && len(userEmbedding) > 0 {
+			_ = s.semanticCache.Save(ctx, userEmbedding, userMessage, completion)
+		}
+		if cacheInfo != nil {
+			cacheInfo.Cached = false
+			cacheInfo.CacheType = "none"
+		}
 	}
 
 	newUserMsg := ChatMessage{

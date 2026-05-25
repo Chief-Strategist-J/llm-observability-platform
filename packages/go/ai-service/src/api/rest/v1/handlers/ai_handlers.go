@@ -26,7 +26,9 @@ type chatRequest struct {
 }
 
 type chatResponse struct {
-	Response string `json:"response"`
+	Response  string `json:"response"`
+	Cached    bool   `json:"cached"`
+	CacheType string `json:"cache_type"`
 }
 
 type persistentChatRequest struct {
@@ -37,8 +39,10 @@ type persistentChatRequest struct {
 }
 
 type persistentChatResponse struct {
-	Response string                        `json:"response"`
-	History  []aiorchestrator.ChatMessage `json:"history"`
+	Response  string                        `json:"response"`
+	History   []aiorchestrator.ChatMessage `json:"history"`
+	Cached    bool                          `json:"cached"`
+	CacheType string                        `json:"cache_type"`
 }
 
 func (h *AIHandlers) ListModels(w http.ResponseWriter, r *http.Request) {
@@ -101,6 +105,8 @@ func (h *AIHandlers) Chat(w http.ResponseWriter, r *http.Request) {
 
 	span.SetAttributes(attribute.String("ai.model", req.Model))
 
+	ctx, cacheInfo := aiorchestrator.WithCacheInfo(ctx)
+
 	res, err := h.orch.Chat(ctx, req.Model, req.Messages)
 	if err != nil {
 		span.RecordError(err)
@@ -109,8 +115,19 @@ func (h *AIHandlers) Chat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var cached bool
+	var cacheType string
+	if cacheInfo != nil {
+		cached = cacheInfo.Cached
+		cacheType = cacheInfo.CacheType
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(chatResponse{Response: res})
+	json.NewEncoder(w).Encode(chatResponse{
+		Response:  res,
+		Cached:    cached,
+		CacheType: cacheType,
+	})
 }
 
 func (h *AIHandlers) PersistentChat(w http.ResponseWriter, r *http.Request) {
@@ -169,6 +186,8 @@ func (h *AIHandlers) PersistentChat(w http.ResponseWriter, r *http.Request) {
 		attribute.String("ai.embedding_model", req.EmbeddingModel),
 	)
 
+	ctx, cacheInfo := aiorchestrator.WithCacheInfo(ctx)
+
 	res, history, err := h.orch.PersistentChat(ctx, req.UserID, req.Message, req.Model, req.EmbeddingModel)
 	if err != nil {
 		span.RecordError(err)
@@ -177,9 +196,18 @@ func (h *AIHandlers) PersistentChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var cached bool
+	var cacheType string
+	if cacheInfo != nil {
+		cached = cacheInfo.Cached
+		cacheType = cacheInfo.CacheType
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(persistentChatResponse{
-		Response: res,
-		History:  history,
+		Response:  res,
+		History:   history,
+		Cached:    cached,
+		CacheType: cacheType,
 	})
 }
