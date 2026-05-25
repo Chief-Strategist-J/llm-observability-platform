@@ -3,7 +3,19 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 import os
 from opentelemetry import trace
-from .....features.metrics.index import record_span_metrics, init_metrics_pipeline
+from src.features.metrics.index import record_span_metrics, init_metrics_pipeline, get_current_prices_ref, reload_prices
+
+
+class ModelPriceResponse(BaseModel):
+    model: str
+    provider: str
+    input_price_per_1m: float
+    output_price_per_1m: float
+    version: str
+
+
+class ModelPricesListResponse(BaseModel):
+    prices: List[ModelPriceResponse]
 
 
 router = APIRouter(prefix="/metrics", tags=["Metrics"])
@@ -68,7 +80,7 @@ def init_metrics(request: MetricsInitRequest = MetricsInitRequest()):
 @router.get("/health", response_model=MetricsStatusResponse)
 def metrics_health():
     _set_span_attributes()
-    from .....features.metrics.index import _initialized
+    from src.features.metrics.index import _initialized
     return MetricsStatusResponse(
         initialized=_initialized,
         message="Metrics pipeline is active" if _initialized else "Metrics pipeline not initialized"
@@ -102,3 +114,36 @@ def record_batch(request: BatchRecordRequest):
         except Exception:
             pass
     return BatchRecordResponse(recorded_count=count)
+
+
+@router.get("/prices", response_model=ModelPricesListResponse)
+def get_prices():
+    _set_span_attributes()
+    prices = get_current_prices_ref()
+    return ModelPricesListResponse(
+        prices=[
+            ModelPriceResponse(
+                model=p.get("model", ""),
+                provider=p.get("provider", ""),
+                input_price_per_1m=float(p.get("input_price_per_1m", 0.0)),
+                output_price_per_1m=float(p.get("output_price_per_1m", 0.0)),
+                version=p.get("version", ""),
+            )
+            for p in prices
+        ]
+    )
+
+
+@router.post("/prices/reload", response_model=MetricsStatusResponse)
+def reload_model_prices():
+    _set_span_attributes()
+    try:
+        reload_prices()
+        from src.features.metrics.index import _initialized
+        return MetricsStatusResponse(
+            initialized=_initialized,
+            message="Model prices reloaded successfully",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

@@ -1,8 +1,8 @@
 import pytest
 import sys
 from unittest.mock import MagicMock, AsyncMock, patch
-from features.auto_instrumentation.index import init_auto_instrumentation, uninstrument_all
-from features.spans.globals import get_reporter
+from src.features.auto_instrumentation.index import init_auto_instrumentation, uninstrument_all
+from src.features.spans.globals import get_reporter
 
 @pytest.fixture
 def mock_openai():
@@ -30,7 +30,7 @@ async def test_openai_auto_instrumentation(mock_openai):
     mock_reporter = MagicMock()
     mock_reporter.report_async = AsyncMock()
     
-    from features.spans.globals import set_reporter, NoOpReporter
+    from src.features.spans.globals import set_reporter, NoOpReporter
     set_reporter(mock_reporter)
     
     try:

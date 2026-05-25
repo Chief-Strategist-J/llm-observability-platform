@@ -2226,6 +2226,494 @@ class ClearFallbackTrackerResponse extends $pb.GeneratedMessage {
   void clearSuccess() => clearField(1);
 }
 
+class TrackToolCallRequest extends $pb.GeneratedMessage {
+  factory TrackToolCallRequest({
+    $core.String? traceId,
+    $core.String? spanId,
+    $fixnum.Int64? costUsdMicro,
+  }) {
+    final $result = create();
+    if (traceId != null) {
+      $result.traceId = traceId;
+    }
+    if (spanId != null) {
+      $result.spanId = spanId;
+    }
+    if (costUsdMicro != null) {
+      $result.costUsdMicro = costUsdMicro;
+    }
+    return $result;
+  }
+  TrackToolCallRequest._() : super();
+  factory TrackToolCallRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory TrackToolCallRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'TrackToolCallRequest', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'traceId')
+    ..aOS(2, _omitFieldNames ? '' : 'spanId')
+    ..aInt64(3, _omitFieldNames ? '' : 'costUsdMicro')
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  TrackToolCallRequest clone() => TrackToolCallRequest()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  TrackToolCallRequest copyWith(void Function(TrackToolCallRequest) updates) => super.copyWith((message) => updates(message as TrackToolCallRequest)) as TrackToolCallRequest;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static TrackToolCallRequest create() => TrackToolCallRequest._();
+  TrackToolCallRequest createEmptyInstance() => create();
+  static $pb.PbList<TrackToolCallRequest> createRepeated() => $pb.PbList<TrackToolCallRequest>();
+  @$core.pragma('dart2js:noInline')
+  static TrackToolCallRequest getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<TrackToolCallRequest>(create);
+  static TrackToolCallRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get traceId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set traceId($core.String v) { $_setString(0, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasTraceId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTraceId() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get spanId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set spanId($core.String v) { $_setString(1, v); }
+  @$pb.TagNumber(2)
+  $core.bool hasSpanId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearSpanId() => clearField(2);
+
+  @$pb.TagNumber(3)
+  $fixnum.Int64 get costUsdMicro => $_getI64(2);
+  @$pb.TagNumber(3)
+  set costUsdMicro($fixnum.Int64 v) { $_setInt64(2, v); }
+  @$pb.TagNumber(3)
+  $core.bool hasCostUsdMicro() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearCostUsdMicro() => clearField(3);
+}
+
+class TrackToolCallResponse extends $pb.GeneratedMessage {
+  factory TrackToolCallResponse({
+    $fixnum.Int64? totalCost,
+  }) {
+    final $result = create();
+    if (totalCost != null) {
+      $result.totalCost = totalCost;
+    }
+    return $result;
+  }
+  TrackToolCallResponse._() : super();
+  factory TrackToolCallResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory TrackToolCallResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'TrackToolCallResponse', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..aInt64(1, _omitFieldNames ? '' : 'totalCost')
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  TrackToolCallResponse clone() => TrackToolCallResponse()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  TrackToolCallResponse copyWith(void Function(TrackToolCallResponse) updates) => super.copyWith((message) => updates(message as TrackToolCallResponse)) as TrackToolCallResponse;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static TrackToolCallResponse create() => TrackToolCallResponse._();
+  TrackToolCallResponse createEmptyInstance() => create();
+  static $pb.PbList<TrackToolCallResponse> createRepeated() => $pb.PbList<TrackToolCallResponse>();
+  @$core.pragma('dart2js:noInline')
+  static TrackToolCallResponse getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<TrackToolCallResponse>(create);
+  static TrackToolCallResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $fixnum.Int64 get totalCost => $_getI64(0);
+  @$pb.TagNumber(1)
+  set totalCost($fixnum.Int64 v) { $_setInt64(0, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasTotalCost() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTotalCost() => clearField(1);
+}
+
+class ClearToolCallTrackerRequest extends $pb.GeneratedMessage {
+  factory ClearToolCallTrackerRequest() => create();
+  ClearToolCallTrackerRequest._() : super();
+  factory ClearToolCallTrackerRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory ClearToolCallTrackerRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'ClearToolCallTrackerRequest', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  ClearToolCallTrackerRequest clone() => ClearToolCallTrackerRequest()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  ClearToolCallTrackerRequest copyWith(void Function(ClearToolCallTrackerRequest) updates) => super.copyWith((message) => updates(message as ClearToolCallTrackerRequest)) as ClearToolCallTrackerRequest;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ClearToolCallTrackerRequest create() => ClearToolCallTrackerRequest._();
+  ClearToolCallTrackerRequest createEmptyInstance() => create();
+  static $pb.PbList<ClearToolCallTrackerRequest> createRepeated() => $pb.PbList<ClearToolCallTrackerRequest>();
+  @$core.pragma('dart2js:noInline')
+  static ClearToolCallTrackerRequest getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ClearToolCallTrackerRequest>(create);
+  static ClearToolCallTrackerRequest? _defaultInstance;
+}
+
+class ClearToolCallTrackerResponse extends $pb.GeneratedMessage {
+  factory ClearToolCallTrackerResponse({
+    $core.bool? success,
+  }) {
+    final $result = create();
+    if (success != null) {
+      $result.success = success;
+    }
+    return $result;
+  }
+  ClearToolCallTrackerResponse._() : super();
+  factory ClearToolCallTrackerResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory ClearToolCallTrackerResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'ClearToolCallTrackerResponse', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..aOB(1, _omitFieldNames ? '' : 'success')
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  ClearToolCallTrackerResponse clone() => ClearToolCallTrackerResponse()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  ClearToolCallTrackerResponse copyWith(void Function(ClearToolCallTrackerResponse) updates) => super.copyWith((message) => updates(message as ClearToolCallTrackerResponse)) as ClearToolCallTrackerResponse;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ClearToolCallTrackerResponse create() => ClearToolCallTrackerResponse._();
+  ClearToolCallTrackerResponse createEmptyInstance() => create();
+  static $pb.PbList<ClearToolCallTrackerResponse> createRepeated() => $pb.PbList<ClearToolCallTrackerResponse>();
+  @$core.pragma('dart2js:noInline')
+  static ClearToolCallTrackerResponse getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ClearToolCallTrackerResponse>(create);
+  static ClearToolCallTrackerResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get success => $_getBF(0);
+  @$pb.TagNumber(1)
+  set success($core.bool v) { $_setBool(0, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasSuccess() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSuccess() => clearField(1);
+}
+
+class GetModelPricesRequest extends $pb.GeneratedMessage {
+  factory GetModelPricesRequest() => create();
+  GetModelPricesRequest._() : super();
+  factory GetModelPricesRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory GetModelPricesRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'GetModelPricesRequest', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  GetModelPricesRequest clone() => GetModelPricesRequest()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  GetModelPricesRequest copyWith(void Function(GetModelPricesRequest) updates) => super.copyWith((message) => updates(message as GetModelPricesRequest)) as GetModelPricesRequest;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static GetModelPricesRequest create() => GetModelPricesRequest._();
+  GetModelPricesRequest createEmptyInstance() => create();
+  static $pb.PbList<GetModelPricesRequest> createRepeated() => $pb.PbList<GetModelPricesRequest>();
+  @$core.pragma('dart2js:noInline')
+  static GetModelPricesRequest getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetModelPricesRequest>(create);
+  static GetModelPricesRequest? _defaultInstance;
+}
+
+class ModelPriceProto extends $pb.GeneratedMessage {
+  factory ModelPriceProto({
+    $core.String? model,
+    $core.String? provider,
+    $core.double? inputPricePer1m,
+    $core.double? outputPricePer1m,
+    $core.String? version,
+  }) {
+    final $result = create();
+    if (model != null) {
+      $result.model = model;
+    }
+    if (provider != null) {
+      $result.provider = provider;
+    }
+    if (inputPricePer1m != null) {
+      $result.inputPricePer1m = inputPricePer1m;
+    }
+    if (outputPricePer1m != null) {
+      $result.outputPricePer1m = outputPricePer1m;
+    }
+    if (version != null) {
+      $result.version = version;
+    }
+    return $result;
+  }
+  ModelPriceProto._() : super();
+  factory ModelPriceProto.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory ModelPriceProto.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'ModelPriceProto', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'model')
+    ..aOS(2, _omitFieldNames ? '' : 'provider')
+    ..a<$core.double>(3, _omitFieldNames ? '' : 'inputPricePer1m', $pb.PbFieldType.OD, protoName: 'input_price_per_1m')
+    ..a<$core.double>(4, _omitFieldNames ? '' : 'outputPricePer1m', $pb.PbFieldType.OD, protoName: 'output_price_per_1m')
+    ..aOS(5, _omitFieldNames ? '' : 'version')
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  ModelPriceProto clone() => ModelPriceProto()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  ModelPriceProto copyWith(void Function(ModelPriceProto) updates) => super.copyWith((message) => updates(message as ModelPriceProto)) as ModelPriceProto;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ModelPriceProto create() => ModelPriceProto._();
+  ModelPriceProto createEmptyInstance() => create();
+  static $pb.PbList<ModelPriceProto> createRepeated() => $pb.PbList<ModelPriceProto>();
+  @$core.pragma('dart2js:noInline')
+  static ModelPriceProto getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ModelPriceProto>(create);
+  static ModelPriceProto? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get model => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set model($core.String v) { $_setString(0, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasModel() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearModel() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get provider => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set provider($core.String v) { $_setString(1, v); }
+  @$pb.TagNumber(2)
+  $core.bool hasProvider() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearProvider() => clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.double get inputPricePer1m => $_getN(2);
+  @$pb.TagNumber(3)
+  set inputPricePer1m($core.double v) { $_setDouble(2, v); }
+  @$pb.TagNumber(3)
+  $core.bool hasInputPricePer1m() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearInputPricePer1m() => clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.double get outputPricePer1m => $_getN(3);
+  @$pb.TagNumber(4)
+  set outputPricePer1m($core.double v) { $_setDouble(3, v); }
+  @$pb.TagNumber(4)
+  $core.bool hasOutputPricePer1m() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearOutputPricePer1m() => clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get version => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set version($core.String v) { $_setString(4, v); }
+  @$pb.TagNumber(5)
+  $core.bool hasVersion() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearVersion() => clearField(5);
+}
+
+class GetModelPricesResponse extends $pb.GeneratedMessage {
+  factory GetModelPricesResponse({
+    $core.Iterable<ModelPriceProto>? prices,
+  }) {
+    final $result = create();
+    if (prices != null) {
+      $result.prices.addAll(prices);
+    }
+    return $result;
+  }
+  GetModelPricesResponse._() : super();
+  factory GetModelPricesResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory GetModelPricesResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'GetModelPricesResponse', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..pc<ModelPriceProto>(1, _omitFieldNames ? '' : 'prices', $pb.PbFieldType.PM, subBuilder: ModelPriceProto.create)
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  GetModelPricesResponse clone() => GetModelPricesResponse()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  GetModelPricesResponse copyWith(void Function(GetModelPricesResponse) updates) => super.copyWith((message) => updates(message as GetModelPricesResponse)) as GetModelPricesResponse;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static GetModelPricesResponse create() => GetModelPricesResponse._();
+  GetModelPricesResponse createEmptyInstance() => create();
+  static $pb.PbList<GetModelPricesResponse> createRepeated() => $pb.PbList<GetModelPricesResponse>();
+  @$core.pragma('dart2js:noInline')
+  static GetModelPricesResponse getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetModelPricesResponse>(create);
+  static GetModelPricesResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.List<ModelPriceProto> get prices => $_getList(0);
+}
+
+class ReloadModelPricesRequest extends $pb.GeneratedMessage {
+  factory ReloadModelPricesRequest() => create();
+  ReloadModelPricesRequest._() : super();
+  factory ReloadModelPricesRequest.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory ReloadModelPricesRequest.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'ReloadModelPricesRequest', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  ReloadModelPricesRequest clone() => ReloadModelPricesRequest()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  ReloadModelPricesRequest copyWith(void Function(ReloadModelPricesRequest) updates) => super.copyWith((message) => updates(message as ReloadModelPricesRequest)) as ReloadModelPricesRequest;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ReloadModelPricesRequest create() => ReloadModelPricesRequest._();
+  ReloadModelPricesRequest createEmptyInstance() => create();
+  static $pb.PbList<ReloadModelPricesRequest> createRepeated() => $pb.PbList<ReloadModelPricesRequest>();
+  @$core.pragma('dart2js:noInline')
+  static ReloadModelPricesRequest getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ReloadModelPricesRequest>(create);
+  static ReloadModelPricesRequest? _defaultInstance;
+}
+
+class ReloadModelPricesResponse extends $pb.GeneratedMessage {
+  factory ReloadModelPricesResponse({
+    $core.bool? initialized,
+    $core.String? message,
+  }) {
+    final $result = create();
+    if (initialized != null) {
+      $result.initialized = initialized;
+    }
+    if (message != null) {
+      $result.message = message;
+    }
+    return $result;
+  }
+  ReloadModelPricesResponse._() : super();
+  factory ReloadModelPricesResponse.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory ReloadModelPricesResponse.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'ReloadModelPricesResponse', package: const $pb.PackageName(_omitMessageNames ? '' : 'llm.observability.v1'), createEmptyInstance: create)
+    ..aOB(1, _omitFieldNames ? '' : 'initialized')
+    ..aOS(2, _omitFieldNames ? '' : 'message')
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  ReloadModelPricesResponse clone() => ReloadModelPricesResponse()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  ReloadModelPricesResponse copyWith(void Function(ReloadModelPricesResponse) updates) => super.copyWith((message) => updates(message as ReloadModelPricesResponse)) as ReloadModelPricesResponse;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ReloadModelPricesResponse create() => ReloadModelPricesResponse._();
+  ReloadModelPricesResponse createEmptyInstance() => create();
+  static $pb.PbList<ReloadModelPricesResponse> createRepeated() => $pb.PbList<ReloadModelPricesResponse>();
+  @$core.pragma('dart2js:noInline')
+  static ReloadModelPricesResponse getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ReloadModelPricesResponse>(create);
+  static ReloadModelPricesResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get initialized => $_getBF(0);
+  @$pb.TagNumber(1)
+  set initialized($core.bool v) { $_setBool(0, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasInitialized() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearInitialized() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get message => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set message($core.String v) { $_setString(1, v); }
+  @$pb.TagNumber(2)
+  $core.bool hasMessage() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearMessage() => clearField(2);
+}
+
 class InstrumentationControlServiceApi {
   $pb.RpcClient _client;
   InstrumentationControlServiceApi(this._client);
@@ -2266,6 +2754,12 @@ class InstrumentationControlServiceApi {
   $async.Future<ClearFallbackTrackerResponse> clearFallbackTracker($pb.ClientContext? ctx, ClearFallbackTrackerRequest request) =>
     _client.invoke<ClearFallbackTrackerResponse>(ctx, 'InstrumentationControlService', 'ClearFallbackTracker', request, ClearFallbackTrackerResponse())
   ;
+  $async.Future<TrackToolCallResponse> trackToolCall($pb.ClientContext? ctx, TrackToolCallRequest request) =>
+    _client.invoke<TrackToolCallResponse>(ctx, 'InstrumentationControlService', 'TrackToolCall', request, TrackToolCallResponse())
+  ;
+  $async.Future<ClearToolCallTrackerResponse> clearToolCallTracker($pb.ClientContext? ctx, ClearToolCallTrackerRequest request) =>
+    _client.invoke<ClearToolCallTrackerResponse>(ctx, 'InstrumentationControlService', 'ClearToolCallTracker', request, ClearToolCallTrackerResponse())
+  ;
   $async.Future<InitMetricsResponse> initMetrics($pb.ClientContext? ctx, InitMetricsRequest request) =>
     _client.invoke<InitMetricsResponse>(ctx, 'InstrumentationControlService', 'InitMetrics', request, InitMetricsResponse())
   ;
@@ -2277,6 +2771,12 @@ class InstrumentationControlServiceApi {
   ;
   $async.Future<RecordMetricsBatchResponse> recordMetricsBatch($pb.ClientContext? ctx, RecordMetricsBatchRequest request) =>
     _client.invoke<RecordMetricsBatchResponse>(ctx, 'InstrumentationControlService', 'RecordMetricsBatch', request, RecordMetricsBatchResponse())
+  ;
+  $async.Future<GetModelPricesResponse> getModelPrices($pb.ClientContext? ctx, GetModelPricesRequest request) =>
+    _client.invoke<GetModelPricesResponse>(ctx, 'InstrumentationControlService', 'GetModelPrices', request, GetModelPricesResponse())
+  ;
+  $async.Future<ReloadModelPricesResponse> reloadModelPrices($pb.ClientContext? ctx, ReloadModelPricesRequest request) =>
+    _client.invoke<ReloadModelPricesResponse>(ctx, 'InstrumentationControlService', 'ReloadModelPrices', request, ReloadModelPricesResponse())
   ;
 }
 

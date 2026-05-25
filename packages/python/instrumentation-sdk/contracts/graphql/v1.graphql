@@ -165,6 +165,14 @@ type MetricsStatusPayload {
   message: String!
 }
 
+type ModelPricePayload {
+  model: String!
+  provider: String!
+  input_price_per_1m: Float!
+  output_price_per_1m: Float!
+  version: String!
+}
+
 type Mutation {
   recordSpan(input: LLMSpanInput!): RecordSpanPayload!
   
@@ -191,6 +199,7 @@ type Mutation {
   clearFallbackTracker: ClearFallbackPayload!
   trackToolCall(trace_id: ID!, span_id: ID!, cost_usd_micro: Int!): TrackToolCallPayload!
   clearToolCallTracker: ClearToolCallPayload!
+  reloadModelPrices: MetricsStatusPayload!
 }
 
 type TrackFallbackPayload {
@@ -222,5 +231,6 @@ type Query {
   metricsHealth: MetricsStatusPayload!
   shouldSample(span_id: ID!): SamplingGatePayload!
   getEmbedding(text: String!): GetEmbeddingPayload!
+  modelPrices: [ModelPricePayload!]!
 }
 

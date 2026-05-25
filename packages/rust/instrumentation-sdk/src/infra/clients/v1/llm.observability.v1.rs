@@ -284,6 +284,68 @@ pub struct ClearFallbackTrackerResponse {
     #[prost(bool, tag="1")]
     pub success: bool,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct TrackToolCallRequest {
+    #[prost(string, tag="1")]
+    pub trace_id: ::prost::alloc::string::String,
+    #[prost(string, tag="2")]
+    pub span_id: ::prost::alloc::string::String,
+    #[prost(int64, tag="3")]
+    pub cost_usd_micro: i64,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct TrackToolCallResponse {
+    #[prost(int64, tag="1")]
+    pub total_cost: i64,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct ClearToolCallTrackerRequest {
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct ClearToolCallTrackerResponse {
+    #[prost(bool, tag="1")]
+    pub success: bool,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct GetModelPricesRequest {
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ModelPriceProto {
+    #[prost(string, tag="1")]
+    pub model: ::prost::alloc::string::String,
+    #[prost(string, tag="2")]
+    pub provider: ::prost::alloc::string::String,
+    #[prost(double, tag="3")]
+    pub input_price_per_1m: f64,
+    #[prost(double, tag="4")]
+    pub output_price_per_1m: f64,
+    #[prost(string, tag="5")]
+    pub version: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetModelPricesResponse {
+    #[prost(message, repeated, tag="1")]
+    pub prices: ::prost::alloc::vec::Vec<ModelPriceProto>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct ReloadModelPricesRequest {
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ReloadModelPricesResponse {
+    #[prost(bool, tag="1")]
+    pub initialized: bool,
+    #[prost(string, tag="2")]
+    pub message: ::prost::alloc::string::String,
+}
 /// InstrumentationStatus represents the current state of auto-instrumentation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]

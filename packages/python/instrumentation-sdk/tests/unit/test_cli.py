@@ -1,5 +1,5 @@
 import pytest
-from api.cli.controller import ObservabilityController
+from src.api.cli.controller import ObservabilityController
 
 
 class FakeDockerClient:

@@ -1,4 +1,12 @@
-from typing import Protocol, Dict
+from typing import Protocol, Dict, List, Any
+
+
+class PriceConfigPort(Protocol):
+    def get_prices(self) -> List[Dict[str, Any]]:
+        ...
+
+    def reload(self) -> None:
+        ...
 
 
 class MetricsPort(Protocol):

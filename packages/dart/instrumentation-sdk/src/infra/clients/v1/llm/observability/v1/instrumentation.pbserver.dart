@@ -33,10 +33,14 @@ abstract class InstrumentationControlServiceBase extends $pb.GeneratedService {
   $async.Future<$0.GetEmbeddingResponse> getEmbedding($pb.ServerContext ctx, $0.GetEmbeddingRequest request);
   $async.Future<$0.TrackFallbackResponse> trackFallback($pb.ServerContext ctx, $0.TrackFallbackRequest request);
   $async.Future<$0.ClearFallbackTrackerResponse> clearFallbackTracker($pb.ServerContext ctx, $0.ClearFallbackTrackerRequest request);
+  $async.Future<$0.TrackToolCallResponse> trackToolCall($pb.ServerContext ctx, $0.TrackToolCallRequest request);
+  $async.Future<$0.ClearToolCallTrackerResponse> clearToolCallTracker($pb.ServerContext ctx, $0.ClearToolCallTrackerRequest request);
   $async.Future<$0.InitMetricsResponse> initMetrics($pb.ServerContext ctx, $0.InitMetricsRequest request);
   $async.Future<$0.GetMetricsHealthResponse> getMetricsHealth($pb.ServerContext ctx, $0.GetMetricsHealthRequest request);
   $async.Future<$0.RecordMetricsResponse> recordMetrics($pb.ServerContext ctx, $0.RecordMetricsRequest request);
   $async.Future<$0.RecordMetricsBatchResponse> recordMetricsBatch($pb.ServerContext ctx, $0.RecordMetricsBatchRequest request);
+  $async.Future<$0.GetModelPricesResponse> getModelPrices($pb.ServerContext ctx, $0.GetModelPricesRequest request);
+  $async.Future<$0.ReloadModelPricesResponse> reloadModelPrices($pb.ServerContext ctx, $0.ReloadModelPricesRequest request);
 
   $pb.GeneratedMessage createRequest($core.String methodName) {
     switch (methodName) {
@@ -52,10 +56,14 @@ abstract class InstrumentationControlServiceBase extends $pb.GeneratedService {
       case 'GetEmbedding': return $0.GetEmbeddingRequest();
       case 'TrackFallback': return $0.TrackFallbackRequest();
       case 'ClearFallbackTracker': return $0.ClearFallbackTrackerRequest();
+      case 'TrackToolCall': return $0.TrackToolCallRequest();
+      case 'ClearToolCallTracker': return $0.ClearToolCallTrackerRequest();
       case 'InitMetrics': return $0.InitMetricsRequest();
       case 'GetMetricsHealth': return $0.GetMetricsHealthRequest();
       case 'RecordMetrics': return $0.RecordMetricsRequest();
       case 'RecordMetricsBatch': return $0.RecordMetricsBatchRequest();
+      case 'GetModelPrices': return $0.GetModelPricesRequest();
+      case 'ReloadModelPrices': return $0.ReloadModelPricesRequest();
       default: throw $core.ArgumentError('Unknown method: $methodName');
     }
   }
@@ -74,10 +82,14 @@ abstract class InstrumentationControlServiceBase extends $pb.GeneratedService {
       case 'GetEmbedding': return this.getEmbedding(ctx, request as $0.GetEmbeddingRequest);
       case 'TrackFallback': return this.trackFallback(ctx, request as $0.TrackFallbackRequest);
       case 'ClearFallbackTracker': return this.clearFallbackTracker(ctx, request as $0.ClearFallbackTrackerRequest);
+      case 'TrackToolCall': return this.trackToolCall(ctx, request as $0.TrackToolCallRequest);
+      case 'ClearToolCallTracker': return this.clearToolCallTracker(ctx, request as $0.ClearToolCallTrackerRequest);
       case 'InitMetrics': return this.initMetrics(ctx, request as $0.InitMetricsRequest);
       case 'GetMetricsHealth': return this.getMetricsHealth(ctx, request as $0.GetMetricsHealthRequest);
       case 'RecordMetrics': return this.recordMetrics(ctx, request as $0.RecordMetricsRequest);
       case 'RecordMetricsBatch': return this.recordMetricsBatch(ctx, request as $0.RecordMetricsBatchRequest);
+      case 'GetModelPrices': return this.getModelPrices(ctx, request as $0.GetModelPricesRequest);
+      case 'ReloadModelPrices': return this.reloadModelPrices(ctx, request as $0.ReloadModelPricesRequest);
       default: throw $core.ArgumentError('Unknown method: $methodName');
     }
   }

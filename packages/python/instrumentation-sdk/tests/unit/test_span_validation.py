@@ -2,7 +2,7 @@ import uuid
 import pytest
 from datetime import datetime, timezone, timedelta
 from pydantic import ValidationError
-from features.spans.types import LLMSpan, FinishReason, TokenCountMethod, Environment
+from src.features.spans.types import LLMSpan, FinishReason, TokenCountMethod, Environment
 
 def get_valid_span_data():
     return {

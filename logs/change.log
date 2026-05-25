@@ -195,3 +195,28 @@
     └── Changes:
         ├── decision-tree -> Update chat flow execution diagrams for stateless and stateful flows
         └── optimizations -> Detail prefix-based TTL caching, MMR re-ranking, and heuristic model routing
+
+[2026-05-25T05:32:00Z] Implement Price Config Hot-Reload in Python Instrumentation SDK
+└── File: packages/python/instrumentation-sdk/src/infra/adapters/price_watcher.py, packages/python/instrumentation-sdk/src/features/metrics/index.py, packages/python/instrumentation-sdk/src/features/metrics/service.py, packages/python/instrumentation-sdk/src/features/spans/decorator.py, packages/python/instrumentation-sdk/src/api/rest/v1/handlers/metrics.py, packages/python/instrumentation-sdk/src/api/rest/v1/router.py, packages/python/instrumentation-sdk/contracts/openapi/v1.yaml, packages/python/instrumentation-sdk/contracts/graphql/v1.graphql, packages/python/instrumentation-sdk/contracts/proto/v1/llm/observability/v1/instrumentation.proto, packages/python/instrumentation-sdk/contracts/changelog.md, packages/python/instrumentation-sdk/tests/unit/features/metrics/test_metrics.py
+    ├── Choice: Implement Price Config Hot-Reload using file-watching (watchdog Observer) on model_prices.yaml and thread-safe atomic reload. Pass references at time-of-call for price_version consistency. Add REST, GraphQL, and gRPC endpoints to retrieve/reload prices.
+    └── Changes:
+        ├── watcher-adapter -> Implement PriceWatcherAdapter with thread-safe lock, watchdog file observer, and manual reload trigger
+        ├── metrics-service -> Retrieve current prices reference on span start, and pass reference to MetricsService in record_span_telemetry
+        ├── api-endpoints -> Add GET /metrics/prices and POST /metrics/prices/reload endpoints
+        ├── contracts -> Add OpenAPI, GraphQL, and Protobuf specifications for retrieving and reloading prices
+        ├── documentation -> Document hot-reload configuration and feature release in contracts/changelog.md
+        └── test-suite -> Update and resolve all relative and top-level package import paths for unit tests
+
+[2026-05-25T05:36:00Z] Bump Instrumentation SDK version to 1.8.3 and update documentation
+└── File: packages/python/instrumentation-sdk/pyproject.toml, packages/python/instrumentation-sdk/README.md, README.md, packages/python/instrumentation-sdk/contracts/changelog.md
+    ├── Choice: Bump package version to 1.8.3 to avoid PyPI package release collision and ensure version parity. Update both SDK and root README files to document new REST endpoints and hot-reload behavior.
+    └── Changes:
+        ├── version-bump -> Bump version to 1.8.3 in pyproject.toml and docker release references
+        └── documentation -> Update REST endpoint tables and "Updating Config Files" instructions in READMEs and changelog.md
+
+[2026-05-25T06:00:00Z] Fix relative and absolute imports to resolve ImportError in test collection
+└── File: packages/python/instrumentation-sdk/src/features/metrics/index.py, packages/python/instrumentation-sdk/src/infra/tracing/middleware.py, packages/python/instrumentation-sdk/src/infra/adapters/kafka/adapter.py, packages/python/instrumentation-sdk/src/api/rest/v1/handlers/metrics.py, packages/python/instrumentation-sdk/src/api/rest/v1/app.py, packages/python/instrumentation-sdk/tests/integration/features/auto_instrumentation/test_*.py
+    ├── Choice: Replace all relative imports going up to package root with src-prefixed absolute imports, and update integration tests to consistently import from src.features.
+    └── Changes:
+        ├── source-imports -> Update middleware, adapters, app, and metrics routes to use absolute imports prefixed with src
+        └── integration-tests -> Prepend src. prefix to features package imports across all auto-instrumentation integration tests

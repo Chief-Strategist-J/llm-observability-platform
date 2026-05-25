@@ -2,8 +2,8 @@ import unittest
 import asyncio
 import time
 from typing import Any, Dict
-from features.manual_instrumentation.service import llm_span
-from features.spans.globals import set_reporter
+from src.features.manual_instrumentation.service import llm_span
+from src.features.spans.globals import set_reporter
 
 class MockReporter:
     def __init__(self):

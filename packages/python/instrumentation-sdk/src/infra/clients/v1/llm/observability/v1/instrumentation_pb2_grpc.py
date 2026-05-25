@@ -75,6 +75,16 @@ class InstrumentationControlServiceStub(object):
                 request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ClearFallbackTrackerRequest.SerializeToString,
                 response_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ClearFallbackTrackerResponse.FromString,
                 )
+        self.TrackToolCall = channel.unary_unary(
+                '/llm.observability.v1.InstrumentationControlService/TrackToolCall',
+                request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.TrackToolCallRequest.SerializeToString,
+                response_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.TrackToolCallResponse.FromString,
+                )
+        self.ClearToolCallTracker = channel.unary_unary(
+                '/llm.observability.v1.InstrumentationControlService/ClearToolCallTracker',
+                request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ClearToolCallTrackerRequest.SerializeToString,
+                response_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ClearToolCallTrackerResponse.FromString,
+                )
         self.InitMetrics = channel.unary_unary(
                 '/llm.observability.v1.InstrumentationControlService/InitMetrics',
                 request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.InitMetricsRequest.SerializeToString,
@@ -94,6 +104,16 @@ class InstrumentationControlServiceStub(object):
                 '/llm.observability.v1.InstrumentationControlService/RecordMetricsBatch',
                 request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.RecordMetricsBatchRequest.SerializeToString,
                 response_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.RecordMetricsBatchResponse.FromString,
+                )
+        self.GetModelPrices = channel.unary_unary(
+                '/llm.observability.v1.InstrumentationControlService/GetModelPrices',
+                request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.GetModelPricesRequest.SerializeToString,
+                response_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.GetModelPricesResponse.FromString,
+                )
+        self.ReloadModelPrices = channel.unary_unary(
+                '/llm.observability.v1.InstrumentationControlService/ReloadModelPrices',
+                request_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ReloadModelPricesRequest.SerializeToString,
+                response_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ReloadModelPricesResponse.FromString,
                 )
 
 
@@ -173,6 +193,18 @@ class InstrumentationControlServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def TrackToolCall(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ClearToolCallTracker(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def InitMetrics(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -192,6 +224,18 @@ class InstrumentationControlServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def RecordMetricsBatch(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetModelPrices(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ReloadModelPrices(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -260,6 +304,16 @@ def add_InstrumentationControlServiceServicer_to_server(servicer, server):
                     request_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ClearFallbackTrackerRequest.FromString,
                     response_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ClearFallbackTrackerResponse.SerializeToString,
             ),
+            'TrackToolCall': grpc.unary_unary_rpc_method_handler(
+                    servicer.TrackToolCall,
+                    request_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.TrackToolCallRequest.FromString,
+                    response_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.TrackToolCallResponse.SerializeToString,
+            ),
+            'ClearToolCallTracker': grpc.unary_unary_rpc_method_handler(
+                    servicer.ClearToolCallTracker,
+                    request_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ClearToolCallTrackerRequest.FromString,
+                    response_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ClearToolCallTrackerResponse.SerializeToString,
+            ),
             'InitMetrics': grpc.unary_unary_rpc_method_handler(
                     servicer.InitMetrics,
                     request_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.InitMetricsRequest.FromString,
@@ -279,6 +333,16 @@ def add_InstrumentationControlServiceServicer_to_server(servicer, server):
                     servicer.RecordMetricsBatch,
                     request_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.RecordMetricsBatchRequest.FromString,
                     response_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.RecordMetricsBatchResponse.SerializeToString,
+            ),
+            'GetModelPrices': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetModelPrices,
+                    request_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.GetModelPricesRequest.FromString,
+                    response_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.GetModelPricesResponse.SerializeToString,
+            ),
+            'ReloadModelPrices': grpc.unary_unary_rpc_method_handler(
+                    servicer.ReloadModelPrices,
+                    request_deserializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ReloadModelPricesRequest.FromString,
+                    response_serializer=llm_dot_observability_dot_v1_dot_instrumentation__pb2.ReloadModelPricesResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -496,6 +560,40 @@ class InstrumentationControlService(object):
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
+    def TrackToolCall(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/llm.observability.v1.InstrumentationControlService/TrackToolCall',
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.TrackToolCallRequest.SerializeToString,
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.TrackToolCallResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def ClearToolCallTracker(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/llm.observability.v1.InstrumentationControlService/ClearToolCallTracker',
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.ClearToolCallTrackerRequest.SerializeToString,
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.ClearToolCallTrackerResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
     def InitMetrics(request,
             target,
             options=(),
@@ -560,5 +658,39 @@ class InstrumentationControlService(object):
         return grpc.experimental.unary_unary(request, target, '/llm.observability.v1.InstrumentationControlService/RecordMetricsBatch',
             llm_dot_observability_dot_v1_dot_instrumentation__pb2.RecordMetricsBatchRequest.SerializeToString,
             llm_dot_observability_dot_v1_dot_instrumentation__pb2.RecordMetricsBatchResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetModelPrices(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/llm.observability.v1.InstrumentationControlService/GetModelPrices',
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.GetModelPricesRequest.SerializeToString,
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.GetModelPricesResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def ReloadModelPrices(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/llm.observability.v1.InstrumentationControlService/ReloadModelPrices',
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.ReloadModelPricesRequest.SerializeToString,
+            llm_dot_observability_dot_v1_dot_instrumentation__pb2.ReloadModelPricesResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

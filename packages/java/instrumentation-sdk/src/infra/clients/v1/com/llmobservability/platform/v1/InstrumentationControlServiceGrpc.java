@@ -390,6 +390,68 @@ public final class InstrumentationControlServiceGrpc {
     return getClearFallbackTrackerMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.llmobservability.platform.v1.TrackToolCallRequest,
+      com.llmobservability.platform.v1.TrackToolCallResponse> getTrackToolCallMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "TrackToolCall",
+      requestType = com.llmobservability.platform.v1.TrackToolCallRequest.class,
+      responseType = com.llmobservability.platform.v1.TrackToolCallResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.llmobservability.platform.v1.TrackToolCallRequest,
+      com.llmobservability.platform.v1.TrackToolCallResponse> getTrackToolCallMethod() {
+    io.grpc.MethodDescriptor<com.llmobservability.platform.v1.TrackToolCallRequest, com.llmobservability.platform.v1.TrackToolCallResponse> getTrackToolCallMethod;
+    if ((getTrackToolCallMethod = InstrumentationControlServiceGrpc.getTrackToolCallMethod) == null) {
+      synchronized (InstrumentationControlServiceGrpc.class) {
+        if ((getTrackToolCallMethod = InstrumentationControlServiceGrpc.getTrackToolCallMethod) == null) {
+          InstrumentationControlServiceGrpc.getTrackToolCallMethod = getTrackToolCallMethod =
+              io.grpc.MethodDescriptor.<com.llmobservability.platform.v1.TrackToolCallRequest, com.llmobservability.platform.v1.TrackToolCallResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "TrackToolCall"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.TrackToolCallRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.TrackToolCallResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new InstrumentationControlServiceMethodDescriptorSupplier("TrackToolCall"))
+              .build();
+        }
+      }
+    }
+    return getTrackToolCallMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.llmobservability.platform.v1.ClearToolCallTrackerRequest,
+      com.llmobservability.platform.v1.ClearToolCallTrackerResponse> getClearToolCallTrackerMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ClearToolCallTracker",
+      requestType = com.llmobservability.platform.v1.ClearToolCallTrackerRequest.class,
+      responseType = com.llmobservability.platform.v1.ClearToolCallTrackerResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.llmobservability.platform.v1.ClearToolCallTrackerRequest,
+      com.llmobservability.platform.v1.ClearToolCallTrackerResponse> getClearToolCallTrackerMethod() {
+    io.grpc.MethodDescriptor<com.llmobservability.platform.v1.ClearToolCallTrackerRequest, com.llmobservability.platform.v1.ClearToolCallTrackerResponse> getClearToolCallTrackerMethod;
+    if ((getClearToolCallTrackerMethod = InstrumentationControlServiceGrpc.getClearToolCallTrackerMethod) == null) {
+      synchronized (InstrumentationControlServiceGrpc.class) {
+        if ((getClearToolCallTrackerMethod = InstrumentationControlServiceGrpc.getClearToolCallTrackerMethod) == null) {
+          InstrumentationControlServiceGrpc.getClearToolCallTrackerMethod = getClearToolCallTrackerMethod =
+              io.grpc.MethodDescriptor.<com.llmobservability.platform.v1.ClearToolCallTrackerRequest, com.llmobservability.platform.v1.ClearToolCallTrackerResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ClearToolCallTracker"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.ClearToolCallTrackerRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.ClearToolCallTrackerResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new InstrumentationControlServiceMethodDescriptorSupplier("ClearToolCallTracker"))
+              .build();
+        }
+      }
+    }
+    return getClearToolCallTrackerMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.llmobservability.platform.v1.InitMetricsRequest,
       com.llmobservability.platform.v1.InitMetricsResponse> getInitMetricsMethod;
 
@@ -512,6 +574,68 @@ public final class InstrumentationControlServiceGrpc {
       }
     }
     return getRecordMetricsBatchMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.llmobservability.platform.v1.GetModelPricesRequest,
+      com.llmobservability.platform.v1.GetModelPricesResponse> getGetModelPricesMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetModelPrices",
+      requestType = com.llmobservability.platform.v1.GetModelPricesRequest.class,
+      responseType = com.llmobservability.platform.v1.GetModelPricesResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.llmobservability.platform.v1.GetModelPricesRequest,
+      com.llmobservability.platform.v1.GetModelPricesResponse> getGetModelPricesMethod() {
+    io.grpc.MethodDescriptor<com.llmobservability.platform.v1.GetModelPricesRequest, com.llmobservability.platform.v1.GetModelPricesResponse> getGetModelPricesMethod;
+    if ((getGetModelPricesMethod = InstrumentationControlServiceGrpc.getGetModelPricesMethod) == null) {
+      synchronized (InstrumentationControlServiceGrpc.class) {
+        if ((getGetModelPricesMethod = InstrumentationControlServiceGrpc.getGetModelPricesMethod) == null) {
+          InstrumentationControlServiceGrpc.getGetModelPricesMethod = getGetModelPricesMethod =
+              io.grpc.MethodDescriptor.<com.llmobservability.platform.v1.GetModelPricesRequest, com.llmobservability.platform.v1.GetModelPricesResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetModelPrices"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.GetModelPricesRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.GetModelPricesResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new InstrumentationControlServiceMethodDescriptorSupplier("GetModelPrices"))
+              .build();
+        }
+      }
+    }
+    return getGetModelPricesMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.llmobservability.platform.v1.ReloadModelPricesRequest,
+      com.llmobservability.platform.v1.ReloadModelPricesResponse> getReloadModelPricesMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ReloadModelPrices",
+      requestType = com.llmobservability.platform.v1.ReloadModelPricesRequest.class,
+      responseType = com.llmobservability.platform.v1.ReloadModelPricesResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.llmobservability.platform.v1.ReloadModelPricesRequest,
+      com.llmobservability.platform.v1.ReloadModelPricesResponse> getReloadModelPricesMethod() {
+    io.grpc.MethodDescriptor<com.llmobservability.platform.v1.ReloadModelPricesRequest, com.llmobservability.platform.v1.ReloadModelPricesResponse> getReloadModelPricesMethod;
+    if ((getReloadModelPricesMethod = InstrumentationControlServiceGrpc.getReloadModelPricesMethod) == null) {
+      synchronized (InstrumentationControlServiceGrpc.class) {
+        if ((getReloadModelPricesMethod = InstrumentationControlServiceGrpc.getReloadModelPricesMethod) == null) {
+          InstrumentationControlServiceGrpc.getReloadModelPricesMethod = getReloadModelPricesMethod =
+              io.grpc.MethodDescriptor.<com.llmobservability.platform.v1.ReloadModelPricesRequest, com.llmobservability.platform.v1.ReloadModelPricesResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ReloadModelPrices"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.ReloadModelPricesRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.llmobservability.platform.v1.ReloadModelPricesResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new InstrumentationControlServiceMethodDescriptorSupplier("ReloadModelPrices"))
+              .build();
+        }
+      }
+    }
+    return getReloadModelPricesMethod;
   }
 
   /**
@@ -651,6 +775,20 @@ public final class InstrumentationControlServiceGrpc {
 
     /**
      */
+    default void trackToolCall(com.llmobservability.platform.v1.TrackToolCallRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.TrackToolCallResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getTrackToolCallMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void clearToolCallTracker(com.llmobservability.platform.v1.ClearToolCallTrackerRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.ClearToolCallTrackerResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getClearToolCallTrackerMethod(), responseObserver);
+    }
+
+    /**
+     */
     default void initMetrics(com.llmobservability.platform.v1.InitMetricsRequest request,
         io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.InitMetricsResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getInitMetricsMethod(), responseObserver);
@@ -675,6 +813,20 @@ public final class InstrumentationControlServiceGrpc {
     default void recordMetricsBatch(com.llmobservability.platform.v1.RecordMetricsBatchRequest request,
         io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.RecordMetricsBatchResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRecordMetricsBatchMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void getModelPrices(com.llmobservability.platform.v1.GetModelPricesRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.GetModelPricesResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetModelPricesMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void reloadModelPrices(com.llmobservability.platform.v1.ReloadModelPricesRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.ReloadModelPricesResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getReloadModelPricesMethod(), responseObserver);
     }
   }
 
@@ -809,6 +961,22 @@ public final class InstrumentationControlServiceGrpc {
 
     /**
      */
+    public void trackToolCall(com.llmobservability.platform.v1.TrackToolCallRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.TrackToolCallResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getTrackToolCallMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void clearToolCallTracker(com.llmobservability.platform.v1.ClearToolCallTrackerRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.ClearToolCallTrackerResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getClearToolCallTrackerMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
     public void initMetrics(com.llmobservability.platform.v1.InitMetricsRequest request,
         io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.InitMetricsResponse> responseObserver) {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
@@ -837,6 +1005,22 @@ public final class InstrumentationControlServiceGrpc {
         io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.RecordMetricsBatchResponse> responseObserver) {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getRecordMetricsBatchMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void getModelPrices(com.llmobservability.platform.v1.GetModelPricesRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.GetModelPricesResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetModelPricesMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void reloadModelPrices(com.llmobservability.platform.v1.ReloadModelPricesRequest request,
+        io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.ReloadModelPricesResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getReloadModelPricesMethod(), getCallOptions()), request, responseObserver);
     }
   }
 
@@ -945,6 +1129,20 @@ public final class InstrumentationControlServiceGrpc {
 
     /**
      */
+    public com.llmobservability.platform.v1.TrackToolCallResponse trackToolCall(com.llmobservability.platform.v1.TrackToolCallRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getTrackToolCallMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.llmobservability.platform.v1.ClearToolCallTrackerResponse clearToolCallTracker(com.llmobservability.platform.v1.ClearToolCallTrackerRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getClearToolCallTrackerMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
     public com.llmobservability.platform.v1.InitMetricsResponse initMetrics(com.llmobservability.platform.v1.InitMetricsRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getInitMetricsMethod(), getCallOptions(), request);
@@ -969,6 +1167,20 @@ public final class InstrumentationControlServiceGrpc {
     public com.llmobservability.platform.v1.RecordMetricsBatchResponse recordMetricsBatch(com.llmobservability.platform.v1.RecordMetricsBatchRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getRecordMetricsBatchMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.llmobservability.platform.v1.GetModelPricesResponse getModelPrices(com.llmobservability.platform.v1.GetModelPricesRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetModelPricesMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.llmobservability.platform.v1.ReloadModelPricesResponse reloadModelPrices(com.llmobservability.platform.v1.ReloadModelPricesRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getReloadModelPricesMethod(), getCallOptions(), request);
     }
   }
 
@@ -1089,6 +1301,22 @@ public final class InstrumentationControlServiceGrpc {
 
     /**
      */
+    public com.google.common.util.concurrent.ListenableFuture<com.llmobservability.platform.v1.TrackToolCallResponse> trackToolCall(
+        com.llmobservability.platform.v1.TrackToolCallRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getTrackToolCallMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.llmobservability.platform.v1.ClearToolCallTrackerResponse> clearToolCallTracker(
+        com.llmobservability.platform.v1.ClearToolCallTrackerRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getClearToolCallTrackerMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
     public com.google.common.util.concurrent.ListenableFuture<com.llmobservability.platform.v1.InitMetricsResponse> initMetrics(
         com.llmobservability.platform.v1.InitMetricsRequest request) {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
@@ -1118,6 +1346,22 @@ public final class InstrumentationControlServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getRecordMetricsBatchMethod(), getCallOptions()), request);
     }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.llmobservability.platform.v1.GetModelPricesResponse> getModelPrices(
+        com.llmobservability.platform.v1.GetModelPricesRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetModelPricesMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.llmobservability.platform.v1.ReloadModelPricesResponse> reloadModelPrices(
+        com.llmobservability.platform.v1.ReloadModelPricesRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getReloadModelPricesMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_INIT_INSTRUMENTATION = 0;
@@ -1132,10 +1376,14 @@ public final class InstrumentationControlServiceGrpc {
   private static final int METHODID_GET_EMBEDDING = 9;
   private static final int METHODID_TRACK_FALLBACK = 10;
   private static final int METHODID_CLEAR_FALLBACK_TRACKER = 11;
-  private static final int METHODID_INIT_METRICS = 12;
-  private static final int METHODID_GET_METRICS_HEALTH = 13;
-  private static final int METHODID_RECORD_METRICS = 14;
-  private static final int METHODID_RECORD_METRICS_BATCH = 15;
+  private static final int METHODID_TRACK_TOOL_CALL = 12;
+  private static final int METHODID_CLEAR_TOOL_CALL_TRACKER = 13;
+  private static final int METHODID_INIT_METRICS = 14;
+  private static final int METHODID_GET_METRICS_HEALTH = 15;
+  private static final int METHODID_RECORD_METRICS = 16;
+  private static final int METHODID_RECORD_METRICS_BATCH = 17;
+  private static final int METHODID_GET_MODEL_PRICES = 18;
+  private static final int METHODID_RELOAD_MODEL_PRICES = 19;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -1202,6 +1450,14 @@ public final class InstrumentationControlServiceGrpc {
           serviceImpl.clearFallbackTracker((com.llmobservability.platform.v1.ClearFallbackTrackerRequest) request,
               (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.ClearFallbackTrackerResponse>) responseObserver);
           break;
+        case METHODID_TRACK_TOOL_CALL:
+          serviceImpl.trackToolCall((com.llmobservability.platform.v1.TrackToolCallRequest) request,
+              (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.TrackToolCallResponse>) responseObserver);
+          break;
+        case METHODID_CLEAR_TOOL_CALL_TRACKER:
+          serviceImpl.clearToolCallTracker((com.llmobservability.platform.v1.ClearToolCallTrackerRequest) request,
+              (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.ClearToolCallTrackerResponse>) responseObserver);
+          break;
         case METHODID_INIT_METRICS:
           serviceImpl.initMetrics((com.llmobservability.platform.v1.InitMetricsRequest) request,
               (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.InitMetricsResponse>) responseObserver);
@@ -1217,6 +1473,14 @@ public final class InstrumentationControlServiceGrpc {
         case METHODID_RECORD_METRICS_BATCH:
           serviceImpl.recordMetricsBatch((com.llmobservability.platform.v1.RecordMetricsBatchRequest) request,
               (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.RecordMetricsBatchResponse>) responseObserver);
+          break;
+        case METHODID_GET_MODEL_PRICES:
+          serviceImpl.getModelPrices((com.llmobservability.platform.v1.GetModelPricesRequest) request,
+              (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.GetModelPricesResponse>) responseObserver);
+          break;
+        case METHODID_RELOAD_MODEL_PRICES:
+          serviceImpl.reloadModelPrices((com.llmobservability.platform.v1.ReloadModelPricesRequest) request,
+              (io.grpc.stub.StreamObserver<com.llmobservability.platform.v1.ReloadModelPricesResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -1321,6 +1585,20 @@ public final class InstrumentationControlServiceGrpc {
               com.llmobservability.platform.v1.ClearFallbackTrackerResponse>(
                 service, METHODID_CLEAR_FALLBACK_TRACKER)))
         .addMethod(
+          getTrackToolCallMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.llmobservability.platform.v1.TrackToolCallRequest,
+              com.llmobservability.platform.v1.TrackToolCallResponse>(
+                service, METHODID_TRACK_TOOL_CALL)))
+        .addMethod(
+          getClearToolCallTrackerMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.llmobservability.platform.v1.ClearToolCallTrackerRequest,
+              com.llmobservability.platform.v1.ClearToolCallTrackerResponse>(
+                service, METHODID_CLEAR_TOOL_CALL_TRACKER)))
+        .addMethod(
           getInitMetricsMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
             new MethodHandlers<
@@ -1348,6 +1626,20 @@ public final class InstrumentationControlServiceGrpc {
               com.llmobservability.platform.v1.RecordMetricsBatchRequest,
               com.llmobservability.platform.v1.RecordMetricsBatchResponse>(
                 service, METHODID_RECORD_METRICS_BATCH)))
+        .addMethod(
+          getGetModelPricesMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.llmobservability.platform.v1.GetModelPricesRequest,
+              com.llmobservability.platform.v1.GetModelPricesResponse>(
+                service, METHODID_GET_MODEL_PRICES)))
+        .addMethod(
+          getReloadModelPricesMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.llmobservability.platform.v1.ReloadModelPricesRequest,
+              com.llmobservability.platform.v1.ReloadModelPricesResponse>(
+                service, METHODID_RELOAD_MODEL_PRICES)))
         .build();
   }
 
@@ -1408,10 +1700,14 @@ public final class InstrumentationControlServiceGrpc {
               .addMethod(getGetEmbeddingMethod())
               .addMethod(getTrackFallbackMethod())
               .addMethod(getClearFallbackTrackerMethod())
+              .addMethod(getTrackToolCallMethod())
+              .addMethod(getClearToolCallTrackerMethod())
               .addMethod(getInitMetricsMethod())
               .addMethod(getGetMetricsHealthMethod())
               .addMethod(getRecordMetricsMethod())
               .addMethod(getRecordMetricsBatchMethod())
+              .addMethod(getGetModelPricesMethod())
+              .addMethod(getReloadModelPricesMethod())
               .build();
         }
       }

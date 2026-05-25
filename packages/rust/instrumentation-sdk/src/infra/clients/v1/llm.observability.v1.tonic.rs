@@ -446,6 +446,66 @@ pub mod instrumentation_control_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        pub async fn track_tool_call(
+            &mut self,
+            request: impl tonic::IntoRequest<super::TrackToolCallRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::TrackToolCallResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/llm.observability.v1.InstrumentationControlService/TrackToolCall",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "llm.observability.v1.InstrumentationControlService",
+                        "TrackToolCall",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn clear_tool_call_tracker(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ClearToolCallTrackerRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ClearToolCallTrackerResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/llm.observability.v1.InstrumentationControlService/ClearToolCallTracker",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "llm.observability.v1.InstrumentationControlService",
+                        "ClearToolCallTracker",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
         pub async fn init_metrics(
             &mut self,
             request: impl tonic::IntoRequest<super::InitMetricsRequest>,
@@ -566,6 +626,66 @@ pub mod instrumentation_control_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        pub async fn get_model_prices(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetModelPricesRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetModelPricesResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/llm.observability.v1.InstrumentationControlService/GetModelPrices",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "llm.observability.v1.InstrumentationControlService",
+                        "GetModelPrices",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn reload_model_prices(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ReloadModelPricesRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ReloadModelPricesResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/llm.observability.v1.InstrumentationControlService/ReloadModelPrices",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "llm.observability.v1.InstrumentationControlService",
+                        "ReloadModelPrices",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
     }
 }
 /// Generated server implementations.
@@ -659,6 +779,20 @@ pub mod instrumentation_control_service_server {
             tonic::Response<super::ClearFallbackTrackerResponse>,
             tonic::Status,
         >;
+        async fn track_tool_call(
+            &self,
+            request: tonic::Request<super::TrackToolCallRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::TrackToolCallResponse>,
+            tonic::Status,
+        >;
+        async fn clear_tool_call_tracker(
+            &self,
+            request: tonic::Request<super::ClearToolCallTrackerRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ClearToolCallTrackerResponse>,
+            tonic::Status,
+        >;
         async fn init_metrics(
             &self,
             request: tonic::Request<super::InitMetricsRequest>,
@@ -685,6 +819,20 @@ pub mod instrumentation_control_service_server {
             request: tonic::Request<super::RecordMetricsBatchRequest>,
         ) -> std::result::Result<
             tonic::Response<super::RecordMetricsBatchResponse>,
+            tonic::Status,
+        >;
+        async fn get_model_prices(
+            &self,
+            request: tonic::Request<super::GetModelPricesRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetModelPricesResponse>,
+            tonic::Status,
+        >;
+        async fn reload_model_prices(
+            &self,
+            request: tonic::Request<super::ReloadModelPricesRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ReloadModelPricesResponse>,
             tonic::Status,
         >;
     }
@@ -1384,6 +1532,110 @@ pub mod instrumentation_control_service_server {
                     };
                     Box::pin(fut)
                 }
+                "/llm.observability.v1.InstrumentationControlService/TrackToolCall" => {
+                    #[allow(non_camel_case_types)]
+                    struct TrackToolCallSvc<T: InstrumentationControlService>(
+                        pub Arc<T>,
+                    );
+                    impl<
+                        T: InstrumentationControlService,
+                    > tonic::server::UnaryService<super::TrackToolCallRequest>
+                    for TrackToolCallSvc<T> {
+                        type Response = super::TrackToolCallResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::TrackToolCallRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as InstrumentationControlService>::track_tool_call(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = TrackToolCallSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/llm.observability.v1.InstrumentationControlService/ClearToolCallTracker" => {
+                    #[allow(non_camel_case_types)]
+                    struct ClearToolCallTrackerSvc<T: InstrumentationControlService>(
+                        pub Arc<T>,
+                    );
+                    impl<
+                        T: InstrumentationControlService,
+                    > tonic::server::UnaryService<super::ClearToolCallTrackerRequest>
+                    for ClearToolCallTrackerSvc<T> {
+                        type Response = super::ClearToolCallTrackerResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::ClearToolCallTrackerRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as InstrumentationControlService>::clear_tool_call_tracker(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = ClearToolCallTrackerSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
                 "/llm.observability.v1.InstrumentationControlService/InitMetrics" => {
                     #[allow(non_camel_case_types)]
                     struct InitMetricsSvc<T: InstrumentationControlService>(pub Arc<T>);
@@ -1575,6 +1827,110 @@ pub mod instrumentation_control_service_server {
                     let fut = async move {
                         let inner = inner.0;
                         let method = RecordMetricsBatchSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/llm.observability.v1.InstrumentationControlService/GetModelPrices" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetModelPricesSvc<T: InstrumentationControlService>(
+                        pub Arc<T>,
+                    );
+                    impl<
+                        T: InstrumentationControlService,
+                    > tonic::server::UnaryService<super::GetModelPricesRequest>
+                    for GetModelPricesSvc<T> {
+                        type Response = super::GetModelPricesResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetModelPricesRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as InstrumentationControlService>::get_model_prices(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = GetModelPricesSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/llm.observability.v1.InstrumentationControlService/ReloadModelPrices" => {
+                    #[allow(non_camel_case_types)]
+                    struct ReloadModelPricesSvc<T: InstrumentationControlService>(
+                        pub Arc<T>,
+                    );
+                    impl<
+                        T: InstrumentationControlService,
+                    > tonic::server::UnaryService<super::ReloadModelPricesRequest>
+                    for ReloadModelPricesSvc<T> {
+                        type Response = super::ReloadModelPricesResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::ReloadModelPricesRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as InstrumentationControlService>::reload_model_prices(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = ReloadModelPricesSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

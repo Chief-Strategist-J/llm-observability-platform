@@ -531,6 +531,34 @@ paths:
                   recorded_count:
                     type: integer
 
+  /metrics/prices:
+    get:
+      summary: Retrieve active model prices configuration
+      operationId: getModelPrices
+      tags:
+        - Metrics
+      responses:
+        '200':
+          description: List of active model prices.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelPricesListResponse'
+
+  /metrics/prices/reload:
+    post:
+      summary: Trigger manual reload of model prices configuration
+      operationId: reloadModelPrices
+      tags:
+        - Metrics
+      responses:
+        '200':
+          description: Status of the reload operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricsStatusResponse'
+
 components:
   schemas:
     StatusResponse:
@@ -550,6 +578,34 @@ components:
           type: boolean
         message:
           type: string
+    ModelPriceResponse:
+      type: object
+      required:
+        - model
+        - provider
+        - input_price_per_1m
+        - output_price_per_1m
+        - version
+      properties:
+        model:
+          type: string
+        provider:
+          type: string
+        input_price_per_1m:
+          type: number
+        output_price_per_1m:
+          type: number
+        version:
+          type: string
+    ModelPricesListResponse:
+      type: object
+      required:
+        - prices
+      properties:
+        prices:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelPriceResponse'
     RecordSpanMetricsRequest:
       type: object
       required:

@@ -6,8 +6,9 @@ import inspect
 from typing import Optional, Callable, Any
 from datetime import datetime, timezone
 from .globals import get_reporter
-from ..metrics.index import record_span_metrics
+from ..metrics.index import record_span_metrics, get_current_prices_ref
 from ..deterministic_sampling.index import should_sample
+
 
 def llm_observe(service: str, endpoint: str):
     def decorator(func: Callable):
@@ -17,7 +18,7 @@ def llm_observe(service: str, endpoint: str):
                 span_id = str(uuid.uuid4())
                 start_time = time.perf_counter()
                 start_timestamp = datetime.now(timezone.utc).isoformat()
-                
+                prices_ref = get_current_prices_ref()
                 try:
                     result = await func(*args, **kwargs)
                     status = "success"
@@ -34,7 +35,8 @@ def llm_observe(service: str, endpoint: str):
                         "latency_ms_total": latency_ms,
                         "timestamp_utc": start_timestamp,
                         "status": status,
-                        "is_sampled": should_sample(span_id)
+                        "is_sampled": should_sample(span_id),
+                        "_prices_ref": prices_ref,
                     }
                     from ..minilm_embedding.index import enrich_and_report_span_async
                     await enrich_and_report_span_async(span_data)
@@ -45,7 +47,7 @@ def llm_observe(service: str, endpoint: str):
                 span_id = str(uuid.uuid4())
                 start_time = time.perf_counter()
                 start_timestamp = datetime.now(timezone.utc).isoformat()
-                
+                prices_ref = get_current_prices_ref()
                 try:
                     result = func(*args, **kwargs)
                     status = "success"
@@ -62,7 +64,8 @@ def llm_observe(service: str, endpoint: str):
                         "latency_ms_total": latency_ms,
                         "timestamp_utc": start_timestamp,
                         "status": status,
-                        "is_sampled": should_sample(span_id)
+                        "is_sampled": should_sample(span_id),
+                        "_prices_ref": prices_ref,
                     }
                     from ..minilm_embedding.index import enrich_and_report_span
                     enrich_and_report_span(span_data)

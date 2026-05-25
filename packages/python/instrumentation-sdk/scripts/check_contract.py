@@ -5,6 +5,7 @@ from typing import Any, Dict
 
 # Add src to path so we can import the model
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 try:
     from features.spans.types import LLMSpan
