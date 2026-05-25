@@ -85,6 +85,30 @@ This hierarchical decision tree outlines the conditional execution paths for sta
         ├── [Step 9] Store response in standard cache and semantic cache
         ├── [Step 10] Atomically store both User and Assistant turns in Memory Repository and Qdrant
         └── [Step 11] Return AI response + semantic context metadata to the client (cached: false)
+
+---
+
+## Production Optimizations & Caching Enhancements
+
+The AI Service employs several production-grade caching and routing mechanisms:
+
+### 1. Prompt Fingerprinting
+To prevent cross-session context contamination, the semantic cache generates a cryptographic hash/fingerprint of the model ID and all messages prior to the current user query (e.g. system instructions, history context). Semantic cache lookups and storage are strictly scoped to matching fingerprints.
+
+### 2. Confidence Gating
+A hard similarity threshold of `0.95` is enforced on semantic cache lookups. Any vector match with a similarity score below 0.95 is rejected and treated as a cache miss, ensuring high response accuracy and reducing false-positive cache hits.
+
+### 3. Memory Recency Weighting
+When retrieving context from stateful session memory or Qdrant vector storage, a temporal decay function is applied to re-rank results:
+$$\text{Score}_{\text{combined}} = \text{Similarity} \times 0.7 + e^{-\frac{\ln(2) \cdot \text{Age}}{604800}} \times 0.3$$
+This formula exponentially decays the weight of older messages over a 7-day half-life, prioritizing recent facts and context.
+
+### 4. Memory summarization Compaction
+If a stateful conversation session exceeds 10 messages, the service automatically triggers compaction. Older history messages (except the most recent 4 messages) are collapsed into a concise summary via a background LLM query and prepended as a single summary message, reclaiming token context window.
+
+### 5. Heuristic Model Routing
+Incoming prompt complexity is classified using a fast heuristic check and small-model routing classifier. Short or simple queries are served by a smaller, cost-effective model (`AI_SMALL_MODEL`, defaulting to `@cf/meta/llama-3-8b-instruct-awq`), whereas complex reasoning or long queries are automatically routed to a larger model (`AI_LARGE_MODEL`, defaulting to `@cf/google/gemma-3-12b-it`).
+
 ```
 
 ---
@@ -149,6 +173,8 @@ The service is configured using the following environment variables:
 | `CF_ACCESS_JWT_ASSERTION` | Cloudflare Access API Token (`cfat_...`) | Optional / None |
 | `CF_EMBEDDING_MODEL` | The default text embedding model ID | `@cf/baai/bge-small-en-v1.5` |
 | `AI_DEFAULT_MODEL` | The default chat/LLM model ID | `@cf/meta/llama-3.1-8b-instruct` |
+| `AI_SMALL_MODEL` | The model ID used for simple prompts | `@cf/meta/llama-3-8b-instruct-awq` |
+| `AI_LARGE_MODEL` | The model ID used for complex prompts | `@cf/google/gemma-3-12b-it` |
 | `QDRANT_URL` | Qdrant REST API endpoint URL | Optional / None |
 | `QDRANT_API_KEY` | Optional API Key for Qdrant | Optional / None |
 | `QDRANT_COLLECTION` | Qdrant Collection name for storing vectors | `chat_messages` |
