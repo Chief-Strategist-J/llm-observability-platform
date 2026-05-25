@@ -1,5 +1,6 @@
 Language-Specific Multiple Package Structure
 
+while generating folder structure add .gitkeep in each folder
 
 
 Core Rule

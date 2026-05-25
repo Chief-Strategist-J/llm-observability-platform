@@ -220,3 +220,10 @@
     └── Changes:
         ├── source-imports -> Update middleware, adapters, app, and metrics routes to use absolute imports prefixed with src
         └── integration-tests -> Prepend src. prefix to features package imports across all auto-instrumentation integration tests
+
+[2026-05-25T06:28:00Z] Create pyproject.toml for quality-engine package with instrumentation-sdk dependency
+└── File: packages/python/quality-engine/pyproject.toml, packages/python/quality-engine/README.md
+    ├── Choice: Configure python package build metadata and add instrumentation-sdk under project dependencies.
+    └── Changes:
+        ├── pyproject-toml -> Add project metadata, setuptools build configuration, and dependencies list
+        └── readme -> Add package placeholder README.md
