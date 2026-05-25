@@ -2,8 +2,8 @@ import pytest
 import sys
 import json
 from unittest.mock import MagicMock, patch, AsyncMock
-from features.auto_instrumentation.index import init_auto_instrumentation, uninstrument_all
-from features.spans.globals import set_reporter, NoOpReporter
+from src.features.auto_instrumentation.index import init_auto_instrumentation, uninstrument_all
+from src.features.spans.globals import set_reporter, NoOpReporter
 
 @pytest.fixture
 def mock_http_libs():

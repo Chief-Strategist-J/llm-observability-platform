@@ -8,7 +8,7 @@ def instrument_app(app, tracer_provider: Optional[Any] = None):
     if tracer_provider is None:
         init_tracer("instrumentation-sdk-api", os.getenv("DEPLOYMENT_ENV", "dev"))
     try:
-        from ...features.metrics.index import init_metrics_pipeline
+        from src.features.metrics.index import init_metrics_pipeline
         init_metrics_pipeline()
     except Exception:
         pass

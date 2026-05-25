@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional, List
 from .infra.adapters.prometheus_adapter import PrometheusMetricsAdapter
 from .service import MetricsService
-from ...infra.adapters.price_watcher import PriceWatcherAdapter
+from src.infra.adapters.price_watcher import PriceWatcherAdapter
 
 
 class _NoOpAdapter:
@@ -40,7 +40,7 @@ def init_metrics_pipeline(port: Optional[int] = None) -> None:
     global _adapter, _service, _initialized
     if _initialized:
         return
-    from ...infra.metrics.meter import init_meter
+    from src.infra.metrics.meter import init_meter
     init_meter(port)
     _adapter = PrometheusMetricsAdapter()
     _service = MetricsService(_adapter, price_config=_price_watcher)

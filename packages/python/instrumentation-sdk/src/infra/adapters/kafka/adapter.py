@@ -1,7 +1,7 @@
 import json
 from typing import Any, Dict
 from confluent_kafka import Producer
-from ...features.spans.reporter import SpanReporter
+from src.features.spans.reporter import SpanReporter
 from .v1.llm.observability.v1.span_pb2 import LLMSpan
 
 class KafkaSpanReporter(SpanReporter):

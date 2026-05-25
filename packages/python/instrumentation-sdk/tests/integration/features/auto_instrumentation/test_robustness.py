@@ -2,8 +2,8 @@ import pytest
 import sys
 import asyncio
 from unittest.mock import MagicMock, AsyncMock, patch
-from features.auto_instrumentation.index import init_auto_instrumentation, uninstrument_all
-from features.spans.globals import set_reporter, NoOpReporter
+from src.features.auto_instrumentation.index import init_auto_instrumentation, uninstrument_all
+from src.features.spans.globals import set_reporter, NoOpReporter
 
 @pytest.fixture
 def mock_openai_module():
@@ -121,7 +121,7 @@ async def test_manual_client_instrumentation(mock_openai_module):
                 ))
         
         client_instance = MockClient()
-        from features.auto_instrumentation.index import instrument_client
+        from src.features.auto_instrumentation.index import instrument_client
         
         # Instrument ONLY this client
         instrument_client(client_instance, provider="openai")
@@ -142,7 +142,7 @@ async def test_manual_instrumentation_multiple_providers(mock_openai_module):
     set_reporter(mock_reporter)
     
     try:
-        from features.auto_instrumentation.index import instrument_client
+        from src.features.auto_instrumentation.index import instrument_client
         
         # Mock an Anthropic client
         mock_anthropic = MagicMock()

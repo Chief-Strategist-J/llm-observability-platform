@@ -2,9 +2,9 @@ from fastapi import FastAPI
 import os
 
 from .router import api_v1_router
-from ....infra.tracing.middleware import instrument_app
-from ....features.spans.globals import set_reporter
-from ....infra.adapters.kafka.reliable_adapter import ReliableKafkaSpanReporter
+from src.infra.tracing.middleware import instrument_app
+from src.features.spans.globals import set_reporter
+from src.infra.adapters.kafka.reliable_adapter import ReliableKafkaSpanReporter
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Instrumentation SDK API", version="1.0.0")
