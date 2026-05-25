@@ -70,6 +70,12 @@ const (
 	// InstrumentationControlServiceClearFallbackTrackerProcedure is the fully-qualified name of the
 	// InstrumentationControlService's ClearFallbackTracker RPC.
 	InstrumentationControlServiceClearFallbackTrackerProcedure = "/llm.observability.v1.InstrumentationControlService/ClearFallbackTracker"
+	// InstrumentationControlServiceTrackToolCallProcedure is the fully-qualified name of the
+	// InstrumentationControlService's TrackToolCall RPC.
+	InstrumentationControlServiceTrackToolCallProcedure = "/llm.observability.v1.InstrumentationControlService/TrackToolCall"
+	// InstrumentationControlServiceClearToolCallTrackerProcedure is the fully-qualified name of the
+	// InstrumentationControlService's ClearToolCallTracker RPC.
+	InstrumentationControlServiceClearToolCallTrackerProcedure = "/llm.observability.v1.InstrumentationControlService/ClearToolCallTracker"
 	// InstrumentationControlServiceInitMetricsProcedure is the fully-qualified name of the
 	// InstrumentationControlService's InitMetrics RPC.
 	InstrumentationControlServiceInitMetricsProcedure = "/llm.observability.v1.InstrumentationControlService/InitMetrics"
@@ -82,6 +88,12 @@ const (
 	// InstrumentationControlServiceRecordMetricsBatchProcedure is the fully-qualified name of the
 	// InstrumentationControlService's RecordMetricsBatch RPC.
 	InstrumentationControlServiceRecordMetricsBatchProcedure = "/llm.observability.v1.InstrumentationControlService/RecordMetricsBatch"
+	// InstrumentationControlServiceGetModelPricesProcedure is the fully-qualified name of the
+	// InstrumentationControlService's GetModelPrices RPC.
+	InstrumentationControlServiceGetModelPricesProcedure = "/llm.observability.v1.InstrumentationControlService/GetModelPrices"
+	// InstrumentationControlServiceReloadModelPricesProcedure is the fully-qualified name of the
+	// InstrumentationControlService's ReloadModelPrices RPC.
+	InstrumentationControlServiceReloadModelPricesProcedure = "/llm.observability.v1.InstrumentationControlService/ReloadModelPrices"
 )
 
 // InstrumentationControlServiceClient is a client for the
@@ -99,10 +111,14 @@ type InstrumentationControlServiceClient interface {
 	GetEmbedding(context.Context, *connect.Request[v1.GetEmbeddingRequest]) (*connect.Response[v1.GetEmbeddingResponse], error)
 	TrackFallback(context.Context, *connect.Request[v1.TrackFallbackRequest]) (*connect.Response[v1.TrackFallbackResponse], error)
 	ClearFallbackTracker(context.Context, *connect.Request[v1.ClearFallbackTrackerRequest]) (*connect.Response[v1.ClearFallbackTrackerResponse], error)
+	TrackToolCall(context.Context, *connect.Request[v1.TrackToolCallRequest]) (*connect.Response[v1.TrackToolCallResponse], error)
+	ClearToolCallTracker(context.Context, *connect.Request[v1.ClearToolCallTrackerRequest]) (*connect.Response[v1.ClearToolCallTrackerResponse], error)
 	InitMetrics(context.Context, *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error)
 	GetMetricsHealth(context.Context, *connect.Request[v1.GetMetricsHealthRequest]) (*connect.Response[v1.GetMetricsHealthResponse], error)
 	RecordMetrics(context.Context, *connect.Request[v1.RecordMetricsRequest]) (*connect.Response[v1.RecordMetricsResponse], error)
 	RecordMetricsBatch(context.Context, *connect.Request[v1.RecordMetricsBatchRequest]) (*connect.Response[v1.RecordMetricsBatchResponse], error)
+	GetModelPrices(context.Context, *connect.Request[v1.GetModelPricesRequest]) (*connect.Response[v1.GetModelPricesResponse], error)
+	ReloadModelPrices(context.Context, *connect.Request[v1.ReloadModelPricesRequest]) (*connect.Response[v1.ReloadModelPricesResponse], error)
 }
 
 // NewInstrumentationControlServiceClient constructs a client for the
@@ -176,6 +192,16 @@ func NewInstrumentationControlServiceClient(httpClient connect.HTTPClient, baseU
 			baseURL+InstrumentationControlServiceClearFallbackTrackerProcedure,
 			opts...,
 		),
+		trackToolCall: connect.NewClient[v1.TrackToolCallRequest, v1.TrackToolCallResponse](
+			httpClient,
+			baseURL+InstrumentationControlServiceTrackToolCallProcedure,
+			opts...,
+		),
+		clearToolCallTracker: connect.NewClient[v1.ClearToolCallTrackerRequest, v1.ClearToolCallTrackerResponse](
+			httpClient,
+			baseURL+InstrumentationControlServiceClearToolCallTrackerProcedure,
+			opts...,
+		),
 		initMetrics: connect.NewClient[v1.InitMetricsRequest, v1.InitMetricsResponse](
 			httpClient,
 			baseURL+InstrumentationControlServiceInitMetricsProcedure,
@@ -196,6 +222,16 @@ func NewInstrumentationControlServiceClient(httpClient connect.HTTPClient, baseU
 			baseURL+InstrumentationControlServiceRecordMetricsBatchProcedure,
 			opts...,
 		),
+		getModelPrices: connect.NewClient[v1.GetModelPricesRequest, v1.GetModelPricesResponse](
+			httpClient,
+			baseURL+InstrumentationControlServiceGetModelPricesProcedure,
+			opts...,
+		),
+		reloadModelPrices: connect.NewClient[v1.ReloadModelPricesRequest, v1.ReloadModelPricesResponse](
+			httpClient,
+			baseURL+InstrumentationControlServiceReloadModelPricesProcedure,
+			opts...,
+		),
 	}
 }
 
@@ -213,10 +249,14 @@ type instrumentationControlServiceClient struct {
 	getEmbedding           *connect.Client[v1.GetEmbeddingRequest, v1.GetEmbeddingResponse]
 	trackFallback          *connect.Client[v1.TrackFallbackRequest, v1.TrackFallbackResponse]
 	clearFallbackTracker   *connect.Client[v1.ClearFallbackTrackerRequest, v1.ClearFallbackTrackerResponse]
+	trackToolCall          *connect.Client[v1.TrackToolCallRequest, v1.TrackToolCallResponse]
+	clearToolCallTracker   *connect.Client[v1.ClearToolCallTrackerRequest, v1.ClearToolCallTrackerResponse]
 	initMetrics            *connect.Client[v1.InitMetricsRequest, v1.InitMetricsResponse]
 	getMetricsHealth       *connect.Client[v1.GetMetricsHealthRequest, v1.GetMetricsHealthResponse]
 	recordMetrics          *connect.Client[v1.RecordMetricsRequest, v1.RecordMetricsResponse]
 	recordMetricsBatch     *connect.Client[v1.RecordMetricsBatchRequest, v1.RecordMetricsBatchResponse]
+	getModelPrices         *connect.Client[v1.GetModelPricesRequest, v1.GetModelPricesResponse]
+	reloadModelPrices      *connect.Client[v1.ReloadModelPricesRequest, v1.ReloadModelPricesResponse]
 }
 
 // InitInstrumentation calls llm.observability.v1.InstrumentationControlService.InitInstrumentation.
@@ -282,6 +322,17 @@ func (c *instrumentationControlServiceClient) ClearFallbackTracker(ctx context.C
 	return c.clearFallbackTracker.CallUnary(ctx, req)
 }
 
+// TrackToolCall calls llm.observability.v1.InstrumentationControlService.TrackToolCall.
+func (c *instrumentationControlServiceClient) TrackToolCall(ctx context.Context, req *connect.Request[v1.TrackToolCallRequest]) (*connect.Response[v1.TrackToolCallResponse], error) {
+	return c.trackToolCall.CallUnary(ctx, req)
+}
+
+// ClearToolCallTracker calls
+// llm.observability.v1.InstrumentationControlService.ClearToolCallTracker.
+func (c *instrumentationControlServiceClient) ClearToolCallTracker(ctx context.Context, req *connect.Request[v1.ClearToolCallTrackerRequest]) (*connect.Response[v1.ClearToolCallTrackerResponse], error) {
+	return c.clearToolCallTracker.CallUnary(ctx, req)
+}
+
 // InitMetrics calls llm.observability.v1.InstrumentationControlService.InitMetrics.
 func (c *instrumentationControlServiceClient) InitMetrics(ctx context.Context, req *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error) {
 	return c.initMetrics.CallUnary(ctx, req)
@@ -302,6 +353,16 @@ func (c *instrumentationControlServiceClient) RecordMetricsBatch(ctx context.Con
 	return c.recordMetricsBatch.CallUnary(ctx, req)
 }
 
+// GetModelPrices calls llm.observability.v1.InstrumentationControlService.GetModelPrices.
+func (c *instrumentationControlServiceClient) GetModelPrices(ctx context.Context, req *connect.Request[v1.GetModelPricesRequest]) (*connect.Response[v1.GetModelPricesResponse], error) {
+	return c.getModelPrices.CallUnary(ctx, req)
+}
+
+// ReloadModelPrices calls llm.observability.v1.InstrumentationControlService.ReloadModelPrices.
+func (c *instrumentationControlServiceClient) ReloadModelPrices(ctx context.Context, req *connect.Request[v1.ReloadModelPricesRequest]) (*connect.Response[v1.ReloadModelPricesResponse], error) {
+	return c.reloadModelPrices.CallUnary(ctx, req)
+}
+
 // InstrumentationControlServiceHandler is an implementation of the
 // llm.observability.v1.InstrumentationControlService service.
 type InstrumentationControlServiceHandler interface {
@@ -317,10 +378,14 @@ type InstrumentationControlServiceHandler interface {
 	GetEmbedding(context.Context, *connect.Request[v1.GetEmbeddingRequest]) (*connect.Response[v1.GetEmbeddingResponse], error)
 	TrackFallback(context.Context, *connect.Request[v1.TrackFallbackRequest]) (*connect.Response[v1.TrackFallbackResponse], error)
 	ClearFallbackTracker(context.Context, *connect.Request[v1.ClearFallbackTrackerRequest]) (*connect.Response[v1.ClearFallbackTrackerResponse], error)
+	TrackToolCall(context.Context, *connect.Request[v1.TrackToolCallRequest]) (*connect.Response[v1.TrackToolCallResponse], error)
+	ClearToolCallTracker(context.Context, *connect.Request[v1.ClearToolCallTrackerRequest]) (*connect.Response[v1.ClearToolCallTrackerResponse], error)
 	InitMetrics(context.Context, *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error)
 	GetMetricsHealth(context.Context, *connect.Request[v1.GetMetricsHealthRequest]) (*connect.Response[v1.GetMetricsHealthResponse], error)
 	RecordMetrics(context.Context, *connect.Request[v1.RecordMetricsRequest]) (*connect.Response[v1.RecordMetricsResponse], error)
 	RecordMetricsBatch(context.Context, *connect.Request[v1.RecordMetricsBatchRequest]) (*connect.Response[v1.RecordMetricsBatchResponse], error)
+	GetModelPrices(context.Context, *connect.Request[v1.GetModelPricesRequest]) (*connect.Response[v1.GetModelPricesResponse], error)
+	ReloadModelPrices(context.Context, *connect.Request[v1.ReloadModelPricesRequest]) (*connect.Response[v1.ReloadModelPricesResponse], error)
 }
 
 // NewInstrumentationControlServiceHandler builds an HTTP handler from the service implementation.
@@ -389,6 +454,16 @@ func NewInstrumentationControlServiceHandler(svc InstrumentationControlServiceHa
 		svc.ClearFallbackTracker,
 		opts...,
 	)
+	instrumentationControlServiceTrackToolCallHandler := connect.NewUnaryHandler(
+		InstrumentationControlServiceTrackToolCallProcedure,
+		svc.TrackToolCall,
+		opts...,
+	)
+	instrumentationControlServiceClearToolCallTrackerHandler := connect.NewUnaryHandler(
+		InstrumentationControlServiceClearToolCallTrackerProcedure,
+		svc.ClearToolCallTracker,
+		opts...,
+	)
 	instrumentationControlServiceInitMetricsHandler := connect.NewUnaryHandler(
 		InstrumentationControlServiceInitMetricsProcedure,
 		svc.InitMetrics,
@@ -407,6 +482,16 @@ func NewInstrumentationControlServiceHandler(svc InstrumentationControlServiceHa
 	instrumentationControlServiceRecordMetricsBatchHandler := connect.NewUnaryHandler(
 		InstrumentationControlServiceRecordMetricsBatchProcedure,
 		svc.RecordMetricsBatch,
+		opts...,
+	)
+	instrumentationControlServiceGetModelPricesHandler := connect.NewUnaryHandler(
+		InstrumentationControlServiceGetModelPricesProcedure,
+		svc.GetModelPrices,
+		opts...,
+	)
+	instrumentationControlServiceReloadModelPricesHandler := connect.NewUnaryHandler(
+		InstrumentationControlServiceReloadModelPricesProcedure,
+		svc.ReloadModelPrices,
 		opts...,
 	)
 	return "/llm.observability.v1.InstrumentationControlService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -435,6 +520,10 @@ func NewInstrumentationControlServiceHandler(svc InstrumentationControlServiceHa
 			instrumentationControlServiceTrackFallbackHandler.ServeHTTP(w, r)
 		case InstrumentationControlServiceClearFallbackTrackerProcedure:
 			instrumentationControlServiceClearFallbackTrackerHandler.ServeHTTP(w, r)
+		case InstrumentationControlServiceTrackToolCallProcedure:
+			instrumentationControlServiceTrackToolCallHandler.ServeHTTP(w, r)
+		case InstrumentationControlServiceClearToolCallTrackerProcedure:
+			instrumentationControlServiceClearToolCallTrackerHandler.ServeHTTP(w, r)
 		case InstrumentationControlServiceInitMetricsProcedure:
 			instrumentationControlServiceInitMetricsHandler.ServeHTTP(w, r)
 		case InstrumentationControlServiceGetMetricsHealthProcedure:
@@ -443,6 +532,10 @@ func NewInstrumentationControlServiceHandler(svc InstrumentationControlServiceHa
 			instrumentationControlServiceRecordMetricsHandler.ServeHTTP(w, r)
 		case InstrumentationControlServiceRecordMetricsBatchProcedure:
 			instrumentationControlServiceRecordMetricsBatchHandler.ServeHTTP(w, r)
+		case InstrumentationControlServiceGetModelPricesProcedure:
+			instrumentationControlServiceGetModelPricesHandler.ServeHTTP(w, r)
+		case InstrumentationControlServiceReloadModelPricesProcedure:
+			instrumentationControlServiceReloadModelPricesHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -500,6 +593,14 @@ func (UnimplementedInstrumentationControlServiceHandler) ClearFallbackTracker(co
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.ClearFallbackTracker is not implemented"))
 }
 
+func (UnimplementedInstrumentationControlServiceHandler) TrackToolCall(context.Context, *connect.Request[v1.TrackToolCallRequest]) (*connect.Response[v1.TrackToolCallResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.TrackToolCall is not implemented"))
+}
+
+func (UnimplementedInstrumentationControlServiceHandler) ClearToolCallTracker(context.Context, *connect.Request[v1.ClearToolCallTrackerRequest]) (*connect.Response[v1.ClearToolCallTrackerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.ClearToolCallTracker is not implemented"))
+}
+
 func (UnimplementedInstrumentationControlServiceHandler) InitMetrics(context.Context, *connect.Request[v1.InitMetricsRequest]) (*connect.Response[v1.InitMetricsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.InitMetrics is not implemented"))
 }
@@ -514,4 +615,12 @@ func (UnimplementedInstrumentationControlServiceHandler) RecordMetrics(context.C
 
 func (UnimplementedInstrumentationControlServiceHandler) RecordMetricsBatch(context.Context, *connect.Request[v1.RecordMetricsBatchRequest]) (*connect.Response[v1.RecordMetricsBatchResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.RecordMetricsBatch is not implemented"))
+}
+
+func (UnimplementedInstrumentationControlServiceHandler) GetModelPrices(context.Context, *connect.Request[v1.GetModelPricesRequest]) (*connect.Response[v1.GetModelPricesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.GetModelPrices is not implemented"))
+}
+
+func (UnimplementedInstrumentationControlServiceHandler) ReloadModelPrices(context.Context, *connect.Request[v1.ReloadModelPricesRequest]) (*connect.Response[v1.ReloadModelPricesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("llm.observability.v1.InstrumentationControlService.ReloadModelPrices is not implemented"))
 }

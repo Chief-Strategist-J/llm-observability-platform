@@ -477,6 +477,103 @@ export interface ClearFallbackTrackerResponse {
     success: boolean;
 }
 /**
+ * @generated from protobuf message llm.observability.v1.TrackToolCallRequest
+ */
+export interface TrackToolCallRequest {
+    /**
+     * @generated from protobuf field: string trace_id = 1;
+     */
+    traceId: string;
+    /**
+     * @generated from protobuf field: string span_id = 2;
+     */
+    spanId: string;
+    /**
+     * @generated from protobuf field: int64 cost_usd_micro = 3;
+     */
+    costUsdMicro: bigint;
+}
+/**
+ * @generated from protobuf message llm.observability.v1.TrackToolCallResponse
+ */
+export interface TrackToolCallResponse {
+    /**
+     * @generated from protobuf field: int64 total_cost = 1;
+     */
+    totalCost: bigint;
+}
+/**
+ * @generated from protobuf message llm.observability.v1.ClearToolCallTrackerRequest
+ */
+export interface ClearToolCallTrackerRequest {
+}
+/**
+ * @generated from protobuf message llm.observability.v1.ClearToolCallTrackerResponse
+ */
+export interface ClearToolCallTrackerResponse {
+    /**
+     * @generated from protobuf field: bool success = 1;
+     */
+    success: boolean;
+}
+/**
+ * @generated from protobuf message llm.observability.v1.GetModelPricesRequest
+ */
+export interface GetModelPricesRequest {
+}
+/**
+ * @generated from protobuf message llm.observability.v1.ModelPriceProto
+ */
+export interface ModelPriceProto {
+    /**
+     * @generated from protobuf field: string model = 1;
+     */
+    model: string;
+    /**
+     * @generated from protobuf field: string provider = 2;
+     */
+    provider: string;
+    /**
+     * @generated from protobuf field: double input_price_per_1m = 3 [json_name = "inputPricePer1m"];
+     */
+    inputPricePer1M: number;
+    /**
+     * @generated from protobuf field: double output_price_per_1m = 4 [json_name = "outputPricePer1m"];
+     */
+    outputPricePer1M: number;
+    /**
+     * @generated from protobuf field: string version = 5;
+     */
+    version: string;
+}
+/**
+ * @generated from protobuf message llm.observability.v1.GetModelPricesResponse
+ */
+export interface GetModelPricesResponse {
+    /**
+     * @generated from protobuf field: repeated llm.observability.v1.ModelPriceProto prices = 1;
+     */
+    prices: ModelPriceProto[];
+}
+/**
+ * @generated from protobuf message llm.observability.v1.ReloadModelPricesRequest
+ */
+export interface ReloadModelPricesRequest {
+}
+/**
+ * @generated from protobuf message llm.observability.v1.ReloadModelPricesResponse
+ */
+export interface ReloadModelPricesResponse {
+    /**
+     * @generated from protobuf field: bool initialized = 1;
+     */
+    initialized: boolean;
+    /**
+     * @generated from protobuf field: string message = 2;
+     */
+    message: string;
+}
+/**
  * InstrumentationStatus represents the current state of auto-instrumentation.
  *
  * @generated from protobuf enum llm.observability.v1.InstrumentationStatus
@@ -2322,6 +2419,415 @@ class ClearFallbackTrackerResponse$Type extends MessageType<ClearFallbackTracker
  * @generated MessageType for protobuf message llm.observability.v1.ClearFallbackTrackerResponse
  */
 export const ClearFallbackTrackerResponse = new ClearFallbackTrackerResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class TrackToolCallRequest$Type extends MessageType<TrackToolCallRequest> {
+    constructor() {
+        super("llm.observability.v1.TrackToolCallRequest", [
+            { no: 1, name: "trace_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "span_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "cost_usd_micro", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ }
+        ]);
+    }
+    create(value?: PartialMessage<TrackToolCallRequest>): TrackToolCallRequest {
+        const message = { traceId: "", spanId: "", costUsdMicro: 0n };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<TrackToolCallRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: TrackToolCallRequest): TrackToolCallRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string trace_id */ 1:
+                    message.traceId = reader.string();
+                    break;
+                case /* string span_id */ 2:
+                    message.spanId = reader.string();
+                    break;
+                case /* int64 cost_usd_micro */ 3:
+                    message.costUsdMicro = reader.int64().toBigInt();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: TrackToolCallRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string trace_id = 1; */
+        if (message.traceId !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.traceId);
+        /* string span_id = 2; */
+        if (message.spanId !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.spanId);
+        /* int64 cost_usd_micro = 3; */
+        if (message.costUsdMicro !== 0n)
+            writer.tag(3, WireType.Varint).int64(message.costUsdMicro);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.TrackToolCallRequest
+ */
+export const TrackToolCallRequest = new TrackToolCallRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class TrackToolCallResponse$Type extends MessageType<TrackToolCallResponse> {
+    constructor() {
+        super("llm.observability.v1.TrackToolCallResponse", [
+            { no: 1, name: "total_cost", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ }
+        ]);
+    }
+    create(value?: PartialMessage<TrackToolCallResponse>): TrackToolCallResponse {
+        const message = { totalCost: 0n };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<TrackToolCallResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: TrackToolCallResponse): TrackToolCallResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* int64 total_cost */ 1:
+                    message.totalCost = reader.int64().toBigInt();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: TrackToolCallResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* int64 total_cost = 1; */
+        if (message.totalCost !== 0n)
+            writer.tag(1, WireType.Varint).int64(message.totalCost);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.TrackToolCallResponse
+ */
+export const TrackToolCallResponse = new TrackToolCallResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ClearToolCallTrackerRequest$Type extends MessageType<ClearToolCallTrackerRequest> {
+    constructor() {
+        super("llm.observability.v1.ClearToolCallTrackerRequest", []);
+    }
+    create(value?: PartialMessage<ClearToolCallTrackerRequest>): ClearToolCallTrackerRequest {
+        const message = {};
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<ClearToolCallTrackerRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ClearToolCallTrackerRequest): ClearToolCallTrackerRequest {
+        return target ?? this.create();
+    }
+    internalBinaryWrite(message: ClearToolCallTrackerRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.ClearToolCallTrackerRequest
+ */
+export const ClearToolCallTrackerRequest = new ClearToolCallTrackerRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ClearToolCallTrackerResponse$Type extends MessageType<ClearToolCallTrackerResponse> {
+    constructor() {
+        super("llm.observability.v1.ClearToolCallTrackerResponse", [
+            { no: 1, name: "success", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ClearToolCallTrackerResponse>): ClearToolCallTrackerResponse {
+        const message = { success: false };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<ClearToolCallTrackerResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ClearToolCallTrackerResponse): ClearToolCallTrackerResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* bool success */ 1:
+                    message.success = reader.bool();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ClearToolCallTrackerResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* bool success = 1; */
+        if (message.success !== false)
+            writer.tag(1, WireType.Varint).bool(message.success);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.ClearToolCallTrackerResponse
+ */
+export const ClearToolCallTrackerResponse = new ClearToolCallTrackerResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetModelPricesRequest$Type extends MessageType<GetModelPricesRequest> {
+    constructor() {
+        super("llm.observability.v1.GetModelPricesRequest", []);
+    }
+    create(value?: PartialMessage<GetModelPricesRequest>): GetModelPricesRequest {
+        const message = {};
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<GetModelPricesRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetModelPricesRequest): GetModelPricesRequest {
+        return target ?? this.create();
+    }
+    internalBinaryWrite(message: GetModelPricesRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.GetModelPricesRequest
+ */
+export const GetModelPricesRequest = new GetModelPricesRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ModelPriceProto$Type extends MessageType<ModelPriceProto> {
+    constructor() {
+        super("llm.observability.v1.ModelPriceProto", [
+            { no: 1, name: "model", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "provider", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "input_price_per_1m", kind: "scalar", jsonName: "inputPricePer1m", T: 1 /*ScalarType.DOUBLE*/ },
+            { no: 4, name: "output_price_per_1m", kind: "scalar", jsonName: "outputPricePer1m", T: 1 /*ScalarType.DOUBLE*/ },
+            { no: 5, name: "version", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ModelPriceProto>): ModelPriceProto {
+        const message = { model: "", provider: "", inputPricePer1M: 0, outputPricePer1M: 0, version: "" };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<ModelPriceProto>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ModelPriceProto): ModelPriceProto {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string model */ 1:
+                    message.model = reader.string();
+                    break;
+                case /* string provider */ 2:
+                    message.provider = reader.string();
+                    break;
+                case /* double input_price_per_1m = 3 [json_name = "inputPricePer1m"];*/ 3:
+                    message.inputPricePer1M = reader.double();
+                    break;
+                case /* double output_price_per_1m = 4 [json_name = "outputPricePer1m"];*/ 4:
+                    message.outputPricePer1M = reader.double();
+                    break;
+                case /* string version */ 5:
+                    message.version = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ModelPriceProto, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string model = 1; */
+        if (message.model !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.model);
+        /* string provider = 2; */
+        if (message.provider !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.provider);
+        /* double input_price_per_1m = 3 [json_name = "inputPricePer1m"]; */
+        if (message.inputPricePer1M !== 0)
+            writer.tag(3, WireType.Bit64).double(message.inputPricePer1M);
+        /* double output_price_per_1m = 4 [json_name = "outputPricePer1m"]; */
+        if (message.outputPricePer1M !== 0)
+            writer.tag(4, WireType.Bit64).double(message.outputPricePer1M);
+        /* string version = 5; */
+        if (message.version !== "")
+            writer.tag(5, WireType.LengthDelimited).string(message.version);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.ModelPriceProto
+ */
+export const ModelPriceProto = new ModelPriceProto$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetModelPricesResponse$Type extends MessageType<GetModelPricesResponse> {
+    constructor() {
+        super("llm.observability.v1.GetModelPricesResponse", [
+            { no: 1, name: "prices", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => ModelPriceProto }
+        ]);
+    }
+    create(value?: PartialMessage<GetModelPricesResponse>): GetModelPricesResponse {
+        const message = { prices: [] };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<GetModelPricesResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetModelPricesResponse): GetModelPricesResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated llm.observability.v1.ModelPriceProto prices */ 1:
+                    message.prices.push(ModelPriceProto.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetModelPricesResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated llm.observability.v1.ModelPriceProto prices = 1; */
+        for (let i = 0; i < message.prices.length; i++)
+            ModelPriceProto.internalBinaryWrite(message.prices[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.GetModelPricesResponse
+ */
+export const GetModelPricesResponse = new GetModelPricesResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ReloadModelPricesRequest$Type extends MessageType<ReloadModelPricesRequest> {
+    constructor() {
+        super("llm.observability.v1.ReloadModelPricesRequest", []);
+    }
+    create(value?: PartialMessage<ReloadModelPricesRequest>): ReloadModelPricesRequest {
+        const message = {};
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<ReloadModelPricesRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ReloadModelPricesRequest): ReloadModelPricesRequest {
+        return target ?? this.create();
+    }
+    internalBinaryWrite(message: ReloadModelPricesRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.ReloadModelPricesRequest
+ */
+export const ReloadModelPricesRequest = new ReloadModelPricesRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ReloadModelPricesResponse$Type extends MessageType<ReloadModelPricesResponse> {
+    constructor() {
+        super("llm.observability.v1.ReloadModelPricesResponse", [
+            { no: 1, name: "initialized", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 2, name: "message", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ReloadModelPricesResponse>): ReloadModelPricesResponse {
+        const message = { initialized: false, message: "" };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<ReloadModelPricesResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ReloadModelPricesResponse): ReloadModelPricesResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* bool initialized */ 1:
+                    message.initialized = reader.bool();
+                    break;
+                case /* string message */ 2:
+                    message.message = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ReloadModelPricesResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* bool initialized = 1; */
+        if (message.initialized !== false)
+            writer.tag(1, WireType.Varint).bool(message.initialized);
+        /* string message = 2; */
+        if (message.message !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.message);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message llm.observability.v1.ReloadModelPricesResponse
+ */
+export const ReloadModelPricesResponse = new ReloadModelPricesResponse$Type();
 /**
  * @generated ServiceType for protobuf service llm.observability.v1.InstrumentationControlService
  */
@@ -2338,8 +2844,12 @@ export const InstrumentationControlService = new ServiceType("llm.observability.
     { name: "GetEmbedding", options: {}, I: GetEmbeddingRequest, O: GetEmbeddingResponse },
     { name: "TrackFallback", options: {}, I: TrackFallbackRequest, O: TrackFallbackResponse },
     { name: "ClearFallbackTracker", options: {}, I: ClearFallbackTrackerRequest, O: ClearFallbackTrackerResponse },
+    { name: "TrackToolCall", options: {}, I: TrackToolCallRequest, O: TrackToolCallResponse },
+    { name: "ClearToolCallTracker", options: {}, I: ClearToolCallTrackerRequest, O: ClearToolCallTrackerResponse },
     { name: "InitMetrics", options: {}, I: InitMetricsRequest, O: InitMetricsResponse },
     { name: "GetMetricsHealth", options: {}, I: GetMetricsHealthRequest, O: GetMetricsHealthResponse },
     { name: "RecordMetrics", options: {}, I: RecordMetricsRequest, O: RecordMetricsResponse },
-    { name: "RecordMetricsBatch", options: {}, I: RecordMetricsBatchRequest, O: RecordMetricsBatchResponse }
+    { name: "RecordMetricsBatch", options: {}, I: RecordMetricsBatchRequest, O: RecordMetricsBatchResponse },
+    { name: "GetModelPrices", options: {}, I: GetModelPricesRequest, O: GetModelPricesResponse },
+    { name: "ReloadModelPrices", options: {}, I: ReloadModelPricesRequest, O: ReloadModelPricesResponse }
 ]);

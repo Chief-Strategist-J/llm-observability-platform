@@ -87,6 +87,15 @@ public object InstrumentationControlServiceGrpcKt {
     @JvmStatic
     get() = InstrumentationControlServiceGrpc.getClearFallbackTrackerMethod()
 
+  public val trackToolCallMethod: MethodDescriptor<TrackToolCallRequest, TrackToolCallResponse>
+    @JvmStatic
+    get() = InstrumentationControlServiceGrpc.getTrackToolCallMethod()
+
+  public val clearToolCallTrackerMethod:
+      MethodDescriptor<ClearToolCallTrackerRequest, ClearToolCallTrackerResponse>
+    @JvmStatic
+    get() = InstrumentationControlServiceGrpc.getClearToolCallTrackerMethod()
+
   public val initMetricsMethod: MethodDescriptor<InitMetricsRequest, InitMetricsResponse>
     @JvmStatic
     get() = InstrumentationControlServiceGrpc.getInitMetricsMethod()
@@ -104,6 +113,15 @@ public object InstrumentationControlServiceGrpcKt {
       MethodDescriptor<RecordMetricsBatchRequest, RecordMetricsBatchResponse>
     @JvmStatic
     get() = InstrumentationControlServiceGrpc.getRecordMetricsBatchMethod()
+
+  public val getModelPricesMethod: MethodDescriptor<GetModelPricesRequest, GetModelPricesResponse>
+    @JvmStatic
+    get() = InstrumentationControlServiceGrpc.getGetModelPricesMethod()
+
+  public val reloadModelPricesMethod:
+      MethodDescriptor<ReloadModelPricesRequest, ReloadModelPricesResponse>
+    @JvmStatic
+    get() = InstrumentationControlServiceGrpc.getReloadModelPricesMethod()
 
   /**
    * A stub for issuing RPCs to a(n) llm.observability.v1.InstrumentationControlService service as
@@ -395,6 +413,50 @@ public object InstrumentationControlServiceGrpcKt {
      *
      * @return The single response from the server.
      */
+    public suspend fun trackToolCall(request: TrackToolCallRequest, headers: Metadata = Metadata()):
+        TrackToolCallResponse = unaryRpc(
+      channel,
+      InstrumentationControlServiceGrpc.getTrackToolCallMethod(),
+      request,
+      callOptions,
+      headers
+    )
+
+    /**
+     * Executes this RPC and returns the response message, suspending until the RPC completes
+     * with [`Status.OK`][io.grpc.Status].  If the RPC completes with another status, a
+     * corresponding
+     * [StatusException] is thrown.  If this coroutine is cancelled, the RPC is also cancelled
+     * with the corresponding exception as a cause.
+     *
+     * @param request The request message to send to the server.
+     *
+     * @param headers Metadata to attach to the request.  Most users will not need this.
+     *
+     * @return The single response from the server.
+     */
+    public suspend fun clearToolCallTracker(request: ClearToolCallTrackerRequest, headers: Metadata
+        = Metadata()): ClearToolCallTrackerResponse = unaryRpc(
+      channel,
+      InstrumentationControlServiceGrpc.getClearToolCallTrackerMethod(),
+      request,
+      callOptions,
+      headers
+    )
+
+    /**
+     * Executes this RPC and returns the response message, suspending until the RPC completes
+     * with [`Status.OK`][io.grpc.Status].  If the RPC completes with another status, a
+     * corresponding
+     * [StatusException] is thrown.  If this coroutine is cancelled, the RPC is also cancelled
+     * with the corresponding exception as a cause.
+     *
+     * @param request The request message to send to the server.
+     *
+     * @param headers Metadata to attach to the request.  Most users will not need this.
+     *
+     * @return The single response from the server.
+     */
     public suspend fun initMetrics(request: InitMetricsRequest, headers: Metadata = Metadata()):
         InitMetricsResponse = unaryRpc(
       channel,
@@ -465,6 +527,50 @@ public object InstrumentationControlServiceGrpcKt {
         Metadata()): RecordMetricsBatchResponse = unaryRpc(
       channel,
       InstrumentationControlServiceGrpc.getRecordMetricsBatchMethod(),
+      request,
+      callOptions,
+      headers
+    )
+
+    /**
+     * Executes this RPC and returns the response message, suspending until the RPC completes
+     * with [`Status.OK`][io.grpc.Status].  If the RPC completes with another status, a
+     * corresponding
+     * [StatusException] is thrown.  If this coroutine is cancelled, the RPC is also cancelled
+     * with the corresponding exception as a cause.
+     *
+     * @param request The request message to send to the server.
+     *
+     * @param headers Metadata to attach to the request.  Most users will not need this.
+     *
+     * @return The single response from the server.
+     */
+    public suspend fun getModelPrices(request: GetModelPricesRequest, headers: Metadata =
+        Metadata()): GetModelPricesResponse = unaryRpc(
+      channel,
+      InstrumentationControlServiceGrpc.getGetModelPricesMethod(),
+      request,
+      callOptions,
+      headers
+    )
+
+    /**
+     * Executes this RPC and returns the response message, suspending until the RPC completes
+     * with [`Status.OK`][io.grpc.Status].  If the RPC completes with another status, a
+     * corresponding
+     * [StatusException] is thrown.  If this coroutine is cancelled, the RPC is also cancelled
+     * with the corresponding exception as a cause.
+     *
+     * @param request The request message to send to the server.
+     *
+     * @param headers Metadata to attach to the request.  Most users will not need this.
+     *
+     * @return The single response from the server.
+     */
+    public suspend fun reloadModelPrices(request: ReloadModelPricesRequest, headers: Metadata =
+        Metadata()): ReloadModelPricesResponse = unaryRpc(
+      channel,
+      InstrumentationControlServiceGrpc.getReloadModelPricesMethod(),
       request,
       callOptions,
       headers
@@ -668,6 +774,38 @@ public object InstrumentationControlServiceGrpcKt {
 
     /**
      * Returns the response to an RPC for
+     * llm.observability.v1.InstrumentationControlService.TrackToolCall.
+     *
+     * If this method fails with a [StatusException], the RPC will fail with the corresponding
+     * [io.grpc.Status].  If this method fails with a [java.util.concurrent.CancellationException],
+     * the RPC will fail
+     * with status `Status.CANCELLED`.  If this method fails for any other reason, the RPC will
+     * fail with `Status.UNKNOWN` with the exception as a cause.
+     *
+     * @param request The request from the client.
+     */
+    public open suspend fun trackToolCall(request: TrackToolCallRequest): TrackToolCallResponse =
+        throw
+        StatusException(UNIMPLEMENTED.withDescription("Method llm.observability.v1.InstrumentationControlService.TrackToolCall is unimplemented"))
+
+    /**
+     * Returns the response to an RPC for
+     * llm.observability.v1.InstrumentationControlService.ClearToolCallTracker.
+     *
+     * If this method fails with a [StatusException], the RPC will fail with the corresponding
+     * [io.grpc.Status].  If this method fails with a [java.util.concurrent.CancellationException],
+     * the RPC will fail
+     * with status `Status.CANCELLED`.  If this method fails for any other reason, the RPC will
+     * fail with `Status.UNKNOWN` with the exception as a cause.
+     *
+     * @param request The request from the client.
+     */
+    public open suspend fun clearToolCallTracker(request: ClearToolCallTrackerRequest):
+        ClearToolCallTrackerResponse = throw
+        StatusException(UNIMPLEMENTED.withDescription("Method llm.observability.v1.InstrumentationControlService.ClearToolCallTracker is unimplemented"))
+
+    /**
+     * Returns the response to an RPC for
      * llm.observability.v1.InstrumentationControlService.InitMetrics.
      *
      * If this method fails with a [StatusException], the RPC will fail with the corresponding
@@ -728,6 +866,38 @@ public object InstrumentationControlServiceGrpcKt {
     public open suspend fun recordMetricsBatch(request: RecordMetricsBatchRequest):
         RecordMetricsBatchResponse = throw
         StatusException(UNIMPLEMENTED.withDescription("Method llm.observability.v1.InstrumentationControlService.RecordMetricsBatch is unimplemented"))
+
+    /**
+     * Returns the response to an RPC for
+     * llm.observability.v1.InstrumentationControlService.GetModelPrices.
+     *
+     * If this method fails with a [StatusException], the RPC will fail with the corresponding
+     * [io.grpc.Status].  If this method fails with a [java.util.concurrent.CancellationException],
+     * the RPC will fail
+     * with status `Status.CANCELLED`.  If this method fails for any other reason, the RPC will
+     * fail with `Status.UNKNOWN` with the exception as a cause.
+     *
+     * @param request The request from the client.
+     */
+    public open suspend fun getModelPrices(request: GetModelPricesRequest): GetModelPricesResponse =
+        throw
+        StatusException(UNIMPLEMENTED.withDescription("Method llm.observability.v1.InstrumentationControlService.GetModelPrices is unimplemented"))
+
+    /**
+     * Returns the response to an RPC for
+     * llm.observability.v1.InstrumentationControlService.ReloadModelPrices.
+     *
+     * If this method fails with a [StatusException], the RPC will fail with the corresponding
+     * [io.grpc.Status].  If this method fails with a [java.util.concurrent.CancellationException],
+     * the RPC will fail
+     * with status `Status.CANCELLED`.  If this method fails for any other reason, the RPC will
+     * fail with `Status.UNKNOWN` with the exception as a cause.
+     *
+     * @param request The request from the client.
+     */
+    public open suspend fun reloadModelPrices(request: ReloadModelPricesRequest):
+        ReloadModelPricesResponse = throw
+        StatusException(UNIMPLEMENTED.withDescription("Method llm.observability.v1.InstrumentationControlService.ReloadModelPrices is unimplemented"))
 
     final override fun bindService(): ServerServiceDefinition = builder(getServiceDescriptor())
       .addMethod(unaryServerMethodDefinition(
@@ -792,6 +962,16 @@ public object InstrumentationControlServiceGrpcKt {
     ))
       .addMethod(unaryServerMethodDefinition(
       context = this.context,
+      descriptor = InstrumentationControlServiceGrpc.getTrackToolCallMethod(),
+      implementation = ::trackToolCall
+    ))
+      .addMethod(unaryServerMethodDefinition(
+      context = this.context,
+      descriptor = InstrumentationControlServiceGrpc.getClearToolCallTrackerMethod(),
+      implementation = ::clearToolCallTracker
+    ))
+      .addMethod(unaryServerMethodDefinition(
+      context = this.context,
       descriptor = InstrumentationControlServiceGrpc.getInitMetricsMethod(),
       implementation = ::initMetrics
     ))
@@ -809,6 +989,16 @@ public object InstrumentationControlServiceGrpcKt {
       context = this.context,
       descriptor = InstrumentationControlServiceGrpc.getRecordMetricsBatchMethod(),
       implementation = ::recordMetricsBatch
+    ))
+      .addMethod(unaryServerMethodDefinition(
+      context = this.context,
+      descriptor = InstrumentationControlServiceGrpc.getGetModelPricesMethod(),
+      implementation = ::getModelPrices
+    ))
+      .addMethod(unaryServerMethodDefinition(
+      context = this.context,
+      descriptor = InstrumentationControlServiceGrpc.getReloadModelPricesMethod(),
+      implementation = ::reloadModelPrices
     )).build()
   }
 }

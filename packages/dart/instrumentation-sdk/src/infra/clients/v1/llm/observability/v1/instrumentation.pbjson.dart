@@ -529,6 +529,120 @@ final $typed_data.Uint8List clearFallbackTrackerResponseDescriptor = $convert.ba
     'ChxDbGVhckZhbGxiYWNrVHJhY2tlclJlc3BvbnNlEhgKB3N1Y2Nlc3MYASABKAhSB3N1Y2Nlc3'
     'M=');
 
+@$core.Deprecated('Use trackToolCallRequestDescriptor instead')
+const TrackToolCallRequest$json = {
+  '1': 'TrackToolCallRequest',
+  '2': [
+    {'1': 'trace_id', '3': 1, '4': 1, '5': 9, '10': 'traceId'},
+    {'1': 'span_id', '3': 2, '4': 1, '5': 9, '10': 'spanId'},
+    {'1': 'cost_usd_micro', '3': 3, '4': 1, '5': 3, '10': 'costUsdMicro'},
+  ],
+};
+
+/// Descriptor for `TrackToolCallRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List trackToolCallRequestDescriptor = $convert.base64Decode(
+    'ChRUcmFja1Rvb2xDYWxsUmVxdWVzdBIZCgh0cmFjZV9pZBgBIAEoCVIHdHJhY2VJZBIXCgdzcG'
+    'FuX2lkGAIgASgJUgZzcGFuSWQSJAoOY29zdF91c2RfbWljcm8YAyABKANSDGNvc3RVc2RNaWNy'
+    'bw==');
+
+@$core.Deprecated('Use trackToolCallResponseDescriptor instead')
+const TrackToolCallResponse$json = {
+  '1': 'TrackToolCallResponse',
+  '2': [
+    {'1': 'total_cost', '3': 1, '4': 1, '5': 3, '10': 'totalCost'},
+  ],
+};
+
+/// Descriptor for `TrackToolCallResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List trackToolCallResponseDescriptor = $convert.base64Decode(
+    'ChVUcmFja1Rvb2xDYWxsUmVzcG9uc2USHQoKdG90YWxfY29zdBgBIAEoA1IJdG90YWxDb3N0');
+
+@$core.Deprecated('Use clearToolCallTrackerRequestDescriptor instead')
+const ClearToolCallTrackerRequest$json = {
+  '1': 'ClearToolCallTrackerRequest',
+};
+
+/// Descriptor for `ClearToolCallTrackerRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List clearToolCallTrackerRequestDescriptor = $convert.base64Decode(
+    'ChtDbGVhclRvb2xDYWxsVHJhY2tlclJlcXVlc3Q=');
+
+@$core.Deprecated('Use clearToolCallTrackerResponseDescriptor instead')
+const ClearToolCallTrackerResponse$json = {
+  '1': 'ClearToolCallTrackerResponse',
+  '2': [
+    {'1': 'success', '3': 1, '4': 1, '5': 8, '10': 'success'},
+  ],
+};
+
+/// Descriptor for `ClearToolCallTrackerResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List clearToolCallTrackerResponseDescriptor = $convert.base64Decode(
+    'ChxDbGVhclRvb2xDYWxsVHJhY2tlclJlc3BvbnNlEhgKB3N1Y2Nlc3MYASABKAhSB3N1Y2Nlc3'
+    'M=');
+
+@$core.Deprecated('Use getModelPricesRequestDescriptor instead')
+const GetModelPricesRequest$json = {
+  '1': 'GetModelPricesRequest',
+};
+
+/// Descriptor for `GetModelPricesRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getModelPricesRequestDescriptor = $convert.base64Decode(
+    'ChVHZXRNb2RlbFByaWNlc1JlcXVlc3Q=');
+
+@$core.Deprecated('Use modelPriceProtoDescriptor instead')
+const ModelPriceProto$json = {
+  '1': 'ModelPriceProto',
+  '2': [
+    {'1': 'model', '3': 1, '4': 1, '5': 9, '10': 'model'},
+    {'1': 'provider', '3': 2, '4': 1, '5': 9, '10': 'provider'},
+    {'1': 'input_price_per_1m', '3': 3, '4': 1, '5': 1, '10': 'inputPricePer1m'},
+    {'1': 'output_price_per_1m', '3': 4, '4': 1, '5': 1, '10': 'outputPricePer1m'},
+    {'1': 'version', '3': 5, '4': 1, '5': 9, '10': 'version'},
+  ],
+};
+
+/// Descriptor for `ModelPriceProto`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List modelPriceProtoDescriptor = $convert.base64Decode(
+    'Cg9Nb2RlbFByaWNlUHJvdG8SFAoFbW9kZWwYASABKAlSBW1vZGVsEhoKCHByb3ZpZGVyGAIgAS'
+    'gJUghwcm92aWRlchIrChJpbnB1dF9wcmljZV9wZXJfMW0YAyABKAFSD2lucHV0UHJpY2VQZXIx'
+    'bRItChNvdXRwdXRfcHJpY2VfcGVyXzFtGAQgASgBUhBvdXRwdXRQcmljZVBlcjFtEhgKB3Zlcn'
+    'Npb24YBSABKAlSB3ZlcnNpb24=');
+
+@$core.Deprecated('Use getModelPricesResponseDescriptor instead')
+const GetModelPricesResponse$json = {
+  '1': 'GetModelPricesResponse',
+  '2': [
+    {'1': 'prices', '3': 1, '4': 3, '5': 11, '6': '.llm.observability.v1.ModelPriceProto', '10': 'prices'},
+  ],
+};
+
+/// Descriptor for `GetModelPricesResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getModelPricesResponseDescriptor = $convert.base64Decode(
+    'ChZHZXRNb2RlbFByaWNlc1Jlc3BvbnNlEj0KBnByaWNlcxgBIAMoCzIlLmxsbS5vYnNlcnZhYm'
+    'lsaXR5LnYxLk1vZGVsUHJpY2VQcm90b1IGcHJpY2Vz');
+
+@$core.Deprecated('Use reloadModelPricesRequestDescriptor instead')
+const ReloadModelPricesRequest$json = {
+  '1': 'ReloadModelPricesRequest',
+};
+
+/// Descriptor for `ReloadModelPricesRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List reloadModelPricesRequestDescriptor = $convert.base64Decode(
+    'ChhSZWxvYWRNb2RlbFByaWNlc1JlcXVlc3Q=');
+
+@$core.Deprecated('Use reloadModelPricesResponseDescriptor instead')
+const ReloadModelPricesResponse$json = {
+  '1': 'ReloadModelPricesResponse',
+  '2': [
+    {'1': 'initialized', '3': 1, '4': 1, '5': 8, '10': 'initialized'},
+    {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
+  ],
+};
+
+/// Descriptor for `ReloadModelPricesResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List reloadModelPricesResponseDescriptor = $convert.base64Decode(
+    'ChlSZWxvYWRNb2RlbFByaWNlc1Jlc3BvbnNlEiAKC2luaXRpYWxpemVkGAEgASgIUgtpbml0aW'
+    'FsaXplZBIYCgdtZXNzYWdlGAIgASgJUgdtZXNzYWdl');
+
 const $core.Map<$core.String, $core.dynamic> InstrumentationControlServiceBase$json = {
   '1': 'InstrumentationControlService',
   '2': [
@@ -544,10 +658,14 @@ const $core.Map<$core.String, $core.dynamic> InstrumentationControlServiceBase$j
     {'1': 'GetEmbedding', '2': '.llm.observability.v1.GetEmbeddingRequest', '3': '.llm.observability.v1.GetEmbeddingResponse'},
     {'1': 'TrackFallback', '2': '.llm.observability.v1.TrackFallbackRequest', '3': '.llm.observability.v1.TrackFallbackResponse'},
     {'1': 'ClearFallbackTracker', '2': '.llm.observability.v1.ClearFallbackTrackerRequest', '3': '.llm.observability.v1.ClearFallbackTrackerResponse'},
+    {'1': 'TrackToolCall', '2': '.llm.observability.v1.TrackToolCallRequest', '3': '.llm.observability.v1.TrackToolCallResponse'},
+    {'1': 'ClearToolCallTracker', '2': '.llm.observability.v1.ClearToolCallTrackerRequest', '3': '.llm.observability.v1.ClearToolCallTrackerResponse'},
     {'1': 'InitMetrics', '2': '.llm.observability.v1.InitMetricsRequest', '3': '.llm.observability.v1.InitMetricsResponse'},
     {'1': 'GetMetricsHealth', '2': '.llm.observability.v1.GetMetricsHealthRequest', '3': '.llm.observability.v1.GetMetricsHealthResponse'},
     {'1': 'RecordMetrics', '2': '.llm.observability.v1.RecordMetricsRequest', '3': '.llm.observability.v1.RecordMetricsResponse'},
     {'1': 'RecordMetricsBatch', '2': '.llm.observability.v1.RecordMetricsBatchRequest', '3': '.llm.observability.v1.RecordMetricsBatchResponse'},
+    {'1': 'GetModelPrices', '2': '.llm.observability.v1.GetModelPricesRequest', '3': '.llm.observability.v1.GetModelPricesResponse'},
+    {'1': 'ReloadModelPrices', '2': '.llm.observability.v1.ReloadModelPricesRequest', '3': '.llm.observability.v1.ReloadModelPricesResponse'},
   ],
 };
 
@@ -577,6 +695,10 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>> Instrument
   '.llm.observability.v1.TrackFallbackResponse': TrackFallbackResponse$json,
   '.llm.observability.v1.ClearFallbackTrackerRequest': ClearFallbackTrackerRequest$json,
   '.llm.observability.v1.ClearFallbackTrackerResponse': ClearFallbackTrackerResponse$json,
+  '.llm.observability.v1.TrackToolCallRequest': TrackToolCallRequest$json,
+  '.llm.observability.v1.TrackToolCallResponse': TrackToolCallResponse$json,
+  '.llm.observability.v1.ClearToolCallTrackerRequest': ClearToolCallTrackerRequest$json,
+  '.llm.observability.v1.ClearToolCallTrackerResponse': ClearToolCallTrackerResponse$json,
   '.llm.observability.v1.InitMetricsRequest': InitMetricsRequest$json,
   '.llm.observability.v1.InitMetricsResponse': InitMetricsResponse$json,
   '.llm.observability.v1.GetMetricsHealthRequest': GetMetricsHealthRequest$json,
@@ -585,6 +707,11 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>> Instrument
   '.llm.observability.v1.RecordMetricsResponse': RecordMetricsResponse$json,
   '.llm.observability.v1.RecordMetricsBatchRequest': RecordMetricsBatchRequest$json,
   '.llm.observability.v1.RecordMetricsBatchResponse': RecordMetricsBatchResponse$json,
+  '.llm.observability.v1.GetModelPricesRequest': GetModelPricesRequest$json,
+  '.llm.observability.v1.GetModelPricesResponse': GetModelPricesResponse$json,
+  '.llm.observability.v1.ModelPriceProto': ModelPriceProto$json,
+  '.llm.observability.v1.ReloadModelPricesRequest': ReloadModelPricesRequest$json,
+  '.llm.observability.v1.ReloadModelPricesResponse': ReloadModelPricesResponse$json,
 };
 
 /// Descriptor for `InstrumentationControlService`. Decode as a `google.protobuf.ServiceDescriptorProto`.
@@ -614,13 +741,21 @@ final $typed_data.Uint8List instrumentationControlServiceDescriptor = $convert.b
     'bG0ub2JzZXJ2YWJpbGl0eS52MS5UcmFja0ZhbGxiYWNrUmVzcG9uc2USfQoUQ2xlYXJGYWxsYm'
     'Fja1RyYWNrZXISMS5sbG0ub2JzZXJ2YWJpbGl0eS52MS5DbGVhckZhbGxiYWNrVHJhY2tlclJl'
     'cXVlc3QaMi5sbG0ub2JzZXJ2YWJpbGl0eS52MS5DbGVhckZhbGxiYWNrVHJhY2tlclJlc3Bvbn'
-    'NlEmIKC0luaXRNZXRyaWNzEigubGxtLm9ic2VydmFiaWxpdHkudjEuSW5pdE1ldHJpY3NSZXF1'
-    'ZXN0GikubGxtLm9ic2VydmFiaWxpdHkudjEuSW5pdE1ldHJpY3NSZXNwb25zZRJxChBHZXRNZX'
-    'RyaWNzSGVhbHRoEi0ubGxtLm9ic2VydmFiaWxpdHkudjEuR2V0TWV0cmljc0hlYWx0aFJlcXVl'
-    'c3QaLi5sbG0ub2JzZXJ2YWJpbGl0eS52MS5HZXRNZXRyaWNzSGVhbHRoUmVzcG9uc2USaAoNUm'
-    'Vjb3JkTWV0cmljcxIqLmxsbS5vYnNlcnZhYmlsaXR5LnYxLlJlY29yZE1ldHJpY3NSZXF1ZXN0'
-    'GisubGxtLm9ic2VydmFiaWxpdHkudjEuUmVjb3JkTWV0cmljc1Jlc3BvbnNlEncKElJlY29yZE'
-    '1ldHJpY3NCYXRjaBIvLmxsbS5vYnNlcnZhYmlsaXR5LnYxLlJlY29yZE1ldHJpY3NCYXRjaFJl'
-    'cXVlc3QaMC5sbG0ub2JzZXJ2YWJpbGl0eS52MS5SZWNvcmRNZXRyaWNzQmF0Y2hSZXNwb25zZQ'
-    '==');
+    'NlEmgKDVRyYWNrVG9vbENhbGwSKi5sbG0ub2JzZXJ2YWJpbGl0eS52MS5UcmFja1Rvb2xDYWxs'
+    'UmVxdWVzdBorLmxsbS5vYnNlcnZhYmlsaXR5LnYxLlRyYWNrVG9vbENhbGxSZXNwb25zZRJ9Ch'
+    'RDbGVhclRvb2xDYWxsVHJhY2tlchIxLmxsbS5vYnNlcnZhYmlsaXR5LnYxLkNsZWFyVG9vbENh'
+    'bGxUcmFja2VyUmVxdWVzdBoyLmxsbS5vYnNlcnZhYmlsaXR5LnYxLkNsZWFyVG9vbENhbGxUcm'
+    'Fja2VyUmVzcG9uc2USYgoLSW5pdE1ldHJpY3MSKC5sbG0ub2JzZXJ2YWJpbGl0eS52MS5Jbml0'
+    'TWV0cmljc1JlcXVlc3QaKS5sbG0ub2JzZXJ2YWJpbGl0eS52MS5Jbml0TWV0cmljc1Jlc3Bvbn'
+    'NlEnEKEEdldE1ldHJpY3NIZWFsdGgSLS5sbG0ub2JzZXJ2YWJpbGl0eS52MS5HZXRNZXRyaWNz'
+    'SGVhbHRoUmVxdWVzdBouLmxsbS5vYnNlcnZhYmlsaXR5LnYxLkdldE1ldHJpY3NIZWFsdGhSZX'
+    'Nwb25zZRJoCg1SZWNvcmRNZXRyaWNzEioubGxtLm9ic2VydmFiaWxpdHkudjEuUmVjb3JkTWV0'
+    'cmljc1JlcXVlc3QaKy5sbG0ub2JzZXJ2YWJpbGl0eS52MS5SZWNvcmRNZXRyaWNzUmVzcG9uc2'
+    'USdwoSUmVjb3JkTWV0cmljc0JhdGNoEi8ubGxtLm9ic2VydmFiaWxpdHkudjEuUmVjb3JkTWV0'
+    'cmljc0JhdGNoUmVxdWVzdBowLmxsbS5vYnNlcnZhYmlsaXR5LnYxLlJlY29yZE1ldHJpY3NCYX'
+    'RjaFJlc3BvbnNlEmsKDkdldE1vZGVsUHJpY2VzEisubGxtLm9ic2VydmFiaWxpdHkudjEuR2V0'
+    'TW9kZWxQcmljZXNSZXF1ZXN0GiwubGxtLm9ic2VydmFiaWxpdHkudjEuR2V0TW9kZWxQcmljZX'
+    'NSZXNwb25zZRJ0ChFSZWxvYWRNb2RlbFByaWNlcxIuLmxsbS5vYnNlcnZhYmlsaXR5LnYxLlJl'
+    'bG9hZE1vZGVsUHJpY2VzUmVxdWVzdBovLmxsbS5vYnNlcnZhYmlsaXR5LnYxLlJlbG9hZE1vZG'
+    'VsUHJpY2VzUmVzcG9uc2U=');
 

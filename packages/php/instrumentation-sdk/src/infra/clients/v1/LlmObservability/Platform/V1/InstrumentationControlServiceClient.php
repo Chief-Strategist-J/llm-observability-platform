@@ -186,6 +186,34 @@ class InstrumentationControlServiceClient extends \Grpc\BaseStub {
     }
 
     /**
+     * @param \LlmObservability\Platform\V1\TrackToolCallRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall
+     */
+    public function TrackToolCall(\LlmObservability\Platform\V1\TrackToolCallRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/llm.observability.v1.InstrumentationControlService/TrackToolCall',
+        $argument,
+        ['\LlmObservability\Platform\V1\TrackToolCallResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \LlmObservability\Platform\V1\ClearToolCallTrackerRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall
+     */
+    public function ClearToolCallTracker(\LlmObservability\Platform\V1\ClearToolCallTrackerRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/llm.observability.v1.InstrumentationControlService/ClearToolCallTracker',
+        $argument,
+        ['\LlmObservability\Platform\V1\ClearToolCallTrackerResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * @param \LlmObservability\Platform\V1\InitMetricsRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options
@@ -238,6 +266,34 @@ class InstrumentationControlServiceClient extends \Grpc\BaseStub {
         return $this->_simpleRequest('/llm.observability.v1.InstrumentationControlService/RecordMetricsBatch',
         $argument,
         ['\LlmObservability\Platform\V1\RecordMetricsBatchResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \LlmObservability\Platform\V1\GetModelPricesRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall
+     */
+    public function GetModelPrices(\LlmObservability\Platform\V1\GetModelPricesRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/llm.observability.v1.InstrumentationControlService/GetModelPrices',
+        $argument,
+        ['\LlmObservability\Platform\V1\GetModelPricesResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \LlmObservability\Platform\V1\ReloadModelPricesRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall
+     */
+    public function ReloadModelPrices(\LlmObservability\Platform\V1\ReloadModelPricesRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/llm.observability.v1.InstrumentationControlService/ReloadModelPrices',
+        $argument,
+        ['\LlmObservability\Platform\V1\ReloadModelPricesResponse', 'decode'],
         $metadata, $options);
     }
 

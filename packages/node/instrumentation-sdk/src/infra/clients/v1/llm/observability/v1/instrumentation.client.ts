@@ -4,6 +4,10 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { InstrumentationControlService } from "./instrumentation";
+import type { ReloadModelPricesResponse } from "./instrumentation";
+import type { ReloadModelPricesRequest } from "./instrumentation";
+import type { GetModelPricesResponse } from "./instrumentation";
+import type { GetModelPricesRequest } from "./instrumentation";
 import type { RecordMetricsBatchResponse } from "./instrumentation";
 import type { RecordMetricsBatchRequest } from "./instrumentation";
 import type { RecordMetricsResponse } from "./instrumentation";
@@ -12,6 +16,10 @@ import type { GetMetricsHealthResponse } from "./instrumentation";
 import type { GetMetricsHealthRequest } from "./instrumentation";
 import type { InitMetricsResponse } from "./instrumentation";
 import type { InitMetricsRequest } from "./instrumentation";
+import type { ClearToolCallTrackerResponse } from "./instrumentation";
+import type { ClearToolCallTrackerRequest } from "./instrumentation";
+import type { TrackToolCallResponse } from "./instrumentation";
+import type { TrackToolCallRequest } from "./instrumentation";
 import type { ClearFallbackTrackerResponse } from "./instrumentation";
 import type { ClearFallbackTrackerRequest } from "./instrumentation";
 import type { TrackFallbackResponse } from "./instrumentation";
@@ -94,6 +102,14 @@ export interface IInstrumentationControlServiceClient {
      */
     clearFallbackTracker(input: ClearFallbackTrackerRequest, options?: RpcOptions): UnaryCall<ClearFallbackTrackerRequest, ClearFallbackTrackerResponse>;
     /**
+     * @generated from protobuf rpc: TrackToolCall(llm.observability.v1.TrackToolCallRequest) returns (llm.observability.v1.TrackToolCallResponse);
+     */
+    trackToolCall(input: TrackToolCallRequest, options?: RpcOptions): UnaryCall<TrackToolCallRequest, TrackToolCallResponse>;
+    /**
+     * @generated from protobuf rpc: ClearToolCallTracker(llm.observability.v1.ClearToolCallTrackerRequest) returns (llm.observability.v1.ClearToolCallTrackerResponse);
+     */
+    clearToolCallTracker(input: ClearToolCallTrackerRequest, options?: RpcOptions): UnaryCall<ClearToolCallTrackerRequest, ClearToolCallTrackerResponse>;
+    /**
      * @generated from protobuf rpc: InitMetrics(llm.observability.v1.InitMetricsRequest) returns (llm.observability.v1.InitMetricsResponse);
      */
     initMetrics(input: InitMetricsRequest, options?: RpcOptions): UnaryCall<InitMetricsRequest, InitMetricsResponse>;
@@ -109,6 +125,14 @@ export interface IInstrumentationControlServiceClient {
      * @generated from protobuf rpc: RecordMetricsBatch(llm.observability.v1.RecordMetricsBatchRequest) returns (llm.observability.v1.RecordMetricsBatchResponse);
      */
     recordMetricsBatch(input: RecordMetricsBatchRequest, options?: RpcOptions): UnaryCall<RecordMetricsBatchRequest, RecordMetricsBatchResponse>;
+    /**
+     * @generated from protobuf rpc: GetModelPrices(llm.observability.v1.GetModelPricesRequest) returns (llm.observability.v1.GetModelPricesResponse);
+     */
+    getModelPrices(input: GetModelPricesRequest, options?: RpcOptions): UnaryCall<GetModelPricesRequest, GetModelPricesResponse>;
+    /**
+     * @generated from protobuf rpc: ReloadModelPrices(llm.observability.v1.ReloadModelPricesRequest) returns (llm.observability.v1.ReloadModelPricesResponse);
+     */
+    reloadModelPrices(input: ReloadModelPricesRequest, options?: RpcOptions): UnaryCall<ReloadModelPricesRequest, ReloadModelPricesResponse>;
 }
 /**
  * Service definition for remote instrumentation control
@@ -206,31 +230,59 @@ export class InstrumentationControlServiceClient implements IInstrumentationCont
         return stackIntercept<ClearFallbackTrackerRequest, ClearFallbackTrackerResponse>("unary", this._transport, method, opt, input);
     }
     /**
+     * @generated from protobuf rpc: TrackToolCall(llm.observability.v1.TrackToolCallRequest) returns (llm.observability.v1.TrackToolCallResponse);
+     */
+    trackToolCall(input: TrackToolCallRequest, options?: RpcOptions): UnaryCall<TrackToolCallRequest, TrackToolCallResponse> {
+        const method = this.methods[12], opt = this._transport.mergeOptions(options);
+        return stackIntercept<TrackToolCallRequest, TrackToolCallResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: ClearToolCallTracker(llm.observability.v1.ClearToolCallTrackerRequest) returns (llm.observability.v1.ClearToolCallTrackerResponse);
+     */
+    clearToolCallTracker(input: ClearToolCallTrackerRequest, options?: RpcOptions): UnaryCall<ClearToolCallTrackerRequest, ClearToolCallTrackerResponse> {
+        const method = this.methods[13], opt = this._transport.mergeOptions(options);
+        return stackIntercept<ClearToolCallTrackerRequest, ClearToolCallTrackerResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
      * @generated from protobuf rpc: InitMetrics(llm.observability.v1.InitMetricsRequest) returns (llm.observability.v1.InitMetricsResponse);
      */
     initMetrics(input: InitMetricsRequest, options?: RpcOptions): UnaryCall<InitMetricsRequest, InitMetricsResponse> {
-        const method = this.methods[12], opt = this._transport.mergeOptions(options);
+        const method = this.methods[14], opt = this._transport.mergeOptions(options);
         return stackIntercept<InitMetricsRequest, InitMetricsResponse>("unary", this._transport, method, opt, input);
     }
     /**
      * @generated from protobuf rpc: GetMetricsHealth(llm.observability.v1.GetMetricsHealthRequest) returns (llm.observability.v1.GetMetricsHealthResponse);
      */
     getMetricsHealth(input: GetMetricsHealthRequest, options?: RpcOptions): UnaryCall<GetMetricsHealthRequest, GetMetricsHealthResponse> {
-        const method = this.methods[13], opt = this._transport.mergeOptions(options);
+        const method = this.methods[15], opt = this._transport.mergeOptions(options);
         return stackIntercept<GetMetricsHealthRequest, GetMetricsHealthResponse>("unary", this._transport, method, opt, input);
     }
     /**
      * @generated from protobuf rpc: RecordMetrics(llm.observability.v1.RecordMetricsRequest) returns (llm.observability.v1.RecordMetricsResponse);
      */
     recordMetrics(input: RecordMetricsRequest, options?: RpcOptions): UnaryCall<RecordMetricsRequest, RecordMetricsResponse> {
-        const method = this.methods[14], opt = this._transport.mergeOptions(options);
+        const method = this.methods[16], opt = this._transport.mergeOptions(options);
         return stackIntercept<RecordMetricsRequest, RecordMetricsResponse>("unary", this._transport, method, opt, input);
     }
     /**
      * @generated from protobuf rpc: RecordMetricsBatch(llm.observability.v1.RecordMetricsBatchRequest) returns (llm.observability.v1.RecordMetricsBatchResponse);
      */
     recordMetricsBatch(input: RecordMetricsBatchRequest, options?: RpcOptions): UnaryCall<RecordMetricsBatchRequest, RecordMetricsBatchResponse> {
-        const method = this.methods[15], opt = this._transport.mergeOptions(options);
+        const method = this.methods[17], opt = this._transport.mergeOptions(options);
         return stackIntercept<RecordMetricsBatchRequest, RecordMetricsBatchResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: GetModelPrices(llm.observability.v1.GetModelPricesRequest) returns (llm.observability.v1.GetModelPricesResponse);
+     */
+    getModelPrices(input: GetModelPricesRequest, options?: RpcOptions): UnaryCall<GetModelPricesRequest, GetModelPricesResponse> {
+        const method = this.methods[18], opt = this._transport.mergeOptions(options);
+        return stackIntercept<GetModelPricesRequest, GetModelPricesResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: ReloadModelPrices(llm.observability.v1.ReloadModelPricesRequest) returns (llm.observability.v1.ReloadModelPricesResponse);
+     */
+    reloadModelPrices(input: ReloadModelPricesRequest, options?: RpcOptions): UnaryCall<ReloadModelPricesRequest, ReloadModelPricesResponse> {
+        const method = this.methods[19], opt = this._transport.mergeOptions(options);
+        return stackIntercept<ReloadModelPricesRequest, ReloadModelPricesResponse>("unary", this._transport, method, opt, input);
     }
 }
