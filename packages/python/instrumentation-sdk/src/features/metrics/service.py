@@ -1,13 +1,21 @@
 import os
 from typing import Any, Dict, List, Optional
 import yaml
-from .ports import MetricsPort
+from .ports import MetricsPort, PriceConfigPort
 
 
 class MetricsService:
-    def __init__(self, adapter: MetricsPort, prices: Optional[List[Dict[str, Any]]] = None):
+    def __init__(
+        self,
+        adapter: MetricsPort,
+        prices: Optional[List[Dict[str, Any]]] = None,
+        price_config: Optional[PriceConfigPort] = None,
+    ):
         self._adapter = adapter
-        self._prices = prices or self._load_prices()
+        self._price_config = price_config
+        self._prices = prices
+        if not self._price_config and not self._prices:
+            self._prices = self._load_prices()
 
     def _load_prices(self) -> List[Dict[str, Any]]:
         config_path = os.path.join(
@@ -21,11 +29,22 @@ class MetricsService:
         except Exception:
             return []
 
-    def _find_price(self, model: str, provider: str) -> Optional[Dict[str, Any]]:
-        for entry in self._prices:
+    def _find_price(
+        self,
+        model: str,
+        provider: str,
+        prices_list: Optional[List[Dict[str, Any]]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        target_prices = prices_list
+        if target_prices is None:
+            if self._price_config is not None:
+                target_prices = self._price_config.get_prices()
+            else:
+                target_prices = self._prices or []
+        for entry in target_prices:
             if entry.get("model") == model and entry.get("provider") == provider:
                 return entry
-        for entry in self._prices:
+        for entry in target_prices:
             if entry.get("model") == model:
                 return entry
         return None
@@ -36,7 +55,8 @@ class MetricsService:
 
         model = span_data.get("model", "")
         provider = span_data.get("provider", "")
-        price = self._find_price(model, provider)
+        prices_ref = span_data.pop("_prices_ref", None)
+        price = self._find_price(model, provider, prices_ref)
         if price is None:
             return
 

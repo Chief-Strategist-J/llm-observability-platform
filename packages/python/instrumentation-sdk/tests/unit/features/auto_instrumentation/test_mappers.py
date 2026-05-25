@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock
-from features.auto_instrumentation.domain.mappers import ProviderMapper
-from features.spans.types import FinishReason
+from src.features.auto_instrumentation.domain.mappers import ProviderMapper
+from src.features.spans.types import FinishReason
 
 def test_map_openai_response():
     mock_response = MagicMock()

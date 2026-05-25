@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
-from features.metrics.service import MetricsService
+from src.features.metrics.service import MetricsService
 
 
 MOCK_PRICES = [
@@ -247,3 +247,49 @@ def test_no_tokens_skips_token_recording():
     }
     svc.record_span_telemetry(span)
     adapter.record_tokens.assert_not_called()
+
+
+def test_metrics_service_with_prices_ref():
+    adapter = _make_adapter()
+    svc = MetricsService(adapter, prices=[])
+    custom_prices = [
+        {
+            "model": "gpt-4o",
+            "provider": "openai",
+            "input_price_per_1m": 10.0,
+            "output_price_per_1m": 30.0,
+            "version": "custom-v1",
+        }
+    ]
+    span = {
+        "model": "gpt-4o",
+        "provider": "openai",
+        "service_name": "chat-api",
+        "prompt_tokens": 1000,
+        "completion_tokens": 500,
+        "latency_ms_total": 200,
+        "status": "success",
+        "_prices_ref": custom_prices,
+    }
+    svc.record_span_telemetry(span)
+    assert span["cost_usd_micro"] == 25000
+    assert span["price_version"] == "custom-v1"
+
+
+def test_price_watcher_adapter_lifecycle():
+    from src.infra.adapters.price_watcher import PriceWatcherAdapter
+    from unittest.mock import patch, mock_open
+
+    yaml_content = "- model: mock-model\n  provider: mock-provider\n  input_price_per_1m: 1.0\n  output_price_per_1m: 2.0\n  version: mock-v1"
+    with patch("builtins.open", mock_open(read_data=yaml_content)):
+        watcher = PriceWatcherAdapter()
+        assert len(watcher.get_prices()) > 0
+        assert watcher.get_prices()[0]["model"] == "mock-model"
+
+        new_yaml = "- model: mock-model\n  provider: mock-provider\n  input_price_per_1m: 1.5\n  output_price_per_1m: 2.5\n  version: mock-v2"
+        with patch("builtins.open", mock_open(read_data=new_yaml)):
+            watcher.reload()
+            assert watcher.get_prices()[0]["version"] == "mock-v2"
+
+        if watcher._observer:
+            watcher._observer.stop()

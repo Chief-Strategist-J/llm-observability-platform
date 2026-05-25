@@ -33,6 +33,8 @@ service InstrumentationControlService {
   rpc GetMetricsHealth(GetMetricsHealthRequest) returns (GetMetricsHealthResponse);
   rpc RecordMetrics(RecordMetricsRequest) returns (RecordMetricsResponse);
   rpc RecordMetricsBatch(RecordMetricsBatchRequest) returns (RecordMetricsBatchResponse);
+  rpc GetModelPrices(GetModelPricesRequest) returns (GetModelPricesResponse);
+  rpc ReloadModelPrices(ReloadModelPricesRequest) returns (ReloadModelPricesResponse);
 }
 
 message InitInstrumentationRequest {
@@ -223,4 +225,26 @@ message ClearToolCallTrackerRequest {}
 message ClearToolCallTrackerResponse {
   bool success = 1;
 }
+
+message GetModelPricesRequest {}
+
+message ModelPriceProto {
+  string model = 1;
+  string provider = 2;
+  double input_price_per_1m = 3;
+  double output_price_per_1m = 4;
+  string version = 5;
+}
+
+message GetModelPricesResponse {
+  repeated ModelPriceProto prices = 1;
+}
+
+message ReloadModelPricesRequest {}
+
+message ReloadModelPricesResponse {
+  bool initialized = 1;
+  string message = 2;
+}
+
 

@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from features.metrics.service import MetricsService
+from src.features.metrics.service import MetricsService
 
 
 MOCK_PRICES = [

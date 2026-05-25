@@ -4,6 +4,11 @@ All notable changes to the `instrumentation-sdk` package will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.3] - 2026-05-25
+
+### Added
+- **Price Config Hot-Reload**: Automatically watches `config/model_prices.yaml` using `watchdog` to perform atomic in-memory reloading. Stamps `price_version` at time of LLM call. Exposes REST endpoints `/v1/metrics/prices` and `/v1/metrics/prices/reload`, GraphQL queries/mutations, and Protobuf RPCs.
+
 ## [1.8.2] - 2026-05-23
 
 ### Added
@@ -77,11 +82,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Runbook — Config File Changes Require Container Restart
 
-> **No database migration is needed.** These are static YAML files read once at startup.
+> **No database migration is needed.** These are static YAML files read once at startup (except hot-reloaded configuration files).
 
 | File changed | Action required |
 |---|---|
-| `config/model_prices.yaml` | Restart container: `docker restart instrumentation-sdk-api` |
+| `config/model_prices.yaml` | Hot-reloaded automatically via file system events or manual POST `/v1/metrics/prices/reload` |
 | `config/patterns.yaml` | Restart container: `docker restart instrumentation-sdk-api` |
 | `build/grafana-datasource.yaml` | Restart container |
 | `build/grafana-dashboard-provider.yaml` | Restart container |

@@ -98,6 +98,8 @@ The SDK provides a built-in FastAPI-based management layer for remote orchestrat
 | `/v1/fallback/clear` | POST | Clean up: Clear the fallback tracker memory. |
 | `/v1/tool-call/track` | POST | Ingestion: Track span cost and get trace cumulative cost. |
 | `/v1/tool-call/clear` | POST | Clean up: Clear the tool-call tracker memory. |
+| `/v1/metrics/prices` | GET | Retrieval: Get the list of all current model prices. |
+| `/v1/metrics/prices/reload` | POST | Management: Manually trigger a reload of model prices. |
 
 ### Basic Usage: Decorators
 Use the `@llm_observe` decorator to manually track functions.
@@ -446,7 +448,7 @@ The dashboard is built-in and automatically provisioned on port `3000` (or `3002
 
 ### Updating Config Files (Model Prices, PII Patterns, Infra)
 
-The SDK reads config files once at startup. After any change, a container restart is required (except dashboard JSON files which are hot-reloaded).
+The SDK reads config files once at startup. For PII patterns and infra configs, a container restart is required. Model prices (`model_prices.yaml`) and Grafana dashboard JSON files are hot-reloaded automatically.
 
 #### Adding or updating a model price
 
@@ -463,10 +465,11 @@ Edit `config/model_prices.yaml`:
 Required fields: `model`, `provider`, `input_price_per_1m`, `output_price_per_1m`, `version`.  
 Prices must be `>= 0`. Duplicate `(model, provider)` pairs are rejected by CI.
 
-Then restart:
+The model prices are watched and hot-reloaded automatically when the configuration file changes. You can also manually trigger a reload via the API:
 ```bash
-docker restart instrumentation-sdk-api
+curl -X POST http://localhost:8000/v1/metrics/prices/reload
 ```
+
 
 #### Adding or updating a PII / Injection pattern
 
@@ -525,7 +528,7 @@ Two Docker Compose configurations are available under `deploy/docker/` depending
    KAFKA_BOOTSTRAP_SERVERS="my-kafka:9092" docker compose -f deploy/docker/docker-compose.prod.yaml up -d
    ```
 
-### Docker Deployments (v1.8.2)
+### Docker Deployments (v1.8.3)
 
 We publish two official Docker images:
 * **All-in-One Image (`chiefj/instrumentation-sdk-api`)**: Contains Java, Kafka, PostgreSQL, and pgvector. When started, it automatically initializes database users, databases, runs migrations, and provisions Kafka topics. No external setup required.
