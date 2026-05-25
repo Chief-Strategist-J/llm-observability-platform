@@ -5,6 +5,7 @@ import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
 package_root = os.path.abspath(os.path.join(current_dir, "../.."))
 sys.path.append(os.path.join(package_root, "src"))
+sys.path.append(package_root)
 sys.path.append(os.path.join(package_root, "src/infra/clients/v1/llm/observability/v1"))
 
 import uuid
