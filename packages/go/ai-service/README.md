@@ -49,42 +49,55 @@ This hierarchical decision tree outlines the conditional execution paths for sta
 └── Incoming Chat Request
     ├── Route: /api/v1/chat (Stateless Flow)
     │   ├── [Step 1] Parse payload (messages list)
-    │   ├── [Step 2] Lookup in standard cache via hash key of prompt history
+    │   ├── [Step 2] Generate prompt fingerprint (system instructions + model ID)
+    │   ├── [Step 3] Lookup in standard cache via hash key of prompt history & fingerprint
     │   │   ├── Hit -> Return cached response (cached: true, cache_type: "standard")
-    │   │   └── Miss -> Proceed to step 3
-    │   ├── [Step 3] Query semantic cache (threshold: 0.92) using user message embedding
-    │   │   ├── Hit -> Store in standard cache, return cached response (cached: true, cache_type: "semantic")
     │   │   └── Miss -> Proceed to step 4
-    │   ├── [Step 4] Send messages directly to Cloudflare LLM
-    │   └── [Step 5] Store response in standard and semantic cache, return response (cached: false)
+    │   ├── [Step 4] Query semantic cache (threshold: 0.95) using embedding & fingerprint filter
+    │   │   ├── Hit -> Store in standard cache, return cached response (cached: true, cache_type: "semantic")
+    │   │   └── Miss -> Proceed to step 5
+    │   ├── [Step 5] Classify prompt complexity (routing check)
+    │   │   ├── Simple -> Route to small model (AI_SMALL_MODEL)
+    │   │   └── Complex -> Route to large model (AI_LARGE_MODEL)
+    │   ├── [Step 6] Send messages directly to selected Cloudflare LLM
+    │   └── [Step 7] Store response in standard and semantic cache with fingerprint, return response (cached: false)
     │
     └── Route: /api/v1/chat/persistent (Stateful Flow)
         ├── [Step 1] Parse payload (user_id, message text)
-        ├── [Step 2] Generate embedding vector for user message via Cloudflare AI
-        ├── [Step 3] Fetch user memory history from In-Memory Memory Repository / Qdrant Vector Store
+        ├── [Step 2] Check session message history length (Compaction Gating)
+        │   ├── If > 10 messages -> Query background LLM to collapse older messages into summary
+        │   └── If <= 10 messages -> Skip compaction
+        ├── [Step 3] Generate embedding vector for user message via Cloudflare AI
+        ├── [Step 4] Fetch user memory history from In-Memory Memory Repository / Qdrant Vector Store
         ├── [Decision] Does user have past conversational memory?
         │   ├── YES (Retrieve Context)
         │   │   ├── [Sub-Step] Query Memory Repository / Qdrant via cosine similarity with user_id filter
-        │   │   ├── [Sub-Step] Filter and sort memories where similarity >= threshold (default: 0.7)
+        │   │   ├── [Sub-Step] Calculate recency exponential decay weight (7-day half-life)
+        │   │   ├── [Sub-Step] Rank using combined score (0.7 * Similarity + 0.3 * Recency)
         │   │   ├── [Sub-Step] Select top K context-rich memories (default: 5)
         │   │   └── [Sub-Step] Prepend retrieved context to the prompt as system instructions
         │   └── NO (Skip Context Retrieval)
         │       └── [Sub-Step] Proceed with empty conversational history context
         │
-        ├── [Step 4] Lookup full compiled prompt in standard cache via hash key
+        ├── [Step 5] Generate fingerprint hash of the model ID and all compiled instructions/history context
+        ├── [Step 6] Lookup full compiled prompt in standard cache via hash key & fingerprint
         │   ├── Hit -> Return cached response (cached: true, cache_type: "standard")
-        │   └── Miss -> Proceed to step 5
+        │   └── Miss -> Proceed to step 7
         │
-        ├── [Step 5] Query semantic cache (threshold: 0.92) using user message embedding
+        ├── [Step 7] Query semantic cache (threshold: 0.95) using embedding & fingerprint filter
         │   ├── Hit -> Store in standard cache, return cached response (cached: true, cache_type: "semantic")
-        │   └── Miss -> Proceed to step 6
+        │   └── Miss -> Proceed to step 8
         │
-        ├── [Step 6] Send complete prompt (context + current message) to Cloudflare LLM
-        ├── [Step 7] Receive LLM AI response text
-        ├── [Step 8] Generate embedding vector for assistant response text via Cloudflare AI
-        ├── [Step 9] Store response in standard cache and semantic cache
-        ├── [Step 10] Atomically store both User and Assistant turns in Memory Repository and Qdrant
-        └── [Step 11] Return AI response + semantic context metadata to the client (cached: false)
+        ├── [Step 8] Classify prompt complexity (routing check)
+        │   ├── Simple -> Route to small model (AI_SMALL_MODEL)
+        │   └── Complex -> Route to large model (AI_LARGE_MODEL)
+        │
+        ├── [Step 9] Send complete prompt (context + current message) to selected Cloudflare LLM
+        ├── [Step 10] Receive LLM AI response text
+        ├── [Step 11] Generate embedding vector for assistant response text via Cloudflare AI
+        ├── [Step 12] Store response in standard cache and semantic cache with prompt fingerprint
+        ├── [Step 13] Atomically store both User and Assistant turns in Memory Repository and Qdrant (with timestamp)
+        └── [Step 14] Return AI response + semantic context metadata to the client (cached: false)
 
 ---
 
