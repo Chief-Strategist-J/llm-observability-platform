@@ -227,3 +227,20 @@
     └── Changes:
         ├── pyproject-toml -> Add project metadata, setuptools build configuration, and dependencies list
         └── readme -> Add package placeholder README.md
+
+[2026-05-26T13:10:00+05:30] Initialize design decision and structure for temporal-ewma-worker package
+└── File: packages/python/temporal-ewma-worker/pyproject.toml, packages/python/temporal-ewma-worker/worker-registry.yaml, packages/python/temporal-ewma-worker/feature-registry.yaml
+    ├── Choice: Construct isolated python package for EWMA baseline updating and anomaly checking using clickhouse-connect, separate docker-compose layout, and package-local registries.
+    └── Changes:
+        ├── design -> Adopt clickhouse-connect HTTP protocol for reliable ClickHouse queries, implement Ports and Adapters architecture
+        └── registries -> Include package-scoped worker-registry.yaml and feature-registry.yaml
+
+[2026-05-26T13:25:00+05:30] Complete implementation, configuration, and testing for temporal-ewma-worker package
+└── File: packages/python/temporal-ewma-worker/src/worker/workflows.py, packages/python/temporal-ewma-worker/src/shared/contracts/validator.py, packages/python/temporal-ewma-worker/src/infra/adapters/redis/redis_adapter.py, packages/python/temporal-ewma-worker/tests/unit/test_workflow.py
+    ├── Choice: Use explicit result_type in Temporal workflows to fix dataclass deserialization issues, type-hint all test mocks and validator paths, and ensure type-safe redis adapter queries.
+    └── Changes:
+        ├── workflows.py -> Specify result_type=EwmaRecord in get_baseline execute_activity to correctly instantiate dataclasses
+        ├── validator.py -> Wrap and type hint os.getenv paths as Path objects to satisfy mypy type checking
+        ├── redis_adapter.py -> Add type-safe isinstance check for Redis value conversion without comments
+        └── test_workflow.py -> Type annotate mock call list variables to resolve mypy errors
+
