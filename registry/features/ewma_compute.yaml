@@ -1,0 +1,13 @@
+features:
+  - name: ewma_compute
+    status: active
+    contract: packages/python/temporal-ewma-worker/contracts/workflows/ewma_baseline_update.yaml
+    contract_version: v1
+    owner: "@data-team"
+    added: 2026-05-26
+    flags: []
+    migrations:
+      - 0001_init
+    depends_on_features: []
+    depends_on_packages:
+      - temporal-ewma-worker

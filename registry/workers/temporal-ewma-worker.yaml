@@ -1,0 +1,18 @@
+workers:
+  - name: temporal-ewma-worker
+    type: temporal
+    language: python
+    task_queue: ewma-tasks
+    owner: "@data-team"
+    stage: 1
+    workflows:
+      - EwmaBaselineUpdate
+    activities:
+      - fetch_active_pairs
+      - fetch_cost_history
+      - fetch_global_model_avg
+      - fetch_current_cost_1h
+      - fetch_cost_by_cluster_1h
+      - get_baseline
+      - upsert_baseline
+      - publish_anomaly_alert
