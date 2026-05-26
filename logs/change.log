@@ -244,3 +244,13 @@
         ├── redis_adapter.py -> Add type-safe isinstance check for Redis value conversion without comments
         └── test_workflow.py -> Type annotate mock call list variables to resolve mypy errors
 
+[2026-05-26T13:30:00+05:30] Add global registries, build and publish Docker image, and set up GitHub CI/CD workflows
+└── File: registry/workers/temporal-ewma-worker.yaml, registry/features/ewma_compute.yaml, packages/python/temporal-ewma-worker/README.md, .github/workflows/temporal-ewma-worker-publish.yml
+    ├── Choice: Establish global registry manifests, enrich the package README with detailed design trees, and configure GitHub actions for automatic CI build/test/publish.
+    └── Changes:
+        ├── global-registries -> Define worker and feature metadata yaml files under registry/
+        ├── readme-docs -> Document folder tree, ASCII decision tree with detailed rationales, sequencing map, and database migration guide
+        ├── github-workflow -> Create temporal-ewma-worker-publish.yml to build, run tests, and publish Docker image to Docker Hub on main merges
+        └── docker-publish -> Log in to Docker Hub using PAT, build local image, run test validations, and push latest, v1.0.0, and stable tags
+
+
