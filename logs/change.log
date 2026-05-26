@@ -277,3 +277,12 @@
     └── Changes:
         ├── Table of Contents -> Add anchor link for Temporal EWMA Worker section
         └── Usage Guide -> Append a dedicated guide for standalone installation and REST triggers
+
+[2026-05-26T15:30:00+05:30] Create detailed Temporal EWMA feature documentation under docs/
+└── File: docs/index.md, docs/features/index.md, docs/features/Temporal-EWMA-Cost-Anomaly-Detection.md
+    ├── Choice: Generate comprehensive technical documentation for the new feature and link it across the docs system.
+    └── Changes:
+        ├── docs-feature-page -> Create Temporal-EWMA-Cost-Anomaly-Detection.md containing architecture flow diagrams, Redis baseline key structures, setup steps, and REST API guide
+        ├── docs-features-index -> Add reference in docs/features/index.md
+        └── docs-main-index -> Include in SDK Feature Map and Documentation Pages table in docs/index.md
+

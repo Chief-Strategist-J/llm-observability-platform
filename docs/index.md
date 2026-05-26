@@ -65,7 +65,7 @@ Open Grafana at `http://localhost:3002` — spans appear within 5–10 seconds.
 ## SDK Feature Map
 
 ```
-instrumentation-sdk
+instrumentation-sdk & temporal-ewma-worker
 │
 ├── Auto-Instrumentation        → zero-code patching
 │   ├── OpenAI
@@ -92,6 +92,9 @@ instrumentation-sdk
 ├── Embeddings
 │   └── MiniLM                  → async 384-dim prompt embeddings
 │
+├── Cost Anomaly Detection
+│   └── Temporal EWMA worker    → decoupled scheduled baseline computing
+│
 └── Observability Backend
     ├── Prometheus Metrics       → 8 metric families
     ├── Grafana Dashboards       → 4 pre-built dashboards
@@ -113,6 +116,7 @@ instrumentation-sdk
 | [Deterministic Sampling](features/Deterministic-Sampling.md) | SHA-256 modulo-100 gate |
 | [MiniLM Embeddings](features/MiniLM-Embeddings.md) | Async 384-dim prompt embeddings |
 | [Prometheus Metrics & Grafana](features/Prometheus-Metrics-and-Grafana.md) | Cost, latency, TTFT dashboards |
+| [Temporal EWMA Cost Anomaly Detection](features/Temporal-EWMA-Cost-Anomaly-Detection.md) | Decoupled EWMA baseline computing & cost anomaly detection worker |
 | [REST Management API](reference/REST-Management-API.md) | Full endpoint reference |
 | [Docker & CLI Deployment](reference/Docker-and-CLI-Deployment.md) | `llm-observe` CLI, all-in-one container |
 | [Config Files Reference](reference/Config-Files-Reference.md) | Model prices, PII patterns, infra configs |
