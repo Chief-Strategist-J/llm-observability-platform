@@ -1,0 +1,20 @@
+packages:
+  - name: instrumentation-sdk
+    language: python
+    version: 1.8.3
+    description: "LLM Observability Instrumentation SDK"
+    owner: "@data-team"
+    stage: 1
+    dependencies:
+      - pydantic
+      - tiktoken
+      - PyYAML
+      - confluent-kafka
+      - protobuf
+      - fastapi
+      - httpx
+      - opentelemetry-api
+      - opentelemetry-sdk
+      - opentelemetry-exporter-otlp
+      - opentelemetry-instrumentation-fastapi
+      - opentelemetry-exporter-prometheus
