@@ -299,5 +299,12 @@
     └── Changes:
         └── pyproject-toml -> Update version string from 0.1.0 to 0.1.1
 
+[2026-05-26T15:53:00+05:30] Add readme metadata to pyproject.toml and bump version to 0.1.2
+└── File: packages/python/temporal-ewma-worker/pyproject.toml
+    ├── Choice: Map README.md in pyproject.toml for proper PyPI display page rendering, and bump version to 0.1.2.
+    └── Changes:
+        └── pyproject-toml -> Add readme configuration key and bump version string from 0.1.1 to 0.1.2
+
+
 
 
