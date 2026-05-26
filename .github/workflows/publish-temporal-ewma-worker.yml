@@ -1,0 +1,43 @@
+name: Publish Temporal EWMA Worker
+
+on:
+  push:
+    paths:
+      - 'packages/python/temporal-ewma-worker/**'
+      - '.github/workflows/publish-temporal-ewma-worker.yml'
+    branches:
+      - main
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Build package
+        run: |
+          cd packages/python/temporal-ewma-worker
+          python -m build
+
+      - name: Publish to PyPI
+        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: packages/python/temporal-ewma-worker/dist/

@@ -286,3 +286,11 @@
         ├── docs-features-index -> Add reference in docs/features/index.md
         └── docs-main-index -> Include in SDK Feature Map and Documentation Pages table in docs/index.md
 
+[2026-05-26T15:47:00+05:30] Create PyPI packaging configuration and automated release publication workflow
+└── File: packages/python/temporal-ewma-worker/pyproject.toml, .github/workflows/publish-temporal-ewma-worker.yml
+    ├── Choice: Configure setuptools build backend in pyproject.toml and implement a secure GitHub Actions publishing workflow using PyPI Trusted Publishing.
+    └── Changes:
+        ├── pyproject-toml -> Add build-system section and setuptools package discovery mapping to src/
+        └── workflow-pypi -> Add publish-temporal-ewma-worker.yml using trusted OIDC-based gh-action-pypi-publish
+
+
