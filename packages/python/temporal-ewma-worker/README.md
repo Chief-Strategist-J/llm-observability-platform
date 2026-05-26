@@ -254,3 +254,25 @@ Start the Temporal worker polling queue `ewma-tasks`:
 ```bash
 ./scripts/run.sh
 ```
+
+---
+
+## Remote Management API (REST)
+
+The worker now includes a FastAPI management layer (port 8000 in prod).
+
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/health` | GET | Check worker status and config. |
+| `/trigger` | POST | Trigger the EWMA baseline update workflow on-demand. |
+
+### Example Execution
+
+```bash
+curl -X POST http://localhost:8000/trigger \
+  -H "Content-Type: application/json" \
+  -d '{
+    "force_hour": 42
+  }'
+```
+
