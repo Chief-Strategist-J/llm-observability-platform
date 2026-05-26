@@ -253,5 +253,15 @@
         ├── github-workflow -> Create temporal-ewma-worker-test.yml to run unit and integration tests on main merges without Docker build or publish
         └── docker-publish -> Log in to Docker Hub using PAT, build local image, run test validations, and push latest, v1.0.0, and stable tags
 
+[2026-05-26T14:10:00+05:30] Expose REST API endpoints and integrate health-check / workflow trigger functionality
+└── File: packages/python/temporal-ewma-worker/contracts/api.yaml, packages/python/temporal-ewma-worker/src/api/index.py, packages/python/temporal-ewma-worker/src/api/rest/v1/app.py, packages/python/temporal-ewma-worker/tests/unit/test_api.py, packages/python/temporal-ewma-worker/pyproject.toml
+    ├── Choice: Construct REST API layer with OpenAPI specs using FastAPI, expose GET /health and POST /trigger endpoints, add HTTXP testing utilities, and enforce strict mypy typing.
+    └── Changes:
+        ├── api-contract -> Design contracts/api.yaml containing health and trigger definitions
+        ├── app-logic -> Implement in-process and REST handlers under src/api/ to initialize Temporal client and trigger workflows
+        ├── pyproject-toml -> Add fastapi, uvicorn, and httpx to dependencies
+        └── tests-api -> Add unit/mock tests for endpoints to ensure 100% test coverage
+
+
 
 
