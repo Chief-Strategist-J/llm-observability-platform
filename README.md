@@ -21,6 +21,7 @@ This guide covers the technical architecture and end-user usage for the Python-b
   - [Updating Config Files (Model Prices, PII Patterns, Infra)](#updating-config-files-model-prices-pii-patterns-infra)
   - [Docker Deployment](#docker-deployment)
   - [Observability Launcher CLI (llm-observe)](#observability-launcher-cli-llm-observe)
+  - [Temporal EWMA Worker & Cost Anomaly Detection (Standalone)](#temporal-ewma-worker--cost-anomaly-detection-standalone)
 - [3. Implementation Call Chain](#3-implementation-call-chain)
 
 ## 1. System Architecture
@@ -563,6 +564,71 @@ cd packages/python/instrumentation-sdk
 ```
 
 This sends spans covering all 6 model/provider combos, error ratios, PII flags, and high token counts.
+
+### Temporal EWMA Worker & Cost Anomaly Detection (Standalone)
+
+The `temporal-ewma-worker` is a decoupled microservice designed to periodically compute Exponentially Weighted Moving Average (EWMA) baselines for LLM usage costs and detect anomalous cost spikes. 
+
+It runs a FastAPI management server alongside a Temporal worker within a single container.
+
+#### Redis Baseline Cache Path
+The calculated baselines are pushed to Redis cache for instant, sub-millisecond retrieval by the ingestion pipeline:
+* **Key Format**: `ewma:cost:{service}:{model}:{hour_of_week}`
+* **Hour of Week (`hour_of_week`)**: An integer from `0` to `167` representing the hour starting from Monday 00:00 (0) to Sunday 23:00 (167).
+
+#### Standalone Setup & Execution
+
+An end-user can install and run this package individually by following these steps:
+
+1. **Install the package and dependencies**:
+   ```bash
+   pip install -e packages/python/temporal-ewma-worker
+   ```
+
+2. **Spin up local infrastructure**:
+   This runs ClickHouse, PostgreSQL, Redis, Kafka, and Temporal:
+   ```bash
+   docker compose -f packages/python/temporal-ewma-worker/deploy/docker/docker-compose.yaml up -d
+   ```
+
+3. **Configure the environment**:
+   ```bash
+   cp packages/python/temporal-ewma-worker/.env.example packages/python/temporal-ewma-worker/.env
+   ```
+
+4. **Apply database migrations**:
+   Apply SQL migration schemas to PostgreSQL:
+   ```bash
+   ./packages/python/temporal-ewma-worker/scripts/migrate.sh up
+   ```
+
+5. **Run test verification**:
+   Verify configuration and end-to-end integration flows:
+   ```bash
+   ./packages/python/temporal-ewma-worker/scripts/test.sh
+   ```
+
+6. **Start the Worker & FastAPI Server**:
+   Start both services concurrently inside a single process:
+   ```bash
+   ./packages/python/temporal-ewma-worker/scripts/run.sh
+   ```
+
+#### REST Management API
+
+The worker exposes a REST management layer on port `8000`:
+
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/health` | GET | Retrieve worker configuration and running environment status |
+| `/trigger` | POST | Trigger the EWMA baseline calculation workflow on-demand |
+
+##### Trigger Baseline Calculation On-Demand:
+```bash
+curl -X POST http://localhost:8000/trigger \
+  -H "Content-Type: application/json" \
+  -d '{"force_hour": 42}'
+```
 
 ## 3. Implementation Call Chain
 

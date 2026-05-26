@@ -270,3 +270,10 @@
         ├── docker-compose -> Add ewma-worker service mapping port 8000, configuring environment variables, and fixing temporal healthcheck with bash </dev/tcp/temporal/7233
         ├── worker-co-location -> Use uvicorn.Server and asyncio.gather to run worker and REST API concurrently
         └── alert-publisher-port -> Add alert_publisher_port.py Protocol in shared/ports/ to ensure successful runtime dependency injection
+
+[2026-05-26T15:25:00+05:30] Document standalone Temporal EWMA worker end-user usage in the main README.md
+└── File: README.md
+    ├── Choice: Add a detailed subsection explaining standalone setup, Redis key formats, environment configuration, database migrations, and REST management API usage.
+    └── Changes:
+        ├── Table of Contents -> Add anchor link for Temporal EWMA Worker section
+        └── Usage Guide -> Append a dedicated guide for standalone installation and REST triggers
