@@ -293,4 +293,11 @@
         ├── pyproject-toml -> Add build-system section and setuptools package discovery mapping to src/
         └── workflow-pypi -> Add publish-temporal-ewma-worker.yml using trusted OIDC-based gh-action-pypi-publish
 
+[2026-05-26T15:52:00+05:30] Bump temporal-ewma-worker version to 0.1.1
+└── File: packages/python/temporal-ewma-worker/pyproject.toml
+    ├── Choice: Bump version to 0.1.1 to satisfy path-based GitHub Actions triggers and publish a clean version.
+    └── Changes:
+        └── pyproject-toml -> Update version string from 0.1.0 to 0.1.1
+
+
 

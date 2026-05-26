@@ -1,6 +1,6 @@
 [project]
 name = "temporal-ewma-worker"
-version = "0.1.0"
+version = "0.1.1"
 description = "Temporal scheduled workflow worker for EWMA baseline updating and anomaly checking"
 requires-python = ">=3.11"
 dependencies = [
