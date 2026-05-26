@@ -1,4 +1,6 @@
 import asyncio
+import uvicorn
+from api.rest.v1.app import app
 from temporalio.client import Client
 from temporalio.worker import Worker
 from worker.config import load_config
@@ -54,7 +56,13 @@ async def main() -> None:
         ],
     )
 
-    await worker.run()
+    server_config = uvicorn.Config(app, host="0.0.0.0", port=8000, log_level="info")
+    server = uvicorn.Server(server_config)
+
+    await asyncio.gather(
+        worker.run(),
+        server.serve(),
+    )
 
 
 if __name__ == "__main__":

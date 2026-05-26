@@ -262,6 +262,11 @@
         ├── pyproject-toml -> Add fastapi, uvicorn, and httpx to dependencies
         └── tests-api -> Add unit/mock tests for endpoints to ensure 100% test coverage
 
-
-
-
+[2026-05-26T14:25:00+05:30] Add container orchestration, fix healthcheck synchronization, and resolve missing Port interface dependency
+└── File: packages/python/temporal-ewma-worker/build/Dockerfile, packages/python/temporal-ewma-worker/deploy/docker/docker-compose.yaml, packages/python/temporal-ewma-worker/src/worker/index.py, packages/python/temporal-ewma-worker/src/shared/ports/alert_publisher_port.py
+    ├── Choice: Co-locate FastAPI REST API and Temporal Worker in a single container via asyncio.gather, integrate the ewma-worker container service with healthy dependencies, fix temporal network healthcheck with bash, and create the missing AlertPublisherPort Protocol interface to fix ModuleNotFoundError runtime error.
+    └── Changes:
+        ├── build-dockerfile -> Expose port 8000 in build/Dockerfile
+        ├── docker-compose -> Add ewma-worker service mapping port 8000, configuring environment variables, and fixing temporal healthcheck with bash </dev/tcp/temporal/7233
+        ├── worker-co-location -> Use uvicorn.Server and asyncio.gather to run worker and REST API concurrently
+        └── alert-publisher-port -> Add alert_publisher_port.py Protocol in shared/ports/ to ensure successful runtime dependency injection
