@@ -1,0 +1,31 @@
+features:
+  - name: stateful_persistent_chat
+    status: active
+    contract: packages/go/ai-service/contracts/openapi/v1.yaml
+    contract_version: v1
+    owner: "@data-team"
+    added: 2026-05-26
+    flags: []
+    depends_on_features: []
+    depends_on_packages:
+      - ai-service
+  - name: stateless_chat_completion
+    status: active
+    contract: packages/go/ai-service/contracts/openapi/v1.yaml
+    contract_version: v1
+    owner: "@data-team"
+    added: 2026-05-26
+    flags: []
+    depends_on_features: []
+    depends_on_packages:
+      - ai-service
+  - name: semantic_memory_retrieval
+    status: active
+    contract: packages/go/ai-service/contracts/openapi/v1.yaml
+    contract_version: v1
+    owner: "@data-team"
+    added: 2026-05-26
+    flags: []
+    depends_on_features: []
+    depends_on_packages:
+      - ai-service

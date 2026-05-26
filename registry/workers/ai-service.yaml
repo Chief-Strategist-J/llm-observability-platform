@@ -1,0 +1,10 @@
+workers:
+  - name: ai-service
+    type: service
+    language: go
+    owner: "@data-team"
+    stage: 1
+    endpoints:
+      - /api/v1/models
+      - /api/v1/chat
+      - /api/v1/chat/persistent

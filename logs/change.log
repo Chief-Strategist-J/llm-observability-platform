@@ -317,12 +317,12 @@
     └── Changes:
         └── git-history -> Run git filter-branch msg-filter to delete Co-authored-by lines in all commits
 
-[2026-05-26T17:55:00+05:30] Register queue-embedding-worker and instrumentation-sdk in centralized registry
+[2026-05-26T17:55:00+05:30] Register queue-embedding-worker, instrumentation-sdk, and ai-service in centralized registry
 └── File: registry/
-    ├── Choice: Catalog workers and features for queue-embedding-worker and instrumentation-sdk to ensure structural traceability.
+    ├── Choice: Catalog workers/services and features for queue-embedding-worker, instrumentation-sdk, and Go-based ai-service to ensure structural traceability.
     └── Changes:
-        ├── workers -> Add queue-embedding-worker.yaml and instrumentation-sdk-api.yaml
-        └── features -> Add enrich_span.yaml and instrumentation_sdk.yaml
+        ├── workers -> Add queue-embedding-worker.yaml and ai-service.yaml (remove instrumentation-sdk-api.yaml worker registration since it is an SDK package library)
+        └── features -> Add enrich_span.yaml, instrumentation_sdk.yaml, and ai_orchestrator.yaml
 
 
 
