@@ -1,0 +1,81 @@
+features:
+  - name: auto_instrumentation
+    status: active
+    contract: packages/python/instrumentation-sdk/contracts/openapi/v1.yaml
+    contract_version: v1
+    owner: "@data-team"
+    added: 2026-05-26
+    flags: []
+    depends_on_features: []
+    depends_on_packages:
+      - instrumentation-sdk
+  - name: token_counting
+    status: active
+    contract: packages/python/instrumentation-sdk/contracts/openapi/v1.yaml
+    contract_version: v1
+    owner: "@data-team"
+    added: 2026-05-26
+    flags: []
+    depends_on_features: []
+    depends_on_packages:
+      - instrumentation-sdk
+  - name: pii_injection_scan
+    status: active
+    contract: packages/python/instrumentation-sdk/contracts/openapi/v1.yaml
+    contract_version: v1
+    owner: "@data-team"
+    added: 2026-05-26
+    flags: []
+    depends_on_features: []
+    depends_on_packages:
+      - instrumentation-sdk
+  - name: deterministic_sampling
+    status: active
+    contract: packages/python/instrumentation-sdk/contracts/openapi/v1.yaml
+    contract_version: v1
+    owner: "@data-team"
+    added: 2026-05-26
+    flags: []
+    depends_on_features: []
+    depends_on_packages:
+      - instrumentation-sdk
+  - name: minilm_embedding
+    status: active
+    contract: packages/python/instrumentation-sdk/contracts/openapi/v1.yaml
+    contract_version: v1
+    owner: "@data-team"
+    added: 2026-05-26
+    flags: []
+    depends_on_features: []
+    depends_on_packages:
+      - instrumentation-sdk
+  - name: fallback_tracking
+    status: active
+    contract: packages/python/instrumentation-sdk/contracts/openapi/v1.yaml
+    contract_version: v1
+    owner: "@data-team"
+    added: 2026-05-26
+    flags: []
+    depends_on_features: []
+    depends_on_packages:
+      - instrumentation-sdk
+  - name: tool_call_linking
+    status: active
+    contract: packages/python/instrumentation-sdk/contracts/openapi/v1.yaml
+    contract_version: v1
+    owner: "@data-team"
+    added: 2026-05-26
+    flags: []
+    depends_on_features: []
+    depends_on_packages:
+      - instrumentation-sdk
+  - name: prometheus_metrics
+    status: active
+    contract: packages/python/instrumentation-sdk/contracts/openapi/v1.yaml
+    contract_version: v1
+    owner: "@data-team"
+    added: 2026-05-26
+    flags: []
+    depends_on_features: []
+    depends_on_packages:
+      - instrumentation-sdk

@@ -1,0 +1,12 @@
+features:
+  - name: enrich_span
+    status: active
+    contract: packages/python/queue-embedding-worker/contracts/jobs/enrich-span.yaml
+    contract_version: v2
+    owner: "@data-team"
+    added: 2026-05-26
+    flags: []
+    migrations: []
+    depends_on_features: []
+    depends_on_packages:
+      - queue-embedding-worker

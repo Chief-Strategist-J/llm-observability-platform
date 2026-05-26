@@ -1,0 +1,11 @@
+workers:
+  - name: queue-embedding-worker
+    type: queue-worker
+    language: python
+    platform: cloudflare-workers
+    entrypoint: src/worker/index.py
+    queue: span-enrichment
+    owner: "@data-team"
+    stage: 1
+    jobs:
+      - enrich-span

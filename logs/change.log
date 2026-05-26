@@ -317,6 +317,14 @@
     └── Changes:
         └── git-history -> Run git filter-branch msg-filter to delete Co-authored-by lines in all commits
 
+[2026-05-26T17:55:00+05:30] Register queue-embedding-worker and instrumentation-sdk in centralized registry
+└── File: registry/
+    ├── Choice: Catalog workers and features for queue-embedding-worker and instrumentation-sdk to ensure structural traceability.
+    └── Changes:
+        ├── workers -> Add queue-embedding-worker.yaml and instrumentation-sdk-api.yaml
+        └── features -> Add enrich_span.yaml and instrumentation_sdk.yaml
+
+
 
 
 
