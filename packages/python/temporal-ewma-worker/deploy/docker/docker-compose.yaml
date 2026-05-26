@@ -83,7 +83,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "timeout", "5", "sh", "-c", "</dev/tcp/127.0.0.1/7233"]
+      test: ["CMD", "timeout", "5", "bash", "-c", "</dev/tcp/temporal/7233"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -101,6 +101,37 @@ services:
       kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --topic alerts.cost.anomaly --partitions 1 --replication-factor 1
       echo 'Topic created successfully.'
       "
+
+  ewma-worker:
+    build:
+      context: ../..
+      dockerfile: build/Dockerfile
+    container_name: temporal-ewma-worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    ports:
+      - "8000:8000"
+    environment:
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_USERNAME=default
+      - CLICKHOUSE_PASSWORD=
+      - CLICKHOUSE_DATABASE=default
+      - REDIS_URL=redis://redis:6379/0
+      - POSTGRES_DSN=postgresql://postgres:postgres@postgres:5432/ewma_db
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - TEMPORAL_HOST=temporal:7233
+      - TEMPORAL_NAMESPACE=default
+      - TEMPORAL_TASK_QUEUE=ewma-tasks
 
 volumes:
   postgres_data:
