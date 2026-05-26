@@ -1,0 +1,11 @@
+CREATE TABLE ewma_baselines (
+  id BIGSERIAL PRIMARY KEY,
+  service VARCHAR(255) NOT NULL,
+  model VARCHAR(255) NOT NULL,
+  hour_of_week SMALLINT NOT NULL,
+  ewma_value DOUBLE PRECISION NOT NULL,
+  sample_count INTEGER NOT NULL DEFAULT 0,
+  is_cold_start BOOLEAN NOT NULL DEFAULT TRUE,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (service, model, hour_of_week)
+);

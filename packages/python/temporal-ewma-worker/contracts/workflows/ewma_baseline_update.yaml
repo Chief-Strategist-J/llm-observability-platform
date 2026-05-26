@@ -1,0 +1,52 @@
+workflow: ewma_baseline_update
+version: 1
+schedule:
+  cron: "0 * * * *"
+input:
+  type: object
+  properties:
+    force_hour:
+      type: integer
+      minimum: 0
+      maximum: 167
+activities:
+  fetch_active_pairs:
+    timeout_seconds: 60
+    retry:
+      max_attempts: 3
+      backoff_ms: 1000
+  fetch_cost_history:
+    timeout_seconds: 30
+    retry:
+      max_attempts: 3
+      backoff_ms: 500
+  fetch_global_model_avg:
+    timeout_seconds: 30
+    retry:
+      max_attempts: 3
+      backoff_ms: 500
+  fetch_current_cost_1h:
+    timeout_seconds: 30
+    retry:
+      max_attempts: 3
+      backoff_ms: 500
+  fetch_cost_by_cluster_1h:
+    timeout_seconds: 30
+    retry:
+      max_attempts: 3
+      backoff_ms: 500
+  get_baseline:
+    timeout_seconds: 10
+    retry:
+      max_attempts: 5
+      backoff_ms: 200
+  upsert_baseline:
+    timeout_seconds: 15
+    retry:
+      max_attempts: 5
+      backoff_ms: 500
+  publish_anomaly_alert:
+    timeout_seconds: 20
+    retry:
+      max_attempts: 5
+      backoff_ms: 1000

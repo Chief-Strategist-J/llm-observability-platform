@@ -1,0 +1,16 @@
+from typing import Protocol, Tuple, List
+from shared.types.ewma_types import ClusterCost
+
+
+class ClickHousePort(Protocol):
+    def get_active_pairs(self) -> List[Tuple[str, str]]: ...
+
+    def get_cost_history(
+        self, service: str, model: str, hour_of_week: int
+    ) -> List[float]: ...
+
+    def get_global_model_avg(self, model: str, hour_of_week: int) -> float: ...
+
+    def get_current_cost_1h(self, service: str, model: str) -> float: ...
+
+    def get_cost_by_cluster_1h(self, service: str, model: str) -> List[ClusterCost]: ...

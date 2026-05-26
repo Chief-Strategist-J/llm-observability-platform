@@ -1,0 +1,45 @@
+asyncapi: 2.6.0
+info:
+  title: Cost Anomaly Alerts
+  version: 1.0.0
+channels:
+  alerts.cost.anomaly:
+    publish:
+      message:
+        $ref: '#/components/messages/CostAnomalyAlert'
+components:
+  messages:
+    CostAnomalyAlert:
+      payload:
+        type: object
+        required: [service, model, hour_of_week, current_cost, ewma_value, threshold_value, sample_count, timestamp, cluster_drilldown]
+        properties:
+          service:
+            type: string
+          model:
+            type: string
+          hour_of_week:
+            type: integer
+            minimum: 0
+            maximum: 167
+          current_cost:
+            type: number
+          ewma_value:
+            type: number
+          threshold_value:
+            type: number
+          sample_count:
+            type: integer
+          timestamp:
+            type: string
+            format: date-time
+          cluster_drilldown:
+            type: array
+            items:
+              type: object
+              required: [cluster_id, cost]
+              properties:
+                cluster_id:
+                  type: string
+                cost:
+                  type: number

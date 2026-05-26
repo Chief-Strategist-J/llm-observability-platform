@@ -1,0 +1,4 @@
+name: temporal-ewma-worker
+runtime: python
+platform: temporal
+entrypoint: src/worker/index.py
