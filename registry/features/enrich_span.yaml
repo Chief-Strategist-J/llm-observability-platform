@@ -6,7 +6,8 @@ features:
     owner: "@data-team"
     added: 2026-05-26
     flags: []
-    migrations: []
+    migrations:
+      - 0001_init
     depends_on_features: []
     depends_on_packages:
       - queue-embedding-worker

@@ -6,6 +6,7 @@ features:
     owner: "@data-team"
     added: 2026-05-26
     flags: []
+    migrations: []
     depends_on_features: []
     depends_on_packages:
       - ai-service
@@ -16,6 +17,7 @@ features:
     owner: "@data-team"
     added: 2026-05-26
     flags: []
+    migrations: []
     depends_on_features: []
     depends_on_packages:
       - ai-service
@@ -26,6 +28,7 @@ features:
     owner: "@data-team"
     added: 2026-05-26
     flags: []
+    migrations: []
     depends_on_features: []
     depends_on_packages:
       - ai-service

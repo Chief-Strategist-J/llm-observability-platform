@@ -6,6 +6,10 @@ features:
     owner: "@data-team"
     added: 2026-05-26
     flags: []
+    migrations:
+      - clickhouse/0001_init
+      - kafka/0001_init
+      - postgres/0001_init
     depends_on_features: []
     depends_on_packages:
       - instrumentation-sdk
@@ -16,6 +20,10 @@ features:
     owner: "@data-team"
     added: 2026-05-26
     flags: []
+    migrations:
+      - clickhouse/0001_init
+      - kafka/0001_init
+      - postgres/0001_init
     depends_on_features: []
     depends_on_packages:
       - instrumentation-sdk
@@ -26,6 +34,10 @@ features:
     owner: "@data-team"
     added: 2026-05-26
     flags: []
+    migrations:
+      - clickhouse/0001_init
+      - kafka/0001_init
+      - postgres/0001_init
     depends_on_features: []
     depends_on_packages:
       - instrumentation-sdk
@@ -36,6 +48,10 @@ features:
     owner: "@data-team"
     added: 2026-05-26
     flags: []
+    migrations:
+      - clickhouse/0001_init
+      - kafka/0001_init
+      - postgres/0001_init
     depends_on_features: []
     depends_on_packages:
       - instrumentation-sdk
@@ -46,6 +62,10 @@ features:
     owner: "@data-team"
     added: 2026-05-26
     flags: []
+    migrations:
+      - clickhouse/0001_init
+      - kafka/0001_init
+      - postgres/0001_init
     depends_on_features: []
     depends_on_packages:
       - instrumentation-sdk
@@ -56,6 +76,10 @@ features:
     owner: "@data-team"
     added: 2026-05-26
     flags: []
+    migrations:
+      - clickhouse/0001_init
+      - kafka/0001_init
+      - postgres/0001_init
     depends_on_features: []
     depends_on_packages:
       - instrumentation-sdk
@@ -66,6 +90,10 @@ features:
     owner: "@data-team"
     added: 2026-05-26
     flags: []
+    migrations:
+      - clickhouse/0001_init
+      - kafka/0001_init
+      - postgres/0001_init
     depends_on_features: []
     depends_on_packages:
       - instrumentation-sdk
@@ -76,6 +104,10 @@ features:
     owner: "@data-team"
     added: 2026-05-26
     flags: []
+    migrations:
+      - clickhouse/0001_init
+      - kafka/0001_init
+      - postgres/0001_init
     depends_on_features: []
     depends_on_packages:
       - instrumentation-sdk
