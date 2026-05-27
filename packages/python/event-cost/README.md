@@ -42,6 +42,9 @@ from event_cost.backends.redis import RedisBackend
 ledger = CostLedger(backend=RedisBackend(redis_url="redis://localhost:6379/0"))
 ```
 
+> [!NOTE]
+> **Redis Backend Windowing (v0.1):** In the current version, the Redis backend acts as a cumulative all-time cost counter, and the `window` parameter is ignored. Precise time-windowed queries are coming in v0.2. Use the default `SQLiteBackend` for exact time-windowed queries.
+
 ## Running at Kafka Scale
 
 Deploy the event-cost-worker for massive log volumes and asynchronous Kafka consumption:

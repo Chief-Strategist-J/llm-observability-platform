@@ -143,7 +143,9 @@ class RedisBackend:
     def query_total(self, org_id: str, window: str, **filters) -> int:
         redis_key = f"fenwick:org:{window}:{org_id}"
         result = self._query_script(keys=[redis_key], args=["1024"])
-        return int(result) if result else 0
+        if result is None or result == b"" or result == "":
+            return 0
+        return int(result)
 
     def get_budget(self, org_id: str, project_id: str) -> int:
         bucket_key = f"budget:tb:{org_id}:{project_id}"
