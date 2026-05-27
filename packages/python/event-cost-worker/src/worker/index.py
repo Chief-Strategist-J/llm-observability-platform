@@ -216,9 +216,9 @@ def _run_consumer_loop(
 
         for span in spans:
             try:
-                def _process() -> None:
+                def _process(s=span) -> None:
                     process_batch(
-                        [span], fenwick, bucket, ewma, price_lookup, dedup
+                        [s], fenwick, bucket, ewma, price_lookup, dedup
                     )
 
                 with_retry(

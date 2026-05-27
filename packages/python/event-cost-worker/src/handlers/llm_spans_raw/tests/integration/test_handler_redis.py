@@ -4,17 +4,10 @@ import redis as redis_lib
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
-FENWICK_UPDATE_LUA = """
-local key = KEYS[1]
-local delta = tonumber(ARGV[1])
-local i = tonumber(ARGV[2])
-local n = tonumber(ARGV[3])
-while i <= n do
-    redis.call('HINCRBY', key, tostring(i), delta)
-    i = i + bit.band(i, -i)
-end
-return 1
-"""
+from handlers.llm_spans_raw.index import (
+    FENWICK_UPDATE_LUA,
+    TOKEN_BUCKET_DEDUCT_LUA,
+)
 
 FENWICK_QUERY_LUA = """
 local key = KEYS[1]
@@ -25,15 +18,6 @@ while i > 0 do
     i = i - bit.band(i, -i)
 end
 return sum
-"""
-
-TOKEN_BUCKET_DEDUCT_LUA = """
-local key = KEYS[1]
-local delta = tonumber(ARGV[1])
-local current = tonumber(redis.call('GET', key) or '0')
-local new_val = current - delta
-redis.call('SET', key, tostring(new_val))
-return new_val
 """
 
 
