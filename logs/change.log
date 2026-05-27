@@ -354,4 +354,9 @@
         ├── dockerfile -> Change pip install target to include dev optional-dependencies in build/Dockerfile
         └── git-branch -> Create feature/event-cost-worker-idempotency branch, stage finalized worker files, delete cost-engine boilerplate, commit and push
 
+[2026-05-27T10:20:00+05:30] Align event-cost-worker README.md style with temporal-ewma-worker
+└── File: packages/python/event-cost-worker/README.md
+    ├── Choice: Reformat README.md to follow strict styling templates of temporal-ewma-worker, including folder structure, detailed decision trees with rationales, sequencing map, and database migration guide.
+    └── Changes:
+        └── documentation -> Aligned event-cost-worker documentation style and section contents with temporal-ewma-worker README.
 
