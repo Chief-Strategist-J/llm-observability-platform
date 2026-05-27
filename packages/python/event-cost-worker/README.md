@@ -99,10 +99,151 @@ python/event-cost-worker/
 | `budget:tb:{org_id}:{project_id}` | String (counter) | Token budget tracking |
 | `ewma:cost:{service}:{model}:{hour}` | String (float) | EWMA baseline (read-only) |
 
-## Quick Start
+## Decision Logic Tree
 
-```bash
-cd packages/python/event-cost-worker
-pip install -e ".[dev]"
-scripts/test.sh
+The worker processes each span event according to the following decision flow:
+
 ```
+                    Span Event Received (Kafka)
+                               │
+                               ▼
+                    [Idempotency Check]
+                               │
+                       ┌───────┴───────┐
+                 [Is Duplicate?]    [Is New?]
+                       │               │
+                       ▼               ▼
+                    [Skip]     [Extract Tracing]
+                                       │
+                                       ▼
+                             [Price Reconciliation]
+                                       │
+                               ┌───────┴───────┐
+                         [Within ±2%?]    [Out of range?]
+                               │               │
+                               │               ▼
+                               │        [Raise Warning]
+                               ▼               │
+                      [Calculate Cost] ◄───────┘
+                               │
+                               ▼
+                   [Aggregate (Fenwick Trees)]
+                               │
+                               ▼
+                  [Token Bucket Retro Deduction]
+                               │
+                               ▼
+                    [Offset Committed]
+```
+
+If any step raises an unhandled exception:
+```
+                      Processing Span Error
+                                │
+                                ▼
+                       [Retry (Max 3x)]
+                                │
+                         ┌──────┴──────┐
+                  [Attempts < 3?]   [Attempts == 3?]
+                         │                 │
+                         ▼                 ▼
+                [Exponential Backoff]   [Route to DLQ]
+```
+
+---
+
+## Event Schema (Kafka Interface)
+
+The worker consumes JSON-encoded events from the `llm.spans.raw` topic.
+
+### Payload Schema
+```json
+{
+  "span_id": "8a02a831-29e8-45e6-bd27-4c3a2ef9d0a1",
+  "trace_id": "bfd0b678-4395-46ae-a235-901d1df36ef8",
+  "service_name": "recommendation-service",
+  "model": "gpt-4",
+  "provider": "openai",
+  "prompt_tokens": 120,
+  "completion_tokens": 250,
+  "cost_usd_micro": 11100,
+  "price_version": "v1.0",
+  "timestamp_utc": "2026-05-27T10:18:00Z",
+  "user_id": "usr-9281",
+  "org_id": "org-4412",
+  "project_id": "proj-901",
+  "estimated_tokens": 100
+}
+```
+
+---
+
+## Redis Query API (Aggregates Interface)
+
+End users can read the compiled aggregates directly from Redis.
+
+### 1. Retrieve Fenwick Tree Cumulative Cost
+To query the Fenwick Tree aggregate for a service, read the Hash fields:
+```bash
+# Get all entries in the Fenwick Tree hash
+redis-cli HGETALL "fenwick:service:1h:recommendation-service"
+```
+
+### 2. Inspect Token Bucket Balance
+To inspect the remaining budget for an organization and project:
+```bash
+redis-cli GET "budget:tb:org-4412:proj-901"
+```
+
+### 3. Check Idempotency Cache
+To verify if a span ID has been cached for deduplication:
+```bash
+redis-cli SISMEMBER "dedup:cost_engine" "8a02a831-29e8-45e6-bd27-4c3a2ef9d0a1"
+```
+
+---
+
+## End-to-End Testing Guide
+
+### 1. Spin up Local Environment
+Start Kafka (Redpanda) and Redis containers:
+```bash
+cd packages/python/event-cost-worker/deploy/docker
+docker compose up -d
+```
+
+### 2. Start the Event Cost Worker
+Set the configuration variables and run the worker script:
+```bash
+cd ../..
+export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"
+export REDIS_URL="redis://localhost:6379/0"
+export PRICE_CONFIG_PATH="src/handlers/llm_spans_raw/tests/unit/test_price_config.yaml"
+
+python src/worker/index.py
+```
+
+### 3. Send a Mock Event via Redpanda CLI
+In a separate terminal, use Redpanda's `rpk` command line inside the container to produce a mock span message:
+```bash
+docker exec -i docker-redpanda-1 rpk topic produce llm.spans.raw <<EOF
+{"span_id": "8a02a831-29e8-45e6-bd27-4c3a2ef9d0a1", "trace_id": "bfd0b678-4395-46ae-a235-901d1df36ef8", "service_name": "recommendation-service", "model": "gpt-4", "provider": "openai", "prompt_tokens": 120, "completion_tokens": 250, "cost_usd_micro": 11100, "price_version": "v1.0", "timestamp_utc": "2026-05-27T10:18:00Z", "org_id": "org-4412", "project_id": "proj-901", "estimated_tokens": 100}
+EOF
+```
+
+### 4. Verify Redis Aggregates
+Check that the cost data has been aggregated correctly in Redis:
+```bash
+# Verify the Fenwick tree was updated
+docker exec -it docker-redis-1 redis-cli HGETALL "fenwick:service:1h:recommendation-service"
+
+# Verify idempotency key registration
+docker exec -it docker-redis-1 redis-cli SISMEMBER "dedup:cost_engine" "8a02a831-29e8-45e6-bd27-4c3a2ef9d0a1"
+```
+
+### 5. Run the Local Test Suite
+You can execute all local unit and integration tests with:
+```bash
+./scripts/test.sh
+```
+
