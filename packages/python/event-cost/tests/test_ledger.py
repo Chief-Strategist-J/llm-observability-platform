@@ -7,8 +7,18 @@ from event_cost.backends.sqlite import SQLiteBackend
 def test_sqlite_backend_record_and_query():
     with tempfile.TemporaryDirectory() as tmpdir:
         db_path = os.path.join(tmpdir, "test.db")
+        yaml_path = os.path.join(tmpdir, "prices.yaml")
+        with open(yaml_path, "w") as f:
+            f.write("""
+prices:
+  - model: "gpt-4"
+    provider: "openai"
+    input_price_per_token_micro: 30
+    output_price_per_token_micro: 60
+    version: "v1"
+""")
         backend = SQLiteBackend(db_path=db_path)
-        ledger = CostLedger(backend=backend)
+        ledger = CostLedger(backend=backend, price_config_path=yaml_path)
         
         ledger.record(
             model="gpt-4",
@@ -37,6 +47,7 @@ def test_redis_backend_mock(monkeypatch):
     
     mock_script = MagicMock()
     mock_script.sha = "mock-sha"
+    mock_script.return_value = "1"
     mock_client.register_script.return_value = mock_script
 
     monkeypatch.setattr(redis_lib, "from_url", lambda url: mock_client)

@@ -7,17 +7,31 @@ ledger = CostLedger()
 @app.middleware("http")
 async def track_llm_cost(request: Request, call_next):
     response = await call_next(request)
-    ledger.record(
-        model="gpt-4o",
-        provider="openai",
-        prompt_tokens=100,
-        completion_tokens=200,
-        org_id="fastapi-org",
-        project_id="main",
-        service_name="gateway",
-        user_id="anonymous"
-    )
+    prompt_tokens = getattr(request.state, "prompt_tokens", 0)
+    completion_tokens = getattr(request.state, "completion_tokens", 0)
+    model = getattr(request.state, "model", "gpt-4o")
+    provider = getattr(request.state, "provider", "openai")
+    
+    if prompt_tokens > 0 or completion_tokens > 0:
+        ledger.record(
+            model=model,
+            provider=provider,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            org_id="fastapi-org",
+            project_id="main",
+            service_name="gateway",
+            user_id="user_123"
+        )
     return response
+
+@app.post("/chat")
+async def chat(request: Request):
+    request.state.prompt_tokens = 15
+    request.state.completion_tokens = 35
+    request.state.model = "gpt-4o"
+    request.state.provider = "openai"
+    return {"message": "Hello world"}
 
 @app.get("/metrics")
 def get_metrics():

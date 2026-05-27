@@ -62,12 +62,12 @@ class SQLiteBackend:
     def query_total(self, org_id: str, window: str, **filters) -> int:
         window_map = {"1h": 1, "24h": 24, "7d": 168, "30d": 720}
         hours = window_map.get(window, 24)
-        cutoff = f"datetime('now', '-{hours} hours')"
-        row = self._conn.execute(f"""
+        modifier = f"-{hours} hours"
+        row = self._conn.execute("""
             SELECT COALESCE(SUM(cost_usd_micro), 0)
             FROM spans
-            WHERE org_id = ? AND recorded_at >= {cutoff}
-        """, (org_id,)).fetchone()
+            WHERE org_id = ? AND recorded_at >= datetime('now', ?)
+        """, (org_id, modifier)).fetchone()
         return row[0] if row else 0
 
     def get_budget(self, org_id: str, project_id: str) -> int:
