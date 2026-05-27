@@ -368,4 +368,14 @@
         ├── worker-fixes -> Implement HTTP server healthcheck on port 8001 and correct OTel export imports in event-cost-worker
         └── price-config -> Ship default model_price_versions.yaml for worker and builtin.yaml for SDK to prevent empty lookups
 
+[2026-05-27T11:40:00+05:30] Fix event-cost RedisBackend, package-data packaging, and worker closure/test bugs
+└── File: packages/python/event-cost/src/event_cost/backends/redis.py, packages/python/event-cost/pyproject.toml, packages/python/event-cost/tests/test_ledger.py, packages/python/event-cost-worker/src/worker/index.py, packages/python/event-cost-worker/src/handlers/llm_spans_raw/tests/integration/test_handler_redis.py
+    ├── Choice: Remove cross-package imports by copying Redis adapters directly into event-cost SDK, use a prefix-sum eval LUA script for query_total, and fix worker indexing closures.
+    └── Changes:
+        ├── sdk-independence -> Duplicate Redis adapters in redis.py and bundle yaml files via pyproject.toml package-data
+        ├── fenwick-query -> Implement FENWICK_QUERY_LUA prefix sum query up to index 1024
+        ├── closure-fix -> Pass default loop variable s=span to consumer processing closure
+        └── test-clean -> Import Lua scripts from index in test_handler_redis.py to remove duplicate code
+
+
 
