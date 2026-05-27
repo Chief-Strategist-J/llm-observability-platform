@@ -2,14 +2,16 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Any
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 import redis as redis_lib
 import yaml
 from confluent_kafka import Consumer, Producer, KafkaError
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import SimpleSpanExporter, ConsoleSpanExporter
-from opentelemetry.trace.propagation import TraceContextTextMapPropagator
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor, ConsoleSpanExporter
+from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from opentelemetry.context import Context
 
 from handlers.llm_spans_raw.index import (
@@ -33,7 +35,7 @@ tracer = trace.get_tracer(SERVICE_NAME)
 
 def _init_tracing() -> None:
     provider = TracerProvider()
-    provider.add_span_processor(SimpleSpanExporter(ConsoleSpanExporter()))
+    provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
     trace.set_tracer_provider(provider)
 
 
@@ -245,9 +247,26 @@ def _run_consumer_loop(
         )
 
 
+class _HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self) -> None:
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(b'{"status":"ok"}')
+
+    def log_message(self, format: str, *args: Any) -> None:
+        pass
+
+
+def _start_health_server(port: int = 8001) -> None:
+    server = HTTPServer(("0.0.0.0", port), _HealthHandler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+
+
 def main() -> None:
     _init_tracing()
     config = load_config()
+    _start_health_server()
 
     redis_client = redis_lib.from_url(config.redis_url)
     fenwick = RedisFenwickAdapter(redis_client)

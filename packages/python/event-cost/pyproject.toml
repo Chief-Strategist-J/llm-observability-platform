@@ -1,0 +1,31 @@
+[project]
+name = "event-cost"
+version = "0.1.0"
+description = "Python client for LLM API cost ledger and retroactive budget reconciliation"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "redis>=5.0.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.1.0",
+    "mypy>=1.8.0",
+    "ruff>=0.2.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.22.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "../event-cost-worker/src"]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
