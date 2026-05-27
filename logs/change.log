@@ -325,9 +325,24 @@
         ├── package -> Add instrumentation-sdk.yaml (catalog SDK library details)
         └── features -> Add enrich_span.yaml, instrumentation_sdk.yaml, and ai_orchestrator.yaml
 
+[2026-05-27T09:46:00+05:30] Implement event-cost-worker Kafka consumer for LLM span cost aggregation
+└── File: packages/python/event-cost-worker/
+    ├── Choice: Follow event-worker-rules.md strictly — handlers/{event-name}/ structure, no features/api/infra dirs
+    └── Changes:
+        ├── contracts -> llm_spans_raw.yaml (AsyncAPI schema v1, consumer group pinned)
+        ├── handler -> build_fenwick_updates, compute_token_bucket_delta, reconcile_price, compute_burn_ratio
+        ├── worker -> Kafka consumer loop with 3x retry + DLQ + offset commit gating
+        ├── redis -> Fenwick Tree Lua (5 dims × 4 windows), Token Bucket Lua, EWMA reader
+        ├── registries -> worker-registry.yaml, feature-registry.yaml, registry/workers/event-cost-worker.yaml, registry/features/cost_aggregation.yaml
+        └── tests -> unit tests for handler domain logic, integration tests for Redis Lua scripts
 
-
-
-
-
+[2026-05-27T10:03:38+05:30] Implement idempotency check, OpenTelemetry tracing, metadata locks, and critical test suite for event-cost-worker
+└── File: packages/python/event-cost-worker/src/handlers/llm_spans_raw/index.py, packages/python/event-cost-worker/src/worker/index.py, packages/python/event-cost-worker/.contract-lock, packages/python/event-cost-worker/.port-registry, packages/python/event-cost-worker/database/schema.lock, packages/python/event-cost-worker/database/migrations/0001_redis_schema.sql, packages/python/event-cost-worker/scripts/migrate.sh, packages/python/event-cost-worker/scripts/deploy_docker.sh, packages/python/event-cost-worker/src/handlers/llm_spans_raw/tests/unit/test_handler.py
+    ├── Choice: Use Redis Lua script (SADD + EXPIRE) for span deduplication (idempotency guard), extract W3C traceparent headers to propagate OTel spans, generate schema locks and port registry, and write custom unit test suite covering retry timing and error boundaries.
+    └── Changes:
+        ├── idempotency -> Add DEDUP_CHECK_LUA script and RedisDedupAdapter to filter duplicate span processing
+        ├── telemetry -> Add W3C traceparent context extraction from Kafka headers and instrument process loops with OTel tracers
+        ├── metadata -> Generate .contract-lock, .port-registry, and database/schema.lock metadata files
+        ├── migrations -> Create database/migrations/0001_redis_schema.sql and update migrate.sh to ping Redis
+        └── testing -> Write 51 test cases in test_handler.py covering every handler path and edge cases
 

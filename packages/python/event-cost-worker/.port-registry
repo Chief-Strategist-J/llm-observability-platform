@@ -1,0 +1,29 @@
+ports:
+  - name: kafka_consumer
+    type: messaging
+    vendor: confluent-kafka
+    adapter: src/worker/index.py::Consumer
+  - name: kafka_dlq_producer
+    type: messaging
+    vendor: confluent-kafka
+    adapter: src/worker/index.py::Producer
+  - name: redis_fenwick
+    type: cache
+    vendor: redis
+    adapter: src/worker/index.py::RedisFenwickAdapter
+  - name: redis_token_bucket
+    type: cache
+    vendor: redis
+    adapter: src/worker/index.py::RedisTokenBucketAdapter
+  - name: redis_ewma_reader
+    type: cache
+    vendor: redis
+    adapter: src/worker/index.py::RedisEwmaReaderAdapter
+  - name: redis_dedup
+    type: cache
+    vendor: redis
+    adapter: src/worker/index.py::RedisDedupAdapter
+  - name: price_lookup
+    type: config
+    vendor: yaml
+    adapter: src/worker/index.py::YamlPriceLookupAdapter
