@@ -346,3 +346,12 @@
         ├── migrations -> Create database/migrations/0001_redis_schema.sql and update migrate.sh to ping Redis
         └── testing -> Write 51 test cases in test_handler.py covering every handler path and edge cases
 
+[2026-05-27T10:18:00+05:30] Configure Docker Hub publishing to chiefj namespace, setup container testing dependencies, and release git branch
+└── File: packages/python/event-cost-worker/scripts/deploy_docker.sh, packages/python/event-cost-worker/build/Dockerfile
+    ├── Choice: Target chiefj/event-cost-worker docker repository to match authenticated credentials, install dev dependencies in the image to run tests on build, and push changes to feature/event-cost-worker-idempotency.
+    └── Changes:
+        ├── docker-deploy -> Update IMAGE variable to chiefj/event-cost-worker in deploy_docker.sh
+        ├── dockerfile -> Change pip install target to include dev optional-dependencies in build/Dockerfile
+        └── git-branch -> Create feature/event-cost-worker-idempotency branch, stage finalized worker files, delete cost-engine boilerplate, commit and push
+
+
