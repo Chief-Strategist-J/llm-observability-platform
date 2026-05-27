@@ -1,0 +1,61 @@
+asyncapi: 2.6.0
+info:
+  title: LLM Spans Raw Event
+  version: "1"
+  description: Raw LLM span events consumed by event-cost-worker
+
+channels:
+  llm.spans.raw:
+    subscribe:
+      operationId: consumeLlmSpansRaw
+      message:
+        name: RawSpanEvent
+        contentType: application/json
+        payload:
+          type: object
+          required:
+            - span_id
+            - trace_id
+            - service_name
+            - model
+            - provider
+            - prompt_tokens
+            - completion_tokens
+            - cost_usd_micro
+            - price_version
+            - timestamp_utc
+          properties:
+            span_id:
+              type: string
+              format: uuid
+            trace_id:
+              type: string
+              format: uuid
+            service_name:
+              type: string
+            model:
+              type: string
+            provider:
+              type: string
+            prompt_tokens:
+              type: integer
+            completion_tokens:
+              type: integer
+            cost_usd_micro:
+              type: integer
+            price_version:
+              type: string
+            timestamp_utc:
+              type: string
+              format: date-time
+            user_id:
+              type: string
+            org_id:
+              type: string
+            project_id:
+              type: string
+            estimated_tokens:
+              type: integer
+
+consumer_group: event-cost-worker-group
+version: 1

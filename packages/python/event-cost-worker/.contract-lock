@@ -1,0 +1,4 @@
+llm_spans_raw:
+  schema_version: 1
+  contract_file: contracts/events/llm_spans_raw.yaml
+  locked_at: 2026-05-27T09:46:00+05:30

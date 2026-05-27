@@ -1,0 +1,8 @@
+workers:
+  - name: event-cost-worker
+    type: event
+    language: python
+    topics:
+      - llm.spans.raw
+    owner: "@data-team"
+    stage: 1

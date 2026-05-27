@@ -1,0 +1,14 @@
+features:
+  - name: cost_aggregation
+    status: active
+    contract: packages/python/event-cost-worker/contracts/events/llm_spans_raw.yaml
+    contract_version: v1
+    owner: "@data-team"
+    added: 2026-05-27
+    capabilities:
+      - fenwick_tree_aggregation
+      - token_bucket_reconciliation
+      - price_version_reconciliation
+      - ewma_burn_ratio_logging
+    depends_on_features:
+      - ewma_compute
