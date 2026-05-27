@@ -1,0 +1,6 @@
+prices:
+  - model: gpt-4
+    provider: openai
+    input_price_per_token_micro: 30
+    output_price_per_token_micro: 60
+    version: v1.0

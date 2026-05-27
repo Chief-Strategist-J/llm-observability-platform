@@ -360,3 +360,12 @@
     └── Changes:
         └── documentation -> Aligned event-cost-worker documentation style and section contents with temporal-ewma-worker README.
 
+[2026-05-27T11:17:00+05:30] Implement event-cost zero-infra Python SDK and fix event-cost-worker bugs
+└── File: packages/python/event-cost/pyproject.toml, packages/python/event-cost/src/event_cost/__init__.py, packages/python/event-cost/src/event_cost/ledger.py, packages/python/event-cost/src/event_cost/backends/_base.py, packages/python/event-cost/src/event_cost/backends/sqlite.py, packages/python/event-cost/src/event_cost/backends/redis.py, packages/python/event-cost/src/event_cost/prices/builtin.yaml, packages/python/event-cost/README.md, packages/python/event-cost-worker/src/worker/index.py, packages/python/event-cost-worker/model_price_versions.yaml
+    ├── Choice: Create a zero-infra local Python SDK event-cost wrapping SQLite for local-first cost metrics, providing a pluggable RedisBackend that matches worker schemas, and fix healthcheck and tracing imports in event-cost-worker.
+    └── Changes:
+        ├── sdk-init -> Create new event-cost library package with SQLite and Redis adapters
+        ├── worker-fixes -> Implement HTTP server healthcheck on port 8001 and correct OTel export imports in event-cost-worker
+        └── price-config -> Ship default model_price_versions.yaml for worker and builtin.yaml for SDK to prevent empty lookups
+
+
