@@ -2,152 +2,229 @@
 
 Kafka consumer worker that aggregates LLM span cost data into Redis Fenwick Trees and reconciles token budgets post-call.
 
-## Architecture
+---
+
+## Folder Structure
 
 ```
-llm.spans.raw (Kafka)
-       │
-       ▼
-┌─────────────────────────┐
-│   event-cost-worker     │
-│                         │
-│  ┌───────────────────┐  │
-│  │ worker/index.py   │  │  ← Kafka consumer loop + DI wiring
-│  │   ▼ poll batch    │  │
-│  │   ▼ deserialize   │  │
-│  │   ▼ retry(3x)     │  │
-│  └───────┬───────────┘  │
-│          ▼              │
-│  ┌───────────────────┐  │
-│  │ handlers/         │  │
-│  │ llm_spans_raw/    │  │
-│  │   handler.py      │  │  ← Pure domain logic (no I/O)
-│  │   index.py        │  │  ← Thin orchestrator
-│  └───────┬───────────┘  │
-│          ▼              │
-│  ┌───────────────────┐  │
-│  │ Redis Adapters    │  │
-│  │  Fenwick Trees    │  │  ← 5 dims × 4 windows = 20 Lua calls/span
-│  │  Token Buckets    │  │  ← Retroactive delta deduction
-│  │  EWMA Reader      │  │  ← Read-only burn ratio
-│  └───────────────────┘  │
-└─────────────────────────┘
-       │ (on failure)
-       ▼
-llm.spans.raw.dlq (Kafka)
-```
-
-## Functional Requirements
-
-| ID | Feature | Description |
-|----|---------|-------------|
-| F-C-01 | Fenwick Tree | 20 Redis Lua updates per span (5 dims × 4 windows), pipelined |
-| F-C-02 | Token Bucket | Retroactive deduction when completion_tokens > estimated |
-| F-C-03 | Price Reconciliation | ±2% tolerance check against model_price_versions |
-| F-C-04 | EWMA Burn Ratio | Read ewma:cost:{service}:{model}:{hour} for logging |
-| F-C-05 | Budget Events | Not produced here — SDK produces, alert-engine consumes |
-| F-C-06 | Dead Letter | 3 retries (100ms/200ms/400ms), then DLQ + counter |
-
-## Directory Structure
-
-```
-python/event-cost-worker/
-├── contracts/events/
-│   ├── llm_spans_raw.yaml
-│   └── changelog.md
-├── src/
-│   ├── worker/
-│   │   ├── config.py
-│   │   ├── registry.py
-│   │   └── index.py
-│   ├── handlers/llm_spans_raw/
-│   │   ├── index.py
-│   │   ├── handler.py
-│   │   ├── types.py
-│   │   └── tests/unit/ + integration/
-│   └── shared/
-│       ├── types/cost_types.py
-│       ├── utils/retry.py
-│       └── contracts/validator.py
-├── scripts/ (run.sh, test.sh, migrate.sh, health-check.sh)
-├── build/Dockerfile
-├── deploy/docker/docker-compose.yaml
+.
+├── build/
+│   └── Dockerfile
+├── contracts/
+│   ├── events/
+│   │   ├── llm_spans_raw.yaml
+│   │   └── changelog.md
+│   └── schema.lock
+├── database/
+│   ├── migrations/
+│   │   ├── 0001_redis_schema.rollback.sql
+│   │   └── 0001_redis_schema.sql
+│   └── schema.lock
+├── deploy/
+│   └── docker/
+│       └── docker-compose.yaml
+├── feature-registry.yaml
 ├── pyproject.toml
-├── worker-registry.yaml
-└── feature-registry.yaml
+├── README.md
+├── scripts/
+│   ├── deploy_docker.sh
+│   ├── health-check.sh
+│   ├── migrate.sh
+│   ├── run.sh
+│   └── test.sh
+├── src/
+│   ├── handlers/
+│   │   └── llm_spans_raw/
+│   │       ├── index.py
+│   │       ├── handler.py
+│   │       ├── types.py
+│   │       └── tests/
+│   │           ├── integration/
+│   │           │   └── test_handler_redis.py
+│   │           └── unit/
+│   │               └── test_handler.py
+│   ├── shared/
+│   │   ├── contracts/
+│   │   │   └── validator.py
+│   │   ├── types/
+│   │   │   └── cost_types.py
+│   │   └── utils/
+│   │       └── retry.py
+│   └── worker/
+│       ├── config.py
+│       ├── index.py
+│       └── registry.py
+└── worker-registry.yaml
 ```
 
-## Configuration
+---
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| KAFKA_BOOTSTRAP_SERVERS | localhost:9092 | Kafka broker addresses |
-| KAFKA_CONSUMER_GROUP | event-cost-worker-group | Consumer group ID |
-| KAFKA_TOPIC | llm.spans.raw | Source topic |
-| KAFKA_DLQ_TOPIC | llm.spans.raw.dlq | Dead letter topic |
-| REDIS_URL | redis://localhost:6379/0 | Redis connection |
-| BATCH_SIZE | 500 | Spans per poll |
-| MAX_RETRIES | 3 | Retry count before DLQ |
-| RETRY_BASE_MS | 100 | Base backoff delay |
-| PRICE_CONFIG_PATH | model_price_versions.yaml | Price lookup config |
+## Work Execution & Decision Flow
 
-## Redis Key Formats
-
-| Key Pattern | Data Structure | Purpose |
-|-------------|---------------|---------|
-| `fenwick:{dim}:{window}:{key}` | Hash (Fenwick Tree) | Cost aggregation |
-| `budget:tb:{org_id}:{project_id}` | String (counter) | Token budget tracking |
-| `ewma:cost:{service}:{model}:{hour}` | String (float) | EWMA baseline (read-only) |
-
-## Decision Logic Tree
-
-The worker processes each span event according to the following decision flow:
+The following detailed decision tree outlines how the consumer aggregates span costs and reconciles budgets, with justification for each design choice:
 
 ```
-                    Span Event Received (Kafka)
-                               │
-                               ▼
-                    [Idempotency Check]
-                               │
-                       ┌───────┴───────┐
-                 [Is Duplicate?]    [Is New?]
-                       │               │
-                       ▼               ▼
-                    [Skip]     [Extract Tracing]
-                                       │
-                                       ▼
-                             [Price Reconciliation]
-                                       │
-                               ┌───────┴───────┐
-                         [Within ±2%?]    [Out of range?]
-                               │               │
-                               │               ▼
-                               │        [Raise Warning]
-                               ▼               │
-                      [Calculate Cost] ◄───────┘
-                               │
-                               ▼
-                   [Aggregate (Fenwick Trees)]
-                               │
-                               ▼
-                  [Token Bucket Retro Deduction]
-                               │
-                               ▼
-                    [Offset Committed]
+[Span Message Consumed from Kafka]
+└── traceparent header extracted (OTel Context)
+    │
+    │   ► RATIONALE: Integrates with global W3C tracing. Ensures that span cost calculation
+    │     participates in the parent span trace without breaking propagation.
+    │
+    └── Idempotency Guard (Redis DEDUP_CHECK_LUA)
+        │
+        │   ► RATIONALE: SADD + EXPIRE Lua script runs atomically on Redis. 
+        │     If span_id already in 'dedup:cost_engine' set, return 0 (Skip processing). 
+        │     This prevents double-counting costs if Kafka re-delivers a batch.
+        │
+        ├── Duplicate Span Found
+        │   └── Skip processing (No-op)
+        │
+        └── New Span Found
+            └── Price Reconciliation (Tolerance Check)
+                │
+                │   ► RATIONALE: Validates span.cost_usd_micro against the baseline price 
+                │     configured in model_price_versions.yaml. Tolerates ±2% deviations to 
+                │     allow minor provider rounding variances while detecting pricing anomalies.
+                │
+                ├── Cost within ±2% of baseline
+                │   └── Use span.cost_usd_micro directly
+                │
+                └── Cost deviates > 2% (Price Anomaly)
+                    ├── Log WARNING event with trace context
+                    └── Recalculate cost = (prompt_tokens * input_rate) + (completion_tokens * output_rate)
+                        │
+                        │   ► RATIONALE: Safeguards the analytical layer from compromised, corrupt, 
+                        │     or erroneous span cost payloads by correcting the value before aggregating.
+                        │
+                └── Batch aggregate execution (process_batch):
+                    │
+                    ├── 1. Redis Pipeline Fenwick Tree Updates
+                    │   │
+                    │   │   ► RATIONALE: Updates 5 dimensions (org, project, service, model, user) 
+                    │   │     across 4 windows (1h, 24h, 7d, 30d) = 20 Fenwick Trees per span. 
+                    │   │     Using a non-transactional Redis pipeline avoids blockages while maintaining 
+                    │   │     extremely high aggregation throughput.
+                    │   │
+                    │   └── Execute 20 Lua calls per span concurrently in Redis pipeline
+                    │
+                    ├── 2. Token Bucket Retro Deduction
+                    │   │
+                    │   │   ► RATIONALE: Token buckets deduct budget BEFORE LLM calls (in SDK). 
+                    │   │     If the actual completion_tokens exceed the pre-estimated amount, the 
+                    │   │     remaining deficit is retroactively deducted here to maintain budget parity.
+                    │   │
+                    │   └── Call TOKEN_BUCKET_DEDUCT_LUA script for org/project if deficit exists
+                    │
+                    └── 3. EWMA Baseline Reading (F-C-04)
+                        │
+                        │   ► RATIONALE: Reads the baseline cost from ewma:cost:{service}:{model}:{hour} 
+                        │     and logs the ratio (cost / baseline) to enable real-time anomaly analysis.
+                        │
+                        └── Read EWMA value from Redis cache
 ```
 
 If any step raises an unhandled exception:
 ```
-                      Processing Span Error
-                                │
-                                ▼
-                       [Retry (Max 3x)]
-                                │
-                         ┌──────┴──────┐
-                  [Attempts < 3?]   [Attempts == 3?]
-                         │                 │
-                         ▼                 ▼
-                [Exponential Backoff]   [Route to DLQ]
+[Processing Exception Raised]
+└── Catch exception and start exponential backoff (with_retry)
+    │
+    │   ► RATIONALE: Protects against transient Redis connectivity blips by retrying 
+    │     3 times with exponential backoff (100ms, 200ms, 400ms).
+    │
+    ├── Successful execution on retry
+    │   └── Commit Kafka offset
+    │
+    └── All 3 retries failed (Dead Letter Queue)
+        │
+        │   ► RATIONALE: Routes raw span bytes to 'llm.spans.raw.dlq' Kafka topic. 
+        │     This prevents transient failures from blocking ingestion queue head-of-line.
+        │
+        ├── Publish payload to DLQ topic
+        └── Commit Kafka offset (Acknowledge progress)
+```
+
+---
+
+## Sequencing & Dependency Map
+
+To run the worker successfully, you MUST spin up and configure dependencies in the following strict order:
+
+```
+[Step 1: Docker Containers] ---> [Step 2: Configuration] ---> [Step 3: Redis Schema Validation] ---> [Step 4: Verification] ---> [Step 5: Start Worker]
+  • Redis Cache (6379)             • Copy .env.example          • ./scripts/migrate.sh                • ./scripts/test.sh         • ./scripts/run.sh
+  • Kafka & Zookeeper (9092)       • Set hosts & ports            (Validates Redis connectivity)        (Runs full unit/            (Starts polling
+                                                                                                         integration tests)          Kafka spans raw topic)
+```
+
+---
+
+## Setup & Running
+
+Follow these steps to set up the local development environment and run the worker:
+
+### 1. Prerequisites
+Ensure you have the following installed:
+- Python 3.11+
+- Docker & Docker Compose
+- Git
+
+### 2. Configure Virtual Environment & Dependencies
+Create a virtual environment and install the package along with development requirements:
+```bash
+# Create virtual environment
+python3 -m venv .venv
+
+# Activate virtual environment
+source .venv/bin/activate
+
+# Install package in editable mode with development dependencies
+pip install -e ".[dev]"
+```
+
+### 3. Spin Up Infrastructure
+Use the provided `docker-compose` to run Redis and Redpanda locally:
+```bash
+docker compose -f deploy/docker/docker-compose.yaml up -d
+```
+
+### 4. Configure Environment Variables
+Copy the template `.env.example` to `.env` and fill in custom connection strings if necessary:
+```bash
+cp .env.example .env
+```
+
+---
+
+## Database Migrations Guide
+
+The database schema is managed via light-weight migration templates tracked under `database/migrations/` and verified using a `schema.lock` file.
+
+### How it Works
+Since the worker is Redis-only, there are no SQL migrations. The migration script validates Redis connectivity and confirms that the Redis instance conforms to the key schemas documented in `database/migrations/0001_redis_schema.sql`.
+
+### Apply Migrations (UP)
+To validate the database connectivity and print schema configurations, run:
+```bash
+./scripts/migrate.sh
+```
+
+### Rollback Migrations
+Since Redis keys are dynamic, rollback is achieved by flushing the Redis DB (only do this on dedicated cost-engine instances) or deleting keys matching `fenwick:*`, `budget:tb:*`, and `dedup:*`.
+
+---
+
+## Running Verification & Worker
+
+### 1. Run Tests
+Verify configuration, domain handlers, and Redis integration behavior using the test script:
+```bash
+./scripts/test.sh
+```
+
+### 2. Run Worker
+Start the Kafka consumer loop:
+```bash
+./scripts/run.sh
 ```
 
 ---
@@ -200,50 +277,3 @@ To verify if a span ID has been cached for deduplication:
 ```bash
 redis-cli SISMEMBER "dedup:cost_engine" "8a02a831-29e8-45e6-bd27-4c3a2ef9d0a1"
 ```
-
----
-
-## End-to-End Testing Guide
-
-### 1. Spin up Local Environment
-Start Kafka (Redpanda) and Redis containers:
-```bash
-cd packages/python/event-cost-worker/deploy/docker
-docker compose up -d
-```
-
-### 2. Start the Event Cost Worker
-Set the configuration variables and run the worker script:
-```bash
-cd ../..
-export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"
-export REDIS_URL="redis://localhost:6379/0"
-export PRICE_CONFIG_PATH="src/handlers/llm_spans_raw/tests/unit/test_price_config.yaml"
-
-python src/worker/index.py
-```
-
-### 3. Send a Mock Event via Redpanda CLI
-In a separate terminal, use Redpanda's `rpk` command line inside the container to produce a mock span message:
-```bash
-docker exec -i docker-redpanda-1 rpk topic produce llm.spans.raw <<EOF
-{"span_id": "8a02a831-29e8-45e6-bd27-4c3a2ef9d0a1", "trace_id": "bfd0b678-4395-46ae-a235-901d1df36ef8", "service_name": "recommendation-service", "model": "gpt-4", "provider": "openai", "prompt_tokens": 120, "completion_tokens": 250, "cost_usd_micro": 11100, "price_version": "v1.0", "timestamp_utc": "2026-05-27T10:18:00Z", "org_id": "org-4412", "project_id": "proj-901", "estimated_tokens": 100}
-EOF
-```
-
-### 4. Verify Redis Aggregates
-Check that the cost data has been aggregated correctly in Redis:
-```bash
-# Verify the Fenwick tree was updated
-docker exec -it docker-redis-1 redis-cli HGETALL "fenwick:service:1h:recommendation-service"
-
-# Verify idempotency key registration
-docker exec -it docker-redis-1 redis-cli SISMEMBER "dedup:cost_engine" "8a02a831-29e8-45e6-bd27-4c3a2ef9d0a1"
-```
-
-### 5. Run the Local Test Suite
-You can execute all local unit and integration tests with:
-```bash
-./scripts/test.sh
-```
-
