@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
+import time
 
 import redis as redis_lib
 import yaml
@@ -13,6 +14,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor, ConsoleSpanExporter
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from opentelemetry.context import Context
+from prometheus_client import start_http_server
 
 from handlers.llm_spans_raw.index import (
     process_batch,
@@ -26,6 +28,8 @@ from shared.types.cost_types import PriceEntry, ProcessingError
 from shared.utils.retry import with_retry
 from worker.config import load_config
 from worker.registry import build_registry
+from infra.adapters.metrics.prometheus_adapter import PrometheusAdapter
+from shared.ports.metrics_port import MetricsPort
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +48,8 @@ class RedisFenwickAdapter:
         self._client = client
         self._script = self._client.register_script(FENWICK_UPDATE_LUA)
 
-    def pipeline_update(self, updates: list[FenwickUpdate]) -> None:
+    def pipeline_update(self, updates: list[FenwickUpdate], metrics: MetricsPort | None = None) -> None:
+        t0 = time.perf_counter()
         pipe = self._client.pipeline(transaction=False)
         for u in updates:
             redis_key = f"fenwick:{u.dimension}:{u.window}:{u.key}"
@@ -58,7 +63,12 @@ class RedisFenwickAdapter:
                 str(i),
                 str(n),
             )
+        t1 = time.perf_counter()
         pipe.execute()
+        t2 = time.perf_counter()
+        if metrics is not None:
+            metrics.record_fenwick_latency((t1 - t0) * 1000)
+            metrics.record_redis_pipeline_latency((t2 - t1) * 1000)
 
 
 class RedisTokenBucketAdapter:
@@ -167,6 +177,7 @@ def _run_consumer_loop(
     price_lookup: YamlPriceLookupAdapter,
     dedup: RedisDedupAdapter,
     config: Any,
+    metrics: MetricsPort,
 ) -> None:
     dlq_total = 0
     while True:
@@ -174,6 +185,24 @@ def _run_consumer_loop(
             num_messages=config.batch_size,
             timeout=config.poll_timeout_s,
         )
+
+        try:
+            partitions = consumer.assignment()
+            positions = consumer.position(partitions)
+            for p in positions:
+                try:
+                    low, high = consumer.get_watermark_offsets(p)
+                    if p.offset >= 0:
+                        lag = high - p.offset
+                      # Offsets might not be committed/positioned yet or default to earliest
+                    else:
+                        lag = 0
+                    metrics.record_kafka_lag(p.partition, max(0, lag))
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         if not messages:
             continue
 
@@ -207,6 +236,7 @@ def _run_consumer_loop(
                     )
                     dlq_producer.flush()
                     dlq_total += 1
+                    metrics.record_dlq_event("deserialization_error")
 
         if not spans:
             consumer.commit(asynchronous=False)
@@ -218,7 +248,7 @@ def _run_consumer_loop(
             try:
                 def _process(s=span) -> None:
                     process_batch(
-                        [s], fenwick, bucket, ewma, price_lookup, dedup
+                        [s], fenwick, bucket, ewma, price_lookup, dedup, metrics
                     )
 
                 with_retry(
@@ -236,6 +266,7 @@ def _run_consumer_loop(
                 value=span.raw_bytes,
             )
             dlq_total += 1
+            metrics.record_dlq_event("processing_error")
         if failed_spans:
             dlq_producer.flush()
 
@@ -268,16 +299,22 @@ def main() -> None:
     config = load_config()
     _start_health_server()
 
+    try:
+        start_http_server(config.prometheus_metrics_port)
+    except OSError:
+        pass
+
     redis_client = redis_lib.from_url(config.redis_url)
     fenwick = RedisFenwickAdapter(redis_client)
     bucket = RedisTokenBucketAdapter(redis_client)
     ewma = RedisEwmaReaderAdapter(redis_client)
     dedup = RedisDedupAdapter(redis_client)
     price_lookup = YamlPriceLookupAdapter(config.price_config_path)
+    metrics = PrometheusAdapter()
 
     build_registry(
         batch_handler=lambda spans: process_batch(
-            spans, fenwick, bucket, ewma, price_lookup, dedup
+            spans, fenwick, bucket, ewma, price_lookup, dedup, metrics
         )
     )
 
@@ -297,7 +334,7 @@ def main() -> None:
 
     try:
         _run_consumer_loop(
-            consumer, dlq_producer, fenwick, bucket, ewma, price_lookup, dedup, config
+            consumer, dlq_producer, fenwick, bucket, ewma, price_lookup, dedup, config, metrics
         )
     finally:
         consumer.close()

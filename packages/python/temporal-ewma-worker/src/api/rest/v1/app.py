@@ -2,7 +2,10 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from api.index import health as get_health, trigger_workflow as trigger_ewma_workflow
 
+from prometheus_client import make_asgi_app
+
 app = FastAPI(title="Temporal EWMA Worker API", version="1.0.0")
+app.mount("/metrics", make_asgi_app())
 
 
 class TriggerRequest(BaseModel):

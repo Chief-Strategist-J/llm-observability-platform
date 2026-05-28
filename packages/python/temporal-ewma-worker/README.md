@@ -257,16 +257,17 @@ Start the Temporal worker polling queue `ewma-tasks`:
 
 ---
 
-## Remote Management API (REST)
+## Remote Management API (REST) & Observability
 
-The worker now includes a FastAPI management layer (port 8000 in prod).
+The worker includes a FastAPI management layer (port 8000 in prod) and exposes Prometheus metrics.
 
 | Endpoint | Method | Description |
 | :--- | :--- | :--- |
 | `/health` | GET | Check worker status and config. |
 | `/trigger` | POST | Trigger the EWMA baseline update workflow on-demand. |
+| `/metrics` | GET | Exposes Prometheus metrics (integrity mismatch counts, price corrections). |
 
-### Example Execution
+### Example Triggering EWMA Workflow
 
 ```bash
 curl -X POST http://localhost:8000/trigger \
@@ -275,4 +276,22 @@ curl -X POST http://localhost:8000/trigger \
     "force_hour": 42
   }'
 ```
+
+---
+
+## Weekly Integrity & Retroactive Price Correction Workflows
+
+In addition to the hourly EWMA baseline updates, the worker hosts two high-reliability admin workflows:
+
+### 1. Weekly Integrity Check Workflow (`WeeklyIntegrityCheck`)
+Reconciles fast-path Redis Fenwick tree aggregates against the source-of-truth logs in ClickHouse across three key dimensions: `service`, `model`, and `user`.
+*   **Threshold Validation**: If cumulative drift between Redis aggregates and ClickHouse counts exceeds a **1% tolerance limit**, it logs Prometheus mismatch metrics.
+*   **Decoupled Alerting**: Publishes detailed drift payloads to Kafka for downstream paging and notification routing.
+
+### 2. Retroactive Price Correction Workflow (`RetroactivePriceCorrection`)
+Corrects historical span pricing in a robust "fix-forward" pattern when base model pricing is updated.
+*   **Config Hot-Reloading**: Automatically loads updated pricing YAML configurations from the environment-configured path.
+*   **Bulk Calculation**: Scans historical window spans, compares the span pricing version against the current target, and computes microsecond-precision cost deltas.
+*   **Adjustment Records**: Inserts new correction records directly into ClickHouse to adjust cumulative metrics without altering historical raw logs.
+
 

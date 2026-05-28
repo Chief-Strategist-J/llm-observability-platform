@@ -2,6 +2,7 @@ import asyncio
 from dataclasses import dataclass
 from datetime import timedelta
 from temporalio import workflow
+from temporalio.common import RetryPolicy
 from shared.types.ewma_types import EwmaRecord, AnomalyPayload
 from features.ewma_compute.service import EwmaService
 
@@ -100,3 +101,82 @@ class EwmaBaselineUpdate:
                 args=[new_record],
                 start_to_close_timeout=timedelta(seconds=15),
             )
+
+
+DEFAULT_RETRY_POLICY = RetryPolicy(
+    initial_interval=timedelta(seconds=1),
+    backoff_coefficient=2.0,
+    maximum_interval=timedelta(seconds=10),
+    maximum_attempts=3,
+)
+
+
+@dataclass
+class IntegrityCheckInput:
+    pass
+
+
+@workflow.defn(name="WeeklyIntegrityCheck")
+class WeeklyIntegrityCheck:
+    @workflow.run
+    async def run(self, workflow_input: IntegrityCheckInput | None = None) -> dict:
+        dimensions = ["service", "model", "user"]
+        all_results = {}
+
+        for dim in dimensions:
+            keys = await workflow.execute_activity(
+                "fetch_active_keys",
+                args=[dim],
+                start_to_close_timeout=timedelta(seconds=60),
+                retry_policy=DEFAULT_RETRY_POLICY,
+            )
+
+            tasks = [
+                workflow.execute_activity(
+                    "verify_key_integrity",
+                    args=[dim, key],
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=DEFAULT_RETRY_POLICY,
+                )
+                for key in keys
+            ]
+
+            results = await asyncio.gather(*tasks)
+            all_results[dim] = results
+
+        return all_results
+
+
+@dataclass
+class RetroactiveCorrectionInput:
+    hours: int = 24
+
+
+@workflow.defn(name="RetroactivePriceCorrection")
+class RetroactivePriceCorrection:
+    @workflow.run
+    async def run(
+        self, workflow_input: RetroactiveCorrectionInput | None = None
+    ) -> int:
+        hours = workflow_input.hours if workflow_input else 24
+
+        spans = await workflow.execute_activity(
+            "fetch_spans_for_correction",
+            args=[hours],
+            start_to_close_timeout=timedelta(seconds=120),
+            retry_policy=DEFAULT_RETRY_POLICY,
+        )
+
+        if not spans:
+            return 0
+
+        correction_count = await workflow.execute_activity(
+            "apply_price_corrections",
+            args=[spans],
+            start_to_close_timeout=timedelta(seconds=180),
+            retry_policy=DEFAULT_RETRY_POLICY,
+        )
+
+        return correction_count
+
+

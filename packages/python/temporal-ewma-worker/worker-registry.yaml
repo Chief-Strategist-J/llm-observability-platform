@@ -7,6 +7,8 @@ workers:
     stage: 1
     workflows:
       - EwmaBaselineUpdate
+      - WeeklyIntegrityCheck
+      - RetroactivePriceCorrection
     activities:
       - fetch_active_pairs
       - fetch_cost_history
@@ -16,3 +18,8 @@ workers:
       - get_baseline
       - upsert_baseline
       - publish_anomaly_alert
+      - fetch_active_keys
+      - verify_key_integrity
+      - fetch_spans_for_correction
+      - apply_price_corrections
+
