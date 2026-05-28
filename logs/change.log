@@ -385,6 +385,68 @@
         ├── redis-robustness -> Handle empty/None results in query_total and set mock script return_value to "1" in test
         └── docs-examples -> Show dynamic state extraction in fastapi middleware example and add Redis window limitation warning in README
 
+[2026-05-28T10:22:00+05:30] Add implementation plan for alert-engine Kafka consumer worker
+└── File: logs/change.log
+    ├── Choice: Propose alert-engine package architecture using Ports & Adapters, Postgres migrations, Redis rate limiting, and Slack/PagerDuty routing.
+    └── Changes:
+        └── alert-engine-design -> Document design decisions in implementation_plan.md
+
+[2026-05-28T10:30:00+05:30] Implement alert-engine Kafka consumer worker and unit tests
+└── File: packages/python/alert-engine/
+    ├── Choice: Implement the alert-engine Kafka consumer worker with PostgreSQL, Redis, Slack, PagerDuty, and Prometheus adapters following Ports & Adapters architecture, and write unit tests for budget and cost anomaly routing.
+    └── Changes:
+        ├── infra-adapters -> Implement postgres_adapter.py, redis_adapter.py, slack_adapter.py, pagerduty_adapter.py, prometheus_adapter.py
+        ├── handlers -> Implement handlers/alerts_budget/handler.py and handlers/alerts_cost_anomaly/handler.py
+        ├── worker -> Implement index.py, config.py, registry.py
+        └── testing -> Write test_budget_handler.py and test_cost_anomaly_handler.py with 100% test coverage
+
+[2026-05-28T10:40:00+05:30] Integrate OpenTelemetry context propagation, Docker deployment support, contract updates, and fault-tolerance unit tests
+└── File: packages/python/alert-engine/
+    ├── Choice: Add OpenTelemetry context extraction from Kafka message headers, update AsyncAPI contract schemas, add Docker build files, and expand the test suite with advanced failure scenarios.
+    └── Changes:
+        ├── telemetry -> Extract W3C traceparent context in consumer poll loop and wrap processing in tracing spans
+        ├── contracts -> Add headers trace metadata schema to alerts.budget.yaml and alerts.cost.anomaly.yaml
+        ├── deployment -> Add build/Dockerfile and deploy/docker/docker-compose.yaml
+        └── testing -> Add test_failures.py for resilience / schema validation testing and test_tracing.py for OTel propagation
+
+[2026-05-28T10:55:00+05:30] Implement deep OpenTelemetry instrumentation tracing across alert-engine adapters, handlers, and unit tests
+└── File: packages/python/alert-engine/src/infra/adapters/redis/redis_adapter.py, packages/python/alert-engine/src/infra/adapters/slack/slack_adapter.py, packages/python/alert-engine/src/infra/adapters/pagerduty/pagerduty_adapter.py, packages/python/alert-engine/src/handlers/alerts_budget/handler.py, packages/python/alert-engine/src/handlers/alerts_cost_anomaly/handler.py, packages/python/alert-engine/tests/unit/test_tracing.py
+    ├── Choice: Deeply instrument the alert-engine with high-fidelity OpenTelemetry spans across all adapters and business handlers, and add validation tests for tracing metadata and sub-spans.
+    └── Changes:
+        ├── redis-adapter -> Wrap rate limit checks in Redis tracing spans with TTL and key metadata
+        ├── slack-adapter -> Wrap Slack webhook message posts in Slack tracing spans with channel metadata
+        ├── pagerduty-adapter -> Wrap incident triggers in PagerDuty tracing spans with severity and source metadata
+        ├── handlers -> Wrap budget and cost anomaly handler pipeline steps (database, rate limiting, notifications) in structured telemetry sub-spans
+        └── testing -> Implement handler sub-spans tracing test case in test_tracing.py to assert sub-span hierarchies and attributes
+
+[2026-05-28T11:05:00+05:30] Register alert-engine worker and features in central registry
+└── File: registry/workers/alert-engine.yaml, registry/features/alert_routing.yaml
+    ├── Choice: Register alert-engine worker service configuration and alert_routing feature in the repository's central registry files.
+    └── Changes:
+        ├── workers -> Register alert-engine consumer worker details, owner, and stage
+        └── features -> Register alert_routing feature mapping, dependencies, and contract
+
+[2026-05-28T11:15:00+05:30] Document end-user usage guide in alert-engine package README
+└── File: packages/python/alert-engine/README.md
+    ├── Choice: Add a comprehensive end-user usage guide section detailing programmatic Python initialization, YAML ownership configuration mapping, and JSON schemas for budget/anomaly Kafka event publishing.
+    └── Changes:
+        └── documentation -> Document end-user schema examples and Python code initialization snippets
+
+[2026-05-28T11:20:00+05:30] Add adoption guide, dependencies, and Kafka broker topics to README
+└── File: packages/python/alert-engine/README.md
+    ├── Choice: Add quick overview section documenting value proposition (deduplication, dynamic routing), dependencies (Kafka, Redis, Postgres), Kafka topics, and expected outputs.
+    └── Changes:
+        └── documentation -> Insert introduction sections detailing adoption benefits and expected results
+
+[2026-05-28T11:30:00+05:30] Create GitHub Actions workflow for alert-engine test enforcement
+└── File: .github/workflows/alert-engine-test.yml
+    ├── Choice: Add automated python testing pipeline for packages/python/alert-engine/ triggered only on merges to main branch.
+    └── Changes:
+        └── workflows -> Define test-on-merge job executing pytest on Python 3.12 environment
+
+
+
+
 
 
 

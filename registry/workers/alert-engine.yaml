@@ -1,0 +1,9 @@
+workers:
+  - name: alert-engine
+    type: event
+    language: python
+    topics:
+      - alerts.budget
+      - alerts.cost.anomaly
+    owner: "@infra-alerts-team"
+    stage: 1

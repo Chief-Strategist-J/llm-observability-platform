@@ -65,7 +65,7 @@ Open Grafana at `http://localhost:3002` — spans appear within 5–10 seconds.
 ## SDK Feature Map
 
 ```
-instrumentation-sdk & temporal-ewma-worker
+instrumentation-sdk & temporal-ewma-worker & alert-engine
 │
 ├── Auto-Instrumentation        → zero-code patching
 │   ├── OpenAI
@@ -95,6 +95,9 @@ instrumentation-sdk & temporal-ewma-worker
 ├── Cost Anomaly Detection
 │   └── Temporal EWMA worker    → decoupled scheduled baseline computing
 │
+├── Alerting & Routing
+│   └── Alert Engine            → Kafka consumer worker routing budget alerts & cost anomalies
+│
 └── Observability Backend
     ├── Prometheus Metrics       → 8 metric families
     ├── Grafana Dashboards       → 4 pre-built dashboards
@@ -117,6 +120,7 @@ instrumentation-sdk & temporal-ewma-worker
 | [MiniLM Embeddings](features/MiniLM-Embeddings.md) | Async 384-dim prompt embeddings |
 | [Prometheus Metrics & Grafana](features/Prometheus-Metrics-and-Grafana.md) | Cost, latency, TTFT dashboards |
 | [Temporal EWMA Cost Anomaly Detection](features/Temporal-EWMA-Cost-Anomaly-Detection.md) | Decoupled EWMA baseline computing & cost anomaly detection worker |
+| [Alert Engine](features/Alert-Engine.md) | Kafka consumer worker routing budget alerts & cost anomalies |
 | [REST Management API](reference/REST-Management-API.md) | Full endpoint reference |
 | [Docker & CLI Deployment](reference/Docker-and-CLI-Deployment.md) | `llm-observe` CLI, all-in-one container |
 | [Config Files Reference](reference/Config-Files-Reference.md) | Model prices, PII patterns, infra configs |
@@ -125,4 +129,4 @@ instrumentation-sdk & temporal-ewma-worker
 
 ## Current Version
 
-`1.8.2` — see [Changelog](changelog.md)
+`1.9.0` — see [Changelog](changelog.md)

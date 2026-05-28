@@ -630,6 +630,47 @@ curl -X POST http://localhost:8000/trigger \
   -d '{"force_hour": 42}'
 ```
 
+### Alert Engine (Kafka Consumer Worker) (Standalone)
+
+The `alert-engine` is a decoupled microservice designed to consume budget thresholds and cost anomaly events from Kafka and route them.
+
+#### Standalone Setup & Execution
+
+An end-user can install and run this package individually by following these steps:
+
+1. **Install the package and dependencies**:
+   ```bash
+   pip install -e packages/python/alert-engine
+   ```
+
+2. **Spin up local infrastructure**:
+   This runs PostgreSQL, Redis, and Kafka:
+   ```bash
+   docker compose -f packages/python/alert-engine/deploy/docker/docker-compose.yaml up -d
+   ```
+
+3. **Configure the environment**:
+   ```bash
+   cp packages/python/alert-engine/.env.example packages/python/alert-engine/.env
+   ```
+
+4. **Apply database migrations**:
+   Apply SQL migration schemas to PostgreSQL:
+   ```bash
+   ./packages/python/alert-engine/scripts/migrate.sh
+   ```
+
+5. **Run test verification**:
+   Verify configuration and end-to-end integration flows:
+   ```bash
+   ./packages/python/alert-engine/scripts/test.sh
+   ```
+
+6. **Start the Kafka Consumer Worker**:
+   ```bash
+   ./packages/python/alert-engine/scripts/run.sh
+   ```
+
 ## 3. Implementation Call Chain
 
 

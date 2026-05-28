@@ -5,6 +5,15 @@ All notable changes to the `instrumentation-sdk` package will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-05-28
+
+### Added
+- **Alert Engine Package**: Decoupled Python-based Kafka consumer worker to route and dedup budget alerts and cost anomalies to PostgreSQL, Slack, and PagerDuty endpoints.
+- **Budget Threshold Alerts**: Deduplicated budget warnings and blocks (15-minute Redis rate-limiting suppression window) with automatic Slack channel routing and service owner DMs.
+- **Cost Anomaly Routing**: Intraday cost spike alerting comparing current costs against EWMA baselines, routing to Slack drill-down clusters and PagerDuty incidents with automatic cold start suppression.
+- **OpenTelemetry Context Propagation**: Automatic trace context extraction using W3C traceparent standards from incoming Kafka headers to link alert routing actions as child spans of LLM operations.
+- **Container Deployment Support**: Dockerfile and multi-service docker-compose.yaml for standalone deployment of alert-engine and its dependencies.
+
 ## [1.8.2] - 2026-05-23
 
 ### Added

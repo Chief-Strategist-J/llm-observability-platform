@@ -1,0 +1,43 @@
+asyncapi: 2.6.0
+info:
+  title: Budget Alerts Event
+  version: "1"
+  description: Budget alerts consumed by alert-engine
+channels:
+  alerts.budget:
+    subscribe:
+      operationId: consumeBudgetAlerts
+      message:
+        name: BudgetAlertEvent
+        contentType: application/json
+        headers:
+          type: object
+          properties:
+            traceparent:
+              type: string
+              description: W3C Trace Context traceparent header
+            tracestate:
+              type: string
+              description: W3C Trace Context tracestate header
+        payload:
+          type: object
+          required:
+            - user_id
+            - model
+            - event_type
+            - timestamp_utc
+          properties:
+            user_id:
+              type: string
+            model:
+              type: string
+            event_type:
+              type: string
+              enum:
+                - blocked
+                - warning_80pct
+            timestamp_utc:
+              type: string
+              format: date-time
+consumer_group: alert-engine-group
+version: 1

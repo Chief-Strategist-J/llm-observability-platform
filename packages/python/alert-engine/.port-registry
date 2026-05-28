@@ -1,0 +1,25 @@
+ports:
+  - name: kafka_consumer
+    type: messaging
+    vendor: confluent-kafka
+    adapter: src/worker/index.py::Consumer
+  - name: postgres_db
+    type: database
+    vendor: postgres
+    adapter: src/infra/adapters/postgres/postgres_adapter.py::PostgresAdapter
+  - name: redis_rate_limit
+    type: cache
+    vendor: redis
+    adapter: src/infra/adapters/redis/redis_adapter.py::RedisAdapter
+  - name: slack_notifier
+    type: notification
+    vendor: slack
+    adapter: src/infra/adapters/slack/slack_adapter.py::SlackAdapter
+  - name: pagerduty_notifier
+    type: notification
+    vendor: pagerduty
+    adapter: src/infra/adapters/pagerduty/pagerduty_adapter.py::PagerDutyAdapter
+  - name: prometheus_metrics
+    type: metrics
+    vendor: prometheus
+    adapter: src/infra/adapters/metrics/prometheus_adapter.py::PrometheusAdapter
