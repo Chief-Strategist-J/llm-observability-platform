@@ -46,8 +46,10 @@ return 0
 DEDUP_TTL_SECONDS = 3600
 
 
+from shared.ports.metrics_port import MetricsPort
+
 class FenwickAdapter(Protocol):
-    def pipeline_update(self, updates: list[FenwickUpdate]) -> None: ...
+    def pipeline_update(self, updates: list[FenwickUpdate], metrics: MetricsPort | None = None) -> None: ...
 
 
 class TokenBucketAdapter(Protocol):
@@ -78,13 +80,14 @@ def process_span(
     ewma: EwmaReaderAdapter,
     price_lookup: PriceLookupAdapter,
     dedup: DedupAdapter,
+    metrics: MetricsPort | None = None,
 ) -> bool:
     if not dedup.is_new(span.span_id):
         logger.info("duplicate span_id=%s skipped", span.span_id)
         return False
 
     updates = handler.build_fenwick_updates(span)
-    fenwick.pipeline_update(updates)
+    fenwick.pipeline_update(updates, metrics)
 
     delta = handler.compute_token_bucket_delta(span)
     if delta is not None:
@@ -110,6 +113,9 @@ def process_span(
             burn,
         )
 
+    if metrics is not None:
+        metrics.record_processed_span(span.service_name, span.model)
+
     return is_mismatch
 
 
@@ -120,10 +126,11 @@ def process_batch(
     ewma: EwmaReaderAdapter,
     price_lookup: PriceLookupAdapter,
     dedup: DedupAdapter,
+    metrics: MetricsPort | None = None,
 ) -> HandlerResult:
     result = HandlerResult()
     for span in spans:
-        is_mismatch = process_span(span, fenwick, bucket, ewma, price_lookup, dedup)
+        is_mismatch = process_span(span, fenwick, bucket, ewma, price_lookup, dedup, metrics)
         result.processed_count += 1
         if is_mismatch:
             result.mismatch_count += 1

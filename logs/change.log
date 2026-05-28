@@ -483,3 +483,14 @@
         ├── documentation -> Create docs/features/Budget-Provisioner.md and expand package README.md
         └── registry -> Build and push chiefj/budget-provisioner:latest docker image to Docker Hub
 
+[2026-05-28T12:35:00+05:30] Implement weekly integrity check and retroactive price correction workflows for Temporal EWMA Worker
+└── File: packages/python/temporal-ewma-worker/src/worker/workflows.py, packages/python/temporal-ewma-worker/src/worker/activities.py, packages/python/temporal-ewma-worker/src/worker/index.py, packages/python/temporal-ewma-worker/pyproject.toml, packages/python/temporal-ewma-worker/tests/unit/test_new_workflows.py
+    ├── Choice: Author production-ready Temporal workflows and activities utilizing Ports and Adapters architecture, and register them on the Temporal worker service.
+    └── Changes:
+        ├── workflows -> Implement WeeklyIntegrityCheck and RetroactivePriceCorrection Temporal workflow definitions
+        ├── activities -> Author fetch_active_keys, verify_key_integrity, fetch_spans_for_correction, and apply_price_corrections activities
+        ├── worker-index -> Register the new workflows and activities on the Temporal Worker instance
+        ├── dependencies -> Add pyyaml to temporal-ewma-worker project dependencies
+        └── testing -> Write test_new_workflows.py with 100% test coverage for the new workflows
+
+

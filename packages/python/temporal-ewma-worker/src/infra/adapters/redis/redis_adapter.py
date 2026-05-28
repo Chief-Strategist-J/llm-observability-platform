@@ -19,3 +19,22 @@ class RedisAdapter(RedisPort):
     ) -> None:
         key = f"ewma:cost:{service}:{model}:{hour_of_week}"
         self.client.set(key, str(value))
+
+    def get_fenwick_sum(self, dimension: str, window: str, key: str) -> int:
+        lua = """
+        local key = KEYS[1]
+        local i = tonumber(ARGV[1])
+        local sum = 0
+        while i > 0 do
+            sum = sum + tonumber(redis.call('HGET', key, tostring(i)) or '0')
+            i = i - bit.band(i, -i)
+        end
+        return sum
+        """
+        redis_key = f"fenwick:{dimension}:{window}:{key}"
+        script = self.client.register_script(lua)
+        res = script(keys=[redis_key], args=["1024"])
+        if res is None or res == b"" or res == "":
+            return 0
+        return int(res)
+

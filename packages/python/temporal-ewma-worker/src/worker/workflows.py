@@ -100,3 +100,69 @@ class EwmaBaselineUpdate:
                 args=[new_record],
                 start_to_close_timeout=timedelta(seconds=15),
             )
+
+
+@dataclass
+class IntegrityCheckInput:
+    pass
+
+
+@workflow.defn(name="WeeklyIntegrityCheck")
+class WeeklyIntegrityCheck:
+    @workflow.run
+    async def run(self, workflow_input: IntegrityCheckInput | None = None) -> dict:
+        dimensions = ["service", "model", "user"]
+        all_results = {}
+
+        for dim in dimensions:
+            keys = await workflow.execute_activity(
+                "fetch_active_keys",
+                args=[dim],
+                start_to_close_timeout=timedelta(seconds=60),
+            )
+
+            tasks = [
+                workflow.execute_activity(
+                    "verify_key_integrity",
+                    args=[dim, key],
+                    start_to_close_timeout=timedelta(seconds=30),
+                )
+                for key in keys
+            ]
+
+            results = await asyncio.gather(*tasks)
+            all_results[dim] = results
+
+        return all_results
+
+
+@dataclass
+class RetroactiveCorrectionInput:
+    hours: int = 24
+
+
+@workflow.defn(name="RetroactivePriceCorrection")
+class RetroactivePriceCorrection:
+    @workflow.run
+    async def run(
+        self, workflow_input: RetroactiveCorrectionInput | None = None
+    ) -> int:
+        hours = workflow_input.hours if workflow_input else 24
+
+        spans = await workflow.execute_activity(
+            "fetch_spans_for_correction",
+            args=[hours],
+            start_to_close_timeout=timedelta(seconds=120),
+        )
+
+        if not spans:
+            return 0
+
+        correction_count = await workflow.execute_activity(
+            "apply_price_corrections",
+            args=[spans],
+            start_to_close_timeout=timedelta(seconds=180),
+        )
+
+        return correction_count
+

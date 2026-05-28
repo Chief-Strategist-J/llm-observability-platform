@@ -18,3 +18,21 @@ class KafkaAlertAdapter(AlertPublisherPort):
             value=json.dumps(payload_dict).encode("utf-8"),
         )
         self.producer.flush()
+
+    def publish_integrity_mismatch(
+        self, dimension: str, key: str, redis_sum: int, clickhouse_sum: int
+    ) -> None:
+        topic = "alerts.cost.integrity_mismatch"
+        payload = {
+            "dimension": dimension,
+            "key": key,
+            "redis_sum": redis_sum,
+            "clickhouse_sum": clickhouse_sum,
+        }
+        self.producer.produce(
+            topic=topic,
+            key=f"{dimension}:{key}",
+            value=json.dumps(payload).encode("utf-8"),
+        )
+        self.producer.flush()
+

@@ -14,6 +14,7 @@ class WorkerConfig:
     max_retries: int = 3
     retry_base_ms: int = 100
     price_config_path: str = "model_price_versions.yaml"
+    prometheus_metrics_port: int = 9465
 
 
 def load_config(env: dict[str, str] | None = None) -> WorkerConfig:
@@ -30,4 +31,5 @@ def load_config(env: dict[str, str] | None = None) -> WorkerConfig:
         max_retries=int(source.get("MAX_RETRIES", "3")),
         retry_base_ms=int(source.get("RETRY_BASE_MS", "100")),
         price_config_path=source.get("PRICE_CONFIG_PATH", "model_price_versions.yaml"),
+        prometheus_metrics_port=int(source.get("PROMETHEUS_METRICS_PORT", "9465")),
     )
