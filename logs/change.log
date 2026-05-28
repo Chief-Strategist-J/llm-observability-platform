@@ -438,6 +438,13 @@
     └── Changes:
         └── documentation -> Insert introduction sections detailing adoption benefits and expected results
 
+[2026-05-28T11:30:00+05:30] Create GitHub Actions workflow for alert-engine test enforcement
+└── File: .github/workflows/alert-engine-test.yml
+    ├── Choice: Add automated python testing pipeline for packages/python/alert-engine/ triggered only on merges to main branch.
+    └── Changes:
+        └── workflows -> Define test-on-merge job executing pytest on Python 3.12 environment
+
+
 
 
 
