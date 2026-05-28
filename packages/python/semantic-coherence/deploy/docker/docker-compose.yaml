@@ -9,12 +9,22 @@ services:
     container_name: semantic-coherence
     ports:
       - "8005:8005"
-      - "9468:9468"
     environment:
       - EMBEDDING_WORKER_URL=http://queue-embedding-worker:8080
       - PRIMARY_SCORER=minilm
+      - SCORERS=minilm
+
+      - SCORER_MINILM_MODEL_ID=sentence-transformers/all-MiniLM-L6-v2
+
     networks:
       - llm-observability
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8005/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
 
 networks:
   llm-observability:

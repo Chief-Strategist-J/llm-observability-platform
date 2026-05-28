@@ -502,6 +502,29 @@
         ├── event-cost-worker -> Document Prometheus metrics dictionary and latency tracking instruments
         └── docker -> Build and push chiefj/temporal-ewma-worker and chiefj/event-cost-worker images with tags (latest, stable, versioned)
 
+[2026-05-28T14:48:00+05:30] Create semantic-coherence Layer 3 scorer package with multi-model swappable ScorerPort registry
+└── File: packages/python/semantic-coherence/
+    ├── Choice: Hexagonal architecture — domain defines ScorerPort Protocol, infra adapters implement it; scorers are registered by name for hot-swap and ensemble; no re-embedding in Layer 3
+    └── Changes:
+        ├── domain-> types.py (CoherenceInput, CoherenceResult, ScorerOutput, PromptType), rules.py (THRESHOLDS + classify_coherence), service.py (score_semantic_coherence — zero infra imports)
+        ├── ports-> scorer_port.py (ScorerPort Protocol — swappable model contract), embedding_store_port.py (EmbeddingStorePort Protocol)
+        ├── infra-> minilm_scorer.py (MiniLM-L6-v2 cosine adapter), scorer_registry.py (named registry for multi-model), http_adapter.py (one HTTP call to embedding-worker)
+        ├── api-> POST /v1/score/semantic-coherence (optional scorer selection, ensemble), GET /v1/scorers (list registered models), GET /health
+        ├── tests-> 34 unit tests — 100% pass — rules boundaries, skip conditions, multi-model, registry, cosine correctness
+        └── registry-> registry/workers/semantic-coherence.yaml, registry/features/semantic_coherence.yaml
 
+[2026-05-28T14:58:00+05:30] Add critical tests, full README, feature branch feature/semantic-coherence-scorer
+└── File: packages/python/semantic-coherence/
+    ├── Choice: Branch isolates scorer work; critical tests cover API contracts, real cosine math, boundary matrix, ensemble divergence, protocol compliance, hot-swap
+    └── Changes:
+        ├── branch-> feature/semantic-coherence-scorer created from main
+        ├── tests-> test_api.py (11 HTTP contract tests via TestClient), test_cosine_critical.py (15 real math + clamp tests, parametrized boundary matrix), test_scorer_protocol.py (8 protocol + hot-swap tests), test_ensemble_divergence.py (7 ensemble behaviour tests) — total 81 tests
+        └── README.md-> rewritten with end-user value prop, architecture rationale, calibration story, all env vars documented, skip_reason table, add-scorer guide
 
-
+[2026-05-28T15:10:00+05:30] Enable generic env-driven pluggable scorers and push Docker image
+└── File: packages/python/semantic-coherence/
+    ├── Choice: Environment variables (SCORERS, SCORER_<NAME>_MODEL_ID) dynamically define, instantiate, and configure scorers without code changes. Docker image builds via two-stage optimized context and pushed to Docker Hub.
+    └── Changes:
+        ├── pluggability-> CosineScorerAdapter handles generic cosine similarity, providers.py resolves names & model IDs dynamically from env, and .env.example/docker-compose.yaml showcase pluggability
+        ├── docker-> Two-stage build Dockerfile copies source context to prevent setuptools errors, successfully pushed chiefj/semantic-coherence:latest to Docker Hub
+        └── tests-> test_env_pluggability.py proves single/multi/custom/fallback scorer resolution and registry loading via env vars
