@@ -419,5 +419,13 @@
         ├── handlers -> Wrap budget and cost anomaly handler pipeline steps (database, rate limiting, notifications) in structured telemetry sub-spans
         └── testing -> Implement handler sub-spans tracing test case in test_tracing.py to assert sub-span hierarchies and attributes
 
+[2026-05-28T11:05:00+05:30] Register alert-engine worker and features in central registry
+└── File: registry/workers/alert-engine.yaml, registry/features/alert_routing.yaml
+    ├── Choice: Register alert-engine worker service configuration and alert_routing feature in the repository's central registry files.
+    └── Changes:
+        ├── workers -> Register alert-engine consumer worker details, owner, and stage
+        └── features -> Register alert_routing feature mapping, dependencies, and contract
+
+
 
 
