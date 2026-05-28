@@ -444,9 +444,42 @@
     └── Changes:
         └── workflows -> Define test-on-merge job executing pytest on Python 3.12 environment
 
+[2026-05-28T11:45:00+05:30] Create implementation plan for new budget-provisioner service
+└── File: .gemini/antigravity/brain/ce4b4fc3-b852-42bf-9444-75cc992612dd/implementation_plan.md
+    ├── Choice: Design budget-provisioner REST API endpoints, directory layout, database migration (budget_configs), and Redis invalidation DEL strategy.
+    └── Changes:
+        └── planning -> Document architecture design and implementation plan for user review
 
+[2026-05-28T12:00:00+05:30] Initialize budget-provisioner hexagonal REST microservice
+└── File: packages/python/budget-provisioner/
+    ├── Choice: Setup ports/adapters architecture, implement database/migrations, integrate token-bucket validation with Redis caching, and deploy unit/integration/API test suites.
+    └── Changes:
+        ├── database -> Implement 0001_init.sql and 0001_init.rollback.sql for PostgreSQL budget_configs
+        ├── ports -> Define DbPort, RedisPort, and MetricsPort interfaces for core-infra segregation
+        ├── adapters -> Implement concrete PostgresAdapter, RedisAdapter, and PrometheusAdapter classes
+        ├── domain -> Build BudgetManagementService handling upserts, deletions, invalidation logic, and bucket status checks
+        ├── api -> Mount FastAPI app, mount REST routes (/health, /budgets/{user_id}, /budgets/{user_id}/{model}, /budgets/{user_id}/{model}/status), and write JWTAuthenticator
+        ├── deployment -> Add build/Dockerfile and deploy/docker/docker-compose.yaml configurations
+        └── testing -> Implement unit and integration API tests under tests/ directory with 100% logic coverage
 
+[2026-05-28T12:15:00+05:30] Integrate strict OpenTelemetry tracing across budget-provisioner layers
+└── File: packages/python/budget-provisioner/src/budget_provisioner/
+    ├── Choice: Wrap all API routing handlers and domain service methods with OpenTelemetry tracing spans.
+    └── Changes:
+        ├── api -> Add trace span tracing instrumentation to budgets REST endpoints
+        ├── features -> Add tracer instrumentation spans inside BudgetManagementService operations
+        └── testing -> Add tests/unit/test_tracing.py to verify span hierarchy and propagation
 
+[2026-05-28T12:20:00+05:30] Add GitHub Actions test workflow for budget-provisioner
+└── File: .github/workflows/budget-provisioner-test.yml
+    ├── Choice: Automate Python test enforcement pipeline for budget-provisioner.
+    └── Changes:
+        └── workflows -> Define test-on-merge job executing pytest on Python 3.12 environment
 
-
+[2026-05-28T12:25:00+05:30] Update budget-provisioner documentation and publish Docker image
+└── File: packages/python/budget-provisioner/README.md
+    ├── Choice: Document all configuration variables, decision trees, REST query flows, and push latest container image.
+    └── Changes:
+        ├── documentation -> Create docs/features/Budget-Provisioner.md and expand package README.md
+        └── registry -> Build and push chiefj/budget-provisioner:latest docker image to Docker Hub
 

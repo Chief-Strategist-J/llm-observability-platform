@@ -1,0 +1,12 @@
+features:
+  - name: budget_provisioning
+    status: active
+    contract: contracts/openapi/v1.yaml
+    contract_version: v1
+    owner: "@infra-alerts-team"
+    added: 2026-05-28
+    flags: []
+    migrations:
+      - 0001_init
+    depends_on_features: []
+    depends_on_packages: []

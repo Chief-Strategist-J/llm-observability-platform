@@ -1,0 +1,11 @@
+workers:
+  - name: budget-provisioner
+    type: service
+    language: python
+    owner: "@infra-alerts-team"
+    stage: 1
+    endpoints:
+      - /health
+      - /budgets/{user_id}/{model}
+      - /budgets/{user_id}
+      - /budgets/{user_id}/{model}/status
