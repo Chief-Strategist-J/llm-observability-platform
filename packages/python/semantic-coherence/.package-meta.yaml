@@ -1,0 +1,4 @@
+name: semantic-coherence
+runtime: python
+platform: fastapi
+entrypoint: src/api/rest/v1/app.py

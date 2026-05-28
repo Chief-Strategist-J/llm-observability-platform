@@ -1,0 +1,15 @@
+name: semantic-coherence
+type: scorer-service
+runtime: python
+platform: fastapi
+port: 8005
+stage: active
+owner: "@quality-team"
+description: >
+  Layer 3 semantic coherence scorer.
+  Computes cosine similarity between prompt and response embeddings
+  reused from Layer 1. Supports multi-model ensemble and hot-swap
+  via ScorerPort registry.
+image: chiefj/semantic-coherence
+depends_on:
+  - queue-embedding-worker

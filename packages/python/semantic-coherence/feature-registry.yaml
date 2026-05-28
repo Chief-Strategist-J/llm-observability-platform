@@ -1,0 +1,13 @@
+features:
+  - name: semantic_coherence
+    status: active
+    contract: contracts/openapi/v1.yaml
+    contract_version: v1
+    owner: "@quality-team"
+    added: 2026-05-28
+    flags: []
+    migrations: []
+    depends_on_features:
+      - enrich_span
+    depends_on_packages:
+      - queue-embedding-worker

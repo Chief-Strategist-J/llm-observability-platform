@@ -1,0 +1,9 @@
+ports:
+  - name: scorer
+    type: ml-scorer
+    vendor: pluggable
+    adapter: src/infra/adapters/scorers/minilm_scorer.py::MiniLMScorerAdapter
+  - name: embedding_store
+    type: vector-store
+    vendor: embedding-worker
+    adapter: src/infra/adapters/embedding_worker/http_adapter.py::EmbeddingWorkerHttpAdapter

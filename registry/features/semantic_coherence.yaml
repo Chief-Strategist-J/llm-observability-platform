@@ -1,0 +1,14 @@
+name: semantic_coherence
+status: active
+contract: packages/python/semantic-coherence/contracts/openapi/v1.yaml
+contract_version: v1
+owner: "@quality-team"
+added: 2026-05-28
+scorer_port: ScorerPort
+registered_scorers:
+  - name: minilm
+    model_id: sentence-transformers/all-MiniLM-L6-v2
+depends_on_features:
+  - enrich_span
+depends_on_packages:
+  - queue-embedding-worker

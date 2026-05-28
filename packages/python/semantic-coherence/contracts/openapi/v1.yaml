@@ -1,0 +1,171 @@
+openapi: "3.0.3"
+info:
+  title: Semantic Coherence Scorer API
+  version: "1.0.0"
+  description: >
+    Layer 3 semantic coherence scoring service.
+    Computes cosine similarity between prompt and response embeddings.
+    Supports multi-model ensemble and hot-swap via ScorerPort registry.
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: health
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /v1/scorers:
+    get:
+      summary: List registered scorer models
+      operationId: listScorers
+      responses:
+        "200":
+          description: Registered scorers and primary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScorersResponse"
+
+  /v1/score/semantic-coherence:
+    post:
+      summary: Score semantic coherence between prompt and response
+      operationId: scoreSemanticCoherence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScoreRequest"
+      responses:
+        "200":
+          description: Coherence scoring result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoreResponse"
+        "400":
+          description: Invalid scorer name or missing required fields
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, scorers]
+      properties:
+        status:
+          type: string
+          example: ok
+        scorers:
+          type: array
+          items:
+            type: string
+
+    ScorerInfo:
+      type: object
+      required: [name, model_id]
+      properties:
+        name:
+          type: string
+          example: minilm
+        model_id:
+          type: string
+          example: sentence-transformers/all-MiniLM-L6-v2
+
+    ScorersResponse:
+      type: object
+      required: [scorers, primary]
+      properties:
+        scorers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScorerInfo"
+        primary:
+          type: string
+          example: minilm
+
+    ScoreRequest:
+      type: object
+      required: [trace_id, span_id, prompt_type, pii_detected]
+      properties:
+        trace_id:
+          type: string
+        span_id:
+          type: string
+        prompt_type:
+          type: string
+          enum: [chat, code, rag, classification]
+        pii_detected:
+          type: boolean
+        prompt_embedding:
+          type: array
+          items:
+            type: number
+          nullable: true
+        response_embedding:
+          type: array
+          items:
+            type: number
+          nullable: true
+        scorers:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Names of scorers to run. Omit to run all registered scorers.
+        primary_scorer:
+          type: string
+          default: minilm
+          description: Name of the scorer whose result is promoted as primary.
+
+    ScorerOutputSchema:
+      type: object
+      required: [scorer_name, scorer_model, skipped]
+      properties:
+        scorer_name:
+          type: string
+        scorer_model:
+          type: string
+        score:
+          type: number
+          nullable: true
+          minimum: 0.0
+          maximum: 1.0
+        label:
+          type: string
+          nullable: true
+          enum: [OK, LOW_COHERENCE, null]
+        skipped:
+          type: boolean
+        skip_reason:
+          type: string
+          nullable: true
+          enum: [pii_detected, prompt_embedding_null, response_embedding_null, null]
+
+    ScoreResponse:
+      type: object
+      required: [trace_id, span_id, prompt_type, skipped, all_scores]
+      properties:
+        trace_id:
+          type: string
+        span_id:
+          type: string
+        prompt_type:
+          type: string
+        skipped:
+          type: boolean
+        skip_reason:
+          type: string
+          nullable: true
+        primary:
+          $ref: "#/components/schemas/ScorerOutputSchema"
+          nullable: true
+        all_scores:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScorerOutputSchema"

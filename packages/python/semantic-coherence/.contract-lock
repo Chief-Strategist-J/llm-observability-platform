@@ -1,0 +1,5 @@
+schema_version: "1"
+locked_at: "2026-05-28T09:19:00Z"
+contracts:
+  - path: contracts/openapi/v1.yaml
+    hash: pending

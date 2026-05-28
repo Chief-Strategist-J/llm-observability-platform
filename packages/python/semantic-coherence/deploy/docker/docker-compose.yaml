@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  semantic-coherence:
+    build:
+      context: ../..
+      dockerfile: build/Dockerfile
+    image: chiefj/semantic-coherence:latest
+    container_name: semantic-coherence
+    ports:
+      - "8005:8005"
+      - "9468:9468"
+    environment:
+      - EMBEDDING_WORKER_URL=http://queue-embedding-worker:8080
+      - PRIMARY_SCORER=minilm
+    networks:
+      - llm-observability
+
+networks:
+  llm-observability:
+    external: true
