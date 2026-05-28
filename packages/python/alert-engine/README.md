@@ -4,6 +4,45 @@ Kafka consumer worker that processes and routes budget thresholds and cost anoma
 
 ---
 
+## Why Use the Alert Engine?
+- **Zero Spam (Deduplication)**: Suppresses duplicate alerts for the same `(user_id, model)` or `(service, model)` within a 15-minute rate-limiting window using Redis.
+- **Dynamic Routing**:
+  - **Budget Blocked**: Sent to a public `#llm-cost-alerts` Slack channel.
+  - **Budget Warnings**: Looked up dynamically and sent as a direct Slack DM to the service owner.
+  - **Cost Anomalies**: Triggers high-priority PagerDuty incidents (except during service cold-starts).
+- **Persistent Logs**: Every dispatched alert is written to PostgreSQL for historical audits and analysis.
+- **Traceability**: Out-of-the-box OpenTelemetry tracing propagation using the W3C standard.
+
+---
+
+## Architecture Dependencies
+Ensure these services are available in your infrastructure environment:
+1. **Kafka / Redpanda Broker**: Event stream source.
+2. **Redis Cache (>= 6.0)**: Used for suppression / rate-limit locking.
+3. **PostgreSQL Database (>= 12)**: Store target for the `alert_history` table.
+
+---
+
+## Kafka Configuration
+Make sure the following topics are created on your Kafka broker before starting the engine:
+* **`alerts.budget`**: Receives budget threshold event payloads.
+* **`alerts.cost.anomaly`**: Receives cost anomaly event payloads.
+
+*Default Consumer Group:* `alert-engine-group`
+
+---
+
+## Expected Results (Outputs)
+Upon consuming events, the engine performs the following actions:
+* Inserts a record into the PostgreSQL `alert_history` table:
+  ```sql
+  SELECT * FROM alert_history ORDER BY created_at DESC;
+  ```
+* Dispatches Slack notifications/DMs or triggers PagerDuty API calls.
+* Exposes execution span telemetry metrics on port `9464`.
+
+---
+
 ## Folder Structure
 
 ```

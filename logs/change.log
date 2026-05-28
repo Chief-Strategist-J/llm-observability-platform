@@ -432,6 +432,13 @@
     └── Changes:
         └── documentation -> Document end-user schema examples and Python code initialization snippets
 
+[2026-05-28T11:20:00+05:30] Add adoption guide, dependencies, and Kafka broker topics to README
+└── File: packages/python/alert-engine/README.md
+    ├── Choice: Add quick overview section documenting value proposition (deduplication, dynamic routing), dependencies (Kafka, Redis, Postgres), Kafka topics, and expected outputs.
+    └── Changes:
+        └── documentation -> Insert introduction sections detailing adoption benefits and expected results
+
+
 
 
 
