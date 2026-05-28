@@ -277,3 +277,21 @@ To verify if a span ID has been cached for deduplication:
 ```bash
 redis-cli SISMEMBER "dedup:cost_engine" "8a02a831-29e8-45e6-bd27-4c3a2ef9d0a1"
 ```
+
+---
+
+## Prometheus Metrics & Observability
+
+The `event-cost-worker` is instrumented with Prometheus-native counters and histograms exposed via an HTTP metrics server (default port `9090` or configured via `PROMETHEUS_METRICS_PORT`).
+
+### Metrics Dictionary
+
+| Metric Name | Type | Labels | Description |
+| :--- | :--- | :--- | :--- |
+| `cost_engine_span_processing_seconds` | Histogram | None | Total duration of Kafka message and batch processing. |
+| `cost_engine_spans_processed_total` | Counter | `status` (`success`, `failure`) | Total number of spans aggregated. |
+| `cost_engine_redis_pipeline_seconds` | Histogram | None | Latency of bulk Redis Pipeline execution. |
+| `cost_engine_fenwick_update_seconds` | Histogram | None | Latency of the Fenwick Tree Lua updates. |
+| `cost_engine_kafka_lag` | Gauge | `partition` | Real-time partition ingestion lag. |
+| `cost_engine_dlq_events_total` | Counter | `reason` | Total events routed to Dead Letter Queue. |
+
