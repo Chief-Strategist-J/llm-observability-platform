@@ -101,7 +101,9 @@ When you recalibrate, change the number in `THRESHOLDS`. The test suite (`test_c
 | Variable | Default | Required | Description |
 |---|---|---|---|
 | `EMBEDDING_WORKER_URL` | `http://localhost:8080` | Yes (production) | Base URL of the `queue-embedding-worker` service. Used to fetch stored embeddings when they are not included in the scoring request body. |
-| `PRIMARY_SCORER` | `minilm` | No | Name of the scorer whose result is promoted to `primary` in the response. Must match the `name` property of a registered `ScorerPort` adapter. Change to swap models at runtime without redeployment. |
+| `PRIMARY_SCORER` | `minilm` | No | Name of the scorer whose result is promoted to `primary` in the response. Must match the `name` property of one of the active scorers in `SCORERS`. |
+| `SCORERS` | `minilm` | No | Comma-separated list of active scorer names to instantiate at startup (e.g. `minilm,mpnet,bge-small`). Zero code change needed to spin up new scorers! |
+| `SCORER_<NAME>_MODEL_ID` | (Resolves to default) | No | Sets the model ID string for a specific scorer name (e.g. `SCORER_MPNET_MODEL_ID=sentence-transformers/all-mpnet-base-v2`). Replaces builtin mappings. |
 
 > **Note:** If `PRIMARY_SCORER` points to a scorer name that is not registered, the service falls back to the first scorer in the registry and logs a warning. No crash, no silent failure.
 
@@ -231,14 +233,30 @@ Lists all registered scorer models and the current primary. Use this to verify w
 
 ---
 
-## Adding a New Scorer Model
+## Adding or Swapping Scorer Models
+
+### Option A: Zero-Code Dynamic Pluggability (Runtime)
+
+If your new model computes standard cosine similarity on a new or different embedding space, **you do not need to write any code**. Simply define it in your environment:
+
+1. **Add it to `SCORERS`**: Append its name to the comma-separated list (e.g., `SCORERS=minilm,mpnet,bge-small`).
+2. **Define its Model ID**: Add the environment variable `SCORER_<NAME>_MODEL_ID` (e.g., `SCORER_BGE_SMALL_MODEL_ID=BAAI/bge-small-en-v1.5`).
+3. **Change the Primary (Optional)**: Promote it to the primary by setting `PRIMARY_SCORER=bge-small`.
+
+The service automatically loads it, maps it to the generic `CosineScorerAdapter`, adds it to the ensemble registry, and exposes it in the `/v1/scorers` and `/v1/score/semantic-coherence` APIs.
+
+---
+
+### Option B: Custom Scorer Adapter (Code)
+
+If your model requires custom calculation logic or calls an external service:
 
 ```
 1. Create: src/infra/adapters/scorers/your_model_scorer.py
 2. Implement ScorerPort (3 methods):
       name       → unique string key
       model_id   → full model path (e.g. "org/model-name")
-      compute()  → returns float (raw cosine — clamping applied by domain)
+      compute()  → returns float (raw similarity — clamping applied by domain)
 
 3. Register in: src/shared/di/providers.py
       registry.register(YourModelScorerAdapter())
@@ -247,7 +265,7 @@ Lists all registered scorer models and the current primary. Use this to verify w
       PRIMARY_SCORER=your-model-name  (env var — no code change)
 ```
 
-The domain, thresholds, rules, API, and all existing tests remain **untouched**.
+The domain logic, threshold rules, and REST API controllers remain completely **untouched**.
 
 ---
 
