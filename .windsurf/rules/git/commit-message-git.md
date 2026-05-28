@@ -37,4 +37,4 @@ make sure you make it queriesble for humans and AI agents
 - Use standard types (feat, fix, refactor, docs, etc.)
 - Separate subject and body with a blank line
 
-- do not push secrets, api keys, or sensitive information
+- do not push secrets, api keys, or sensitive information and if you accidentally push then immediately remove it and create a new commit to remove it and notify the team.
