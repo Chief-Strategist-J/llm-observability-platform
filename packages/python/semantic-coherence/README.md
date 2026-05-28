@@ -341,6 +341,78 @@ semantic-coherence/
 ├── build/Dockerfile
 └── deploy/docker/docker-compose.yaml
 ```
+---
+
+## Docker Usage Guide
+
+The production-ready container image is hosted on Docker Hub at [chiefj/semantic-coherence](https://hub.docker.com/r/chiefj/semantic-coherence).
+
+### 1. Pull the Image
+
+```bash
+docker pull chiefj/semantic-coherence:latest
+```
+
+### 2. Run the Container (Single Scorer / Default)
+
+By default, the image runs with the `minilm` scorer listening on port `8005`:
+
+```bash
+docker run -d \
+  --name semantic-coherence \
+  -p 8005:8005 \
+  -e EMBEDDING_WORKER_URL=http://your-embedding-worker:8080 \
+  chiefj/semantic-coherence:latest
+```
+
+### 3. Run with Multi-Model Ensemble
+
+To load multiple scorers at startup and declare `mpnet` as the primary evaluation model:
+
+```bash
+docker run -d \
+  --name semantic-coherence \
+  -p 8005:8005 \
+  -e EMBEDDING_WORKER_URL=http://your-embedding-worker:8080 \
+  -e SCORERS=minilm,mpnet,bge-small \
+  -e PRIMARY_SCORER=mpnet \
+  chiefj/semantic-coherence:latest
+```
+
+### 4. Plug in Any Custom Model dynamically (Zero-Code)
+
+You can spin up the container with any custom embedding model from Hugging Face or your private registry. Simply declare it in the environment:
+
+```bash
+docker run -d \
+  --name semantic-coherence \
+  -p 8005:8005 \
+  -e EMBEDDING_WORKER_URL=http://your-embedding-worker:8080 \
+  -e SCORERS=minilm,custom-model \
+  -e SCORER_CUSTOM_MODEL_MODEL_ID=org/my-private-model-v3 \
+  -e PRIMARY_SCORER=custom-model \
+  chiefj/semantic-coherence:latest
+```
+
+### 5. Running with Docker Compose
+
+Integrate the scorer into your microservices stack by adding the service to your `docker-compose.yaml`:
+
+```yaml
+version: "3.9"
+
+services:
+  semantic-coherence:
+    image: chiefj/semantic-coherence:latest
+    ports:
+      - "8005:8005"
+    environment:
+      - EMBEDDING_WORKER_URL=http://queue-embedding-worker:8080
+      - SCORERS=minilm,mpnet,bge-base
+      - PRIMARY_SCORER=minilm
+      - SCORER_BGE_BASE_MODEL_ID=BAAI/bge-base-en-v1.5
+    restart: unless-stopped
+```
 
 ---
 
