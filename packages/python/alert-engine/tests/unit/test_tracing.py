@@ -35,3 +35,65 @@ def test_extract_traceparent_none() -> None:
     assert _extract_traceparent(None) is None
     assert _extract_traceparent([]) is None
     assert _extract_traceparent([("other-header", b"value")]) is None
+
+def test_handler_sub_spans() -> None:
+    import opentelemetry.trace as otel_trace
+    current_provider = otel_trace.get_tracer_provider()
+    if hasattr(current_provider, "_delegate"):
+        current_provider = current_provider._delegate
+        
+    exporter = InMemorySpanExporter()
+    processor = SimpleSpanProcessor(exporter)
+    
+    if hasattr(current_provider, "add_span_processor"):
+        current_provider.add_span_processor(processor)
+    
+    from unittest.mock import MagicMock
+    from handlers.alerts_budget.handler import BudgetAlertHandler
+    
+    db_port = MagicMock()
+    redis_port = MagicMock()
+    slack_port = MagicMock()
+    metrics_port = MagicMock()
+    
+    redis_port.acquire_rate_limit.return_value = True
+    
+    import os
+    import tempfile
+    
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
+        f.write("service_owners:\n  default: owner_a\n")
+        temp_path = f.name
+        
+    try:
+        handler = BudgetAlertHandler(
+            db_port=db_port,
+            redis_port=redis_port,
+            slack_port=slack_port,
+            metrics_port=metrics_port,
+            service_owners_path=temp_path
+        )
+        
+        payload = {
+            "user_id": "user123",
+            "model": "gpt-4",
+            "event_type": "blocked",
+            "service": "default",
+            "timestamp_utc": "2026-05-28T10:00:00Z"
+        }
+        
+        handler.handle(payload)
+        
+        spans = exporter.get_finished_spans()
+        assert len(spans) > 0
+        
+        span_names = [s.name for s in spans]
+        assert "budget_alert_handler.handle" in span_names
+        assert "budget_alert_handler.check_rate_limit" in span_names
+        assert "budget_alert_handler.insert_database" in span_names
+        assert "budget_alert_handler.notify_slack_channel" in span_names
+        
+    finally:
+        os.unlink(temp_path)
+
+

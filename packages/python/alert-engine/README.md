@@ -178,13 +178,36 @@ Start the consumer listening to the Kafka topics:
 
 ## Observability & Tracing
 
-The alert engine is instrumented with OpenTelemetry to track delivery latencies and propagate distributed trace contexts across services.
+The alert engine is deeply instrumented with OpenTelemetry to track delivery latencies, database execution times, third-party notification overheads, and propagate distributed trace contexts across services.
+
+### Tracing Instrumentation Hierarchy
+
+The engine generates the following structured spans and sub-spans:
+- **`budget_alert_handler.handle`** (Root span for budget alert processing)
+  - Attributes: `alert.type`, `user_id`, `model`, `event_type`, `alert.suppressed`
+  - Sub-spans:
+    - `budget_alert_handler.check_rate_limit` (with `rate_limit.key` and `rate_limit.acquired`)
+    - `budget_alert_handler.insert_database` (wrapping DB queries)
+    - `budget_alert_handler.notify_slack_channel` / `budget_alert_handler.notify_slack_owner`
+- **`cost_anomaly_alert_handler.handle`** (Root span for anomaly alert processing)
+  - Attributes: `alert.type`, `service`, `model`, `sample_count`, `current_cost`, `ewma_value`, `alert.burn_ratio`
+  - Sub-spans:
+    - `cost_anomaly_alert_handler.insert_database`
+    - `cost_anomaly_alert_handler.check_rate_limit`
+    - `cost_anomaly_alert_handler.notify_slack`
+    - `cost_anomaly_alert_handler.notify_pagerduty`
+- **Adapters Spans**:
+  - `postgres_adapter.insert_alert`: Captures Postgres storage queries.
+  - `redis_adapter.acquire_rate_limit`: Tracks Redis rate limiting locks.
+  - `slack_adapter.post`: Captures outgoing Slack webhook latency and channels.
+  - `pagerduty_adapter.trigger_incident`: Tracks PagerDuty API calls.
 
 ### Environment Variables
 - `OTEL_EXPORTER_OTLP_ENDPOINT`: OTLP collector endpoint for traces (e.g. `http://localhost:4317`).
 - `OTEL_SERVICE_NAME`: Set to `alert-engine` by default.
 
 Traces are automatically propagated from incoming Kafka message header metadata using the W3C traceparent context standard.
+
 
 ---
 

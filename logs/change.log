@@ -384,6 +384,7 @@
         ├── sqlite-security -> Parameterize SQLite queries using datetime modifier arguments
         ├── redis-robustness -> Handle empty/None results in query_total and set mock script return_value to "1" in test
         └── docs-examples -> Show dynamic state extraction in fastapi middleware example and add Redis window limitation warning in README
+
 [2026-05-28T10:22:00+05:30] Add implementation plan for alert-engine Kafka consumer worker
 └── File: logs/change.log
     ├── Choice: Propose alert-engine package architecture using Ports & Adapters, Postgres migrations, Redis rate limiting, and Slack/PagerDuty routing.
@@ -406,6 +407,17 @@
         ├── telemetry -> Extract W3C traceparent context in consumer poll loop and wrap processing in tracing spans
         ├── contracts -> Add headers trace metadata schema to alerts.budget.yaml and alerts.cost.anomaly.yaml
         ├── deployment -> Add build/Dockerfile and deploy/docker/docker-compose.yaml
-        └── testing -> Add test_tracing.py for OTel propagation and test_failures.py for resilience / schema validation testing
+        └── testing -> Add test_failures.py for resilience / schema validation testing and test_tracing.py for OTel propagation
+
+[2026-05-28T10:55:00+05:30] Implement deep OpenTelemetry instrumentation tracing across alert-engine adapters, handlers, and unit tests
+└── File: packages/python/alert-engine/src/infra/adapters/redis/redis_adapter.py, packages/python/alert-engine/src/infra/adapters/slack/slack_adapter.py, packages/python/alert-engine/src/infra/adapters/pagerduty/pagerduty_adapter.py, packages/python/alert-engine/src/handlers/alerts_budget/handler.py, packages/python/alert-engine/src/handlers/alerts_cost_anomaly/handler.py, packages/python/alert-engine/tests/unit/test_tracing.py
+    ├── Choice: Deeply instrument the alert-engine with high-fidelity OpenTelemetry spans across all adapters and business handlers, and add validation tests for tracing metadata and sub-spans.
+    └── Changes:
+        ├── redis-adapter -> Wrap rate limit checks in Redis tracing spans with TTL and key metadata
+        ├── slack-adapter -> Wrap Slack webhook message posts in Slack tracing spans with channel metadata
+        ├── pagerduty-adapter -> Wrap incident triggers in PagerDuty tracing spans with severity and source metadata
+        ├── handlers -> Wrap budget and cost anomaly handler pipeline steps (database, rate limiting, notifications) in structured telemetry sub-spans
+        └── testing -> Implement handler sub-spans tracing test case in test_tracing.py to assert sub-span hierarchies and attributes
+
 
 
