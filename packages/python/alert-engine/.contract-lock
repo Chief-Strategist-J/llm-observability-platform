@@ -1,0 +1,8 @@
+alerts_budget:
+  schema_version: 1
+  contract_file: contracts/events/alerts.budget.yaml
+  locked_at: 2026-05-28T10:30:00+05:30
+alerts_cost_anomaly:
+  schema_version: 1
+  contract_file: contracts/events/alerts.cost.anomaly.yaml
+  locked_at: 2026-05-28T10:30:00+05:30

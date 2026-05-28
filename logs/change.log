@@ -384,7 +384,28 @@
         ├── sqlite-security -> Parameterize SQLite queries using datetime modifier arguments
         ├── redis-robustness -> Handle empty/None results in query_total and set mock script return_value to "1" in test
         └── docs-examples -> Show dynamic state extraction in fastapi middleware example and add Redis window limitation warning in README
+[2026-05-28T10:22:00+05:30] Add implementation plan for alert-engine Kafka consumer worker
+└── File: logs/change.log
+    ├── Choice: Propose alert-engine package architecture using Ports & Adapters, Postgres migrations, Redis rate limiting, and Slack/PagerDuty routing.
+    └── Changes:
+        └── alert-engine-design -> Document design decisions in implementation_plan.md
 
+[2026-05-28T10:30:00+05:30] Implement alert-engine Kafka consumer worker and unit tests
+└── File: packages/python/alert-engine/
+    ├── Choice: Implement the alert-engine Kafka consumer worker with PostgreSQL, Redis, Slack, PagerDuty, and Prometheus adapters following Ports & Adapters architecture, and write unit tests for budget and cost anomaly routing.
+    └── Changes:
+        ├── infra-adapters -> Implement postgres_adapter.py, redis_adapter.py, slack_adapter.py, pagerduty_adapter.py, prometheus_adapter.py
+        ├── handlers -> Implement handlers/alerts_budget/handler.py and handlers/alerts_cost_anomaly/handler.py
+        ├── worker -> Implement index.py, config.py, registry.py
+        └── testing -> Write test_budget_handler.py and test_cost_anomaly_handler.py with 100% test coverage
 
+[2026-05-28T10:40:00+05:30] Integrate OpenTelemetry context propagation, Docker deployment support, contract updates, and fault-tolerance unit tests
+└── File: packages/python/alert-engine/
+    ├── Choice: Add OpenTelemetry context extraction from Kafka message headers, update AsyncAPI contract schemas, add Docker build files, and expand the test suite with advanced failure scenarios.
+    └── Changes:
+        ├── telemetry -> Extract W3C traceparent context in consumer poll loop and wrap processing in tracing spans
+        ├── contracts -> Add headers trace metadata schema to alerts.budget.yaml and alerts.cost.anomaly.yaml
+        ├── deployment -> Add build/Dockerfile and deploy/docker/docker-compose.yaml
+        └── testing -> Add test_tracing.py for OTel propagation and test_failures.py for resilience / schema validation testing
 
 
