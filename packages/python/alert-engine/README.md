@@ -227,14 +227,51 @@ docker compose -f deploy/docker/docker-compose.yaml up -d
 
 ---
 
+---
+
 ## End-User Usage Guide
 
-This section explains how developers and operators can use this package either by producing event payloads to Kafka or programmatically inside Python applications.
+This section explains how developers and operators can configure, connect, and run this package either as a standalone container or programmatically in Python.
 
-### 1. Producing Kafka Alert Events (JSON Payloads)
+### 1. Infrastructure Connection Configuration (Environment Variables)
+
+Configure the alert engine by supplying the following environment variables to your container or environment:
+
+| Variable | Description | Default / Example Value |
+| :--- | :--- | :--- |
+| **`KAFKA_BOOTSTRAP_SERVERS`** | Host/port of Kafka brokers | `localhost:9099` (Default) |
+| **`KAFKA_CONSUMER_GROUP`** | Kafka consumer group identifier | `alert-engine-group` |
+| **`KAFKA_TOPICS`** | Comma-separated list of subscribed topics | `alerts.budget,alerts.cost.anomaly` |
+| **`REDIS_URL`** | Redis connection URI for rate limiting | `redis://localhost:6389/0` |
+| **`POSTGRES_DSN`** | Postgres connection DSN | `postgresql://user:pass@host:5439/db` |
+| **`SLACK_WEBHOOK_URL`** | Webhook URL for Slack alerts | `https://hooks.slack.com/services/...` |
+| **`PAGERDUTY_ROUTING_KEY`** | Integration key for PagerDuty | `pd-routing-key-here` |
+| **`SERVICE_OWNERS_FILE_PATH`** | Path to service owners file | `service_owners.yaml` |
+| **`PROMETHEUS_METRICS_PORT`** | Port for Prometheus metrics scraping | `9464` |
+| **`HEALTH_CHECK_PORT`** | Port for health probes | `8001` |
+| **`OTEL_EXPORTER_OTLP_ENDPOINT`**| OpenTelemetry trace collector endpoint | `http://localhost:4317` |
+
+#### Run via Docker:
+Run the container and expose health check (`8001`) and metrics (`9464`) ports:
+```bash
+docker run -d \
+  --name alert-engine \
+  -e KAFKA_BOOTSTRAP_SERVERS="kafka-host:9092" \
+  -e REDIS_URL="redis://redis-host:6379/0" \
+  -e POSTGRES_DSN="postgresql://postgres:postgres@db-host:5432/alert_db" \
+  -e SLACK_WEBHOOK_URL="https://hooks.slack.com/services/T00/B00/X00" \
+  -e PAGERDUTY_ROUTING_KEY="pagerduty-key" \
+  -e OTEL_EXPORTER_OTLP_ENDPOINT="http://otel-collector:4317" \
+  -p 8001:8001 \
+  -p 9464:9464 \
+  chiefj/alert-engine:latest
+```
+
+---
+
+### 2. Producing Kafka Alert Events (JSON Payloads)
 
 #### Budget Alert Payload (`alerts.budget` topic)
-End-users can trigger budget alerts by publishing the following schema payload into Kafka:
 ```json
 {
   "user_id": "user_12345",
@@ -246,7 +283,6 @@ End-users can trigger budget alerts by publishing the following schema payload i
 *Note: Valid `event_type` options are `"blocked"` and `"warning_80pct"`.*
 
 #### Cost Anomaly Alert Payload (`alerts.cost.anomaly` topic)
-End-users can trigger cost anomaly spike alerts by publishing the following schema payload:
 ```json
 {
   "service": "recommendation-service",
@@ -262,10 +298,6 @@ End-users can trigger cost anomaly spike alerts by publishing the following sche
     {
       "cluster_id": "k8s-us-east-1",
       "cost": 120.40
-    },
-    {
-      "cluster_id": "k8s-us-west-2",
-      "cost": 30.10
     }
   ]
 }
@@ -273,7 +305,7 @@ End-users can trigger cost anomaly spike alerts by publishing the following sche
 
 ---
 
-### 2. Service Owners Mapping (`service_owners.yaml`)
+### 3. Service Owners Mapping (`service_owners.yaml`)
 When a budget alert with `event_type="warning_80pct"` triggers, the system routes the Slack DM notification to the owner of the service using `service_owners.yaml`.
 Configure this file in your workspace:
 ```yaml
@@ -285,9 +317,19 @@ service_owners:
 
 ---
 
-### 3. Programmatic Usage in Python
-You can import the adapters and handlers directly in your Python code to process events programmatically:
+### 4. Programmatic Usage in Python
+You can import the adapters, config loaders, and handlers directly in your Python application code.
 
+#### Loading Configurations programmatically:
+```python
+from worker.config import load_config
+
+# Automatically loads and validates config from environment variables
+config = load_config()
+print(f"Connecting to Kafka at {config.kafka_bootstrap_servers}")
+```
+
+#### Triggering Handlers manually:
 ```python
 from src.infra.adapters.postgres.postgres_adapter import PostgresAdapter
 from src.infra.adapters.redis.redis_adapter import RedisAdapter
@@ -319,4 +361,5 @@ budget_handler.handle({
     "timestamp_utc": "2026-05-28T10:45:00Z"
 })
 ```
+
 
