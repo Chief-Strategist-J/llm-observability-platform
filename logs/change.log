@@ -426,6 +426,13 @@
         ├── workers -> Register alert-engine consumer worker details, owner, and stage
         └── features -> Register alert_routing feature mapping, dependencies, and contract
 
+[2026-05-28T11:15:00+05:30] Document end-user usage guide in alert-engine package README
+└── File: packages/python/alert-engine/README.md
+    ├── Choice: Add a comprehensive end-user usage guide section detailing programmatic Python initialization, YAML ownership configuration mapping, and JSON schemas for budget/anomaly Kafka event publishing.
+    └── Changes:
+        └── documentation -> Document end-user schema examples and Python code initialization snippets
+
+
 
 
 

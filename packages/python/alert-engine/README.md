@@ -224,3 +224,99 @@ Orchestrate all dependent services (PostgreSQL, Redis, Kafka, Tempo/OTLP collect
 ```bash
 docker compose -f deploy/docker/docker-compose.yaml up -d
 ```
+
+---
+
+## End-User Usage Guide
+
+This section explains how developers and operators can use this package either by producing event payloads to Kafka or programmatically inside Python applications.
+
+### 1. Producing Kafka Alert Events (JSON Payloads)
+
+#### Budget Alert Payload (`alerts.budget` topic)
+End-users can trigger budget alerts by publishing the following schema payload into Kafka:
+```json
+{
+  "user_id": "user_12345",
+  "model": "gpt-4-turbo",
+  "event_type": "warning_80pct",
+  "timestamp_utc": "2026-05-28T10:45:00Z"
+}
+```
+*Note: Valid `event_type` options are `"blocked"` and `"warning_80pct"`.*
+
+#### Cost Anomaly Alert Payload (`alerts.cost.anomaly` topic)
+End-users can trigger cost anomaly spike alerts by publishing the following schema payload:
+```json
+{
+  "service": "recommendation-service",
+  "model": "claude-3-opus",
+  "hour_of_week": 42,
+  "current_cost": 150.50,
+  "ewma_value": 30.10,
+  "threshold_value": 90.30,
+  "sample_count": 14,
+  "timestamp": "2026-05-28T10:45:00Z",
+  "is_cold_start": false,
+  "cluster_drilldown": [
+    {
+      "cluster_id": "k8s-us-east-1",
+      "cost": 120.40
+    },
+    {
+      "cluster_id": "k8s-us-west-2",
+      "cost": 30.10
+    }
+  ]
+}
+```
+
+---
+
+### 2. Service Owners Mapping (`service_owners.yaml`)
+When a budget alert with `event_type="warning_80pct"` triggers, the system routes the Slack DM notification to the owner of the service using `service_owners.yaml`.
+Configure this file in your workspace:
+```yaml
+service_owners:
+  recommendation-service: "@john-doe"
+  payment-processor: "@jane-smith"
+  default: "@on-call-infra"
+```
+
+---
+
+### 3. Programmatic Usage in Python
+You can import the adapters and handlers directly in your Python code to process events programmatically:
+
+```python
+from src.infra.adapters.postgres.postgres_adapter import PostgresAdapter
+from src.infra.adapters.redis.redis_adapter import RedisAdapter
+from src.infra.adapters.slack.slack_adapter import SlackAdapter
+from src.infra.adapters.metrics.prometheus_adapter import PrometheusAdapter
+from src.handlers.alerts_budget.handler import BudgetAlertHandler
+
+# Initialize the adapter ports
+db_port = PostgresAdapter("postgresql://postgres:postgres@localhost:5432/alert_db")
+redis_port = RedisAdapter("redis://localhost:6379/0")
+slack_port = SlackAdapter("https://hooks.slack.com/services/T00/B00/X00")
+metrics_port = PrometheusAdapter()
+
+# Initialize the handler
+budget_handler = BudgetAlertHandler(
+    db_port=db_port,
+    redis_port=redis_port,
+    slack_port=slack_port,
+    metrics_port=metrics_port,
+    service_owners_path="service_owners.yaml"
+)
+
+# Process budget alert payload manually
+budget_handler.handle({
+    "user_id": "user_12345",
+    "model": "gpt-4",
+    "event_type": "blocked",
+    "service": "recommendation-service",
+    "timestamp_utc": "2026-05-28T10:45:00Z"
+})
+```
+
