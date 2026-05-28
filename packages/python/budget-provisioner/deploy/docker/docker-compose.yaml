@@ -1,0 +1,43 @@
+version: "3.9"
+services:
+  budget-provisioner:
+    build:
+      context: ../../
+      dockerfile: build/Dockerfile
+    environment:
+      POSTGRES_DSN: postgresql://postgres:postgres@postgres:5432/ewma_db
+      REDIS_URL: redis://redis:6379/0
+      INTERNAL_JWT_SECRET: super-secret-key-value-for-testing-1234
+      HOST: 0.0.0.0
+      PORT: 8001
+    ports:
+      - "8001:8001"
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ewma_db
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ewma_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5

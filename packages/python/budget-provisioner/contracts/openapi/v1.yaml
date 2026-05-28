@@ -1,0 +1,306 @@
+openapi: 3.0.3
+info:
+  title: Budget Provisioner API
+  description: REST API for budget configuration CRUD operations and token bucket status queries
+  version: 1.0.0
+  contact:
+    name: LLM Observability Platform
+    email: dev@example.com
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8001
+    description: Development server
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns the health status of the budget provisioner service
+      operationId: healthCheck
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Healthy status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  service:
+                    type: string
+                    example: budget-provisioner
+
+  /budgets/{user_id}/{model}:
+    post:
+      summary: Create or update budget config
+      description: Creates or updates a budget configuration for a specific user and model
+      operationId: createOrUpdateBudget
+      tags:
+        - Budgets
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique user identifier
+        - name: model
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BudgetConfigUpsertRequest'
+      responses:
+        '200':
+          description: Budget updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetConfigResponse'
+        '201':
+          description: Budget created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetConfigResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      summary: Remove budget config
+      description: Deletes a budget configuration for a specific user and model and invalidates the Redis token bucket cache
+      operationId: deleteBudget
+      tags:
+        - Budgets
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique user identifier
+        - name: model
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model identifier
+      responses:
+        '200':
+          description: Budget deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Budget deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /budgets/{user_id}:
+    get:
+      summary: List all budgets for a user
+      description: Retrieves all budget configurations associated with a specific user
+      operationId: listBudgets
+      tags:
+        - Budgets
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique user identifier
+      responses:
+        '200':
+          description: List of budgets retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  budgets:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BudgetConfigResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /budgets/{user_id}/{model}/status:
+    get:
+      summary: Get current token bucket status
+      description: Returns the active token bucket status
+      operationId: getBudgetStatus
+      tags:
+        - Budgets
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique user identifier
+        - name: model
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model identifier
+      responses:
+        '200':
+          description: Token bucket status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    BudgetConfigUpsertRequest:
+      type: object
+      properties:
+        max_budget:
+          type: number
+          format: double
+          description: The maximum budget allowed
+          example: 100.0
+        window_size_secs:
+          type: integer
+          description: Budget duration window size in seconds
+          default: 900
+          example: 900
+        initial_fill_fraction:
+          type: number
+          format: double
+          description: Initial fill fraction of token bucket when reconstructed
+          default: 0.1
+          example: 0.1
+      required:
+        - max_budget
+
+    BudgetConfigResponse:
+      type: object
+      properties:
+        user_id:
+          type: string
+          example: "user_123"
+        model:
+          type: string
+          example: "gpt-4"
+        max_budget:
+          type: number
+          format: double
+          example: 100.0
+        window_size_secs:
+          type: integer
+          example: 900
+        initial_fill_fraction:
+          type: number
+          format: double
+          example: 0.1
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-05-28T12:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-05-28T12:00:00Z"
+
+    BudgetStatusResponse:
+      type: object
+      properties:
+        user_id:
+          type: string
+          example: "user_123"
+        model:
+          type: string
+          example: "gpt-4"
+        tokens_remaining:
+          type: number
+          format: double
+          example: 10.0
+        burn_rate:
+          type: number
+          format: double
+          example: 0.5
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Invalid request format"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-05-28T12:00:00Z"
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Unauthorized (invalid JWT)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Budget not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []

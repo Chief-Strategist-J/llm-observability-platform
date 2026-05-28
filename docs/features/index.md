@@ -8,4 +8,6 @@ Explore the core features of the observability stack.
 - [Prometheus Metrics & Grafana](Prometheus-Metrics-and-Grafana.md) — Prebuilt dashboards for monitoring latency, TTFT, cost, and error rates.
 - [Temporal EWMA Cost Anomaly Detection](Temporal-EWMA-Cost-Anomaly-Detection.md) — Decoupled EWMA baseline computing & cost anomaly detection worker.
 - [Alert Engine](Alert-Engine.md) — Kafka consumer worker routing budget alerts and cost anomalies to Postgres, Slack, and PagerDuty.
+- [Budget Provisioner](Budget-Provisioner.md) — Internal API managing token bucket rate limits and user budget configurations.
+
 
