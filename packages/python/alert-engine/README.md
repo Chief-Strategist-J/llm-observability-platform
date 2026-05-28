@@ -243,13 +243,19 @@ Configure the alert engine by supplying the following environment variables to y
 | **`KAFKA_CONSUMER_GROUP`** | Kafka consumer group identifier | `alert-engine-group` |
 | **`KAFKA_TOPICS`** | Comma-separated list of subscribed topics | `alerts.budget,alerts.cost.anomaly` |
 | **`REDIS_URL`** | Redis connection URI for rate limiting | `redis://localhost:6389/0` |
-| **`POSTGRES_DSN`** | Postgres connection DSN | `postgresql://user:pass@host:5439/db` |
-| **`SLACK_WEBHOOK_URL`** | Webhook URL for Slack alerts | `https://hooks.slack.com/services/...` |
-| **`PAGERDUTY_ROUTING_KEY`** | Integration key for PagerDuty | `pd-routing-key-here` |
+| **`POSTGRES_DSN`** | Complete Postgres connection DSN (supercedes other variables if set) | `postgresql://user:pass@host:5439/db` |
+| **`POSTGRES_HOST`** | Postgres server host address (fallback when DSN not set) | `localhost` (Default) |
+| **`POSTGRES_PORT`** | Postgres server port (fallback when DSN not set) | `5439` (Default) |
+| **`POSTGRES_USER`** | Postgres database username (fallback when DSN not set) | `postgres` (Default) |
+| **`POSTGRES_PASSWORD`** | Postgres database password (fallback when DSN not set) | `postgres` (Default) |
+| **`POSTGRES_DB`** | Postgres database name (fallback when DSN not set) | `ewma_db` (Default) |
+| **`SLACK_WEBHOOK_URL`** | Webhook URL for Slack alerts | `http://localhost:8080/mock-slack` |
+| **`PAGERDUTY_ROUTING_KEY`** | Integration key for PagerDuty | `mock-pagerduty-routing-key` |
 | **`SERVICE_OWNERS_FILE_PATH`** | Path to service owners file | `service_owners.yaml` |
 | **`PROMETHEUS_METRICS_PORT`** | Port for Prometheus metrics scraping | `9464` |
 | **`HEALTH_CHECK_PORT`** | Port for health probes | `8001` |
 | **`OTEL_EXPORTER_OTLP_ENDPOINT`**| OpenTelemetry trace collector endpoint | `http://localhost:4317` |
+| **`OTEL_SERVICE_NAME`** | OpenTelemetry service identifier | `alert-engine` |
 
 #### Run via Docker:
 Run the container and expose health check (`8001`) and metrics (`9464`) ports:
