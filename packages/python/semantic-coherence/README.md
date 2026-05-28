@@ -109,6 +109,36 @@ When you recalibrate, change the number in `THRESHOLDS`. The test suite (`test_c
 
 ---
 
+## Built-in Model Mappings
+
+The service includes built-in defaults for several popular open-source embedding models. If you use one of these names in `SCORERS`, you do **not** need to set `SCORER_<NAME>_MODEL_ID`:
+
+| Scorer Name | Built-in Model ID |
+|---|---|
+| `minilm` *(Default)* | `sentence-transformers/all-MiniLM-L6-v2` |
+| `mpnet` | `sentence-transformers/all-mpnet-base-v2` |
+| `bge-small` | `BAAI/bge-small-en-v1.5` |
+| `bge-base` | `BAAI/bge-base-en-v1.5` |
+| `bge-large` | `BAAI/bge-large-en-v1.5` |
+| `e5-small` | `intfloat/e5-small-v2` |
+| `e5-base` | `intfloat/e5-base-v2` |
+| `e5-large` | `intfloat/e5-large-v2` |
+| `gte-small` | `thenlper/gte-small` |
+| `gte-base` | `thenlper/gte-base` |
+
+### Discovering Active Models at Runtime
+
+An end-user or downstream service can inspect what scorers are loaded, which models they represent, and which is currently serving as `primary` by making a request to the REST API:
+
+1. **`GET /health`**: Returns an array of active scorer names.
+2. **`GET /v1/scorers`**: Returns full details of all active scorers (`name` and `model_id`), along with the current `primary` scorer name.
+
+### Plugging in Any Custom Model
+
+You can plug in **any model whatsoever** simply by choosing a unique name and declaring its model ID in the environment variables. For example, to add OpenAI's new embedding model:
+- `SCORERS=minilm,openai-v3`
+- `SCORER_OPENAI_V3_MODEL_ID=text-embedding-3-small`
+
 ## REST API
 
 ### `GET /health`
