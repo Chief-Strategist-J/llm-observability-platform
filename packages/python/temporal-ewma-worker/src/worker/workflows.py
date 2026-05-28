@@ -2,6 +2,7 @@ import asyncio
 from dataclasses import dataclass
 from datetime import timedelta
 from temporalio import workflow
+from temporalio.common import RetryPolicy
 from shared.types.ewma_types import EwmaRecord, AnomalyPayload
 from features.ewma_compute.service import EwmaService
 
@@ -102,6 +103,14 @@ class EwmaBaselineUpdate:
             )
 
 
+DEFAULT_RETRY_POLICY = RetryPolicy(
+    initial_interval=timedelta(seconds=1),
+    backoff_coefficient=2.0,
+    maximum_interval=timedelta(seconds=10),
+    maximum_attempts=3,
+)
+
+
 @dataclass
 class IntegrityCheckInput:
     pass
@@ -119,6 +128,7 @@ class WeeklyIntegrityCheck:
                 "fetch_active_keys",
                 args=[dim],
                 start_to_close_timeout=timedelta(seconds=60),
+                retry_policy=DEFAULT_RETRY_POLICY,
             )
 
             tasks = [
@@ -126,6 +136,7 @@ class WeeklyIntegrityCheck:
                     "verify_key_integrity",
                     args=[dim, key],
                     start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=DEFAULT_RETRY_POLICY,
                 )
                 for key in keys
             ]
@@ -153,6 +164,7 @@ class RetroactivePriceCorrection:
             "fetch_spans_for_correction",
             args=[hours],
             start_to_close_timeout=timedelta(seconds=120),
+            retry_policy=DEFAULT_RETRY_POLICY,
         )
 
         if not spans:
@@ -162,7 +174,9 @@ class RetroactivePriceCorrection:
             "apply_price_corrections",
             args=[spans],
             start_to_close_timeout=timedelta(seconds=180),
+            retry_policy=DEFAULT_RETRY_POLICY,
         )
 
         return correction_count
+
 
