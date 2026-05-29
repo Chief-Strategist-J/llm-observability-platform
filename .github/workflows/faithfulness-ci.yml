@@ -1,0 +1,53 @@
+name: Faithfulness Scorer — Test & Publish
+
+on:
+  push:
+    branches: [main, "feature/**"]
+    paths:
+      - "packages/python/faithfulness/**"
+      - ".github/workflows/faithfulness-ci.yml"
+  pull_request:
+    paths:
+      - "packages/python/faithfulness/**"
+
+env:
+  IMAGE: chiefj/faithfulness
+  PKG: packages/python/faithfulness
+
+jobs:
+  test:
+    name: Unit Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: faithfulness-pip-${{ matrix.python-version }}-${{ hashFiles('packages/python/faithfulness/pyproject.toml') }}
+          restore-keys: |
+            faithfulness-pip-${{ matrix.python-version }}-
+
+      - name: Install dependencies
+        run: |
+          cd ${{ env.PKG }}
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          python -m spacy download en_core_web_sm
+
+      - name: Run tests
+        run: |
+          cd ${{ env.PKG }}
+          python -m pytest tests/ -v --tb=short --cov=src --cov-report=term-missing
+
