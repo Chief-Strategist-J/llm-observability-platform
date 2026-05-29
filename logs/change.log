@@ -598,4 +598,11 @@
         ├── reference -> Added POST /spans, fallback, tool-call, and pricing endpoints to REST-Management-API.md, and Layer 3 ports to Docker-and-CLI-Deployment.md.
         └── changelog -> Logged version 1.10.0 additions in changelog.md.
 
+[2026-05-29T16:15:00+05:30] Add documentation validation workflow to GitHub Actions
+└── File: .github/workflows/docs-validate.yml, logs/change.log
+    ├── Choice: Automate documentation validation check using GitHub Actions to run mkdocs build with strict settings on push or pull requests.
+    └── Changes:
+        └── ci -> Created docs-validate.yml executing mkdocs build --strict.
+
+
 
