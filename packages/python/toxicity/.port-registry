@@ -1,0 +1,9 @@
+ports:
+  - name: toxicity_scorer
+    type: ml-scorer
+    vendor: transformers
+    adapter: src/infra/adapters/detoxify_onnx_adapter.py::DetoxifyOnnxAdapter
+  - name: toxicity_publisher
+    type: event-publisher
+    vendor: confluent_kafka
+    adapter: src/infra/adapters/kafka_publisher_adapter.py::KafkaToxicityPublisherAdapter

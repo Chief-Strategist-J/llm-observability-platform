@@ -1,0 +1,12 @@
+name: toxicity
+status: active
+contract: packages/python/toxicity/contracts/openapi/v1.yaml
+contract_version: v1
+owner: "@quality-team"
+added: 2026-05-29
+scorer_port: ToxicityScorerPort
+publisher_port: ToxicityPublisherPort
+model_id: unitary/toxic-bert
+depends_on_features:
+  - enrich_span
+depends_on_packages: []

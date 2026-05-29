@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  toxicity:
+    build:
+      context: ../..
+      dockerfile: build/Dockerfile
+    image: chiefj/toxicity:latest
+    container_name: toxicity
+    ports:
+      - "8007:8007"
+    environment:
+      - TOXICITY_MODEL_ID=unitary/toxic-bert
+      - KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+    networks:
+      - llm-observability
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8007/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+networks:
+  llm-observability:
+    external: true

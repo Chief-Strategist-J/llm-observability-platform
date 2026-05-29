@@ -1,0 +1,14 @@
+name: toxicity
+type: scorer-service
+runtime: python
+platform: fastapi
+port: 8007
+stage: active
+owner: "@quality-team"
+description: >
+  Layer 3 toxicity scorer.
+  Uses unitary/toxic-bert ONNX Runtime on CPU to score responses.
+  Processes first 512 and last 512 tokens for long responses.
+  Emits flagged toxic responses (>0.50 score) to llm.toxicity.flagged.
+image: chiefj/toxicity
+depends_on: []

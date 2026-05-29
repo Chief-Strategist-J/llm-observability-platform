@@ -1,0 +1,4 @@
+name: toxicity
+runtime: python
+platform: fastapi
+entrypoint: src/api/rest/v1/app.py

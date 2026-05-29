@@ -1,0 +1,107 @@
+openapi: "3.0.3"
+info:
+  title: Toxicity Scorer API
+  version: "1.0.0"
+  description: Layer 3 toxicity scoring service using unitary/toxic-bert ONNX.
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: health
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /v1/score/toxicity:
+    post:
+      summary: Score toxicity of a response text
+      operationId: scoreToxicity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScoreRequest"
+      responses:
+        "200":
+          description: Toxicity scoring result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoreResponse"
+        "422":
+          description: Validation error
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, model_id]
+      properties:
+        status:
+          type: string
+          example: ok
+        model_id:
+          type: string
+          example: unitary/toxic-bert
+
+    ScoreRequest:
+      type: object
+      required: [trace_id, span_id, response_text]
+      properties:
+        trace_id:
+          type: string
+        span_id:
+          type: string
+        response_text:
+          type: string
+
+    ToxicityScoresSchema:
+      type: object
+      required: [toxicity, severe_toxicity, obscene, threat, insult, identity_hate]
+      properties:
+        toxicity:
+          type: number
+        severe_toxicity:
+          type: number
+        obscene:
+          type: number
+        threat:
+          type: number
+        insult:
+          type: number
+        identity_hate:
+          type: number
+
+    ScoreResponse:
+      type: object
+      required: [trace_id, span_id, score, flagged, flag, skipped, skip_reason, scores]
+      properties:
+        trace_id:
+          type: string
+        span_id:
+          type: string
+        score:
+          type: number
+          nullable: true
+          minimum: 0.0
+          maximum: 1.0
+        flagged:
+          type: boolean
+        flag:
+          type: string
+          nullable: true
+        skipped:
+          type: boolean
+        skip_reason:
+          type: string
+          nullable: true
+        scores:
+          type: object
+          nullable: true
+          $ref: "#/components/schemas/ToxicityScoresSchema"
