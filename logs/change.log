@@ -589,3 +589,13 @@
     └── Changes:
         └── ci -> created toxicity-test.yml containing unit test automation for packages/python/toxicity
 
+[2026-05-29T16:05:00+05:30] Update global features, indices, and reference documents for Layer 3 scorers and REST APIs
+└── File: docs/index.md, docs/features/index.md, docs/features/Toxicity-Scorer.md, docs/features/Faithfulness-Scorer.md, docs/features/Semantic-Coherence-Scorer.md, docs/reference/REST-Management-API.md, docs/reference/Docker-and-CLI-Deployment.md, docs/changelog.md
+    ├── Choice: Keep documentation in perfect sync with the implementation state (Toxicity, Faithfulness, Semantic Coherence scorers and the expanded REST API endpoints on the FastAPI server).
+    └── Changes:
+        ├── features -> Created Toxicity-Scorer.md, Faithfulness-Scorer.md, and Semantic-Coherence-Scorer.md detailing architecture, quickstart guides, decision/skip rules, API schemas, and tracing.
+        ├── index -> Updated global index.md and features/index.md with links, feature map tree, version bump to 1.10.0.
+        ├── reference -> Added POST /spans, fallback, tool-call, and pricing endpoints to REST-Management-API.md, and Layer 3 ports to Docker-and-CLI-Deployment.md.
+        └── changelog -> Logged version 1.10.0 additions in changelog.md.
+
+

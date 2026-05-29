@@ -5,6 +5,14 @@ All notable changes to the `instrumentation-sdk` package will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-05-29
+
+### Added
+- **Toxicity Scorer Package**: Multi-label toxicity classifier microservice using `unitary/toxic-bert` ONNX running on CPU. Includes a dual-pass evaluation window strategy for texts > 512 tokens and automatically publishes flagged toxic responses (score > 0.50) to the `llm.toxicity.flagged` Kafka topic.
+- **Faithfulness Scorer Package**: Hallucination detection microservice utilizing `cross-encoder/nli-deberta-v3-base` to check sentence entailment against retrieved RAG contexts. Features temperature scaling (T=1.5), sentence splitting with spaCy, context chunking, and OpenTelemetry trace propagation.
+- **Semantic Coherence Scorer Package**: Evaluation microservice to check prompt-to-response relevance via cosine similarity of pre-computed embeddings. Supports multiple prompt types (chat, code, rag, classification) with distinct thresholds, and a dynamically swappable scorer registry.
+- **REST Endpoints Enrichment**: Added span ingestion (`POST /spans`), fallback chain tracking (`/fallback/track`, `/fallback/clear`), tool call tracking (`/tool-call/track`, `/tool-call/clear`), and price database fetching/reloading (`/metrics/prices`, `/metrics/prices/reload`).
+
 ## [1.9.0] - 2026-05-28
 
 ### Added

@@ -91,6 +91,18 @@ docker run -d \
 
 ---
 
+## Layer 3 Evaluator Ports (Microservices)
+
+In addition to the core API and metrics telemetry stack, the evaluation layer runs specialized microservices:
+
+| Microservice | Default Port | Docker Image |
+|---|---|---|
+| **Semantic Coherence Scorer** | `8005` | `chiefj/semantic-coherence:latest` |
+| **Faithfulness Scorer** | `8006` | `chiefj/faithfulness:latest` |
+| **Toxicity Scorer** | `8007` | `chiefj/toxicity:latest` |
+
+---
+
 ## Docker Compose — Development Stack
 
 For contributors wanting to run the API alongside ClickHouse, Redis, PostgreSQL, and Kafka backends:

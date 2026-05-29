@@ -65,7 +65,7 @@ Open Grafana at `http://localhost:3002` — spans appear within 5–10 seconds.
 ## SDK Feature Map
 
 ```
-instrumentation-sdk & temporal-ewma-worker & alert-engine
+instrumentation-sdk & temporal-ewma-worker & alert-engine & layer-3-scorers
 │
 ├── Auto-Instrumentation        → zero-code patching
 │   ├── OpenAI
@@ -98,6 +98,11 @@ instrumentation-sdk & temporal-ewma-worker & alert-engine
 ├── Alerting & Routing
 │   └── Alert Engine            → Kafka consumer worker routing budget alerts & cost anomalies
 │
+├── Layer 3 Evaluation (Scorers)
+│   ├── Toxicity Scorer         → dual-pass toxic-bert ONNX classifier (Kafka publisher)
+│   ├── Faithfulness Scorer     → DeBERTa-v3 NLI factual grounding (RAG context chunking)
+│   └── Semantic Coherence      → prompt-response cosine similarity similarity checks
+│
 └── Observability Backend
     ├── Prometheus Metrics       → 8 metric families
     ├── Grafana Dashboards       → 4 pre-built dashboards
@@ -121,6 +126,9 @@ instrumentation-sdk & temporal-ewma-worker & alert-engine
 | [Prometheus Metrics & Grafana](features/Prometheus-Metrics-and-Grafana.md) | Cost, latency, TTFT dashboards |
 | [Temporal EWMA Cost Anomaly Detection](features/Temporal-EWMA-Cost-Anomaly-Detection.md) | Decoupled EWMA baseline computing & cost anomaly detection worker |
 | [Alert Engine](features/Alert-Engine.md) | Kafka consumer worker routing budget alerts & cost anomalies |
+| [Toxicity Scorer](features/Toxicity-Scorer.md) | toxic-bert ONNX classifier and flagged event publisher |
+| [Faithfulness Scorer](features/Faithfulness-Scorer.md) | Hallucination detection in RAG pipelines using DeBERTa NLI |
+| [Semantic Coherence Scorer](features/Semantic-Coherence-Scorer.md) | Cosine similarity off-topic check for pre-calculated embeddings |
 | [REST Management API](reference/REST-Management-API.md) | Full endpoint reference |
 | [Docker & CLI Deployment](reference/Docker-and-CLI-Deployment.md) | `llm-observe` CLI, all-in-one container |
 | [Config Files Reference](reference/Config-Files-Reference.md) | Model prices, PII patterns, infra configs |
@@ -129,4 +137,5 @@ instrumentation-sdk & temporal-ewma-worker & alert-engine
 
 ## Current Version
 
-`1.9.0` — see [Changelog](changelog.md)
+`1.10.0` — see [Changelog](changelog.md)
+
