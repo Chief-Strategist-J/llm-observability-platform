@@ -604,5 +604,12 @@
     └── Changes:
         └── ci -> Created docs-validate.yml executing mkdocs build --strict.
 
+[2026-05-29T16:16:00+05:30] Update documentation workflow to publish to GitHub Pages
+└── File: .github/workflows/docs-validate.yml, logs/change.log
+    ├── Choice: Include GitHub Pages deployment using peaceiris/actions-gh-pages action on pushes to main.
+    └── Changes:
+        └── ci -> Configured permissions (contents: write) and added Deploy step to docs-validate.yml.
+
+
 
 

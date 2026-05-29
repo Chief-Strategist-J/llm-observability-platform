@@ -1,4 +1,4 @@
-name: Validate Documentation Build
+name: Validate and Publish Documentation
 
 on:
   push:
@@ -17,8 +17,11 @@ on:
       - "docs/requirements.txt"
       - ".github/workflows/docs-validate.yml"
 
+permissions:
+  contents: write
+
 jobs:
-  build-docs:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -39,3 +42,10 @@ jobs:
       - name: Build MkDocs Site
         run: |
           mkdocs build --strict
+
+      - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
