@@ -1,0 +1,37 @@
+name: Test Enforcement (Toxicity)
+
+on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+    paths:
+      - "packages/python/toxicity/**"
+      - ".github/workflows/toxicity-test.yml"
+  pull_request:
+    paths:
+      - "packages/python/toxicity/**"
+      - ".github/workflows/toxicity-test.yml"
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          cd packages/python/toxicity
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run tests
+        run: |
+          cd packages/python/toxicity
+          pytest tests/ -v --tb=short --cov=src --cov-report=term-missing
