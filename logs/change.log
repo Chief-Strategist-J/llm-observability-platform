@@ -562,3 +562,24 @@
         ├── tests-> tests/unit/test_critical.py (adds TestOpenTelemetryTracing to verify trace span context propagation)
         ├── docs-> README.md (adds Observability & Tracing section, documents telemetry environment variables)
         └── docker-> scripts/deploy_docker.sh (mounts tests directory via volume for in-container testing), chiefj/faithfulness successfully built, verified, and pushed to Docker Hub (tags: latest, v0.1.0, stable)
+
+[2026-05-29T14:50:00+05:30] Implement toxicity classification microservice using toxic-bert ONNX on CPU
+└── File: packages/python/toxicity/
+    ├── Choice: Hexagonal architecture (Ports & Adapters) separating domain logic from ONNX/Kafka adapters, with OpenTelemetry span tracing and dual-pass inference strategy.
+    └── Changes:
+        ├── contracts -> contracts/openapi/v1.yaml (written first) — POST /v1/score/toxicity + GET /health
+        ├── ports -> shared/ports/toxicity_scorer_port.py (ToxicityScorerPort Protocol), shared/ports/toxicity_publisher_port.py (ToxicityPublisherPort Protocol)
+        ├── domain -> features/score_toxicity/service.py (pure orchestration, dual-pass inference, max combination, threshold rule enforcement)
+        ├── infra -> infra/adapters/detoxify_onnx_adapter.py (lazy ONNX Runtime SequenceClassification inference), infra/adapters/kafka_publisher_adapter.py (confluent-kafka toxic event publisher)
+        ├── api -> api/rest/v1/app.py (FastAPI app factory), api/rest/v1/router.py, api/rest/v1/handlers/health.py, api/rest/v1/handlers/score.py (scoring endpoint with full OpenAPI schema compliance)
+        ├── testing -> 29 unit tests — 96% package test coverage — rules boundaries, service dual-pass logic, mock/fake ONNX & Kafka adapters, REST client integration
+        └── registry -> registry/workers/toxicity.yaml, registry/features/toxicity.yaml
+
+[2026-05-29T14:52:40+05:30] toxicity — feature branch feature/toxicity-scorer-observability-docker, environment docs, and Docker publication
+└── File: packages/python/toxicity/
+    ├── Choice: Feature branch isolates final documentation and deployment changes; Docker build runs tests inside the container prior to pushing tags.
+    └── Changes:
+        ├── branch -> feature/toxicity-scorer-observability-docker created, staged, committed, and pushed
+        ├── docs -> README.md updated with configuration table, full docker run execution command, and business decision tree
+        └── docker -> built, validated, and pushed chiefj/toxicity (tags: latest, v0.1.0, stable) to Docker Hub after all tests passed in-container
+
