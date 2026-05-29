@@ -183,6 +183,12 @@ nav:
     - Deterministic Sampling:     features/Deterministic-Sampling.md
     - MiniLM Embeddings:          features/MiniLM-Embeddings.md
     - Prometheus & Grafana:       features/Prometheus-Metrics-and-Grafana.md
+    - Toxicity Scorer:            features/Toxicity-Scorer.md
+    - Faithfulness Scorer:        features/Faithfulness-Scorer.md
+    - Semantic Coherence Scorer:  features/Semantic-Coherence-Scorer.md
+    - Alert Engine:               features/Alert-Engine.md
+    - Budget Provisioner:         features/Budget-Provisioner.md
+    - Temporal EWMA Detection:    features/Temporal-EWMA-Cost-Anomaly-Detection.md
 
   - Reference:
     - reference/index.md

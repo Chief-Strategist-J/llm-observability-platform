@@ -617,6 +617,13 @@
         ├── config -> Replaced deprecated tags_file settings under tags plugin in mkdocs.yml.
         └── links -> Updated relative link from ../performance-report.html to performance-report.html in Performance-Benchmarks.md.
 
+[2026-05-29T16:18:00+05:30] Include missing scorer and module pages under Features navigation menu
+└── File: mkdocs.yml, logs/change.log
+    ├── Choice: List Alert-Engine, Budget-Provisioner, Faithfulness-Scorer, Semantic-Coherence-Scorer, Temporal-EWMA, and Toxicity-Scorer pages in the mkdocs navigation menu to resolve unlisted page warnings.
+    └── Changes:
+        └── config -> Added missing feature paths under the Features nav node in mkdocs.yml.
+
+
 
 
 
