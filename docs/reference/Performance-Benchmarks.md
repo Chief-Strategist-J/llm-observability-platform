@@ -9,7 +9,7 @@ An interactive dark-mode HTML dashboard featuring throughput comparisons and tai
 !!! tip "How the dashboard is generated"
     Running `PYTHONPATH=. .venv/bin/pytest tests/performance/test_reporter_performance.py` inside `packages/python/instrumentation-sdk/` automatically writes the latest benchmark data into both `reports/performance-report.html` (local) and `docs/reference/performance-report.html` (committed to docs). Commit the updated file to publish new results.
 
-👉 **[Open Interactive Performance Dashboard](../performance-report.html)**
+👉 **[Open Interactive Performance Dashboard](performance-report.html)**
 
 ---
 

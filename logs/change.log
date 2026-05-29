@@ -610,6 +610,14 @@
     └── Changes:
         └── ci -> Configured permissions (contents: write) and added Deploy step to docs-validate.yml.
 
+[2026-05-29T16:17:00+05:30] Fix deprecated config and broken link in MkDocs settings and benchmarks reference
+└── File: mkdocs.yml, docs/reference/Performance-Benchmarks.md, logs/change.log
+    ├── Choice: Remove deprecated 'tags_file' option from tags plugin and fix relative path to performance-report.html to ensure strict compilation passes.
+    └── Changes:
+        ├── config -> Replaced deprecated tags_file settings under tags plugin in mkdocs.yml.
+        └── links -> Updated relative link from ../performance-report.html to performance-report.html in Performance-Benchmarks.md.
+
+
 
 
 
