@@ -583,3 +583,9 @@
         ├── docs -> README.md updated with configuration table, full docker run execution command, and business decision tree
         └── docker -> built, validated, and pushed chiefj/toxicity (tags: latest, v0.1.0, stable) to Docker Hub after all tests passed in-container
 
+[2026-05-29T15:47:00+05:30] toxicity — add CI test-only workflow
+└── File: .github/workflows/toxicity-test.yml
+    ├── Choice: Simple GitHub Actions workflow running pytest-based test enforcement on pushes and pull requests to toxicity package.
+    └── Changes:
+        └── ci -> created toxicity-test.yml containing unit test automation for packages/python/toxicity
+
