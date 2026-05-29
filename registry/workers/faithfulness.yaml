@@ -1,0 +1,15 @@
+name: faithfulness
+type: scorer-service
+runtime: python
+platform: fastapi
+port: 8006
+stage: active
+owner: "@quality-team"
+description: >
+  Layer 3 faithfulness scorer.
+  Uses DeBERTa-v3-base NLI (cross-encoder/nli-deberta-v3-base, 186M params)
+  to measure what fraction of response sentences are entailed by RAG context.
+  Temperature-scaled softmax (T=1.5) for calibration.
+  Context chunking when context > 512 tokens. Batched NLI (8 pairs/batch).
+image: chiefj/faithfulness
+depends_on: []

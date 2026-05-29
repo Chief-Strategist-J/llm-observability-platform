@@ -1,0 +1,9 @@
+ports:
+  - name: nli_scorer
+    type: ml-scorer
+    vendor: transformers
+    adapter: src/infra/adapters/nli/deberta_nli_adapter.py::DeBertaNliAdapter
+  - name: sentencizer
+    type: nlp-sentencizer
+    vendor: spacy
+    adapter: src/infra/adapters/sentencizer/spacy_sentencizer.py::SpacySentencizerAdapter

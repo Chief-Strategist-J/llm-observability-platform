@@ -1,0 +1,38 @@
+[project]
+name = "faithfulness"
+version = "0.1.0"
+description = "Layer 3 faithfulness scorer — DeBERTa-v3-base NLI entailment fraction over RAG context"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.22.0",
+    "numpy>=1.26.0",
+    "transformers>=4.40.0",
+    "torch>=2.2.0",
+    "spacy>=3.7.0",
+    "opentelemetry-sdk>=1.26.0",
+    "opentelemetry-api>=1.26.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.23.0",
+    "httpx>=0.24.0",
+    "mypy>=1.8.0",
+    "ruff>=0.2.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
