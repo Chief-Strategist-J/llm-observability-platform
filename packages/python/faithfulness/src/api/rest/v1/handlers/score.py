@@ -54,6 +54,8 @@ def score_endpoint(body: ScoreRequest, request: Request) -> Any:
         input=faith_input,
         sentencizer=sentencizer,
         nli_scorer=nli_scorer,
+        trace_id=body.trace_id,
+        span_id=body.span_id,
     )
 
     return ScoreResponse(

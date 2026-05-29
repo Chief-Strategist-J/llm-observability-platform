@@ -528,3 +528,37 @@
         ├── pluggability-> CosineScorerAdapter handles generic cosine similarity, providers.py resolves names & model IDs dynamically from env, and .env.example/docker-compose.yaml showcase pluggability
         ├── docker-> Two-stage build Dockerfile copies source context to prevent setuptools errors, successfully pushed chiefj/semantic-coherence:latest to Docker Hub
         └── tests-> test_env_pluggability.py proves single/multi/custom/fallback scorer resolution and registry loading via env vars
+
+[2026-05-29T09:40:00+05:30] Implement faithfulness scorer package — DeBERTa-v3-base NLI entailment fraction over RAG context
+└── File: packages/python/faithfulness/
+    ├── Choice: Hexagonal architecture — domain defines NliScorerPort + SentencizerPort Protocols; infra adapters implement them; service is pure orchestration with zero infra imports
+    └── Changes:
+        ├── contracts-> contracts/openapi/v1.yaml (written first) — POST /v1/score/faithfulness + GET /health
+        ├── ports-> shared/ports/nli_scorer_port.py (NliScorerPort Protocol), shared/ports/sentencizer_port.py (SentencizerPort Protocol)
+        ├── domain-> types.py (FaithfulnessInput, SentenceResult, FaithfulnessResult), rules.py (skip predicates, constants, label_from_probs, context chunking helpers), service.py (pure orchestration, long-context chunking, entailment fraction)
+        ├── infra-> deberta_nli_adapter.py (lazy-loaded cross-encoder/nli-deberta-v3-base, T=1.5 temperature, batch=8), spacy_sentencizer.py (en_core_web_sm, min_words filter)
+        ├── api-> app.py (FastAPI factory), router.py, handlers/health.py, handlers/score.py
+        ├── deploy-> build/Dockerfile (port 8006, spaCy model baked in), deploy/docker/docker-compose.yaml, scripts/deploy_docker.sh
+        ├── tests-> 47 unit tests — 100% pass — rules, service (fakes), NLI adapter (fakes), sentencizer (real spaCy), API (TestClient + fakes)
+        └── registry-> registry/workers/faithfulness.yaml, registry/features/faithfulness.yaml, .port-registry, .contract-lock, feature-registry.yaml
+
+[2026-05-29T10:09:00+05:30] faithfulness — CI workflow, critical tests, failure cases, business decision tree, 5-min quickstart
+└── File: packages/python/faithfulness/ + .github/workflows/faithfulness-ci.yml
+    ├── Choice: New feature branch feature/faithfulness-ci-critical-tests — all work atomic and reversible
+    └── Changes:
+        ├── gitkeep-> removed all .gitkeep files (not needed — src has real content)
+        ├── tests-> test_critical.py (41 new tests): TestSkipConditionBoundaries, TestScoreComputation, TestLongContextChunking, TestNliBatchingContract, TestFailureCases — 85 total tests pass
+        ├── scripts-> scripts/test.sh added (pytest --cov runner)
+        ├── ci-> .github/workflows/faithfulness-ci.yml — job1: test (Py3.11+3.12), job2: docker build+push on main after tests pass (DOCKERHUB_USERNAME/TOKEN secrets)
+        └── docs-> README.md rewritten with 5-min quickstart, full business decision ASCII tree, score interpretation table, skip conditions table, T=1.5 rationale, composite weight docs
+
+[2026-05-29T10:49:00+05:30] faithfulness — OpenTelemetry tracing integration, telemetry docs, test suite enhancement, Docker deployment updated
+└── File: packages/python/faithfulness/
+    ├── Choice: In-depth manual OpenTelemetry context propagation & tracing instead of auto-instrumentation since fastapi instrumentation is not installed.
+    └── Changes:
+        ├── tracer-> src/shared/tracing/tracer.py (initializes TracerProvider, console/OTLP exporters via env vars SKIP_CONSOLE_EXPORTER, SKIP_OTLP_EXPORTER, OTEL_EXPORTER_OTLP_ENDPOINT)
+        ├── service-> src/features/score_faithfulness/service.py (adds trace_span around sentence splitting, NLI scoring, chunks check)
+        ├── api-> src/api/rest/v1/handlers/score.py (passes trace_id and span_id to service call)
+        ├── tests-> tests/unit/test_critical.py (adds TestOpenTelemetryTracing to verify trace span context propagation)
+        ├── docs-> README.md (adds Observability & Tracing section, documents telemetry environment variables)
+        └── docker-> scripts/deploy_docker.sh (mounts tests directory via volume for in-container testing), chiefj/faithfulness successfully built, verified, and pushed to Docker Hub (tags: latest, v0.1.0, stable)
