@@ -654,8 +654,8 @@
         ├── README.md -> full end-user guide: curl examples, Docker run/compose, CI secrets table, skip table
         └── Docker Hub: chiefj/perplexity:latest|stable|v0.1.0 pushed + smoke test passed
 
-[2026-06-01T15:20:00+05:30] docs(rules): add Model Context Protocol (MCP) and agentic standards rule
+[2026-06-01T15:20:00+05:30] docs(rules): add Model Context Protocol (MCP), ACP, and agentic standards rules
 └── File: .windsurf/rules/mcp-agent-protocols.md
-    ├── Choice: Standardize MCP as isolated Driving Adapters inside each package's api/mcp/ folder
+    ├── Choice: Standardize MCP and ACP as isolated Driving Adapters inside each package's api/mcp/ and api/acp/ folders
     └── Changes:
-        └── .windsurf/rules/mcp-agent-protocols.md -> defined hexagonal boundaries, stdio/SSE transports, and single-artifact distribution rules
+        └── .windsurf/rules/mcp-agent-protocols.md -> defined hexagonal boundaries, stdio/SSE transports, ACP envelope schemas, performative mapping, conversational threading, and single-artifact distribution rules

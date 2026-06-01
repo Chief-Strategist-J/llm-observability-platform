@@ -31,11 +31,9 @@ packages/python/{package-name}/
 - **Payload Limits:** Truncate or paginate responses exceeding 1MB to prevent client buffer overflows.
 - **Zero Raw Exceptions:** Handlers in `api/mcp/` must catch all exceptions from the feature service layer and map them to the standard MCP error codes (e.g., `-32603` for Internal Error, `-32602` for Invalid Params).
 
----
+## 2. Agent Communication Protocol (ACP) & Other Agentic Standards
 
-## 2. Other Agent-to-Agent Protocols
-
-If a service needs to support other standard agentic orchestration protocols (e.g., LangChain Remote Runnables, AutoGen Message Protocols, or Agent Protocol), the same boundary isolation applies.
+If a service needs to support ACP (Agent Communication Protocol) or other agentic protocols (e.g., Agent Protocol, LangChain Remote Runnables, AutoGen Message Protocol), the same boundary isolation applies.
 
 ### Directory Placement
 ```
@@ -44,17 +42,51 @@ packages/python/{package-name}/
 │   ├── api/
 │   │   ├── rest/v1/
 │   │   ├── mcp/
-│   │   └── agent_protocol/            # Agent Protocol / LangChain API Adapter
-│   │       ├── router.py
-│   │       └── handlers.py
+│   │   └── acp/                       # ACP Adapter Layer
+│   │       ├── router.py              # Listens for and dispatches ACP envelopes
+│   │       ├── envelope.py            # Standard ACP envelope model & validation
+│   │       └── performatives.py       # Handlers mapped by communicative act type
 ```
 
-### Compliance Checklist for Agent Protocols
-1. **Stateless Operations:** Agent APIs should be stateless, or delegate session states to the core feature services/repositories (which in turn rely on Redis/Postgres adapters).
-2. **Streaming Execution Spans:** For long-running agent actions, use Server-Sent Events (SSE) or WebSockets to stream intermediate tool calls, reasoning steps, and partial outputs.
-3. **Trace Propagation:** Ensure that headers (like OpenTelemetry traceparent) are captured from incoming messages (e.g., in `agent_protocol` metadata) and injected into the current execution context so the entire multi-agent trace chain is unified.
+### Strict ACP Envelope Structure
+Every incoming or outgoing ACP message must strictly adhere to the following schema contract:
+
+```json
+{
+  "id": "uuid4-string",
+  "conversation_id": "uuid4-string",
+  "sender": "agent-uri-identifier",
+  "receiver": "agent-uri-identifier",
+  "performative": "REQUEST | INFORM | PROPOSE | ACCEPT_PROPOSAL | REJECT_PROPOSAL | FAILURE",
+  "content": {
+    "response_text": "...",
+    "parameters": {}
+  },
+  "ontology": "urn:llm-observability:perplexity:v1",
+  "protocol": "request-response",
+  "timestamp": "ISO-8601-UTC-datetime",
+  "metadata": {
+    "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+  }
+}
+```
+
+### ACP Compliance & Execution Rules
+1. **Communicative Performative Mapping:**
+   - **`REQUEST`**: Triggers core feature/service scoring execution.
+   - **`INFORM`**: Used to send back success payloads or telemetry updates.
+   - **`FAILURE`**: Used to return standardized error codes and skip signals.
+2. **Conversational Threading:** The adapter must validate that the `conversation_id` is present. If it belongs to a multi-turn conversation, it must check the local session repository for matching execution context.
+3. **Trace Context Propagation:** The `metadata.traceparent` field must be parsed to extract the W3C trace context, which must then be registered as the active OpenTelemetry span context before invoking the feature service.
+4. **Stateless Operations:** ACP adapters must remain stateless; any session persistence or caching must be offloaded to the core features infra layer via interfaces.
 
 ---
+
+## 3. Other Agent Orchestration Frameworks
+For integration with client frameworks (e.g., LangChain Remote Runnables):
+1. **Streaming Execution Spans:** For long-running agent actions, use Server-Sent Events (SSE) or WebSockets to stream intermediate tool calls, reasoning steps, and partial outputs.
+2. **Standard Serialization:** Force JSON-safe input/output mapping at the boundary. No python-specific pickling or model objects should leak outside the adapter.
+
 
 ## 3. Distribution & Deployment
 
