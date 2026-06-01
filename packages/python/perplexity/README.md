@@ -239,24 +239,9 @@ The pipeline (`perplexity-ci.yml`) triggers **only** when files under `packages/
 | Event | Jobs triggered |
 |---|---|
 | Pull request → `main` (perplexity path) | `test` (Python 3.11 + 3.12) |
-| Push/merge → `main` (perplexity path) | `test` → `build-and-push` |
+| Push/merge → `main` (perplexity path) | `test` (Python 3.11 + 3.12) |
 
-### GitHub Secrets required
-
-Go to **Settings → Secrets → Actions** and add:
-
-| Secret name | Value |
-|---|---|
-| `DOCKERHUB_USERNAME` | `chiefj` |
-| `DOCKERHUB_TOKEN` | your Docker Hub access token |
-
-### Docker Hub tags published on merge to main
-
-```
-chiefj/perplexity:latest
-chiefj/perplexity:stable
-chiefj/perplexity:v<version>
-```
+Docker builds and pushes are done **manually** via the deploy script — not in CI.
 
 ---
 
