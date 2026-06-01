@@ -645,3 +645,17 @@
         ├── deploy/docker/docker-compose.yaml -> dev compose port 8007
         └── 44/44 tests pass, pushed to origin/feature/perplexity-scorer
 
+[2026-06-01T14:05:00+05:30] chore(perplexity): build image, test live API, deploy to Docker Hub + CI + README
+└── File: packages/python/perplexity/build/Dockerfile, .github/workflows/perplexity-ci.yml, packages/python/perplexity/README.md
+    ├── Choice: Separate gpt2 extras from builder stage so CI stays fast; keep CI as tests-only per user instruction
+    └── Changes:
+        ├── Dockerfile -> drop [gpt2] extras from builder, add curl for HEALTHCHECK, two-stage unchanged
+        ├── perplexity-ci.yml -> trigger only on perplexity path + main branch for pytest; no build-and-push job
+        ├── README.md -> full end-user guide: curl examples, Docker run/compose, CI secrets table, skip table
+        └── Docker Hub: chiefj/perplexity:latest|stable|v0.1.0 pushed + smoke test passed
+
+[2026-06-01T15:20:00+05:30] docs(rules): add Model Context Protocol (MCP) and agentic standards rule
+└── File: .windsurf/rules/mcp-agent-protocols.md
+    ├── Choice: Standardize MCP as isolated Driving Adapters inside each package's api/mcp/ folder
+    └── Changes:
+        └── .windsurf/rules/mcp-agent-protocols.md -> defined hexagonal boundaries, stdio/SSE transports, and single-artifact distribution rules
