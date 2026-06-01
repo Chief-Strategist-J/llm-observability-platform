@@ -1,0 +1,9 @@
+name: perplexity
+type: scorer-service
+runtime: python
+port: 8007
+image: chiefj/perplexity
+owner: "@quality-team"
+stage: 1
+entrypoint: src/api/rest/v1/app.py
+contract: packages/python/perplexity/contracts/openapi/v1.yaml

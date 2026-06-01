@@ -1,0 +1,9 @@
+ports:
+  - name: logprobs_scorer
+    type: ml-scorer
+    vendor: provider_logprobs
+    adapter: src/infra/adapters/logprobs/provider_logprobs_adapter.py::ProviderLogprobsAdapter
+  - name: gpt2_scorer
+    type: ml-scorer
+    vendor: onnxruntime
+    adapter: src/infra/adapters/gpt2/gpt2_onnx_adapter.py::Gpt2OnnxAdapter

@@ -1,0 +1,12 @@
+features:
+  - name: perplexity
+    status: active
+    contract: contracts/openapi/v1.yaml
+    contract_version: v1
+    owner: "@quality-team"
+    added: 2026-06-01
+    flags: []
+    migrations: []
+    depends_on_features:
+      - enrich_span
+    depends_on_packages: []

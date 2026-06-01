@@ -1,0 +1,12 @@
+name: perplexity
+status: active
+owner: "@quality-team"
+package: packages/python/perplexity
+contract: packages/python/perplexity/contracts/openapi/v1.yaml
+depends_on_features:
+  - enrich_span
+description: >
+  Cross-entropy perplexity scorer (Score 4).
+  Primary: provider logprobs (zero inference cost).
+  Fallback: GPT-2 124M ONNX on CPU (~25ms / 200 tokens).
+  Weight: 0.10 when active, 0.00 when skipped.
