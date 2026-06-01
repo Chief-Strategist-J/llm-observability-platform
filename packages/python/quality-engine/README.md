@@ -8,6 +8,32 @@ This service aggregates model evaluation metrics (coherence, faithfulness, toxic
 
 If sub-metrics are not provided directly in the request payload, the quality engine can dynamically fetch them by querying the downstream sub-scorer microservices if they are configured in the environment.
 
+## Business Decision Tree
+
+```
+[quality-ST-01 | Request Received]
+   |
+   +-- [quality-IN-01 | CompositeScoreInput (trace_id, span_id, scores, text attributes)]
+       |
+       +-- [quality-DC-01 | Pre-calculated scores provided?]
+           |-- [yes | Use provided values for coherence, faithfulness, toxicity, perplexity]
+           |-- [no  | ScorerClientPort configured?]
+           |          |-- [yes | Fetch missing scores dynamically from downstream microservices]
+           |          `-- [no  | Retain null for missing scores]
+           |
+           `-- [quality-PR-01 | Renormalize weights for non-null metrics]
+               |   Base weights: coherence=0.30, faithfulness=0.40, toxicity=0.20, perplexity=0.10
+               |   normalized_weight = weight / sum(active_weights)
+               |
+               +-- [quality-DC-02 | Are all active scores null?]
+                   |-- [yes | Trigger alert: 'scoring pipeline is broken' (trace_id, span_id)]
+                   |          quality_skipped_reason = 'all_scores_null'
+                   |          composite_score = null
+                   |-- [no  | Calculate composite_score = Σ (normalized_weight * raw_contribution)]
+                   |
+                   `-- [quality-OUT-01 | Return CompositeScoreResult]
+```
+
 ## Environment Variables
 
 | Variable | Description | Default |
