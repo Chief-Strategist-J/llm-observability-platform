@@ -1,0 +1,3 @@
+contract: contracts/openapi/v1.yaml
+version: "1.0.0"
+locked: 2026-06-01

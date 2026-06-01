@@ -1,0 +1,136 @@
+openapi: "3.0.3"
+info:
+  title: Perplexity Scorer API
+  version: "1.0.0"
+  description: >
+    Layer 3 perplexity scoring service.
+    Primary path: provider logprobs (zero inference cost).
+    Fallback path: GPT-2 124M ONNX on CPU (~25ms / 200 tokens).
+    Returns null when skip conditions are met.
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: health
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /v1/score/perplexity:
+    post:
+      summary: Score perplexity of an LLM response
+      operationId: scorePerplexity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScoreRequest"
+      responses:
+        "200":
+          description: Perplexity scoring result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoreResponse"
+        "422":
+          description: Validation error
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, scorer]
+      properties:
+        status:
+          type: string
+          example: ok
+        scorer:
+          type: string
+          example: provider_logprobs
+          enum: [provider_logprobs, gpt2_onnx, unavailable]
+
+    ScoreRequest:
+      type: object
+      required: [trace_id, span_id, response_text, completion_tokens, prompt_type]
+      properties:
+        trace_id:
+          type: string
+        span_id:
+          type: string
+        response_text:
+          type: string
+          description: The LLM response text to score.
+        completion_tokens:
+          type: integer
+          description: Number of completion tokens. < 10 triggers skip.
+        finish_reason:
+          type: string
+          nullable: true
+          description: >
+            LLM finish reason. 'content_filter' triggers skip.
+        prompt_type:
+          type: string
+          enum: [chat, code, rag, classification]
+          description: Prompt category for baseline lookup.
+        token_logprobs:
+          type: array
+          nullable: true
+          items:
+            type: number
+          description: >
+            Provider token log-probabilities (primary path).
+            When supplied, GPT-2 fallback is skipped entirely.
+
+    ScoreResponse:
+      type: object
+      required: [trace_id, span_id, skipped]
+      properties:
+        trace_id:
+          type: string
+        span_id:
+          type: string
+        perplexity:
+          type: number
+          nullable: true
+          description: >
+            Cross-entropy perplexity score. Null when skipped.
+        score:
+          type: number
+          nullable: true
+          minimum: 0.0
+          maximum: 1.0
+          description: >
+            Normalized composite contribution: 1/log(perplexity),
+            mapped to [0,1] against baseline range. Null when skipped.
+        weight:
+          type: number
+          description: >
+            w_perplexity: 0.10 when perplexity is not null, 0.00 otherwise.
+          example: 0.10
+        skipped:
+          type: boolean
+        skip_reason:
+          type: string
+          nullable: true
+          enum:
+            - completion_tokens_too_few
+            - finish_reason_blocked
+            - scorer_unavailable
+            - null
+        high_perplexity_flag:
+          type: boolean
+          description: >
+            True when perplexity > 3 × baseline for the given prompt_type.
+        prompt_type:
+          type: string
+          enum: [chat, code, rag, classification]
+        scorer_used:
+          type: string
+          nullable: true
+          enum: [provider_logprobs, gpt2_onnx, null]

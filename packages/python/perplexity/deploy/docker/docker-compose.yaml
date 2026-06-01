@@ -1,0 +1,13 @@
+services:
+  perplexity:
+    build:
+      context: ../..
+      dockerfile: build/Dockerfile
+    ports:
+      - "8007:8007"
+    environment:
+      - GPT2_MODEL_PATH=gpt2
+      - SKIP_CONSOLE_EXPORTER=false
+      - SKIP_OTLP_EXPORTER=true
+      - DEPLOYMENT_ENV=dev
+    restart: unless-stopped
