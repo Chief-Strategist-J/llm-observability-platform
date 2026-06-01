@@ -55,3 +55,8 @@ Run tests:
 ```bash
 pytest
 ```
+
+## CI / CD
+
+The pipeline (`quality-engine-test.yml`) is run automatically on GitHub Actions on pushes and pull requests targeting branches that match `main` or `feature/**` when changes are made inside the `packages/python/quality-engine/` directory. It executes the test suite.
+
