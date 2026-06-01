@@ -18,6 +18,15 @@ class ScoreRequest(BaseModel):
     perplexity: float | None = Field(default=None, ge=0.0)
     perplexity_baseline: float = Field(default=2.0, ge=0.0)
     use_literal_formula: bool = False
+    prompt_type: str | None = None
+    pii_detected: bool | None = None
+    prompt_embedding: list[float] | None = None
+    response_embedding: list[float] | None = None
+    response_text: str | None = None
+    completion_tokens: int | None = None
+    rag_context: str | None = None
+    finish_reason: str | None = None
+    token_logprobs: list[float] | None = None
 
 class ScoreResponse(BaseModel):
     trace_id: str
@@ -30,6 +39,7 @@ class ScoreResponse(BaseModel):
 @router.post("/v1/score/composite", response_model=ScoreResponse)
 def score_endpoint(body: ScoreRequest, request: Request) -> Any:
     alert_publisher = request.app.state.alert_publisher
+    scorer_client = request.app.state.scorer_client
     inp = CompositeScoreInput(
         trace_id=body.trace_id,
         span_id=body.span_id,
@@ -39,8 +49,17 @@ def score_endpoint(body: ScoreRequest, request: Request) -> Any:
         perplexity=body.perplexity,
         perplexity_baseline=body.perplexity_baseline,
         use_literal_formula=body.use_literal_formula,
+        prompt_type=body.prompt_type,
+        pii_detected=body.pii_detected,
+        prompt_embedding=body.prompt_embedding,
+        response_embedding=body.response_embedding,
+        response_text=body.response_text,
+        completion_tokens=body.completion_tokens,
+        rag_context=body.rag_context,
+        finish_reason=body.finish_reason,
+        token_logprobs=body.token_logprobs,
     )
-    result = score_composite(inp, alert_publisher)
+    result = score_composite(inp, alert_publisher, scorer_client)
     return ScoreResponse(
         trace_id=result.trace_id,
         span_id=result.span_id,

@@ -666,3 +666,14 @@
     └── Changes:
         ├── quality-engine -> Implement pure domain rules, service orchestration, alert publisher port, logger alert adapter, OTel tracing, REST handlers/routes/FastAPI app, unit tests, and package README
         └── affected files -> packages/python/quality-engine/pyproject.toml, packages/python/quality-engine/README.md, packages/python/quality-engine/contracts/openapi/v1.yaml, packages/python/quality-engine/src/features/score_composite/*, packages/python/quality-engine/src/shared/*, packages/python/quality-engine/src/infra/*, packages/python/quality-engine/src/api/*, packages/python/quality-engine/tests/*
+
+[2026-06-01T18:30:00+05:30] Integrate downstream sub-scorer APIs in quality-engine orchestrator
+└── File: packages/python/quality-engine/pyproject.toml, packages/python/quality-engine/src/features/score_composite/types.py, packages/python/quality-engine/src/features/score_composite/service.py, packages/python/quality-engine/src/shared/ports/scorer_client_port.py, packages/python/quality-engine/src/infra/adapters/scorers/http_scorer_client_adapter.py, packages/python/quality-engine/src/shared/di/providers.py, packages/python/quality-engine/src/api/rest/v1/app.py, packages/python/quality-engine/src/api/rest/v1/handlers/score.py, packages/python/quality-engine/tests/unit/test_service.py, packages/python/quality-engine/deploy/docker/docker-compose.yaml
+    ├── Choice: Query sub-scorer microservices dynamically for missing quality metrics if raw inputs are provided, without breaking existing call signatures.
+    └── Changes:
+        ├── dependencies -> Add httpx to pyproject.toml
+        ├── ports -> Define ScorerClientPort interface in src/shared/ports/
+        ├── adapters -> Implement HttpScorerClientAdapter using httpx.Client in src/infra/adapters/
+        ├── service -> Update score_composite to optionally query ScorerClientPort with default parameters
+        ├── api -> Accept raw text inputs in ScoreRequest and map scorer_client in application state
+        └── docker -> Declare COHERENCE_SERVICE_URL, FAITHFULNESS_SERVICE_URL, TOXICITY_SERVICE_URL, and PERPLEXITY_SERVICE_URL URLs in docker-compose.yaml

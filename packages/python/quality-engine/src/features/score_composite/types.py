@@ -11,6 +11,15 @@ class CompositeScoreInput(BaseModel):
     perplexity: float | None = Field(default=None, ge=0.0)
     perplexity_baseline: float = Field(default=2.0, ge=0.0)
     use_literal_formula: bool = False
+    prompt_type: str | None = None
+    pii_detected: bool | None = None
+    prompt_embedding: list[float] | None = None
+    response_embedding: list[float] | None = None
+    response_text: str | None = None
+    completion_tokens: int | None = None
+    rag_context: str | None = None
+    finish_reason: str | None = None
+    token_logprobs: list[float] | None = None
 
 class CompositeScoreResult(BaseModel):
     trace_id: str

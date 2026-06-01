@@ -1,0 +1,16 @@
+services:
+  quality-engine:
+    build:
+      context: ../..
+      dockerfile: build/Dockerfile
+    ports:
+      - "8008:8008"
+    environment:
+      - SKIP_CONSOLE_EXPORTER=false
+      - SKIP_OTLP_EXPORTER=true
+      - DEPLOYMENT_ENV=dev
+      - COHERENCE_SERVICE_URL=http://semantic-coherence:8005
+      - FAITHFULNESS_SERVICE_URL=http://faithfulness:8006
+      - TOXICITY_SERVICE_URL=http://toxicity:8007
+      - PERPLEXITY_SERVICE_URL=http://perplexity:8007
+    restart: unless-stopped
