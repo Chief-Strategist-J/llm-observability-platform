@@ -623,8 +623,25 @@
     └── Changes:
         └── config -> Added missing feature paths under the Features nav node in mkdocs.yml.
 
-
-
-
-
+[2026-06-01T08:26:00+05:30] feat(perplexity): add perplexity scorer package — Score 4 on feature/perplexity-scorer
+└── File: packages/python/perplexity/ (all files), registry/features/perplexity.yaml, registry/workers/perplexity.yaml, .github/workflows/perplexity-ci.yml
+    ├── Choice: Hexagonal architecture — domain owns ports, infra adapters implement them, no domain→infra imports
+    └── Changes:
+        ├── contracts/openapi/v1.yaml -> POST /v1/score/perplexity + GET /health, skip_reason enum, scorer_used enum
+        ├── src/features/score_perplexity/types.py -> PerplexityInput, PerplexityResult (frozen dataclasses)
+        ├── src/features/score_perplexity/rules.py -> should_skip, baseline_for, compute_perplexity_from_logprobs, is_high_perplexity, normalize_contribution
+        ├── src/features/score_perplexity/service.py -> score_perplexity orchestration, primary logprobs path, GPT-2 fallback
+        ├── src/shared/ports/logprobs_scorer_port.py -> LogprobsScorerPort (Protocol)
+        ├── src/shared/ports/gpt2_scorer_port.py -> Gpt2ScorerPort (Protocol)
+        ├── src/infra/adapters/logprobs/provider_logprobs_adapter.py -> exp(-sum/n) math, zero IO
+        ├── src/infra/adapters/gpt2/gpt2_onnx_adapter.py -> lazy-loaded GPT-2 ONNX, ~25ms CPU, implements Gpt2ScorerPort
+        ├── src/shared/tracing/tracer.py -> OTel spans service=perplexity-scorer
+        ├── src/shared/di/providers.py -> build_logprobs_scorer, build_gpt2_scorer
+        ├── src/api/rest/v1/* -> FastAPI app factory, router, health handler, score handler
+        ├── tests/unit/test_rules.py -> 17 rule boundary tests
+        ├── tests/unit/test_service.py -> 12 service path tests (fakes only)
+        ├── tests/unit/test_api.py -> 8 API contract tests (TestClient + fakes)
+        ├── build/Dockerfile -> port 8007, two-stage, tests inside builder
+        ├── deploy/docker/docker-compose.yaml -> dev compose port 8007
+        └── 44/44 tests pass, pushed to origin/feature/perplexity-scorer
 
