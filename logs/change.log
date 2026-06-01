@@ -659,3 +659,10 @@
     ├── Choice: Standardize MCP and ACP as isolated Driving Adapters inside each package's api/mcp/ and api/acp/ folders
     └── Changes:
         └── .windsurf/rules/mcp-agent-protocols.md -> defined hexagonal boundaries, stdio/SSE transports, ACP envelope schemas, performative mapping, conversational threading, and single-artifact distribution rules
+
+[2026-06-01T18:10:00+05:30] Implement composite score formula in quality-engine
+└── File: packages/python/quality-engine/
+    ├── Choice: Use Hexagonal architecture (Ports & Adapters) to separate core calculation rules, service orchestration, ports, adapters, and REST API layers with zero-comment code styling.
+    └── Changes:
+        ├── quality-engine -> Implement pure domain rules, service orchestration, alert publisher port, logger alert adapter, OTel tracing, REST handlers/routes/FastAPI app, unit tests, and package README
+        └── affected files -> packages/python/quality-engine/pyproject.toml, packages/python/quality-engine/README.md, packages/python/quality-engine/contracts/openapi/v1.yaml, packages/python/quality-engine/src/features/score_composite/*, packages/python/quality-engine/src/shared/*, packages/python/quality-engine/src/infra/*, packages/python/quality-engine/src/api/*, packages/python/quality-engine/tests/*

@@ -1,0 +1,112 @@
+openapi: "3.0.3"
+info:
+  title: Quality Engine API
+  version: "1.0.0"
+  description: >
+    Layer 3 quality aggregation service.
+    Calculates the composite quality score by dynamically normalizing weights
+    when any individual sub-metrics are null.
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: health
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /v1/score/composite:
+    post:
+      summary: Compute composite score from available metrics
+      operationId: scoreComposite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScoreRequest"
+      responses:
+        "200":
+          description: Composite score result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoreResponse"
+        "422":
+          description: Validation error
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok
+
+    ScoreRequest:
+      type: object
+      required: [trace_id, span_id]
+      properties:
+        trace_id:
+          type: string
+        span_id:
+          type: string
+        coherence_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          nullable: true
+        faithfulness_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          nullable: true
+        toxicity_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          nullable: true
+        perplexity:
+          type: number
+          minimum: 0.0
+          nullable: true
+        perplexity_baseline:
+          type: number
+          minimum: 0.0
+          default: 2.0
+        use_literal_formula:
+          type: boolean
+          default: false
+
+    ScoreResponse:
+      type: object
+      required: [trace_id, span_id, composite_score, quality_skipped_reason]
+      properties:
+        trace_id:
+          type: string
+        span_id:
+          type: string
+        composite_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          nullable: true
+        quality_skipped_reason:
+          type: string
+          nullable: true
+          enum: [all_scores_null, null]
+        active_weights:
+          type: object
+          additionalProperties:
+            type: number
+        raw_contributions:
+          type: object
+          additionalProperties:
+            type: number
