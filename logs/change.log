@@ -748,3 +748,10 @@
     ├── Choice: Rebuild Docker images following lint and type-checking fixes and push to registry.
     └── Changes:
         └── docker-push -> Rebuild and push chiefj/webrtc-signaling:latest and chiefj/webrtc-client:latest to Docker Hub registry
+
+[2026-06-02T13:45:00+05:30] Document foundational research and architectural blueprint for custom voice agent from scratch
+└── File: logs/change.log
+    ├── Choice: Establish learning roadmap, low-level audio packetization specs, VAD state machine, conversational turn-taking, barge-in logic, and hexagonal architecture ports in Notion page.
+    └── Changes:
+        └── voice-agent-blueprint -> Create and populate Notion page with IDs, calculations, VAD state machine logic, and ports/adapters contract declarations
+
