@@ -791,3 +791,11 @@
         ├── rules -> Update .windsurf/rules/runbook/folder-structure.md to formally support root notebooks/ directory
         └── dependencies -> Add jupyterlab, matplotlib, and pandas optional-dependencies to pyproject.toml
 
+[2026-06-02T17:20:00+05:30] Scale latency benchmark sample sizes in research notebook and regenerate output plots
+└── File: notebooks/research/toxicity/2026-06-02-inference/research.ipynb, notebooks/research/toxicity/2026-06-02-inference/findings.md
+    ├── Choice: Increase benchmarking token counts up to 4,000 with 5 trials per count to capture long-context scaling limits.
+    └── Changes:
+        ├── notebook -> Expand token counts array and implement average latency calculation across 5 trial iterations in research.ipynb
+        └── findings -> Document the flat latency scaling behavior (~3.4 seconds) of the dual-pass inference strategy in findings.md
+
+
