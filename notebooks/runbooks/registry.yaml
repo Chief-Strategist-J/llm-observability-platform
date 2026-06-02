@@ -1,0 +1,6 @@
+runbooks:
+  - id: 2026-06-02-inference
+    title: Toxicity Inference ONNX Evaluation
+    category: research
+    path: research/toxicity/2026-06-02-inference
+    description: Verification of performance, complexity, failure modes, and threat models of the dual-pass toxicity inference strategy.

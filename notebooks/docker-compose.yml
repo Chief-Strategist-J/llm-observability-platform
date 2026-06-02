@@ -31,6 +31,6 @@ services:
     image: blang/latex:latest
     volumes:
       - ../:/workdir
-    working_dir: /workdir/notebooks/research/toxicity/2026-06-02-inference
+    working_dir: /workdir/notebooks/runbooks/research/toxicity/2026-06-02-inference
     command: pdflatex proof.tex
 

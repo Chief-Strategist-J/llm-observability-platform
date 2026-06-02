@@ -831,3 +831,12 @@
         ├── latex -> Write mathematical proofs of complexity bounds, monotonicity, and recall in proof.tex; reconcile SLO, derive sliding window latency, separate failure modes, add threat model, and include visualization figures
         ├── markdown -> Update findings.md to achieve full parity with the updated proofs, derivations, and threat model
         └── pdf -> Recompile proof.pdf with resolved cross-references using Docker latex service
+
+[2026-06-02T18:35:00+05:30] Align research directory with runbook folder structure rules
+└── File: notebooks/runbooks/registry.yaml, notebooks/runbooks/research/toxicity/2026-06-02-inference/, notebooks/docker-compose.yml
+    ├── Choice: Restructure interactive research notebooks into notebooks/runbooks/ to follow standard runbook conventions, index the notebook in registry.yaml, and create required directories.
+    └── Changes:
+        ├── runbooks -> Move research/toxicity/2026-06-02-inference/ to runbooks/research/toxicity/2026-06-02-inference/
+        ├── registry -> [NEW] Index the toxicity inference runbook in notebooks/runbooks/registry.yaml
+        ├── structure -> Create data/ and references/ directories with .gitkeep placeholders inside the study directory
+        └── compose -> Update docker-compose.yml with the new working directory for the latex service
