@@ -25,6 +25,9 @@ dev = [
     "httpx>=0.24.0",
     "mypy>=1.8.0",
     "ruff>=0.2.0",
+    "jupyterlab>=4.0.0",
+    "matplotlib>=3.8.0",
+    "pandas>=2.1.0",
 ]
 
 [tool.pytest.ini_options]

@@ -782,3 +782,12 @@
         ├── script -> Create scripts/deploy_docker.sh to orchestrate building, unit testing inside container, and pushing tags v0.1.0 and stable
         └── registry -> Build and publish chiefj/toxicity-worker:v0.1.0 and chiefj/toxicity-worker:stable to Docker Hub
 
+[2026-06-02T17:15:00+05:30] Initialize root notebooks directory with docker-compose orchestration and interactive research runbooks
+└── File: notebooks/, packages/python/toxicity-worker/pyproject.toml, .windsurf/rules/runbook/folder-structure.md
+    ├── Choice: Mount project root to Jupyter Lab container using chiefj/toxicity-worker:stable image and install dependencies dynamically on startup.
+    └── Changes:
+        ├── config -> Add notebooks/docker-compose.yml orchestrating toxicity-worker and jupyter container services
+        ├── runbooks -> Create notebooks/research/toxicity/2026-06-02-inference/ containing hypothesis.md, executed research.ipynb, and findings.md
+        ├── rules -> Update .windsurf/rules/runbook/folder-structure.md to formally support root notebooks/ directory
+        └── dependencies -> Add jupyterlab, matplotlib, and pandas optional-dependencies to pyproject.toml
+

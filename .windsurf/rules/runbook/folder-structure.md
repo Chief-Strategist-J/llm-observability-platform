@@ -1,6 +1,6 @@
 Complete Runbook Folder Structure — All Types Together
 ==
-Inside on each package 
+Inside on each package (or under the root `notebooks/` directory for interactive/cross-package research)
 
 runbooks/
 │
