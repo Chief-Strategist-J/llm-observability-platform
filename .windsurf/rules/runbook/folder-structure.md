@@ -40,6 +40,8 @@ runbooks/
 │   │       ├── hypothesis.md
 │   │       ├── research.ipynb
 │   │       ├── findings.md
+│   │       ├── proof.tex
+│   │       ├── proof.pdf
 │   │       ├── data/
 │   │       ├── outputs/
 │   │       └── references/

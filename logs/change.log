@@ -840,3 +840,9 @@
         ├── registry -> [NEW] Index the toxicity inference runbook in notebooks/runbooks/registry.yaml
         ├── structure -> Create data/ and references/ directories with .gitkeep placeholders inside the study directory
         └── compose -> Update docker-compose.yml with the new working directory for the latex service
+
+[2026-06-02T18:40:00+05:30] Add LaTeX and PDF files to Category 4 runbook rules
+└── File: .windsurf/rules/runbook/folder-structure.md
+    ├── Choice: Update standard runbook folder rules to require proof.tex and proof.pdf files in research runbooks.
+    └── Changes:
+        └── rules -> Append proof.tex and proof.pdf to Category 4: Research & Spike folder structure
