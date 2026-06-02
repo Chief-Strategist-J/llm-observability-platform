@@ -815,3 +815,11 @@
         ├── latex -> Replace Section 5.2 with empirical verification table, findings, and figures 3 & 4 in proof.tex
         ├── pdf -> Recompile proof.pdf with resolved cross-references using Docker latex service
         └── script -> Update run_evaluation.py to save csv and png files relative to script directory
+
+[2026-06-02T18:25:00+05:30] Consolidate evaluation script into research notebook
+└── File: notebooks/research/toxicity/2026-06-02-inference/research.ipynb, notebooks/research/toxicity/2026-06-02-inference/run_evaluation.py, notebooks/research/toxicity/2026-06-02-inference/proof.pdf
+    ├── Choice: Embed evaluation & plot generation logic directly in research.ipynb, execute the notebook, and remove the external run_evaluation.py script.
+    └── Changes:
+        ├── notebook -> Inject complete evaluation metrics, CSV exports, and plot generation logic into cell 5 of research.ipynb, then execute in-place
+        ├── script -> [DELETE] Remove separate run_evaluation.py script
+        └── pdf -> Recompile proof.pdf with resolved cross-references using Docker latex service
