@@ -25,7 +25,7 @@ def score_toxicity(
         with trace_span("model_inference", trace_id=trace_id, span_id=span_id) as inf_span:
             if len(token_ids) <= 510:
                 scores = scorer.score_token_ids(token_ids)
-                strategy = "single_pass"
+                strategy = None
             else:
                 first_ids = token_ids[:510]
                 last_ids = token_ids[-510:]
@@ -39,10 +39,11 @@ def score_toxicity(
                     insult=max(scores_first.insult, scores_last.insult),
                     identity_hate=max(scores_first.identity_hate, scores_last.identity_hate),
                 )
-                strategy = "dual_pass"
+                strategy = "max_of_two_passes"
 
         main_span.set_attribute("output.score", scores.toxicity)
-        main_span.set_attribute("output.strategy", strategy)
+        if strategy:
+            main_span.set_attribute("output.strategy", strategy)
 
         return ToxicityResult(
             scores=scores,

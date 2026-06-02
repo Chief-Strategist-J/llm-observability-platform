@@ -34,7 +34,15 @@ def test_healthz_returns_200(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "ok"
+    assert data["model"] == "fake/toxicity-model"
     assert data["model_id"] == "fake/toxicity-model"
+
+    resp_post = client.post("/healthz")
+    assert resp_post.status_code == 200
+    data_post = resp_post.json()
+    assert data_post["status"] == "ok"
+    assert data_post["model"] == "fake/toxicity-model"
+    assert data_post["model_id"] == "fake/toxicity-model"
 
 def test_score_valid_returns_score(client):
     resp = client.post("/score", json={
@@ -48,7 +56,16 @@ def test_score_valid_returns_score(client):
     assert data["threat"] == 0.01
     assert data["insult"] == 0.03
     assert data["identity_hate"] == 0.01
-    assert data["long_response_strategy"] == "single_pass"
+    assert "long_response_strategy" not in data
+
+def test_score_long_text_returns_strategy(client):
+    resp = client.post("/score", json={
+        "text": "word " * 600,
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["toxicity"] == 0.15
+    assert data["long_response_strategy"] == "max_of_two_passes"
 
 def test_score_traceparent_header_context(client):
     resp = client.post(

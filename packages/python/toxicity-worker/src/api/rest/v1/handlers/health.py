@@ -8,9 +8,15 @@ router = APIRouter()
 
 class HealthResponse(BaseModel):
     status: str
+    model: str
     model_id: str
 
 @router.get("/healthz", response_model=HealthResponse)
+@router.post("/healthz", response_model=HealthResponse)
 def healthz(request: Request) -> Any:
     scorer = request.app.state.toxicity_scorer
-    return HealthResponse(status="ok", model_id=scorer.model_id)
+    return HealthResponse(
+        status="ok",
+        model=scorer.model_id,
+        model_id=scorer.model_id,
+    )

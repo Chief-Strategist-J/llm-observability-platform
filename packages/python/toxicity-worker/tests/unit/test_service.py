@@ -39,7 +39,7 @@ def test_score_toxicity_short_text():
         span_id="1234567890123456",
     )
 
-    assert result.long_response_strategy == "single_pass"
+    assert result.long_response_strategy is None
     assert result.scores.toxicity == 0.1
     assert len(scorer.score_calls) == 1
     assert scorer.score_calls[0] == token_ids
@@ -63,7 +63,7 @@ def test_score_toxicity_long_text_dual_pass():
         span_id="1234567890123456",
     )
 
-    assert result.long_response_strategy == "dual_pass"
+    assert result.long_response_strategy == "max_of_two_passes"
     assert result.scores.toxicity == 0.6
     assert len(scorer.score_calls) == 2
     assert scorer.score_calls[0] == list(range(510))

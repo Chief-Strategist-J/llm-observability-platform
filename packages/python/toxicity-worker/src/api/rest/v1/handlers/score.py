@@ -19,9 +19,9 @@ class ScoreResponse(BaseModel):
     threat: float
     insult: float
     identity_hate: float
-    long_response_strategy: str
+    long_response_strategy: str | None = None
 
-@router.post("/score", response_model=ScoreResponse)
+@router.post("/score", response_model=ScoreResponse, response_model_exclude_none=True)
 def score_endpoint(body: ScoreRequest, request: Request) -> Any:
     scorer = request.app.state.toxicity_scorer
 

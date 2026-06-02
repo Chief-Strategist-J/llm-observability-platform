@@ -759,3 +759,26 @@
         ├── docker -> Create Dockerfile building cached ONNX weights to eliminate cold starts, exposing port 8008
         ├── tests -> Create unit test suite for service, adapter, and handlers, achieving 92% coverage
         └── registry -> Add .package-meta.yaml, .port-registry, and feature-registry.yaml configurations
+
+[2026-06-02T16:16:00+05:30] Align toxicity-worker API and responses with HTTP inference server specification
+└── File: packages/python/toxicity-worker/src/core/domain/types.py, packages/python/toxicity-worker/src/core/domain/service.py, packages/python/toxicity-worker/src/api/rest/v1/handlers/score.py, packages/python/toxicity-worker/src/api/rest/v1/handlers/health.py, packages/python/toxicity-worker/contracts/openapi/v1.yaml, packages/python/toxicity-worker/tests/unit/test_api.py, packages/python/toxicity-worker/tests/unit/test_service.py
+    ├── Choice: Modify /score strategy output to be conditional and named max_of_two_passes, add POST healthz route, rename model_id to model key in health response, and update schemas and unit tests.
+    └── Changes:
+        ├── domain -> Update ToxicityResult strategy field to be optional and value to max_of_two_passes
+        ├── api -> Support POST /healthz, add model property in HealthResponse, and exclude None strategy field from ScoreResponse
+        ├── contracts -> Align OpenAPI specification with new response structures and healthz post route
+        └── tests -> Update unit and API assertions for health response fields and score endpoint strategy exclusions
+
+[2026-06-02T16:18:00+05:30] Create package README documentation
+└── File: packages/python/toxicity-worker/README.md
+    ├── Choice: Write README documentation outlining key features, architecture, endpoints, config, and installation.
+    └── Changes:
+        └── docs -> Create package README.md detailing service design, API contracts, deployment, and testing
+
+[2026-06-02T16:52:00+05:30] Create deploy script, build and push toxicity-worker Docker image
+└── File: packages/python/toxicity-worker/scripts/deploy_docker.sh
+    ├── Choice: Establish automated deployment pipeline to build, test inside container, and push docker image to registry.
+    └── Changes:
+        ├── script -> Create scripts/deploy_docker.sh to orchestrate building, unit testing inside container, and pushing tags v0.1.0 and stable
+        └── registry -> Build and publish chiefj/toxicity-worker:v0.1.0 and chiefj/toxicity-worker:stable to Docker Hub
+

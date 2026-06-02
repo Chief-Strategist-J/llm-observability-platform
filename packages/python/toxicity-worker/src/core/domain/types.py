@@ -18,4 +18,4 @@ class ToxicityScores:
 @dataclass(frozen=True)
 class ToxicityResult:
     scores: ToxicityScores
-    long_response_strategy: str
+    long_response_strategy: str | None = None

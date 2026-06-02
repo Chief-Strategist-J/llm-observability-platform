@@ -16,6 +16,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
+    post:
+      summary: Health check POST
+      operationId: healthz_post
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
 
   /score:
     post:
@@ -41,12 +51,15 @@ components:
   schemas:
     HealthResponse:
       type: object
-      required: [status, model_id]
+      required: [status, model_id, model]
       properties:
         status:
           type: string
           example: ok
         model_id:
+          type: string
+          example: unitary/toxic-bert
+        model:
           type: string
           example: unitary/toxic-bert
 
@@ -59,7 +72,7 @@ components:
 
     ScoreResponse:
       type: object
-      required: [toxicity, severe_toxicity, obscene, threat, insult, identity_hate, long_response_strategy]
+      required: [toxicity, severe_toxicity, obscene, threat, insult, identity_hate]
       properties:
         toxicity:
           type: number
@@ -75,4 +88,4 @@ components:
           type: number
         long_response_strategy:
           type: string
-          enum: [single_pass, dual_pass]
+          enum: [max_of_two_passes]
