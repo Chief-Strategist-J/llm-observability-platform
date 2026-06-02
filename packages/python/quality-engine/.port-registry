@@ -1,0 +1,5 @@
+ports:
+  - name: alert_publisher
+    type: event-publisher
+    vendor: alert_logger
+    adapter: src/infra/adapters/alerts/logger_alert_adapter.py::LoggerAlertAdapter
