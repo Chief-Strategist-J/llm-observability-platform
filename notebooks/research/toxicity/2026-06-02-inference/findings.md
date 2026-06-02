@@ -18,3 +18,8 @@ Below is the latency plot demonstrating the step change when transitioning from 
 
 ![Inference Latency vs. Token Count](outputs/latency_comparison.png)
 
+## Conclusion (Simple Analogy)
+Think of the model as a reader checking a text for mean words:
+- **Short Texts (< 510 tokens):** The reader can read the entire text in a single quick glance.
+- **Long Texts (> 510 tokens):** The reader is constrained and only reads the very first page and the very last page (taking exactly two glances).
+- **Predictable Performance:** Because the reader never takes more than two glances, it doesn't matter if the text has 10 pages or 100 pages—the reading time stays exactly the same, preventing the system from slowing down on extremely long inputs.

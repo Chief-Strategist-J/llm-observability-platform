@@ -796,6 +796,7 @@
     ├── Choice: Increase benchmarking token counts up to 4,000 with 5 trials per count to capture long-context scaling limits.
     └── Changes:
         ├── notebook -> Expand token counts array and implement average latency calculation across 5 trial iterations in research.ipynb
-        └── findings -> Document the flat latency scaling behavior (~3.4 seconds) of the dual-pass inference strategy in findings.md
+        └── findings -> Document flat latency scaling (~3.4 seconds) and append reader-analogy conclusion to findings.md
+
 
 
