@@ -1,0 +1,34 @@
+services:
+  signaling:
+    image: chiefj/webrtc-signaling:latest
+    ports:
+      - "8010:8010"
+    environment:
+      - DEPLOYMENT_ENV=prod
+      - SKIP_CONSOLE_EXPORTER=true
+    restart: unless-stopped
+    networks:
+      - webrtc-net
+
+  webrtc-client:
+    image: chiefj/webrtc-client:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_SIGNALING_URL=ws://localhost:8010
+      - VITE_TURN_USER=webrtc
+      - VITE_TURN_CREDENTIAL=webrtc123
+    restart: unless-stopped
+    networks:
+      - webrtc-net
+
+  coturn:
+    image: coturn/coturn:latest
+    network_mode: host
+    volumes:
+      - ./coturn.conf:/etc/coturn/turnserver.conf:ro
+    restart: unless-stopped
+
+networks:
+  webrtc-net:
+    driver: bridge

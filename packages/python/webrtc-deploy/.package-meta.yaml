@@ -1,0 +1,10 @@
+name: webrtc-deploy
+version: "1.0.0"
+language: python
+stage: 1
+owner: Chief-Strategist-J
+description: Unified Docker Compose deployment configuration for WebRTC
+ports:
+  http: 3000
+  websocket: 8010
+  turn: 3478
