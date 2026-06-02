@@ -800,8 +800,11 @@
         ├── latex -> Create proof.tex and compile proof.pdf (single-column) containing LaTeX decision boundaries, score aggregation formulas, bounded complexity proofs, hypotheses, results, and visualization graphs
         └── docker-compose -> Add latex service in notebooks/docker-compose.yml for running pdflatex compilation
 
-
-
-
-
+[2026-06-02T18:04:23+05:30] Integrate mathematical formulations, architectural trade-offs, and quality validation roadmap into research resources
+└── File: notebooks/research/toxicity/2026-06-02-inference/research.ipynb, notebooks/research/toxicity/2026-06-02-inference/findings.md, notebooks/research/toxicity/2026-06-02-inference/proof.pdf
+    ├── Choice: Keep documentation parity across formal proof, findings report, and interactive research runbook.
+    └── Changes:
+        ├── notebook -> Append markdown cell outlining latency complexity model, middle-truncation info loss, architecture comparison, and metrics validation roadmap to research.ipynb
+        ├── findings -> Overhaul findings.md to formally detail refined latency models, middle-truncation vulnerability, sliding window comparison, and statistical metrics (F1, Precision, Recall)
+        └── pdf -> Compile proof.tex via latex Docker service to generate updated proof.pdf
 
