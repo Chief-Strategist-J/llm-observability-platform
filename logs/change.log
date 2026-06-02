@@ -782,3 +782,12 @@
         ├── script -> Create scripts/deploy_docker.sh to orchestrate building, unit testing inside container, and pushing tags v0.1.0 and stable
         └── registry -> Build and publish chiefj/toxicity-worker:v0.1.0 and chiefj/toxicity-worker:stable to Docker Hub
 
+[2026-06-02T16:56:00+05:30] Add local research notebook, runbooks, and docker-compose orchestration
+└── File: packages/python/toxicity-worker/docker-compose.yml, packages/python/toxicity-worker/runbooks/research/toxicity/2026-06-02-inference/research.ipynb, packages/python/toxicity-worker/runbooks/research/toxicity/2026-06-02-inference/hypothesis.md, packages/python/toxicity-worker/runbooks/research/toxicity/2026-06-02-inference/findings.md, packages/python/toxicity-worker/pyproject.toml
+    ├── Choice: Establish standard runbook structure for toxicity research and add docker-compose configuration for local development and analysis.
+    └── Changes:
+        ├── runbooks -> Create hypothesis, findings, and research notebook for local toxicity worker inference analysis without code comments
+        ├── compose -> Create docker-compose.yml orchestrating the FastAPI server and a local Jupyter Lab environment
+        └── dev-dependencies -> Add jupyterlab to dev dependencies in pyproject.toml
+
+
