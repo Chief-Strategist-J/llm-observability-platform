@@ -1,4 +1,5 @@
 import re
+from typing import Any
 
 from src.features.signal_session.types import MessageType, SignalMessage
 
@@ -18,7 +19,7 @@ def is_relay_message(message_type: MessageType) -> bool:
     return message_type in {MessageType.OFFER, MessageType.ANSWER, MessageType.ICE_CANDIDATE}
 
 
-def validate_signal_message(raw: dict) -> SignalMessage | None:
+def validate_signal_message(raw: dict[str, Any]) -> SignalMessage | None:
     try:
         msg_type = MessageType(raw.get("type", ""))
     except ValueError:

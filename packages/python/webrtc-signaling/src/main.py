@@ -1,12 +1,11 @@
-from src.shared.tracing.tracer import init_tracer
-
-init_tracer()
-
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.websocket.handler import handle_websocket
 from src.shared.di.providers import build_session_manager
+from src.shared.tracing.tracer import init_tracer
+
+init_tracer()
 
 _manager = build_session_manager()
 
@@ -26,7 +25,7 @@ app.add_middleware(
 
 
 @app.get("/health")
-async def health() -> dict:
+async def health() -> dict[str, str]:
     return {"status": "ok", "version": "1.0.0"}
 
 

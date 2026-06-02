@@ -1,5 +1,3 @@
-import pytest
-
 from src.features.signal_session.rules import (
     is_relay_message,
     is_room_full,

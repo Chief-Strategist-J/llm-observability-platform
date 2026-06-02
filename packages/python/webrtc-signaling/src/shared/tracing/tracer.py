@@ -1,9 +1,10 @@
 import os
+
 from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import SERVICE_NAME, SERVICE_VERSION, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-from opentelemetry.sdk.resources import Resource, SERVICE_NAME, SERVICE_VERSION
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
 
 def init_tracer() -> trace.Tracer:
@@ -12,7 +13,7 @@ def init_tracer() -> trace.Tracer:
             SERVICE_NAME: "python.webrtc-signaling",
             SERVICE_VERSION: "1.0.0",
             "deployment.env": os.getenv("DEPLOYMENT_ENV", "dev"),
-        }
+        },
     )
     provider = TracerProvider(resource=resource)
 

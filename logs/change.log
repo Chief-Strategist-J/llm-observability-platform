@@ -729,3 +729,17 @@
     └── Changes:
         ├── docker-push -> Build and publish chiefj/webrtc-signaling:latest and chiefj/webrtc-client:latest to Docker Hub
         └── documentation -> Create packages/python/webrtc-signaling/README.md and packages/node/webrtc-client/README.md detailing structural layout, decision trees, and usage guides
+
+[2026-06-02T13:28:00+05:30] Configure WebRTC package CI pipelines, resolve lint/typecheck errors, and add package init files
+└── File: .github/workflows/webrtc-signaling-test.yml, .github/workflows/webrtc-client-test.yml, packages/python/webrtc-signaling/pyproject.toml, packages/python/webrtc-signaling/src/features/signal_session/types.py, packages/python/webrtc-signaling/src/main.py, packages/python/webrtc-signaling/src/features/signal_session/rules.py, packages/node/webrtc-client/eslint.config.js, packages/node/webrtc-client/.gitignore
+    ├── Choice: Establish CI test enforcement pipelines and fix all static code quality (ruff/mypy/eslint) violations.
+    └── Changes:
+        ├── workflows -> Create dedicated GitHub Action YAML test workflows for client and signaling
+        ├── namespace-packages -> Create __init__.py files in all python signaling package and test subdirectories
+        ├── enums -> Migrate MessageType and PeerRole to inherit from StrEnum to satisfy UP042 lint rule
+        ├── imports -> Relocate module level imports in main.py to satisfy E402 rule
+        ├── typecheck -> Fix mypy generic dict annotations in rules.py and main.py
+        ├── lint-rules -> Add per-file-ignores for pytest assert statements in pyproject.toml
+        ├── eslint -> Create flat eslint.config.js in client to support ESLint v9 structure
+        └── gitignore -> Add gitignore in client to ignore node_modules, build, and coverage directories
+

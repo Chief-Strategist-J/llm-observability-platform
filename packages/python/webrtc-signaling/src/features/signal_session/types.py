@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class MessageType(str, Enum):
+class MessageType(StrEnum):
     OFFER = "offer"
     ANSWER = "answer"
     ICE_CANDIDATE = "ice-candidate"
@@ -12,7 +12,7 @@ class MessageType(str, Enum):
     ERROR = "error"
 
 
-class PeerRole(str, Enum):
+class PeerRole(StrEnum):
     OFFERER = "offerer"
     ANSWERER = "answerer"
 
