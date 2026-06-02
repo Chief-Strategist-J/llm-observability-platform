@@ -797,7 +797,7 @@
     └── Changes:
         ├── notebook -> Expand token counts array and implement average latency calculation across 5 trial iterations in research.ipynb
         ├── findings -> Document flat latency scaling (~3.4 seconds) in findings.md
-        ├── latex -> Create proof.tex and compile proof.pdf (single-column) containing LaTeX decision boundaries, score aggregation formulas, and bounded complexity proofs
+        ├── latex -> Create proof.tex and compile proof.pdf (single-column) containing LaTeX decision boundaries, score aggregation formulas, bounded complexity proofs, hypotheses, results, and visualization graphs
         └── docker-compose -> Add latex service in notebooks/docker-compose.yml for running pdflatex compilation
 
 
