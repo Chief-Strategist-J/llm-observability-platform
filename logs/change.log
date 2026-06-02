@@ -722,3 +722,10 @@
         ├── metadata -> Add .package-meta.yaml in packages/python/webrtc-deploy/ root to declare the deployment package
         ├── scripts -> Implement scripts/start.sh and scripts/stop.sh for simple deployment control
         └── registry-link -> Register packages/python/webrtc-deploy in registry/features/webrtc_call.yaml
+
+[2026-06-02T12:08:30+05:30] Build and publish production-ready Docker images and add package README documentations
+└── File: packages/python/webrtc-signaling/README.md, packages/node/webrtc-client/README.md
+    ├── Choice: Log in to Docker Hub registry, rebuild all images to ensure latest state, push to registry, and write package README files.
+    └── Changes:
+        ├── docker-push -> Build and publish chiefj/webrtc-signaling:latest and chiefj/webrtc-client:latest to Docker Hub
+        └── documentation -> Create packages/python/webrtc-signaling/README.md and packages/node/webrtc-client/README.md detailing structural layout, decision trees, and usage guides
