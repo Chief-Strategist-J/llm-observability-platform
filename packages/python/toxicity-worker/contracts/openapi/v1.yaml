@@ -1,0 +1,78 @@
+openapi: "3.0.3"
+info:
+  title: Toxicity Worker API
+  version: "1.0.0"
+  description: Stateless toxicity inference engine running toxic-bert ONNX on CPU.
+
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      operationId: healthz
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /score:
+    post:
+      summary: Score a given text for toxicity labels
+      operationId: score
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScoreRequest"
+      responses:
+        "200":
+          description: Toxicity raw scores
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoreResponse"
+        "422":
+          description: Validation error
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, model_id]
+      properties:
+        status:
+          type: string
+          example: ok
+        model_id:
+          type: string
+          example: unitary/toxic-bert
+
+    ScoreRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+
+    ScoreResponse:
+      type: object
+      required: [toxicity, severe_toxicity, obscene, threat, insult, identity_hate, long_response_strategy]
+      properties:
+        toxicity:
+          type: number
+        severe_toxicity:
+          type: number
+        obscene:
+          type: number
+        threat:
+          type: number
+        insult:
+          type: number
+        identity_hate:
+          type: number
+        long_response_strategy:
+          type: string
+          enum: [single_pass, dual_pass]

@@ -743,3 +743,19 @@
         ├── eslint -> Create flat eslint.config.js in client to support ESLint v9 structure
         └── gitignore -> Add gitignore in client to ignore node_modules, build, and coverage directories
 
+[2026-06-02T15:37:00+05:30] Create ADR 0001 documenting decoupling of toxicity-worker from the existing toxicity scorer service
+└── File: docs/adr/0001-toxicity-worker-decoupling.md
+    ├── Choice: Decouple CPU-heavy ML predictions (toxicity-worker) from event-driven orchestration (toxicity)
+    └── Changes:
+        └── docs -> Create docs/adr/0001-toxicity-worker-decoupling.md documenting context, decisions, and consequences of the new service
+
+[2026-06-02T15:45:00+05:30] Implement core domain, infrastructure, API endpoints, test suite, and registry files for decoupled toxicity-worker service
+└── File: packages/python/toxicity-worker/
+    ├── Choice: Establish Hexagonal architecture with Ports and Adapters, implementing CPU-optimized ONNX model scoring with FastAPI and OpenTelemetry context propagation.
+    └── Changes:
+        ├── domain -> Implement domain types, ports (ToxicityScorerPort), and scoring service (score_toxicity) with dual-pass capability
+        ├── infra -> Create DetoxifyOnnxAdapter implementing the scorer port via optimum and onnxruntime
+        ├── api -> Implement FastAPI endpoints /healthz and /score extracting traceparent headers for trace context propagation
+        ├── docker -> Create Dockerfile building cached ONNX weights to eliminate cold starts, exposing port 8008
+        ├── tests -> Create unit test suite for service, adapter, and handlers, achieving 92% coverage
+        └── registry -> Add .package-meta.yaml, .port-registry, and feature-registry.yaml configurations
