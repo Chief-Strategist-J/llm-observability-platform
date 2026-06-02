@@ -792,11 +792,13 @@
         └── dependencies -> Add jupyterlab, matplotlib, and pandas optional-dependencies to pyproject.toml
 
 [2026-06-02T17:20:00+05:30] Scale latency benchmark sample sizes in research notebook and regenerate output plots
-└── File: notebooks/research/toxicity/2026-06-02-inference/research.ipynb, notebooks/research/toxicity/2026-06-02-inference/findings.md
-    ├── Choice: Increase benchmarking token counts up to 4,000 with 5 trials per count to capture long-context scaling limits.
+└── File: notebooks/research/toxicity/2026-06-02-inference/research.ipynb, notebooks/research/toxicity/2026-06-02-inference/findings.md, notebooks/research/toxicity/2026-06-02-inference/proof.tex
+    ├── Choice: Increase benchmarking token counts up to 4,000 and create a separate formal LaTeX document for mathematical formulations and complexity proofs.
     └── Changes:
         ├── notebook -> Expand token counts array and implement average latency calculation across 5 trial iterations in research.ipynb
-        └── findings -> Document flat latency scaling (~3.4 seconds), add LaTeX formulas/proof of bounded complexity, and append reader-analogy conclusion to findings.md
+        ├── findings -> Document flat latency scaling (~3.4 seconds) in findings.md
+        └── latex -> Create proof.tex and compile proof.pdf containing LaTeX decision boundaries, score aggregation formulas, and bounded complexity proofs
+
 
 
 
