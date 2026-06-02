@@ -1,0 +1,42 @@
+name: Test Enforcement (WebRTC Client)
+
+on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+    paths:
+      - 'packages/node/webrtc-client/**'
+      - '.github/workflows/webrtc-client-test.yml'
+  pull_request:
+    paths:
+      - 'packages/node/webrtc-client/**'
+      - '.github/workflows/webrtc-client-test.yml'
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "packages/node/webrtc-client/package.json"
+
+      - name: Install dependencies
+        run: |
+          cd packages/node/webrtc-client
+          npm install --legacy-peer-deps
+
+      - name: Run lint & typecheck
+        run: |
+          cd packages/node/webrtc-client
+          npm run typecheck
+
+      - name: Run tests
+        run: |
+          cd packages/node/webrtc-client
+          npm run test
