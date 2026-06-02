@@ -711,11 +711,13 @@
         ├── frontend-structure -> Relocate public/index.html to project root so Vite can resolve it as build entry point
         └── frontend-health -> Target http://127.0.0.1:3000/ instead of localhost in HEALTHCHECK to bypass IPv6 connection refusal
 
-[2026-06-02T11:59:00+05:30] Publish WebRTC docker images and create unified docker-compose deployment manifests and documentation
-└── File: deploy/webrtc/docker-compose.yaml, deploy/webrtc/coturn.conf, deploy/webrtc/README.md
-    ├── Choice: Authenticate and push signaling and client builds to Docker Hub registry, and write unified deployment manifests and setup guide for simplified production hosting.
+[2026-06-02T11:59:00+05:30] Publish WebRTC docker images, create unified docker-compose deployment manifests, and treat deploy as a package
+└── File: deploy/webrtc/docker-compose.yaml, deploy/webrtc/coturn.conf, deploy/webrtc/README.md, deploy/.package-meta.yaml, deploy/webrtc/.package-meta.yaml, registry/features/webrtc_call.yaml
+    ├── Choice: Authenticate and push signaling and client builds to Docker Hub registry, write unified deployment manifests and setup guide, and expose deploy directory as a platform-compliant package.
     └── Changes:
         ├── registry -> Publish chiefj/webrtc-signaling:latest and chiefj/webrtc-client:latest to Docker Hub
         ├── compose -> Create unified deploy/webrtc/docker-compose.yaml linking client, signaling, and host-network coturn services
         ├── coturn -> Add deploy/webrtc/coturn.conf for NAT-traversal configuration
-        └── documentation -> Write deploy/webrtc/README.md detailing peer connection procedure, in-call controls, and public VM setup
+        ├── documentation -> Write deploy/webrtc/README.md detailing peer connection procedure, in-call controls, and public VM setup
+        ├── metadata -> Add .package-meta.yaml in deploy/ and deploy/webrtc/ to declare deployment packages
+        └── registry-link -> Register deploy and deploy/webrtc as packages in registry/features/webrtc_call.yaml

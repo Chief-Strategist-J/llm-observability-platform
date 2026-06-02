@@ -5,6 +5,8 @@ description: Free 1-on-1 peer-to-peer audio/video calling via WebRTC
 packages:
   - packages/python/webrtc-signaling
   - packages/node/webrtc-client
+  - deploy
+  - deploy/webrtc
 contracts:
   openapi: packages/python/webrtc-signaling/contracts/openapi/v1.yaml
 ports_used:
