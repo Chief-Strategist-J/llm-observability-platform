@@ -1,0 +1,18 @@
+name: webrtc-signaling
+type: service
+language: python
+version: "1.0.0"
+owner: Chief-Strategist-J
+stage: 1
+description: Relay-only WebRTC signaling server for 1-on-1 audio/video calls
+path: packages/python/webrtc-signaling
+ports:
+  http: 8010
+  websocket: 8010
+topics: []
+dependencies:
+  infra:
+    - type: memory
+      name: MemorySessionStoreAdapter
+contracts:
+  openapi: packages/python/webrtc-signaling/contracts/openapi/v1.yaml

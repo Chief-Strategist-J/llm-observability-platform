@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Free, open-source 1-on-1 audio and video calls powered by WebRTC" />
+    <title>WebRTC — Free 1-on-1 Video Call</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="header">
+        <div class="logo">
+          <span class="logo-icon">◉</span>
+          <span class="logo-text">WebRTC</span>
+        </div>
+        <div id="status-badge" class="badge badge--idle">Idle</div>
+      </header>
+
+      <main class="main">
+        <section id="join-panel" class="join-panel glass">
+          <h1 class="join-title">Start a free call</h1>
+          <p class="join-sub">Enter a room name and share it — anyone with the same name joins your call.</p>
+          <div class="input-row">
+            <input
+              id="room-input"
+              class="room-input"
+              type="text"
+              placeholder="e.g. my-room-42"
+              maxlength="64"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button id="join-btn" class="btn btn--primary">Join</button>
+          </div>
+        </section>
+
+        <section id="call-panel" class="call-panel hidden">
+          <div class="video-grid">
+            <div class="video-wrapper video-wrapper--remote">
+              <video id="remote-video" class="video-el" autoplay playsinline></video>
+              <span class="video-label">Remote</span>
+            </div>
+            <div class="video-wrapper video-wrapper--local">
+              <video id="local-video" class="video-el" autoplay playsinline muted></video>
+              <span class="video-label">You</span>
+            </div>
+          </div>
+
+          <div class="controls">
+            <button id="mute-btn" class="ctrl-btn" title="Toggle microphone">🎙️</button>
+            <button id="cam-btn" class="ctrl-btn" title="Toggle camera">📷</button>
+            <button id="hang-btn" class="ctrl-btn ctrl-btn--danger" title="End call">📵</button>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

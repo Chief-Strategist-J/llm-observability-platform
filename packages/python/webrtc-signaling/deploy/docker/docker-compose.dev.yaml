@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  signaling:
+    build:
+      context: ../..
+      dockerfile: build/Dockerfile
+    ports:
+      - "8010:8010"
+    environment:
+      - DEPLOYMENT_ENV=dev
+      - SKIP_CONSOLE_EXPORTER=false
+      - OTEL_EXPORTER_OTLP_ENDPOINT=
+    restart: unless-stopped
+    networks:
+      - webrtc-net
+
+  coturn:
+    image: coturn/coturn:latest
+    network_mode: host
+    volumes:
+      - ./coturn.conf:/etc/coturn/turnserver.conf:ro
+    restart: unless-stopped
+
+networks:
+  webrtc-net:
+    driver: bridge

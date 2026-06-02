@@ -1,0 +1,20 @@
+errors:
+  ROOM_FULL:
+    code: SIG-001
+    message: "Room already has two active peers"
+    http_status: 409
+
+  INVALID_ROOM_ID:
+    code: SIG-002
+    message: "Room ID must be 3-64 alphanumeric characters, hyphens or underscores"
+    http_status: 400
+
+  INVALID_MESSAGE_TYPE:
+    code: SIG-003
+    message: "Unrecognised signal message type"
+    http_status: 422
+
+  PEER_NOT_IN_ROOM:
+    code: SIG-004
+    message: "Peer is not registered in this room"
+    http_status: 404

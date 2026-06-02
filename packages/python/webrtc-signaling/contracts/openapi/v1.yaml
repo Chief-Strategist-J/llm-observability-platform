@@ -1,0 +1,84 @@
+openapi: "3.1.0"
+info:
+  title: WebRTC Signaling Server
+  version: "1.0.0"
+  description: |
+    Relay-only signaling server for 1-on-1 WebRTC audio/video calls.
+    Clients establish a WebSocket connection to /ws/{room_id}.
+    The server relays SDP offers, SDP answers, and ICE candidates between exactly two peers in the same room.
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8010
+    description: Local development
+
+paths:
+  /health:
+    get:
+      operationId: health_check
+      summary: Liveness check
+      tags: [Health]
+      responses:
+        "200":
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /ws/{room_id}:
+    get:
+      operationId: websocket_connect
+      summary: Upgrade to WebSocket for signaling in a named room
+      tags: [Signaling]
+      parameters:
+        - name: room_id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 64
+            pattern: "^[a-zA-Z0-9_-]+$"
+      responses:
+        "101":
+          description: Switching Protocols — WebSocket upgrade successful
+        "400":
+          description: Invalid room_id format
+        "409":
+          description: Room already has two active peers
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, version]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        version:
+          type: string
+
+    SignalMessage:
+      type: object
+      required: [type, room_id]
+      properties:
+        type:
+          type: string
+          enum: [offer, answer, ice-candidate, peer-joined, peer-left, error]
+        room_id:
+          type: string
+        payload:
+          type: object
+          description: SDP object for offer/answer; ICECandidateInit for ice-candidate
+
+    ErrorMessage:
+      type: object
+      required: [code, detail]
+      properties:
+        code:
+          type: string
+        detail:
+          type: string

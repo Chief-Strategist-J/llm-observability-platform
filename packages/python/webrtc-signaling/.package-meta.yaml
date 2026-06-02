@@ -1,0 +1,9 @@
+name: webrtc-signaling
+version: "1.0.0"
+language: python
+stage: 1
+owner: Chief-Strategist-J
+description: Relay-only WebRTC signaling server for 1-on-1 audio/video calls
+ports:
+  http: 8010
+  websocket: 8010

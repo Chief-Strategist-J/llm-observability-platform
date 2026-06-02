@@ -677,3 +677,36 @@
         ├── service -> Update score_composite to optionally query ScorerClientPort with default parameters
         ├── api -> Accept raw text inputs in ScoreRequest and map scorer_client in application state
         └── docker -> Declare COHERENCE_SERVICE_URL, FAITHFULNESS_SERVICE_URL, TOXICITY_SERVICE_URL, and PERPLEXITY_SERVICE_URL URLs in docker-compose.yaml
+
+[2026-06-02T11:34:00+05:30] Implement free open-source 1-on-1 WebRTC audio/video call platform
+└── File: packages/python/webrtc-signaling/*, packages/node/webrtc-client/*, registry/workers/webrtc-signaling.yaml, registry/features/webrtc_call.yaml
+    ├── Choice: Hexagonal architecture (Ports & Adapters) — domain never imports infra; SessionStorePort/ISignalingPort/IMediaPort are the only boundaries; coturn TURN included for free symmetric-NAT traversal
+    └── Changes:
+        ├── backend-contracts -> contracts/openapi/v1.yaml (WebSocket /ws/{room_id} + GET /health, SignalMessage schema)
+        ├── backend-ports -> shared/ports/session_store_port.py (SessionStorePort Protocol)
+        ├── backend-domain -> signal_session/types.py (SignalMessage, PeerSession, PeerRole frozen dataclasses), signal_session/rules.py (pure validation functions), signal_session/service.py (SessionManagerService — zero infra imports)
+        ├── backend-infra -> infra/adapters/memory/session_store_adapter.py (thread-safe in-memory store with OTel child spans)
+        ├── backend-api -> api/websocket/handler.py (relay handler), src/main.py (FastAPI factory, tracer first)
+        ├── backend-di -> shared/di/providers.py, shared/tracing/tracer.py
+        ├── backend-tests -> tests/unit/test_rules.py (16 tests), tests/unit/test_service.py (12 tests via FakeSessionStore)
+        ├── backend-deploy -> build/Dockerfile (multi-stage, tests in builder), deploy/docker/docker-compose.dev.yaml (signaling + coturn)
+        ├── frontend-ports -> src/shared/ports/signaling_port.ts (ISignalingPort), src/shared/ports/media_port.ts (IMediaPort)
+        ├── frontend-domain -> features/call/types.ts (CallState, SignalMessage), features/call/rules.ts (pure guards), features/call/service.ts (CallService — one use case, port-only deps), features/call/repository.ts (SignalingRepository — WS I/O only)
+        ├── frontend-infra -> infra/adapters/webrtc/rtc_peer_adapter.ts (BrowserMediaAdapter)
+        ├── frontend-di -> shared/di/container.ts, shared/tracing/tracer.ts (OTel browser)
+        ├── frontend-ui -> public/index.html, src/main.ts, src/style.css (dark glassmorphism, mute/cam/hang controls)
+        ├── frontend-tests -> tests/unit/features/call/rules.test.ts (12 tests, zero mocks)
+        ├── frontend-deploy -> build/Dockerfile (Nginx multi-stage), build/nginx.conf, deploy/docker/docker-compose.dev.yaml
+
+[2026-06-02T11:55:00+05:30] Resolve packaging, path resolution, and type safety issues in WebRTC signaling and client docker builds
+└── File: packages/python/webrtc-signaling/pyproject.toml, packages/python/webrtc-signaling/build/Dockerfile, packages/node/webrtc-client/build/Dockerfile, packages/node/webrtc-client/tsconfig.json, packages/node/webrtc-client/package.json, packages/node/webrtc-client/tests/unit/features/call/rules.test.ts, packages/node/webrtc-client/src/features/call/service.ts, packages/node/webrtc-client/index.html
+    ├── Choice: Modify Docker builds, TypeScript typings, dependencies, and file structures to pass static checks, unit tests, and runtime healthchecks under alpine environments.
+    └── Changes:
+        ├── backend-packaging -> Use setuptools.build_meta in pyproject.toml to resolve pep517 build backend
+        ├── backend-docker -> Copy src directory before running pip install in Dockerfile
+        ├── frontend-deps -> Install with --legacy-peer-deps to bypass peer conflicts and add jsdom devDependency in package.json
+        ├── frontend-types -> Add vite/client to compilerOptions.types in tsconfig.json
+        ├── frontend-imports -> Update relative paths in tests/unit/features/call/rules.test.ts to properly resolve src
+        ├── frontend-logic -> Cast dynamic websocket payloads via unknown to RTCSessionDescriptionInit to satisfy strict compiler
+        ├── frontend-structure -> Relocate public/index.html to project root so Vite can resolve it as build entry point
+        └── frontend-health -> Target http://127.0.0.1:3000/ instead of localhost in HEALTHCHECK to bypass IPv6 connection refusal
