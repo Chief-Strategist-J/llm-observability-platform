@@ -828,6 +828,6 @@
 └── File: notebooks/research/toxicity/2026-06-02-inference/proof.tex, notebooks/research/toxicity/2026-06-02-inference/findings.md, notebooks/research/toxicity/2026-06-02-inference/proof.pdf
     ├── Choice: Restructure reports to prove properties (complexity, monotonicity, recall), reconcile the 200ms SLO contract, separate failure modes (dilution vs truncation), and document bypass vulnerability.
     └── Changes:
-        ├── latex -> Write mathematical proofs of complexity bounds, monotonicity, and recall in proof.tex; reconcile SLO, derive sliding window latency, separate failure modes, and add threat model
+        ├── latex -> Write mathematical proofs of complexity bounds, monotonicity, and recall in proof.tex; reconcile SLO, derive sliding window latency, separate failure modes, add threat model, and include visualization figures
         ├── markdown -> Update findings.md to achieve full parity with the updated proofs, derivations, and threat model
         └── pdf -> Recompile proof.pdf with resolved cross-references using Docker latex service

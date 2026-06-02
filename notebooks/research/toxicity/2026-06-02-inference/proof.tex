@@ -230,6 +230,43 @@ The system's execution bounds are determined by the underlying hardware and mode
 \item \textbf{Hardware limits:} On single-threaded CPU containers, evaluating 110M parameters requires significant execution time ($T_{\text{inf}}(510) \approx 1.7$ s). Bounding execution to $F(N) \le 2$ is necessary to prevent complete CPU thread starvation under concurrent request loads, but CPU constraints limit the feasibility of real-time long-text moderation.
 \end{itemize}
 
+\section{Visualizations}
+The empirical results of the characterization are visualized in the figures below:
+\begin{itemize}
+\item Figure \ref{fig:scores} displays the model's toxicity probability scores across categories.
+\item Figure \ref{fig:latency} presents the inference latency profile as a function of the token count, showing the plateau transition.
+\item Figure \ref{fig:eval_scores} illustrates the detected toxicity score across document lengths and positions.
+\item Figure \ref{fig:eval_accuracy} displays the classification accuracy across document lengths and positions.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\columnwidth]{outputs/toxicity_scores.png}
+\caption{Toxicity Probability Scores across different categories.}
+\label{fig:scores}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\columnwidth]{outputs/latency_comparison.png}
+\caption{Inference Latency vs. Input Token Count showcasing plateau behavior.}
+\label{fig:latency}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\columnwidth]{outputs/evaluation_scores_by_position.png}
+\caption{Detected Toxicity Score vs. Sequence Length by position.}
+\label{fig:eval_scores}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\columnwidth]{outputs/evaluation_accuracy_by_position.png}
+\caption{Classification Accuracy vs. Sequence Length by position.}
+\label{fig:eval_accuracy}
+\end{figure}
+
 \section{Conclusion}
 While the dual-pass strategy successfully bounds CPU inference complexity to a constant plateau ($2 \cdot T_{\text{inf}}(510)$), it compromises classification integrity. Reconciling the 200ms P95 SLO shows that CPU execution is only suitable for short user inputs. For documents exceeding 510 tokens, the system is subject to context dilution (Failure Mode A) and structural truncation (Failure Mode B). In public security boundaries, the "middle-stuffing" bypass vector represents a critical vulnerability, indicating that production deployments for document moderation must transition to GPU infrastructure or distilled student models to support full coverage sliding windows within the 200ms SLO.
 
