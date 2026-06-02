@@ -78,3 +78,28 @@ For coturn to relay traffic between peers behind symmetric NATs over the interne
 external-ip=<YOUR_SERVER_PUBLIC_IP>
 ```
 Make sure port `3478` (UDP & TCP) and the UDP relay ports (`49152-65535`) are open on your host's firewall.
+
+---
+
+## Configuration & Environment Variables
+
+### 1. Signaling Backend Environment Variables
+
+Configure these in the `signaling` service environment section of `docker-compose.yaml` (or via a `.env` file):
+
+| Variable Name | Default Value | Description |
+| :--- | :--- | :--- |
+| `DEPLOYMENT_ENV` | `dev` | Deployment environment name (e.g., `dev`, `prod`). |
+| `SKIP_CONSOLE_EXPORTER` | `false` | Set to `true` to disable logging of OpenTelemetry traces to stdout. |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | *(None)* | Endpoint URL for the OTLP exporter to send OpenTelemetry traces to a collector (e.g., `http://otel-collector:4317`). |
+
+### 2. Client Frontend Environment Variables (Build-time)
+
+*Note: Since the client application compiles to static assets served by Nginx, these variables are injected during the Docker build process or can be overridden dynamically at runtime by referencing `window` configurations if using a dynamic provider. Otherwise, rebuild the image using these environment arguments:*
+
+| Variable Name | Default Value | Description |
+| :--- | :--- | :--- |
+| `VITE_SIGNALING_URL` | `ws://localhost:8010` | The WebSocket URL for signaling. If not specified, falls back dynamically to the browser's hostname: `ws://${location.hostname}:8010`. |
+| `VITE_TURN_USER` | `webrtc` | Username credential for the Coturn STUN/TURN server. |
+| `VITE_TURN_CREDENTIAL` | `webrtc123` | Password credential for the Coturn STUN/TURN server. |
+| `VITE_OTEL_ENDPOINT` | *(None)* | Web collector OTLP trace exporter URL (e.g., `http://localhost:4318/v1/traces`). |
