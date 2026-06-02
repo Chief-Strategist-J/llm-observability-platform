@@ -711,13 +711,14 @@
         ├── frontend-structure -> Relocate public/index.html to project root so Vite can resolve it as build entry point
         └── frontend-health -> Target http://127.0.0.1:3000/ instead of localhost in HEALTHCHECK to bypass IPv6 connection refusal
 
-[2026-06-02T11:59:00+05:30] Publish WebRTC docker images, create unified docker-compose deployment manifests, and create webrtc-deploy package
-└── File: packages/webrtc-deploy/docker-compose.yaml, packages/webrtc-deploy/coturn.conf, packages/webrtc-deploy/README.md, packages/webrtc-deploy/.package-meta.yaml, registry/features/webrtc_call.yaml
-    ├── Choice: Authenticate and push signaling and client builds to Docker Hub registry, write unified deployment manifests and setup guide, and expose packages/webrtc-deploy as a platform-compliant package.
+[2026-06-02T11:59:00+05:30] Publish WebRTC docker images, create unified docker-compose deployment manifests, and create webrtc-deploy package with scripts
+└── File: packages/webrtc-deploy/deploy/docker/docker-compose.yaml, packages/webrtc-deploy/deploy/docker/coturn.conf, packages/webrtc-deploy/README.md, packages/webrtc-deploy/.package-meta.yaml, packages/webrtc-deploy/scripts/start.sh, packages/webrtc-deploy/scripts/stop.sh, registry/features/webrtc_call.yaml
+    ├── Choice: Authenticate and push signaling/client images, and structure packages/webrtc-deploy following the Universal Sub-Package Layout with docker compose and start/stop bash scripts.
     └── Changes:
         ├── registry -> Publish chiefj/webrtc-signaling:latest and chiefj/webrtc-client:latest to Docker Hub
-        ├── compose -> Create unified packages/webrtc-deploy/docker-compose.yaml linking client, signaling, and host-network coturn services
-        ├── coturn -> Add packages/webrtc-deploy/coturn.conf for NAT-traversal configuration
-        ├── documentation -> Write packages/webrtc-deploy/README.md detailing peer connection procedure, in-call controls, and public VM setup
-        ├── metadata -> Add .package-meta.yaml in packages/webrtc-deploy/ to declare the deployment package
+        ├── compose -> Create packages/webrtc-deploy/deploy/docker/docker-compose.yaml linking client, signaling, and coturn
+        ├── coturn -> Add packages/webrtc-deploy/deploy/docker/coturn.conf configuration
+        ├── documentation -> Write packages/webrtc-deploy/README.md detailing peer connection, controls, and setup
+        ├── metadata -> Add .package-meta.yaml in packages/webrtc-deploy/ root to declare the deployment package
+        ├── scripts -> Implement scripts/start.sh and scripts/stop.sh for simple deployment control
         └── registry-link -> Register packages/webrtc-deploy in registry/features/webrtc_call.yaml
