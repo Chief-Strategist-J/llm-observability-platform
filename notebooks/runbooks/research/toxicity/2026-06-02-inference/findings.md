@@ -73,9 +73,9 @@ Our empirical evaluation placed a toxic sentence (ground truth = 1) in different
 
 ## 3. Threat Model: The 'Middle-Stuffing' Bypass Vector
 
-For document moderation, the truncation behavior (Failure Mode B) represents a critical security risk. An adversary can bypass public safety moderation filters by prepending $\ge 510$ tokens of clean, benign text (e.g., standard essays) and appending $\ge 510$ tokens of clean text around a toxic payload.
+For document moderation, the truncation behavior (Failure Mode B) represents a high-severity security risk. An adversary can bypass public safety moderation filters by prepending $\ge 510$ tokens of clean, benign text (e.g., standard essays) and appending $\ge 510$ tokens of clean text around a toxic payload.
 
-Because the dual-pass routing strategy only extracts and scores the prefix and suffix windows, it returns a score of $\approx 0.0032$ (completely clean) with 100% confidence, leaving the toxic content in the middle untouched.
+Because the dual-pass routing strategy only extracts and scores the prefix and suffix windows, it returns a score of $\approx 0.0032$ (yielding 99.68% confidence that the sequence is clean), leaving the toxic content in the middle untouched.
 
 ---
 
@@ -90,11 +90,13 @@ We compare the dual-pass heuristic against the alternative **Sliding Window / Ch
 
 ---
 
-## 5. Model Specifications and Hardware Constraints
+## 5. Model Specifications and Benchmarking Environment
 
-- **Model Architecture:** `toxic-bert` base (approx. 110M parameters).
-- **ONNX Footprint:** The model file size is $\approx 438$ MB.
-- **CPU Constraints:** Running a 110M parameter BERT model on single-threaded CPU containers is heavily CPU-bound ($T_{\text{inf}}(510) \approx 1.7$ s). Bounding the execution passes to $F(N) \le 2$ is necessary to avoid thread starvation, showing that real-time long-document moderation is not feasible on CPU infrastructure.
+- **Hardware Environment:** Intel(R) Core(TM) i5-4300U CPU @ 1.90GHz (2 physical cores, 4 threads), 15 GiB RAM.
+- **Software Stack:** ONNX Runtime version 1.26.0, Hugging Face Optimum version 1.18.0, and PyTorch 2.2.0 running inside a Docker container.
+- **Model Architecture:** `toxic-bert` base architecture (approx. 110M parameters).
+- **Model Storage Size:** The ONNX-exported model serialization footprint is approximately 438 MB.
+- **Latency Measurements:** On the specified CPU hardware, a single-pass model evaluation takes $T_{\text{inf}}(510) \approx 1.7$ seconds, which serves as the empirical basis for our latency modeling and comparisons. Bounding execution to $F(N) \le 2$ is necessary to prevent complete CPU thread starvation under concurrent request loads.
 
 ---
 

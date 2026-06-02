@@ -846,3 +846,11 @@
     ├── Choice: Update standard runbook folder rules to require proof.tex and proof.pdf files in research runbooks.
     └── Changes:
         └── rules -> Append proof.tex and proof.pdf to Category 4: Research & Spike folder structure
+
+[2026-06-02T18:45:00+05:30] Address mathematical rigor, phrasing safety, and hardware context in toxicity inference report
+└── File: notebooks/runbooks/research/toxicity/2026-06-02-inference/proof.tex, notebooks/runbooks/research/toxicity/2026-06-02-inference/findings.md, notebooks/runbooks/research/toxicity/2026-06-02-inference/proof.pdf
+    ├── Choice: Reframe theorems to empirical observations and visibility guarantees, refine severity terminology, specify benchmarking CPU/software environment, and correct bypass confidence level.
+    └── Changes:
+        ├── latex -> Reframe Theorem 2 to empirical context dilution, reframe Theorem 3 to Theorem 2 (Visibility Guarantee), correct bypass confidence to 99.68%, tone down security phrasing, and specify Intel CPU & ONNX Runtime environment in proof.tex
+        ├── markdown -> Update findings.md to match refined confidence, threat model risk phrasing, and precise container benchmarking hardware specs
+        └── pdf -> Compile proof.tex via latex Docker service twice to generate updated proof.pdf

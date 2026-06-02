@@ -68,53 +68,56 @@ F(N) \le 2
 \end{equation}
 This proves that the computational cost of transformer forward passes is capped at a maximum of two operations, preventing execution cost from scaling with sequence length.
 
-\subsection{Equation 2 --- Category Probability Score Aggregation}
+\subsection{Equation 2 --- Category Probability Score Aggregation and Empirical Context Dilution}
 For an input sequence $\mathbf{x}$, the aggregated probability score $S_c(\mathbf{x})$ for toxicity category $c$ is:
 \begin{equation}
+\label{eq:score_aggregation}
 S_c(\mathbf{x}) = \begin{cases} P(c \mid \mathbf{x}), & \text{if } N \le M_{\text{cap}} \\ \max\left( P(c \mid \mathbf{x}_{[1:M_{\text{cap}}]}), \, P(c \mid \mathbf{x}_{[N-M_{\text{cap}}+1:N]}) \right), & \text{if } N > M_{\text{cap}} \end{cases}
 \end{equation}
 where $\mathbf{x}_{[a:b]}$ represents the token subsequence from index $a$ to $b$ inclusive, and $P(c \mid \mathbf{y})$ is the model's raw probability output for category $c$ given text sequence $\mathbf{y}$.
 
-\subsubsection{Proof of Score Monotonicity}
-\textbf{Theorem 2.} \textit{Let $\mathbf{t}$ be a toxic sequence. If $\mathbf{t}$ is inserted into the prefix window $\mathbf{x}_{[1:M_{\text{cap}}]}$ or the suffix window $\mathbf{x}_{[N-M_{\text{cap}}+1:N]}$ of a sequence $\mathbf{x}$ of length $N > M_{\text{cap}}$, the aggregated score $S_c(\mathbf{x})$ is monotonic with respect to the toxicity of $\mathbf{t}$, bounded by an attention dilution factor $\delta_{\text{dilution}}$.}
-\\
-\textbf{Proof.}
-Suppose $\mathbf{t}$ is located in the prefix window, such that $\mathbf{x}_{[1:M_{\text{cap}}]} = \mathbf{t} \circ \mathbf{p}_{\text{clean}}$, where $\mathbf{p}_{\text{clean}}$ represents benign padding tokens. The model prediction on the prefix window is $P(c \mid \mathbf{t} \circ \mathbf{p}_{\text{clean}}) = P(c \mid \mathbf{t}) - \delta_{\text{dilution}}$, where $\delta_{\text{dilution}} \ge 0$ represents the score dilution caused by the distribution of self-attention weights over the clean tokens.
-By Equation 5:
+\subsubsection{Empirical Observation of Context Dilution}
+Attention dilution is the empirical phenomenon where the classification score of a toxic segment decreases when embedded within a larger context of benign tokens. 
+
+Specifically, let $\mathbf{t}$ be a toxic sequence. When evaluated in isolation, it yields model probability score $P(c \mid \mathbf{t})$. When concatenated with a benign sequence $\mathbf{p}_{\text{clean}}$, the self-attention mechanism distributes attention weights across the clean tokens, resulting in a reduced score:
+\begin{equation}
+\label{eq:attention_dilution}
+P(c \mid \mathbf{t} \circ \mathbf{p}_{\text{clean}}) \le P(c \mid \mathbf{t})
+\end{equation}
+Let $\delta_{\text{dilution}}(\mathbf{t}, \mathbf{p}_{\text{clean}}) = P(c \mid \mathbf{t}) - P(c \mid \mathbf{t} \circ \mathbf{p}_{\text{clean}}) \ge 0$ denote this dilution effect. Empirically, as the ratio of clean tokens increases or the semantic context dilutes, $\delta_{\text{dilution}}$ increases.
+
+Under the dual-pass routing strategy, the aggregated score is:
 \begin{align}
 S_c(\mathbf{x}) &= \max\left( P(c \mid \mathbf{x}_{[1:M_{\text{cap}}]}), \, P(c \mid \mathbf{x}_{[N-M_{\text{cap}}+1:N]}) \right) \\
 &\ge P(c \mid \mathbf{x}_{[1:M_{\text{cap}}]}) \\
-&= P(c \mid \mathbf{t}) - \delta_{\text{dilution}}
+&= P(c \mid \mathbf{t} \circ \mathbf{p}_{\text{clean}}) = P(c \mid \mathbf{t}) - \delta_{\text{dilution}}
 \end{align}
 Thus, the aggregated score preserves the classification signal of the toxic segment (attenuated by $\delta_{\text{dilution}}$), ensuring that if the segment is sufficiently toxic such that $P(c \mid \mathbf{t}) - \delta_{\text{dilution}} \ge \theta$ (threshold), the aggregated score will trigger detection.
 
-\subsubsection{Safety Guarantee and Recall Boundary Theorem}
-Let $\mathbf{s}$ be a toxic span of length $L_s$ starting at token index $i_s$ in a document $\mathbf{x}$ of length $N$. Let $R(i_s)$ be the detection recall.
+\subsubsection{Visibility Guarantee and Coverage Boundary Theorem}
+Let $\mathbf{s}$ be a toxic span of length $L_s$ starting at token index $i_s$ in a document $\mathbf{x}$ of length $N$.
 \\
-\textbf{Theorem 3.} \textit{The system guarantees recall preservation (up to context dilution limits) if and only if the toxic span lies within the prefix or suffix boundaries.}
 \\
+\textbf{Theorem 2 (Visibility Guarantee).} \textit{The system guarantees physical visibility of a toxic span $\mathbf{s}$ (i.e., the span is processed by the model's self-attention mechanism) if and only if the span lies entirely within the prefix or suffix boundaries: $i_s \in \mathcal{D}_{\text{visible}}$ where:
+\begin{equation}
+\label{eq:visible_domain}
+\mathcal{D}_{\text{visible}} = \{ i_s \mid 1 \le i_s \le M_{\text{cap}} - L_s + 1 \quad \text{or} \quad N - M_{\text{cap}} + 1 \le i_s \le N - L_s + 1 \}
+\end{equation}
+}
 \textbf{Proof.}
-Define the domain of recall preservation as:
-\begin{equation}
-\mathcal{D}_{\text{safe}} = \{ i_s \mid 1 \le i_s \le M_{\text{cap}} - L_s + 1 \quad \text{or} \quad N - M_{\text{cap}} + 1 \le i_s \le N - L_s + 1 \}
-\end{equation}
-If $i_s \in \mathcal{D}_{\text{safe}}$, the toxic span lies entirely inside the prefix window or suffix window. From Theorem 2, the model evaluates the span and outputs $S_c(\mathbf{x}) \ge P(c \mid \mathbf{s}) - \delta_{\text{dilution}}$. Assuming the base toxicity exceeds the classification threshold $\theta$ after dilution, the recall is:
-\begin{equation}
-R(i_s) = 1 - \text{FNR}_{\text{dilution}}
-\end{equation}
-Conversely, if $i_s \notin \mathcal{D}_{\text{safe}}$, then:
+If $i_s \in \mathcal{D}_{\text{visible}}$, then by definition the toxic span $\mathbf{s}$ is fully contained inside the prefix window $[1:M_{\text{cap}}]$ or the suffix window $[N - M_{\text{cap}} + 1 : N]$. Therefore, the tokens of $\mathbf{s}$ are passed to the transformer forward pass, guaranteeing that the model evaluates the span.
+
+Conversely, if $i_s \notin \mathcal{D}_{\text{visible}}$, then:
 \begin{equation}
 M_{\text{cap}} - L_s + 1 < i_s < N - M_{\text{cap}} + 1
 \end{equation}
-For documents where $N \ge 2 \cdot M_{\text{cap}} = 1020$, the intersection of the toxic span with both the prefix window $[1:M_{\text{cap}}]$ and suffix window $[N - M_{\text{cap}} + 1:N]$ is empty. Consequently, both windows evaluate benign text $\mathbf{x}_{\text{clean}}$. The model output is:
+For documents where $N \ge 2 \cdot M_{\text{cap}} = 1020$, the intersection of the toxic span with both the prefix window $[1:M_{\text{cap}}]$ and suffix window $[N - M_{\text{cap}} + 1:N]$ is empty. Consequently, both windows evaluate benign text $\mathbf{x}_{\text{clean}}$, and the toxic span is physically bypassed (zero visibility). The model output is:
 \begin{equation}
-S_c(\mathbf{x}) = \max\left( P(c \mid \mathbf{x}_{\text{clean}}), \, P(c \mid \mathbf{x}_{\text{clean}}) \right) \approx 0.0032 \ll \theta
+S_c(\mathbf{x}) = \max\left( P(c \mid \mathbf{x}_{\text{clean}}), \, P(c \mid \mathbf{x}_{\text{clean}}) \right) \approx 0.0032
 \end{equation}
-Therefore, the model classifies the sequence as clean, yielding:
-\begin{equation}
-R(i_s) = 0
-\end{equation}
-This mathematically proves the strict recall boundary limit of the dual-pass system.
+which is identical to the clean background control score. Under a standard threshold $\theta = 0.5$, the sequence is classified as clean, yielding zero recall for the toxic span.
+
+Note that physical visibility is a necessary but insufficient condition for detection. A toxic span may be visible ($i_s \in \mathcal{D}_{\text{visible}}$) but still go undetected if attention dilution reduces the score below the classification threshold $\theta$ (as observed in the $600$-token middle-position scenario where the score drops to $0.4190$, below $\theta = 0.5$).
 
 \subsection{Equation 3 --- Service Latency Model}
 The total latency $L(N)$ of the service is modeled as:
@@ -206,28 +209,30 @@ At sequence lengths $N \ge 1200$, the toxic phrase lies entirely within the igno
 As a result, the model returns a score of $0.0032$, which is identical to the clean background control score. This results in a 100\% False Negative Rate. Unlike Failure Mode A, which is caused by numerical signal attenuation, Failure Mode B is a binary coverage truncation: the model has zero visibility of the toxicity.
 
 \section{Threat Model: The 'Middle-Stuffing' Bypass Vector}
-The truncation behavior characterized in Failure Mode B represents a critical security vulnerability. An adversary seeking to inject toxic content through a public-facing API monitored by the dual-pass worker can easily bypass detection:
+The truncation behavior characterized in Failure Mode B represents a high-severity security risk. An adversary seeking to inject toxic content through a public-facing API monitored by the dual-pass worker can easily bypass detection:
 \begin{enumerate}
 \item The adversary packages the toxic payload.
 \item The adversary prepends at least $510$ tokens of benign, clean text (e.g., a standard news article) at the beginning of the payload.
 \item The adversary appends at least $510$ tokens of benign, clean text at the end of the payload.
 \item The combined input sequence of length $N > 1020$ is submitted to the system.
 \end{enumerate}
-Under the dual-pass routing strategy, the worker extracts and scores the prefix and suffix windows (which contain only clean text), returning a toxicity score of $\approx 0.0032$. The system reports that the sequence is clean with 100\% confidence, completely ignoring the toxic payload in the middle. 
+Under the dual-pass routing strategy, the worker extracts and scores the prefix and suffix windows (which contain only clean text), returning a toxicity score of $\approx 0.0032$. The system reports that the sequence is clean with 99.68\% confidence (based on the model output probability score of $0.0032$), completely ignoring the toxic payload in the middle. 
 
-This bypass vector is a catastrophic vulnerability for safety moderation systems. Mitigations include:
+This bypass vector is a high-severity moderation bypass vulnerability for public-facing safety systems. Mitigations include:
 \begin{itemize}
 \item Running full-document sliding window inference on GPU instances to maintain latency bounds.
 \item Applying a secondary lightweight, high-throughput heuristic classifier (e.g., TF-IDF or fastText) to detect suspicious keywords in the ignored middle segment.
 \item Randomly sampling token windows across the document body to complement the prefix and suffix passes.
 \end{itemize}
 
-\section{Model Specifications and Hardware Constraints}
-The system's execution bounds are determined by the underlying hardware and model architecture:
+\section{Model Specifications and Benchmarking Environment}
+The latency and complexity benchmarks presented in this report were measured in a standardized containerized environment with the following specifications:
 \begin{itemize}
-\item \textbf{Model Architecture:} \texttt{toxic-bert} base architecture containing approximately 110 Million parameters.
-\item \textbf{Memory footprint:} The ONNX Runtime model file size is $\approx 438$ MB.
-\item \textbf{Hardware limits:} On single-threaded CPU containers, evaluating 110M parameters requires significant execution time ($T_{\text{inf}}(510) \approx 1.7$ s). Bounding execution to $F(N) \le 2$ is necessary to prevent complete CPU thread starvation under concurrent request loads, but CPU constraints limit the feasibility of real-time long-text moderation.
+\item \textbf{Hardware Environment:} Intel(R) Core(TM) i5-4300U CPU @ 1.90GHz (2 physical cores, 4 threads), 15 GiB RAM.
+\item \textbf{Software Stack:} ONNX Runtime version 1.26.0, Hugging Face Optimum version 1.18.0, and PyTorch 2.2.0 running inside a Docker container.
+\item \textbf{Model Architecture:} \texttt{toxic-bert} (based on the BERT-base architecture) containing approximately 110 Million parameters.
+\item \textbf{Model Storage Size:} The ONNX-exported model serialization footprint is approximately 438 MB.
+\item \textbf{Latency Measurements:} On the specified CPU hardware, a single-pass model evaluation takes $T_{\text{inf}}(510) \approx 1.7$ seconds, which serves as the empirical basis for our latency modeling and comparisons. Bounding execution to $F(N) \le 2$ is necessary to prevent complete CPU thread starvation under concurrent request loads.
 \end{itemize}
 
 \section{Visualizations}
@@ -268,6 +273,6 @@ The empirical results of the characterization are visualized in the figures belo
 \end{figure}
 
 \section{Conclusion}
-While the dual-pass strategy successfully bounds CPU inference complexity to a constant plateau ($2 \cdot T_{\text{inf}}(510)$), it compromises classification integrity. Reconciling the 200ms P95 SLO shows that CPU execution is only suitable for short user inputs. For documents exceeding 510 tokens, the system is subject to context dilution (Failure Mode A) and structural truncation (Failure Mode B). In public security boundaries, the "middle-stuffing" bypass vector represents a critical vulnerability, indicating that production deployments for document moderation must transition to GPU infrastructure or distilled student models to support full coverage sliding windows within the 200ms SLO.
+While the dual-pass strategy successfully bounds CPU inference complexity to a constant plateau ($2 \cdot T_{\text{inf}}(510)$), it compromises classification integrity. Reconciling the 200ms P95 SLO shows that CPU execution is only suitable for short user inputs. For documents exceeding 510 tokens, the system is subject to context dilution (Failure Mode A) and structural truncation (Failure Mode B). In public security boundaries, the "middle-stuffing" bypass vector represents a severe recall vulnerability, indicating that production deployments for document moderation must transition to GPU infrastructure or distilled student models to support full coverage sliding windows within the 200ms SLO.
 
 \end{document}
