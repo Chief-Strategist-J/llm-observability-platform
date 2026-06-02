@@ -16,7 +16,7 @@
 \maketitle
 
 \section{Introduction}
-This technical note describes the performance characterization and complexity boundaries of the toxicity inference service. The service employs an optimized ONNX sequence classification model to classify input text across six distinct toxicity categories. Due to the model's architectural input capacity limits, a dual-pass inference routing strategy is utilized for long sequences. We detail the equations governing this system, lay out our experimental hypotheses, report our empirical findings, and prove that it yields bounded latency independent of the input sequence length.
+This technical note describes the performance characterization and complexity boundaries of the toxicity inference service. The service employs an optimized ONNX sequence classification model to classify input text across six distinct toxicity categories. Due to the model's architectural input capacity limits, a dual-pass inference routing strategy is utilized for long sequences. We detail the equations governing this system, lay out our experimental hypotheses, report our empirical findings, and analyze the architectural trade-offs of the dual-pass strategy. We show that the model inference cost is bounded by a constant after 510 tokens, while the total latency is dominated by a small linear tokenization component.
 
 \section{Hypotheses and Objectives}
 \subsection{Objective}
@@ -48,7 +48,7 @@ M_{\text{cap}} = M - 2 = 510
 \end{equation}
 For any text length $N \le 510$, the sequence is routed directly to single-pass inference. Sequences where $N > 510$ cannot fit into a single forward pass without truncating middle sections, triggering the dual-pass routing strategy.
 \paragraph*{Why it matters:}
-Operational significance: Directs input sequences dynamically to prevent text truncation and ensure zero information loss.
+Operational significance: Directs input sequences dynamically to prevent complete truncation, though it introduces a middle-truncation vulnerability where middle tokens are bypassed to cap inference cost.
 
 \noindent\rule{\linewidth}{0.1pt}\medskip
 
@@ -93,35 +93,52 @@ Let $T_{\text{tok}}(N)$ be the tokenization latency. Because tokenization is imp
 \begin{equation}
 T_{\text{tok}}(N) = O(N)
 \end{equation}
-The gradient of tokenization latency with respect to length is extremely small:
+The gradient of tokenization latency with respect to length is small but positive:
 \begin{equation}
 \frac{d T_{\text{tok}}}{dN} \approx 0.005 \text{ ms/token}
 \end{equation}
-For any sequence length $N \le 4000$:
+For any sequence length $N > 510$, the total latency function $L(N)$ is given by:
 \begin{equation}
-T_{\text{tok}}(N) \ll T_{\text{inf}}(510)
+L(N) = T_{\text{tok}}(N) + 2 \cdot T_{\text{inf}}(510) + T_{\text{overhead}}
 \end{equation}
-Thus, for all $N > 510$, the total latency function $L(N)$ is dominated by the double-pass inference runs:
+Since $2 \cdot T_{\text{inf}}(510) + T_{\text{overhead}} = C$, where $C$ is a constant latency value representing the dual-pass inference execution plateau:
 \begin{equation}
-L(N) \approx 2 \cdot T_{\text{inf}}(510) + T_{\text{overhead}}
+L(N) = C + T_{\text{tok}}(N)
 \end{equation}
-Since $2 \cdot T_{\text{inf}}(510) + T_{\text{overhead}} = C$, where $C$ is a constant latency value:
-\begin{equation}
-L(N) \le C + \epsilon(N)
-\end{equation}
-where $\epsilon(N) = T_{\text{tok}}(N)$ is a negligible linear term. This proves that for arbitrarily long inputs ($N > 510$), the latency scales flatly rather than linearly or quadratically.
+Because the model forward pass is bounded by $2 \cdot T_{\text{inf}}(510)$, the computationally intensive neural network forward propagation costs are strictly capped by a constant. The overall latency curve is not perfectly flat, but is characterized by a constant model inference plateau with a minor linear growth factor governed by the tokenization rate.
+
+\section{Architectural Trade-offs and Limitations}
+
+\subsection{Information Loss and Middle-Truncation Vulnerability}
+The dual-pass strategy assumes that toxicity is concentrated at the beginning (prefix) or the end (suffix) of the sequence. For documents where $N > 1020$, a middle portion of size $N - 1020$ tokens is completely ignored. For example, in a 4,000-token document, the prefix and suffix windows cover a combined 1,020 tokens, leaving 2,980 tokens unexamined. If toxic content is nested exclusively in the middle, the dual-pass architecture will result in a false negative (100\% information loss for that segment). This represents a conscious trade-off prioritizing latency bound guarantees over full document coverage.
+
+\subsection{Lack of Statistical Quality Evaluation}
+A significant scientific limitation of the current results is the absence of model quality metrics on a long-context corpus. Latency observations must be validated against downstream classification performance. Future work must establish quality benchmarks using:
+\begin{itemize}[noitemsep]
+\item Precision and Recall across various sequence lengths.
+\item F1-score and ROC-AUC under prefix/suffix/middle toxicity distributions.
+\item False Positive Rate (FPR) and False Negative Rate (FNR) to quantify the impact of middle-truncation.
+\end{itemize}
+
+\subsection{Comparison Against Alternative Architectures}
+We justify the choice of the dual-pass heuristic by comparing it against alternative strategies:
+\begin{itemize}
+\item \textbf{Sliding Window / Chunk Aggregation}: Slicing the input into $k = \lceil N / 510 \rceil$ windows and executing $k$ sequential or parallel forward passes. While this eliminates information loss, it scales inference cost linearly $O(N)$ (e.g., 8 passes for a 4,000-token document). On CPU, this leads to a P95 latency of $\sim 13.6$ seconds, violating the 200ms P95 SLO and creating severe request queuing.
+\item \textbf{Hierarchical Classifiers}: Encoding segments individually and aggregating representation vectors via an attention layer. This requires extensive training, validation, and custom architecture.
+\item \textbf{Long-Context Models (Longformer, BigBird, Modern Transformers)}: Models that natively support longer contexts. These require exporting a new model and potentially fine-tuning, which was bypassed in this phase to directly leverage the pre-existing, production-validated \texttt{toxic-bert} ONNX export.
+\end{itemize}
 
 \section{Evaluation Findings and Results}
 \subsection{Empirical Observations}
 \begin{itemize}
 \item \textbf{Single-Pass Inference:} Validated successfully. Standard texts under 510 tokens execute in single-digit milliseconds under optimal execution, with average CPU latency scaling from $\sim63$ms ($10$ tokens) up to $\sim1.3$s ($500$ tokens).
 \item \textbf{Dual-Pass Inference:} Verified that text lengths exceeding 510 tokens successfully trigger the dual-pass strategy, capturing toxic content from both the beginning and the end of the text.
-\item \textbf{Flat Scaling Behavior:} Because the dual-pass strategy always slices the text into exactly two 510-token windows (first and last), the model inference latency remains flat at $\sim3.4$ seconds even as the input length scales from 520 to 4,000 tokens. This prevents linear latency explosion for very long inputs.
+\item \textbf{Inference Cost Plateau:} The model inference latency plateau is bounded at $\sim3.4$ seconds even as the input length scales from 520 to 4,000 tokens. This prevents linear neural network latency explosion for very long inputs.
 \item \textbf{ONNX Export:} The optimum ONNX export cleanly optimizes the PyTorch graphs into a highly efficient sequence classification graph, minimizing memory footprint and CPU utilization.
 \end{itemize}
 
 \subsection{Visualizations}
-The toxicity probability scores for a standard clean test sentence are visualized in Figure \ref{fig:scores}. The latency profile demonstrating the step transition at 510 tokens and subsequent flat scaling is depicted in Figure \ref{fig:latency}.
+The toxicity probability scores for a standard clean test sentence are visualized in Figure \ref{fig:scores}. The latency profile demonstrating the step transition at 510 tokens and subsequent linear growth with a small positive gradient is depicted in Figure \ref{fig:latency}.
 
 \begin{figure}[htbp]
 \centering
@@ -133,11 +150,11 @@ The toxicity probability scores for a standard clean test sentence are visualize
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.7\textwidth]{outputs/latency_comparison.png}
-\caption{Inference Latency vs. Input Token Count showing flat scaling.}
+\caption{Inference Latency vs. Input Token Count showing plateau behavior.}
 \label{fig:latency}
 \end{figure}
 
 \section{Conclusion}
-The dual-pass strategy successfully bounds toxicity inference latency under $3.4$ seconds on CPU, preventing execution time explosion on large context inputs while maintaining model sensitivity over text boundaries.
+The dual-pass strategy successfully bounds toxicity model inference cost to a constant plateau ($2 \cdot T_{\text{inf}}(510)$), preventing execution time explosion on large context inputs while accepting a middle-truncation coverage vulnerability.
 
 \end{document}
