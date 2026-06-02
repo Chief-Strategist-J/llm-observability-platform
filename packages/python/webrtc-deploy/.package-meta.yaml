@@ -1,6 +1,6 @@
 name: webrtc-deploy
 version: "1.0.0"
-language: docker
+language: python
 stage: 1
 owner: Chief-Strategist-J
 description: Unified Docker Compose deployment configuration for WebRTC
