@@ -886,3 +886,19 @@
     └── Changes:
         ├── ADR-001 -> context (4-file blast radius), decision (SAFETY_METRICS_REGISTRY), consequences (+/-), alternatives rejected (per-method, dynamic register(), separate exporters)
         └── registry.yaml -> +ADR-001 entry with category:decisions, status:accepted, package + branch refs
+
+[2026-06-03T11:08:00+05:30] Add code quality rules for coupling and declarative code guide
+└── File: .windsurf/rules/codeQuality/coupling-strength-spectrum.md [NEW]
+    .windsurf/rules/codeQuality/declarativeCode/declarative_complete_guide.md [NEW]
+    ├── Choice: Establish clear guidelines for Connascence scale and declarative code design
+    └── Changes:
+        ├── coupling-strength-spectrum.md -> Coupling definitions from CoN (Name) to CoI (Identity), mapping Q1-Q6 verification checklist
+        └── declarative_complete_guide.md -> Core guidelines on writing declarative code, registry pattern, mapping DSL to evaluator loop
+
+[2026-06-03T11:09:00+05:30] Add runbook rules for ADR format and brutal failure-first system building
+└── File: .windsurf/rules/runbook/adr.md [NEW]
+    .windsurf/rules/runbook/ffsb.md [NEW]
+    ├── Choice: Establish failure-first decision framework and ADR (Nygard/MADR) format details
+    └── Changes:
+        ├── adr.md -> Failure-first mental model, Nygard vs MADR format, mapping failure modes to decision drivers in ADRs
+        └── ffsb.md -> Failure archetypes (cascade, split-brain, thundering herd, silent data corruption, config drift, dependency hell) checklist
