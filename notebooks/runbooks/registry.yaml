@@ -4,3 +4,12 @@ runbooks:
     category: research
     path: research/toxicity/2026-06-02-inference
     description: Verification of performance, complexity, failure modes, and threat models of the dual-pass toxicity inference strategy.
+
+  - id: 20260603-001-declarative-safety-metrics-registry
+    title: "ADR-001: Declarative Safety Metrics Registry Pattern"
+    category: decisions
+    status: accepted
+    path: decisions/20260603-001-declarative-safety-metrics-registry.md
+    package: packages/python/instrumentation-sdk
+    branch: feature/toxicity-metrics-registry
+    description: Records the decision to use a declarative registry pattern (MetricEvaluator + SAFETY_METRICS_REGISTRY) for all safety/security Prometheus metrics in the instrumentation SDK, replacing per-metric hardcoded methods.

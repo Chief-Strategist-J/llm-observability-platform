@@ -872,3 +872,17 @@
         ├── service.py -> +SAFETY_METRICS_REGISTRY import; +registry loop after legacy calls (hasattr guard)
         ├── test_safety_registry.py -> 18 new unit tests; 42/42 total pass (0 regressions)
         └── llm-security-safety-dashboard.json -> version 2; +tag toxicity; panel-3 query +llm_toxicity_detected_total; panel-4 +Toxicity refId C; panel-5 Toxicity Detection Rate; panel-6 Toxicity Score P95; panel-7 Total Toxicity Detections stat
+
+[2026-06-03T10:45:24+05:30] Add decisions/ ADR category to runbook folder-structure rules
+└── File: .windsurf/rules/runbook/folder-structure.md
+    ├── Choice: ADRs are first-class architectural artifacts, distinct from research spikes; flat directory, YYYYMMDD-NNN-slug naming, status lifecycle (proposed→accepted→deprecated→superseded)
+    └── Changes:
+        └── folder-structure.md -> +Category 2 decisions/ block with Nygard/MADR format, status values, naming convention
+
+[2026-06-03T10:45:24+05:30] Create ADR-001 declarative safety metrics registry and update runbook registry
+└── File: notebooks/runbooks/decisions/20260603-001-declarative-safety-metrics-registry.md [NEW]
+    notebooks/runbooks/registry.yaml
+    ├── Choice: Document the registry pattern decision immediately after implementation; ADR captures context, rejected alternatives, connascence analysis, and future extension guide
+    └── Changes:
+        ├── ADR-001 -> context (4-file blast radius), decision (SAFETY_METRICS_REGISTRY), consequences (+/-), alternatives rejected (per-method, dynamic register(), separate exporters)
+        └── registry.yaml -> +ADR-001 entry with category:decisions, status:accepted, package + branch refs
