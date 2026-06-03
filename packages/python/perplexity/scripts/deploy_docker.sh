@@ -2,7 +2,7 @@
 set -euo pipefail
 
 IMAGE="chiefj/perplexity"
-VERSION=$(python -c "import tomllib; d=tomllib.load(open('pyproject.toml','rb')); print(d['project']['version'])")
+VERSION=$(python3 -c "import tomllib; d=tomllib.load(open('pyproject.toml','rb')); print(d['project']['version'])")
 
 echo "Building $IMAGE:$VERSION"
 docker build -f build/Dockerfile -t "$IMAGE:latest" -t "$IMAGE:v$VERSION" -t "$IMAGE:stable" .

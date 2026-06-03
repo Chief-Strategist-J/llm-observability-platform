@@ -32,6 +32,34 @@ Scores the cross-entropy perplexity of an LLM response.
 
 Returns `null` (skipped) when skip conditions are met. The composite weight drops to `0.00` automatically.
 
+### Inference Decision Flow
+
+```text
+                          [ POST /perplexity ]
+                                    │
+                                    ▼
+                         { Has "logprobs" field? }
+                                 /     \
+                               Yes      No
+                               /         \
+                              ▼           ▼
+                   [ provider_logprobs ]  [ gpt2_onnx ]
+                            │                   │
+                  (Extract logprobs from  (Tokenize input text
+                   nested/candidate lists) and run local ONNX model)
+                            │                   │
+                            ▼                   ▼
+                   [ Compute Perplexity ]  [ Run Inference & Loss ]
+                            │                   │
+                            └─────────┬─────────┘
+                                      │
+                                      ▼
+                           [ Response Payload ]
+                          - perplexity: float
+                          - method: string ("provider_logprobs" | "gpt2_onnx")
+                          - token_count: int
+```
+
 ---
 
 ## Run Locally (Python)
@@ -179,6 +207,24 @@ Full contract: [`contracts/openapi/v1.yaml`](contracts/openapi/v1.yaml)
 | `prompt_type` | enum | ✅ | `chat` \| `code` \| `rag` \| `classification` |
 | `token_logprobs` | float[] | ❌ | Provider log-probs (primary path) |
 | `finish_reason` | string | ❌ | `content_filter` triggers skip |
+
+### `POST /perplexity`
+
+Dual-path perplexity scoring for HTTP inference.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `text` | string | ✅ | The text to score |
+| `logprobs` | float[][] | ❌ | Optional nested or candidate provider logprob array |
+
+Returns:
+```json
+{
+  "perplexity": 18.4,
+  "method": "provider_logprobs" | "gpt2_onnx",
+  "token_count": 187
+}
+```
 
 ### `GET /health`
 

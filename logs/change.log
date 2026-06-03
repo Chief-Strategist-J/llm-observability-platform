@@ -914,3 +914,41 @@
     └── Changes:
         ├── adr.md -> Failure-first mental model, Nygard vs MADR format, mapping failure modes to decision drivers in ADRs
         └── ffsb.md -> Failure archetypes (cascade, split-brain, thundering herd, silent data corruption, config drift, dependency hell) checklist
+
+[2026-06-03T11:45:00+05:30] Implement HTTP inference /perplexity endpoint with dual-path scoring
+└── File: packages/python/perplexity/contracts/openapi/v1.yaml, packages/python/perplexity/src/shared/ports/gpt2_scorer_port.py, packages/python/perplexity/src/infra/adapters/gpt2/gpt2_onnx_adapter.py, packages/python/perplexity/src/api/rest/v1/handlers/score_inference.py, packages/python/perplexity/src/api/rest/v1/router.py, packages/python/perplexity/tests/unit/test_api.py, packages/python/perplexity/README.md
+    ├── Choice: Extend Gpt2ScorerPort and Gpt2OnnxAdapter to support dual-path scoring with token count, add a dedicated /perplexity endpoint to handle both provider logprobs and GPT-2 ONNX fallback, and document the changes.
+    └── Changes:
+        ├── contracts -> Add /perplexity POST endpoint to OpenAPI v1 contract
+        ├── ports -> Extend Gpt2ScorerPort protocol with compute_with_token_count
+        ├── adapters -> Implement compute_with_token_count on Gpt2OnnxAdapter and update compute to delegate to it
+        ├── api -> Implement REST handler score_inference.py and register in router.py
+        ├── tests -> Add unit tests for /perplexity endpoint in test_api.py and extend FakeGpt2Scorer
+        └── documentation -> Update perplexity package README.md with /perplexity details
+
+[2026-06-03T12:00:00+05:30] Bump perplexity scorer version, add ASCII decision flow to README, and deploy Docker image
+└── File: packages/python/perplexity/pyproject.toml, packages/python/perplexity/README.md, packages/python/perplexity/scripts/deploy_docker.sh, logs/change.log
+    ├── Choice: Bump version to 0.2.0, add visual ASCII flow tree in README, fix python3 compatibility in deploy script, build and push image
+    └── Changes:
+        ├── pyproject.toml -> Bump project version to 0.2.0
+        ├── README.md -> Add ASCII tree mapping out the dual-path perplexity decision flow
+        ├── deploy_docker.sh -> Set script execution permission and use python3 instead of python to parse pyproject.toml version
+        └── docker -> Build, test, and push chiefj/perplexity tags (:latest, :v0.2.0, :stable) to Docker Hub
+
+[2026-06-03T12:30:00+05:30] Formalize perplexity scorer ADR-002 and research notebooks
+└── File: notebooks/runbooks/decisions/20260603-002-perplexity-dual-path-scoring.md, notebooks/runbooks/research/perplexity/2026-06-03-dual-path-scoring/hypothesis.md, notebooks/runbooks/research/perplexity/2026-06-03-dual-path-scoring/findings.md, notebooks/runbooks/research/perplexity/2026-06-03-dual-path-scoring/research.ipynb, notebooks/runbooks/registry.yaml
+    ├── Choice: Create formal Architecture Decision Record for the microservice and detail the scientific hypotheses, findings, and interactive research notebook.
+    └── Changes:
+        ├── decisions -> Add ADR-002 detailing dual-path inference routing and failure-first constraints (OOM risk, slow-not-down)
+        ├── research -> Add hypothesis, findings, and interactive Jupyter notebook detailing logprobs conversion equivalence, latency benchmarks, and memory usage profiling
+        └── registry.yaml -> Register ADR-002 and research runbook in registry index
+
+[2026-06-03T12:45:00+05:30] Generate Perplexity empirical plots and compile LaTeX proof document
+└── File: notebooks/runbooks/research/perplexity/2026-06-03-dual-path-scoring/proof.tex, notebooks/runbooks/research/perplexity/2026-06-03-dual-path-scoring/proof.pdf, notebooks/runbooks/research/perplexity/2026-06-03-dual-path-scoring/outputs/perplexity_latency_profile.png, notebooks/runbooks/research/perplexity/2026-06-03-dual-path-scoring/outputs/perplexity_memory_profile.png, notebooks/runbooks/research/perplexity/2026-06-03-dual-path-scoring/research.ipynb
+    ├── Choice: Construct and compile formal LaTeX proof document, generate latency and memory profiling graphs, and embed the generated visualizations in the interactive Jupyter notebook.
+    └── Changes:
+        ├── latex -> Write proof.tex detailing dual-path math, complexity proofs, and resource limits, and compile to proof.pdf
+        ├── outputs -> Save generated matplotlib charts for latency and memory profiles to outputs directory
+        └── jupyter -> Update research.ipynb with embedded base64 plots and executable cell blocks
+
+

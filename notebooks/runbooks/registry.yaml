@@ -13,3 +13,18 @@ runbooks:
     package: packages/python/instrumentation-sdk
     branch: feature/toxicity-metrics-registry
     description: Records the decision to use a declarative registry pattern (MetricEvaluator + SAFETY_METRICS_REGISTRY) for all safety/security Prometheus metrics in the instrumentation SDK, replacing per-metric hardcoded methods.
+
+  - id: 2026-06-03-dual-path-scoring
+    title: Perplexity Dual-Path Scoring Evaluation
+    category: research
+    path: research/perplexity/2026-06-03-dual-path-scoring
+    description: Empirical verification of token logprobs vs GPT-2 ONNX fallback inference, assessing latency bounds, memory overhead (OOM risk under 512Mi), and sequence length constraints.
+
+  - id: 20260603-002-perplexity-dual-path-scoring
+    title: "ADR-002: Perplexity Dual-Path Scoring and Fail-Safe Fallbacks"
+    category: decisions
+    status: accepted
+    path: decisions/20260603-002-perplexity-dual-path-scoring.md
+    package: packages/python/perplexity
+    description: Records the architecture decision for the HTTP perplexity service, formalizing the zero-cost provider path and failure-first constraints of the GPT-2 ONNX fallback path.
+
