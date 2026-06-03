@@ -950,5 +950,11 @@
         ├── latex -> Write proof.tex detailing dual-path math, complexity proofs, and resource limits, and compile to proof.pdf
         ├── outputs -> Save generated matplotlib charts for latency and memory profiles to outputs directory
         └── jupyter -> Update research.ipynb with embedded base64 plots and executable cell blocks
+[2026-06-03T13:00:00+05:30] Validate Jupyter research notebook and recompile LaTeX proof
+└── File: notebooks/runbooks/research/perplexity/2026-06-03-dual-path-scoring/research.ipynb, notebooks/runbooks/research/perplexity/2026-06-03-dual-path-scoring/proof.pdf
+    ├── Choice: Fix display_data outputs schema missing metadata fields in research.ipynb and rerun pdflatex compilation to resolve cross-reference warnings in proof.pdf
+    └── Changes:
+        ├── research.ipynb -> Fix nbformat schema error by adding empty metadata dictionary to display_data outputs
+        └── proof.pdf -> Recompile proof.tex via latex Docker container to resolve warnings and update document
 
 
