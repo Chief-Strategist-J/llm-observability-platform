@@ -914,3 +914,15 @@
     └── Changes:
         ├── adr.md -> Failure-first mental model, Nygard vs MADR format, mapping failure modes to decision drivers in ADRs
         └── ffsb.md -> Failure archetypes (cascade, split-brain, thundering herd, silent data corruption, config drift, dependency hell) checklist
+
+[2026-06-03T11:45:00+05:30] Implement HTTP inference /perplexity endpoint with dual-path scoring
+└── File: packages/python/perplexity/contracts/openapi/v1.yaml, packages/python/perplexity/src/shared/ports/gpt2_scorer_port.py, packages/python/perplexity/src/infra/adapters/gpt2/gpt2_onnx_adapter.py, packages/python/perplexity/src/api/rest/v1/handlers/score_inference.py, packages/python/perplexity/src/api/rest/v1/router.py, packages/python/perplexity/tests/unit/test_api.py, packages/python/perplexity/README.md
+    ├── Choice: Extend Gpt2ScorerPort and Gpt2OnnxAdapter to support dual-path scoring with token count, add a dedicated /perplexity endpoint to handle both provider logprobs and GPT-2 ONNX fallback, and document the changes.
+    └── Changes:
+        ├── contracts -> Add /perplexity POST endpoint to OpenAPI v1 contract
+        ├── ports -> Extend Gpt2ScorerPort protocol with compute_with_token_count
+        ├── adapters -> Implement compute_with_token_count on Gpt2OnnxAdapter and update compute to delegate to it
+        ├── api -> Implement REST handler score_inference.py and register in router.py
+        ├── tests -> Add unit tests for /perplexity endpoint in test_api.py and extend FakeGpt2Scorer
+        └── documentation -> Update perplexity package README.md with /perplexity details
+

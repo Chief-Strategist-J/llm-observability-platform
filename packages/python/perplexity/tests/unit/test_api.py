@@ -25,6 +25,10 @@ class FakeGpt2Scorer:
     def compute(self, response_text: str) -> float:
         return 18.0
 
+    def compute_with_token_count(self, response_text: str) -> tuple[float | None, int]:
+        return 18.0, len(response_text.split())
+
+
 
 @pytest.fixture()
 def client():
@@ -159,3 +163,84 @@ def test_prompt_type_preserved_in_response(client):
     resp = client.post("/v1/score/perplexity", json=payload)
     assert resp.status_code == 200
     assert resp.json()["prompt_type"] == "classification"
+
+
+def test_perplexity_endpoint_with_logprobs_nested_array(client):
+    payload = {
+        "text": "The sky is blue",
+        "logprobs": [[-2.0, -1.5, -2.5, -1.8]],
+    }
+    resp = client.post("/perplexity", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["method"] == "provider_logprobs"
+    assert data["token_count"] == 4
+    assert data["perplexity"] is not None
+
+
+def test_perplexity_endpoint_with_logprobs_candidate_array(client):
+    payload = {
+        "text": "The sky is blue",
+        "logprobs": [[-2.0], [-1.5], [-2.5], [-1.8]],
+    }
+    resp = client.post("/perplexity", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["method"] == "provider_logprobs"
+    assert data["token_count"] == 4
+    assert data["perplexity"] is not None
+
+
+def test_perplexity_endpoint_fallback(client):
+    payload = {
+        "text": "The sky is blue",
+    }
+    resp = client.post("/perplexity", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["method"] == "gpt2_onnx"
+    assert data["token_count"] == 4
+    assert data["perplexity"] == pytest.approx(18.0)
+
+
+def test_perplexity_endpoint_empty_logprobs(client):
+    payload = {
+        "text": "The sky is blue",
+        "logprobs": [],
+    }
+    resp = client.post("/perplexity", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["method"] == "provider_logprobs"
+    assert data["token_count"] == 0
+    assert data["perplexity"] is None
+
+
+def test_perplexity_endpoint_validation_error(client):
+    payload = {
+        "logprobs": [[-2.0]],
+    }
+    resp = client.post("/perplexity", json=payload)
+    assert resp.status_code == 422
+
+
+def test_perplexity_endpoint_unavailable(client):
+    class UnavailableGpt2Scorer:
+        def is_available(self) -> bool:
+            return False
+        def compute(self, response_text: str) -> float | None:
+            return None
+        def compute_with_token_count(self, response_text: str) -> tuple[float | None, int]:
+            return None, 0
+
+    from api.rest.v1.app import create_app
+    app = create_app()
+    app.state.logprobs_scorer = FakeLogprobsScorer()
+    app.state.gpt2_scorer = UnavailableGpt2Scorer()
+    c = TestClient(app)
+    payload = {
+        "text": "The sky is blue",
+    }
+    resp = c.post("/perplexity", json=payload)
+    assert resp.status_code == 503
+

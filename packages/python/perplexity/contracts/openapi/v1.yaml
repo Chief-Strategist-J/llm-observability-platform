@@ -41,6 +41,49 @@ paths:
         "422":
           description: Validation error
 
+  /perplexity:
+    post:
+      summary: Compute perplexity for HTTP inference
+      operationId: computePerplexity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  description: The text to score.
+                logprobs:
+                  type: array
+                  nullable: true
+                  items:
+                    type: array
+                    items:
+                      type: number
+                  description: Optional list of logprob lists.
+      responses:
+        "200":
+          description: Perplexity calculation result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [perplexity, method, token_count]
+                properties:
+                  perplexity:
+                    type: number
+                    nullable: true
+                  method:
+                    type: string
+                    enum: [provider_logprobs, gpt2_onnx]
+                  token_count:
+                    type: integer
+        "422":
+          description: Validation error
+
 components:
   schemas:
     HealthResponse:

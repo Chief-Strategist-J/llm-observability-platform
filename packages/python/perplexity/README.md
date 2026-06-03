@@ -180,6 +180,24 @@ Full contract: [`contracts/openapi/v1.yaml`](contracts/openapi/v1.yaml)
 | `token_logprobs` | float[] | ❌ | Provider log-probs (primary path) |
 | `finish_reason` | string | ❌ | `content_filter` triggers skip |
 
+### `POST /perplexity`
+
+Dual-path perplexity scoring for HTTP inference.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `text` | string | ✅ | The text to score |
+| `logprobs` | float[][] | ❌ | Optional nested or candidate provider logprob array |
+
+Returns:
+```json
+{
+  "perplexity": 18.4,
+  "method": "provider_logprobs" | "gpt2_onnx",
+  "token_count": 187
+}
+```
+
 ### `GET /health`
 
 Returns `{"status": "ok", "scorer": "<provider_logprobs|gpt2_onnx|unavailable>"}`.

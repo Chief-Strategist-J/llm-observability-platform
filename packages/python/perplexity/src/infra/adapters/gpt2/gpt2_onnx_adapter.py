@@ -34,22 +34,26 @@ class Gpt2OnnxAdapter:
         from optimum.onnxruntime import ORTModelForCausalLM
         return ORTModelForCausalLM.from_pretrained(self._model_path, export=True)
 
-    def compute(self, response_text: str) -> float | None:
+    def compute_with_token_count(self, response_text: str) -> tuple[float | None, int]:
         if not self.is_available():
-            return None
+            return None, 0
         try:
-            return self._compute_perplexity(response_text)
+            import torch
+            enc = self._tokenizer(response_text, return_tensors="pt", truncation=True, max_length=1024)
+            input_ids = enc["input_ids"]
+            token_count = input_ids.shape[1]
+            with torch.no_grad():
+                outputs = self._session(input_ids=input_ids, labels=input_ids)
+            loss = outputs.loss
+            return math.exp(loss.item()), token_count
         except Exception:
-            return None
+            try:
+                enc = self._tokenizer(response_text, return_tensors="pt", truncation=True, max_length=1024)
+                return None, enc["input_ids"].shape[1]
+            except Exception:
+                return None, 0
 
-    def _compute_perplexity(self, text: str) -> float:
-        import torch
+    def compute(self, response_text: str) -> float | None:
+        val, _ = self.compute_with_token_count(response_text)
+        return val
 
-        enc = self._tokenizer(text, return_tensors="pt", truncation=True, max_length=1024)
-        input_ids = enc["input_ids"]
-
-        with torch.no_grad():
-            outputs = self._session(input_ids=input_ids, labels=input_ids)
-
-        loss = outputs.loss
-        return math.exp(loss.item())
