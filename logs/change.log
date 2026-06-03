@@ -934,3 +934,12 @@
         ├── README.md -> Add ASCII tree mapping out the dual-path perplexity decision flow
         ├── deploy_docker.sh -> Set script execution permission and use python3 instead of python to parse pyproject.toml version
         └── docker -> Build, test, and push chiefj/perplexity tags (:latest, :v0.2.0, :stable) to Docker Hub
+
+[2026-06-03T12:30:00+05:30] Formalize perplexity scorer ADR-002 and research notebooks
+└── File: notebooks/runbooks/decisions/20260603-002-perplexity-dual-path-scoring.md, notebooks/runbooks/research/perplexity/2026-06-03-dual-path-scoring/hypothesis.md, notebooks/runbooks/research/perplexity/2026-06-03-dual-path-scoring/findings.md, notebooks/runbooks/research/perplexity/2026-06-03-dual-path-scoring/research.ipynb, notebooks/runbooks/registry.yaml
+    ├── Choice: Create formal Architecture Decision Record for the microservice and detail the scientific hypotheses, findings, and interactive research notebook.
+    └── Changes:
+        ├── decisions -> Add ADR-002 detailing dual-path inference routing and failure-first constraints (OOM risk, slow-not-down)
+        ├── research -> Add hypothesis, findings, and interactive Jupyter notebook detailing logprobs conversion equivalence, latency benchmarks, and memory usage profiling
+        └── registry.yaml -> Register ADR-002 and research runbook in registry index
+
