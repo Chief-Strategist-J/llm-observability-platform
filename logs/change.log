@@ -743,6 +743,18 @@
         ├── eslint -> Create flat eslint.config.js in client to support ESLint v9 structure
         └── gitignore -> Add gitignore in client to ignore node_modules, build, and coverage directories
 
+[2026-06-02T13:30:00+05:30] Rebuild and push clean WebRTC Docker images to Docker Hub
+└── File: packages/python/webrtc-signaling/build/Dockerfile, packages/node/webrtc-client/build/Dockerfile
+    ├── Choice: Rebuild Docker images following lint and type-checking fixes and push to registry.
+    └── Changes:
+        └── docker-push -> Rebuild and push chiefj/webrtc-signaling:latest and chiefj/webrtc-client:latest to Docker Hub registry
+
+[2026-06-02T13:45:00+05:30] Document foundational research and architectural blueprint for custom voice agent from scratch
+└── File: logs/change.log
+    ├── Choice: Establish learning roadmap, low-level audio packetization specs, VAD state machine, conversational turn-taking, barge-in logic, and hexagonal architecture ports in Notion page.
+    └── Changes:
+        └── voice-agent-blueprint -> Create and populate Notion page with IDs, calculations, VAD state machine logic, and ports/adapters contract declarations
+
 [2026-06-02T15:37:00+05:30] Create ADR 0001 documenting decoupling of toxicity-worker from the existing toxicity scorer service
 └── File: docs/adr/0001-toxicity-worker-decoupling.md
     ├── Choice: Decouple CPU-heavy ML predictions (toxicity-worker) from event-driven orchestration (toxicity)
