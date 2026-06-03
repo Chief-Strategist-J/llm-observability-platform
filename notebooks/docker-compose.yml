@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  worker:
+    image: chiefj/toxicity-worker:stable
+    ports:
+      - "8008:8008"
+    environment:
+      - PORT=8008
+      - TOXICITY_MODEL_ID=unitary/toxic-bert
+    restart: unless-stopped
+
+  jupyter:
+    image: chiefj/toxicity-worker:stable
+    ports:
+      - "8888:8888"
+    environment:
+      - TOXICITY_MODEL_ID=unitary/toxic-bert
+      - PYTHONPATH=/app/packages/python/toxicity-worker/src
+    volumes:
+      - ../:/app
+    working_dir: /app/notebooks
+    entrypoint: >
+      bash -c "
+      pip install --no-cache-dir jupyterlab matplotlib pandas &&
+      exec jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
+      "
+    restart: unless-stopped
+
+  latex:
+    image: blang/latex:latest
+    volumes:
+      - ../:/workdir
+    working_dir: /workdir/notebooks/runbooks/research/toxicity/2026-06-02-inference
+    command: pdflatex proof.tex
+

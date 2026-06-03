@@ -1,10 +1,10 @@
 {
   "uid": "llm-security-safety-dashboard",
   "title": "LLM Security & Safety Dashboard",
-  "tags": ["llm", "security", "pii", "injection", "observability"],
+  "tags": ["llm", "security", "pii", "injection", "toxicity", "observability"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "30s",
   "time": {
     "from": "now-6h",
@@ -112,7 +112,7 @@
       },
       "targets": [
         {
-          "expr": "sum(llm_pii_detected_total) + sum(llm_injection_attempts_total)",
+          "expr": "sum(llm_pii_detected_total) + sum(llm_injection_attempts_total) + sum(llm_toxicity_detected_total)",
           "legendFormat": "Total Violations",
           "refId": "A"
         }
@@ -146,6 +146,118 @@
           "expr": "sum(increase(llm_injection_attempts_total[5m])) by (service_name)",
           "legendFormat": "Injection — {{service_name}}",
           "refId": "B"
+        },
+        {
+          "expr": "sum(increase(llm_toxicity_detected_total[5m])) by (service_name)",
+          "legendFormat": "Toxicity — {{service_name}}",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Toxicity Detection Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(llm_toxicity_detected_total[5m])) by (service_name)",
+          "legendFormat": "{{service_name}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Toxicity Score P95 (per service)",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "auto"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.5 },
+              { "color": "red", "value": 0.8 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(llm_toxicity_score_bucket[5m])) by (le, service_name))",
+          "legendFormat": "P95 — {{service_name}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Total Toxicity Detections",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 26 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 5 },
+              { "color": "red", "value": 20 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "expr": "sum(llm_toxicity_detected_total)",
+          "legendFormat": "Toxicity Detections",
+          "refId": "A"
         }
       ]
     }

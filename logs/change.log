@@ -755,3 +755,162 @@
     └── Changes:
         └── voice-agent-blueprint -> Create and populate Notion page with IDs, calculations, VAD state machine logic, and ports/adapters contract declarations
 
+[2026-06-02T15:37:00+05:30] Create ADR 0001 documenting decoupling of toxicity-worker from the existing toxicity scorer service
+└── File: docs/adr/0001-toxicity-worker-decoupling.md
+    ├── Choice: Decouple CPU-heavy ML predictions (toxicity-worker) from event-driven orchestration (toxicity)
+    └── Changes:
+        └── docs -> Create docs/adr/0001-toxicity-worker-decoupling.md documenting context, decisions, and consequences of the new service
+
+[2026-06-02T15:45:00+05:30] Implement core domain, infrastructure, API endpoints, test suite, and registry files for decoupled toxicity-worker service
+└── File: packages/python/toxicity-worker/
+    ├── Choice: Establish Hexagonal architecture with Ports and Adapters, implementing CPU-optimized ONNX model scoring with FastAPI and OpenTelemetry context propagation.
+    └── Changes:
+        ├── domain -> Implement domain types, ports (ToxicityScorerPort), and scoring service (score_toxicity) with dual-pass capability
+        ├── infra -> Create DetoxifyOnnxAdapter implementing the scorer port via optimum and onnxruntime
+        ├── api -> Implement FastAPI endpoints /healthz and /score extracting traceparent headers for trace context propagation
+        ├── docker -> Create Dockerfile building cached ONNX weights to eliminate cold starts, exposing port 8008
+        ├── tests -> Create unit test suite for service, adapter, and handlers, achieving 92% coverage
+        └── registry -> Add .package-meta.yaml, .port-registry, and feature-registry.yaml configurations
+
+[2026-06-02T16:16:00+05:30] Align toxicity-worker API and responses with HTTP inference server specification
+└── File: packages/python/toxicity-worker/src/core/domain/types.py, packages/python/toxicity-worker/src/core/domain/service.py, packages/python/toxicity-worker/src/api/rest/v1/handlers/score.py, packages/python/toxicity-worker/src/api/rest/v1/handlers/health.py, packages/python/toxicity-worker/contracts/openapi/v1.yaml, packages/python/toxicity-worker/tests/unit/test_api.py, packages/python/toxicity-worker/tests/unit/test_service.py
+    ├── Choice: Modify /score strategy output to be conditional and named max_of_two_passes, add POST healthz route, rename model_id to model key in health response, and update schemas and unit tests.
+    └── Changes:
+        ├── domain -> Update ToxicityResult strategy field to be optional and value to max_of_two_passes
+        ├── api -> Support POST /healthz, add model property in HealthResponse, and exclude None strategy field from ScoreResponse
+        ├── contracts -> Align OpenAPI specification with new response structures and healthz post route
+        └── tests -> Update unit and API assertions for health response fields and score endpoint strategy exclusions
+
+[2026-06-02T16:18:00+05:30] Create package README documentation
+└── File: packages/python/toxicity-worker/README.md
+    ├── Choice: Write README documentation outlining key features, architecture, endpoints, config, and installation.
+    └── Changes:
+        └── docs -> Create package README.md detailing service design, API contracts, deployment, and testing
+
+[2026-06-02T16:52:00+05:30] Create deploy script, build and push toxicity-worker Docker image
+└── File: packages/python/toxicity-worker/scripts/deploy_docker.sh
+    ├── Choice: Establish automated deployment pipeline to build, test inside container, and push docker image to registry.
+    └── Changes:
+        ├── script -> Create scripts/deploy_docker.sh to orchestrate building, unit testing inside container, and pushing tags v0.1.0 and stable
+        └── registry -> Build and publish chiefj/toxicity-worker:v0.1.0 and chiefj/toxicity-worker:stable to Docker Hub
+
+[2026-06-02T17:15:00+05:30] Initialize root notebooks directory with docker-compose orchestration and interactive research runbooks
+└── File: notebooks/, packages/python/toxicity-worker/pyproject.toml, .windsurf/rules/runbook/folder-structure.md
+    ├── Choice: Mount project root to Jupyter Lab container using chiefj/toxicity-worker:stable image and install dependencies dynamically on startup.
+    └── Changes:
+        ├── config -> Add notebooks/docker-compose.yml orchestrating toxicity-worker and jupyter container services
+        ├── runbooks -> Create notebooks/research/toxicity/2026-06-02-inference/ containing hypothesis.md, executed research.ipynb, and findings.md
+        ├── rules -> Update .windsurf/rules/runbook/folder-structure.md to formally support root notebooks/ directory
+        └── dependencies -> Add jupyterlab, matplotlib, and pandas optional-dependencies to pyproject.toml
+
+[2026-06-02T17:20:00+05:30] Scale latency benchmark sample sizes in research notebook and regenerate output plots
+└── File: notebooks/research/toxicity/2026-06-02-inference/research.ipynb, notebooks/research/toxicity/2026-06-02-inference/findings.md, notebooks/research/toxicity/2026-06-02-inference/proof.tex, notebooks/docker-compose.yml
+    ├── Choice: Increase benchmarking token counts up to 4,000, create a separate formal single-column LaTeX document for mathematical formulations, and configure a Docker Compose service.
+    └── Changes:
+        ├── notebook -> Expand token counts array and implement average latency calculation across 5 trial iterations in research.ipynb
+        ├── findings -> Document flat latency scaling (~3.4 seconds) in findings.md
+        ├── latex -> Create proof.tex and compile proof.pdf (single-column) containing LaTeX decision boundaries, score aggregation formulas, bounded complexity proofs, hypotheses, results, and visualization graphs
+        └── docker-compose -> Add latex service in notebooks/docker-compose.yml for running pdflatex compilation
+
+[2026-06-02T18:04:23+05:30] Integrate mathematical formulations, architectural trade-offs, and quality validation roadmap into research resources
+└── File: notebooks/research/toxicity/2026-06-02-inference/research.ipynb, notebooks/research/toxicity/2026-06-02-inference/findings.md, notebooks/research/toxicity/2026-06-02-inference/proof.pdf
+    ├── Choice: Keep documentation parity across formal proof, findings report, and interactive research runbook.
+    └── Changes:
+        ├── notebook -> Append markdown cell outlining latency complexity model, middle-truncation info loss, architecture comparison, and metrics validation roadmap to research.ipynb
+        ├── findings -> Overhaul findings.md to formally detail refined latency models, middle-truncation vulnerability, sliding window comparison, and statistical metrics (F1, Precision, Recall)
+        └── pdf -> Compile proof.tex via latex Docker service to generate updated proof.pdf
+
+[2026-06-02T18:18:00+05:30] Integrate empirical verification metrics and classification plots into LaTeX report
+└── File: notebooks/research/toxicity/2026-06-02-inference/proof.tex, notebooks/research/toxicity/2026-06-02-inference/proof.pdf, notebooks/research/toxicity/2026-06-02-inference/run_evaluation.py
+    ├── Choice: Update the LaTeX source with the empirical results table and figures, compile the PDF, and parameterize evaluation script output paths.
+    └── Changes:
+        ├── latex -> Replace Section 5.2 with empirical verification table, findings, and figures 3 & 4 in proof.tex
+        ├── pdf -> Recompile proof.pdf with resolved cross-references using Docker latex service
+        └── script -> Update run_evaluation.py to save csv and png files relative to script directory
+
+[2026-06-02T18:25:00+05:30] Consolidate evaluation script into research notebook
+└── File: notebooks/research/toxicity/2026-06-02-inference/research.ipynb, notebooks/research/toxicity/2026-06-02-inference/run_evaluation.py, notebooks/research/toxicity/2026-06-02-inference/proof.pdf
+    ├── Choice: Embed evaluation & plot generation logic directly in research.ipynb, execute the notebook, and remove the external run_evaluation.py script.
+    └── Changes:
+        ├── notebook -> Inject complete evaluation metrics, CSV exports, and plot generation logic into cell 5 of research.ipynb, then execute in-place
+        ├── script -> [DELETE] Remove separate run_evaluation.py script
+        └── pdf -> Recompile proof.pdf with resolved cross-references using Docker latex service
+
+[2026-06-02T18:30:00+05:30] Overhaul toxicity proof report for scientific and mathematical rigor
+└── File: notebooks/research/toxicity/2026-06-02-inference/proof.tex, notebooks/research/toxicity/2026-06-02-inference/findings.md, notebooks/research/toxicity/2026-06-02-inference/proof.pdf
+    ├── Choice: Restructure reports to prove properties (complexity, monotonicity, recall), reconcile the 200ms SLO contract, separate failure modes (dilution vs truncation), and document bypass vulnerability.
+    └── Changes:
+        ├── latex -> Write mathematical proofs of complexity bounds, monotonicity, and recall in proof.tex; reconcile SLO, derive sliding window latency, separate failure modes, add threat model, and include visualization figures
+        ├── markdown -> Update findings.md to achieve full parity with the updated proofs, derivations, and threat model
+        └── pdf -> Recompile proof.pdf with resolved cross-references using Docker latex service
+
+[2026-06-02T18:35:00+05:30] Align research directory with runbook folder structure rules
+└── File: notebooks/runbooks/registry.yaml, notebooks/runbooks/research/toxicity/2026-06-02-inference/, notebooks/docker-compose.yml
+    ├── Choice: Restructure interactive research notebooks into notebooks/runbooks/ to follow standard runbook conventions, index the notebook in registry.yaml, and create required directories.
+    └── Changes:
+        ├── runbooks -> Move research/toxicity/2026-06-02-inference/ to runbooks/research/toxicity/2026-06-02-inference/
+        ├── registry -> [NEW] Index the toxicity inference runbook in notebooks/runbooks/registry.yaml
+        ├── structure -> Create data/ and references/ directories with .gitkeep placeholders inside the study directory
+        └── compose -> Update docker-compose.yml with the new working directory for the latex service
+
+[2026-06-02T18:40:00+05:30] Add LaTeX and PDF files to Category 4 runbook rules
+└── File: .windsurf/rules/runbook/folder-structure.md
+    ├── Choice: Update standard runbook folder rules to require proof.tex and proof.pdf files in research runbooks.
+    └── Changes:
+        └── rules -> Append proof.tex and proof.pdf to Category 4: Research & Spike folder structure
+
+[2026-06-02T18:45:00+05:30] Address mathematical rigor, phrasing safety, and hardware context in toxicity inference report
+└── File: notebooks/runbooks/research/toxicity/2026-06-02-inference/proof.tex, notebooks/runbooks/research/toxicity/2026-06-02-inference/findings.md, notebooks/runbooks/research/toxicity/2026-06-02-inference/proof.pdf
+    ├── Choice: Reframe theorems to empirical observations and visibility guarantees, refine severity terminology, specify benchmarking CPU/software environment, and correct bypass confidence level.
+    └── Changes:
+        ├── latex -> Reframe Theorem 2 to empirical context dilution, reframe Theorem 3 to Theorem 2 (Visibility Guarantee), correct bypass confidence to 99.68%, tone down security phrasing, and specify Intel CPU & ONNX Runtime environment in proof.tex
+        ├── markdown -> Update findings.md to match refined confidence, threat model risk phrasing, and precise container benchmarking hardware specs
+        └── pdf -> Compile proof.tex via latex Docker service twice to generate updated proof.pdf
+
+[2026-06-03T10:31:04+05:30] Add declarative safety metrics registry + toxicity Grafana panels
+└── File: packages/python/instrumentation-sdk/src/features/metrics/registry.py [NEW]
+    packages/python/instrumentation-sdk/src/features/metrics/ports.py
+    packages/python/instrumentation-sdk/src/features/metrics/index.py
+    packages/python/instrumentation-sdk/src/features/metrics/infra/adapters/prometheus_adapter.py
+    packages/python/instrumentation-sdk/src/features/metrics/service.py
+    packages/python/instrumentation-sdk/tests/unit/features/metrics/test_safety_registry.py [NEW]
+    packages/python/instrumentation-sdk/build/dashboards/llm-security-safety-dashboard.json
+    ├── Choice: Registry pattern — declarative metric definitions; new metrics require only registry.py change
+    └── Changes:
+        ├── registry.py -> MetricDefinition, MetricEvaluator, SAFETY_METRICS_REGISTRY; _extract_toxicity_detected (threshold 0.50), _extract_toxicity_score
+        ├── ports.py -> +record_metric(name, value, labels) to MetricsPort protocol; 8 existing methods untouched
+        ├── index.py -> +record_metric no-op to _NoOpAdapter; 8 existing no-ops untouched
+        ├── prometheus_adapter.py -> dynamic registry loop in __init__; +record_metric dispatch (hasattr add/record)
+        ├── service.py -> +SAFETY_METRICS_REGISTRY import; +registry loop after legacy calls (hasattr guard)
+        ├── test_safety_registry.py -> 18 new unit tests; 42/42 total pass (0 regressions)
+        └── llm-security-safety-dashboard.json -> version 2; +tag toxicity; panel-3 query +llm_toxicity_detected_total; panel-4 +Toxicity refId C; panel-5 Toxicity Detection Rate; panel-6 Toxicity Score P95; panel-7 Total Toxicity Detections stat
+
+[2026-06-03T10:45:24+05:30] Add decisions/ ADR category to runbook folder-structure rules
+└── File: .windsurf/rules/runbook/folder-structure.md
+    ├── Choice: ADRs are first-class architectural artifacts, distinct from research spikes; flat directory, YYYYMMDD-NNN-slug naming, status lifecycle (proposed→accepted→deprecated→superseded)
+    └── Changes:
+        └── folder-structure.md -> +Category 2 decisions/ block with Nygard/MADR format, status values, naming convention
+
+[2026-06-03T10:45:24+05:30] Create ADR-001 declarative safety metrics registry and update runbook registry
+└── File: notebooks/runbooks/decisions/20260603-001-declarative-safety-metrics-registry.md [NEW]
+    notebooks/runbooks/registry.yaml
+    ├── Choice: Document the registry pattern decision immediately after implementation; ADR captures context, rejected alternatives, connascence analysis, and future extension guide
+    └── Changes:
+        ├── ADR-001 -> context (4-file blast radius), decision (SAFETY_METRICS_REGISTRY), consequences (+/-), alternatives rejected (per-method, dynamic register(), separate exporters)
+        └── registry.yaml -> +ADR-001 entry with category:decisions, status:accepted, package + branch refs
+
+[2026-06-03T11:08:00+05:30] Add code quality rules for coupling and declarative code guide
+└── File: .windsurf/rules/codeQuality/coupling-strength-spectrum.md [NEW]
+    .windsurf/rules/codeQuality/declarativeCode/declarative_complete_guide.md [NEW]
+    ├── Choice: Establish clear guidelines for Connascence scale and declarative code design
+    └── Changes:
+        ├── coupling-strength-spectrum.md -> Coupling definitions from CoN (Name) to CoI (Identity), mapping Q1-Q6 verification checklist
+        └── declarative_complete_guide.md -> Core guidelines on writing declarative code, registry pattern, mapping DSL to evaluator loop
+
+[2026-06-03T11:09:00+05:30] Add runbook rules for ADR format and brutal failure-first system building
+└── File: .windsurf/rules/runbook/adr.md [NEW]
+    .windsurf/rules/runbook/ffsb.md [NEW]
+    ├── Choice: Establish failure-first decision framework and ADR (Nygard/MADR) format details
+    └── Changes:
+        ├── adr.md -> Failure-first mental model, Nygard vs MADR format, mapping failure modes to decision drivers in ADRs
+        └── ffsb.md -> Failure archetypes (cascade, split-brain, thundering herd, silent data corruption, config drift, dependency hell) checklist

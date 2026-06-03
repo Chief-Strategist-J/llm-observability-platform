@@ -1,5 +1,6 @@
-from typing import Dict
+from typing import Any, Dict
 from opentelemetry import metrics
+from src.features.metrics.registry import SAFETY_METRICS_REGISTRY, MetricType
 
 
 class PrometheusMetricsAdapter:
@@ -54,6 +55,18 @@ class PrometheusMetricsAdapter:
             description="Total LLM spans recorded",
         )
 
+        self._registry_metrics: Dict[str, Any] = {}
+        for evaluator in SAFETY_METRICS_REGISTRY:
+            m = evaluator.metric
+            if m.metric_type == MetricType.COUNTER:
+                self._registry_metrics[m.name] = meter.create_counter(
+                    m.name, unit=m.unit, description=m.description
+                )
+            elif m.metric_type == MetricType.HISTOGRAM:
+                self._registry_metrics[m.name] = meter.create_histogram(
+                    m.name, unit=m.unit, description=m.description
+                )
+
     def record_tokens(self, amount: int, labels: Dict[str, str]) -> None:
         self._token_counter.add(amount, labels)
 
@@ -77,3 +90,12 @@ class PrometheusMetricsAdapter:
 
     def record_span(self, labels: Dict[str, str]) -> None:
         self._span_counter.add(1, labels)
+
+    def record_metric(self, name: str, value: Any, labels: Dict[str, str]) -> None:
+        instrument = self._registry_metrics.get(name)
+        if instrument is None:
+            return
+        if hasattr(instrument, "add"):
+            instrument.add(value, labels)
+        elif hasattr(instrument, "record"):
+            instrument.record(value, labels)

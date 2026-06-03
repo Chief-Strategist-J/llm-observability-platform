@@ -1,6 +1,6 @@
 Complete Runbook Folder Structure — All Types Together
 ==
-Inside on each package 
+Inside on each package (or under the root `notebooks/` directory for interactive/cross-package research)
 
 runbooks/
 │
@@ -22,6 +22,14 @@ runbooks/
 │       ├── staging/
 │       └── dev/
 │
+├── decisions/                           ← Category 2: Architecture Decision Records (ADR)
+│   ├── {YYYYMMDD}-{NNN}-{slug}.md       ← Nygard/MADR format per decision
+│   │   ── Fields: title, date, status, context, decision, consequences, alternatives
+│   │   ── status: proposed | accepted | deprecated | superseded-by:{NNN}
+│   │   ── NNN: zero-padded sequential (001, 002 …)
+│   │   ── slug: kebab-case, ≤ 5 words, describes the decision
+│   └── (no sub-folders — ADRs are flat for easy grep and linking)
+│
 ├── scripts/                             ← Category 5: Script / Code Runbooks
 │   ├── services/
 │   ├── workers/
@@ -40,6 +48,8 @@ runbooks/
 │   │       ├── hypothesis.md
 │   │       ├── research.ipynb
 │   │       ├── findings.md
+│   │       ├── proof.tex
+│   │       ├── proof.pdf
 │   │       ├── data/
 │   │       ├── outputs/
 │   │       └── references/
