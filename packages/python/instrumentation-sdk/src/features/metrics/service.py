@@ -2,6 +2,7 @@ import os
 from typing import Any, Dict, List, Optional
 import yaml
 from .ports import MetricsPort, PriceConfigPort
+from .registry import SAFETY_METRICS_REGISTRY
 
 
 class MetricsService:
@@ -123,3 +124,10 @@ class MetricsService:
         self._adapter.record_span(
             {**base_labels, "status": status, "has_retries": has_retries}
         )
+
+        if hasattr(self._adapter, "record_metric"):
+            for evaluator in SAFETY_METRICS_REGISTRY:
+                result = evaluator.extract_fn(span_data)
+                if result is not None:
+                    value, labels = result
+                    self._adapter.record_metric(evaluator.metric.name, value, labels)

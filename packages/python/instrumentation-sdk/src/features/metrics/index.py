@@ -29,6 +29,9 @@ class _NoOpAdapter:
     def record_span(self, labels):
         pass
 
+    def record_metric(self, name, value, labels):
+        pass
+
 
 _price_watcher = PriceWatcherAdapter()
 _adapter = _NoOpAdapter()

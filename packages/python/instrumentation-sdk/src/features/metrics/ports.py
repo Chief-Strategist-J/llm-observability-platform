@@ -1,4 +1,4 @@
-from typing import Protocol, Dict, List, Any
+from typing import Any, Dict, List, Protocol
 
 
 class PriceConfigPort(Protocol):
@@ -32,4 +32,7 @@ class MetricsPort(Protocol):
         ...
 
     def record_span(self, labels: Dict[str, str]) -> None:
+        ...
+
+    def record_metric(self, name: str, value: Any, labels: Dict[str, str]) -> None:
         ...
