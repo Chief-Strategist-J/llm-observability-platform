@@ -22,6 +22,14 @@ runbooks/
 │       ├── staging/
 │       └── dev/
 │
+├── decisions/                           ← Category 2: Architecture Decision Records (ADR)
+│   ├── {YYYYMMDD}-{NNN}-{slug}.md       ← Nygard/MADR format per decision
+│   │   ── Fields: title, date, status, context, decision, consequences, alternatives
+│   │   ── status: proposed | accepted | deprecated | superseded-by:{NNN}
+│   │   ── NNN: zero-padded sequential (001, 002 …)
+│   │   ── slug: kebab-case, ≤ 5 words, describes the decision
+│   └── (no sub-folders — ADRs are flat for easy grep and linking)
+│
 ├── scripts/                             ← Category 5: Script / Code Runbooks
 │   ├── services/
 │   ├── workers/
