@@ -943,3 +943,12 @@
         ├── research -> Add hypothesis, findings, and interactive Jupyter notebook detailing logprobs conversion equivalence, latency benchmarks, and memory usage profiling
         └── registry.yaml -> Register ADR-002 and research runbook in registry index
 
+[2026-06-03T12:45:00+05:30] Generate Perplexity empirical plots and compile LaTeX proof document
+└── File: notebooks/runbooks/research/perplexity/2026-06-03-dual-path-scoring/proof.tex, notebooks/runbooks/research/perplexity/2026-06-03-dual-path-scoring/proof.pdf, notebooks/runbooks/research/perplexity/2026-06-03-dual-path-scoring/outputs/perplexity_latency_profile.png, notebooks/runbooks/research/perplexity/2026-06-03-dual-path-scoring/outputs/perplexity_memory_profile.png, notebooks/runbooks/research/perplexity/2026-06-03-dual-path-scoring/research.ipynb
+    ├── Choice: Construct and compile formal LaTeX proof document, generate latency and memory profiling graphs, and embed the generated visualizations in the interactive Jupyter notebook.
+    └── Changes:
+        ├── latex -> Write proof.tex detailing dual-path math, complexity proofs, and resource limits, and compile to proof.pdf
+        ├── outputs -> Save generated matplotlib charts for latency and memory profiles to outputs directory
+        └── jupyter -> Update research.ipynb with embedded base64 plots and executable cell blocks
+
+
