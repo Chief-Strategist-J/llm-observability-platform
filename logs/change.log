@@ -957,4 +957,9 @@
         ├── research.ipynb -> Fix nbformat schema error by adding empty metadata dictionary to display_data outputs
         └── proof.pdf -> Recompile proof.tex via latex Docker container to resolve warnings and update document
 
-
+[2026-06-03T17:10:00+05:30] Configure SameSite=None and Secure=True session cookies in Hugging Face Spaces environment
+└── File: ../odysseus/routes/auth_routes.py, ../odysseus/tests/test_auth_cookies_samesite.py
+    ├── Choice: Dynamically configure session cookies with SameSite=None and Secure=True when running in Hugging Face Spaces (detected by SPACE_ID or ALLOW_FRAMING) to support iframe embedding.
+    └── Changes:
+        ├── auth_routes.py -> Use dynamic samesite/secure flags for session cookie creation and deletion
+        └── test_auth_cookies_samesite.py -> Add unit tests to verify session cookie attributes in different environment configurations
