@@ -854,3 +854,21 @@
         ├── latex -> Reframe Theorem 2 to empirical context dilution, reframe Theorem 3 to Theorem 2 (Visibility Guarantee), correct bypass confidence to 99.68%, tone down security phrasing, and specify Intel CPU & ONNX Runtime environment in proof.tex
         ├── markdown -> Update findings.md to match refined confidence, threat model risk phrasing, and precise container benchmarking hardware specs
         └── pdf -> Compile proof.tex via latex Docker service twice to generate updated proof.pdf
+
+[2026-06-03T10:31:04+05:30] Add declarative safety metrics registry + toxicity Grafana panels
+└── File: packages/python/instrumentation-sdk/src/features/metrics/registry.py [NEW]
+    packages/python/instrumentation-sdk/src/features/metrics/ports.py
+    packages/python/instrumentation-sdk/src/features/metrics/index.py
+    packages/python/instrumentation-sdk/src/features/metrics/infra/adapters/prometheus_adapter.py
+    packages/python/instrumentation-sdk/src/features/metrics/service.py
+    packages/python/instrumentation-sdk/tests/unit/features/metrics/test_safety_registry.py [NEW]
+    packages/python/instrumentation-sdk/build/dashboards/llm-security-safety-dashboard.json
+    ├── Choice: Registry pattern — declarative metric definitions; new metrics require only registry.py change
+    └── Changes:
+        ├── registry.py -> MetricDefinition, MetricEvaluator, SAFETY_METRICS_REGISTRY; _extract_toxicity_detected (threshold 0.50), _extract_toxicity_score
+        ├── ports.py -> +record_metric(name, value, labels) to MetricsPort protocol; 8 existing methods untouched
+        ├── index.py -> +record_metric no-op to _NoOpAdapter; 8 existing no-ops untouched
+        ├── prometheus_adapter.py -> dynamic registry loop in __init__; +record_metric dispatch (hasattr add/record)
+        ├── service.py -> +SAFETY_METRICS_REGISTRY import; +registry loop after legacy calls (hasattr guard)
+        ├── test_safety_registry.py -> 18 new unit tests; 42/42 total pass (0 regressions)
+        └── llm-security-safety-dashboard.json -> version 2; +tag toxicity; panel-3 query +llm_toxicity_detected_total; panel-4 +Toxicity refId C; panel-5 Toxicity Detection Rate; panel-6 Toxicity Score P95; panel-7 Total Toxicity Detections stat
