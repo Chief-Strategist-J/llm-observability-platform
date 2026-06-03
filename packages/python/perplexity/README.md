@@ -32,6 +32,34 @@ Scores the cross-entropy perplexity of an LLM response.
 
 Returns `null` (skipped) when skip conditions are met. The composite weight drops to `0.00` automatically.
 
+### Inference Decision Flow
+
+```text
+                          [ POST /perplexity ]
+                                    │
+                                    ▼
+                         { Has "logprobs" field? }
+                                 /     \
+                               Yes      No
+                               /         \
+                              ▼           ▼
+                   [ provider_logprobs ]  [ gpt2_onnx ]
+                            │                   │
+                  (Extract logprobs from  (Tokenize input text
+                   nested/candidate lists) and run local ONNX model)
+                            │                   │
+                            ▼                   ▼
+                   [ Compute Perplexity ]  [ Run Inference & Loss ]
+                            │                   │
+                            └─────────┬─────────┘
+                                      │
+                                      ▼
+                           [ Response Payload ]
+                          - perplexity: float
+                          - method: string ("provider_logprobs" | "gpt2_onnx")
+                          - token_count: int
+```
+
 ---
 
 ## Run Locally (Python)

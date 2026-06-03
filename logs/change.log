@@ -926,3 +926,11 @@
         ├── tests -> Add unit tests for /perplexity endpoint in test_api.py and extend FakeGpt2Scorer
         └── documentation -> Update perplexity package README.md with /perplexity details
 
+[2026-06-03T12:00:00+05:30] Bump perplexity scorer version, add ASCII decision flow to README, and deploy Docker image
+└── File: packages/python/perplexity/pyproject.toml, packages/python/perplexity/README.md, packages/python/perplexity/scripts/deploy_docker.sh, logs/change.log
+    ├── Choice: Bump version to 0.2.0, add visual ASCII flow tree in README, fix python3 compatibility in deploy script, build and push image
+    └── Changes:
+        ├── pyproject.toml -> Bump project version to 0.2.0
+        ├── README.md -> Add ASCII tree mapping out the dual-path perplexity decision flow
+        ├── deploy_docker.sh -> Set script execution permission and use python3 instead of python to parse pyproject.toml version
+        └── docker -> Build, test, and push chiefj/perplexity tags (:latest, :v0.2.0, :stable) to Docker Hub

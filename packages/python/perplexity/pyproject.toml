@@ -1,6 +1,6 @@
 [project]
 name = "perplexity"
-version = "0.1.0"
+version = "0.2.0"
 description = "Layer 3 perplexity scorer — provider logprobs (primary) + GPT-2 ONNX fallback on CPU"
 readme = "README.md"
 requires-python = ">=3.11"
