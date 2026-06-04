@@ -6,3 +6,5 @@ workers:
       - llm.spans.raw
     owner: "@data-team"
     stage: 1
+    features:
+      - cost_aggregation
