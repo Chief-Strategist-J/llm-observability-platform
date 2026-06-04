@@ -1,0 +1,39 @@
+[project]
+name = "quality-baseline-worker"
+version = "0.1.0"
+description = "Temporal scheduled workflow worker for quality score baselines and trend rollups"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "temporalio>=1.5.0",
+    "clickhouse-connect>=0.7.0",
+    "redis>=5.0.0",
+    "psycopg[binary]>=3.1.0",
+    "opentelemetry-sdk>=1.26.0",
+    "pydantic>=2.0.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.22.0",
+    "prometheus-client>=0.17.0",
+    "pyyaml>=6.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.23.0",
+    "mypy>=1.8.0",
+    "ruff>=0.2.0",
+    "httpx>=0.24.0"
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

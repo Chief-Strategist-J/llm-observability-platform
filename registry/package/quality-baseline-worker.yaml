@@ -1,0 +1,18 @@
+packages:
+  - name: quality-baseline-worker
+    language: python
+    version: 0.1.0
+    description: "Temporal scheduled workflow worker for quality score baselines and trend rollups"
+    owner: "@quality-team"
+    stage: 1
+    dependencies:
+      - temporalio
+      - clickhouse-connect
+      - redis
+      - psycopg
+      - opentelemetry-sdk
+      - pydantic
+      - fastapi
+      - uvicorn
+      - prometheus-client
+      - pyyaml

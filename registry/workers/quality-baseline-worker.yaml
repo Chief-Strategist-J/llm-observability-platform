@@ -1,0 +1,14 @@
+workers:
+  - name: quality-baseline-worker
+    type: temporal
+    language: python
+    task_queue: quality-baseline-tasks
+    owner: "@quality-team"
+    stage: 1
+    workflows:
+      - RecomputeQualityBaseline
+      - RollupQualityTrend
+    activities:
+      - recompute_baseline_scores
+      - write_redis_baselines
+      - rollup_quality_trend

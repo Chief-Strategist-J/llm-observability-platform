@@ -1,0 +1,24 @@
+features:
+  - name: quality_baseline_recompute
+    status: active
+    contract: contracts/workflows/recompute_quality_baseline.yaml
+    contract_version: v1
+    owner: "@quality-team"
+    added: 2026-06-04
+    flags: []
+    migrations:
+      - 0001_init
+    depends_on_features: []
+    depends_on_packages: []
+
+  - name: quality_trend_rollup
+    status: active
+    contract: contracts/workflows/rollup_quality_trend.yaml
+    contract_version: v1
+    owner: "@quality-team"
+    added: 2026-06-04
+    flags: []
+    migrations:
+      - 0001_init
+    depends_on_features: []
+    depends_on_packages: []
