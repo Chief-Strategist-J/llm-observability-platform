@@ -1,0 +1,15 @@
+workflow: recompute_quality_baseline
+version: 1
+schedule:
+  cron: "0 * * * *"
+activities:
+  recompute_baseline_scores:
+    timeout_seconds: 60
+    retry:
+      max_attempts: 3
+      backoff_ms: 1000
+  write_redis_baselines:
+    timeout_seconds: 30
+    retry:
+      max_attempts: 5
+      backoff_ms: 500

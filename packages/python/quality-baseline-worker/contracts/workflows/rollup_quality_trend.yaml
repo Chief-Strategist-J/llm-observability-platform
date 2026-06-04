@@ -1,0 +1,10 @@
+workflow: rollup_quality_trend
+version: 1
+schedule:
+  cron: "0 0 * * *"
+activities:
+  rollup_quality_trend:
+    timeout_seconds: 120
+    retry:
+      max_attempts: 3
+      backoff_ms: 1000

@@ -1,0 +1,27 @@
+openapi: 3.0.3
+info:
+  title: Quality Baseline Worker API
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: Health and configuration details
+  /trigger/recompute:
+    post:
+      summary: Trigger the quality baseline recomputation workflow on-demand
+      responses:
+        '200':
+          description: Recompute workflow triggered successfully
+        '500':
+          description: Internal server error triggering workflow
+  /trigger/rollup:
+    post:
+      summary: Trigger the daily trend rollup workflow on-demand
+      responses:
+        '200':
+          description: Rollup workflow triggered successfully
+        '500':
+          description: Internal server error triggering workflow

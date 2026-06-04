@@ -1,0 +1,4 @@
+name: quality-baseline-worker
+runtime: python
+platform: temporal
+entrypoint: src/worker/index.py
