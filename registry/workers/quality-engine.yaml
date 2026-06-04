@@ -1,0 +1,22 @@
+name: quality-engine
+type: event
+language: python
+version: "0.2.0"
+topics:
+  consumes:
+    - llm.spans.sampled
+  produces:
+    - llm.quality.scores
+    - llm.toxicity.flagged
+    - alerts.quality.degradation
+consumer_group: quality-engine-group
+task_queue: quality-engine-tasks
+owner: "@llm-observability-platform-team"
+stage: 2
+package_path: packages/python/quality-engine
+features:
+  - span_ingestion_preflight
+  - prompt_type_detection
+  - composite_score_computation
+  - quality_baseline_update
+  - degradation_alerting

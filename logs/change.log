@@ -973,3 +973,15 @@
         ├── metrics-tracing -> Add PrometheusAdapter and trace_span context managers for OTel telemetry
         └── tests -> Write pytest unit tests using Temporal testing WorkflowEnvironment.start_time_skipping
 
+[2026-06-04T17:33:00+05:30] Implement quality-engine Kafka consumer with F-Q-01 to F-Q-08 features
+└── File: packages/python/quality-engine/contracts/events/llm_spans_sampled.yaml, packages/python/quality-engine/database/migrations/0001_init.sql, packages/python/quality-engine/database/schema.lock, packages/python/quality-engine/src/shared/ports/kafka_producer_port.py, packages/python/quality-engine/src/shared/ports/quality_score_repo_port.py, packages/python/quality-engine/src/shared/ports/baseline_cache_port.py, packages/python/quality-engine/src/shared/ports/temporal_trigger_port.py, packages/python/quality-engine/src/shared/ports/embedding_client_port.py, packages/python/quality-engine/src/handlers/span_quality/types.py, packages/python/quality-engine/src/handlers/span_quality/prompt_type_detector.py, packages/python/quality-engine/src/handlers/span_quality/language_detector.py, packages/python/quality-engine/src/handlers/span_quality/composite_scorer.py, packages/python/quality-engine/src/handlers/span_quality/baseline_logic.py, packages/python/quality-engine/src/handlers/span_quality/handler.py, packages/python/quality-engine/src/infra/adapters/postgres/postgres_adapter.py, packages/python/quality-engine/src/infra/adapters/redis/redis_adapter.py, packages/python/quality-engine/src/infra/adapters/embedding/http_embedding_adapter.py, packages/python/quality-engine/src/infra/adapters/kafka/confluent_producer_adapter.py, packages/python/quality-engine/src/infra/adapters/temporal/temporal_client_adapter.py, packages/python/quality-engine/src/worker/config.py, packages/python/quality-engine/src/worker/index.py, packages/python/quality-engine/feature-registry.yaml, packages/python/quality-engine/worker-registry.yaml, registry/workers/quality-engine.yaml, .github/workflows/quality-engine-test.yml
+    ├── Choice: Event-worker architecture per event-worker-rules.md. Hexagonal Ports & Adapters. Idempotent handler via ON CONFLICT DO NOTHING.
+    └── Changes:
+        ├── contracts-first -> AsyncAPI v2.6 schema for all 4 topics: consumed + produced
+        ├── migrations -> 0001_init.sql creates quality_scores table with idempotent insert
+        ├── ports -> 5 Protocol interfaces: KafkaProducer, QualityScoreRepo, BaselineCache, TemporalTrigger, EmbeddingClient
+        ├── handler -> SpanQualityHandler: F-Q-01 (preflight/skip), F-Q-02 (prompt type), F-Q-03 (language), F-Q-04 (embedding reuse), F-Q-05 (toxicity always), F-Q-06 (composite+invariants), F-Q-07 (EWMA baseline), F-Q-08 (degradation alert)
+        ├── adapters -> Postgres, Redis (JSON envelope+TTL), HttpEmbedding (500ms timeout), ConfluentKafka, Temporal
+        ├── worker -> Kafka consumer: W3C traceparent, 3-retry+DLQ, manual offset commit
+        └── tests -> prompt_type_detector, composite_scorer, baseline_logic, handler, config unit tests
+
