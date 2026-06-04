@@ -1,7 +1,8 @@
 from __future__ import annotations
 from contextlib import contextmanager
-from typing import Generator, Iterator
+from typing import Iterator
 from opentelemetry import trace
+from opentelemetry.trace import SpanContext, TraceFlags
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.sdk.resources import Resource
@@ -22,8 +23,6 @@ def configure_tracer(service_name: str = "quality-engine") -> None:
 
     trace.set_tracer_provider(provider)
 
-
-from opentelemetry.trace import SpanContext, TraceFlags
 
 @contextmanager
 def trace_span(

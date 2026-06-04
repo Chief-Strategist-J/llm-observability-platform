@@ -1,10 +1,18 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Literal
 
 # Re-export from shared so handler-internal code can use one import location
 from shared.types.quality_score_row import QualityScoreRow, PromptType, FinishReason
+
+__all__ = [
+    "QualityScoreRow",
+    "PromptType",
+    "FinishReason",
+    "SampledSpan",
+    "ScoreMap",
+]
+
 
 
 @dataclass(frozen=True)

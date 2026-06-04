@@ -1,6 +1,5 @@
 from __future__ import annotations
 import asyncio
-import json
 import logging
 import os
 import signal
@@ -8,7 +7,6 @@ import signal
 from confluent_kafka import Consumer, KafkaError  # type: ignore[import-untyped]
 from opentelemetry import trace
 from opentelemetry.propagate import extract as otel_extract
-from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from temporalio.client import Client
 
 from worker.config import load_config

@@ -9,7 +9,6 @@ from handlers.span_quality.types import (
     SampledSpan,
     QualityScoreRow,
     ScoreMap,
-    FinishReason,
 )
 from handlers.span_quality.prompt_type_detector import detect_prompt_type
 from handlers.span_quality.language_detector import detect_language

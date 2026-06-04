@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 try:
-    from langdetect import detect as _detect, LangDetectException  # type: ignore[import-untyped]
+    from langdetect import detect as _detect  # type: ignore[import-untyped]
     _LANGDETECT_AVAILABLE = True
 except ImportError:
     _LANGDETECT_AVAILABLE = False

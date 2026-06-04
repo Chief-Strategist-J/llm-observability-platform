@@ -1,5 +1,4 @@
 from __future__ import annotations
-import pytest
 from handlers.span_quality.types import SampledSpan
 from handlers.span_quality.prompt_type_detector import detect_prompt_type
 

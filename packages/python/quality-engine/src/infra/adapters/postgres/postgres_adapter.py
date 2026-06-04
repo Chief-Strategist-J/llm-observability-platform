@@ -1,6 +1,5 @@
 from __future__ import annotations
 import psycopg
-from datetime import datetime, timezone, timedelta
 
 from shared.types.quality_score_row import QualityScoreRow
 from shared.ports.quality_score_repo_port import QualityScoreRepositoryPort

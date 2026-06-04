@@ -1,7 +1,6 @@
 from __future__ import annotations
 from temporalio.client import Client
 from shared.ports.temporal_trigger_port import TemporalTriggerPort
-import time
 
 
 class TemporalClientAdapter(TemporalTriggerPort):
@@ -18,7 +17,7 @@ class TemporalClientAdapter(TemporalTriggerPort):
         self, span_id: str, payload: dict
     ) -> str:
         workflow_id = f"quality-score-{span_id}"
-        handle = await self._client.start_workflow(
+        await self._client.start_workflow(
             "quality_score_workflow",
             payload,
             id=workflow_id,

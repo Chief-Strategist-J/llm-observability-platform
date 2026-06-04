@@ -1,6 +1,4 @@
 from __future__ import annotations
-import json
-import asyncio
 import httpx
 
 from shared.ports.embedding_client_port import EmbeddingClientPort

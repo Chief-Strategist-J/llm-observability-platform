@@ -1,5 +1,4 @@
 from __future__ import annotations
-import pytest
 from handlers.span_quality.baseline_logic import update_baseline_ewma, should_alert_degradation
 
 

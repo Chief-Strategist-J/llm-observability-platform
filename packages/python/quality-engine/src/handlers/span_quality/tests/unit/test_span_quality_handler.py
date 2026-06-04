@@ -11,9 +11,9 @@ from __future__ import annotations
 import json
 import pytest
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock
 
-from handlers.span_quality.handler import SpanQualityHandler, _check_skip, _parse_span
+from handlers.span_quality.handler import SpanQualityHandler, _check_skip
 from handlers.span_quality.types import SampledSpan, ScoreMap
 
 

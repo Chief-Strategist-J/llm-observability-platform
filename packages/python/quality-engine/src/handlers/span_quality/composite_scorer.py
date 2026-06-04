@@ -1,6 +1,6 @@
 from __future__ import annotations
 import logging
-from handlers.span_quality.types import ScoreMap, INVARIANT_IDS
+from handlers.span_quality.types import ScoreMap
 
 logger = logging.getLogger(__name__)
 

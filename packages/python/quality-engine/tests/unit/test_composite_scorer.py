@@ -1,5 +1,4 @@
 from __future__ import annotations
-import pytest
 from handlers.span_quality.composite_scorer import compute_composite
 from handlers.span_quality.types import ScoreMap
 

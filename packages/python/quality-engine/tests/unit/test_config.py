@@ -1,5 +1,4 @@
 from __future__ import annotations
-import pytest
 from worker.config import load_config
 
 
