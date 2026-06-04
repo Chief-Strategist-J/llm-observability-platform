@@ -1,0 +1,24 @@
+schema_version: "1"
+tables:
+  - name: quality_scores
+    migration: 0001_init.sql
+    columns:
+      - { name: id,                 type: BIGSERIAL,    nullable: false, pk: true }
+      - { name: span_id,            type: TEXT,         nullable: false, unique: true }
+      - { name: trace_id,           type: TEXT,         nullable: false }
+      - { name: model,              type: TEXT,         nullable: false }
+      - { name: endpoint,           type: TEXT,         nullable: false }
+      - { name: prompt_type,        type: TEXT,         nullable: false, default: "'chat'" }
+      - { name: response_language,  type: TEXT,         nullable: false, default: "'en'" }
+      - { name: composite_score,    type: FLOAT,        nullable: true }
+      - { name: coherence_score,    type: FLOAT,        nullable: true }
+      - { name: toxicity_score,     type: FLOAT,        nullable: true }
+      - { name: faithfulness_score, type: FLOAT,        nullable: true }
+      - { name: perplexity_score,   type: FLOAT,        nullable: true }
+      - { name: quality_flags,      type: "TEXT[]",     nullable: false, default: "'{}'" }
+      - { name: skipped_reason,     type: TEXT,         nullable: true }
+      - { name: scored_at,          type: TIMESTAMPTZ,  nullable: false, default: "NOW()" }
+    indexes:
+      - { name: idx_quality_scores_model_endpoint, columns: [model, endpoint, scored_at] }
+      - { name: idx_quality_scores_scored_at,      columns: [scored_at] }
+      - { name: idx_quality_scores_span_id,        columns: [span_id] }

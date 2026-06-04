@@ -1,0 +1,99 @@
+asyncapi: "2.6.0"
+info:
+  title: llm.spans.sampled Consumer Contract
+  version: "1.0.0"
+  description: >
+    Quality-engine consumes sampled LLM spans from the llm.spans.sampled Kafka topic.
+    Each span payload drives pre-flight checks, prompt-type detection, language detection,
+    scoring (coherence, toxicity, perplexity, faithfulness), composite computation,
+    baseline update, and degradation alerting.
+
+channels:
+  llm.spans.sampled:
+    subscribe:
+      summary: Consume sampled LLM span for quality scoring
+      message:
+        $ref: "#/components/messages/SampledSpan"
+
+  llm.quality.scores:
+    publish:
+      summary: Produce quality score row after scoring workflow completes
+      message:
+        $ref: "#/components/messages/QualityScoreEvent"
+
+  llm.toxicity.flagged:
+    publish:
+      summary: Produce toxicity flag event when toxicity threshold exceeded
+      message:
+        $ref: "#/components/messages/ToxicityFlaggedEvent"
+
+  alerts.quality.degradation:
+    publish:
+      summary: Produce degradation alert when 1-hour window avg drops below 90% of baseline
+      message:
+        $ref: "#/components/messages/DegradationAlertEvent"
+
+components:
+  messages:
+    SampledSpan:
+      name: SampledSpan
+      payload:
+        type: object
+        required: [span_id, trace_id, model, endpoint, prompt_text, response_text, completion_tokens, finish_reason]
+        properties:
+          span_id:          { type: string }
+          trace_id:         { type: string }
+          model:            { type: string }
+          endpoint:         { type: string }
+          prompt_text:      { type: string }
+          response_text:    { type: string }
+          prompt_tokens:    { type: integer }
+          completion_tokens:{ type: integer }
+          finish_reason:    { type: string, enum: [stop, length, content_filter, tool_calls] }
+          rag_context:      { type: string, nullable: true }
+          prompt_embedding: { type: array, items: { type: number }, nullable: true }
+          response_embedding:{ type: array, items: { type: number }, nullable: true }
+          provider_logprobs: { type: array, items: { type: number }, nullable: true }
+          scored_at:        { type: string, format: date-time }
+
+    QualityScoreEvent:
+      name: QualityScoreEvent
+      payload:
+        type: object
+        properties:
+          span_id:            { type: string }
+          model:              { type: string }
+          endpoint:           { type: string }
+          prompt_type:        { type: string, enum: [chat, code, rag, classification] }
+          response_language:  { type: string }
+          composite_score:    { type: number, nullable: true }
+          coherence_score:    { type: number, nullable: true }
+          toxicity_score:     { type: number, nullable: true }
+          faithfulness_score: { type: number, nullable: true }
+          perplexity_score:   { type: number, nullable: true }
+          quality_flags:      { type: array, items: { type: string } }
+          skipped_reason:     { type: string, nullable: true }
+          scored_at:          { type: string, format: date-time }
+
+    ToxicityFlaggedEvent:
+      name: ToxicityFlaggedEvent
+      payload:
+        type: object
+        properties:
+          span_id:       { type: string }
+          model:         { type: string }
+          endpoint:      { type: string }
+          toxicity_score:{ type: number }
+          flagged_at:    { type: string, format: date-time }
+
+    DegradationAlertEvent:
+      name: DegradationAlertEvent
+      payload:
+        type: object
+        properties:
+          model:              { type: string }
+          endpoint:           { type: string }
+          current_window_avg: { type: number }
+          baseline:           { type: number }
+          ratio:              { type: number }
+          alerted_at:         { type: string, format: date-time }

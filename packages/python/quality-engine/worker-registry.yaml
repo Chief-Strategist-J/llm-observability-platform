@@ -1,0 +1,15 @@
+workers:
+  - name: quality-engine
+    type: event
+    language: python
+    topics:
+      - llm.spans.sampled
+    consumer_group: quality-engine-group
+    owner: "@llm-observability-platform-team"
+    stage: 2
+    handlers:
+      - SpanQualityHandler
+    produces:
+      - llm.quality.scores
+      - llm.toxicity.flagged
+      - alerts.quality.degradation

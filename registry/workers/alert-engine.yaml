@@ -7,3 +7,6 @@ workers:
       - alerts.cost.anomaly
     owner: "@infra-alerts-team"
     stage: 1
+    features:
+      - alert_routing
+      - cost_anomaly_routing

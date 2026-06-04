@@ -1,4 +1,6 @@
 name: quality-engine
-runtime: python
-platform: fastapi
-entrypoint: src/api/rest/v1/app.py
+language: python
+type: event
+version: "0.2.0"
+owner: "@llm-observability-platform-team"
+stage: 2

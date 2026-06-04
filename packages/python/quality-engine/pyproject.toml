@@ -1,16 +1,22 @@
 [project]
 name = "quality-engine"
-version = "0.1.0"
-description = "LLM Observability Quality Engine"
+version = "0.2.0"
+description = "LLM Observability Quality Engine — Kafka consumer and Temporal trigger"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
     "pydantic>=2.0.0",
     "fastapi>=0.100.0",
     "uvicorn>=0.22.0",
     "opentelemetry-sdk>=1.26.0",
     "opentelemetry-api>=1.26.0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.26.0",
     "httpx>=0.24.0",
+    "confluent-kafka>=2.3.0",
+    "psycopg[binary]>=3.1.0",
+    "redis>=5.0.0",
+    "temporalio>=1.5.0",
+    "langdetect>=1.0.9",
 ]
 
 [project.optional-dependencies]
@@ -18,14 +24,19 @@ dev = [
     "pytest>=8.0",
     "pytest-cov>=4.1.0",
     "pytest-asyncio>=0.23.0",
-    "httpx>=0.24.0",
     "mypy>=1.8.0",
     "ruff>=0.2.0",
+    "httpx>=0.24.0",
+    "pyyaml>=6.0",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "contract: OpenAPI/Event contract tests",
+]
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]

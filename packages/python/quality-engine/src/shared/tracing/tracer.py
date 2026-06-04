@@ -1,56 +1,37 @@
 from __future__ import annotations
-
-import os
-import socket
 from contextlib import contextmanager
-from typing import Generator
-
+from typing import Iterator
 from opentelemetry import trace
-from opentelemetry.trace import SpanContext, TraceFlags, Span
-from opentelemetry.sdk.resources import Resource
+from opentelemetry.trace import SpanContext, TraceFlags
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor, ConsoleSpanExporter
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.resources import Resource
 
-_PROVIDER_INITIALIZED = False
 
-def init_tracer() -> None:
-    global _PROVIDER_INITIALIZED
-    if _PROVIDER_INITIALIZED:
-        return
-    res = Resource.create({
-        "service.name": "quality-engine",
-        "service.version": "0.1.0",
-        "deployment.env": os.getenv("DEPLOYMENT_ENV", "dev"),
-        "host.name": socket.gethostname(),
-    })
-    prov = TracerProvider(resource=res)
-    if os.getenv("SKIP_CONSOLE_EXPORTER") != "true":
-        prov.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
-    if os.getenv("SKIP_OTLP_EXPORTER") != "true":
-        try:
-            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-            endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
-            prov.add_span_processor(SimpleSpanProcessor(OTLPSpanExporter(endpoint=endpoint, insecure=True)))
-        except ImportError:
-            try:
-                from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-                endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318/v1/traces")
-                prov.add_span_processor(SimpleSpanProcessor(OTLPSpanExporter(endpoint=endpoint)))
-            except ImportError:
-                pass
-    trace.set_tracer_provider(prov)
-    _PROVIDER_INITIALIZED = True
+def configure_tracer(service_name: str = "quality-engine") -> None:
+    """Initialize OTEL TracerProvider with OTLP export if configured."""
+    import os
+
+    resource = Resource.create({"service.name": service_name})
+    provider = TracerProvider(resource=resource)
+
+    otlp_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
+    if otlp_endpoint:
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter  # type: ignore[import-untyped]
+        exporter = OTLPSpanExporter(endpoint=otlp_endpoint)
+        provider.add_span_processor(BatchSpanProcessor(exporter))
+
+    trace.set_tracer_provider(provider)
+
 
 @contextmanager
 def trace_span(
     name: str,
     trace_id: str | None = None,
     span_id: str | None = None,
-    attributes: dict[str, str | int | float | bool | None] | None = None,
-) -> Generator[Span, None, None]:
-    init_tracer()
-    t = trace.get_tracer("quality-engine")
-
+    attributes: dict | None = None,
+) -> Iterator[trace.Span]:
+    tracer = trace.get_tracer("quality-engine")
     parent_ctx = None
     if trace_id and span_id:
         try:
@@ -66,16 +47,10 @@ def trace_span(
         except ValueError:
             pass
 
-    with t.start_as_current_span(name, context=parent_ctx) as span:
-        span.set_attribute("feature.name", "score_composite")
-        span.set_attribute("api.version", "v1")
+    with tracer.start_as_current_span(name, context=parent_ctx) as span:
         if attributes:
             for k, v in attributes.items():
                 if v is not None:
                     span.set_attribute(k, v)
-        try:
-            yield span
-        except Exception as err:
-            span.record_exception(err)
-            span.set_status(trace.Status(trace.StatusCode.ERROR, str(err)))
-            raise
+        yield span
+
