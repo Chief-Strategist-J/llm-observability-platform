@@ -1,0 +1,11 @@
+features:
+  - name: prompt_type_detection
+    status: active
+    contract: packages/python/quality-engine/contracts/events/llm_spans_sampled.yaml
+    contract_version: "1.0.0"
+    owner: "@llm-observability-platform-team"
+    added: "2026-06-04"
+    flags: []
+    migrations: []
+    depends_on_features:
+      - span_ingestion_preflight
