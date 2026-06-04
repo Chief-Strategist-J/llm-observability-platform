@@ -28,3 +28,19 @@ runbooks:
     package: packages/python/perplexity
     description: Records the architecture decision for the HTTP perplexity service, formalizing the zero-cost provider path and failure-first constraints of the GPT-2 ONNX fallback path.
 
+  - id: 20260604-003-quality-baseline-worker
+    title: "ADR-003: Quality Baseline and Trend Rollup Worker"
+    category: decisions
+    status: accepted
+    path: decisions/20260604-003-quality-baseline-worker.md
+    package: packages/python/quality-baseline-worker
+    description: Records the architecture decision for the quality-baseline-worker, outlining the Temporal scheduled workflows and failure-first adapters for Postgres, ClickHouse, and Redis.
+
+  - id: 2026-06-04-worker-evaluation
+    title: Quality Baseline Worker Implementation and Rollup Verification
+    category: research
+    path: research/quality-baseline/2026-06-04-worker-evaluation
+    description: Verification of rolling average calculations, Temporal activity executions, database adapters (Postgres, ClickHouse, Redis), and alerting thresholds for quality scores.
+
+
+
