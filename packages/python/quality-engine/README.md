@@ -4,9 +4,52 @@ LLM Observability Quality Engine package.
 
 ## Introduction
 
-This service aggregates model evaluation metrics (coherence, faithfulness, toxicity, and perplexity) into a single composite quality score. It implements dynamic weight renormalization to handle missing inputs and triggers console alerts if all sub-metrics are null.
+The **Quality Engine** is a core layer-3 service in the LLM Observability Platform. It consumes LLM spans, orchestrates asynchronous quality evaluation, calculates composite quality scores, tracks baseline drifts, and handles real-time quality degradation alerting.
 
-If sub-metrics are not provided directly in the request payload, the quality engine can dynamically fetch them by querying the downstream sub-scorer microservices if they are configured in the environment.
+### Core Features & What It Does
+
+1. **Span Ingestion & Pre-flight Checks (F-Q-01)**:
+   - Consumes sampled LLM spans from the `llm.spans.sampled` Kafka topic.
+   - Evaluates pre-flight skip conditions before kicking off expensive workflows:
+     - Skips if `finish_reason` is `content_filter`.
+     - Skips if `completion_tokens` is less than 10.
+     - Skips if PII is detected.
+   - Writes a minimal `skipped` record directly to the database for skipped spans.
+
+2. **Heuristic Prompt Type Detection (F-Q-02)**:
+   - Classifies prompt categories using lightweight rules:
+     - `code`: If the prompt contains Markdown code blocks (\`\`\`).
+     - `rag`: If the span includes a non-null `rag_context` field.
+     - `classification`: If the model response is a single word (e.g. classification output).
+     - `chat`: Default fallback category.
+
+3. **Response Language Detection (F-Q-03)**:
+   - Identifies the language code of the response (e.g. `en`, `es`, `fr`).
+   - Flags and logs non-English responses for separate baseline grouping.
+
+4. **Embedding Re-use and Generation (F-Q-04)**:
+   - Reuses existing embeddings on the incoming span when present.
+   - Automatically calls downstream embedding worker services to generate missing embeddings (500ms timeout guard).
+
+5. **Temporal Workflow Orchestration**:
+   - Triggers the Temporal workflow `quality_score_workflow` with deterministic workflow IDs to ensure idempotency.
+   - The Temporal workflow coordinates evaluations of coherence, toxicity, faithfulness, and perplexity across downstream microservices.
+
+6. **Composite Quality Score Aggregation (F-Q-06)**:
+   - Aggregates sub-scorer metrics.
+   - Emits a safety alert to Kafka's `llm.toxicity.flagged` topic if toxicity exceeds `0.75` (F-Q-05).
+   - Computes a composite quality score with **dynamic weight renormalization** if any sub-metrics are null (base weights: Coherence=30%, Faithfulness=40%, Toxicity=20%, Perplexity=10%).
+   - Asserts mathematical and business invariants (e.g. scores clamped between `[0.0, 1.0]`, alerts if all sub-metrics are null).
+
+7. **Rolling Historical Baselines (F-Q-07)**:
+   - Tracks a rolling EWMA (Exponentially Weighted Moving Average) quality baseline per model, endpoint, and prompt-type in Redis.
+   - Baseline average window caps at 7 days (10,080 minutes) with an 8-day baseline cache TTL.
+
+8. **Real-time Quality Degradation Alerting (F-Q-08)**:
+   - Compares the 1-hour window average score against the historical base quality average.
+   - Publishes degradation notifications to the `alerts.quality.degradation` Kafka topic if the average drops below 90% of the baseline (evaluated once 20 samples are collected).
+   - Enforces a strict 1-hour rate limit limit per model/endpoint on alerts.
+
 
 ## Business Decision Tree
 
