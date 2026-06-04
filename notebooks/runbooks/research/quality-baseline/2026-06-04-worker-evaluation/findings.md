@@ -1,6 +1,6 @@
 # Findings: Quality Baseline Worker Implementation \& Rollup Evaluation
 
-This document details the performance characterization and database lock contention analysis of the quality baseline and trend rollup worker. For the rigorous mathematical formulations, variance bounds, and alerting sensitivity proofs, please refer to the compiled [proof.pdf](file:///home/btpl-lap-22/live/obs/notebooks/runbooks/research/quality-baseline/2026-06-04-worker-evaluation/proof.pdf).
+This document details the performance characterization, database lock contention analysis, and standard compliance verification of the quality baseline and trend rollup worker. For the rigorous mathematical formulations, variance bounds, and alerting sensitivity proofs, please refer to the compiled [proof.pdf](file:///home/btpl-lap-22/live/obs/notebooks/runbooks/research/quality-baseline/2026-06-04-worker-evaluation/proof.pdf).
 
 ## Key Outcomes
 
@@ -11,19 +11,49 @@ This document details the performance characterization and database lock content
 
 ---
 
-## 1. Estimator Stability \& Variance Analysis
+## 1. Standard vs. Actual Architectural Audit
+
+Below is a detailed verification mapping the platform's engineering standards against the concrete files and settings in the implementation:
+
+### 1.1 Worker Registration \& Port Mapping
+*   **Standard**: Every worker must register metadata globally in `registry/workers/`, locally in `worker-registry.yaml`, and reserve a port in `.port-registry` inside the package directory.
+*   **Actual**: 
+    *   Metadata registered in [quality-baseline-worker.yaml (Global)](file:///home/btpl-lap-22/live/obs/registry/workers/quality-baseline-worker.yaml) and [worker-registry.yaml (Local)](file:///home/btpl-lap-22/live/obs/packages/python/quality-baseline-worker/worker-registry.yaml).
+    *   Port `8000` registered in [.port-registry](file:///home/btpl-lap-22/live/obs/packages/python/quality-baseline-worker/.port-registry).
+
+### 1.2 Temporal Scheduled Workflows
+*   **Standard**: Automated workflows must follow naming conventions, use task queues, and define explicit retry policies.
+*   **Actual**: 
+    *   `RecomputeQualityBaseline` (hourly cron) and `RollupQualityTrend` (daily cron) workflows registered on task queue `quality-baseline-tasks`.
+    *   Retry policies configured with `initial_interval=1s`, `backoff_coefficient=2.0`, and `maximum_attempts=3` on all database/API activities.
+
+### 1.3 Hexagonal Database Adapters
+*   **Standard**: Package logic must remain decoupled from specific database vendors by routing all infrastructure operations through interfaces (ports) and concrete adapters.
+*   **Actual**:
+    *   Created ports [postgres_port.py](file:///home/btpl-lap-22/live/obs/packages/python/quality-baseline-worker/src/shared/ports/postgres_port.py), [clickhouse_port.py](file:///home/btpl-lap-22/live/obs/packages/python/quality-baseline-worker/src/shared/ports/clickhouse_port.py), and [redis_port.py](file:///home/btpl-lap-22/live/obs/packages/python/quality-baseline-worker/src/shared/ports/redis_port.py).
+    *   Implemented concrete database wrappers under `src/infra/adapters/` using `psycopg3`, `clickhouse-connect`, and `redis-py`.
+
+### 1.4 Docker and CI configurations
+*   **Standard**: Contain production Dockerfiles with strict execution paths and CI test workflows targeting package folders.
+*   **Actual**:
+    *   Production Dockerfile configured with `ENV PYTHONPATH=/app/src` to prevent namespace crashes.
+    *   Created [quality-baseline-worker-test.yml](file:///home/btpl-lap-22/live/obs/.github/workflows/quality-baseline-worker-test.yml) to automatically run pytest suites on every push/PR to the feature branch.
+
+---
+
+## 2. Estimator Stability \& Variance Analysis
 
 The quality baseline worker computes rolling averages over a trailing window of historical scores. Running this out-of-band ensures that the calculated baseline cached in Redis remains stable and converges to the true performance mean of the models without impacting front-end users. The detailed proofs for variance boundedness and estimator convergence are documented in [proof.pdf](file:///home/btpl-lap-22/live/obs/notebooks/runbooks/research/quality-baseline/2026-06-04-worker-evaluation/proof.pdf).
 
 ---
 
-## 2. Alerting Sensitivity & Detection Latency
+## 3. Alerting Sensitivity & Detection Latency
 
 The alerting mechanism is calibrated to trigger a quality degradation alert if the daily average quality score falls below a configured fraction of the rolling baseline. The mathematical model proves that the system will automatically detect and report any major prompt quality degradation within exactly one day of the drift event. The formal step-change derivation and detection threshold constraints are detailed in [proof.pdf](file:///home/btpl-lap-22/live/obs/notebooks/runbooks/research/quality-baseline/2026-06-04-worker-evaluation/proof.pdf).
 
 ---
 
-## 3. Computational Complexity \& Database Lock Contention
+## 4. Computational Complexity \& Database Lock Contention
 
 We compare the system behavior under synchronous (in-band) vs asynchronous (out-of-band) aggregation:
 
@@ -36,7 +66,7 @@ We compare the system behavior under synchronous (in-band) vs asynchronous (out-
 
 ---
 
-## 4. Visual Verification Outcomes
+## 5. Visual Verification Outcomes
 
 The simulation results are stored in the following files:
 *   **Dataset:** [simulated_scores.csv](file:///home/btpl-lap-22/live/obs/notebooks/runbooks/research/quality-baseline/2026-06-04-worker-evaluation/data/simulated_scores.csv)

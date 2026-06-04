@@ -40,34 +40,40 @@ Implement the `quality-baseline-worker` as a dedicated Python package combining 
 
 Applying the platform's brutal failure-first framework (`ffsb.md`), we identify the following key failure modes:
 
-### Mode 1: clickhouse-down (ClickHouse Unavailability)
-- **Symptom**: Daily trend rollup fails with connection exceptions.
-- **Trigger**: ClickHouse is down during the daily 00:00 UTC rollup.
+### Mode 1: Slow Not Down (PostgreSQL Lock Contention)
+- **Symptom**: Ingestion services experience thread-pool starvation, causing timeout cascades, while health check probes remain green.
+- **Trigger**: Upstream scorers query PostgreSQL aggregates synchronously under heavy concurrent load. 
 - **Recovery/Prevention**:
-  - Alert on Temporal dashboard when the `RollupQualityTrend` workflow fails.
-  - Settle alert triggers using Prometheus metric `temporal_workflow_failed`.
-  - Temporal automatically retries the failed activities with exponential backoff.
-  - If ClickHouse downtime exceeds Temporal's retry limits, operators run the workflow manually via Temporal UI once the database is restored.
+  - Offload calculations to the background using Temporal scheduled crons.
+  - Upstream scorers perform $O(1)$ reads from the Redis cache in sub-millisecond times, keeping the request loop fast.
 
-### Mode 2: redis-down (Cache Write Failure)
-- **Symptom**: Baseline cache overwrites fail. Upstream evaluators read stale baseline values from their fallback layers.
-- **Trigger**: Redis is down or overloaded during the hourly recomputation write.
+### Mode 2: Correct Response, Wrong Data (Unvalidated Cache / DB Synchronization Drift)
+- **Symptom**: Evaluator computes quality deviations against outdated or corrupt rolling baseline scores, leading to false negatives on degradation metrics.
+- **Trigger**: The worker fails to update Redis due to connection failures, or writes incorrect data type structures.
 - **Recovery/Prevention**:
-  - Implement write retries with backoff in the worker's `write_redis_baselines` activity.
-  - Configure upstream evaluation services to fall back gracefully to a hardcoded default or the last known good baseline if the Redis key is missing.
+  - Implement strict schema validations on Redis baseline values.
+  - Implement read-through fallbacks in the scorer: if a Redis baseline key is missing, default back to the last known baseline or default threshold rather than failing silently.
 
-### Mode 3: temporal-connection-failure (Orchestration Outage)
-- **Symptom**: The worker container crashes immediately on startup or enters a LoopBackOff state.
-- **Trigger**: Temporal service host (port 7233) is unreachable on startup.
+### Mode 3: Works Until Specific Conditions (OOM Termination & Startup Crash)
+- **Symptom**: The container crashes instantly with `OOMKilled` or `ModuleNotFoundError` on startup.
+- **Trigger**: Worker package imports fail due to missing `PYTHONPATH` context on container start.
 - **Recovery/Prevention**:
-  - Ensure the `quality-temporal` container is verified healthy by using Docker Compose `depends_on` conditions.
-  - Ensure connection attempts loop and retry rather than immediately terminating the container if a transient network partition exists.
+  - Set `ENV PYTHONPATH=/app/src` inside the production Dockerfile to guarantee python resolves directories.
+  - Implement container health check conditions in docker-compose configs.
 
-### Mode 4: pythonpath-missing (Import Error Crash)
-- **Symptom**: The container starts but terminates instantly with `ModuleNotFoundError: No module named 'api'`.
-- **Trigger**: Setuptools does not find packages without `__init__.py` files, and `PYTHONPATH` is missing from the environment.
+### Mode 4: Cascading Failure (Temporal Orchestration / Worker Outage)
+- **Symptom**: Historical aggregations stop and Grafana metric databases go stale, but the core system does not throw errors.
+- **Trigger**: The Temporal server goes offline or network partition separates the worker from Temporal port 7233.
 - **Recovery/Prevention**:
-  - Rigidly configure `ENV PYTHONPATH=/app/src` in the production [Dockerfile](file:///home/btpl-lap-22/live/obs/packages/python/quality-baseline-worker/build/Dockerfile) to guarantee clean import paths.
+  - Configure Grafana dashboards to verify timestamps of incoming data: if aggregate data is older than 24 hours, show banner alerts.
+  - Persistent Temporal workflow retries buffer the tasks until connection is restored.
+
+### Mode 5: Configuration Drift (Temporal Namespace or Port Registry Misalignment)
+- **Symptom**: The worker starts up but never runs workflows, or routes traffic to incorrect environments.
+- **Trigger**: Environment namespace or port mappings are edited in local configurations without a proper code deployment.
+- **Recovery/Prevention**:
+  - Enforce configuration as code: all environment variables (Temporal task queues, ports) must be pinned in version control.
+  - Startup sanity checks validate variables before starting the worker.
 
 ---
 

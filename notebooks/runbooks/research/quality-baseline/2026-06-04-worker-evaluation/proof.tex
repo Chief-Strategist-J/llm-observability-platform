@@ -117,7 +117,7 @@ This proves that the system will automatically detect and alert on any prompt de
 We compare two architectures:
 \begin{enumerate}
 \item \textbf{Synchronous (In-band)}: Aggregate 7-day scores from PostgreSQL on every incoming request.
-2. **Asynchronous (Out-of-band)**: Compute averages once per hour in the background, cache in Redis, and read from Redis during requests.
+\item \textbf{Asynchronous (Out-of-band)}: Compute averages once per hour in the background, cache in Redis, and read from Redis during requests.
 \end{enumerate}
 
 Let $R$ be the request rate (requests/sec) and $W = 7\text{ days} = 604,800\text{ seconds}$ be the window.
@@ -133,7 +133,7 @@ SELECT avg(composite_score) FROM quality_scores WHERE scored_at > now() - INTERV
   \begin{equation}
   \text{Complexity}_{\text{sync}} = O(R \cdot N) = O(R^2 \cdot W)
   \end{equation}
-  Under a moderate load of $R = 500$ reqs/sec, the database must process $500 \times (500 \times 604,800) = 1.512 \times 10^{11}$ row scans per second. This results in CPU starvation and locks connection pools, leading to cascade failures across the ingestion API.
+  Under a load of $R = 500$ reqs/sec, the database must process $500 \times (500 \times 604,800) = 1.512 \times 10^{11}$ row scans per second. This results in CPU starvation and locks connection pools, leading to cascade failures.
   
 - **Asynchronous Architecture**: The query runs once per hour (3600 seconds).
   Total computational complexity per second is:
@@ -152,5 +152,45 @@ SELECT avg(composite_score) FROM quality_scores WHERE scored_at > now() - INTERV
   L_{\text{async}} = O(1) \le 1\text{ ms}
   \end{equation}
 Offloading the rolling baseline to Redis reduces request latency by $99\%$.
+
+---
+
+\section{Simulation Outcomes and Visualizations}
+
+\subsection{Simulation Dataset}
+A 30-day operation dataset was simulated, containing a model degradation event on Day 20. Table~\ref{tab:simulation_data} details the transition around the degradation threshold.
+
+\begin{table}[htbp]
+\centering
+\caption{Simulation Data of Daily Average Scores and Alert Triggers (Days 15--25)}
+\label{tab:simulation_data}
+\begin{tabular}{ccccc}
+\hline
+\textbf{Day} & \textbf{Date} & \textbf{Average Score} & \textbf{7-day Rolling Baseline} & \textbf{Alert Triggered} \\
+\hline
+15 & 2026-05-20 & 0.916 & 0.918 & No \\
+16 & 2026-05-21 & 0.923 & 0.919 & No \\
+17 & 2026-05-22 & 0.911 & 0.918 & No \\
+18 & 2026-05-23 & 0.918 & 0.917 & No \\
+19 & 2026-05-24 & 0.925 & 0.918 & No \\
+20 & 2026-05-25 & 0.732 & 0.891 & Yes (Drift Detected) \\
+21 & 2026-05-26 & 0.718 & 0.862 & Yes \\
+22 & 2026-05-27 & 0.741 & 0.837 & Yes \\
+23 & 2026-05-28 & 0.698 & 0.805 & Yes \\
+24 & 2026-05-29 & 0.709 & 0.775 & Yes \\
+25 & 2026-05-30 & 0.725 & 0.751 & Yes \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Visualized Quality Score Degradation}
+Figure~\ref{fig:drift_plot} illustrates the daily average score tracking against the rolling baseline and the alert trigger.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{outputs/drift_alert.png}
+\caption{Model Quality Baseline Drift and Degradation Alerting Plot.}
+\label{fig:drift_plot}
+\end{figure}
 
 \end{document}
