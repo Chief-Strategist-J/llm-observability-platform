@@ -1,0 +1,5 @@
+schema_version: "1"
+event: llm.spans.sampled
+version: "1.0.0"
+contract_file: contracts/events/llm_spans_sampled.yaml
+locked_at: "2026-06-04"
