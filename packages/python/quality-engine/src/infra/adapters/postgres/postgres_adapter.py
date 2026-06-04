@@ -1,10 +1,10 @@
 from __future__ import annotations
-import json
 import psycopg
 from datetime import datetime, timezone, timedelta
 
-from handlers.span_quality.types import QualityScoreRow
+from shared.types.quality_score_row import QualityScoreRow
 from shared.ports.quality_score_repo_port import QualityScoreRepositoryPort
+
 
 
 class PostgresQualityScoreAdapter(QualityScoreRepositoryPort):

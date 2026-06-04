@@ -3,9 +3,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
 
-
-PromptType = Literal["chat", "code", "rag", "classification"]
-FinishReason = Literal["stop", "length", "content_filter", "tool_calls"]
+# Re-export from shared so handler-internal code can use one import location
+from shared.types.quality_score_row import QualityScoreRow, PromptType, FinishReason
 
 
 @dataclass(frozen=True)
@@ -25,25 +24,6 @@ class SampledSpan:
     response_embedding: list[float] | None = None
     provider_logprobs: list[float] | None = None
     scored_at: datetime = field(default_factory=datetime.utcnow)
-
-
-@dataclass(frozen=True)
-class QualityScoreRow:
-    """Row written to PostgreSQL quality_scores table after scoring."""
-    span_id: str
-    trace_id: str
-    model: str
-    endpoint: str
-    prompt_type: PromptType
-    response_language: str
-    composite_score: float | None
-    coherence_score: float | None
-    toxicity_score: float | None
-    faithfulness_score: float | None
-    perplexity_score: float | None
-    quality_flags: list[str]
-    skipped_reason: str | None
-    scored_at: datetime
 
 
 @dataclass(frozen=True)

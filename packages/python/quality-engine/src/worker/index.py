@@ -2,11 +2,13 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import signal
-from typing import Any
 
 from confluent_kafka import Consumer, KafkaError  # type: ignore[import-untyped]
+from opentelemetry import trace
 from opentelemetry.propagate import extract as otel_extract
+from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from temporalio.client import Client
 
 from worker.config import load_config
@@ -18,9 +20,11 @@ from infra.adapters.kafka.confluent_producer_adapter import ConfluentKafkaProduc
 from infra.adapters.temporal.temporal_client_adapter import TemporalClientAdapter
 
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer("quality-engine.worker")
 
 _MAX_RETRIES = 3
 _DEAD_LETTER_TOPIC = "llm.spans.sampled.dlq"
+_DEPLOYMENT_ENV = os.environ.get("DEPLOYMENT_ENV", "local")
 
 
 async def run() -> None:
@@ -50,7 +54,10 @@ async def run() -> None:
         "enable.auto.commit": False,  # manual offset commit after success
     })
     consumer.subscribe([cfg.kafka_topic_input])
-    logger.info("quality-engine consumer started topic=%s group=%s", cfg.kafka_topic_input, cfg.kafka_consumer_group)
+    logger.info(
+        "quality-engine consumer started topic=%s group=%s",
+        cfg.kafka_topic_input, cfg.kafka_consumer_group,
+    )
 
     loop = asyncio.get_event_loop()
     stop = asyncio.Event()
@@ -68,39 +75,57 @@ async def run() -> None:
                 logger.error("kafka_error code=%s reason=%s", msg.error().code(), msg.error().str())
                 continue
 
-            # W3C traceparent propagation from message headers
+            # W3C traceparent extraction from message headers — used as parent span context
+            # Rule: tracing-rules-for-workers.md line 6
             headers: dict[str, str] = {}
             if msg.headers():
                 headers = {k: v.decode() for k, v in msg.headers() if v}
-            otel_extract(headers)
+            ctx = otel_extract(headers)
 
-            # Retry loop with dead-letter fallback
-            last_exc: Exception | None = None
-            for attempt in range(1, _MAX_RETRIES + 1):
-                try:
-                    await handler.handle(msg.value(), headers)
-                    last_exc = None
-                    break
-                except Exception as exc:
-                    last_exc = exc
-                    logger.warning(
-                        "handler_attempt_failed attempt=%s/%s span_offset=%s exc=%s",
-                        attempt, _MAX_RETRIES, msg.offset(), exc,
+            # Root span per message — required by tracing-rules-for-workers.md lines 4 and 7
+            # Carries: service.name, worker.type, worker.queue_name, deployment.env
+            with tracer.start_as_current_span(
+                "quality_engine.consumer.process",
+                context=ctx,
+                attributes={
+                    "service.name": "quality-engine",
+                    "worker.type": "event",
+                    "worker.queue_name": cfg.kafka_topic_input,
+                    "worker.consumer_group": cfg.kafka_consumer_group,
+                    "deployment.env": _DEPLOYMENT_ENV,
+                    "messaging.system": "kafka",
+                    "messaging.destination": cfg.kafka_topic_input,
+                    "messaging.kafka.partition": str(msg.partition()),
+                    "messaging.kafka.offset": str(msg.offset()),
+                },
+            ):
+                # Retry loop with dead-letter fallback
+                last_exc: Exception | None = None
+                for attempt in range(1, _MAX_RETRIES + 1):
+                    try:
+                        await handler.handle(msg.value(), headers)
+                        last_exc = None
+                        break
+                    except Exception as exc:
+                        last_exc = exc
+                        logger.warning(
+                            "handler_attempt_failed attempt=%s/%s offset=%s exc=%s",
+                            attempt, _MAX_RETRIES, msg.offset(), exc,
+                        )
+                        await asyncio.sleep(0.2 * attempt)
+
+                if last_exc is not None:
+                    logger.error(
+                        "handler_max_retries_exceeded — routing to DLQ offset=%s", msg.offset()
                     )
-                    await asyncio.sleep(0.2 * attempt)
+                    producer.produce(
+                        topic=_DEAD_LETTER_TOPIC,
+                        key=str(msg.offset()),
+                        value=msg.value(),
+                        headers=headers,
+                    )
 
-            if last_exc is not None:
-                logger.error(
-                    "handler_max_retries_exceeded — routing to DLQ offset=%s", msg.offset()
-                )
-                producer.produce(
-                    topic=_DEAD_LETTER_TOPIC,
-                    key=str(msg.offset()),
-                    value=msg.value(),
-                    headers=headers,
-                )
-
-            # Commit offset only after successful processing or DLQ routing
+            # Commit offset only after successful processing or DLQ routing (outside span)
             consumer.commit(message=msg, asynchronous=False)
 
     finally:

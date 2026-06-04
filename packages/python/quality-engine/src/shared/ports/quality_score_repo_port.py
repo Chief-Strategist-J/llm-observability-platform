@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Protocol
-from handlers.span_quality.types import QualityScoreRow
+from shared.types.quality_score_row import QualityScoreRow
 
 
 class QualityScoreRepositoryPort(Protocol):
