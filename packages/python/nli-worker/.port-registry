@@ -1,0 +1,5 @@
+ports:
+  - name: nli_scorer
+    type: ml-scorer
+    vendor: transformers
+    adapter: src/infra/adapters/nli_scorer_adapter.py::NliScorerAdapter

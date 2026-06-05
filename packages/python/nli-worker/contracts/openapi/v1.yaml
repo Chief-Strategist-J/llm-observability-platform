@@ -1,0 +1,129 @@
+openapi: "3.0.3"
+info:
+  title: NLI Worker API
+  version: "1.0.0"
+  description: >
+    Layer 3 stateless NLI worker.
+    Uses DeBERTa-v3-base NLI to score sentence-pairs and output faithfulness scores.
+
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      operationId: healthzGet
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+    post:
+      summary: Health check
+      operationId: healthzPost
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /nli:
+    post:
+      summary: Score sentences against context using NLI
+      operationId: scoreNli
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NliRequest"
+      responses:
+        "200":
+          description: NLI scoring and faithfulness results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NliResponse"
+        "422":
+          description: Validation error
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, model, device]
+      properties:
+        status:
+          type: string
+          example: ok
+        model:
+          type: string
+          example: nli-deberta-v3-base
+        device:
+          type: string
+          example: cpu
+
+    NliRequest:
+      type: object
+      required: [context, sentences]
+      properties:
+        context:
+          type: string
+          description: Retrieved paragraph text context to ground against.
+        sentences:
+          type: array
+          items:
+            type: string
+          description: List of sentences to score.
+        temperature:
+          type: number
+          default: 1.5
+          description: Temperature scaling parameter for the logits before softmax.
+
+    SentenceProbability:
+      type: object
+      required: [entailment, neutral, contradiction]
+      properties:
+        entailment:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        neutral:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        contradiction:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+
+    SentenceResult:
+      type: object
+      required: [sentence, label, probabilities]
+      properties:
+        sentence:
+          type: string
+        label:
+          type: string
+          enum: [entailment, neutral, contradiction]
+        probabilities:
+          $ref: "#/components/schemas/SentenceProbability"
+
+    NliResponse:
+      type: object
+      required: [results, faithfulness_score, flagged_sentences]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/SentenceResult"
+        faithfulness_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        flagged_sentences:
+          type: array
+          items:
+            type: string

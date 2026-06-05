@@ -42,5 +42,17 @@ runbooks:
     path: research/quality-baseline/2026-06-04-worker-evaluation
     description: Verification of rolling average calculations, Temporal activity executions, database adapters (Postgres, ClickHouse, Redis), and alerting thresholds for quality scores.
 
+  - id: 2026-06-05-decoupling
+    title: NLI Model Decoupling and Dynamic Warmup Evaluation
+    category: research
+    path: research/nli-worker/2026-06-05-decoupling
+    description: Verification of model weight decoupling, in-memory registry caching latency bounds, cold-start spikes, and memory consumption under concurrency.
 
+  - id: 20260605-004-nli-worker-decoupling
+    title: "ADR-004: Model Registry Decoupling for NLI Worker"
+    category: decisions
+    status: accepted
+    path: decisions/20260605-004-nli-worker-decoupling.md
+    package: packages/python/nli-worker
+    description: Records the decision to decouple the model weights from the NLI worker container image and implement a dynamic, thread-safe in-memory model registry.
 

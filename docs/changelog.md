@@ -5,6 +5,14 @@ All notable changes to the `instrumentation-sdk` package will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [1.11.0] - 2026-06-05
+
+### Added
+- **NLI Scorer Worker Package**: A stateless microservice (`nli-worker`) using the `cross-encoder/nli-deberta-v3-base` model to score sentence-pairs for natural language inference (NLI) and calculate LLM faithfulness. Features context chunking for contexts exceeding 400 tokens, batched NLI scoring, temperature-scaled softmax calibration (T=1.5), and OpenTelemetry trace propagation.
+- **Model Registry & Weight Decoupling (ADR-004)**: Decoupled model weight storage from the `nli-worker` CPU/GPU container runtimes to optimize image sizes (< 1GB for CPU) and enable runtime hot-swapping of natural language inference models. Implemented memory-caching of model and tokenizer instances within [NliScorerAdapter](file:///home/btpl-lap-22/live/obs/packages/python/nli-worker/src/infra/adapters/nli_scorer_adapter.py), parameterized REST endpoints in [nli.py](file:///home/btpl-lap-22/live/obs/packages/python/nli-worker/src/api/rest/v1/handlers/nli.py) to accept dynamic `model_id` payloads, introduced [NliScorerPort](file:///home/btpl-lap-22/live/obs/packages/python/nli-worker/src/core/domain/ports/nli_scorer_port.py) for Clean Architecture decoupling, and implemented lifespan startup preloading in [app.py](file:///home/btpl-lap-22/live/obs/packages/python/nli-worker/src/api/rest/v1/app.py) to mitigate first-request cold-starts. Detailed architectural design is documented in [ADR-004](file:///home/btpl-lap-22/live/obs/notebooks/runbooks/decisions/20260605-004-nli-worker-decoupling.md).
+- **Verification Scripts**: Added a repository-wide shell script audit utility [bash-audit.sh](file:///home/btpl-lap-22/live/obs/scripts/bash-audit.sh) to automatically verify executable permissions, shebang headers, syntax correctness, and safety/fail-on-error configurations for all project shell scripts.
+
 ## [1.10.0] - 2026-05-29
 
 ### Added

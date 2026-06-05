@@ -1,0 +1,51 @@
+name: NLI Worker — Test & Publish
+
+on:
+  push:
+    branches: [main, "feature/**"]
+    paths:
+      - "packages/python/nli-worker/**"
+      - ".github/workflows/nli-worker-ci.yml"
+  pull_request:
+    paths:
+      - "packages/python/nli-worker/**"
+
+env:
+  IMAGE: chiefj/nli-worker
+  PKG: packages/python/nli-worker
+
+jobs:
+  test:
+    name: Unit Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: nli-worker-pip-${{ matrix.python-version }}-${{ hashFiles('packages/python/nli-worker/pyproject.toml') }}
+          restore-keys: |
+            nli-worker-pip-${{ matrix.python-version }}-
+
+      - name: Install dependencies
+        run: |
+          cd ${{ env.PKG }}
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run tests
+        run: |
+          cd ${{ env.PKG }}
+          python -m pytest tests/ -v --tb=short --cov=src --cov-report=term-missing

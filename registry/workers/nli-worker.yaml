@@ -1,0 +1,15 @@
+name: nli-worker
+type: scorer-service
+runtime: python
+platform: fastapi
+port: 8009
+stage: active
+owner: "@quality-team"
+description: >
+  Layer 3 stateless NLI worker.
+  Uses DeBERTa-v3-base NLI (cross-encoder/nli-deberta-v3-base, 186M params)
+  to score sentence-pairs and return faithfulness scores.
+  Temperature-scaled softmax (T=1.5) for calibration.
+  Context chunking when context > 400 tokens. Batched NLI (8 pairs/batch).
+image: chiefj/nli-worker
+depends_on: []
