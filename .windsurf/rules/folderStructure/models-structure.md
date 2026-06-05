@@ -26,16 +26,22 @@ Below is the detailed directory map of the model registry, shepherding rules, an
 ├── models/                                # Centralized Model Registry
 │   ├── cross-encoder/                     # HF Namespace directory
 │   │   └── nli-deberta-v3-base/           # Model folder
-│   │       ├── model.yaml                 # NLI weights metadata and deployment parameters
+│   │       ├── model.yaml                 # Configs: id, task, framework, precision, deployment, metadata
+│   │       │                              # Source: Hugging Face (cross-encoder/nli-deberta-v3-base)
+│   │       │                              # Use Case: RAG grounding verification, response faithfulness scoring
 │   │       └── README.md                  # Accuracy benchmarks and evaluation metrics
 │   │
 │   ├── unitary/                           # HF Namespace directory
 │   │   └── toxic-bert/                    # Toxicity classification model
-│   │       ├── model.yaml                 # ONNX CPU-only deployment metadata
+│   │       ├── model.yaml                 # Configs: id, task, framework, precision, deployment, metadata
+│   │       │                              # Source: Hugging Face (unitary/toxic-bert)
+│   │       │                              # Use Case: Input/output toxicity classification and Kafka alert publishing
 │   │       └── README.md                  # Multi-label category descriptions
 │   │
 │   ├── gpt2/                              # Standalone model folder (no namespace prefix)
-│   │   ├── model.yaml                     # Fallback perplexity specifications
+│   │   ├── model.yaml                     # Configs: id, task, framework, precision, deployment, metadata
+│   │   │                                  # Source: Hugging Face (gpt2) / local ONNX
+│   │   │                                  # Use Case: Fallback token perplexity computation when provider logprobs are missing
 │   │   └── README.md                      # Logprob causal LM benchmarks
 │   │
 │   └── README.md                          # Master index of registered platform models
@@ -90,3 +96,25 @@ metadata:
   owner: "@quality-team"
   description: "Cross-encoder NLI model for RAG grounding and faithfulness evaluation."
 ```
+
+---
+
+## Detailed Configuration Parameters
+
+Every `model.yaml` registry file requires these configurations:
+- **`id` (string)**: The exact model repository identifier (Hugging Face ID or model path) that the runtime loaders query.
+- **`task` (string)**: The machine learning task type. Must be one of `sequence-classification`, `token-classification`, or `causal-lm`.
+- **`framework` (string)**: The software execution framework. Must be one of `pytorch`, `onnx`, or `tensorflow`.
+- **`precision` (string)**: The numerical data precision. Commonly `fp32`, `fp16`, or `int8`.
+- **`size_bytes` (integer)**: The size of model weights in bytes on disk, used for forecasting volume storage allocations.
+- **`parameters` (integer)**: Active model parameter count.
+- **`deployment` (object)**:
+  - **`memory_limit_bytes` (integer)**: The minimum container memory size (in bytes) needed to run model loading and inference without triggering OOM-kills.
+  - **`hardware_platforms` (list of strings)**: Runtime hardware devices supported (`cpu`, `cuda`, `mps`).
+  - **`volume_mounts` (object)**:
+    - **`host_path` (string)**: Host system volume path to mount.
+    - **`container_path` (string)**: Container destination path to mount for Hugging Face cache persistence.
+- **`metadata` (object)**:
+  - **`owner` (string)**: Slack owner tag or team handles for package support.
+  - **`description` (string)**: Detailed operational context and use cases for the registered model.
+
