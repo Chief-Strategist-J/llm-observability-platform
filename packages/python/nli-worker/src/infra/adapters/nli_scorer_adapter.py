@@ -1,5 +1,5 @@
-from __future__ import annotations
-
+import os
+import threading
 from functools import cached_property
 import torch
 
@@ -7,6 +7,8 @@ class NliScorerAdapter:
     def __init__(self, model_id: str = "cross-encoder/nli-deberta-v3-base") -> None:
         self._model_id = model_id
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._lock = threading.Lock()
+        self._batch_size = int(os.getenv("NLI_BATCH_SIZE", "8"))
 
     @property
     def model_id(self) -> str:
@@ -49,13 +51,14 @@ class NliScorerAdapter:
         self,
         pairs: list[tuple[str, str]],
         temperature: float = 1.5,
-        batch_size: int = 8,
+        batch_size: int | None = None,
     ) -> list[tuple[float, float, float]]:
         if not pairs:
             return []
+        bs = batch_size or self._batch_size
         results: list[tuple[float, float, float]] = []
-        for batch_start in range(0, len(pairs), batch_size):
-            batch = pairs[batch_start : batch_start + batch_size]
+        for batch_start in range(0, len(pairs), bs):
+            batch = pairs[batch_start : batch_start + bs]
             results.extend(self._score_batch(batch, temperature))
         return results
 
@@ -71,27 +74,30 @@ class NliScorerAdapter:
             premises,
             hypotheses,
             return_tensors="pt",
-            truncation=True,
+            truncation="only_first",
             padding=True,
             max_length=512,
         )
 
         encoding = {k: v.to(self._device) for k, v in encoding.items()}
 
-        with torch.no_grad():
-            logits = self._model(**encoding).logits
+        with self._lock:
+            with torch.no_grad():
+                logits = self._model(**encoding).logits
 
         scaled = logits / temperature
         probs = torch.softmax(scaled, dim=-1).tolist()
 
+        id2label = getattr(self._model.config, "id2label", {}) or {}
         label_to_idx = {
-            label: idx
-            for idx, label in enumerate(self._model.config.id2label.values())
+            str(label).lower(): int(idx)
+            for idx, label in id2label.items()
         }
 
-        e_idx = label_to_idx.get("entailment", 0)
-        n_idx = label_to_idx.get("neutral", 1)
-        c_idx = label_to_idx.get("contradiction", 2)
+        # True DeBERTa NLI logit order: 0 = contradiction, 1 = entailment, 2 = neutral
+        c_idx = label_to_idx.get("contradiction", 0)
+        e_idx = label_to_idx.get("entailment", 1)
+        n_idx = label_to_idx.get("neutral", 2)
 
         return [
             (row[e_idx], row[n_idx], row[c_idx])

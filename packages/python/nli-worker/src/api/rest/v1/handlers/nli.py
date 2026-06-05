@@ -43,7 +43,7 @@ def score_endpoint(body: NliRequest, request: Request) -> Any:
             span_id = parts[2]
 
     # Validate temperature to prevent division by zero in model
-    temp = body.temperature if body.temperature > 0 else 1.5
+    temp = max(body.temperature, 0.01)
 
     nli_input = NliInput(
         context=body.context,

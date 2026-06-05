@@ -6,12 +6,12 @@ from core.domain.types import (
     SentenceProbability,
     SentenceResult,
 )
-from infra.adapters.nli_scorer_adapter import NliScorerAdapter
+from core.domain.ports.nli_scorer_port import NliScorerPort
 from shared.tracing.tracer import trace_span
 
 def score_nli(
     input: NliInput,
-    scorer: NliScorerAdapter,
+    scorer: NliScorerPort,
     trace_id: str | None = None,
     span_id: str | None = None,
 ) -> NliResult:
