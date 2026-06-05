@@ -9,7 +9,7 @@ This service runs the `cross-encoder/nli-deberta-v3-base` Natural Language Infer
 ## Features
 
 - **Stateless Inference**: Exposes lightweight REST endpoints powered by FastAPI and Uvicorn on port `8009`.
-- **Eager Model Preloading**: Pre-caches and warms up tokenizer/model weights during container build and startup, eliminating cold-start latency.
+- **Eager Model Preloading**: Warm up tokenizer and model weights during container startup (lazy loaded and cached dynamically in memory, with default path preloaded in the lifespan hook) to eliminate cold-start latency.
 - **Batched Execution**: Packages evaluations into configurable batches (default `8` pairs/pass, adjustable via `NLI_BATCH_SIZE`) for optimal GPU/CPU throughput.
 - **Context Chunking**: Automatically splits context segments exceeding `400` tokens using the model tokenizer, performing a max-entailment aggregation across chunks.
 - **Thread Safety**: Protects shared PyTorch resource states with thread locks to eliminate CUDA OOM errors under concurrent request traffic.
@@ -95,4 +95,24 @@ pytest tests/ -v
 ### 3. Run Server
 ```bash
 uvicorn api.rest.v1.app:app --host 0.0.0.0 --port 8009
+```
+
+---
+
+## Docker Deployment
+
+### 1. Build Image
+```bash
+docker build -f build/Dockerfile -t chiefj/nli-worker:latest .
+```
+This produces a lightweight image of **229 MB**.
+
+### 2. Run Container
+To avoid downloading model weights on every container start, mount a persistent host Hugging Face cache directory:
+```bash
+docker run -d \
+  --name nli-worker \
+  -p 8009:8009 \
+  -v ~/.cache/huggingface:/root/.cache/huggingface \
+  chiefj/nli-worker:latest
 ```
