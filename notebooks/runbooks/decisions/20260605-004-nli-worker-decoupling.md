@@ -70,7 +70,7 @@ Applying the failure-first framework:
 ## Consequences
 
 ### Positive
-- **Reduced Image Size**: Extricating model weights reduces the CPU build size substantially, making deployment fast.
+- **Reduced Image Size**: Extricating model weights reduces the CPU build size substantially (the built image size is only **229 MB**), making deployment fast.
 - **Flexibility**: Zero rebuilds required to switch models; simply pass a different `model_id` in the API payload.
 - **Strict Separation**: Clean Architecture guidelines are met via the [NliScorerPort](file:///home/btpl-lap-22/live/obs/packages/python/nli-worker/src/core/domain/ports/nli_scorer_port.py) protocol.
 

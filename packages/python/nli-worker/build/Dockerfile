@@ -10,8 +10,9 @@ COPY pyproject.toml README.md ./
 COPY src/ src/
 
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir ".[dev]"
+    && pip install --no-cache-dir "."
 
+COPY build/entrypoint.sh /app/build/entrypoint.sh
 COPY contracts/ contracts/
 
 
@@ -23,6 +24,7 @@ COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /app/src /app/src
 COPY --from=builder /app/contracts /app/contracts
+COPY --from=builder /app/build/entrypoint.sh /app/build/entrypoint.sh
 
 ENV PYTHONPATH=/app/src
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -35,4 +37,4 @@ EXPOSE 8009
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8009/healthz')"
 
-CMD ["uvicorn", "api.rest.v1.app:app", "--host", "0.0.0.0", "--port", "8009"]
+ENTRYPOINT ["/app/build/entrypoint.sh"]

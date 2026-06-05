@@ -9,13 +9,15 @@ dependencies = [
     "fastapi>=0.100.0",
     "uvicorn>=0.22.0",
     "numpy>=1.26.0",
-    "transformers>=4.40.0",
-    "torch>=2.2.0",
     "opentelemetry-sdk>=1.26.0",
     "opentelemetry-api>=1.26.0",
 ]
 
 [project.optional-dependencies]
+ml = [
+    "transformers>=4.40.0",
+    "torch>=2.2.0",
+]
 dev = [
     "pytest>=8.0",
     "pytest-cov>=4.1.0",
