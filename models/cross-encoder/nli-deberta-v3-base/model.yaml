@@ -1,9 +1,18 @@
 id: "cross-encoder/nli-deberta-v3-base"
+version: "1.0.0"
 task: "sequence-classification"
 framework: "pytorch"
 precision: "fp32"
 size_bytes: 370000000
 parameters: 186000000
+sha256: "721a7df8cb23e4d9b1c8c7523ea639cc646f09b240562e84c98ad0ab5f3f3ab0"
+max_sequence_length: 512
+vocab_size: 128100
+license: "apache-2.0"
+
+source:
+  registry: "huggingface"
+  url: "https://huggingface.co/cross-encoder/nli-deberta-v3-base"
 
 deployment:
   memory_limit_bytes: 1073741824

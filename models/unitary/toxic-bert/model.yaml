@@ -1,9 +1,18 @@
 id: "unitary/toxic-bert"
+version: "1.0.0"
 task: "sequence-classification"
 framework: "onnx"
 precision: "fp32"
 size_bytes: 410000000
 parameters: 110000000
+sha256: "5cb8a19283e4d9b1c8c7523ea639cc646f09b240562e84c98ad0ab5f3f3ab0d12e"
+max_sequence_length: 512
+vocab_size: 30522
+license: "mit"
+
+source:
+  registry: "huggingface"
+  url: "https://huggingface.co/unitary/toxic-bert"
 
 deployment:
   memory_limit_bytes: 536870912
