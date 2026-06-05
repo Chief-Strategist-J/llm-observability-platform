@@ -14,18 +14,53 @@ This document defines the rules and structure for registering and maintaining mo
 
 ## Registry Folder Structure Layout
 
-```
-models/
-├── {namespace}/                   ← Hugging Face author namespace (e.g., cross-encoder)
-│   └── {model-name}/              ← Model repository name
-│       ├── model.yaml             ← Model metadata, tasks, parameters, and constraints
-│       └── README.md              ← Model evaluation, baseline benchmarks, and references
+Below is the detailed directory map of the model registry, shepherding rules, and consumer packages:
+
+```text
+.
+├── .windsurf/
+│   └── rules/
+│       └── folderStructure/
+│           └── models-structure.md        # Registry specifications and locking rules
 │
-├── {standalone-model-name}/       ← Standalone model repositories (e.g., gpt2)
-│   ├── model.yaml
-│   └── README.md
+├── models/                                # Centralized Model Registry
+│   ├── cross-encoder/                     # HF Namespace directory
+│   │   └── nli-deberta-v3-base/           # Model folder
+│   │       ├── model.yaml                 # NLI weights metadata and deployment parameters
+│   │       └── README.md                  # Accuracy benchmarks and evaluation metrics
+│   │
+│   ├── unitary/                           # HF Namespace directory
+│   │   └── toxic-bert/                    # Toxicity classification model
+│   │       ├── model.yaml                 # ONNX CPU-only deployment metadata
+│   │       └── README.md                  # Multi-label category descriptions
+│   │
+│   ├── gpt2/                              # Standalone model folder (no namespace prefix)
+│   │   ├── model.yaml                     # Fallback perplexity specifications
+│   │   └── README.md                      # Logprob causal LM benchmarks
+│   │
+│   └── README.md                          # Master index of registered platform models
 │
-└── README.md                      ← Global model registry index
+└── packages/
+    └── python/
+        ├── nli-worker/                    # Consumer package for NLI scoring
+        │   ├── build/
+        │   │   ├── Dockerfile             # Decoupled build (Zero Weight Baking)
+        │   │   └── Dockerfile.gpu         # Decoupled build (Zero Weight Baking)
+        │   └── src/
+        │       ├── core/domain/ports/
+        │       │   └── nli_scorer_port.py # Clean Architecture port (no ML dependencies)
+        │       └── infra/adapters/
+        │           └── nli_scorer_adapter.py # Implements cache loader and thread safety
+        │
+        ├── perplexity/                    # Consumer package for Perplexity metrics
+        │   └── src/infra/adapters/
+        │       └── scorers/
+        │           └── gpt2_scorer_adapter.py # Loads fallback ONNX models dynamically
+        │
+        └── toxicity/                      # Consumer package for Toxicity auditing
+            └── src/infra/adapters/
+                └── scorers/
+                    └── toxicity_scorer_adapter.py # Loads ONNX classification weights
 ```
 
 ---
