@@ -17,6 +17,6 @@ def healthz(request: Request) -> Any:
     scorer = request.app.state.nli_scorer
     return HealthResponse(
         status="ok",
-        model="nli-deberta-v3-base",
+        model=scorer.default_model_id,
         device=scorer.device_name,
     )

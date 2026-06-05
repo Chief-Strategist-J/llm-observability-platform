@@ -4,13 +4,18 @@ import pytest
 from fastapi.testclient import TestClient
 
 class FakeNliScorer:
-    model_id = "fake/nli-deberta-v3-base"
+    default_model_id = "fake/nli-deberta-v3-base"
     device_name = "cpu"
 
-    def count_tokens(self, text: str) -> int:
+    def count_tokens(self, text: str, model_id: str | None = None) -> int:
         return len(text.split())
 
-    def split_context_by_tokens(self, text: str, max_tokens: int = 400) -> list[str]:
+    def split_context_by_tokens(
+        self,
+        text: str,
+        max_tokens: int = 400,
+        model_id: str | None = None,
+    ) -> list[str]:
         words = text.split()
         return [" ".join(words[i : i + max_tokens]) for i in range(0, len(words), max_tokens)]
 
@@ -18,7 +23,8 @@ class FakeNliScorer:
         self,
         pairs: list[tuple[str, str]],
         temperature: float = 1.5,
-        batch_size: int = 8,
+        batch_size: int | None = None,
+        model_id: str | None = None,
     ) -> list[tuple[float, float, float]]:
         res = []
         for _, hyp in pairs:
@@ -48,7 +54,7 @@ def test_healthz_get(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "ok"
-    assert data["model"] == "nli-deberta-v3-base"
+    assert data["model"] == "fake/nli-deberta-v3-base"
     assert data["device"] == "cpu"
 
 def test_healthz_post(client):
@@ -56,7 +62,7 @@ def test_healthz_post(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "ok"
-    assert data["model"] == "nli-deberta-v3-base"
+    assert data["model"] == "fake/nli-deberta-v3-base"
     assert data["device"] == "cpu"
 
 def test_score_nli_success(client):
@@ -85,6 +91,17 @@ def test_score_nli_success(client):
 
     assert abs(data["faithfulness_score"] - 0.3333) < 0.01
     assert data["flagged_sentences"] == ["This will hallucinate."]
+
+def test_score_nli_with_custom_model(client):
+    resp = client.post("/nli", json={
+        "context": "Context",
+        "sentences": ["This is grounded."],
+        "model_id": "custom-model-repo"
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["results"]) == 1
+    assert data["results"][0]["label"] == "entailment"
 
 def test_score_nli_empty_sentences(client):
     resp = client.post("/nli", json={

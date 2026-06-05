@@ -33,17 +33,16 @@ def score_nli(
                 flagged_sentences=[],
             )
 
-        # 1. Context Chunking
         with trace_span(
             "nli.check_and_chunk",
             trace_id=trace_id,
             span_id=span_id,
         ) as chunk_span:
-            context_tokens = scorer.count_tokens(input.context)
+            context_tokens = scorer.count_tokens(input.context, model_id=input.model_id)
             chunk_span.set_attribute("nli.context_tokens", context_tokens)
             
             if context_tokens > 400:
-                chunks = scorer.split_context_by_tokens(input.context, max_tokens=400)
+                chunks = scorer.split_context_by_tokens(input.context, max_tokens=400, model_id=input.model_id)
                 is_chunked = True
             else:
                 chunks = [input.context]
@@ -58,18 +57,17 @@ def score_nli(
             for s in input.sentences:
                 pairs.append((chunk, s))
 
-        # 3. Model Inference
         with trace_span(
             "model_inference",
             trace_id=trace_id,
             span_id=span_id,
             attributes={
-                "nli.model_id": scorer.model_id,
+                "nli.model_id": input.model_id or scorer.default_model_id,
                 "nli.device": scorer.device_name,
                 "nli.pair_count": len(pairs),
             },
         ):
-            raw_probs = scorer.score_pairs(pairs, temperature=input.temperature)
+            raw_probs = scorer.score_pairs(pairs, temperature=input.temperature, model_id=input.model_id)
 
         # 4. Aggregation
         num_sentences = len(input.sentences)

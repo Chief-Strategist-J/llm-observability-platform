@@ -9,9 +9,6 @@ COPY contracts/ contracts/
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir ".[dev]"
 
-# Pre-download Hugging Face model and tokenizer weights
-RUN python -c "from transformers import AutoTokenizer, AutoModelForSequenceClassification; AutoTokenizer.from_pretrained('cross-encoder/nli-deberta-v3-base'); AutoModelForSequenceClassification.from_pretrained('cross-encoder/nli-deberta-v3-base')"
-
 ENV PYTHONPATH=/app/src
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1

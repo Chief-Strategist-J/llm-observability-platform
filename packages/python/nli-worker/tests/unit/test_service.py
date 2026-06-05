@@ -5,22 +5,28 @@ from core.domain.types import NliInput
 
 class DummyScorer:
     def __init__(self, token_count: int = 100):
-        self.model_id = "dummy-nli"
+        self.default_model_id = "dummy-nli"
         self.device_name = "cpu"
         self._token_count = token_count
         self.score_pairs_calls = []
 
-    def count_tokens(self, text: str) -> int:
+    def count_tokens(self, text: str, model_id: str | None = None) -> int:
         return self._token_count
 
-    def split_context_by_tokens(self, text: str, max_tokens: int = 400) -> list[str]:
+    def split_context_by_tokens(
+        self,
+        text: str,
+        max_tokens: int = 400,
+        model_id: str | None = None,
+    ) -> list[str]:
         return ["chunk1", "chunk2", "chunk3"]
 
     def score_pairs(
         self,
         pairs: list[tuple[str, str]],
         temperature: float = 1.5,
-        batch_size: int = 8,
+        batch_size: int | None = None,
+        model_id: str | None = None,
     ) -> list[tuple[float, float, float]]:
         self.score_pairs_calls.append(pairs)
         res = []

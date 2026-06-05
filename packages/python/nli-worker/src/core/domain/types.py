@@ -6,6 +6,7 @@ class NliInput(BaseModel):
     context: str
     sentences: list[str]
     temperature: float = 1.5
+    model_id: str | None = None
 
 class SentenceProbability(BaseModel):
     entailment: float

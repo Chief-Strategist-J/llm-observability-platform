@@ -13,6 +13,7 @@ class NliRequest(BaseModel):
     context: str
     sentences: list[str]
     temperature: float = Field(default=1.5, ge=0.0)
+    model_id: str | None = None
 
 class SentenceProbabilitySchema(BaseModel):
     entailment: float
@@ -49,6 +50,7 @@ def score_endpoint(body: NliRequest, request: Request) -> Any:
         context=body.context,
         sentences=body.sentences,
         temperature=temp,
+        model_id=body.model_id,
     )
 
     result = score_nli(

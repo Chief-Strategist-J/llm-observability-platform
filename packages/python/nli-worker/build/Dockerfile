@@ -12,9 +12,6 @@ COPY src/ src/
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir ".[dev]"
 
-# Pre-download Hugging Face model and tokenizer weights
-RUN python -c "from transformers import AutoTokenizer, AutoModelForSequenceClassification; AutoTokenizer.from_pretrained('cross-encoder/nli-deberta-v3-base'); AutoModelForSequenceClassification.from_pretrained('cross-encoder/nli-deberta-v3-base')"
-
 COPY contracts/ contracts/
 
 
@@ -26,8 +23,6 @@ COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /app/src /app/src
 COPY --from=builder /app/contracts /app/contracts
-# Copy the Hugging Face cache directory
-COPY --from=builder /root/.cache /root/.cache
 
 ENV PYTHONPATH=/app/src
 ENV PYTHONDONTWRITEBYTECODE=1

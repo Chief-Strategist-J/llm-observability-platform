@@ -4,23 +4,29 @@ from typing import Protocol
 
 class NliScorerPort(Protocol):
     @property
-    def model_id(self) -> str:
+    def default_model_id(self) -> str:
         ...
 
     @property
     def device_name(self) -> str:
         ...
 
-    def count_tokens(self, text: str) -> int:
+    def count_tokens(self, text: str, model_id: str | None = None) -> int:
         ...
 
-    def split_context_by_tokens(self, text: str, max_tokens: int = 400) -> list[str]:
+    def split_context_by_tokens(
+        self,
+        text: str,
+        max_tokens: int = 400,
+        model_id: str | None = None,
+    ) -> list[str]:
         ...
 
     def score_pairs(
         self,
         pairs: list[tuple[str, str]],
         temperature: float = 1.5,
-        batch_size: int = 8,
+        batch_size: int | None = None,
+        model_id: str | None = None,
     ) -> list[tuple[float, float, float]]:
         ...
