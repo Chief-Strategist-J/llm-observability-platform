@@ -1,0 +1,11 @@
+features:
+  - name: nli-worker
+    status: active
+    contract: contracts/openapi/v1.yaml
+    contract_version: v1
+    owner: "@quality-team"
+    added: 2026-06-05
+    flags: []
+    migrations: []
+    depends_on_features: []
+    depends_on_packages: []
