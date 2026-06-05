@@ -1,0 +1,18 @@
+id: "gpt2"
+task: "causal-lm"
+framework: "onnx"
+precision: "fp32"
+size_bytes: 498000000
+parameters: 124000000
+
+deployment:
+  memory_limit_bytes: 1288490188
+  hardware_platforms:
+    - "cpu"
+  volume_mounts:
+    host_path: "~/.cache/huggingface"
+    container_path: "/root/.cache/huggingface"
+
+metadata:
+  owner: "@quality-team"
+  description: "GPT-2 causal language model compiled to ONNX for CPU-bound fallback perplexity metrics calculation."

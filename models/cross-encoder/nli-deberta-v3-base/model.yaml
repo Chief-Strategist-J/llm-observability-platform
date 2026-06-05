@@ -1,0 +1,19 @@
+id: "cross-encoder/nli-deberta-v3-base"
+task: "sequence-classification"
+framework: "pytorch"
+precision: "fp32"
+size_bytes: 370000000
+parameters: 186000000
+
+deployment:
+  memory_limit_bytes: 1073741824
+  hardware_platforms:
+    - "cpu"
+    - "cuda"
+  volume_mounts:
+    host_path: "~/.cache/huggingface"
+    container_path: "/root/.cache/huggingface"
+
+metadata:
+  owner: "@quality-team"
+  description: "Cross-encoder NLI model used for evaluating RAG grounding and response faithfulness."
