@@ -31,6 +31,12 @@ services:
     image: blang/latex:latest
     volumes:
       - ../:/workdir
-    working_dir: /workdir/notebooks/runbooks/research/toxicity/2026-06-02-inference
-    command: pdflatex proof.tex
+    working_dir: /workdir/notebooks/runbooks/research/nli-worker/2026-06-05-decoupling
+    # Two passes: first builds aux/toc, second resolves \cref cross-references
+    command: >
+      bash -c "
+        pdflatex -interaction=nonstopmode proof.tex &&
+        pdflatex -interaction=nonstopmode proof.tex &&
+        echo '✅ PDF compiled: proof.pdf'
+      "
 

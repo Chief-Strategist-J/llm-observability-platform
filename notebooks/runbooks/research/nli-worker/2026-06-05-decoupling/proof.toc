@@ -1,0 +1,54 @@
+\contentsline {section}{\numberline {1}System Model and Notation}{2}{section.1}
+\contentsline {section}{\numberline {2}End-to-End System Architecture}{3}{section.6}
+\contentsline {subsection}{\numberline {2.1}Ingress Routing, Bloom Filtering, and Resiliency FSM}{3}{subsection.7}
+\contentsline {subsection}{\numberline {2.2}Asynchronous Ingress \& Lifespan Lifecycles}{3}{subsection.11}
+\contentsline {subsection}{\numberline {2.3}Thread-Safe Model Registry \& Double-Checked Locking}{3}{subsection.14}
+\contentsline {subsection}{\numberline {2.4}Token-Size Context Partitioning \& Re-alignment}{4}{subsection.18}
+\contentsline {subsection}{\numberline {2.5}Traffic Resiliency Module}{4}{subsection.23}
+\contentsline {subsection}{\numberline {2.6}Model Registry \& Caching Module}{5}{subsection.26}
+\contentsline {subsection}{\numberline {2.7}Context Slicing \& Tokenization Module}{5}{subsection.29}
+\contentsline {subsection}{\numberline {2.8}Inference Engine \& Aggregation Module}{5}{subsection.32}
+\contentsline {subsection}{\numberline {2.9}Algorithm Execution Dependencies and Inter-Connections}{6}{subsection.35}
+\contentsline {subsection}{\numberline {2.10}Detailed Architectural Data Pipeline and Serialization Flow}{7}{subsection.42}
+\contentsline {section}{\numberline {3}Detailed Architectural Data and Control Planes}{8}{section.52}
+\contentsline {subsection}{\numberline {3.1}Micro-Level Data, Control, and Messaging Plane Architecture}{9}{subsection.56}
+\contentsline {subsection}{\numberline {3.2}Data Plane Specification}{9}{subsection.59}
+\contentsline {subsection}{\numberline {3.3}Control and Architecture Plane Specification}{10}{subsection.64}
+\contentsline {subsection}{\numberline {3.4}Messaging and Telemetry Plane Specification}{10}{subsection.68}
+\contentsline {section}{\numberline {4}Core Platform Algorithms \& Mathematical Foundations}{10}{section.71}
+\contentsline {subsection}{\numberline {4.1}ALG-01: Thread-Safe Model Registry Cache \& Double-Checked Locking}{10}{subsection.72}
+\contentsline {subsubsection}{\numberline {4.1.1}Context and Design Motivation}{10}{subsubsection.73}
+\contentsline {subsubsection}{\numberline {4.1.2}Formal Concurrency Protection Proofs}{12}{subsubsection.77}
+\contentsline {paragraph}{Non-Blocking Cached Access Property:}{13}{theorem.79}
+\contentsline {paragraph}{Lock Acquisition Overhead Boundedness:}{13}{theorem.79}
+\contentsline {subsection}{\numberline {4.2}ALG-02: Lifespan Eager Startup Preloading}{14}{subsection.81}
+\contentsline {subsubsection}{\numberline {4.2.1}Context and Design Motivation}{14}{subsubsection.82}
+\contentsline {subsubsection}{\numberline {4.2.2}Formal Latency Model Proofs}{15}{subsubsection.86}
+\contentsline {subsection}{\numberline {4.3}ALG-03: Token-Level Context Chunking \& Pairs Generation}{17}{subsection.89}
+\contentsline {subsubsection}{\numberline {4.3.1}Context and Design Motivation}{17}{subsubsection.90}
+\contentsline {subsubsection}{\numberline {4.3.2}Formal Correctness Proof}{18}{subsubsection.94}
+\contentsline {subsection}{\numberline {4.4}ALG-04: Batch Inference \& Entailment Max-Aggregation}{19}{subsection.96}
+\contentsline {subsubsection}{\numberline {4.4.1}Context and Design Motivation}{19}{subsubsection.97}
+\contentsline {subsubsection}{\numberline {4.4.2}Formal Statistical Decision Proofs}{20}{subsubsection.101}
+\contentsline {subsection}{\numberline {4.5}ALG-05: Resilient HTTP Circuit Breaker \& Bloom Filter Deduplication}{23}{subsection.105}
+\contentsline {subsubsection}{\numberline {4.5.1}Context and Design Motivation}{23}{subsubsection.106}
+\contentsline {subsubsection}{\numberline {4.5.2}Formal FSM \& Resiliency Proofs}{25}{subsubsection.110}
+\contentsline {section}{\numberline {5}Algorithm Complexity Summary}{31}{section.120}
+\contentsline {section}{\numberline {6}Circuit Breaker Markov Chain}{31}{section.123}
+\contentsline {section}{\numberline {7}Experimental Evaluation}{31}{section.126}
+\contentsline {subsection}{\numberline {7.1}Experimental Setup}{31}{subsection.127}
+\contentsline {subsection}{\numberline {7.2}Container Image Footprint and Deploy Times}{32}{subsection.128}
+\contentsline {subsection}{\numberline {7.3}Latency Distributions and Cache Performance}{32}{subsection.133}
+\contentsline {subsection}{\numberline {7.4}Context Slicing and Token Distributions}{32}{subsection.136}
+\contentsline {subsection}{\numberline {7.5}Bloom Filter and EWMA Telemetry Dynamics}{33}{subsection.139}
+\contentsline {subsection}{\numberline {7.6}Concurrency and Lock Contention Gantt Analysis}{33}{subsection.144}
+\contentsline {subsection}{\numberline {7.7}Circuit Breaker State Transition and Recovery}{34}{subsection.147}
+\contentsline {section}{\numberline {8}Critical Failure Modes \& Mitigations}{34}{section.150}
+\contentsline {subsection}{\numberline {8.1}Data Plane Failures}{35}{subsection.151}
+\contentsline {subsection}{\numberline {8.2}Control and Architecture Plane Failures}{37}{subsection.157}
+\contentsline {subsection}{\numberline {8.3}Messaging and Telemetry Plane Failures}{38}{subsection.163}
+\contentsline {section}{\numberline {9}Discussion: Practical Translation \& Architectural Scaling}{40}{section.169}
+\contentsline {subsection}{\numberline {9.1}Bridging the Theoretical-Practical Translation Gap}{40}{subsection.170}
+\contentsline {subsection}{\numberline {9.2}Distributed State Synchronization and Split-Brain Mitigations}{40}{subsection.171}
+\contentsline {subsection}{\numberline {9.3}Hardware-Aware Optimizations \& Multi-GPU Co-Design}{40}{subsection.172}
+\contentsline {section}{\numberline {10}Conclusion}{41}{section.173}
