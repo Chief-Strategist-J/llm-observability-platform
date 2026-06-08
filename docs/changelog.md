@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.12.0] - 2026-06-08
+
+### Added
+- **Docker Deployments & Cleanup Automation**: Automated Docker image building, testing, pushing, and post-deployment cleanup for `toxicity-worker` (v0.1.0), `quality-engine` (v0.2.0), and `alert-engine` (v0.1.0) services to Docker Hub under the `chiefj` namespace. Built images are cleaned up from the host system immediately after successful registry pushes.
+
 ## [1.11.0] - 2026-06-05
 
 ### Added

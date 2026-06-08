@@ -468,11 +468,70 @@ Two Docker Compose configurations are available under `deploy/docker/` depending
    KAFKA_BOOTSTRAP_SERVERS="my-kafka:9092" docker compose -f deploy/docker/docker-compose.prod.yaml up -d
    ```
 
-### Docker Deployments (v1.8.3)
+### Docker Deployments (v1.12.0)
 
-We publish two official Docker images:
+We publish several official Docker images to the `chiefj` namespace on Docker Hub:
 * **All-in-One Image (`chiefj/instrumentation-sdk-api`)**: Contains Java, Kafka, PostgreSQL, and pgvector. When started, it automatically initializes database users, databases, runs migrations, and provisions Kafka topics. No external setup required.
 * **Standalone Image (`chiefj/instrumentation-sdk-api-nokafka`)**: A lightweight container without the embedded databases and message queues. You supply your own external endpoints.
+* **Toxicity Scorer Worker (`chiefj/toxicity-worker`)**: Standalone ONNX runtime microservice for multi-label toxicity checks.
+* **Quality Scorer Engine (`chiefj/quality-engine`)**: Standalone microservice evaluating span metrics, schema alignment, and rule-based thresholds.
+* **Alert Engine (`chiefj/alert-engine`)**: Kafka-consumer worker routing budget warnings and cost anomaly updates.
+
+Each engine contains a `deploy_docker.sh` utility under its `scripts/` directory to build, validate, push, and automatically clean up the local image caches.
+
+#### Architectural Connection Flow
+
+The following diagram illustrates how the three standalone services interact:
+
+```text
+┌───────────────────────┐
+│  instrumentation-sdk  │──(Publish Spans)──> [ Kafka: llm.spans.sampled ]
+└───────────────────────┘                                │
+                                                         v
+┌───────────────────────┐                    ┌───────────────────────┐
+│    Toxicity Worker    │<──(POST /score)────│    Quality Engine     │
+│  (chiefj/toxic-bert)  │                    │ (Temporal Orchestrator)│
+└───────────────────────┘                    └───────────┬───────────┘
+                                                         │
+                                                  (Emit Alerts)
+                                                         │
+                                                         v
+┌───────────────────────┐                    [ Kafka: alert topics ]
+│     Alert Engine      │<──(Consume Alerts)─────────────┘
+│ (Slack / PagerDuty)   │
+└───────────────────────┘
+```
+
+1. **Telemetry Ingestion**: The `instrumentation-sdk` streams intercepted LLM spans into the `llm.spans.sampled` Kafka topic.
+2. **Quality Orchestration**: The **Quality Engine** consumes these spans and triggers a Temporal workflow, which queries the **Toxicity Worker** (via HTTP POST `/score`) and other scorer microservices to evaluate the content.
+3. **Alert Routing**: High-toxicity flags and quality degradation events are emitted to Kafka alert topics. The **Alert Engine** consumes these events and dispatches notifications to PostgreSQL databases, Slack channels, and PagerDuty endpoints.
+
+#### How to Run & Use the Microservices
+
+* **Toxicity Scorer Worker** (FastAPI Scorer API):
+  Run container on port `8008`:
+  ```bash
+  docker run -d -p 8008:8008 --name toxicity-worker chiefj/toxicity-worker:stable
+  ```
+  Score text via HTTP POST request:
+  ```bash
+  curl -X POST http://localhost:8008/score -H "Content-Type: application/json" -d '{"text": "Is this text toxic?"}'
+  ```
+
+* **Quality Scorer Engine** (Kafka Ingestion + Temporal Orchestrator):
+  Run container:
+  ```bash
+  docker run -d --name quality-engine -e KAFKA_BOOTSTRAP_SERVERS=kafka:9092 -e POSTGRES_HOST=postgres -e TEMPORAL_HOST=temporal:7233 chiefj/quality-engine:stable
+  ```
+
+* **Alert Engine** (Kafka Consumer Alert Dispatcher):
+  Run container:
+  ```bash
+  docker run -d --name alert-engine -e KAFKA_BOOTSTRAP_SERVERS=kafka:9092 -e POSTGRES_URL=postgresql://user:pass@postgres:5432/db chiefj/alert-engine:stable
+  ```
+
+
+
 
 #### Connection & Configuration Environment Variables
 

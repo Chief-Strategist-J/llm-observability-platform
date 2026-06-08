@@ -9,3 +9,7 @@ docker run --rm -v "$(pwd)/tests:/app/tests" "${IMAGE}:latest" pytest tests/ -v 
 docker push "${IMAGE}:latest"
 docker push "${IMAGE}:v${VERSION}"
 docker push "${IMAGE}:stable"
+
+echo "=== Deleting Local Docker Images ==="
+docker rmi "${IMAGE}:latest" "${IMAGE}:v${VERSION}" "${IMAGE}:stable"
+

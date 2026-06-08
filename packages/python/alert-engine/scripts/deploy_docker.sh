@@ -2,7 +2,7 @@
 # deploy_docker.sh — Build, validate, and push Docker image with proper tags (latest, version, stable)
 set -euo pipefail
 
-IMAGE="chiefj/quality-engine"
+IMAGE="chiefj/alert-engine"
 VERSION=$(grep '^version' pyproject.toml | head -1 | cut -d'"' -f2)
 
 echo "=== Building Docker Image: ${IMAGE} ==="
@@ -12,7 +12,7 @@ echo "=== Running Container Validation Tests ==="
 docker run --rm \
   -v "$(pwd)/tests:/app/tests" \
   -e PYTHONPATH=/app/src \
-  "${IMAGE}:latest" pytest /app/tests /app/src/handlers/span_quality/tests -v --tb=short
+  "${IMAGE}:latest" pytest /app/tests -v --tb=short
 
 echo "=== Pushing Docker Image Tags ==="
 docker push "${IMAGE}:latest"
