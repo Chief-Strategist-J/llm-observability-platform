@@ -186,7 +186,7 @@ class TestToxicityAlwaysRuns:
         await handler.handle_score_result(
             span_id="s1", model="gpt-4", endpoint="/v1/chat",
             prompt_type="chat", response_language="en",
-            scores=ScoreMap(toxicity=0.80),  # > 0.75 threshold
+            scores=ScoreMap(toxicity=0.60),  # > 0.50 threshold
             quality_flags=[],
             scored_at=datetime.now(timezone.utc),
             trace_id="t1",
@@ -201,7 +201,7 @@ class TestToxicityAlwaysRuns:
         await handler.handle_score_result(
             span_id="s1", model="gpt-4", endpoint="/v1/chat",
             prompt_type="chat", response_language="en",
-            scores=ScoreMap(toxicity=0.74),  # exactly below 0.75
+            scores=ScoreMap(toxicity=0.49),  # exactly below 0.50
             quality_flags=[],
             scored_at=datetime.now(timezone.utc),
             trace_id="t1",
@@ -209,6 +209,7 @@ class TestToxicityAlwaysRuns:
         toxicity_calls = [c for c in producer.produce.call_args_list
                           if c[1].get("topic") == "llm.toxicity.flagged"]
         assert len(toxicity_calls) == 0
+
 
     @pytest.mark.asyncio
     async def test_toxicity_flag_emitted_even_when_coherence_null(self):

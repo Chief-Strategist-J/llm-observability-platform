@@ -54,3 +54,11 @@ class DetoxifyOnnxAdapter(ToxicityScorerPort):
             insult=probs[label_to_idx.get("insult", 4)],
             identity_hate=probs[label_to_idx.get("identity_hate", 5)],
         )
+
+    def warmup(self) -> None:
+        # Trigger cached property loading
+        _ = self._tokenizer
+        _ = self._model
+        # Run dummy inference pass
+        self.score_token_ids(self.tokenize("hello"))
+

@@ -121,11 +121,16 @@ async def test_handle_score_result_emits_toxicity_flag():
     await handler.handle_score_result(
         span_id="s1", model="gpt-4", endpoint="/v1/chat",
         prompt_type="chat", response_language="en",
-        scores=ScoreMap(toxicity=0.90),  # above 0.75 threshold
+        scores=ScoreMap(toxicity=0.60),  # above 0.50 threshold
         quality_flags=[],
         scored_at=datetime.now(timezone.utc),
         trace_id="t1",
+        user_id="user-123",
     )
     producer.produce.assert_called()
     call_args = producer.produce.call_args
     assert call_args[1]["topic"] == "llm.toxicity.flagged"
+    payload = json.loads(call_args[1]["value"].decode())
+    assert payload["user_id"] == "user-123"
+    assert payload["toxicity_score"] == 0.60
+

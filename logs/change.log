@@ -985,3 +985,12 @@
         ├── worker -> Kafka consumer: W3C traceparent, 3-retry+DLQ, manual offset commit
         └── tests -> prompt_type_detector, composite_scorer, baseline_logic, handler, config unit tests
 
+[2026-06-08T10:25:00+05:30] Implement Phase 1 Toxicity Pipeline (Week 5) pending tasks: warm-up, user_id propagation, and alert-engine toxicity consumer
+└── File: packages/python/toxicity-worker/src/core/domain/ports/toxicity_scorer_port.py, packages/python/toxicity-worker/src/infra/adapters/detoxify_onnx_adapter.py, packages/python/toxicity-worker/src/api/rest/v1/app.py, packages/python/quality-engine/contracts/events/llm_spans_sampled.yaml, packages/python/quality-engine/src/handlers/span_quality/types.py, packages/python/quality-engine/src/handlers/span_quality/handler.py, packages/python/alert-engine/contracts/events/llm.toxicity.flagged.yaml, packages/python/alert-engine/src/handlers/alerts_toxicity/handler.py, packages/python/alert-engine/src/worker/registry.py, packages/python/alert-engine/src/worker/config.py
+    ├── Choice: Update contracts first, implement startup warm-up in toxicity-worker, propagate user_id through quality-engine to llm.toxicity.flagged topic, and add a deduplicating Kafka consumer in alert-engine.
+    └── Changes:
+        ├── toxicity-worker-warmup -> Add warmup() to scorer port/adapter and invoke on FastAPI startup
+        ├── user-id-propagation -> Add user_id to contracts and propagate through span parser and alert emitter
+        └── alert-engine-toxicity -> Add ToxicityAlertHandler with 5-minute Redis-based deduplication per user_id+endpoint
+
+
