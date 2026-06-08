@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from prometheus_client import make_asgi_app
 
 from api.rest.v1.router import router as v1_router
 from infra.adapters.detoxify_onnx_adapter import DetoxifyOnnxAdapter
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -22,9 +24,11 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    app.mount("/metrics", make_asgi_app())
     app.state.toxicity_scorer = DetoxifyOnnxAdapter()
     app.include_router(v1_router)
     return app
+
 
 
 app = create_app()

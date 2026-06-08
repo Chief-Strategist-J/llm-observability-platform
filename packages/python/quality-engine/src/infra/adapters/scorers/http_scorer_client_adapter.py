@@ -88,7 +88,8 @@ class HttpScorerClientAdapter(ScorerClientPort):
             "response_text": response_text,
         }
         try:
-            with httpx.Client(timeout=5.0) as client:
+            with httpx.Client(timeout=0.2) as client:
+
                 r = client.post(url, json=payload)
                 if r.status_code == 200:
                     return r.json().get("score")

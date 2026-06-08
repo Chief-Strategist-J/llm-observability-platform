@@ -993,4 +993,10 @@
         ├── user-id-propagation -> Add user_id to contracts and propagate through span parser and alert emitter
         └── alert-engine-toxicity -> Add ToxicityAlertHandler with 5-minute Redis-based deduplication per user_id+endpoint
 
+[2026-06-08T12:01:00+05:30] Configure 200ms timeout on toxicity scorer calls and add toxicity-worker prometheus metrics
+└── File: packages/python/quality-engine/src/infra/adapters/scorers/http_scorer_client_adapter.py, packages/python/toxicity-worker/pyproject.toml, packages/python/toxicity-worker/src/api/rest/v1/app.py
+    ├── Choice: Reduce httpx client timeout to 200ms (0.2s) in quality-engine scorer adapter and expose /metrics endpoint via prometheus-client in toxicity-worker.
+    └── Changes:
+        ├── scorer-timeout -> Set timeout to 0.2s for get_toxicity_score HTTP client calls
+        └── toxicity-worker-metrics -> Add prometheus-client dependency, mount /metrics asgi app, and instrument requests
 
