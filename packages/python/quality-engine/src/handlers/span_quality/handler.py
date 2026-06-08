@@ -19,6 +19,8 @@ from shared.ports.baseline_cache_port import BaselineCachePort
 from shared.ports.temporal_trigger_port import TemporalTriggerPort
 from shared.ports.embedding_client_port import EmbeddingClientPort
 from shared.ports.kafka_producer_port import KafkaProducerPort
+from shared.metrics import SPANS_PROCESSED, TOXICITY_SCORE, TOXIC_FLAGGED, PIPELINE_LATENCY, SCORE_NULL
+
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer("quality-engine.span-quality-handler")
@@ -130,6 +132,7 @@ class SpanQualityHandler:
         quality_flags: list[str],
         scored_at: datetime,
         trace_id: str,
+        user_id: str | None = None,
     ) -> None:
         """
         Called after Temporal workflow activities complete and emit llm.quality.scores.
@@ -139,9 +142,31 @@ class SpanQualityHandler:
             "span_quality_handler.handle_score_result",
             attributes={"span_id": span_id, "model": model, "endpoint": endpoint},
         ):
-            # F-Q-05: Toxicity is always present (safety signal); emit flag if above threshold
-            if scores.toxicity is not None and scores.toxicity >= _TOXICITY_FLAG_THRESHOLD:
-                self._emit_toxicity_flagged(span_id, model, endpoint, scores.toxicity, scored_at)
+            # Record Prometheus metrics
+            SPANS_PROCESSED.labels(model=model, endpoint=endpoint).inc()
+            if scores.toxicity is not None:
+                TOXICITY_SCORE.observe(scores.toxicity)
+                if scores.toxicity > 0.50:
+                    TOXOC_FLAGGED_LABELS = TOXIC_FLAGGED.labels(model=model, endpoint=endpoint)
+                    TOXOC_FLAGGED_LABELS.inc()
+            
+            # Latency from scored_at timestamp to current time
+            latency_ms = (datetime.now(timezone.utc) - scored_at.astimezone(timezone.utc)).total_seconds() * 1000
+            PIPELINE_LATENCY.observe(max(0.0, latency_ms))
+
+            if scores.toxicity is None:
+                SCORE_NULL.labels(reason="toxicity").inc()
+            if scores.coherence is None:
+                SCORE_NULL.labels(reason="coherence").inc()
+            if scores.faithfulness is None:
+                SCORE_NULL.labels(reason="faithfulness").inc()
+            if scores.perplexity is None:
+                SCORE_NULL.labels(reason="perplexity").inc()
+
+            # F-Q-05: Toxicity is always present (safety signal); emit flag if above threshold (> 0.50 per Phase 1)
+            if scores.toxicity is not None and scores.toxicity > 0.50:
+                self._emit_toxicity_flagged(span_id, model, endpoint, scores.toxicity, scored_at, user_id)
+
 
             # F-Q-06: Composite computation with invariant validation
             composite = compute_composite(scores)
@@ -162,6 +187,7 @@ class SpanQualityHandler:
                 scored_at=scored_at,
             )
             self._repo.insert_score(row)
+
 
             # F-Q-07: Update rolling baseline if composite is not null
             if composite is not None:
@@ -245,9 +271,11 @@ class SpanQualityHandler:
         endpoint: str,
         toxicity_score: float,
         flagged_at: datetime,
+        user_id: str | None = None,
     ) -> None:
         event = {
             "span_id": span_id,
+            "user_id": user_id,
             "model": model,
             "endpoint": endpoint,
             "toxicity_score": toxicity_score,
@@ -258,6 +286,7 @@ class SpanQualityHandler:
             key=span_id,
             value=json.dumps(event).encode(),
         )
+
 
     def _emit_degradation_alert(
         self,
@@ -294,8 +323,10 @@ def _parse_span(payload: dict) -> SampledSpan:
     return SampledSpan(
         span_id=payload["span_id"],
         trace_id=payload["trace_id"],
+        user_id=payload.get("user_id"),
         model=payload["model"],
         endpoint=payload["endpoint"],
+
         prompt_text=payload["prompt_text"],
         response_text=payload["response_text"],
         completion_tokens=int(payload["completion_tokens"]),

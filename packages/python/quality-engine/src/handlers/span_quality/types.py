@@ -22,11 +22,14 @@ class SampledSpan:
     trace_id: str
     model: str
     endpoint: str
+
     prompt_text: str
     response_text: str
     completion_tokens: int
     finish_reason: FinishReason
+    user_id: str | None = None
     prompt_tokens: int = 0
+
     rag_context: str | None = None
     prompt_embedding: list[float] | None = None
     response_embedding: list[float] | None = None

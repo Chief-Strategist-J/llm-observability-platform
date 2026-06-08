@@ -1,0 +1,46 @@
+asyncapi: 2.6.0
+info:
+  title: Toxicity Flagged Event
+  version: "1"
+  description: Toxicity flagged events consumed by alert-engine
+channels:
+  llm.toxicity.flagged:
+    subscribe:
+      operationId: consumeToxicityFlagged
+      message:
+        name: ToxicityFlaggedEvent
+        contentType: application/json
+        headers:
+          type: object
+          properties:
+            traceparent:
+              type: string
+              description: W3C Trace Context traceparent header
+            tracestate:
+              type: string
+              description: W3C Trace Context tracestate header
+        payload:
+          type: object
+          required:
+            - span_id
+            - model
+            - endpoint
+            - toxicity_score
+            - flagged_at
+          properties:
+            span_id:
+              type: string
+            user_id:
+              type: string
+              nullable: true
+            model:
+              type: string
+            endpoint:
+              type: string
+            toxicity_score:
+              type: number
+            flagged_at:
+              type: string
+              format: date-time
+consumer_group: alert-engine-group
+version: 1

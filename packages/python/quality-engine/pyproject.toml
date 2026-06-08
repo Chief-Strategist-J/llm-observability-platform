@@ -17,7 +17,9 @@ dependencies = [
     "redis>=5.0.0",
     "temporalio>=1.5.0",
     "langdetect>=1.0.9",
+    "prometheus-client>=0.17.0",
 ]
+
 
 [project.optional-dependencies]
 dev = [

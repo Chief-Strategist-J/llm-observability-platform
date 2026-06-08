@@ -43,6 +43,7 @@ components:
         properties:
           span_id:          { type: string }
           trace_id:         { type: string }
+          user_id:          { type: string, nullable: true }
           model:            { type: string }
           endpoint:         { type: string }
           prompt_text:      { type: string }
@@ -55,6 +56,7 @@ components:
           response_embedding:{ type: array, items: { type: number }, nullable: true }
           provider_logprobs: { type: array, items: { type: number }, nullable: true }
           scored_at:        { type: string, format: date-time }
+
 
     QualityScoreEvent:
       name: QualityScoreEvent
@@ -81,10 +83,12 @@ components:
         type: object
         properties:
           span_id:       { type: string }
+          user_id:       { type: string, nullable: true }
           model:         { type: string }
           endpoint:      { type: string }
           toxicity_score:{ type: number }
           flagged_at:    { type: string, format: date-time }
+
 
     DegradationAlertEvent:
       name: DegradationAlertEvent

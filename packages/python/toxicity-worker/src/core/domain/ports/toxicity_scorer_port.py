@@ -11,3 +11,7 @@ class ToxicityScorerPort(ABC):
     @abstractmethod
     def score_token_ids(self, token_ids: list[int]) -> ToxicityScores:
         pass
+
+    def warmup(self) -> None:
+        pass
+
