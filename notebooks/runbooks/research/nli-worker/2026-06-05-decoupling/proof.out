@@ -1,0 +1,52 @@
+\BOOKMARK [1][-]{section.1}{System Model and Notation}{}% 1
+\BOOKMARK [1][-]{section.6}{End-to-End System Architecture}{}% 2
+\BOOKMARK [2][-]{subsection.7}{Ingress Routing, Bloom Filtering, and Resiliency FSM}{section.6}% 3
+\BOOKMARK [2][-]{subsection.11}{Asynchronous Ingress \046 Lifespan Lifecycles}{section.6}% 4
+\BOOKMARK [2][-]{subsection.14}{Thread-Safe Model Registry \046 Double-Checked Locking}{section.6}% 5
+\BOOKMARK [2][-]{subsection.18}{Token-Size Context Partitioning \046 Re-alignment}{section.6}% 6
+\BOOKMARK [2][-]{subsection.23}{Traffic Resiliency Module}{section.6}% 7
+\BOOKMARK [2][-]{subsection.26}{Model Registry \046 Caching Module}{section.6}% 8
+\BOOKMARK [2][-]{subsection.29}{Context Slicing \046 Tokenization Module}{section.6}% 9
+\BOOKMARK [2][-]{subsection.32}{Inference Engine \046 Aggregation Module}{section.6}% 10
+\BOOKMARK [2][-]{subsection.35}{Algorithm Execution Dependencies and Inter-Connections}{section.6}% 11
+\BOOKMARK [2][-]{subsection.42}{Detailed Architectural Data Pipeline and Serialization Flow}{section.6}% 12
+\BOOKMARK [1][-]{section.52}{Detailed Architectural Data and Control Planes}{}% 13
+\BOOKMARK [2][-]{subsection.56}{Micro-Level Data, Control, and Messaging Plane Architecture}{section.52}% 14
+\BOOKMARK [2][-]{subsection.59}{Data Plane Specification}{section.52}% 15
+\BOOKMARK [2][-]{subsection.64}{Control and Architecture Plane Specification}{section.52}% 16
+\BOOKMARK [2][-]{subsection.68}{Messaging and Telemetry Plane Specification}{section.52}% 17
+\BOOKMARK [1][-]{section.71}{Core Platform Algorithms \046 Mathematical Foundations}{}% 18
+\BOOKMARK [2][-]{subsection.72}{ALG-01: Thread-Safe Model Registry Cache \046 Double-Checked Locking}{section.71}% 19
+\BOOKMARK [3][-]{subsubsection.73}{Context and Design Motivation}{subsection.72}% 20
+\BOOKMARK [3][-]{subsubsection.77}{Formal Concurrency Protection Proofs}{subsection.72}% 21
+\BOOKMARK [2][-]{subsection.81}{ALG-02: Lifespan Eager Startup Preloading}{section.71}% 22
+\BOOKMARK [3][-]{subsubsection.82}{Context and Design Motivation}{subsection.81}% 23
+\BOOKMARK [3][-]{subsubsection.86}{Formal Latency Model Proofs}{subsection.81}% 24
+\BOOKMARK [2][-]{subsection.89}{ALG-03: Token-Level Context Chunking \046 Pairs Generation}{section.71}% 25
+\BOOKMARK [3][-]{subsubsection.90}{Context and Design Motivation}{subsection.89}% 26
+\BOOKMARK [3][-]{subsubsection.94}{Formal Correctness Proof}{subsection.89}% 27
+\BOOKMARK [2][-]{subsection.96}{ALG-04: Batch Inference \046 Entailment Max-Aggregation}{section.71}% 28
+\BOOKMARK [3][-]{subsubsection.97}{Context and Design Motivation}{subsection.96}% 29
+\BOOKMARK [3][-]{subsubsection.101}{Formal Statistical Decision Proofs}{subsection.96}% 30
+\BOOKMARK [2][-]{subsection.105}{ALG-05: Resilient HTTP Circuit Breaker \046 Bloom Filter Deduplication}{section.71}% 31
+\BOOKMARK [3][-]{subsubsection.106}{Context and Design Motivation}{subsection.105}% 32
+\BOOKMARK [3][-]{subsubsection.110}{Formal FSM \046 Resiliency Proofs}{subsection.105}% 33
+\BOOKMARK [1][-]{section.120}{Algorithm Complexity Summary}{}% 34
+\BOOKMARK [1][-]{section.123}{Circuit Breaker Markov Chain}{}% 35
+\BOOKMARK [1][-]{section.126}{Experimental Evaluation}{}% 36
+\BOOKMARK [2][-]{subsection.127}{Experimental Setup}{section.126}% 37
+\BOOKMARK [2][-]{subsection.128}{Container Image Footprint and Deploy Times}{section.126}% 38
+\BOOKMARK [2][-]{subsection.133}{Latency Distributions and Cache Performance}{section.126}% 39
+\BOOKMARK [2][-]{subsection.136}{Context Slicing and Token Distributions}{section.126}% 40
+\BOOKMARK [2][-]{subsection.139}{Bloom Filter and EWMA Telemetry Dynamics}{section.126}% 41
+\BOOKMARK [2][-]{subsection.144}{Concurrency and Lock Contention Gantt Analysis}{section.126}% 42
+\BOOKMARK [2][-]{subsection.147}{Circuit Breaker State Transition and Recovery}{section.126}% 43
+\BOOKMARK [1][-]{section.150}{Critical Failure Modes \046 Mitigations}{}% 44
+\BOOKMARK [2][-]{subsection.151}{Data Plane Failures}{section.150}% 45
+\BOOKMARK [2][-]{subsection.157}{Control and Architecture Plane Failures}{section.150}% 46
+\BOOKMARK [2][-]{subsection.163}{Messaging and Telemetry Plane Failures}{section.150}% 47
+\BOOKMARK [1][-]{section.169}{Discussion: Practical Translation \046 Architectural Scaling}{}% 48
+\BOOKMARK [2][-]{subsection.170}{Bridging the Theoretical-Practical Translation Gap}{section.169}% 49
+\BOOKMARK [2][-]{subsection.171}{Distributed State Synchronization and Split-Brain Mitigations}{section.169}% 50
+\BOOKMARK [2][-]{subsection.172}{Hardware-Aware Optimizations \046 Multi-GPU Co-Design}{section.169}% 51
+\BOOKMARK [1][-]{section.173}{Conclusion}{}% 52
