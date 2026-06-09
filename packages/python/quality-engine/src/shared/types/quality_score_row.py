@@ -27,3 +27,4 @@ class QualityScoreRow:
     quality_flags: list[str]
     skipped_reason: str | None
     scored_at: datetime
+    weights_used: dict[str, float] | None = None

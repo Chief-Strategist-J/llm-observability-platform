@@ -13,18 +13,20 @@ class PostgresQualityScoreAdapter(QualityScoreRepositoryPort):
         self._dsn = dsn
 
     def insert_score(self, row: QualityScoreRow) -> None:
+        import json
         sql = """
         INSERT INTO quality_scores (
             span_id, trace_id, model, endpoint, prompt_type, response_language,
             composite_score, coherence_score, toxicity_score, faithfulness_score,
-            perplexity_score, quality_flags, skipped_reason, scored_at
+            perplexity_score, quality_flags, skipped_reason, weights_used, scored_at
         ) VALUES (
             %s, %s, %s, %s, %s, %s,
             %s, %s, %s, %s,
-            %s, %s, %s, %s
+            %s, %s, %s, %s, %s
         )
         ON CONFLICT (span_id) DO NOTHING
         """
+        weights_json = json.dumps(row.weights_used) if row.weights_used is not None else None
         with psycopg.connect(self._dsn) as conn:
             with conn.cursor() as cur:
                 cur.execute(sql, (
@@ -41,6 +43,7 @@ class PostgresQualityScoreAdapter(QualityScoreRepositoryPort):
                     row.perplexity_score,
                     row.quality_flags,
                     row.skipped_reason,
+                    weights_json,
                     row.scored_at,
                 ))
             conn.commit()

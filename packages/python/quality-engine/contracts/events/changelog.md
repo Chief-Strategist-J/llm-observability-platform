@@ -7,4 +7,8 @@
   - `llm.toxicity.flagged`
   - `alerts.quality.degradation`
 - Consumer group: `quality-engine-group` (pinned in `src/worker/config.py`)
-- Event schema version v1.0.0 pinned in `.contract-lock`
+## [1.1.0] — 2026-06-09
+### Added
+- Added database schema support for `weights_used` JSONB column inside `quality_scores`.
+- Integrated `LOW_COHERENCE` and `HALLUCINATION_RISK` flags back to ingestion metrics quality flags.
+- Configured dynamic weight renormalization excluding perplexity by default.

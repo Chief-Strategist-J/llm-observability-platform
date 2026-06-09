@@ -19,7 +19,7 @@ from shared.ports.baseline_cache_port import BaselineCachePort
 from shared.ports.temporal_trigger_port import TemporalTriggerPort
 from shared.ports.embedding_client_port import EmbeddingClientPort
 from shared.ports.kafka_producer_port import KafkaProducerPort
-from shared.metrics import SPANS_PROCESSED, TOXICITY_SCORE, TOXIC_FLAGGED, PIPELINE_LATENCY, SCORE_NULL
+from shared.metrics import SPANS_PROCESSED, TOXICITY_SCORE, TOXIC_FLAGGED, PIPELINE_LATENCY, SCORE_NULL, EMBEDDING_REUSE
 
 
 logger = logging.getLogger(__name__)
@@ -86,20 +86,30 @@ class SpanQualityHandler:
 
             # F-Q-04: Embedding reuse
             prompt_emb = sampled.prompt_embedding
-            response_emb = sampled.response_embedding
-            if prompt_emb is None or response_emb is None:
-                with tracer.start_as_current_span("embedding.fetch"):
+            if prompt_emb is not None:
+                EMBEDDING_REUSE.labels(status="reused").inc()
+            else:
+                EMBEDDING_REUSE.labels(status="generated").inc()
+                with tracer.start_as_current_span("embedding.fetch.prompt"):
                     prompt_emb = await self._embedding_client.embed(
                         sampled.prompt_text, timeout_ms=500
                     )
+
+            response_emb = sampled.response_embedding
+            if response_emb is not None:
+                EMBEDDING_REUSE.labels(status="reused").inc()
+            else:
+                EMBEDDING_REUSE.labels(status="generated").inc()
+                with tracer.start_as_current_span("embedding.fetch.response"):
                     response_emb = await self._embedding_client.embed(
                         sampled.response_text, timeout_ms=500
                     )
-                    if prompt_emb is None or response_emb is None:
-                        logger.warning(
-                            "embedding_fetch_timeout span_id=%s — coherence will be null",
-                            sampled.span_id
-                        )
+
+            if prompt_emb is None or response_emb is None:
+                logger.warning(
+                    "embedding_fetch_timeout span_id=%s — coherence will be null",
+                    sampled.span_id
+                )
 
             # F-Q-01: Signal Temporal workflow with enriched span
             enriched_payload = {
@@ -163,13 +173,39 @@ class SpanQualityHandler:
             if scores.perplexity is None:
                 SCORE_NULL.labels(reason="perplexity").inc()
 
-            # F-Q-05: Toxicity is always present (safety signal); emit flag if above threshold (> 0.50 per Phase 1)
+             # F-Q-05: Toxicity is always present (safety signal); emit flag if above threshold (> 0.50 per Phase 1)
             if scores.toxicity is not None and scores.toxicity > 0.50:
                 self._emit_toxicity_flagged(span_id, model, endpoint, scores.toxicity, scored_at, user_id)
 
+            # Ensure quality_flags is a list so we can modify it
+            flags = list(quality_flags) if quality_flags is not None else []
+
+            # Step 2.4: HALLUCINATION_RISK flag if faithfulness_score < 0.70
+            if scores.faithfulness is not None and scores.faithfulness < 0.70:
+                if "HALLUCINATION_RISK" not in flags:
+                    flags.append("HALLUCINATION_RISK")
+
+            # Step 2.2: LOW_COHERENCE flag if coherence is below prompt_type threshold
+            # Chat: 0.30, RAG: 0.25, Code: 0.15, Classification: 0.40
+            if scores.coherence is not None:
+                threshold = 0.30
+                if prompt_type == "code":
+                    threshold = 0.15
+                elif prompt_type == "rag":
+                    threshold = 0.25
+                elif prompt_type == "classification":
+                    threshold = 0.40
+
+                if scores.coherence < threshold:
+                    if "LOW_COHERENCE" not in flags:
+                        flags.append("LOW_COHERENCE")
+
+            # Update quality_flags variable
+            quality_flags = flags
+
 
             # F-Q-06: Composite computation with invariant validation
-            composite = compute_composite(scores)
+            composite, weights_used = compute_composite(scores)
             row = QualityScoreRow(
                 span_id=span_id,
                 trace_id=trace_id,
@@ -184,6 +220,7 @@ class SpanQualityHandler:
                 perplexity_score=scores.perplexity,
                 quality_flags=quality_flags,
                 skipped_reason=None,
+                weights_used=weights_used,
                 scored_at=scored_at,
             )
             self._repo.insert_score(row)

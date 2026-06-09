@@ -1000,3 +1000,14 @@
         ├── scorer-timeout -> Set timeout to 0.2s for get_toxicity_score HTTP client calls
         └── toxicity-worker-metrics -> Add prometheus-client dependency, mount /metrics asgi app, and instrument requests
 
+[2026-06-09T10:05:00+05:30] Implement Phase 2 Coherence + Faithfulness Pipeline
+└── File: packages/python/quality-engine/src/handlers/span_quality/handler.py, packages/python/quality-engine/src/shared/metrics.py, packages/python/quality-engine/src/handlers/span_quality/composite_scorer.py, packages/python/quality-engine/src/infra/adapters/postgres/postgres_adapter.py, packages/python/quality-engine/src/shared/types/quality_score_row.py, packages/python/quality-engine/database/migrations/0001_init.sql, packages/python/quality-engine/src/infra/adapters/scorers/http_scorer_client_adapter.py, packages/python/quality-engine/tests/unit/test_composite_scorer.py, packages/python/quality-engine/tests/unit/test_rules.py, packages/python/quality-engine/src/handlers/span_quality/tests/unit/test_composite_scorer_critical.py, packages/python/quality-engine/src/handlers/span_quality/tests/unit/test_span_quality_handler.py
+    ├── Choice: Integrate embedding reuse logic per-embedding, add EMBEDDING_REUSE prometheus counters, enforce 2000ms timeout on faithfulness scoring, renormalize weights dynamically without perplexity, and persist weights_used to database.
+    └── Changes:
+        ├── embedding-reuse -> Reuse prompt/response embeddings individually, fetch missing via HTTP client (500ms limit), track hits/misses via EMBEDDING_REUSE counter
+        ├── faithfulness-timeout -> Enforce 2000ms timeout on faithfulness POST /nli query; skip if context < 50 chars
+        ├── flag-propagation -> Set LOW_COHERENCE (using prompt type thresholds) and HALLUCINATION_RISK flags on score results
+        ├── composite-scoring -> Exclude perplexity for now (using coherence=0.30, faithfulness=0.40, toxicity=0.20 base weights), renormalize dynamically, validate invariants (INV-Q-01 through INV-Q-07)
+        └── persistence -> Save weights_used JSONB column to quality_scores DB table and row models
+
+

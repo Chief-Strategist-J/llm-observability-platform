@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS quality_scores (
     perplexity_score    FLOAT       NULL,
     quality_flags       TEXT[]      NOT NULL DEFAULT '{}',
     skipped_reason      TEXT        NULL,
+    weights_used        JSONB       NULL,
     scored_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
