@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 from handlers.span_quality.handler import SpanQualityHandler, _check_skip
+from handlers.span_quality.composite_scorer import compute_composite
 from handlers.span_quality.types import SampledSpan, ScoreMap
 
 
@@ -153,20 +154,45 @@ class TestEmbeddingReuse:
     @pytest.mark.asyncio
     async def test_uses_existing_embeddings_without_calling_client(self):
         """If span already has embeddings, embedding client must NOT be called."""
+        from shared.metrics import EMBEDDING_REUSE
+        EMBEDDING_REUSE.clear()
         handler, _, _, _, embedder, _ = _handler()
         await handler.handle(
             _raw(prompt_embedding=[0.1, 0.2], response_embedding=[0.3, 0.4]),
             headers={},
         )
         embedder.embed.assert_not_awaited()
+        # Verify metric counters
+        # (each hit registers 'reused', total of 2 hits)
+        assert EMBEDDING_REUSE.labels(status="reused")._value.get() == 2.0
+        assert EMBEDDING_REUSE.labels(status="generated")._value.get() == 0.0
 
     @pytest.mark.asyncio
     async def test_calls_client_when_embeddings_missing(self):
         """If no embeddings on span, embedding client MUST be called."""
+        from shared.metrics import EMBEDDING_REUSE
+        EMBEDDING_REUSE.clear()
         handler, _, _, _, embedder, _ = _handler()
         embedder.embed.return_value = [0.1, 0.2, 0.3]
         await handler.handle(_raw(), headers={})
         assert embedder.embed.await_count == 2  # once for prompt, once for response
+        # Verify metrics (2 generated, 0 reused)
+        assert EMBEDDING_REUSE.labels(status="generated")._value.get() == 2.0
+        assert EMBEDDING_REUSE.labels(status="reused")._value.get() == 0.0
+
+    @pytest.mark.asyncio
+    async def test_uses_one_embedding_and_calls_client_for_other(self):
+        """If prompt_embedding is present but response_embedding is missing, only call client for response."""
+        from shared.metrics import EMBEDDING_REUSE
+        EMBEDDING_REUSE.clear()
+        handler, _, _, _, embedder, _ = _handler()
+        embedder.embed.return_value = [0.5, 0.6]
+        await handler.handle(_raw(prompt_embedding=[0.1, 0.2]), headers={})
+        # Assert client is only called for the response embedding
+        embedder.embed.assert_awaited_once_with("Recursion is when a function calls itself. For example...", timeout_ms=500)
+        # Verify metrics (1 reused, 1 generated)
+        assert EMBEDDING_REUSE.labels(status="reused")._value.get() == 1.0
+        assert EMBEDDING_REUSE.labels(status="generated")._value.get() == 1.0
 
     @pytest.mark.asyncio
     async def test_timeout_on_embedding_does_not_block_temporal_trigger(self):
@@ -228,6 +254,50 @@ class TestToxicityAlwaysRuns:
         assert len(toxicity_calls) == 1
 
 
+class TestCoherenceAndFaithfulnessFlags:
+    @pytest.mark.asyncio
+    async def test_low_coherence_flag_appended_for_chat(self):
+        handler, repo, *_ = _handler()
+        await handler.handle_score_result(
+            span_id="s1", model="gpt-4", endpoint="/v1/chat",
+            prompt_type="chat", response_language="en",
+            scores=ScoreMap(coherence=0.29),  # threshold 0.30
+            quality_flags=[],
+            scored_at=datetime.now(timezone.utc),
+            trace_id="t1",
+        )
+        row = repo.insert_score.call_args[0][0]
+        assert "LOW_COHERENCE" in row.quality_flags
+
+    @pytest.mark.asyncio
+    async def test_coherence_ok_flag_not_appended_for_chat(self):
+        handler, repo, *_ = _handler()
+        await handler.handle_score_result(
+            span_id="s1", model="gpt-4", endpoint="/v1/chat",
+            prompt_type="chat", response_language="en",
+            scores=ScoreMap(coherence=0.31),  # threshold 0.30
+            quality_flags=[],
+            scored_at=datetime.now(timezone.utc),
+            trace_id="t1",
+        )
+        row = repo.insert_score.call_args[0][0]
+        assert "LOW_COHERENCE" not in row.quality_flags
+
+    @pytest.mark.asyncio
+    async def test_hallucination_risk_flag_appended(self):
+        handler, repo, *_ = _handler()
+        await handler.handle_score_result(
+            span_id="s1", model="gpt-4", endpoint="/v1/chat",
+            prompt_type="rag", response_language="en",
+            scores=ScoreMap(faithfulness=0.69),  # threshold 0.70
+            quality_flags=[],
+            scored_at=datetime.now(timezone.utc),
+            trace_id="t1",
+        )
+        row = repo.insert_score.call_args[0][0]
+        assert "HALLUCINATION_RISK" in row.quality_flags
+
+
 # ─── F-Q-06: Composite written to DB ─────────────────────────────────────────
 
 class TestScoreResultPersistence:
@@ -243,7 +313,11 @@ class TestScoreResultPersistence:
             scored_at=datetime.now(timezone.utc),
             trace_id="t1",
         )
+        comp, weights = compute_composite(ScoreMap(toxicity=0.1, coherence=0.9))
         repo.insert_score.assert_called_once()
+        row = repo.insert_score.call_args[0][0]
+        assert row.weights_used == weights
+        assert weights == {"coherence": 0.30 / 0.50, "toxicity": 0.20 / 0.50}
 
     @pytest.mark.asyncio
     async def test_repo_insert_failure_propagates(self):

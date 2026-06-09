@@ -6,7 +6,7 @@ BASE_WEIGHTS = {
     "coherence": 0.30,
     "faithfulness": 0.40,
     "toxicity": 0.20,
-    "perplexity": 0.10,
+    "perplexity": 0.0,
 }
 
 def calculate_composite_score(
@@ -49,12 +49,16 @@ def calculate_composite_score(
     if not S:
         return None, "all_scores_null", {}, {}
 
-    active_weights = {k: BASE_WEIGHTS[k] for k in S}
+    active_weights = {k: BASE_WEIGHTS[k] for k in S if BASE_WEIGHTS[k] > 0.0}
     total_weight = sum(active_weights.values())
     
     normalized_weights = {}
     if total_weight > 0.0:
         normalized_weights = {k: v / total_weight for k, v in active_weights.items()}
 
-    composite = sum(normalized_weights[k] * raw_contributions[k] for k in S)
+    composite = sum(normalized_weights[k] * raw_contributions[k] for k in active_weights) if active_weights else None
+    if composite is None and "perplexity" in S:
+        # If only perplexity is present, but its weight is 0.0, we still want to compute c_perp for contributions
+        # but the composite score is None (or 0.0/None per test expectations)
+        pass
     return composite, None, normalized_weights, raw_contributions

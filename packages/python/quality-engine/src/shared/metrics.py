@@ -28,3 +28,10 @@ SCORE_NULL = Counter(
     "Total null scores with reasons",
     ["reason"]
 )
+
+EMBEDDING_REUSE = Counter(
+    "quality_embedding_reuse_total",
+    "Total embeddings evaluated for reuse versus generation",
+    ["status"]
+)
+

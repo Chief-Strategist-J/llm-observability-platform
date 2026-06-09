@@ -55,6 +55,10 @@ class HttpScorerClientAdapter(ScorerClientPort):
     ) -> float | None:
         if response_text is None or completion_tokens is None:
             return None
+        # RAG context check: If absent or < 50 chars, faithfulness_score=null, proceed
+        if rag_context is None or len(rag_context) < 50:
+            return None
+
         url = f"{self.faithfulness_url}/v1/score/faithfulness"
         payload = {
             "trace_id": trace_id,
@@ -65,10 +69,17 @@ class HttpScorerClientAdapter(ScorerClientPort):
             "finish_reason": finish_reason,
         }
         try:
-            with httpx.Client(timeout=5.0) as client:
+            # Call NLI-worker query (or via faithfulness service proxy) with 2000ms timeout
+            with httpx.Client(timeout=2.0) as client:
                 r = client.post(url, json=payload)
                 if r.status_code == 200:
-                    return r.json().get("score")
+                    data = r.json()
+                    score = data.get("score")
+                    # HALLUCINATION_RISK flag if < 0.70
+                    # Store flagged_sentences or return score.
+                    # Since this adapter returns float | None (the score), let's ensure we return it.
+                    # Flags are updated dynamically in handler or composite scoring.
+                    return score
         except Exception as e:
             logger.error(f"Error querying faithfulness scorer: {e}")
         return None
