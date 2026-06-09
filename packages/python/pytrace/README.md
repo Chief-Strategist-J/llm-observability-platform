@@ -5,6 +5,21 @@
 
 One CLI. Zero code changes. Full system flow visibility for any Python service or distributed system.
 
+## Installation & Setup
+
+You can install `pylow` globally via pip:
+```bash
+pip install pylow
+```
+
+> [!IMPORTANT]
+> If you get `Command 'pylow' not found` after installation, make sure Python's user bin directory is in your `PATH`.
+> Run the following commands to add it to your profile:
+> ```bash
+> echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+> source ~/.bashrc
+> ```
+
 ## How it works under the hood
 Three layers working together:
 - **Layer 1** → OTel auto-instrumentation (HTTP, DB, gRPC, queues — zero code changes)
