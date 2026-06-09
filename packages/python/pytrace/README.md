@@ -1,7 +1,7 @@
 
 
 
-# pytrace
+# pylow
 
 One CLI. Zero code changes. Full system flow visibility for any Python service or distributed system.
 
@@ -9,28 +9,28 @@ One CLI. Zero code changes. Full system flow visibility for any Python service o
 Three layers working together:
 - **Layer 1** → OTel auto-instrumentation (HTTP, DB, gRPC, queues — zero code changes)
 - **Layer 2** → bpftrace USDT (Python function call tree, syscalls)
-- **Layer 3** → pytrace CLI (stitches both, renders the flow)
+- **Layer 3** → pylow CLI (stitches both, renders the flow)
 
 ---
 
 ## Complete CLI Command Reference & Outputs
 
-Here is the usage documentation and sample outputs for every command in the `pytrace` tool:
+Here is the usage documentation and sample outputs for every command in the `pylow` tool:
 
-### 1. `pytrace attach <pid>`
+### 1. `pylow attach <pid>`
 Attach to any running Python process and start collecting trace logs immediately.
 ```bash
-pytrace attach 4821
+pylow attach 4821
 ```
 **Output:**
 ```text
 ✓ Attached to process 4821. Monitoring execution events...
 ```
 
-### 2. `pytrace flow`
+### 2. `pylow flow`
 Renders the complete execution flow tree (local/distributed spans & events) from the trace repository.
 ```bash
-pytrace flow --last
+pylow flow --last
 ```
 **Output:**
 ```text
@@ -42,10 +42,10 @@ handle_request 450ms
         └── waiting (epoll_wait) 390ms   ← bottleneck
 ```
 
-### 3. `pytrace stitch`
+### 3. `pylow stitch`
 Stitch distributed traces together across service boundaries using traceparent headers.
 ```bash
-pytrace stitch --services api,worker,ml-service
+pylow stitch --services api,worker,ml-service
 ```
 **Output:**
 ```text
@@ -59,10 +59,10 @@ REQUEST trace-id: t_demo_flow_123
           └── api-gateway          390ms  waiting (epoll_wait)
 ```
 
-### 4. `pytrace slow`
+### 4. `pylow slow`
 Continuously daemonize/monitor and surface slow execution paths exceeding a latency threshold.
 ```bash
-pytrace slow --threshold 200ms --watch
+pylow slow --threshold 200ms --watch
 ```
 **Output:**
 ```text
@@ -74,10 +74,10 @@ SLOW PATHS detected (last 5 min):
       root cause: epoll_wait 310ms — network latency to openai
 ```
 
-### 5. `pytrace diff`
+### 5. `pylow diff`
 Compare execution flow metrics between versions or releases to detect regressions.
 ```bash
-pytrace diff --before deploy-v1.2 --after deploy-v1.3
+pylow diff --before deploy-v1.2 --after deploy-v1.3
 ```
 **Output:**
 ```text
@@ -96,10 +96,10 @@ REMOVED in v1.3:
   legacy_cache_check (removed)
 ```
 
-### 6. `pytrace syscall <pid>`
+### 6. `pylow syscall <pid>`
 Trace syscall counts and histogram latency patterns for the target process.
 ```bash
-pytrace syscall 4821
+pylow syscall 4821
 ```
 **Output:**
 ```text
@@ -112,10 +112,10 @@ Attaching syscall counter to PID 4821...
   sys_enter_epoll_wait: 42
 ```
 
-### 7. `pytrace malloc <pid>`
+### 7. `pylow malloc <pid>`
 Profile allocations and heap sizing metrics.
 ```bash
-pytrace malloc 4821
+pylow malloc 4821
 ```
 **Output:**
 ```text
@@ -128,10 +128,10 @@ Attaching allocator profile to PID 4821...
 [4096, 8191]           18 |@@@@                                |
 ```
 
-### 8. `pytrace tcp <pid>`
+### 8. `pylow tcp <pid>`
 Trace outbound TCP latency.
 ```bash
-pytrace tcp 4821
+pylow tcp 4821
 ```
 **Output:**
 ```text
@@ -142,10 +142,10 @@ Attaching TCP latency tracer to PID 4821...
 [100000, 200000]       21 |@@@@@@@@@@                          |
 ```
 
-### 9. `pytrace io <pid>`
+### 9. `pylow io <pid>`
 Trace Block and File I/O read/write latencies.
 ```bash
-pytrace io 4821
+pylow io 4821
 ```
 **Output:**
 ```text
@@ -157,10 +157,10 @@ Attaching File I/O latency tracer to PID 4821...
 [16384, 32767]        23 |@@@@@                               |
 ```
 
-### 10. `pytrace flame <pid>`
+### 10. `pylow flame <pid>`
 Generate sampling-based user/kernel stack flame graphs.
 ```bash
-pytrace flame 4821 --duration 5
+pylow flame 4821 --duration 5
 ```
 **Output:**
 ```text
@@ -169,10 +169,10 @@ Attaching kernel profile sampler to PID 4821 for 5s...
 ✓ Saved flame graph to flamegraph.svg
 ```
 
-### 11. `pytrace sched <pid>`
+### 11. `pylow sched <pid>`
 Monitor runqueue latency and scheduling delays.
 ```bash
-pytrace sched 4821
+pylow sched 4821
 ```
 **Output:**
 ```text
@@ -184,10 +184,10 @@ Attaching scheduler delay tracer to PID 4821...
 [4, 8]                142 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 ```
 
-### 12. `pytrace pycall <pid>`
+### 12. `pylow pycall <pid>`
 Profile Python `PyObject_Call` execution timings.
 ```bash
-pytrace pycall 4821
+pylow pycall 4821
 ```
 **Output:**
 ```text
@@ -199,10 +199,10 @@ SLOW execute_query took 12400us
 SLOW process_job took 1850us
 ```
 
-### 13. `pytrace pyframe <pid>`
+### 13. `pylow pyframe <pid>`
 Log Python execution contexts at the frame level (file, function, line).
 ```bash
-pytrace pyframe 4821
+pylow pyframe 4821
 ```
 **Output:**
 ```text
@@ -213,10 +213,10 @@ ENTER execute_query() @ db/models.py:142
 slow_query() @ db/models.py:142 — p99: 340ms
 ```
 
-### 14. `pytrace pycpu <pid>`
+### 14. `pylow pycpu <pid>`
 Identify CPU hotspots in Python runtime execution stacks.
 ```bash
-pytrace pycpu 4821
+pylow pycpu 4821
 ```
 **Output:**
 ```text
@@ -228,10 +228,10 @@ Attaching CPU hotspot sampler to PID 4821...
   -> Resolved: call_llm_chain @ gateway/orchestrator.py:120
 ```
 
-### 15. `pytrace pyexcept <pid>`
+### 15. `pylow pyexcept <pid>`
 Trace raised and caught exceptions within Python virtual machine.
 ```bash
-pytrace pyexcept 4821
+pylow pyexcept 4821
 ```
 **Output:**
 ```text
@@ -243,10 +243,10 @@ EXCEPTION KeyError @ tid=10234
     get_user_context @ db/client.py:48
 ```
 
-### 16. `pytrace pyiowait <pid>`
+### 16. `pylow pyiowait <pid>`
 Trace Python code blocked waiting on blocking I/O calls.
 ```bash
-pytrace pyiowait 4821
+pylow pyiowait 4821
 ```
 **Output:**
 ```text
@@ -258,10 +258,10 @@ BLOCKING READ 12ms
     fetch_metadata @ db/client.py:54
 ```
 
-### 17. `pytrace pygil <pid>`
+### 17. `pylow pygil <pid>`
 Profile GIL lock acquisition delays and thread contention.
 ```bash
-pytrace pygil 4821
+pylow pygil 4821
 ```
 **Output:**
 ```text
@@ -273,10 +273,10 @@ GIL WAIT 1250us tid=10234 stack:
     calculate_features @ ml/engine.py:89
 ```
 
-### 18. `pytrace pyleak <pid>`
+### 18. `pylow pyleak <pid>`
 Profile heap allocations to detect memory leak patterns.
 ```bash
-pytrace pyleak 4821
+pylow pyleak 4821
 ```
 **Output:**
 ```text
@@ -288,10 +288,10 @@ Attaching memory leak tracer to PID 4821...
   -> allocating callsite: load_dataset @ ml/data.py:12
 ```
 
-### 19. `pytrace pyreq <pid>`
+### 19. `pylow pyreq <pid>`
 Measure end-to-end request lifecycle breakdown.
 ```bash
-pytrace pyreq 4821
+pylow pyreq 4821
 ```
 **Output:**
 ```text
@@ -302,10 +302,10 @@ REQ START tid=10234
 REQ DONE total=340ms db=310ms other=30ms
 ```
 
-### 20. `pytrace timeline <pid>`
+### 20. `pylow timeline <pid>`
 Trace absolute chronological timeline call graph.
 ```bash
-pytrace timeline 4821 --duration 5.0 --threshold 2.0
+pylow timeline 4821 --duration 5.0 --threshold 2.0
 ```
 **Output:**
 ```text
@@ -316,10 +316,10 @@ pytrace timeline 4821 --duration 5.0 --threshold 2.0
 [    91.230ms]   ← execute_query()  [91.175ms]  ⚠️ SLOW
 ```
 
-### 21. `pytrace pythread <pid>`
+### 21. `pylow pythread <pid>`
 Trace thread-aware function call timelines with self-time.
 ```bash
-pytrace pythread 4821
+pylow pythread 4821
 ```
 **Output:**
 ```text
@@ -330,10 +330,10 @@ Attaching thread-aware tracer to PID 4821...
   parse_headers() spent 0.00ms (Self time: 0.00ms)
 ```
 
-### 22. `pytrace pyasync <pid>`
+### 22. `pylow pyasync <pid>`
 Trace async await coroutine metrics and yields.
 ```bash
-pytrace pyasync 4821
+pylow pyasync 4821
 ```
 **Output:**
 ```text
@@ -345,10 +345,10 @@ Attaching async/coroutine tracer to PID 4821...
   Total CPU Time: 80us
 ```
 
-### 23. `pytrace pyargs <pid>`
+### 23. `pylow pyargs <pid>`
 Profile Python function call argument types and layout.
 ```bash
-pytrace pyargs 4821
+pylow pyargs 4821
 ```
 **Output:**
 ```text
@@ -358,10 +358,10 @@ Attaching argument Layout layout-tracer to PID 4821...
 1000 CALL obj=0x7f3b821034bc args=0x7f3b821051fa
 ```
 
-### 24. `pytrace pysyscall <pid>`
+### 24. `pylow pysyscall <pid>`
 Profile syscalls attributed directly to Python frames.
 ```bash
-pytrace pysyscall 4821
+pylow pysyscall 4821
 ```
 **Output:**
 ```text
@@ -373,10 +373,10 @@ Attaching syscall-to-Python attribution tracer to PID 4821...
     fetch_metadata @ db/client.py:54
 ```
 
-### 25. `pytrace pynplus1 <pid>`
+### 25. `pylow pynplus1 <pid>`
 Detect potential ORM loop-driven N+1 query patterns.
 ```bash
-pytrace pynplus1 4821
+pylow pynplus1 4821
 ```
 **Output:**
 ```text
@@ -387,10 +387,10 @@ Attaching N+1 query loop detector to PID 4821...
    Called 15x in 5s (3.0/s)
 ```
 
-### 26. `pytrace pygraph <pid>`
+### 26. `pylow pygraph <pid>`
 Trace hierarchical call relationships.
 ```bash
-pytrace pygraph 4821
+pylow pygraph 4821
 ```
 **Output:**
 ```text
@@ -398,10 +398,10 @@ handle_request()  calls=1  avg=0.00ms  (server.py:45)
   execute_query()  calls=1  avg=0.00ms  (db.py:88)
 ```
 
-### 27. `pytrace pyanomaly <pid>`
+### 27. `pylow pyanomaly <pid>`
 Identify slow function calls using statistical baselines.
 ```bash
-pytrace pyanomaly 4821
+pylow pyanomaly 4821
 ```
 **Output:**
 ```text
@@ -409,10 +409,10 @@ pytrace pyanomaly 4821
 🚨 ANOMALY execute_query(): 45.00ms vs baseline 10.33ms
 ```
 
-### 28. `pytrace pydash <pid>`
+### 28. `pylow pydash <pid>`
 Stream traces directly to live curses dashboard.
 ```bash
-pytrace pydash 4821
+pylow pydash 4821
 ```
 **Output:**
 ```text
@@ -422,10 +422,10 @@ RECENT CALLS:
   handle_request() 120.40ms
 ```
 
-### 29. `pytrace pysingle <pid> <target_func>`
+### 29. `pylow pysingle <pid> <target_func>`
 Trace single request / execution call tree with self time.
 ```bash
-pytrace pysingle 4821 handle_request
+pylow pysingle 4821 handle_request
 ```
 **Output:**
 ```text

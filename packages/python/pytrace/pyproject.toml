@@ -1,6 +1,6 @@
 [project]
-name = "pytrace"
-version = "0.1.0"
+name = "pylow"
+version = "0.1.1"
 description = "One CLI. Zero code changes. Full system flow visibility for any Python service or distributed system."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -13,6 +13,7 @@ dependencies = [
     "opentelemetry-exporter-otlp>=1.24.0",
     "opentelemetry-instrumentation-fastapi>=0.45b0",
     "httpx>=0.27.0",
+    "argcomplete>=3.0.0",
 ]
 
 [project.optional-dependencies]
@@ -25,7 +26,7 @@ dev = [
 ]
 
 [project.scripts]
-pytrace = "api.cli.controller:main"
+pylow = "api.cli.controller:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
