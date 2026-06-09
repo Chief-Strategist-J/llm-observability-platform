@@ -29,7 +29,9 @@ The **Quality Engine** is a core layer-3 service in the LLM Observability Platfo
 
 4. **Embedding Re-use and Generation (F-Q-04)**:
    - Reuses existing embeddings on the incoming span when present.
-   - Automatically calls downstream embedding worker services to generate missing embeddings (500ms timeout guard).
+   - Individually evaluates and generates prompt and response embeddings, bypassing requests to downstream workers if already present.
+   - Automatically calls downstream embedding worker services to generate missing embeddings (2.0s timeout guard).
+   - Tracks embedding reuse hits and misses via the `quality_embedding_reuse_total` Prometheus Counter.
 
 5. **Temporal Workflow Orchestration**:
    - Triggers the Temporal workflow `quality_score_workflow` with deterministic workflow IDs to ensure idempotency.
@@ -38,8 +40,11 @@ The **Quality Engine** is a core layer-3 service in the LLM Observability Platfo
 6. **Composite Quality Score Aggregation (F-Q-06)**:
    - Aggregates sub-scorer metrics.
    - Emits a safety alert to Kafka's `llm.toxicity.flagged` topic if toxicity exceeds `0.75` (F-Q-05).
-   - Computes a composite quality score with **dynamic weight renormalization** if any sub-metrics are null (base weights: Coherence=30%, Faithfulness=40%, Toxicity=20%, Perplexity=10%).
-   - Asserts mathematical and business invariants (e.g. scores clamped between `[0.0, 1.0]`, alerts if all sub-metrics are null).
+   - Dynamic weight renormalization if any sub-metrics are null (base weights: Coherence=30%, Faithfulness=40%, Toxicity=20%).
+   - Flags low-coherence responses with the `LOW_COHERENCE` tag based on prompt-type thresholds (Chat: 0.30, RAG: 0.25, Code: 0.15, Classification: 0.40).
+   - Flags hallucination risks with the `HALLUCINATION_RISK` tag if faithfulness score falls below 0.70.
+   - Asserts mathematical and business invariants (e.g. scores clamped between `[0.0, 1.0]`, alerts if all sub-metrics are null, checks `INV-Q-07` for null toxicity).
+   - Persists final composite scores and `weights_used` (JSONB) into the `quality_scores` database table.
 
 7. **Rolling Historical Baselines (F-Q-07)**:
    - Tracks a rolling EWMA (Exponentially Weighted Moving Average) quality baseline per model, endpoint, and prompt-type in Redis.
