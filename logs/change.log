@@ -1011,3 +1011,11 @@
         └── persistence -> Save weights_used JSONB column to quality_scores DB table and row models
 
 
+
+[2026-06-09T13:20:00+05:30] Create decision runbook ADR-005 for Coherence and Faithfulness pipeline
+└── File: notebooks/runbooks/decisions/20260609-005-coherence-faithfulness-pipeline.md, notebooks/runbooks/registry.yaml, logs/change.log
+    ├── Choice: Document architectural decision record (ADR-005) inside decisions runbook directory per FFSB and project rules, registering it in registry.yaml.
+    └── Changes:
+        ├── adr-definition -> Add 20260609-005-coherence-faithfulness-pipeline.md detailing decisions, context, and FFSB prevention modes.
+        ├── registry -> Add entry for ADR-005 in notebooks/runbooks/registry.yaml
+        └── changelog -> Update change.log with the ascii decision tree

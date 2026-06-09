@@ -56,3 +56,12 @@ runbooks:
     package: packages/python/nli-worker
     description: Records the decision to decouple the model weights from the NLI worker container image and implement a dynamic, thread-safe in-memory model registry.
 
+  - id: 20260609-005-coherence-faithfulness-pipeline
+    title: "ADR-005: Phase 2 Coherence + Faithfulness Pipeline Implementation"
+    category: decisions
+    status: accepted
+    path: decisions/20260609-005-coherence-faithfulness-pipeline.md
+    package: packages/python/quality-engine
+    description: Records the architecture and design decisions for Phase 2 Coherence and Faithfulness metrics aggregation, dynamic weight renormalization, and database migration safety rules.
+
+
