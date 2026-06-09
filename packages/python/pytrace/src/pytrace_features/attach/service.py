@@ -1,4 +1,5 @@
 import sys
+import time
 from pytrace_features.attach.ports import TraceCollectorPort
 
 class AttachService:
@@ -19,23 +20,18 @@ class AttachService:
         print("✓ Function tracing active        (USDT probes)")
         print("✓ Outbound calls active          (openai, anthropic, deepgram)")
         
-        # Simulate wait or run collection loop
+        # Run collection loop
         try:
             while True:
                 sys.stdout.write(".")
                 sys.stdout.flush()
-                sys.sleep(1) # We mock this for CLI run but let CLI control it
+                time.sleep(1)
         except KeyboardInterrupt:
             self._collector.stop_collection()
             print("\n[pytrace] detached. Trace saved.")
             return 0
-        except AttributeError:
-            # sys.sleep mock fallback
-            time_spent = 0
-            while time_spent < 2:
-                import time
-                time.sleep(0.5)
-                time_spent += 0.5
+        except Exception:
             self._collector.stop_collection()
             print("\n[pytrace] detached. Trace saved.")
             return 0
+

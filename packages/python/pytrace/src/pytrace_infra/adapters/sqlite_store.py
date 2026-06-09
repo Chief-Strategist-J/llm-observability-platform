@@ -107,3 +107,37 @@ class SQLiteStore:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM spans WHERE duration_ns >= ? ORDER BY duration_ns DESC", (threshold_ns,))
         return [dict(r) for r in cursor.fetchall()]
+
+    def get_last_trace_events(self) -> List[Dict[str, Any]]:
+        conn = self._get_connection()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT trace_id FROM traces ORDER BY start_time_ns DESC LIMIT 1")
+        row = cursor.fetchone()
+        if not row:
+            return []
+        trace_id = row["trace_id"]
+        cursor.execute("SELECT * FROM events WHERE span_id = ? ORDER BY timestamp_ns ASC", (trace_id,))
+        return [dict(r) for r in cursor.fetchall()]
+
+    def get_all_events_grouped(self) -> Dict[str, List[Dict[str, Any]]]:
+        conn = self._get_connection()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM events ORDER BY timestamp_ns ASC")
+        events = cursor.fetchall()
+        grouped: Dict[str, List[Dict[str, Any]]] = {}
+        for ev in events:
+            tid = ev["span_id"] # span_id stores trace_id in uninstrumented event flow
+            if tid not in grouped:
+                grouped[tid] = []
+            grouped[tid].append(dict(ev))
+        return grouped
+
+    def get_slow_events(self, threshold_ns: int) -> List[Dict[str, Any]]:
+        conn = self._get_connection()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM events WHERE duration_ns >= ? ORDER BY duration_ns DESC", (threshold_ns,))
+        return [dict(r) for r in cursor.fetchall()]
+

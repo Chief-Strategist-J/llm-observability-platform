@@ -5,21 +5,59 @@ import signal
 import time
 import shutil
 import threading
-from typing import List, Dict, Any
+import json
+from dataclasses import dataclass, field
+from typing import List, Dict, Any, Callable, Optional
 from pytrace_features.attach.ports import TraceCollectorPort
 from pytrace_infra.adapters.sqlite_store import SQLiteStore
+
+@dataclass
+class BpfSession:
+    pid: int
+    program: str
+    on_event: Callable
+    _proc: Optional[subprocess.Popen] = field(default=None, repr=False)
+    _thread: Optional[threading.Thread] = field(default=None, repr=False)
+
+    def start(self):
+        self._proc = subprocess.Popen(
+            ["bpftrace", "-f", "json", "-p", str(self.pid), "-e", self.program],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        )
+        self._thread = threading.Thread(target=self._drain, daemon=True)
+        self._thread.start()
+
+    def _drain(self):
+        if not self._proc or not self._proc.stdout:
+            return
+        for line in self._proc.stdout:
+            try:
+                event = json.loads(line.strip())
+                self.on_event(event)
+            except Exception:
+                pass
+
+    def stop(self):
+        if self._proc:
+            self._proc.send_signal(signal.SIGINT)
+            try:
+                self._proc.wait(timeout=3.0)
+            except subprocess.TimeoutExpired:
+                self._proc.kill()
+            self._proc = None
+
+    def __enter__(self): self.start(); return self
+    def __exit__(self, *_): self.stop()
 
 class RealTraceCollectorAdapter(TraceCollectorPort):
     def __init__(self, store: SQLiteStore | None = None) -> None:
         self.pid: int | None = None
-        self._bpftrace_process: subprocess.Popen[str] | None = None
+        self._session: BpfSession | None = None
         self._is_collecting = False
         self._events: List[Dict[str, Any]] = []
-        self._read_thread: threading.Thread | None = None
         self.store = store or SQLiteStore()
 
     def attach(self, pid: int) -> bool:
-        # 1. Verify PID exists
         try:
             os.kill(pid, 0)
         except OSError:
@@ -29,9 +67,7 @@ class RealTraceCollectorAdapter(TraceCollectorPort):
         self._is_collecting = True
         self._events.clear()
 
-        # 2. Setup bpftrace script to trace Python USDT entry & return probes
-        # We target function__entry and function__return which are standard Python USDT probes.
-        # Format output as simple CSV: action,elapsed_ns,filename,function_name
+        # USDT python entry and return probes
         bpftrace_script = """
         usdt:python:*:function__entry {
             printf("entry,%u,%s,%s\\n", elapsed, str(arg0), str(arg1));
@@ -40,43 +76,38 @@ class RealTraceCollectorAdapter(TraceCollectorPort):
             printf("return,%u,%s,%s\\n", elapsed, str(arg0), str(arg1));
         }
         """
-        
+
         # Check if bpftrace is available on the path
         if shutil.which("bpftrace") is not None:
             try:
-                self._bpftrace_process = subprocess.Popen(
-                    ["bpftrace", "-p", str(pid), "-e", bpftrace_script],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True
+                # Initialize trace record in DB
+                trace_id = f"t_attach_{pid}"
+                self.store.insert_trace(trace_id, int(time.time() * 1e9), int(time.time() * 1e9 + 1e9))
+                
+                self._session = BpfSession(
+                    pid=pid,
+                    program=bpftrace_script,
+                    on_event=self._handle_bpf_event
                 )
-                # Read stdout in a background thread
-                self._read_thread = threading.Thread(target=self._read_bpftrace_output, daemon=True)
-                self._read_thread.start()
+                self._session.start()
             except Exception as e:
-                # If execution fails, fallback to gathering virtual traces
                 self._gather_simulated_traces()
         else:
             self._gather_simulated_traces()
-            
+
         return True
 
-    def _read_bpftrace_output(self) -> None:
-        if not self._bpftrace_process or not self._bpftrace_process.stdout:
+    def _handle_bpf_event(self, event: Dict[str, Any]) -> None:
+        if not self._is_collecting:
             return
         
-        trace_id = "t_attach_" + str(int(time.time()))
-        self.store.insert_trace(trace_id, int(time.time() * 1e9), int(time.time() * 1e9 + 1e9))
-
-        for line in self._bpftrace_process.stdout:
-            if not self._is_collecting:
-                break
-            line = line.strip()
-            if not line:
-                continue
-            
-            # Parse bpftrace stdout output
-            parts = line.split(",")
+        # Parse printf messages
+        if event.get("type") == "printf":
+            msg = event.get("data") or event.get("msg")
+            if not msg:
+                return
+            msg = msg.strip()
+            parts = msg.split(",")
             if len(parts) >= 4:
                 action, elapsed_ns, filename, func_name = parts[0], parts[1], parts[2], parts[3]
                 try:
@@ -85,13 +116,10 @@ class RealTraceCollectorAdapter(TraceCollectorPort):
                     duration_ns = 0
                 
                 event_type = "usdt_entry" if action == "entry" else "usdt_return"
-                span_id = f"span_{func_name}"
-                
-                # Normalize both sources into one common event schema
-                # {type, tid, timestamp_ns, name, duration_ns, metadata}
+                trace_id = f"t_attach_{self.pid}"
                 timestamp_ns = int(time.time() * 1e9)
-                self.store.insert_span(span_id, trace_id, None, func_name, timestamp_ns, timestamp_ns + duration_ns, duration_ns, "python-process")
-                self.store.insert_event(span_id, event_type, threading.get_ident(), timestamp_ns, func_name, duration_ns, filename)
+                
+                self.store.insert_event(trace_id, event_type, threading.get_ident(), timestamp_ns, func_name, duration_ns, filename)
                 
                 self._events.append({
                     "timestamp": time.time(),
@@ -103,36 +131,27 @@ class RealTraceCollectorAdapter(TraceCollectorPort):
 
     def stop_collection(self) -> None:
         self._is_collecting = False
-        if self._bpftrace_process:
-            self._bpftrace_process.terminate()
-            try:
-                self._bpftrace_process.wait(timeout=1.0)
-            except subprocess.TimeoutExpired:
-                self._bpftrace_process.kill()
-            self._bpftrace_process = None
+        if self._session:
+            self._session.stop()
+            self._session = None
 
     def _gather_simulated_traces(self) -> None:
         now = time.time()
         trace_id = "t_sim_" + str(int(now))
         
-        # Populate store
         self.store.insert_trace(trace_id, int((now - 0.2) * 1e9), int(now * 1e9))
         
-        # Root span
-        self.store.insert_span("s_root", trace_id, None, "handle_request", int((now - 0.187) * 1e9), int(now * 1e9), int(187 * 1e6), "api-service")
-        # Children
-        self.store.insert_span("s_auth", trace_id, "s_root", "authenticate", int((now - 0.185) * 1e9), int((now - 0.183) * 1e9), int(2 * 1e6), "api-service")
-        self.store.insert_span("s_redis", trace_id, "s_auth", "redis GET session:abc", int((now - 0.184) * 1e9), int((now - 0.183) * 1e9), int(1 * 1e6), "api-service")
-        
-        self.store.insert_span("s_ctx", trace_id, "s_root", "get_user_context", int((now - 0.182) * 1e9), int((now - 0.178) * 1e9), int(4 * 1e6), "api-service")
-        self.store.insert_span("s_pg", trace_id, "s_ctx", "postgres SELECT users", int((now - 0.181) * 1e9), int((now - 0.178) * 1e9), int(3 * 1e6), "api-service")
-        
-        self.store.insert_span("s_llm", trace_id, "s_root", "call_llm", int((now - 0.178) * 1e9), int((now - 0.003) * 1e9), int(178 * 1e6), "api-service")
-        self.store.insert_span("s_http", trace_id, "s_llm", "POST api.openai.com/v1/chat", int((now - 0.177) * 1e9), int((now - 0.003) * 1e9), int(176 * 1e6), "api-service")
-        self.store.insert_span("s_tcp", trace_id, "s_http", "tcp_connect", int((now - 0.176) * 1e9), int((now - 0.168) * 1e9), int(8 * 1e6), "api-service")
-        self.store.insert_span("s_epoll", trace_id, "s_http", "waiting (epoll)", int((now - 0.168) * 1e9), int((now - 0.0) * 1e9), int(168 * 1e6), "api-service")
-        
-        self.store.insert_span("s_ser", trace_id, "s_root", "serialize_response", int((now - 0.003) * 1e9), int(now * 1e9), int(3 * 1e6), "api-service")
+        # Insert raw events only (no spans)
+        self.store.insert_event(trace_id, "usdt_entry", 1, int((now - 0.187) * 1e9), "handle_request", int(187 * 1e6), "api-service")
+        self.store.insert_event(trace_id, "usdt_entry", 1, int((now - 0.185) * 1e9), "authenticate", int(2 * 1e6), "api-service")
+        self.store.insert_event(trace_id, "db_query", 1, int((now - 0.184) * 1e9), "redis GET session:abc", int(1 * 1e6), "api-service")
+        self.store.insert_event(trace_id, "usdt_entry", 1, int((now - 0.182) * 1e9), "get_user_context", int(4 * 1e6), "api-service")
+        self.store.insert_event(trace_id, "db_query", 1, int((now - 0.181) * 1e9), "postgres SELECT users", int(3 * 1e6), "api-service")
+        self.store.insert_event(trace_id, "usdt_entry", 1, int((now - 0.178) * 1e9), "call_llm", int(178 * 1e6), "api-service")
+        self.store.insert_event(trace_id, "http_outbound", 1, int((now - 0.177) * 1e9), "POST api.openai.com/v1/chat", int(176 * 1e6), "api-service")
+        self.store.insert_event(trace_id, "tcp_connect", 1, int((now - 0.176) * 1e9), "tcp_connect", int(8 * 1e6), "api-service")
+        self.store.insert_event(trace_id, "syscall_wait", 1, int((now - 0.168) * 1e9), "waiting (epoll)", int(168 * 1e6), "api-service")
+        self.store.insert_event(trace_id, "usdt_entry", 1, int((now - 0.003) * 1e9), "serialize_response", int(3 * 1e6), "api-service")
 
         # Set memory events cache
         self._events = [
