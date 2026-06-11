@@ -85,6 +85,19 @@ run_cmd pylow jq-structural-diff 1234
 run_cmd pylow jq-extract-subtree 1234
 run_cmd pylow jq-summary 1234
 run_cmd pylow jq-validate-schema 1234
+run_cmd pylow jq-array-schema 1234
+run_cmd pylow jq-null-pct 1234
+run_cmd pylow jq-non-null-leaves 1234
+run_cmd pylow jq-parent-context 1234
+run_cmd pylow jq-locate-value-contains 1234
+run_cmd pylow jq-trace-all-keys 1234
+run_cmd pylow jq-heavy-objects 1234
+run_cmd pylow jq-repeated-schema 1234
+run_cmd pylow jq-common-audit 1234
+run_cmd pylow jq-schema-evolution 1234
+run_cmd pylow jq-validate-fields 1234
+run_cmd pylow jq-watch-changes 1234
+
 
 
 

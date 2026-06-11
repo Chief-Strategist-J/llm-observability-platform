@@ -75,7 +75,20 @@ from pytrace_features.jq_structural_diff.service import JqStructuralDiffService
 from pytrace_features.jq_extract_subtree.service import JqExtractSubtreeService
 from pytrace_features.jq_summary.service import JqSummaryService
 from pytrace_features.jq_validate_schema.service import JqValidateSchemaService
+from pytrace_features.jq_array_schema.service import JqArraySchemaService
+from pytrace_features.jq_null_pct.service import JqNullPctService
+from pytrace_features.jq_non_null_leaves.service import JqNonNullLeavesService
+from pytrace_features.jq_parent_context.service import JqParentContextService
+from pytrace_features.jq_locate_value_contains.service import JqLocateValueContainsService
+from pytrace_features.jq_trace_all_keys.service import JqTraceAllKeysService
+from pytrace_features.jq_heavy_objects.service import JqHeavyObjectsService
+from pytrace_features.jq_repeated_schema.service import JqRepeatedSchemaService
+from pytrace_features.jq_common_audit.service import JqCommonAuditService
+from pytrace_features.jq_schema_evolution.service import JqSchemaEvolutionService
+from pytrace_features.jq_validate_fields.service import JqValidateFieldsService
+from pytrace_features.jq_watch_changes.service import JqWatchChangesService
 from pytrace_infra.adapters.trace_collector_adapter import RealTraceCollectorAdapter
+
 
 
 
@@ -385,6 +398,58 @@ def main() -> None:
     jq_validate_schema_parser = subparsers.add_parser("jq-validate-schema", help="Verify documents shape against schema template")
     jq_validate_schema_parser.add_argument("pid", type=int, help="Target process PID")
     jq_validate_schema_parser.add_argument("schema_file", type=str, default="schema.json", nargs="?", help="Path to schema JSON file")
+
+    # Jq Array Schema CLI
+    jq_array_schema_parser = subparsers.add_parser("jq-array-schema", help="Trace array schemas with sizes and item types")
+    jq_array_schema_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Null Pct CLI
+    jq_null_pct_parser = subparsers.add_parser("jq-null-pct", help="Track percentage of null fields per object tree")
+    jq_null_pct_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Non Null Leaves CLI
+    jq_non_null_leaves_parser = subparsers.add_parser("jq-non-null-leaves", help="List all filled fields flat mapping")
+    jq_non_null_leaves_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Parent Context CLI
+    jq_parent_context_parser = subparsers.add_parser("jq-parent-context", help="Locate keys showing parent and sibling contexts")
+    jq_parent_context_parser.add_argument("pid", type=int, help="Target process PID")
+    jq_parent_context_parser.add_argument("target_key", type=str, default="salesActivities", nargs="?", help="Key name to inspect siblings")
+
+    # Jq Locate Value Contains CLI
+    jq_locate_value_contains_parser = subparsers.add_parser("jq-locate-value-contains", help="Find path of values matching partial search term")
+    jq_locate_value_contains_parser.add_argument("pid", type=int, help="Target process PID")
+    jq_locate_value_contains_parser.add_argument("partial_val", type=str, default="Kernel", nargs="?", help="Partial string to search")
+
+    # Jq Trace All Keys CLI
+    jq_trace_all_keys_parser = subparsers.add_parser("jq-trace-all-keys", help="Trace all occurrences of a key in nested entities")
+    jq_trace_all_keys_parser.add_argument("pid", type=int, help="Target process PID")
+    jq_trace_all_keys_parser.add_argument("target_key", type=str, default="username", nargs="?", help="Key name to track globally")
+
+    # Jq Heavy Objects CLI
+    jq_heavy_objects_parser = subparsers.add_parser("jq-heavy-objects", help="Identify heavy nested objects with high fields count")
+    jq_heavy_objects_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Repeated Schema CLI
+    jq_repeated_schema_parser = subparsers.add_parser("jq-repeated-schema", help="Find repeated patterns representing audit or references")
+    jq_repeated_schema_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Common Audit CLI
+    jq_common_audit_parser = subparsers.add_parser("jq-common-audit", help="Find nested objects sharing the same audit trail keys")
+    jq_common_audit_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Schema Evolution CLI
+    jq_schema_evolution_parser = subparsers.add_parser("jq-schema-evolution", help="Compare endpoint pages to detect structural changes")
+    jq_schema_evolution_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Validate Fields CLI
+    jq_validate_fields_parser = subparsers.add_parser("jq-validate-fields", help="Assert mandatory fields presence on endpoint data")
+    jq_validate_fields_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Watch Changes CLI
+    jq_watch_changes_parser = subparsers.add_parser("jq-watch-changes", help="Track differences and field value updates over time")
+    jq_watch_changes_parser.add_argument("pid", type=int, help="Target process PID")
+
 
 
 
@@ -748,6 +813,67 @@ def main() -> None:
         service = JqValidateSchemaService(collector)
         service.trace(args.pid, args.schema_file)
         sys.exit(0)
+
+    elif cmd == "jq-array-schema":
+        service = JqArraySchemaService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-null-pct":
+        service = JqNullPctService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-non-null-leaves":
+        service = JqNonNullLeavesService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-parent-context":
+        service = JqParentContextService(collector)
+        service.trace(args.pid, args.target_key)
+        sys.exit(0)
+
+    elif cmd == "jq-locate-value-contains":
+        service = JqLocateValueContainsService(collector)
+        service.trace(args.pid, args.partial_val)
+        sys.exit(0)
+
+    elif cmd == "jq-trace-all-keys":
+        service = JqTraceAllKeysService(collector)
+        service.trace(args.pid, args.target_key)
+        sys.exit(0)
+
+    elif cmd == "jq-heavy-objects":
+        service = JqHeavyObjectsService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-repeated-schema":
+        service = JqRepeatedSchemaService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-common-audit":
+        service = JqCommonAuditService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-schema-evolution":
+        service = JqSchemaEvolutionService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-validate-fields":
+        service = JqValidateFieldsService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-watch-changes":
+        service = JqWatchChangesService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
 
 
 

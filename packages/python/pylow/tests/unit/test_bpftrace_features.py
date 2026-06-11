@@ -450,6 +450,91 @@ def test_jq_validate_schema_service_runs(capsys):
     captured = capsys.readouterr()
     assert "Validation" in captured.out or "jq-validate-schema" in captured.out
 
+def test_jq_array_schema_service_runs(capsys):
+    from pytrace_features.jq_array_schema.service import JqArraySchemaService
+    service = JqArraySchemaService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Discovering" in captured.out or "jq-array-schema" in captured.out
+
+def test_jq_null_pct_service_runs(capsys):
+    from pytrace_features.jq_null_pct.service import JqNullPctService
+    service = JqNullPctService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Percentage" in captured.out or "jq-null-pct" in captured.out
+
+def test_jq_non_null_leaves_service_runs(capsys):
+    from pytrace_features.jq_non_null_leaves.service import JqNonNullLeavesService
+    service = JqNonNullLeavesService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Non-Null" in captured.out or "jq-non-null-leaves" in captured.out
+
+def test_jq_parent_context_service_runs(capsys):
+    from pytrace_features.jq_parent_context.service import JqParentContextService
+    service = JqParentContextService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Context" in captured.out or "jq-parent-context" in captured.out
+
+def test_jq_locate_value_contains_service_runs(capsys):
+    from pytrace_features.jq_locate_value_contains.service import JqLocateValueContainsService
+    service = JqLocateValueContainsService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Locations" in captured.out or "jq-locate-value-contains" in captured.out
+
+def test_jq_trace_all_keys_service_runs(capsys):
+    from pytrace_features.jq_trace_all_keys.service import JqTraceAllKeysService
+    service = JqTraceAllKeysService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Traced" in captured.out or "jq-trace-all-keys" in captured.out
+
+def test_jq_heavy_objects_service_runs(capsys):
+    from pytrace_features.jq_heavy_objects.service import JqHeavyObjectsService
+    service = JqHeavyObjectsService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "HEAVIEST" in captured.out or "jq-heavy-objects" in captured.out
+
+def test_jq_repeated_schema_service_runs(capsys):
+    from pytrace_features.jq_repeated_schema.service import JqRepeatedSchemaService
+    service = JqRepeatedSchemaService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Repeated" in captured.out or "jq-repeated-schema" in captured.out
+
+def test_jq_common_audit_service_runs(capsys):
+    from pytrace_features.jq_common_audit.service import JqCommonAuditService
+    service = JqCommonAuditService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Audit" in captured.out or "jq-common-audit" in captured.out
+
+def test_jq_schema_evolution_service_runs(capsys):
+    from pytrace_features.jq_schema_evolution.service import JqSchemaEvolutionService
+    service = JqSchemaEvolutionService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Evolution" in captured.out or "jq-schema-evolution" in captured.out
+
+def test_jq_validate_fields_service_runs(capsys):
+    from pytrace_features.jq_validate_fields.service import JqValidateFieldsService
+    service = JqValidateFieldsService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Validation" in captured.out or "jq-validate-fields" in captured.out
+
+def test_jq_watch_changes_service_runs(capsys):
+    from pytrace_features.jq_watch_changes.service import JqWatchChangesService
+    service = JqWatchChangesService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Snapshot" in captured.out or "jq-watch-changes" in captured.out
+
+
 
 
 
