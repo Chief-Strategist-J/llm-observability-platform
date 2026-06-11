@@ -757,6 +757,35 @@ def saga_replay(log_file: str = "/tmp/pylow_saga.log") -> str:
 
 
 # ===========================================================================
+# PROMPTS
+# ===========================================================================
+
+@mcp.prompt()
+def diagnose_performance(pid: int) -> str:
+    """Prompt template for analyzing latency spikes, CPU hotspots, or slow requests."""
+    return (
+        f"You are investigating a latency anomaly or high CPU usage in Python process PID {pid}.\n"
+        "Please follow these steps to locate the bottleneck:\n"
+        f"1. Run `pycpu(pid={pid})` to profile CPU stack traces and find hotspot methods.\n"
+        f"2. Run `slow(threshold_ms=200)` to see which operations cross latency boundaries.\n"
+        f"3. Run `syscall(pid={pid})` to check if syscall overhead (e.g. read/write/epoll) is dragging down execution.\n"
+        f"4. Run `pygil(pid={pid})` to check if lock contention or thread synchronization is blocking execution."
+    )
+
+
+@mcp.prompt()
+def troubleshoot_memory(pid: int) -> str:
+    """Prompt template for memory leaks, allocation spikes, or high RAM usage."""
+    return (
+        f"You are diagnosing high memory usage or a memory leak in Python process PID {pid}.\n"
+        "Follow this diagnostic runbook:\n"
+        f"1. Run `malloc(pid={pid})` to view live memory allocation sizes and traceback callers.\n"
+        f"2. Run `pyleak(pid={pid})` to search for leak patterns and identify objects that aren't being garbage collected.\n"
+        f"3. Run `page_faults(pid={pid})` to determine if frequent swapping or page re-allocations are slowing down process heap expansion."
+    )
+
+
+# ===========================================================================
 # ENTRY POINTS
 # ===========================================================================
 
