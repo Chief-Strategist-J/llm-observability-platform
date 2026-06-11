@@ -1,5 +1,11 @@
+# PYTHON_ARGCOMPLETE_OK
 import argparse
 import sys
+try:
+    import argcomplete
+except ImportError:
+    argcomplete = None
+
 from pytrace_features.attach.index import AttachService
 from pytrace_features.flow.index import FlowService
 from pytrace_features.stitch.index import StitchService
@@ -38,150 +44,152 @@ def main() -> None:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # Attach CLI
-    attach_parser = subparsers.add_parser("attach", help="Attach to a running Python process")
+    attach_parser = subparsers.add_parser("attach", aliases=["listen"], help="Attach to / listen to a running Python process")
     attach_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Flow CLI
-    flow_parser = subparsers.add_parser("flow", help="Render execution flow tree")
+    flow_parser = subparsers.add_parser("flow", aliases=["tree", "show"], help="Render execution flow tree")
     flow_parser.add_argument("--last", action="store_true", help="Render last collected trace")
 
     # Stitch CLI
-    stitch_parser = subparsers.add_parser("stitch", help="Stitch distributed traces")
+    stitch_parser = subparsers.add_parser("stitch", aliases=["combine", "link"], help="Stitch distributed traces")
     stitch_parser.add_argument("--services", type=str, required=True, help="Comma-separated list of services")
 
     # Slow CLI
-    slow_parser = subparsers.add_parser("slow", help="Monitor and surface slow paths")
+    slow_parser = subparsers.add_parser("slow", aliases=["monitor", "watch"], help="Monitor and surface slow paths")
     slow_parser.add_argument("--threshold", type=str, default="200ms", help="Latency threshold (e.g. 200ms)")
     slow_parser.add_argument("--watch", action="store_true", help="Watch continuously in background")
 
     # Diff CLI
-    diff_parser = subparsers.add_parser("diff", help="Compare execution flow regressions")
+    diff_parser = subparsers.add_parser("diff", aliases=["compare"], help="Compare execution flow regressions")
     diff_parser.add_argument("--before", type=str, required=True, help="Baseline release/trace ID")
     diff_parser.add_argument("--after", type=str, required=True, help="Target release/trace ID")
 
     # Syscall CLI
-    syscall_parser = subparsers.add_parser("syscall", help="Trace syscall counts and latency")
+    syscall_parser = subparsers.add_parser("syscall", aliases=["system-calls"], help="Trace syscall counts and latency")
     syscall_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Malloc CLI
-    malloc_parser = subparsers.add_parser("malloc", help="Trace memory allocation sizes and callers")
+    malloc_parser = subparsers.add_parser("malloc", aliases=["memory", "allocations"], help="Trace memory allocation sizes and callers")
     malloc_parser.add_argument("pid", type=int, help="Target process PID")
 
     # TCP CLI
-    tcp_parser = subparsers.add_parser("tcp", help="Trace TCP sendmsg latency")
+    tcp_parser = subparsers.add_parser("tcp", aliases=["network"], help="Trace TCP sendmsg latency")
     tcp_parser.add_argument("pid", type=int, help="Target process PID")
 
     # IO CLI
-    io_parser = subparsers.add_parser("io", help="Trace File I/O latency histogram")
+    io_parser = subparsers.add_parser("io", aliases=["files", "disk"], help="Trace File I/O latency histogram")
     io_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Flame CLI
-    flame_parser = subparsers.add_parser("flame", help="Generate user/kernel stack flame graphs")
+    flame_parser = subparsers.add_parser("flame", aliases=["chart", "graph"], help="Generate user/kernel stack flame graphs")
     flame_parser.add_argument("pid", type=int, help="Target process PID")
     flame_parser.add_argument("--duration", type=int, default=5, help="Sampling duration in seconds")
 
     # Sched CLI
-    sched_parser = subparsers.add_parser("sched", help="Trace runqueue scheduler latency")
+    sched_parser = subparsers.add_parser("sched", aliases=["scheduler"], help="Trace runqueue scheduler latency")
     sched_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Pycall CLI
-    pycall_parser = subparsers.add_parser("pycall", help="Trace Python PyObject_Call function latencies")
+    pycall_parser = subparsers.add_parser("pycall", aliases=["python-calls"], help="Trace Python PyObject_Call function latencies")
     pycall_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Pyframe CLI
-    pyframe_parser = subparsers.add_parser("pyframe", help="Trace exact Python frames (file + line + func)")
+    pyframe_parser = subparsers.add_parser("pyframe", aliases=["frames"], help="Trace exact Python frames (file + line + func)")
     pyframe_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Pycpu CLI
-    pycpu_parser = subparsers.add_parser("pycpu", help="Profile CPU hotspots with stack trace resolving")
+    pycpu_parser = subparsers.add_parser("pycpu", aliases=["cpu"], help="Profile CPU hotspots with stack trace resolving")
     pycpu_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Pyexcept CLI
-    pyexcept_parser = subparsers.add_parser("pyexcept", help="Trace raised and caught Python exceptions")
+    pyexcept_parser = subparsers.add_parser("pyexcept", aliases=["errors", "exceptions"], help="Trace raised and caught Python exceptions")
     pyexcept_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Pyiowait CLI
-    pyiowait_parser = subparsers.add_parser("pyiowait", help="Trace blocking I/O wait calls in Python code")
+    pyiowait_parser = subparsers.add_parser("pyiowait", aliases=["blocked-io"], help="Trace blocking I/O wait calls in Python code")
     pyiowait_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Pygil CLI
-    pygil_parser = subparsers.add_parser("pygil", help="Trace GIL lock wait contention profiles")
+    pygil_parser = subparsers.add_parser("pygil", aliases=["gil", "locks"], help="Trace GIL lock wait contention profiles")
     pygil_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Pyleak CLI
-    pyleak_parser = subparsers.add_parser("pyleak", help="Profile heap memory leak patterns")
+    pyleak_parser = subparsers.add_parser("pyleak", aliases=["leaks"], help="Profile heap memory leak patterns")
     pyleak_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Pyreq CLI
-    pyreq_parser = subparsers.add_parser("pyreq", help="Measure end-to-end request lifecycle breakdown")
+    pyreq_parser = subparsers.add_parser("pyreq", aliases=["requests", "endpoints"], help="Measure end-to-end request lifecycle breakdown")
     pyreq_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Timeline CLI
-    timeline_parser = subparsers.add_parser("timeline", help="Trace absolute chronological timeline call graph")
+    timeline_parser = subparsers.add_parser("timeline", aliases=["chronological"], help="Trace absolute chronological timeline call graph")
     timeline_parser.add_argument("pid", type=int, help="Target process PID")
     timeline_parser.add_argument("--duration", type=float, default=5.0, help="Sampling duration in seconds")
     timeline_parser.add_argument("--threshold", type=float, default=None, help="Show only functions slower than this threshold in ms")
 
     # Pythread CLI
-    pythread_parser = subparsers.add_parser("pythread", help="Trace thread-aware function call timelines with self-time")
+    pythread_parser = subparsers.add_parser("pythread", aliases=["threads"], help="Trace thread-aware function call timelines with self-time")
     pythread_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Pyasync CLI
-    pyasync_parser = subparsers.add_parser("pyasync", help="Trace async await coroutine metrics")
+    pyasync_parser = subparsers.add_parser("pyasync", aliases=["async"], help="Trace async await coroutine metrics")
     pyasync_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Pyargs CLI
-    pyargs_parser = subparsers.add_parser("pyargs", help="Profile Python Vectorcall argument layouts")
+    pyargs_parser = subparsers.add_parser("pyargs", aliases=["arguments"], help="Profile Python Vectorcall argument layouts")
     pyargs_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Pysyscall CLI
-    pysyscall_parser = subparsers.add_parser("pysyscall", help="Profile syscalls attributed directly to Python code")
+    pysyscall_parser = subparsers.add_parser("pysyscall", aliases=["python-syscalls"], help="Profile syscalls attributed directly to Python code")
     pysyscall_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Pynplus1 CLI
-    pynplus1_parser = subparsers.add_parser("pynplus1", help="Profile ORM queries to detect loop-driven N+1 queries")
+    pynplus1_parser = subparsers.add_parser("pynplus1", aliases=["loops", "database-loops"], help="Profile ORM queries to detect loop-driven N+1 queries")
     pynplus1_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Pygraph CLI
-    pygraph_parser = subparsers.add_parser("pygraph", help="Trace hierarchical call relationship graph")
+    pygraph_parser = subparsers.add_parser("pygraph", aliases=["diagram"], help="Trace hierarchical call relationship graph")
     pygraph_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Pyanomaly CLI
-    pyanomaly_parser = subparsers.add_parser("pyanomaly", help="Profile statistical baselines to catch slow anomalies")
+    pyanomaly_parser = subparsers.add_parser("pyanomaly", aliases=["anomalies", "outliers"], help="Profile statistical baselines to catch slow anomalies")
     pyanomaly_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Pydash CLI
-    pydash_parser = subparsers.add_parser("pydash", help="Stream traces directly to live curses dashboard")
+    pydash_parser = subparsers.add_parser("pydash", aliases=["dashboard", "live"], help="Stream traces directly to live curses dashboard")
     pydash_parser.add_argument("pid", type=int, help="Target process PID")
 
     # Pysingle CLI
-    pysingle_parser = subparsers.add_parser("pysingle", help="Trace single request / execution call tree with self time")
+    pysingle_parser = subparsers.add_parser("pysingle", aliases=["single-request"], help="Trace single request / execution call tree with self time")
     pysingle_parser.add_argument("pid", type=int, help="Target process PID")
     pysingle_parser.add_argument("target_func", type=str, help="Name of entry point function to trace")
     pysingle_parser.add_argument("--tid", type=int, default=None, help="Trace only target thread ID")
 
-    args = parser.parse_args()
+    if argcomplete:
+        argcomplete.autocomplete(parser)
 
-    # DI container wiring / dependency selection
+    args = parser.parse_args()
     collector = RealTraceCollectorAdapter()
     
-    if args.command == "attach":
+    cmd = args.command
+    if cmd in ["attach", "listen"]:
         service = AttachService(collector)
         sys.exit(service.attach_and_collect(args.pid))
         
-    elif args.command == "flow":
+    elif cmd in ["flow", "tree", "show"]:
         service = FlowService()
         events = collector.get_events()
         service.render_tree(events)
         sys.exit(0)
 
-    elif args.command == "stitch":
+    elif cmd in ["stitch", "combine", "link"]:
         service = StitchService()
         services = [s.strip() for s in args.services.split(",")]
         service.stitch_traces(services)
         sys.exit(0)
 
-    elif args.command == "slow":
+    elif cmd in ["slow", "monitor", "watch"]:
         service = SlowService()
         threshold_ms = 200
         if args.threshold.endswith("ms"):
@@ -192,127 +200,127 @@ def main() -> None:
         service.monitor(threshold_ms, args.watch)
         sys.exit(0)
 
-    elif args.command == "diff":
+    elif cmd in ["diff", "compare"]:
         service = DiffService()
         service.compare(args.before, args.after)
         sys.exit(0)
 
-    elif args.command == "syscall":
+    elif cmd in ["syscall", "system-calls"]:
         service = SyscallService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "malloc":
+    elif cmd in ["malloc", "memory", "allocations"]:
         service = MallocService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "tcp":
+    elif cmd in ["tcp", "network"]:
         service = TcpService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "io":
+    elif cmd in ["io", "files", "disk"]:
         service = IoService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "flame":
+    elif cmd in ["flame", "chart", "graph"]:
         service = FlameService(collector)
         service.trace(args.pid, args.duration)
         sys.exit(0)
 
-    elif args.command == "sched":
+    elif cmd in ["sched", "scheduler"]:
         service = SchedService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "pycall":
+    elif cmd in ["pycall", "python-calls"]:
         service = PycallService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "pyframe":
+    elif cmd in ["pyframe", "frames"]:
         service = PyframeService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "pycpu":
+    elif cmd in ["pycpu", "cpu"]:
         service = PycpuService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "pyexcept":
+    elif cmd in ["pyexcept", "errors", "exceptions"]:
         service = PyexceptService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "pyiowait":
+    elif cmd in ["pyiowait", "blocked-io"]:
         service = PyiowaitService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "pygil":
+    elif cmd in ["pygil", "gil", "locks"]:
         service = PygilService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "pyleak":
+    elif cmd in ["pyleak", "leaks"]:
         service = PyleakService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "pyreq":
+    elif cmd in ["pyreq", "requests", "endpoints"]:
         service = PyreqService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "timeline":
+    elif cmd in ["timeline", "chronological"]:
         service = TimelineService(collector)
         service.trace(args.pid, args.duration, args.threshold)
         sys.exit(0)
 
-    elif args.command == "pythread":
+    elif cmd in ["pythread", "threads"]:
         service = PythreadService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "pyasync":
+    elif cmd in ["pyasync", "async"]:
         service = PyasyncService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "pyargs":
+    elif cmd in ["pyargs", "arguments"]:
         service = PyargsService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "pysyscall":
+    elif cmd in ["pysyscall", "python-syscalls"]:
         service = PysyscallService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "pynplus1":
+    elif cmd in ["pynplus1", "loops", "database-loops"]:
         service = Pynplus1Service(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "pygraph":
+    elif cmd in ["pygraph", "diagram"]:
         service = PygraphService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "pyanomaly":
+    elif cmd in ["pyanomaly", "anomalies", "outliers"]:
         service = PyanomalyService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "pydash":
+    elif cmd in ["pydash", "dashboard", "live"]:
         service = PydashService(collector)
         service.trace(args.pid)
         sys.exit(0)
 
-    elif args.command == "pysingle":
+    elif cmd in ["pysingle", "single-request"]:
         service = PysingleService(collector)
         service.trace(args.pid, args.target_func, args.tid)
         sys.exit(0)
