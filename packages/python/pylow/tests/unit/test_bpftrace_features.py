@@ -275,6 +275,77 @@ def test_correlation_service_runs(capsys):
     captured = capsys.readouterr()
     assert "SVC" in captured.out or "Correlation" in captured.out
 
+def test_curl_perf_service_runs(capsys):
+    from pytrace_features.curl_perf.service import CurlPerfService
+    service = CurlPerfService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "metrics" in captured.out or "curl-perf" in captured.out
+
+def test_jq_search_service_runs(capsys):
+    from pytrace_features.jq_search.service import JqSearchService
+    service = JqSearchService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "results" in captured.out or "jq-search" in captured.out
+
+def test_awk_stats_service_runs(capsys):
+    from pytrace_features.awk_stats.service import AwkStatsService
+    service = AwkStatsService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "status" in captured.out or "awk-stats" in captured.out
+
+def test_parallel_fetch_service_runs(capsys):
+    from pytrace_features.parallel_fetch.service import ParallelFetchService
+    service = ParallelFetchService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "concurrency" in captured.out or "parallel-fetch" in captured.out
+
+def test_tee_branch_service_runs(capsys):
+    from pytrace_features.tee_branch.service import TeeBranchService
+    service = TeeBranchService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "branched" in captured.out or "tee-branch" in captured.out
+
+def test_pipe_decouple_service_runs(capsys):
+    from pytrace_features.pipe_decouple.service import PipeDecoupleService
+    service = PipeDecoupleService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "FIFO" in captured.out or "pipe-decouple" in captured.out
+
+def test_jwt_decode_service_runs(capsys):
+    from pytrace_features.jwt_decode.service import JwtDecodeService
+    service = JwtDecodeService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "JWT" in captured.out or "jwt-decode" in captured.out
+
+def test_cert_check_service_runs(capsys):
+    from pytrace_features.cert_check.service import CertCheckService
+    service = CertCheckService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "SSL" in captured.out or "cert-check" in captured.out
+
+def test_rate_limit_test_service_runs(capsys):
+    from pytrace_features.rate_limit_test.service import RateLimitTestService
+    service = RateLimitTestService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Rate" in captured.out or "rate-limit-test" in captured.out
+
+def test_sed_mask_service_runs(capsys):
+    from pytrace_features.sed_mask.service import SedMaskService
+    service = SedMaskService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Masked" in captured.out or "sed-mask" in captured.out
+
+
 
 
 

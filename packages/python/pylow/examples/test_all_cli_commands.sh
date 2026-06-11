@@ -60,6 +60,17 @@ run_cmd pylow ordered-log 1234
 run_cmd pylow intercept 1234
 run_cmd pylow anomaly-trigger 1234
 run_cmd pylow correlation 1234
+run_cmd pylow curl-perf 1234
+run_cmd pylow jq-search 1234
+run_cmd pylow awk-stats 1234
+run_cmd pylow parallel-fetch 1234
+run_cmd pylow tee-branch 1234
+run_cmd pylow pipe-decouple 1234
+run_cmd pylow jwt-decode 1234
+run_cmd pylow cert-check 1234
+run_cmd pylow rate-limit-test 1234
+run_cmd pylow sed-mask 1234
+
 
 
 

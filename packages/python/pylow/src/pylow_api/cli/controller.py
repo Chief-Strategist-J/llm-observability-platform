@@ -50,7 +50,18 @@ from pytrace_features.ordered_log.service import OrderedLogService
 from pytrace_features.intercept.service import InterceptService
 from pytrace_features.anomaly_trigger.service import AnomalyTriggerService
 from pytrace_features.correlation.service import CorrelationService
+from pytrace_features.curl_perf.service import CurlPerfService
+from pytrace_features.jq_search.service import JqSearchService
+from pytrace_features.awk_stats.service import AwkStatsService
+from pytrace_features.parallel_fetch.service import ParallelFetchService
+from pytrace_features.tee_branch.service import TeeBranchService
+from pytrace_features.pipe_decouple.service import PipeDecoupleService
+from pytrace_features.jwt_decode.service import JwtDecodeService
+from pytrace_features.cert_check.service import CertCheckService
+from pytrace_features.rate_limit_test.service import RateLimitTestService
+from pytrace_features.sed_mask.service import SedMaskService
 from pytrace_infra.adapters.trace_collector_adapter import RealTraceCollectorAdapter
+
 
 
 
@@ -247,6 +258,52 @@ def main() -> None:
     correlation_parser = subparsers.add_parser("correlation", help="Trace cross-service chronological correlation")
     correlation_parser.add_argument("pid", type=int, help="Target process PID")
     correlation_parser.add_argument("service_name", type=str, default="py-service", nargs="?", help="Name of this service")
+
+    # Curl Perf CLI
+    curl_perf_parser = subparsers.add_parser("curl-perf", help="Trace curl write-out metrics and connection latency")
+    curl_perf_parser.add_argument("pid", type=int, help="Target process PID")
+    curl_perf_parser.add_argument("target_url", type=str, default="https://api.example.com/payments", nargs="?", help="Target URL to measure")
+
+    # Jq Search CLI
+    jq_search_parser = subparsers.add_parser("jq-search", help="Trace JSON query paths and structured field matches")
+    jq_search_parser.add_argument("pid", type=int, help="Target process PID")
+    jq_search_parser.add_argument("query", type=str, default="error", nargs="?", help="Field or pattern search query")
+
+    # Awk Stats CLI
+    awk_stats_parser = subparsers.add_parser("awk-stats", help="Compute statistics and percentages on tabular data stream")
+    awk_stats_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Parallel Fetch CLI
+    parallel_fetch_parser = subparsers.add_parser("parallel-fetch", help="Trace parallel request pipelines with concurrency control")
+    parallel_fetch_parser.add_argument("pid", type=int, help="Target process PID")
+    parallel_fetch_parser.add_argument("--concurrency", type=int, default=4, help="Maximum concurrent connections")
+
+    # Tee Branch CLI
+    tee_branch_parser = subparsers.add_parser("tee-branch", help="Monitor output stream branching to files and stdout")
+    tee_branch_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Pipe Decouple CLI
+    pipe_decouple_parser = subparsers.add_parser("pipe-decouple", help="Monitor named pipe FIFO decoupler status")
+    pipe_decouple_parser.add_argument("pid", type=int, help="Target process PID")
+    pipe_decouple_parser.add_argument("fifo_path", type=str, default="/tmp/payment_pipe", nargs="?", help="Path to named pipe FIFO file")
+
+    # Jwt Decode CLI
+    jwt_decode_parser = subparsers.add_parser("jwt-decode", help="Trace and decode JWT authorization tokens inline")
+    jwt_decode_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Cert Check CLI
+    cert_check_parser = subparsers.add_parser("cert-check", help="Trace SSL/TLS handshake and certificate expiry info")
+    cert_check_parser.add_argument("pid", type=int, help="Target process PID")
+    cert_check_parser.add_argument("domain", type=str, default="api.example.com", nargs="?", help="Domain to check certificate expiry")
+
+    # Rate Limit Test CLI
+    rate_limit_test_parser = subparsers.add_parser("rate-limit-test", help="Diagnose API rate limit backoff and HTTP 429 status")
+    rate_limit_test_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Sed Mask CLI
+    sed_mask_parser = subparsers.add_parser("sed-mask", help="Monitor stream for PII masking and character sanitizing filters")
+    sed_mask_parser.add_argument("pid", type=int, help="Target process PID")
+
 
 
 
@@ -483,6 +540,57 @@ def main() -> None:
         service = CorrelationService(collector)
         service.trace(args.pid, args.service_name)
         sys.exit(0)
+
+    elif cmd == "curl-perf":
+        service = CurlPerfService(collector)
+        service.trace(args.pid, args.target_url)
+        sys.exit(0)
+
+    elif cmd == "jq-search":
+        service = JqSearchService(collector)
+        service.trace(args.pid, args.query)
+        sys.exit(0)
+
+    elif cmd == "awk-stats":
+        service = AwkStatsService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "parallel-fetch":
+        service = ParallelFetchService(collector)
+        service.trace(args.pid, args.concurrency)
+        sys.exit(0)
+
+    elif cmd == "tee-branch":
+        service = TeeBranchService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "pipe-decouple":
+        service = PipeDecoupleService(collector)
+        service.trace(args.pid, args.fifo_path)
+        sys.exit(0)
+
+    elif cmd == "jwt-decode":
+        service = JwtDecodeService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "cert-check":
+        service = CertCheckService(collector)
+        service.trace(args.pid, args.domain)
+        sys.exit(0)
+
+    elif cmd == "rate-limit-test":
+        service = RateLimitTestService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "sed-mask":
+        service = SedMaskService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
 
 
 
