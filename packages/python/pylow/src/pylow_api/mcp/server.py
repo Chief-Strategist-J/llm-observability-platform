@@ -213,7 +213,7 @@ def tcp(pid: int) -> str:
 
 
 @mcp.tool(description="Trace file I/O latency histogram for a PID.")
-def io(pid: int) -> str:
+def io_trace(pid: int) -> str:
     return _capture(IoService(_col).trace, pid)
 
 
