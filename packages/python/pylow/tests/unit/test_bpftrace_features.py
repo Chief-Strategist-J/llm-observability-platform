@@ -19,7 +19,8 @@ def test_syscall_service_runs(capsys):
     service = SyscallService()
     service.trace(1234)
     captured = capsys.readouterr()
-    assert "sys_enter_read" in captured.out or "Streaming events" in captured.out
+    assert "SLOW SYSCALL" in captured.out or "Streaming events" in captured.out
+
 
 def test_malloc_service_runs(capsys):
     service = MallocService()
@@ -168,6 +169,42 @@ def test_pysingle_service_runs(capsys):
     service.trace(1234, "handle_request")
     captured = capsys.readouterr()
     assert "handle_request" in captured.out
+
+def test_page_faults_service_runs(capsys):
+    from pytrace_features.page_faults.service import PageFaultsService
+    service = PageFaultsService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "PAGE FAULT" in captured.out or "Page faults tracer active" in captured.out
+
+def test_context_switches_service_runs(capsys):
+    from pytrace_features.context_switches.service import ContextSwitchesService
+    service = ContextSwitchesService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "OFF CPU" in captured.out or "Context switches tracer active" in captured.out
+
+def test_kernel_blocked_service_runs(capsys):
+    from pytrace_features.kernel_blocked.service import KernelBlockedService
+    service = KernelBlockedService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "BLOCKED" in captured.out or "Kernel blocked stack tracer active" in captured.out
+
+def test_tlb_shootdowns_service_runs(capsys):
+    from pytrace_features.tlb_shootdowns.service import TlbShootdownsService
+    service = TlbShootdownsService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "TLB" in captured.out or "TLB shootdowns tracer active" in captured.out
+
+def test_irq_impact_service_runs(capsys):
+    from pytrace_features.irq_impact.service import IrqImpactService
+    service = IrqImpactService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "IRQ" in captured.out or "IRQ impact tracer active" in captured.out
+
 
 
 

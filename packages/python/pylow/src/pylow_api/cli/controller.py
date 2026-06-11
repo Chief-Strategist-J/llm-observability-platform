@@ -35,7 +35,13 @@ from pytrace_features.pygraph.service import PygraphService
 from pytrace_features.pyanomaly.service import PyanomalyService
 from pytrace_features.pydash.service import PydashService
 from pytrace_features.pysingle.service import PysingleService
+from pytrace_features.page_faults.service import PageFaultsService
+from pytrace_features.context_switches.service import ContextSwitchesService
+from pytrace_features.kernel_blocked.service import KernelBlockedService
+from pytrace_features.tlb_shootdowns.service import TlbShootdownsService
+from pytrace_features.irq_impact.service import IrqImpactService
 from pytrace_infra.adapters.trace_collector_adapter import RealTraceCollectorAdapter
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -165,6 +171,27 @@ def main() -> None:
     pysingle_parser.add_argument("pid", type=int, help="Target process PID")
     pysingle_parser.add_argument("target_func", type=str, help="Name of entry point function to trace")
     pysingle_parser.add_argument("--tid", type=int, default=None, help="Trace only target thread ID")
+
+    # Page Faults CLI
+    page_faults_parser = subparsers.add_parser("page-faults", aliases=["faults"], help="Trace page fault hotspots")
+    page_faults_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Context Switches CLI
+    context_switches_parser = subparsers.add_parser("context-switches", aliases=["preemption", "switches"], help="Trace context switch preemption latency")
+    context_switches_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Kernel Blocked CLI
+    kernel_blocked_parser = subparsers.add_parser("kernel-blocked", aliases=["blocked"], help="Trace kernel stack when process blocks")
+    kernel_blocked_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # TLB Shootdowns CLI
+    tlb_shootdowns_parser = subparsers.add_parser("tlb-shootdowns", aliases=["tlb"], help="Trace TLB shootdowns rate and reason")
+    tlb_shootdowns_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # IRQ Impact CLI
+    irq_impact_parser = subparsers.add_parser("irq-impact", aliases=["irq"], help="Trace soft and hard IRQ CPU impact")
+    irq_impact_parser.add_argument("pid", type=int, help="Target process PID")
+
 
     if argcomplete:
         argcomplete.autocomplete(parser)
@@ -324,6 +351,32 @@ def main() -> None:
         service = PysingleService(collector)
         service.trace(args.pid, args.target_func, args.tid)
         sys.exit(0)
+
+    elif cmd in ["page-faults", "faults"]:
+        service = PageFaultsService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd in ["context-switches", "preemption", "switches"]:
+        service = ContextSwitchesService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd in ["kernel-blocked", "blocked"]:
+        service = KernelBlockedService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd in ["tlb-shootdowns", "tlb"]:
+        service = TlbShootdownsService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd in ["irq-impact", "irq"]:
+        service = IrqImpactService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

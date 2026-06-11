@@ -1,6 +1,6 @@
 [project]
 name = "pylow"
-version = "0.1.2"
+version = "0.1.3"
 
 description = "One CLI. Zero code changes. Full system flow visibility for any Python service or distributed system."
 readme = "README.md"
