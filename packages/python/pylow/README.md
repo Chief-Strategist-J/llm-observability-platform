@@ -818,3 +818,258 @@ Every diagnostic query can be customized using target filters:
 /nsecs - @t[tid] > 50000000/
 ```
 
+---
+
+## Logical Error Troubleshooting Playbook (Zero Instrumentation)
+
+When there is no instrumentation and you need to debug logical errors, bpftrace lets you observe execution flows, function arguments, outputs, and cross-service communication payloads directly from the kernel.
+
+### Phase 1 — You Don't Know Which Service Is the Problem (Map Request Flow)
+
+Run this tracepoint probe script on each service PID to find where data flow stops:
+
+```bash
+sudo bpftrace -e '
+# catch every outbound HTTP call
+tracepoint:syscalls:sys_enter_connect /pid == $1/ {
+  @conn_start[tid] = nsecs;
+  @conn_count = count();
+}
+tracepoint:syscalls:sys_exit_connect /pid == $1/ {
+  if (@conn_start[tid]) {
+    $d = nsecs - @conn_start[tid];
+    @conn_time = hist($d / 1000000);
+    delete(@conn_start[tid]);
+  }
+}
+# catch every inbound request handling
+tracepoint:syscalls:sys_enter_accept4 /pid == $1/ {
+  @accept_ts = nsecs;
+}
+tracepoint:syscalls:sys_exit_accept4 /pid == $1/ {
+  if (@accept_ts) {
+    printf("INBOUND CONNECTION at %lld\n", nsecs);
+  }
+}
+# catch all data sent and received
+tracepoint:syscalls:sys_exit_read /pid == $1 && args->ret > 0/ {
+  @bytes_in = sum(args->ret);
+}
+tracepoint:syscalls:sys_exit_write /pid == $1 && args->ret > 0/ {
+  @bytes_out = sum(args->ret);
+}
+interval:s:5 {
+  printf("\n=== SERVICE pid=%d ===\n", $1);
+  printf("outbound_calls : %d\n", @conn_count);
+  printf("bytes_in       : %lld\n", @bytes_in);
+  printf("bytes_out      : %lld\n", @bytes_out);
+  printf("conn_time_ms:\n"); print(@conn_time);
+  clear(@conn_count); clear(@bytes_in);
+  clear(@bytes_out); clear(@conn_time);
+}' <PID>
+```
+
+---
+
+### Phase 2 — You Know Which Service, Not Where Inside (Trace Call Flow)
+
+#### A. Trace every function call and return:
+```bash
+sudo bpftrace -p <PID> -e '
+usdt:/usr/bin/python3:python:function__entry {
+  @enter_ts[tid, str(arg1)] = nsecs;
+  @call_depth[tid]++;
+  printf("%lld %d ENTER %s %s:%d\n",
+    nsecs, tid, str(arg1), str(arg0), arg2);
+}
+usdt:/usr/bin/python3:python:function__return {
+  $func = str(arg1);
+  $dur  = nsecs - @enter_ts[tid, $func];
+  @call_depth[tid]--;
+  printf("%lld %d EXIT  %s %lldms\n",
+    nsecs, tid, $func, $dur/1000000);
+  delete(@enter_ts[tid, $func]);
+}'
+```
+
+#### B. Narrow execution details to business logic files only:
+```bash
+sudo bpftrace -p <PID> -e '
+usdt:/usr/bin/python3:python:function__entry
+/str(arg0) != "<frozen importlib._bootstrap>"
+&& str(arg0) != "<frozen importlib._bootstrap_external>"
+&& str(arg0) != "threading.py"
+&& str(arg0) != "socketserver.py"/ {
+  printf("%lld ENTER %-40s %s:%d\n",
+    nsecs, str(arg1), str(arg0), arg2);
+}
+usdt:/usr/bin/python3:python:function__return
+/str(arg0) != "<frozen importlib._bootstrap>"
+&& str(arg0) != "threading.py"/ {
+  printf("%lld EXIT  %s\n", nsecs, str(arg1));
+}'
+```
+
+---
+
+### Phase 3 — Intercept Data at Boundaries
+
+#### A. Read values being passed to specific functions and trace caller stacks:
+```bash
+sudo bpftrace -p <PID> -e '
+usdt:/usr/bin/python3:python:function__entry
+/str(arg1) == "process_payment"/ {
+  printf("\n=== process_payment CALLED ===\n");
+  printf("file : %s\n", str(arg0));
+  printf("line : %d\n", arg2);
+  printf("tid  : %d\n", tid);
+  printf("time : %lld\n", nsecs);
+  print(ustack(perf, 5));
+}
+usdt:/usr/bin/python3:python:function__return
+/str(arg1) == "process_payment"/ {
+  printf("=== process_payment RETURNED ===\n");
+  printf("duration: %lldms\n", (nsecs - @t[tid])/1000000);
+}'
+```
+
+#### B. Intercept raw HTTP request/response payloads:
+```bash
+sudo bpftrace -e '
+tracepoint:syscalls:sys_enter_write /pid == $1/ {
+  if (args->count > 0 && args->count < 1024) {
+    printf("\n=== OUTBOUND DATA ===\n");
+    printf("%s\n", str(args->buf, args->count));
+    print(ustack(perf, 5));
+  }
+}
+tracepoint:syscalls:sys_enter_read /pid == $1/ {
+  @read_buf[tid] = args->buf;
+  @read_ts[tid]  = nsecs;
+}
+tracepoint:syscalls:sys_exit_read /pid == $1 && args->ret > 0/ {
+  if (@read_buf[tid] && args->ret < 2048) {
+    printf("\n=== INBOUND DATA ===\n");
+    printf("RECEIVED: %s\n", str(@read_buf[tid], args->ret));
+  }
+  delete(@read_buf[tid]);
+}' <PID>
+```
+
+---
+
+### Phase 4 — Spot Anomaly and Trace Random Failures
+
+#### A. Arm trigger dynamically on anomalies to avoid trace noise:
+```bash
+sudo bpftrace -p <PID> -e '
+usdt:/usr/bin/python3:python:function__entry
+/str(arg1) == "validate_payment"/ {
+  @watch[tid] = 1;
+  @watch_start[tid] = nsecs;
+}
+usdt:/usr/bin/python3:python:function__entry /@watch[tid]/ {
+  printf("%lld ENTER %s %s:%d\n",
+    nsecs, str(arg1), str(arg0), arg2);
+}
+usdt:/usr/bin/python3:python:function__return /@watch[tid]/ {
+  printf("%lld EXIT  %s\n", nsecs, str(arg1));
+}
+usdt:/usr/bin/python3:python:raise__exception /@watch[tid]/ {
+  printf("\n!!! EXCEPTION DURING PAYMENT !!!\n");
+  printf("type : %s\n", str(arg0));
+  printf("after: %lldms\n", (nsecs-@watch_start[tid])/1000000);
+  print(ustack(perf, 15));
+  @watch[tid] = 0;
+  exit();
+}'
+```
+
+#### B. Flag suspiciously fast executions (indicating early return errors):
+```bash
+sudo bpftrace -p <PID> -e '
+usdt:/usr/bin/python3:python:function__entry
+/str(arg1) == "get_transaction_status"/ {
+  @tx_start[tid] = nsecs;
+  @tx_stack[tid] = ustack(perf, 8);
+}
+usdt:/usr/bin/python3:python:function__return
+/str(arg1) == "get_transaction_status"/ {
+  $dur = nsecs - @tx_start[tid];
+  if ($dur < 100000) {
+    printf("\n!!! SUSPICIOUSLY FAST RETURN !!!\n");
+    printf("returned in %ldus — early return / branch issue?\n", $dur/1000);
+    print(@tx_stack[tid]);
+  }
+  delete(@tx_start[tid]);
+  delete(@tx_stack[tid]);
+}'
+```
+
+---
+
+### Phase 5 — Multi-Service Timestamp Correlation
+
+Run a timestamped log on all machines concurrently:
+```bash
+sudo bpftrace -p <PID> -e '
+usdt:/usr/bin/python3:python:function__entry {
+  printf("SVC=%s TS=%lld ENTER %s %s:%d\n",
+    comm, nsecs, str(arg1), str(arg0), arg2);
+}
+usdt:/usr/bin/python3:python:function__return {
+  printf("SVC=%s TS=%lld EXIT  %s\n",
+    comm, nsecs, str(arg1));
+}
+tracepoint:syscalls:sys_enter_connect /pid == $1/ {
+  printf("SVC=%s TS=%lld CONNECT\n", comm, nsecs);
+}' <PID> 2>&1 | tee /tmp/trace_<service_name>.log
+```
+
+Merge and sort all logs on one machine:
+```bash
+cat /tmp/trace_*.log | sort -k2 -t= | grep -v "^$"
+```
+
+---
+
+### Logical Error Mental Model
+
+```
+Logical error symptoms:
+├── Wrong value returned        → intercept write() — read actual payload
+├── Wrong branch taken          → function returns too fast = early return
+├── Missing call                → expected function never appears in trace
+├── Called in wrong order       → timestamps show wrong sequence
+├── Called with wrong args      → read() intercept shows wrong payload
+└── Race condition              → two threads in same function simultaneously
+```
+
+```
+START — something is wrong
+│
+├── Which service?
+│   └── bytes_in/bytes_out per service → find where chain breaks
+│
+├── Which function?
+│   └── full function trace filtered to your files only
+│       → find the function that returns wrong/fast/never
+│
+├── What data?
+│   └── intercept write()/read() syscalls → read actual payloads
+│       → find where value becomes wrong
+│
+├── Which code path?
+│   └── ustack on entry → who called this function
+│       → wrong caller = wrong code path taken
+│
+├── Race condition?
+│   └── count concurrent threads in same function
+│       → > 1 simultaneously = race
+│
+└── Happens randomly?
+    └── arm trigger on anomaly → capture only on bad execution
+        → exit() after first capture = zero noise
+```
+
+
