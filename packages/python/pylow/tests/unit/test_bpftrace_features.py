@@ -535,6 +535,90 @@ def test_jq_watch_changes_service_runs(capsys):
     assert "Snapshot" in captured.out or "jq-watch-changes" in captured.out
 
 
+# --- DAG Engine ---
+
+def test_dag_engine_dry_run_valid_dag(capsys):
+    from pytrace_features.dag_engine.service import DagEngineService
+    service = DagEngineService()
+    service.run("auth: get_user:auth get_catalog:auth create_order:get_user,get_catalog", None, dry=True, max_workers=2)
+    captured = capsys.readouterr()
+    assert "valid" in captured.out.lower() or "DAG" in captured.out
+
+def test_dag_engine_detects_cycle(capsys):
+    from pytrace_features.dag_engine.service import DagEngineService
+    import pytest
+    service = DagEngineService()
+    with pytest.raises(SystemExit):
+        service.run("a:b b:a", None, dry=True, max_workers=2)
+    captured = capsys.readouterr()
+    assert "CYCLE" in captured.err or "CYCLE" in captured.out
+
+def test_dag_engine_runs_levels(capsys):
+    from pytrace_features.dag_engine.service import DagEngineService
+    service = DagEngineService()
+    service.run("auth: step_a:auth step_b:auth final:step_a,step_b", None, dry=False, max_workers=4)
+    captured = capsys.readouterr()
+    assert "completed" in captured.out.lower() or "Level" in captured.out
+
+def test_dag_engine_empty_dag_exits(capsys):
+    from pytrace_features.dag_engine.service import DagEngineService
+    import pytest
+    service = DagEngineService()
+    with pytest.raises(SystemExit):
+        service.run("", None, dry=False, max_workers=2)
+
+def test_dag_engine_status_empty(capsys):
+    from pytrace_features.dag_engine.service import DagEngineService
+    service = DagEngineService()
+    service.status()
+    captured = capsys.readouterr()
+    assert "No DAG" in captured.out or "STATUS" in captured.out
+
+
+# --- Saga Orchestrator ---
+
+def test_saga_run_all_succeed(capsys, tmp_path):
+    from pytrace_features.saga_orchestrator.service import SagaOrchestratorService
+    log = str(tmp_path / "saga.log")
+    service = SagaOrchestratorService()
+    service.run("auth,create_order,reserve_inventory", fail_at=None, log_file=log)
+    captured = capsys.readouterr()
+    assert "committed" in captured.out.lower() or "✓" in captured.out
+
+def test_saga_run_rollback_on_failure(capsys, tmp_path):
+    from pytrace_features.saga_orchestrator.service import SagaOrchestratorService
+    log = str(tmp_path / "saga.log")
+    service = SagaOrchestratorService()
+    service.run("auth,create_order,reserve_inventory", fail_at="create_order", log_file=log)
+    captured = capsys.readouterr()
+    assert "rolled back" in captured.out.lower() or "FAILED" in captured.out
+
+def test_saga_log_display(capsys, tmp_path):
+    from pytrace_features.saga_orchestrator.service import SagaOrchestratorService
+    log = str(tmp_path / "saga.log")
+    service = SagaOrchestratorService()
+    service.run("auth,create_order", fail_at=None, log_file=log)
+    service.show_log(log)
+    captured = capsys.readouterr()
+    assert "SAGA" in captured.out or "auth" in captured.out
+
+def test_saga_replay(capsys, tmp_path):
+    from pytrace_features.saga_orchestrator.service import SagaOrchestratorService
+    log = str(tmp_path / "saga.log")
+    service = SagaOrchestratorService()
+    service.run("auth,payment", fail_at=None, log_file=log)
+    service.replay(log)
+    captured = capsys.readouterr()
+    assert "Replaying" in captured.out or "committed" in captured.out.lower()
+
+def test_saga_log_missing_file(capsys):
+    from pytrace_features.saga_orchestrator.service import SagaOrchestratorService
+    service = SagaOrchestratorService()
+    service.show_log("/tmp/nonexistent_pylow_saga_xyz.log")
+    captured = capsys.readouterr()
+    assert "No log" in captured.out
+
+
 
 
 

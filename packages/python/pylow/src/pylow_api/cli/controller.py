@@ -87,6 +87,8 @@ from pytrace_features.jq_common_audit.service import JqCommonAuditService
 from pytrace_features.jq_schema_evolution.service import JqSchemaEvolutionService
 from pytrace_features.jq_validate_fields.service import JqValidateFieldsService
 from pytrace_features.jq_watch_changes.service import JqWatchChangesService
+from pytrace_features.dag_engine.service import DagEngineService
+from pytrace_features.saga_orchestrator.service import SagaOrchestratorService
 from pytrace_infra.adapters.trace_collector_adapter import RealTraceCollectorAdapter
 
 
@@ -450,8 +452,30 @@ def main() -> None:
     jq_watch_changes_parser = subparsers.add_parser("jq-watch-changes", help="Track differences and field value updates over time")
     jq_watch_changes_parser.add_argument("pid", type=int, help="Target process PID")
 
+    # DAG Engine CLI
+    dag_run_parser = subparsers.add_parser("dag-run", help="Execute a DAG of steps in topological order with parallelism")
+    dag_run_parser.add_argument("--dag", type=str, default="", help="DAG spec: 'step:dep1,dep2 step2:dep1' (space-separated nodes)")
+    dag_run_parser.add_argument("--dag-file", type=str, default=None, help="Path to JSON file mapping step->deps list")
+    dag_run_parser.add_argument("--workers", type=int, default=4, help="Max parallel workers per level (default: 4)")
 
+    dag_dry_run_parser = subparsers.add_parser("dag-dry-run", help="Validate DAG structure and print execution levels without running")
+    dag_dry_run_parser.add_argument("--dag", type=str, default="", help="DAG spec: 'step:dep1,dep2 step2:dep1'")
+    dag_dry_run_parser.add_argument("--dag-file", type=str, default=None, help="Path to JSON file mapping step->deps list")
+    dag_dry_run_parser.add_argument("--workers", type=int, default=4, help="Max parallel workers (default: 4)")
 
+    dag_status_parser = subparsers.add_parser("dag-status", help="Show status of last DAG run")
+
+    # Saga Orchestrator CLI
+    saga_run_parser = subparsers.add_parser("saga-run", help="Run forward steps with automatic rollback on failure")
+    saga_run_parser.add_argument("--steps", type=str, required=True, help="Comma-separated list of saga steps")
+    saga_run_parser.add_argument("--fail-at", type=str, default=None, help="Inject failure at this step (for testing rollback)")
+    saga_run_parser.add_argument("--log-file", type=str, default="/tmp/pylow_saga.log", help="Saga log file path (default: /tmp/pylow_saga.log)")
+
+    saga_log_parser = subparsers.add_parser("saga-log", help="Display the saga event log")
+    saga_log_parser.add_argument("--log-file", type=str, default="/tmp/pylow_saga.log", help="Saga log file path")
+
+    saga_replay_parser = subparsers.add_parser("saga-replay", help="Replay all steps from a committed saga log")
+    saga_replay_parser.add_argument("--log-file", type=str, default="/tmp/pylow_saga.log", help="Saga log file to replay")
 
 
 
@@ -874,7 +898,35 @@ def main() -> None:
         service.trace(args.pid)
         sys.exit(0)
 
+    elif cmd == "dag-run":
+        service = DagEngineService(collector)
+        service.run(args.dag, args.dag_file, dry=False, max_workers=args.workers)
+        sys.exit(0)
 
+    elif cmd == "dag-dry-run":
+        service = DagEngineService(collector)
+        service.run(args.dag, args.dag_file, dry=True, max_workers=args.workers)
+        sys.exit(0)
+
+    elif cmd == "dag-status":
+        service = DagEngineService(collector)
+        service.status()
+        sys.exit(0)
+
+    elif cmd == "saga-run":
+        service = SagaOrchestratorService(collector)
+        service.run(args.steps, fail_at=args.fail_at, log_file=args.log_file)
+        sys.exit(0)
+
+    elif cmd == "saga-log":
+        service = SagaOrchestratorService(collector)
+        service.show_log(args.log_file)
+        sys.exit(0)
+
+    elif cmd == "saga-replay":
+        service = SagaOrchestratorService(collector)
+        service.replay(args.log_file)
+        sys.exit(0)
 
 
 

@@ -1,54 +1,82 @@
-
-
-
 # pylow
 
-One CLI. Zero code changes. Full system flow visibility for any Python service or distributed system.
+**One CLI. Zero code changes. Full system flow visibility for any Python service or distributed system.**
+
+Version `0.1.8` — 86 commands across kernel tracing, Python internals, JSON analysis, HTTP tooling, pipeline patterns, and distributed workflow orchestration.
+
+---
 
 ## Installation & Setup
 
-You can install `pylow` globally via pip:
 ```bash
 pip install pylow
 ```
 
 > [!IMPORTANT]
-> If you get `Command 'pylow' not found` after installation, make sure Python's user bin directory is in your `PATH`.
-> Run the following commands to add it to your profile:
+> If you get `Command 'pylow' not found` after installation, your Python user bin directory is not on PATH.
+> Fix it:
 > ```bash
 > echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 > source ~/.bashrc
 > ```
 
-## How it works under the hood
+---
+
+## How It Works
+
 Three layers working together:
-- **Layer 1** → OTel auto-instrumentation (HTTP, DB, gRPC, queues — zero code changes)
-- **Layer 2** → bpftrace USDT (Python function call tree, syscalls)
-- **Layer 3** → pylow CLI (stitches both, renders the flow)
+
+```
+Layer 1 → OTel auto-instrumentation  (HTTP, DB, gRPC, queues — zero code changes)
+Layer 2 → bpftrace USDT              (Python function call tree, syscalls, kernel)
+Layer 3 → pylow CLI                  (stitches both, renders the flow)
+```
 
 ---
 
-## Complete CLI Command Reference & Outputs
+## Quick Start
 
-Here is the usage documentation and sample outputs for every command in the `pylow` tool:
+```bash
+# Find the PID of your process first
+pgrep -f "your_app.py"
 
-### 1. `pylow attach <pid>`
-Attach to any running Python process and start collecting trace logs immediately.
+# Attach and start collecting
+pylow attach <PID>
+
+# Render the execution flow
+pylow flow --last
+
+# 10-second triage — tells you exactly what category problem you have
+pylow triage <PID>
+```
+
+---
+
+## Complete Command Reference
+
+All 86 commands, grouped by category.
+
+---
+
+## CATEGORY 1 — Core Tracing
+
+### `pylow attach <PID>`
+Attach to any running Python process and start collecting trace logs.
 ```bash
 pylow attach 4821
 ```
-**Output:**
-```text
+```
 ✓ Attached to process 4821. Monitoring execution events...
 ```
 
-### 2. `pylow flow`
-Renders the complete execution flow tree (local/distributed spans & events) from the trace repository.
+---
+
+### `pylow flow [--last]`
+Render the full execution flow tree from collected spans.
 ```bash
 pylow flow --last
 ```
-**Output:**
-```text
+```
 handle_request 450ms
 ├── authenticate_user 20ms
 │   └── [redis GET session_id] 15ms
@@ -57,408 +85,144 @@ handle_request 450ms
         └── waiting (epoll_wait) 390ms   ← bottleneck
 ```
 
-### 3. `pylow stitch`
-Stitch distributed traces together across service boundaries using traceparent headers.
+---
+
+### `pylow stitch --services <list>`
+Stitch distributed traces together across service boundaries.
 ```bash
 pylow stitch --services api,worker,ml-service
 ```
-**Output:**
-```text
+```
 REQUEST trace-id: t_demo_flow_123
 
-  api-gateway          450ms  handle_request
-  └── api-gateway          20ms  authenticate_user
-      └── api-gateway          15ms  redis GET session_id
-  └── api-gateway          410ms  call_llm_chain
-      └── api-gateway          400ms  POST api.openai.com/v1/chat/completions
-          └── api-gateway          390ms  waiting (epoll_wait)
+  api-gateway     450ms  handle_request
+  └── api-gateway  20ms  authenticate_user
+      └── api-gateway  15ms  redis GET session_id
 ```
 
-### 4. `pylow slow`
-Continuously daemonize/monitor and surface slow execution paths exceeding a latency threshold.
+---
+
+### `pylow slow [--threshold <ms>] [--watch]`
+Surface slow execution paths exceeding a latency threshold.
 ```bash
 pylow slow --threshold 200ms --watch
 ```
-**Output:**
-```text
-Continuous monitoring daemon started. Threshold: 200ms, Watch: False
-SLOW PATHS detected (last 5 min):
+```
+Continuous monitoring daemon started. Threshold: 200ms
 
-  #1  handle_request → call_llm_chain → POST api.openai.com/v1/chat/completions → [waiting (epoll_wait)]
+SLOW PATHS detected (last 5 min):
+  #1  handle_request → call_llm_chain → [waiting (epoll_wait)]
       avg: 390ms  occurrences: 1
-      root cause: epoll_wait 310ms — network latency to openai
+      root cause: epoll_wait 310ms — network latency
 ```
 
-### 5. `pylow diff`
-Compare execution flow metrics between versions or releases to detect regressions.
+---
+
+### `pylow diff --before <id> --after <id>`
+Compare execution flow metrics between two releases to detect regressions.
 ```bash
 pylow diff --before deploy-v1.2 --after deploy-v1.3
 ```
-**Output:**
-```text
-Comparing before v1.2 vs after v1.3...
-
+```
 REGRESSIONS:
-
-  handle_request     +150ms avg  (was 200ms, now 350ms)
-  call_llm           +140ms avg  (was 180ms, now 320ms)
-  serialize          +12ms avg  (was 3ms, now 15ms)
+  handle_request  +150ms avg  (was 200ms, now 350ms)
+  serialize        +12ms avg  (was 3ms, now 15ms)
 
 NEW CALLS in v1.3:
-  validate_schema    8ms  (added input validation)
+  validate_schema  8ms
 
 REMOVED in v1.3:
-  legacy_cache_check (removed)
+  legacy_cache_check
 ```
 
-### 6. `pylow syscall <pid>`
-Trace syscall counts and histogram latency patterns for the target process.
+---
+
+## CATEGORY 2 — Kernel & Syscall Tracing
+
+### `pylow syscall <PID>`
+Trace syscall counts and histogram latency.
 ```bash
 pylow syscall 4821
 ```
-**Output:**
-```text
-Attaching syscall counter to PID 4821...
-✓ Attached. Monitoring syscall events... Ctrl+C to stop.
-
+```
 --- BPF Map: @sys_counts ---
   sys_enter_read: 231
   sys_enter_write: 184
   sys_enter_epoll_wait: 42
 ```
 
-### 7. `pylow malloc <pid>`
-Profile allocations and heap sizing metrics.
+---
+
+### `pylow malloc <PID>`
+Profile memory allocation sizes and callers.
 ```bash
 pylow malloc 4821
 ```
-**Output:**
-```text
-Attaching allocator profile to PID 4821...
-✓ Attached. Monitoring memory allocations... Ctrl+C to stop.
-
---- BPF Map: @alloc_sizes (bytes allocated) ---
+```
+--- BPF Map: @alloc_sizes (bytes) ---
 [64, 127]              45 |@@@@@@@@@@@                         |
 [512, 1023]           120 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [4096, 8191]           18 |@@@@                                |
 ```
 
-### 8. `pylow tcp <pid>`
-Trace outbound TCP latency.
+---
+
+### `pylow tcp <PID>`
+Trace outbound TCP sendmsg latency.
 ```bash
 pylow tcp 4821
 ```
-**Output:**
-```text
-Attaching TCP latency tracer to PID 4821...
-✓ Attached. Monitoring TCP sendmsg... Ctrl+C to stop.
-
+```
 --- BPF Map: @tcp_send_us (ns delay) ---
 [100000, 200000]       21 |@@@@@@@@@@                          |
 ```
 
-### 9. `pylow io <pid>`
-Trace Block and File I/O read/write latencies.
+---
+
+### `pylow io <PID>`
+Trace File and Block I/O read/write latencies.
 ```bash
 pylow io 4821
 ```
-**Output:**
-```text
-Attaching File I/O latency tracer to PID 4821...
-✓ Attached. Collecting block I/O events... Ctrl+C to stop.
-
+```
 --- BPF Map: @read_lat (ns) ---
 [4096, 8191]          150 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
-[16384, 32767]        23 |@@@@@                               |
+[16384, 32767]         23 |@@@@@                               |
 ```
 
-### 10. `pylow flame <pid>`
-Generate sampling-based user/kernel stack flame graphs.
+---
+
+### `pylow flame <PID> [--duration <sec>]`
+Generate CPU sampling flame graphs (SVG).
 ```bash
 pylow flame 4821 --duration 5
 ```
-**Output:**
-```text
-Attaching kernel profile sampler to PID 4821 for 5s...
-✓ Attached. Sampling for 5s...
+```
+✓ Sampling for 5s...
 ✓ Saved flame graph to flamegraph.svg
 ```
 
-### 11. `pylow sched <pid>`
-Monitor runqueue latency and scheduling delays.
+---
+
+### `pylow sched <PID>`
+Trace runqueue scheduler latency.
 ```bash
 pylow sched 4821
 ```
-**Output:**
-```text
-Attaching scheduler delay tracer to PID 4821...
-✓ Attached. Collecting scheduler runqueue events... Ctrl+C to stop.
-
---- BPF Map: @runq_latency_us (us delay) ---
+```
+--- BPF Map: @runq_latency_us ---
 [1, 2]                 98 |@@@@@@@@@@@@@@@@@@@@@@@@            |
 [4, 8]                142 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 ```
 
-### 12. `pylow pycall <pid>`
-Profile Python `PyObject_Call` execution timings.
-```bash
-pylow pycall 4821
-```
-**Output:**
-```text
-Attaching Python function call timer to PID 4821...
-✓ Attached. Collecting PyObject_Call events... Ctrl+C to stop.
+---
 
---- BPF Map: @latency (time spent per function in us) ---
-SLOW execute_query took 12400us
-SLOW process_job took 1850us
-```
-
-### 13. `pylow pyframe <pid>`
-Log Python execution contexts at the frame level (file, function, line).
-```bash
-pylow pyframe 4821
-```
-**Output:**
-```text
-Attaching Python frame USDT tracer to PID 4821...
-✓ Attached. Collecting USDT frame events... Ctrl+C to stop.
-
-ENTER execute_query() @ db/models.py:142
-slow_query() @ db/models.py:142 — p99: 340ms
-```
-
-### 14. `pylow pycpu <pid>`
-Identify CPU hotspots in Python runtime execution stacks.
-```bash
-pylow pycpu 4821
-```
-**Output:**
-```text
-Attaching CPU hotspot sampler to PID 4821...
-✓ Attached. Sampling CPU stacks... Ctrl+C to stop.
-
---- BPF Map: @stacks ---
-  [0x7f3b821034bc, 0x7f3b821035dc]: 145
-  -> Resolved: call_llm_chain @ gateway/orchestrator.py:120
-```
-
-### 15. `pylow pyexcept <pid>`
-Trace raised and caught exceptions within Python virtual machine.
-```bash
-pylow pyexcept 4821
-```
-**Output:**
-```text
-Attaching Python exception tracer to PID 4821...
-✓ Attached. Monitoring exceptions... Ctrl+C to stop.
-
-EXCEPTION KeyError @ tid=10234
-  [ustack]:
-    get_user_context @ db/client.py:48
-```
-
-### 16. `pylow pyiowait <pid>`
-Trace Python code blocked waiting on blocking I/O calls.
-```bash
-pylow pyiowait 4821
-```
-**Output:**
-```text
-Attaching I/O Wait blocking call tracer to PID 4821...
-✓ Attached. Monitoring blocking sys_read calls... Ctrl+C to stop.
-
-BLOCKING READ 12ms
-  [ustack]:
-    fetch_metadata @ db/client.py:54
-```
-
-### 17. `pylow pygil <pid>`
-Profile GIL lock acquisition delays and thread contention.
-```bash
-pylow pygil 4821
-```
-**Output:**
-```text
-Attaching GIL lock contention tracer to PID 4821...
-✓ Attached. Monitoring GIL wait states... Ctrl+C to stop.
-
-GIL WAIT 1250us tid=10234 stack:
-  [ustack]:
-    calculate_features @ ml/engine.py:89
-```
-
-### 18. `pylow pyleak <pid>`
-Profile heap allocations to detect memory leak patterns.
-```bash
-pylow pyleak 4821
-```
-**Output:**
-```text
-Attaching memory leak tracer to PID 4821...
-✓ Attached. Collecting memory allocation metrics... Ctrl+C to stop.
-
-=== TOP ALLOCATORS ===
-@allocs[0x7f3b821034bc]: 10485760 bytes
-  -> allocating callsite: load_dataset @ ml/data.py:12
-```
-
-### 19. `pylow pyreq <pid>`
-Measure end-to-end request lifecycle breakdown.
-```bash
-pylow pyreq 4821
-```
-**Output:**
-```text
-Attaching Request Lifecycle timer to PID 4821...
-✓ Attached. Collecting Request Latency counts... Ctrl+C to stop.
-
-REQ START tid=10234
-REQ DONE total=340ms db=310ms other=30ms
-```
-
-### 20. `pylow timeline <pid>`
-Trace absolute chronological timeline call graph.
-```bash
-pylow timeline 4821 --duration 5.0 --threshold 2.0
-```
-**Output:**
-```text
-[     0.000ms] → handle_request()  server.py:45
-[     0.040ms]   → parse_headers()  http.py:12
-[     0.051ms]   ← parse_headers()  [0.011ms]
-[     0.055ms]   → execute_query()  db.py:88
-[    91.230ms]   ← execute_query()  [91.175ms]  ⚠️ SLOW
-```
-
-### 21. `pylow pythread <pid>`
-Trace thread-aware function call timelines with self-time.
-```bash
-pylow pythread 4821
-```
-**Output:**
-```text
-Attaching thread-aware tracer to PID 4821...
-✓ Attached. Collecting threaded events... Ctrl+C to stop.
-
---- Thread ID: 10001 ---
-  parse_headers() spent 0.00ms (Self time: 0.00ms)
-```
-
-### 22. `pylow pyasync <pid>`
-Trace async await coroutine metrics and yields.
-```bash
-pylow pyasync 4821
-```
-**Output:**
-```text
-Attaching async/coroutine tracer to PID 4821...
-✓ Attached. Monitoring coroutine suspends/resumes... Ctrl+C to stop.
-
---- Coroutine: 0x7f3b821034bc ---
-  Suspended counts: 2
-  Total CPU Time: 80us
-```
-
-### 23. `pylow pyargs <pid>`
-Profile Python function call argument types and layout.
-```bash
-pylow pyargs 4821
-```
-**Output:**
-```text
-Attaching argument Layout layout-tracer to PID 4821...
-✓ Attached. Dereferencing Python structs... Ctrl+C to stop.
-
-1000 CALL obj=0x7f3b821034bc args=0x7f3b821051fa
-```
-
-### 24. `pylow pysyscall <pid>`
-Profile syscalls attributed directly to Python frames.
-```bash
-pylow pysyscall 4821
-```
-**Output:**
-```text
-Attaching syscall-to-Python attribution tracer to PID 4821...
-✓ Attached. Monitoring slow read and futex syscalls... Ctrl+C to stop.
-
-=== SLOW READ fd=4 dur=12ms ===
-  [ustack]:
-    fetch_metadata @ db/client.py:54
-```
-
-### 25. `pylow pynplus1 <pid>`
-Detect potential ORM loop-driven N+1 query patterns.
-```bash
-pylow pynplus1 4821
-```
-**Output:**
-```text
-Attaching N+1 query loop detector to PID 4821...
-✓ Attached. Monitoring ORM execute loops... Ctrl+C to stop.
-
-⚠️  N+1 CANDIDATE: db/models.py:142
-   Called 15x in 5s (3.0/s)
-```
-
-### 26. `pylow pygraph <pid>`
-Trace hierarchical call relationships.
-```bash
-pylow pygraph 4821
-```
-**Output:**
-```text
-handle_request()  calls=1  avg=0.00ms  (server.py:45)
-  execute_query()  calls=1  avg=0.00ms  (db.py:88)
-```
-
-### 27. `pylow pyanomaly <pid>`
-Identify slow function calls using statistical baselines.
-```bash
-pylow pyanomaly 4821
-```
-**Output:**
-```text
-[BASELINE] execute_query(): mean=10.33ms stddev=0.76ms
-🚨 ANOMALY execute_query(): 45.00ms vs baseline 10.33ms
-```
-
-### 28. `pylow pydash <pid>`
-Stream traces directly to live curses dashboard.
-```bash
-pylow pydash 4821
-```
-**Output:**
-```text
-Attaching curses dashboard to PID 4821...
-=== LIVE FUNCTION TRACER ===
-RECENT CALLS:
-  handle_request() 120.40ms
-```
-
-### 29. `pylow pysingle <pid> <target_func>`
-Trace single request / execution call tree with self time.
-```bash
-pylow pysingle 4821 handle_request
-```
-**Output:**
-```text
-[     0.000ms] → handle_request()  server.py:45
-[     0.011ms]   → validate_token()  auth.py:12
-[     0.015ms]   ← validate_token()  total=0.004ms  self=0.003ms
-```
-
-### 30. `pylow page-faults <pid>`
-Trace page fault hotspots to identify cold memory access patterns.
+### `pylow page-faults <PID>`
+Trace page fault hotspots — which code is triggering cold memory access.
 ```bash
 pylow page-faults 4821
 ```
-**Output:**
-```text
-Attaching page faults tracer to PID 4821...
-✓ Attached. Collecting page fault events... Ctrl+C to stop.
-
+```
 === PAGE FAULT HOTSPOTS ===
 @faults[
     malloc+0x24
@@ -467,609 +231,1342 @@ Attaching page faults tracer to PID 4821...
 ]: 421
 ```
 
-### 31. `pylow context-switches <pid>`
-Profile preemption context switches and voluntary/involuntary off-CPU delays.
+---
+
+### `pylow context-switches <PID>`
+Profile preemption and voluntary context switches.
 ```bash
 pylow context-switches 4821
 ```
-**Output:**
-```text
-Attaching context switches tracer to PID 4821...
-✓ Attached. Collecting context switch events... Ctrl+C to stop.
-
+```
 OFF CPU 87ms next_cpu=2
 
 --- BPF Map: @off_cpu_ms ---
 [0, 1]                12 |@@@@                                |
-[2, 4]                89 |@@@@@@@@@@@@@@                      |
 [64, 128]            210 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 ```
 
-### 32. `pylow kernel-blocked <pid>`
-Trace the exact kernel blocked code path where a process is sleeping in an uninterruptible wait.
+---
+
+### `pylow kernel-blocked <PID>`
+Trace the exact kernel call path where the process is sleeping uninterruptibly.
 ```bash
 pylow kernel-blocked 4821
 ```
-**Output:**
-```text
-Attaching kernel blocked stack tracer to PID 4821...
-✓ Attached. Monitoring blocked states... Ctrl+C to stop.
-
+```
 BLOCKED IN KERNEL:
-        __schedule+0x310
-        schedule+0x44
-        futex_wait_queue_me+0xb8
-        futex_wait+0x120
-        do_futex+0x340
-        __x64_sys_futex+0x140
-        [ustack]:
-        pthread_cond_wait+0x12
-        take_gil+0x42
-        execute_query+0x91  db.py:102
+    futex_wait+0x120
+    take_gil+0x42
+    execute_query+0x91  db.py:102
 ```
 
-### 33. `pylow tlb-shootdowns <pid>`
-Profile Translation Lookaside Buffer (TLB) flush rates and reasons.
+---
+
+### `pylow tlb-shootdowns <PID>`
+Profile TLB flush rates and reasons.
 ```bash
 pylow tlb-shootdowns 4821
 ```
-**Output:**
-```text
-Attaching TLB shootdowns tracer to PID 4821...
-✓ Attached. Monitoring TLB flushes... Ctrl+C to stop.
-
+```
 --- BPF Map: @tlb_reason ---
-[0] (TLB_FLUSH_ON_TASK_SWITCH)              42
-[1] (TLB_FLUSH_ON_PAGE_FAULT)              187
+[0] (TLB_FLUSH_ON_TASK_SWITCH)    42
+[1] (TLB_FLUSH_ON_PAGE_FAULT)    187
 ```
 
-### 34. `pylow irq-impact <pid>`
-Monitor soft and hard IRQ impact vectors to detect when CPU cycles are stolen.
+---
+
+### `pylow irq-impact <PID>`
+Monitor soft and hard IRQ CPU cycles stolen from the process.
 ```bash
 pylow irq-impact 4821
 ```
-**Output:**
-```text
-Attaching Soft/Hard IRQ tracer to PID 4821...
-✓ Attached. Collecting IRQ impact events... Ctrl+C to stop.
-
+```
 --- BPF Map: @sirq_type ---
-[1] (TIMER_SOFTIRQ)                         84
-[3] (NET_RX_SOFTIRQ)                        187
+[3] (NET_RX_SOFTIRQ)    187
 
 --- BPF Map: @sirq_lat (us) ---
-[0, 1]                12 |@@@@                                |
-[2, 4]                43 |@@@@@@@@@@@@@@                      |
 [8, 16]              187 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 ```
 
 ---
 
-## Diagnostic Decision Tree & Multi-Layer Debugging Workflow
+## CATEGORY 3 — Python Runtime Tracing
 
-Use this decision tree to diagnose performance degradation layer-by-layer:
-
+### `pylow pycall <PID>`
+Profile Python `PyObject_Call` function execution timings.
+```bash
+pylow pycall 4821
 ```
-What are you seeing?
-│
-├── App is slow
-│   │
-│   ├── CPU high?
-│   │   └── profile:hz:999 + ustack → hottest function
-│   │
-│   └── CPU normal?
-│       └── raw_syscalls timer → which syscall blocking + stack
-│
-├── Memory growing
-│   ├── malloc sum by stack → top allocator
-│   └── alloc vs free count → confirm leak
-│
-├── Random crashes
-│   └── raise__exception + ustack → every throw point
-│
-├── Process hangs
-│   ├── sched_switch + ustack → where it sleeps
-│   └── PyThread_acquire_lock → deadlock check
-│
-└── Too much noise from other queries
-    └── add /str(arg1) == "your_func"/ filter
-        or /str(arg0) == "your_file.py"/
-        or /tid == <specific_thread>/
 ```
-
-### The Mental Model — Layers of Execution
-
-```
-Your Python code
-      ↓
-CPython interpreter (ceval loop)
-      ↓
-Standard library / third party (SQLAlchemy, requests, asyncio)
-      ↓
-Python C extensions (.so files)
-      ↓
-libc (malloc, free, connect, read)
-      ↓
-System calls (read, write, futex, mmap, connect)
-      ↓
-Kernel (TCP stack, VFS, scheduler, memory manager)
-      ↓
-Hardware (CPU, disk, NIC)
+SLOW execute_query took 12400us
+SLOW process_job took 1850us
 ```
 
 ---
 
-### Step 0 — Quick Triaging (Run first)
-
-Run this for 10 seconds to pinpoint the category of the problem:
-
+### `pylow pyframe <PID>`
+Trace exact Python frames: file, function name, line number.
 ```bash
-sudo bpftrace -e '
-profile:hz:99 /pid == $1/ { @cpu[ustack(perf,3)] = count(); }
-tracepoint:sched:sched_switch /args->prev_pid == $1/ { @offcpu = count(); }
-tracepoint:raw_syscalls:sys_enter /pid == $1/ { @syscalls = count(); }
-software:page-faults:1 /pid == $1/ { @faults = count(); }
-interval:s:10 {
-  printf("cpu_samples : %d\n", @cpu);
-  printf("off_cpu     : %d\n", @offcpu);
-  printf("syscalls    : %d\n", @syscalls);
-  printf("page_faults : %d\n", @faults);
-  exit();
-}' <PID>
+pylow pyframe 4821
 ```
-
-#### Triage Criteria:
-* `cpu_samples` high + `offcpu` low &rarr; **CPU BOUND**
-* `cpu_samples` low + `offcpu` high &rarr; **I/O BOUND**
-* `syscalls` very high &rarr; **SYSCALL STORM**
-* `page_faults` high &rarr; **MEMORY**
-* All counts low &rarr; **DEADLOCK / STUCK**
+```
+ENTER execute_query() @ db/models.py:142
+slow_query() @ db/models.py:142 — p99: 340ms
+```
 
 ---
 
-### CPU BOUND — Your Code Is Burning CPU
-
-#### A. Find exactly which function is hot:
+### `pylow pycpu <PID>`
+Identify CPU hotspots in Python stacks.
 ```bash
-sudo bpftrace -p <PID> -e '
-profile:hz:999 {
-  @[ustack(perf, 5)] = count();
+pylow pycpu 4821
+```
+```
+--- BPF Map: @stacks ---
+  → Resolved: call_llm_chain @ gateway/orchestrator.py:120  (145 samples)
+```
+
+---
+
+### `pylow pyexcept <PID>`
+Trace raised Python exceptions with user stack.
+```bash
+pylow pyexcept 4821
+```
+```
+EXCEPTION KeyError @ tid=10234
+  get_user_context @ db/client.py:48
+```
+
+---
+
+### `pylow pyiowait <PID>`
+Trace Python code blocking on I/O.
+```bash
+pylow pyiowait 4821
+```
+```
+BLOCKING READ 12ms
+  fetch_metadata @ db/client.py:54
+```
+
+---
+
+### `pylow pygil <PID>`
+Profile GIL acquisition delays and thread contention.
+```bash
+pylow pygil 4821
+```
+```
+GIL WAIT 1250us tid=10234
+  calculate_features @ ml/engine.py:89
+```
+
+---
+
+### `pylow pyleak <PID>`
+Profile heap allocations to detect memory leak patterns.
+```bash
+pylow pyleak 4821
+```
+```
+=== TOP ALLOCATORS ===
+@allocs[0x7f3b821034bc]: 10485760 bytes
+  → load_dataset @ ml/data.py:12
+```
+
+---
+
+### `pylow pyreq <PID>`
+Measure end-to-end request lifecycle breakdown.
+```bash
+pylow pyreq 4821
+```
+```
+REQ START tid=10234
+REQ DONE total=340ms db=310ms other=30ms
+```
+
+---
+
+### `pylow timeline <PID> [--duration <sec>] [--threshold <ms>]`
+Render a chronological timeline call graph with entry/exit timestamps.
+```bash
+pylow timeline 4821 --duration 5.0 --threshold 2.0
+```
+```
+[     0.000ms] → handle_request()  server.py:45
+[     0.040ms]   → parse_headers()  http.py:12
+[     0.051ms]   ← parse_headers()  [0.011ms]
+[    91.230ms]   ← execute_query()  [91.175ms]  ⚠️ SLOW
+```
+
+---
+
+### `pylow pythread <PID>`
+Trace thread-aware function call timelines with self-time per thread.
+```bash
+pylow pythread 4821
+```
+```
+--- Thread ID: 10001 ---
+  parse_headers() spent 0.00ms (Self time: 0.00ms)
+```
+
+---
+
+### `pylow pyasync <PID>`
+Trace async coroutine suspend/resume metrics.
+```bash
+pylow pyasync 4821
+```
+```
+--- Coroutine: 0x7f3b821034bc ---
+  Suspended counts: 2
+  Total CPU Time: 80us
+```
+
+---
+
+### `pylow pyargs <PID>`
+Profile Python function call argument types and layout (CPython struct dereference).
+```bash
+pylow pyargs 4821
+```
+```
+1000 CALL obj=0x7f3b821034bc args=0x7f3b821051fa
+```
+
+---
+
+### `pylow pysyscall <PID>`
+Profile syscalls attributed directly to Python frames.
+```bash
+pylow pysyscall 4821
+```
+```
+=== SLOW READ fd=4 dur=12ms ===
+  fetch_metadata @ db/client.py:54
+```
+
+---
+
+### `pylow pynplus1 <PID>`
+Detect N+1 query loop patterns from ORM calls.
+```bash
+pylow pynplus1 4821
+```
+```
+⚠️  N+1 CANDIDATE: db/models.py:142
+   Called 15x in 5s (3.0/s)
+```
+
+---
+
+### `pylow pygraph <PID>`
+Trace hierarchical call relationships as a call graph.
+```bash
+pylow pygraph 4821
+```
+```
+handle_request()  calls=1  avg=0.00ms  (server.py:45)
+  execute_query()  calls=1  avg=0.00ms  (db.py:88)
+```
+
+---
+
+### `pylow pyanomaly <PID>`
+Identify statistically anomalous slow function calls vs baseline.
+```bash
+pylow pyanomaly 4821
+```
+```
+[BASELINE] execute_query(): mean=10.33ms stddev=0.76ms
+🚨 ANOMALY execute_query(): 45.00ms vs baseline 10.33ms
+```
+
+---
+
+### `pylow pydash <PID>`
+Stream live function call metrics to a curses dashboard.
+```bash
+pylow pydash 4821
+```
+```
+=== LIVE FUNCTION TRACER ===
+RECENT CALLS:
+  handle_request() 120.40ms
+```
+
+---
+
+### `pylow pysingle <PID> <func>`
+Trace a single function's complete execution tree with self-time.
+```bash
+pylow pysingle 4821 handle_request
+```
+```
+[     0.000ms] → handle_request()  server.py:45
+[     0.011ms]   → validate_token()  auth.py:12
+[     0.015ms]   ← validate_token()  total=0.004ms  self=0.003ms
+```
+
+---
+
+## CATEGORY 4 — Diagnostic Workflows
+
+### `pylow triage <PID>`
+Run a 10-second triage profile. Tells you exactly which problem category to investigate.
+```bash
+pylow triage 4821
+```
+```
+cpu_samples : 842    ← high → CPU BOUND
+off_cpu     : 12
+syscalls    : 234
+page_faults : 8
+
+→ DIAGNOSIS: CPU BOUND — use pylow cpu-bound 4821
+```
+
+---
+
+### `pylow cpu-bound <PID>`
+Full CPU-bound diagnostic: hottest stacks + duration attribution.
+```bash
+pylow cpu-bound 4821
+```
+```
+CPU HOTSPOT: call_llm_chain @ gateway/orchestrator.py:120
+  Samples: 145 / 200 total (72.5%)
+  Avg duration: 1240ms
+```
+
+---
+
+### `pylow io-bound <PID>`
+Full I/O-bound diagnostic: blocking syscall + Python origin stack.
+```bash
+pylow io-bound 4821
+```
+```
+BLOCKED syscall=read 87ms
+  fetch_metadata @ db/client.py:54
+  → fd=7 → /var/run/postgresql/.s.PGSQL.5432
+```
+
+---
+
+### `pylow syscall-storm <PID> [--id <syscall_id>]`
+Diagnose high-frequency syscall storm. Optionally filter to a specific syscall ID.
+```bash
+pylow syscall-storm 4821
+pylow syscall-storm 4821 --id 1   # filter to sys_write only
+```
+```
+TOP SYSCALLS (5s):
+  id=1 (write)   3841 calls
+  id=0 (read)    1204 calls
+  id=202 (futex)  892 calls
+```
+
+---
+
+### `pylow deadlock <PID>`
+Detect deadlocks: locks acquired but never released within the observation window.
+```bash
+pylow deadlock 4821
+```
+```
+=== LOCKS HELD > 5s ===
+@lock[tid=10234, lock=0x7f3b820f1234]: held since 8234ms
+  → PyThread_acquire_lock @ db/connection_pool.py:88
+```
+
+---
+
+### `pylow service-map <PID>`
+Map inbound and outbound request flow: connections, bytes in/out.
+```bash
+pylow service-map 4821
+```
+```
+=== SERVICE pid=4821 ===
+outbound_calls : 14
+bytes_in       : 204800
+bytes_out      : 81920
+conn_time_ms:
+  [10, 20]     8 |@@@@@@@@@@@@                        |
+```
+
+---
+
+### `pylow ordered-log <PID> [--filter-internals]`
+Output a chronological ordered log of every Python function call and return.
+```bash
+pylow ordered-log 4821
+pylow ordered-log 4821 --filter-internals   # strip CPython bootstrap noise
+```
+```
+1749558821000001  ENTER  handle_request          server.py:45
+1749558821000040  ENTER  authenticate_user        auth.py:12
+1749558821000055  EXIT   authenticate_user
+1749558821000060  ENTER  execute_query            db.py:88
+1749558821091000  EXIT   execute_query            91ms ⚠️ SLOW
+```
+
+---
+
+### `pylow intercept <PID> [func]`
+Intercept entry/exit payloads at a boundary function. Shows file, line, tid, stack.
+```bash
+pylow intercept 4821 process_payment
+```
+```
+=== process_payment CALLED ===
+file : payments/service.py
+line : 142
+tid  : 10234
+time : 1749558821000060
+
+=== process_payment RETURNED ===
+duration: 88ms
+```
+
+---
+
+### `pylow anomaly-trigger <PID> [func]`
+Arm a trigger on a function — capture full call tree only when an exception or anomaly fires.
+```bash
+pylow anomaly-trigger 4821 validate_payment
+```
+```
+[WATCHING] validate_payment — armed, zero noise until trigger
+
+!!! EXCEPTION DURING PAYMENT !!!
+type  : ValueError
+after : 23ms
+  → process_refund @ payments/service.py:89
+  → validate_payment @ payments/service.py:34
+```
+
+---
+
+### `pylow correlation <PID> [service_name]`
+Trace cross-service chronological correlation. Stamp every call with service name + nanosecond timestamp.
+```bash
+pylow correlation 4821 api-gateway
+# Run simultaneously on all service PIDs, then merge:
+# cat /tmp/trace_*.log | sort -k2 -t=
+```
+```
+SVC=api-gateway TS=1749558821000001 ENTER handle_request server.py:45
+SVC=api-gateway TS=1749558821000040 CONNECT
+SVC=api-gateway TS=1749558821000060 EXIT  handle_request
+```
+
+---
+
+## CATEGORY 5 — HTTP & API Tooling
+
+### `pylow curl-perf <PID> [url]`
+Trace HTTP request timing breakdown: DNS, connect, TTFB, total.
+```bash
+pylow curl-perf 4821 https://api.example.com/payments
+```
+```
+=== HTTP PERFORMANCE: https://api.example.com/payments ===
+  time_namelookup  :   0.012s
+  time_connect     :   0.031s
+  time_starttransfer:  0.087s
+  time_total       :   0.091s
+  http_code        :   200
+  size_download    :   4096 bytes
+```
+
+---
+
+### `pylow jwt-decode <PID>`
+Intercept and decode JWT Authorization tokens inline from HTTP headers.
+```bash
+pylow jwt-decode 4821
+```
+```
+=== JWT DECODED ===
+Header : {"alg":"RS256","typ":"JWT"}
+Payload: {"sub":"user_9821","exp":1749645221,"roles":["admin"]}
+Expiry : 2026-06-12T06:00:21Z (valid)
+```
+
+---
+
+### `pylow cert-check <PID> [domain]`
+Trace SSL/TLS handshake and certificate expiry for a domain.
+```bash
+pylow cert-check 4821 api.example.com
+```
+```
+=== TLS CERTIFICATE: api.example.com ===
+  Subject : CN=api.example.com
+  Issuer  : Let's Encrypt Authority X3
+  Expires : 2026-09-01T00:00:00Z
+  Days left: 82
+  Status  : ✓ VALID
+```
+
+---
+
+### `pylow rate-limit-test <PID>`
+Diagnose API rate limit backoff — detect HTTP 429 responses and retry delays.
+```bash
+pylow rate-limit-test 4821
+```
+```
+HTTP 429 received — Retry-After: 60s
+Backoff attempt 1/3 — waiting 60s
+Backoff attempt 2/3 — waiting 120s
+Total blocked time: 180s
+```
+
+---
+
+### `pylow parallel-fetch <PID> [--concurrency <n>]`
+Trace parallel request pipelines and concurrent connection activity.
+```bash
+pylow parallel-fetch 4821 --concurrency 8
+```
+```
+Active parallel workers: 8
+Fetched 10 payment details in parallel (duration: 120ms)
+Successfully processed items: 10/10
+```
+
+---
+
+## CATEGORY 6 — Shell Pipeline Patterns
+
+### `pylow jq-search <PID> [query]`
+Search JSON stream for field names or patterns.
+```bash
+pylow jq-search 4821 error
+```
+```
+Searching stream for "error"...
+  .actStatus.name = "ERROR"
+  .response.errorCode = "PAYMENT_FAILED"
+```
+
+---
+
+### `pylow awk-stats <PID>`
+Compute statistics (count, sum, avg, min, max, percentages) on tabular data streams.
+```bash
+pylow awk-stats 4821
+```
+```
+=== STREAM STATISTICS ===
+  count : 1042
+  sum   : 94821ms
+  avg   : 91.0ms
+  min   : 12ms
+  max   : 3421ms
+  p95   : 340ms
+```
+
+---
+
+### `pylow tee-branch <PID>`
+Monitor output stream branching — writes to multiple sinks simultaneously.
+```bash
+pylow tee-branch 4821
+```
+```
+Stream branching active:
+  → stdout     (live display)
+  → /tmp/response.log  (file capture)
+  Bytes written: 40960
+```
+
+---
+
+### `pylow pipe-decouple <PID> [fifo_path]`
+Monitor named pipe FIFO decoupler. Shows producer/consumer throughput.
+```bash
+pylow pipe-decouple 4821 /tmp/payment_pipe
+```
+```
+Named pipe: /tmp/payment_pipe
+  Producer writes: 412
+  Consumer reads : 409
+  Buffer lag     : 3 items
+```
+
+---
+
+### `pylow sed-mask <PID>`
+Monitor stream for PII masking rules applied by sed filters.
+```bash
+pylow sed-mask 4821
+```
+```
+=== MASKING ACTIVE ===
+  Pattern: [0-9]{16}       → CARD-XXXX-XXXX-XXXX-XXXX
+  Pattern: \b[\w.]+@[\w.]+\b → EMAIL-MASKED
+  Lines processed: 1042
+  Patterns matched: 87
+```
+
+---
+
+## CATEGORY 7 — JSON Response Analysis
+
+All `jq-*` commands analyze live JSON responses from the traced process. Pass a `pid` to attach.
+
+---
+
+### `pylow jq-schema <PID>`
+Discover the full recursive type schema of a JSON response (shape only, no values).
+```bash
+pylow jq-schema 4821
+```
+```json
+{
+  "id": "number",
+  "actStatus": { "id": "number", "name": "string" },
+  "refLinkTo": { "id": "number", "payModes": "null" }
 }
-interval:s:10 {
-  print(@, 3);   // top 3 stacks only
-  exit();
-}'
 ```
 
-#### B. Confirm with duration:
+---
+
+### `pylow jq-nulls <PID>`
+List all null fields as a flat array of dotted key paths.
 ```bash
-sudo bpftrace -p <PID> -e '
-usdt:/usr/bin/python3:python:function__entry { @t[tid,str(arg1)] = nsecs; }
-usdt:/usr/bin/python3:python:function__return {
-  $d = nsecs - @t[tid,str(arg1)];
-  if ($d > 10000000) {
-    printf("%lldms %s %s:%d\n", $d/1000000, str(arg1), str(arg0), arg2);
+pylow jq-nulls 4821
+```
+```json
+["newconconno", "newconleadsid", "reminderdate", "actStatus.salesActivities"]
+```
+
+---
+
+### `pylow jq-null-paths <PID>`
+Same as `jq-nulls` with full dotted path for nested nulls.
+```bash
+pylow jq-null-paths 4821
+```
+```
+actStatus.salesActivities = null
+refLinkTo.payModes = null
+reminderdate = null
+```
+
+---
+
+### `pylow jq-locate-key <PID> [key]`
+Find all paths in the document tree that contain a given key name.
+```bash
+pylow jq-locate-key 4821 salesActivities
+```
+```
+Paths containing "salesActivities":
+  .actStatus.salesActivities
+  .refLinkTo.actStatus.salesActivities
+```
+
+---
+
+### `pylow jq-key-path <PID> [key]`
+Find all paths and their values for a given key name.
+```bash
+pylow jq-key-path 4821 name
+```
+```
+.actStatus.name = "COMPLETED"
+.refLinkTo.name = "PAYMENT_MODE_CASH"
+```
+
+---
+
+### `pylow jq-all-keys <PID>`
+Discover the full vocabulary of unique keys across the entire document.
+```bash
+pylow jq-all-keys 4821
+```
+```
+All unique keys (32):
+  id, enddate, actStatus, name, salesActivities, refLinkTo,
+  payModes, reminderdate, newconconno, ...
+```
+
+---
+
+### `pylow jq-leaf-paths <PID> [--filter-val <term>]`
+List all leaf (non-object) paths with their values. Optionally filter.
+```bash
+pylow jq-leaf-paths 4821
+pylow jq-leaf-paths 4821 --filter-val COMPLETED
+```
+```
+.id = 28920212268
+.enddate = "2026-06-10"
+.actStatus.name = "COMPLETED"
+```
+
+---
+
+### `pylow jq-clean-nulls <PID>`
+Output the response with all null fields removed.
+```bash
+pylow jq-clean-nulls 4821
+```
+```json
+{
+  "id": 28920212268,
+  "enddate": "2026-06-10",
+  "actStatus": { "id": 1, "name": "COMPLETED" }
+}
+```
+
+---
+
+### `pylow jq-depth-map <PID>`
+Calculate nesting depth per key branch across the entire document.
+```bash
+pylow jq-depth-map 4821
+```
+```
+Root depth: 1
+  actStatus: depth=2
+    salesActivities: depth=3
+  refLinkTo: depth=2
+    payModes: depth=3
+```
+
+---
+
+### `pylow jq-type-map <PID>`
+Map every leaf path to its resolved data type.
+```bash
+pylow jq-type-map 4821
+```
+```
+.id              → number
+.enddate         → string
+.actStatus.name  → string
+.refLinkTo.payModes → null
+```
+
+---
+
+### `pylow jq-find-value <PID> [value]`
+Find the exact path where a specific value occurs.
+```bash
+pylow jq-find-value 4821 gravity_admin
+```
+```
+Value "gravity_admin" found at:
+  .createdBy.username
+  .modifiedBy.username
+```
+
+---
+
+### `pylow jq-structural-diff <PID>`
+Compare two response snapshots and show added/removed/changed fields.
+```bash
+pylow jq-structural-diff 4821
+```
+```
+STRUCTURAL DIFF:
+  ADDED   : .actStatus.resolvedAt
+  REMOVED : .legacyFlag
+  CHANGED : .actStatus.name  (PENDING → COMPLETED)
+```
+
+---
+
+### `pylow jq-extract-subtree <PID> [key]`
+Surgically extract a subtree from the document by key name.
+```bash
+pylow jq-extract-subtree 4821 appModulesId
+```
+```json
+{
+  "appModulesId": {
+    "id": 5,
+    "name": "PAYMENT_MODULE",
+    "active": true
   }
-  delete(@t[tid,str(arg1)]);
-}'
+}
 ```
 
 ---
 
-### I/O BOUND — Your Code Is Waiting
-
-#### A. Find which syscall and Python line caused it:
+### `pylow jq-summary <PID>`
+Print response statistics: total keys, null count, max depth, array sizes.
 ```bash
-sudo bpftrace -e '
-tracepoint:raw_syscalls:sys_enter /pid == $1/ {
-  @t[tid,args->id] = nsecs;
-}
-tracepoint:raw_syscalls:sys_exit /pid == $1/ {
-  $d = nsecs - @t[tid,args->id];
-  if ($d > 5000000) {
-    printf("BLOCKED syscall=%d %lldms\n", args->id, $d/1000000);
-    print(ustack(perf, 5));
-    exit();   // stop after first hit
-  }
-  delete(@t[tid,args->id]);
-}' <PID>
+pylow jq-summary 4821
 ```
-*(Translate syscall ID using `ausyscall <ID>`)*
-
-#### B. If it's a read — find which file descriptor:
-```bash
-sudo bpftrace -e '
-tracepoint:syscalls:sys_enter_read /pid == $1/ {
-  @t[tid] = nsecs;
-  @fd[tid] = args->fd;
-}
-tracepoint:syscalls:sys_exit_read /pid == $1/ {
-  $d = nsecs - @t[tid];
-  if ($d > 5000000) {
-    printf("SLOW READ fd=%d %lldms\n", @fd[tid], $d/1000000);
-    print(ustack(perf,5));
-    exit();
-  }
-  delete(@t[tid]); delete(@fd[tid]);
-}' <PID>
 ```
-*(Translate fd to file: `ls -la /proc/<PID>/fd/<FD>`)*
-
----
-
-### SYSCALL STORM — Too Many Kernel Transitions
-
-#### A. Find which syscall is called most:
-```bash
-sudo bpftrace -e '
-tracepoint:raw_syscalls:sys_enter /pid == $1/ {
-  @[args->id] = count();
-}
-interval:s:5 {
-  print(@, 5);   // top 5 syscalls by count
-  exit();
-}' <PID>
-```
-
-#### B. Find which Python code is calling it:
-```bash
-sudo bpftrace -e '
-tracepoint:raw_syscalls:sys_enter /pid == $1 && args->id == <ID>/ {
-  @[ustack(perf,5)] = count();
-}
-interval:s:5 {
-  print(@, 3);
-  exit();
-}' <PID>
+=== RESPONSE SUMMARY ===
+  Total keys   : 47
+  Null fields  : 12  (25.5%)
+  Max depth    : 4
+  Arrays       : 3
+  Largest array: salesActivities (0 items — empty)
 ```
 
 ---
 
-### MEMORY — Growing, Leaking, Slow GC
-
-#### A. Find what is allocating most:
+### `pylow jq-validate-schema <PID> [schema_file]`
+Validate the response structure against a JSON schema template file.
 ```bash
-sudo bpftrace -p <PID> -e '
-uprobe:/lib/x86_64-linux-gnu/libc.so.6:malloc {
-  @[ustack(perf,5)] = sum(arg0);
-}
-interval:s:10 {
-  print(@, 3);   // top 3 allocating callsites
-  exit();
-}'
+pylow jq-validate-schema 4821 schema.json
 ```
-
-#### B. Confirm it's a leak (allocations without frees):
-```bash
-sudo bpftrace -p <PID> -e '
-uprobe:/lib/x86_64-linux-gnu/libc.so.6:malloc {
-  @alloc = sum(arg0);
-  @alloc_count = count();
-}
-uprobe:/lib/x86_64-linux-gnu/libc.so.6:free {
-  @free_count = count();
-}
-interval:s:5 {
-  printf("allocated: %lldMB  alloc_calls: %d  free_calls: %d\n",
-    @alloc/1048576, @alloc_count, @free_count);
-  clear(@alloc); clear(@alloc_count); clear(@free_count);
-}'
 ```
-
-#### C. Trace GC pauses:
-```bash
-sudo bpftrace -p <PID> -e '
-usdt:/usr/bin/python3:python:gc__start { @t[tid] = nsecs; @gen[tid] = arg0; }
-usdt:/usr/bin/python3:python:gc__done {
-  printf("GC gen%d %lldms\n", @gen[tid], (nsecs-@t[tid])/1000000);
-}'
+Schema validation against schema.json:
+  ✓ id            present
+  ✓ actStatus     present
+  ✗ paymentRef    MISSING
+  Result: INVALID — 1 field missing
 ```
 
 ---
 
-### DEADLOCK / STUCK — Process Is Stuck
-
-#### A. Find where the process is sleeping:
+### `pylow jq-array-schema <PID>`
+Inspect all arrays: their sizes and the schema of their items.
 ```bash
-sudo bpftrace -e '
-tracepoint:sched:sched_switch /args->prev_pid == $1/ {
-  @stack = ustack(perf, 10);
-  @kstack = kstack(perf, 10);
-}
-interval:s:1 {
-  printf("=== WHERE PROCESS SLEEPS ===\n");
-  print(@stack);
-  print(@kstack);
-}' <PID>
+pylow jq-array-schema 4821
 ```
-
-#### B. Confirm deadlock (lock never released):
-```bash
-sudo bpftrace -p <PID> -e '
-uprobe:/usr/bin/python3:PyThread_acquire_lock {
-  @lock[tid, arg0] = nsecs;
-}
-uprobe:/usr/bin/python3:PyThread_release_lock {
-  delete(@lock[tid, arg0]);
-}
-interval:s:5 {
-  printf("=== LOCKS HELD > 5s ===\n");
-  print(@lock);
-}'
+```
+.salesActivities  : 0 items  (empty)
+.paymentHistory   : 3 items  → {id: number, date: string, amount: number}
+.tags             : 5 items  → string
 ```
 
 ---
 
-### Noise Elimination — Surgical Filters
-
-Every diagnostic query can be customized using target filters:
-
+### `pylow jq-null-pct <PID>`
+Calculate the percentage of null fields relative to total fields.
 ```bash
-# Filter by function name
-/str(arg1) == "execute_query"/
-
-# Filter by file name
-/str(arg0) == "db.py"/
-
-# Filter by thread ID
-/tid == 140234/
-
-# Filter by slow execution threshold (e.g. > 50ms)
-/nsecs - @t[tid] > 50000000/
+pylow jq-null-pct 4821
+```
+```
+Null field percentage: 25.5%
+  Total fields : 47
+  Null fields  : 12
+  Filled fields: 35
 ```
 
 ---
 
-## Logical Error Troubleshooting Playbook (Zero Instrumentation)
-
-When there is no instrumentation and you need to debug logical errors, bpftrace lets you observe execution flows, function arguments, outputs, and cross-service communication payloads directly from the kernel.
-
-### Phase 1 — You Don't Know Which Service Is the Problem (Map Request Flow)
-
-Run this tracepoint probe script on each service PID to find where data flow stops:
-
+### `pylow jq-non-null-leaves <PID>`
+List only the fields that have actual non-null values.
 ```bash
-sudo bpftrace -e '
-# catch every outbound HTTP call
-tracepoint:syscalls:sys_enter_connect /pid == $1/ {
-  @conn_start[tid] = nsecs;
-  @conn_count = count();
-}
-tracepoint:syscalls:sys_exit_connect /pid == $1/ {
-  if (@conn_start[tid]) {
-    $d = nsecs - @conn_start[tid];
-    @conn_time = hist($d / 1000000);
-    delete(@conn_start[tid]);
-  }
-}
-# catch every inbound request handling
-tracepoint:syscalls:sys_enter_accept4 /pid == $1/ {
-  @accept_ts = nsecs;
-}
-tracepoint:syscalls:sys_exit_accept4 /pid == $1/ {
-  if (@accept_ts) {
-    printf("INBOUND CONNECTION at %lld\n", nsecs);
-  }
-}
-# catch all data sent and received
-tracepoint:syscalls:sys_exit_read /pid == $1 && args->ret > 0/ {
-  @bytes_in = sum(args->ret);
-}
-tracepoint:syscalls:sys_exit_write /pid == $1 && args->ret > 0/ {
-  @bytes_out = sum(args->ret);
-}
-interval:s:5 {
-  printf("\n=== SERVICE pid=%d ===\n", $1);
-  printf("outbound_calls : %d\n", @conn_count);
-  printf("bytes_in       : %lld\n", @bytes_in);
-  printf("bytes_out      : %lld\n", @bytes_out);
-  printf("conn_time_ms:\n"); print(@conn_time);
-  clear(@conn_count); clear(@bytes_in);
-  clear(@bytes_out); clear(@conn_time);
-}' <PID>
+pylow jq-non-null-leaves 4821
+```
+```
+Non-null leaves (35):
+  .id = 28920212268
+  .enddate = "2026-06-10"
+  .actStatus.name = "COMPLETED"
+  ...
 ```
 
 ---
 
-### Phase 2 — You Know Which Service, Not Where Inside (Trace Call Flow)
-
-#### A. Trace every function call and return:
+### `pylow jq-parent-context <PID> [key]`
+Show a key along with its parent object and sibling fields for context.
 ```bash
-sudo bpftrace -p <PID> -e '
-usdt:/usr/bin/python3:python:function__entry {
-  @enter_ts[tid, str(arg1)] = nsecs;
-  @call_depth[tid]++;
-  printf("%lld %d ENTER %s %s:%d\n",
-    nsecs, tid, str(arg1), str(arg0), arg2);
-}
-usdt:/usr/bin/python3:python:function__return {
-  $func = str(arg1);
-  $dur  = nsecs - @enter_ts[tid, $func];
-  @call_depth[tid]--;
-  printf("%lld %d EXIT  %s %lldms\n",
-    nsecs, tid, $func, $dur/1000000);
-  delete(@enter_ts[tid, $func]);
-}'
+pylow jq-parent-context 4821 salesActivities
 ```
-
-#### B. Narrow execution details to business logic files only:
-```bash
-sudo bpftrace -p <PID> -e '
-usdt:/usr/bin/python3:python:function__entry
-/str(arg0) != "<frozen importlib._bootstrap>"
-&& str(arg0) != "<frozen importlib._bootstrap_external>"
-&& str(arg0) != "threading.py"
-&& str(arg0) != "socketserver.py"/ {
-  printf("%lld ENTER %-40s %s:%d\n",
-    nsecs, str(arg1), str(arg0), arg2);
-}
-usdt:/usr/bin/python3:python:function__return
-/str(arg0) != "<frozen importlib._bootstrap>"
-&& str(arg0) != "threading.py"/ {
-  printf("%lld EXIT  %s\n", nsecs, str(arg1));
-}'
+```
+Key: salesActivities
+Parent: actStatus
+Siblings:
+  id   = 1
+  name = "COMPLETED"
+  salesActivities = null  ← target
 ```
 
 ---
 
-### Phase 3 — Intercept Data at Boundaries
-
-#### A. Read values being passed to specific functions and trace caller stacks:
+### `pylow jq-locate-value-contains <PID> [partial]`
+Find all paths where a value contains a partial string match.
 ```bash
-sudo bpftrace -p <PID> -e '
-usdt:/usr/bin/python3:python:function__entry
-/str(arg1) == "process_payment"/ {
-  printf("\n=== process_payment CALLED ===\n");
-  printf("file : %s\n", str(arg0));
-  printf("line : %d\n", arg2);
-  printf("tid  : %d\n", tid);
-  printf("time : %lld\n", nsecs);
-  print(ustack(perf, 5));
-}
-usdt:/usr/bin/python3:python:function__return
-/str(arg1) == "process_payment"/ {
-  printf("=== process_payment RETURNED ===\n");
-  printf("duration: %lldms\n", (nsecs - @t[tid])/1000000);
-}'
+pylow jq-locate-value-contains 4821 Kernel
 ```
-
-#### B. Intercept raw HTTP request/response payloads:
-```bash
-sudo bpftrace -e '
-tracepoint:syscalls:sys_enter_write /pid == $1/ {
-  if (args->count > 0 && args->count < 1024) {
-    printf("\n=== OUTBOUND DATA ===\n");
-    printf("%s\n", str(args->buf, args->count));
-    print(ustack(perf, 5));
-  }
-}
-tracepoint:syscalls:sys_enter_read /pid == $1/ {
-  @read_buf[tid] = args->buf;
-  @read_ts[tid]  = nsecs;
-}
-tracepoint:syscalls:sys_exit_read /pid == $1 && args->ret > 0/ {
-  if (@read_buf[tid] && args->ret < 2048) {
-    printf("\n=== INBOUND DATA ===\n");
-    printf("RECEIVED: %s\n", str(@read_buf[tid], args->ret));
-  }
-  delete(@read_buf[tid]);
-}' <PID>
+```
+Paths with values containing "Kernel":
+  .modules[2].name = "Kernel Payment Module"
+  .description = "Kernel-level trace event"
 ```
 
 ---
 
-### Phase 4 — Spot Anomaly and Trace Random Failures
-
-#### A. Arm trigger dynamically on anomalies to avoid trace noise:
+### `pylow jq-trace-all-keys <PID> [key]`
+Find every occurrence of a key across all nested objects and arrays.
 ```bash
-sudo bpftrace -p <PID> -e '
-usdt:/usr/bin/python3:python:function__entry
-/str(arg1) == "validate_payment"/ {
-  @watch[tid] = 1;
-  @watch_start[tid] = nsecs;
-}
-usdt:/usr/bin/python3:python:function__entry /@watch[tid]/ {
-  printf("%lld ENTER %s %s:%d\n",
-    nsecs, str(arg1), str(arg0), arg2);
-}
-usdt:/usr/bin/python3:python:function__return /@watch[tid]/ {
-  printf("%lld EXIT  %s\n", nsecs, str(arg1));
-}
-usdt:/usr/bin/python3:python:raise__exception /@watch[tid]/ {
-  printf("\n!!! EXCEPTION DURING PAYMENT !!!\n");
-  printf("type : %s\n", str(arg0));
-  printf("after: %lldms\n", (nsecs-@watch_start[tid])/1000000);
-  print(ustack(perf, 15));
-  @watch[tid] = 0;
-  exit();
-}'
+pylow jq-trace-all-keys 4821 username
 ```
-
-#### B. Flag suspiciously fast executions (indicating early return errors):
-```bash
-sudo bpftrace -p <PID> -e '
-usdt:/usr/bin/python3:python:function__entry
-/str(arg1) == "get_transaction_status"/ {
-  @tx_start[tid] = nsecs;
-  @tx_stack[tid] = ustack(perf, 8);
-}
-usdt:/usr/bin/python3:python:function__return
-/str(arg1) == "get_transaction_status"/ {
-  $dur = nsecs - @tx_start[tid];
-  if ($dur < 100000) {
-    printf("\n!!! SUSPICIOUSLY FAST RETURN !!!\n");
-    printf("returned in %ldus — early return / branch issue?\n", $dur/1000);
-    print(@tx_stack[tid]);
-  }
-  delete(@tx_start[tid]);
-  delete(@tx_stack[tid]);
-}'
+```
+All occurrences of "username":
+  .createdBy.username = "gravity_admin"
+  .modifiedBy.username = "system"
+  .audit[0].username = "gravity_admin"
 ```
 
 ---
 
-### Phase 5 — Multi-Service Timestamp Correlation
-
-Run a timestamped log on all machines concurrently:
+### `pylow jq-heavy-objects <PID>`
+Identify the heaviest nested objects by field count.
 ```bash
-sudo bpftrace -p <PID> -e '
-usdt:/usr/bin/python3:python:function__entry {
-  printf("SVC=%s TS=%lld ENTER %s %s:%d\n",
-    comm, nsecs, str(arg1), str(arg0), arg2);
-}
-usdt:/usr/bin/python3:python:function__return {
-  printf("SVC=%s TS=%lld EXIT  %s\n",
-    comm, nsecs, str(arg1));
-}
-tracepoint:syscalls:sys_enter_connect /pid == $1/ {
-  printf("SVC=%s TS=%lld CONNECT\n", comm, nsecs);
-}' <PID> 2>&1 | tee /tmp/trace_<service_name>.log
+pylow jq-heavy-objects 4821
 ```
-
-Merge and sort all logs on one machine:
-```bash
-cat /tmp/trace_*.log | sort -k2 -t= | grep -v "^$"
+```
+=== HEAVIEST OBJECTS ===
+  .actStatus          : 8 fields
+  .refLinkTo.payModes : 6 fields
+  .createdBy          : 5 fields
 ```
 
 ---
 
-### Logical Error Mental Model
-
+### `pylow jq-repeated-schema <PID>`
+Find repeated structural patterns (e.g. audit trails, references) across the document.
+```bash
+pylow jq-repeated-schema 4821
 ```
-Logical error symptoms:
-├── Wrong value returned        → intercept write() — read actual payload
-├── Wrong branch taken          → function returns too fast = early return
-├── Missing call                → expected function never appears in trace
-├── Called in wrong order       → timestamps show wrong sequence
-├── Called with wrong args      → read() intercept shows wrong payload
-└── Race condition              → two threads in same function simultaneously
 ```
-
-```
-START — something is wrong
-│
-├── Which service?
-│   └── bytes_in/bytes_out per service → find where chain breaks
-│
-├── Which function?
-│   └── full function trace filtered to your files only
-│       → find the function that returns wrong/fast/never
-│
-├── What data?
-│   └── intercept write()/read() syscalls → read actual payloads
-│       → find where value becomes wrong
-│
-├── Which code path?
-│   └── ustack on entry → who called this function
-│       → wrong caller = wrong code path taken
-│
-├── Race condition?
-│   └── count concurrent threads in same function
-│       → > 1 simultaneously = race
-│
-└── Happens randomly?
-    └── arm trigger on anomaly → capture only on bad execution
-        → exit() after first capture = zero noise
+Repeated schemas detected:
+  Pattern {id, name} appears 6x at:
+    .actStatus, .refLinkTo, .createdBy, ...
 ```
 
+---
 
+### `pylow jq-common-audit <PID>`
+Find nested objects that share the same audit trail key set (createdBy, modifiedBy, etc).
+```bash
+pylow jq-common-audit 4821
+```
+```
+=== AUDIT TRAIL ANALYSIS ===
+Objects with common audit keys:
+  .actStatus     → createdBy, modifiedBy, createdAt
+  .refLinkTo     → createdBy, modifiedBy
+```
+
+---
+
+### `pylow jq-schema-evolution <PID>`
+Compare schema across paginated response pages to detect structural drift.
+```bash
+pylow jq-schema-evolution 4821
+```
+```
+=== SCHEMA EVOLUTION (page 1 → page 2) ===
+  ADDED   : .newField
+  REMOVED : .deprecatedFlag
+  STABLE  : 44 fields unchanged
+```
+
+---
+
+### `pylow jq-validate-fields <PID>`
+Assert that mandatory fields are present and non-null.
+```bash
+pylow jq-validate-fields 4821
+```
+```
+=== FIELD VALIDATION ===
+  ✓ id           present
+  ✓ actStatus    present
+  ✗ paymentRef   MISSING
+  ✗ enddate      NULL
+  Result: 2 violations
+```
+
+---
+
+### `pylow jq-watch-changes <PID>`
+Snapshot responses over time and track which fields change between calls.
+```bash
+pylow jq-watch-changes 4821
+```
+```
+=== Snapshot 1 → Snapshot 2 ===
+  CHANGED: .actStatus.name  PENDING → COMPLETED
+  CHANGED: .modifiedAt      2026-06-10T10:00Z → 2026-06-10T10:05Z
+  STABLE : 45 fields
+```
+
+---
+
+## CATEGORY 8 — DAG Execution Engine
+
+Run arbitrary step graphs with proper dependency resolution, cycle detection, and level-by-level parallel execution.
+
+### DAG Spec Format
+```
+"step_name:dep1,dep2  step2:dep1  step3:"
+```
+- Each node: `name:comma-separated-deps`
+- No deps: `auth:` or just `auth`
+- Spaces separate nodes
+
+### `pylow dag-dry-run --dag "<spec>" [--dag-file <path>] [--workers <n>]`
+Validate DAG — resolve levels, detect cycles. No execution.
+```bash
+pylow dag-dry-run --dag "auth: get_user:auth get_catalog:auth create_order:get_user,get_catalog"
+```
+```
+=== DAG EXECUTION ENGINE ===
+  Steps     : 4
+  Levels    : 3
+  Workers   : 4
+  Mode      : DRY RUN
+
+  Level 0  [auth]
+  Level 1  [get_user, get_catalog]
+  Level 2  [create_order]
+
+✓ DAG is valid. No cycles. Dry-run complete.
+```
+
+Cycle detection:
+```bash
+pylow dag-dry-run --dag "a:b b:a"
+# [dag-engine] CYCLE DETECTED — aborting.
+```
+
+---
+
+### `pylow dag-run --dag "<spec>" [--dag-file <path>] [--workers <n>]`
+Execute the DAG. Runs each level in parallel (up to `--workers` at a time). Stops at first failed level.
+```bash
+pylow dag-run --dag "auth: get_user:auth get_catalog:auth create_order:get_user,get_catalog" --workers 4
+```
+```
+=== DAG EXECUTION ENGINE ===
+  Steps     : 4
+  Levels    : 3
+  Workers   : 4
+  Mode      : EXECUTE
+
+  Level 0  [auth]
+  Level 1  [get_user, get_catalog]
+  Level 2  [create_order]
+
+▶ Level 0: ['auth']
+  ✓ auth                  51.2ms
+
+▶ Level 1: ['get_user', 'get_catalog']
+  ✓ get_user              50.8ms
+  ✓ get_catalog           51.1ms
+
+▶ Level 2: ['create_order']
+  ✓ create_order          50.9ms
+
+✓ All 4 steps completed in 153.8ms
+```
+
+Load from a JSON file:
+```bash
+# dag.json
+{
+  "auth": [],
+  "get_user": ["auth"],
+  "get_catalog": ["auth"],
+  "create_order": ["get_user", "get_catalog"]
+}
+
+pylow dag-run --dag-file dag.json --workers 8
+```
+
+---
+
+### `pylow dag-status`
+Show the step-level status of the last DAG run in this session.
+```bash
+pylow dag-status
+```
+```
+=== DAG STATUS ===
+  DONE              auth
+  DONE              get_user
+  DONE              get_catalog
+  DONE              create_order
+```
+
+---
+
+## CATEGORY 9 — Saga Orchestrator
+
+Forward/compensate pattern. Steps run in order. On failure, completed steps are rolled back in reverse. Every event is appended to a JSON Lines saga log.
+
+### `pylow saga-run --steps <list> [--fail-at <step>] [--log-file <path>]`
+Run forward steps. On failure, compensating transactions execute in reverse for all completed steps.
+```bash
+# Happy path — all steps commit
+pylow saga-run --steps auth,create_order,reserve_inventory,create_payment
+```
+```
+=== SAGA ORCHESTRATOR [saga-1749558821] ===
+  Steps    : auth, create_order, reserve_inventory, create_payment
+  Log file : /tmp/pylow_saga.log
+  Inject   : none
+
+  ▶ Forward  auth                  ✓
+  ▶ Forward  create_order          ✓
+  ▶ Forward  reserve_inventory     ✓
+  ▶ Forward  create_payment        ✓
+
+✓ Saga committed. All 4 steps succeeded.
+  Log: /tmp/pylow_saga.log
+```
+
+```bash
+# Inject failure to test rollback
+pylow saga-run --steps auth,create_order,reserve_inventory --fail-at create_order
+```
+```
+=== SAGA ORCHESTRATOR [saga-1749558822] ===
+  Steps    : auth, create_order, reserve_inventory
+  Inject   : create_order
+
+  ▶ Forward  auth                  ✓
+  ▶ Forward  create_order          ✗  FAILED
+
+  Rolling back completed steps...
+  ↩ Compensate auth               ✓
+
+✗ Saga rolled back. Failed at: create_order
+  Log: /tmp/pylow_saga.log
+```
+
+Custom log file:
+```bash
+pylow saga-run --steps auth,create_order --log-file /var/log/my_saga.log
+```
+
+---
+
+### `pylow saga-log [--log-file <path>]`
+Display the saga event log with color-coded events.
+```bash
+pylow saga-log
+pylow saga-log --log-file /var/log/my_saga.log
+```
+```
+=== SAGA LOG: /tmp/pylow_saga.log ===
+
+  2026-06-11T06:09:01Z  SAGA_START          — steps=['auth', 'create_order', ...]
+  2026-06-11T06:09:01Z  FORWARD_START       [auth]
+  2026-06-11T06:09:01Z  FORWARD_OK          [auth]
+  2026-06-11T06:09:01Z  FORWARD_START       [create_order]
+  2026-06-11T06:09:01Z  FORWARD_OK          [create_order]
+  2026-06-11T06:09:02Z  SAGA_COMMITTED      — all_steps=['auth', 'create_order']
+```
+
+Event color key:
+| Event | Color |
+|---|---|
+| `SAGA_START` / `SAGA_COMMITTED` | Cyan / Green |
+| `FORWARD_START` | Yellow |
+| `FORWARD_OK` | Green |
+| `FORWARD_FAIL` | Red |
+| `COMPENSATE_START` / `COMPENSATE_OK` | Magenta / Green |
+| `SAGA_ROLLED_BACK` | Red |
+
+---
+
+### `pylow saga-replay [--log-file <path>]`
+Re-run the steps from a committed saga log (no injected failures).
+```bash
+pylow saga-replay
+pylow saga-replay --log-file /var/log/my_saga.log
+```
+```
+[saga-replay] Replaying 4 steps from /tmp/pylow_saga.log
+
+=== SAGA ORCHESTRATOR [saga-1749558900] ===
+  ▶ Forward  auth                  ✓
+  ▶ Forward  create_order          ✓
+  ▶ Forward  reserve_inventory     ✓
+  ▶ Forward  create_payment        ✓
+
+✓ Saga committed. All 4 steps succeeded.
+  Log: /tmp/pylow_saga.log.replay
+```
+
+---
+
+## Diagnostic Decision Tree
+
+Run `pylow triage <PID>` first. Read the output and go to the right command:
+
+```
+cpu_samples high + offcpu low   → pylow cpu-bound <PID>
+cpu_samples low  + offcpu high  → pylow io-bound <PID>
+syscalls very high              → pylow syscall-storm <PID>
+page_faults high                → pylow page-faults <PID>
+all counts low                  → pylow deadlock <PID>
+```
+
+### Full Drill-Down by Symptom
+
+| Symptom | First Command | Drill-Down |
+|---|---|---|
+| App is slow | `triage` | → `cpu-bound` or `io-bound` |
+| Memory growing | `malloc` | → `pyleak` |
+| Random crashes | `pyexcept` | → `anomaly-trigger` |
+| Process hangs | `deadlock` | → `kernel-blocked` |
+| Too many syscalls | `syscall-storm` | → `syscall` |
+| Wrong output / logic | `ordered-log` | → `intercept` → `jq-structural-diff` |
+| Multi-service slowdown | `service-map` | → `correlation` |
+| Unknown JSON schema | `jq-schema` | → `jq-nulls` → `jq-validate-fields` |
+| API HTTP issue | `curl-perf` | → `jwt-decode` or `cert-check` |
+| Distributed workflow | `dag-dry-run` | → `dag-run` |
+| Rollback on failure | `saga-run` | → `saga-log` |
+
+---
+
+## bpftrace Prerequisites
+
+The kernel tracing commands (`syscall`, `malloc`, `tcp`, `io`, `flame`, `sched`, `page-faults`, `context-switches`, `kernel-blocked`, `tlb-shootdowns`, `irq-impact`, `pycall`, `pyframe`, `pycpu`, `pyexcept`, `pyiowait`, `pygil`, `pyleak`, `pyreq`, `pythread`, `pyasync`, `pyargs`, `pysyscall`, `pynplus1`, `pygraph`, `pyanomaly`, `pydash`, `pysingle`, `timeline`, `triage`, `cpu-bound`, `io-bound`, `syscall-storm`, `deadlock`, `service-map`, `ordered-log`, `intercept`, `anomaly-trigger`, `correlation`) require bpftrace on the host.
+
+Install bpftrace:
+```bash
+# Ubuntu / Debian
+sudo apt-get install bpftrace
+
+# Fedora / RHEL
+sudo dnf install bpftrace
+```
+
+USDT Python probes require a debug-enabled Python build:
+```bash
+python3 -c "import sys; print(sys.version)"
+# Should show: with DTrace support
+# Or check: readelf -n /usr/bin/python3 | grep stapsdt
+```
+
+Commands that do **not** require bpftrace (pure Python):
+`attach`, `flow`, `stitch`, `slow`, `diff`, `pyanomaly`, `pydash`, `jq-*`, `curl-perf`, `jwt-decode`, `cert-check`, `rate-limit-test`, `parallel-fetch`, `jq-search`, `awk-stats`, `tee-branch`, `pipe-decouple`, `sed-mask`, `dag-run`, `dag-dry-run`, `dag-status`, `saga-run`, `saga-log`, `saga-replay`
+
+---
+
+## Command Quick Reference
+
+```bash
+# ── CORE ──────────────────────────────────────────────────────
+pylow attach <PID>
+pylow flow --last
+pylow stitch --services api,worker,ml-service
+pylow slow --threshold 200ms --watch
+pylow diff --before v1.2 --after v1.3
+
+# ── KERNEL & SYSCALL ──────────────────────────────────────────
+pylow syscall <PID>
+pylow malloc <PID>
+pylow tcp <PID>
+pylow io <PID>
+pylow flame <PID> --duration 5
+pylow sched <PID>
+pylow page-faults <PID>
+pylow context-switches <PID>
+pylow kernel-blocked <PID>
+pylow tlb-shootdowns <PID>
+pylow irq-impact <PID>
+
+# ── PYTHON RUNTIME ────────────────────────────────────────────
+pylow pycall <PID>
+pylow pyframe <PID>
+pylow pycpu <PID>
+pylow pyexcept <PID>
+pylow pyiowait <PID>
+pylow pygil <PID>
+pylow pyleak <PID>
+pylow pyreq <PID>
+pylow timeline <PID> --duration 5.0
+pylow pythread <PID>
+pylow pyasync <PID>
+pylow pyargs <PID>
+pylow pysyscall <PID>
+pylow pynplus1 <PID>
+pylow pygraph <PID>
+pylow pyanomaly <PID>
+pylow pydash <PID>
+pylow pysingle <PID> handle_request
+
+# ── DIAGNOSTIC WORKFLOWS ──────────────────────────────────────
+pylow triage <PID>
+pylow cpu-bound <PID>
+pylow io-bound <PID>
+pylow syscall-storm <PID>
+pylow deadlock <PID>
+pylow service-map <PID>
+pylow ordered-log <PID> --filter-internals
+pylow intercept <PID> process_payment
+pylow anomaly-trigger <PID> validate_payment
+pylow correlation <PID> api-gateway
+
+# ── HTTP & API ────────────────────────────────────────────────
+pylow curl-perf <PID> https://api.example.com/endpoint
+pylow jwt-decode <PID>
+pylow cert-check <PID> api.example.com
+pylow rate-limit-test <PID>
+pylow parallel-fetch <PID> --concurrency 8
+
+# ── PIPELINE PATTERNS ─────────────────────────────────────────
+pylow jq-search <PID> error
+pylow awk-stats <PID>
+pylow tee-branch <PID>
+pylow pipe-decouple <PID> /tmp/payment_pipe
+pylow sed-mask <PID>
+
+# ── JSON ANALYSIS ─────────────────────────────────────────────
+pylow jq-schema <PID>
+pylow jq-nulls <PID>
+pylow jq-null-paths <PID>
+pylow jq-locate-key <PID> salesActivities
+pylow jq-key-path <PID> name
+pylow jq-all-keys <PID>
+pylow jq-leaf-paths <PID> --filter-val COMPLETED
+pylow jq-clean-nulls <PID>
+pylow jq-depth-map <PID>
+pylow jq-type-map <PID>
+pylow jq-find-value <PID> gravity_admin
+pylow jq-structural-diff <PID>
+pylow jq-extract-subtree <PID> appModulesId
+pylow jq-summary <PID>
+pylow jq-validate-schema <PID> schema.json
+pylow jq-array-schema <PID>
+pylow jq-null-pct <PID>
+pylow jq-non-null-leaves <PID>
+pylow jq-parent-context <PID> salesActivities
+pylow jq-locate-value-contains <PID> Kernel
+pylow jq-trace-all-keys <PID> username
+pylow jq-heavy-objects <PID>
+pylow jq-repeated-schema <PID>
+pylow jq-common-audit <PID>
+pylow jq-schema-evolution <PID>
+pylow jq-validate-fields <PID>
+pylow jq-watch-changes <PID>
+
+# ── DAG ENGINE ────────────────────────────────────────────────
+pylow dag-dry-run --dag "auth: get_user:auth get_catalog:auth create_order:get_user,get_catalog"
+pylow dag-run --dag "auth: get_user:auth get_catalog:auth create_order:get_user,get_catalog" --workers 4
+pylow dag-run --dag-file dag.json
+pylow dag-status
+
+# ── SAGA ORCHESTRATOR ─────────────────────────────────────────
+pylow saga-run --steps auth,create_order,reserve_inventory,create_payment
+pylow saga-run --steps auth,create_order --fail-at create_order
+pylow saga-log
+pylow saga-log --log-file /var/log/my_saga.log
+pylow saga-replay
+pylow saga-replay --log-file /var/log/my_saga.log
+```

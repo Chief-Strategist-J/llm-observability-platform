@@ -98,8 +98,16 @@ run_cmd pylow jq-schema-evolution 1234
 run_cmd pylow jq-validate-fields 1234
 run_cmd pylow jq-watch-changes 1234
 
+# DAG Engine
+run_cmd pylow dag-dry-run --dag "auth: get_user:auth get_catalog:auth create_order:get_user,get_catalog"
+run_cmd pylow dag-run --dag "auth: step_a:auth step_b:auth final:step_a,step_b" --workers 2
+run_cmd pylow dag-status
 
-
+# Saga Orchestrator
+run_cmd pylow saga-run --steps auth,create_order,reserve_inventory
+run_cmd pylow saga-run --steps auth,create_order,reserve_inventory --fail-at create_order
+run_cmd pylow saga-log
+run_cmd pylow saga-replay
 
 
 
