@@ -1569,4 +1569,14 @@ pylow saga-log
 pylow saga-log --log-file /var/log/my_saga.log
 pylow saga-replay
 pylow saga-replay --log-file /var/log/my_saga.log
+
+# ── PROTOCOL & ADVANCED PIPELINE CONTROL ───────────────────────
+pylow net-tcp <PID> --url https://api.example.com
+pylow chaos-run --url https://api.example.com/payments --rate 30
+pylow contract-test <PID> --contract /path/to/contract.json
+pylow rate-limit-check <PID> --headers-file /tmp/headers.txt
+pylow shadow-compare --prod-file /tmp/prod.json --staging-file /tmp/staging.json
+pylow load-gen --url https://api.example.com/payments --rps 20 --duration 10
+pylow webhook-mock --port 9000 --secret whsec_secretkey
+pylow behavior-fingerprint --url https://api.example.com/payments
 ```

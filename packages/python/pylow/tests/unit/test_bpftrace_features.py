@@ -618,6 +618,63 @@ def test_saga_log_missing_file(capsys):
     captured = capsys.readouterr()
     assert "No log" in captured.out
 
+def test_net_tcp(capsys):
+    from pytrace_features.net_tcp.service import NetTcpService
+    service = NetTcpService()
+    service.trace(1234, "https://api.example.com")
+    captured = capsys.readouterr()
+    assert "TCP" in captured.out
+
+def test_chaos_run(capsys):
+    from pytrace_features.chaos_run.service import ChaosRunService
+    service = ChaosRunService()
+    service.run("https://api.example.com", failure_rate=50)
+    captured = capsys.readouterr()
+    assert "CHAOS" in captured.out or "succeeded" in captured.out
+
+def test_contract_test(capsys):
+    from pytrace_features.contract_test.service import ContractTestService
+    service = ContractTestService()
+    service.run(1234)
+    captured = capsys.readouterr()
+    assert "Contract" in captured.out or "CONTRACT" in captured.out
+
+def test_rate_limit_check(capsys):
+    from pytrace_features.rate_limit_check.service import RateLimitCheckService
+    service = RateLimitCheckService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Token" in captured.out or "RateLimit" in captured.out
+
+def test_shadow_compare(capsys):
+    from pytrace_features.shadow_compare.service import ShadowCompareService
+    service = ShadowCompareService()
+    service.compare()
+    captured = capsys.readouterr()
+    assert "Shadow" in captured.out or "mismatch" in captured.out or "IDENTICAL" in captured.out
+
+def test_load_gen(capsys):
+    from pytrace_features.load_gen.service import LoadGenService
+    service = LoadGenService()
+    service.run("https://api.example.com", rps=2, duration=2)
+    captured = capsys.readouterr()
+    assert "Report" in captured.out or "Load" in captured.out
+
+def test_webhook_mock(capsys):
+    from pytrace_features.webhook_mock.service import WebhookMockService
+    service = WebhookMockService()
+    service.listen(port=9001, secret="whsec_abc123")
+    captured = capsys.readouterr()
+    assert "webhook" in captured.out.lower() or "signature" in captured.out.lower()
+
+def test_behavior_fingerprint(capsys):
+    from pytrace_features.behavior_fingerprint.service import BehaviorFingerprintService
+    service = BehaviorFingerprintService()
+    service.probe("https://api.example.com")
+    captured = capsys.readouterr()
+    assert "Fingerprint" in captured.out or "Edge Case" in captured.out
+
+
 
 
 

@@ -89,6 +89,14 @@ from pytrace_features.jq_validate_fields.service import JqValidateFieldsService
 from pytrace_features.jq_watch_changes.service import JqWatchChangesService
 from pytrace_features.dag_engine.service import DagEngineService
 from pytrace_features.saga_orchestrator.service import SagaOrchestratorService
+from pytrace_features.net_tcp.service import NetTcpService
+from pytrace_features.chaos_run.service import ChaosRunService
+from pytrace_features.contract_test.service import ContractTestService
+from pytrace_features.rate_limit_check.service import RateLimitCheckService
+from pytrace_features.shadow_compare.service import ShadowCompareService
+from pytrace_features.load_gen.service import LoadGenService
+from pytrace_features.webhook_mock.service import WebhookMockService
+from pytrace_features.behavior_fingerprint.service import BehaviorFingerprintService
 from pytrace_infra.adapters.trace_collector_adapter import RealTraceCollectorAdapter
 
 
@@ -476,6 +484,46 @@ def main() -> None:
 
     saga_replay_parser = subparsers.add_parser("saga-replay", help="Replay all steps from a committed saga log")
     saga_replay_parser.add_argument("--log-file", type=str, default="/tmp/pylow_saga.log", help="Saga log file to replay")
+
+    # TCP Connection Introspection CLI
+    net_tcp_parser = subparsers.add_parser("net-tcp", help="Introspect TCP socket states, TLS sessions and handshake time splits")
+    net_tcp_parser.add_argument("pid", type=int, help="Target process PID")
+    net_tcp_parser.add_argument("--url", type=str, default="https://api.example.com", help="Target URL to test connects")
+
+    # Chaos Run CLI
+    chaos_run_parser = subparsers.add_parser("chaos-run", help="Run orchestrator request pipeline with random failure injection")
+    chaos_run_parser.add_argument("--url", type=str, required=True, help="Target URL to test with chaos proxy")
+    chaos_run_parser.add_argument("--rate", type=int, default=30, help="Failure injection rate percentage (default: 30)")
+
+    # Contract Test CLI
+    contract_test_parser = subparsers.add_parser("contract-test", help="Assert JSON payload properties against consumer contracts")
+    contract_test_parser.add_argument("pid", type=int, help="Target process PID")
+    contract_test_parser.add_argument("--contract", type=str, default="", help="Path to contract assertions file")
+
+    # Rate Limit Check CLI
+    rate_limit_check_parser = subparsers.add_parser("rate-limit-check", help="Trace and analyze HTTP rate limits and resets")
+    rate_limit_check_parser.add_argument("pid", type=int, help="Target process PID")
+    rate_limit_check_parser.add_argument("--headers-file", type=str, default="", help="Optional parsed headers file path")
+
+    # Shadow Compare CLI
+    shadow_compare_parser = subparsers.add_parser("shadow-compare", help="Compare schema and value compatibility between production and staging")
+    shadow_compare_parser.add_argument("--prod-file", type=str, default="", help="Path to production response JSON")
+    shadow_compare_parser.add_argument("--staging-file", type=str, default="", help="Path to staging response JSON")
+
+    # Load Generator CLI
+    load_gen_parser = subparsers.add_parser("load-gen", help="Generate constant rate load and measure latency percentiles")
+    load_gen_parser.add_argument("--url", type=str, required=True, help="URL to target for load generation")
+    load_gen_parser.add_argument("--rps", type=int, default=10, help="Requests per second target (default: 10)")
+    load_gen_parser.add_argument("--duration", type=int, default=5, help="Duration of test in seconds (default: 5)")
+
+    # Webhook Mock CLI
+    webhook_mock_parser = subparsers.add_parser("webhook-mock", help="Start local webhook receiver and validate HMAC signatures")
+    webhook_mock_parser.add_argument("--port", type=int, default=9000, help="Port to listen on (default: 9000)")
+    webhook_mock_parser.add_argument("--secret", type=str, default="whsec_abc123", help="HMAC validation secret")
+
+    # Behavior Fingerprint CLI
+    behavior_fingerprint_parser = subparsers.add_parser("behavior-fingerprint", help="Probe target API endpoints for robust boundary edge cases")
+    behavior_fingerprint_parser.add_argument("--url", type=str, required=True, help="Endpoint URL to probe")
 
 
 
@@ -926,6 +974,46 @@ def main() -> None:
     elif cmd == "saga-replay":
         service = SagaOrchestratorService(collector)
         service.replay(args.log_file)
+        sys.exit(0)
+
+    elif cmd == "net-tcp":
+        service = NetTcpService(collector)
+        service.trace(args.pid, args.url)
+        sys.exit(0)
+
+    elif cmd == "chaos-run":
+        service = ChaosRunService(collector)
+        service.run(args.url, args.rate)
+        sys.exit(0)
+
+    elif cmd == "contract-test":
+        service = ContractTestService(collector)
+        service.run(args.pid, args.contract)
+        sys.exit(0)
+
+    elif cmd == "rate-limit-check":
+        service = RateLimitCheckService(collector)
+        service.trace(args.pid, args.headers_file)
+        sys.exit(0)
+
+    elif cmd == "shadow-compare":
+        service = ShadowCompareService(collector)
+        service.compare(args.prod_file, args.staging_file)
+        sys.exit(0)
+
+    elif cmd == "load-gen":
+        service = LoadGenService(collector)
+        service.run(args.url, args.rps, args.duration)
+        sys.exit(0)
+
+    elif cmd == "webhook-mock":
+        service = WebhookMockService(collector)
+        service.listen(args.port, args.secret)
+        sys.exit(0)
+
+    elif cmd == "behavior-fingerprint":
+        service = BehaviorFingerprintService(collector)
+        service.probe(args.url)
         sys.exit(0)
 
 
