@@ -7,7 +7,7 @@
 [![Docker](https://img.shields.io/docker/v/chiefj/pylow-mcp?label=docker&logo=docker)](https://hub.docker.com/r/chiefj/pylow-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Version `0.1.13` — **113 MCP tools** + 113 CLI commands across kernel tracing, Python internals, JSON analysis, HTTP tooling, protocol diagnostics, pipeline patterns, distributed workflow orchestration, and MCP server.
+Version `0.1.14` — **118 MCP tools** + 118 CLI commands across kernel tracing, Python internals, JSON analysis, HTTP tooling, protocol diagnostics, pipeline patterns, distributed workflow orchestration, and MCP server.
 
 ---
 
