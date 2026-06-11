@@ -135,6 +135,7 @@ from pytrace_features.jq_custom_stdlib.service import JqCustomStdlibService
 from pytrace_features.pipeline_etl.service import PipelineEtlService
 from pytrace_features.grep_jq_interleave.service import GrepJqInterleaveService
 from pytrace_features.jq_sql_export.service import JqSqlExportService
+from pytrace_features.live_pipeline.service import LivePipelineService
 from pytrace_infra.adapters.trace_collector_adapter import RealTraceCollectorAdapter
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -713,6 +714,31 @@ def wire_grep(payload: str, pattern: str) -> str:
 @mcp.tool(description="Run multi-stage ETL pipeline: Extract, Normalize, Validate, Aggregate.")
 def pipeline_etl() -> str:
     return _capture(PipelineEtlService(_col).run)
+
+
+@mcp.tool(description="Run the source-agnostic live transformation pipeline.")
+def pipeline_run() -> str:
+    return _capture(LivePipelineService(_col).run)
+
+
+@mcp.tool(description="Inject a manual test record into the live pipeline.")
+def pipeline_inject(record: str, stage: str = "ingest") -> str:
+    return _capture(LivePipelineService(_col).inject, record, stage)
+
+
+@mcp.tool(description="Replay dead letter box records into the pipeline.")
+def pipeline_replay(filter: str = ".", stage: str = "normalize") -> str:
+    return _capture(LivePipelineService(_col).replay, filter, stage)
+
+
+@mcp.tool(description="Test a single stage transform without the full pipeline.")
+def pipeline_test_stage(record: str, transform: str) -> str:
+    return _capture(LivePipelineService(_col).test_stage, record, transform)
+
+
+@mcp.tool(description="Tap and display live logs from a specific pipeline stage.")
+def pipeline_tap(stage: str) -> str:
+    return _capture(LivePipelineService(_col).tap, stage)
 
 
 @mcp.tool(description="Benchmark DFA pre-filter (grep) speed vs JQ AST parser on a dataset.")

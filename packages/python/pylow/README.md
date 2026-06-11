@@ -1836,6 +1836,66 @@ pylow jq-sql-export 4821 --table payments
 
 ---
 
+### `pylow pipeline-run`
+Run the source-agnostic live transformation pipeline.
+```bash
+pylow pipeline-run
+```
+
+#### Integrating Custom Curl Sources (Streaming & Polling)
+The pipeline is designed to be completely **source-agnostic**—meaning the core pipeline doesn't care what format your API returns. 
+
+To connect any custom `curl` command, read the target input pipe location from `/tmp/pylow_pipeline_latest` and append to it:
+
+```bash
+# 1. Start the pipeline in the background or another terminal
+pylow pipeline-run
+
+# 2. Feed any HTTP JSON stream directly into the pipeline
+curl -sN "https://stream.example.com/events" >> $(cat /tmp/pylow_pipeline_latest)/pipes/ingest_in
+
+# 3. Poll a REST API every 10 seconds and pipe it in
+while true; do
+  curl -s -H "Authorization: Bearer KEY" "https://api.example.com/payments" >> $(cat /tmp/pylow_pipeline_latest)/pipes/ingest_in
+  sleep 10
+done
+```
+
+---
+
+### `pylow pipeline-inject <record>`
+Inject a manual test record into the live pipeline.
+```bash
+pylow pipeline-inject '{"id": "pay_1", "amount": 100, "currency": "USD"}' --stage ingest
+```
+
+---
+
+### `pylow pipeline-replay`
+Replay dead letter box records into the pipeline.
+```bash
+pylow pipeline-replay --filter "." --stage normalize
+```
+
+---
+
+### `pylow pipeline-test-stage <record> <transform>`
+Test a single stage transform without the full pipeline.
+```bash
+pylow pipeline-test-stage '{"id": "pay_1", "amount": 100, "currency": "USD"}' 01_normalize.jq
+```
+
+---
+
+### `pylow pipeline-tap <stage>`
+Tap and display live logs from a specific pipeline stage.
+```bash
+pylow pipeline-tap normalize
+```
+
+---
+
+
 ## CATEGORY 10 — MCP Server
 
 ### `pylow-mcp`

@@ -115,6 +115,7 @@ from pytrace_features.jq_custom_stdlib.service import JqCustomStdlibService
 from pytrace_features.pipeline_etl.service import PipelineEtlService
 from pytrace_features.grep_jq_interleave.service import GrepJqInterleaveService
 from pytrace_features.jq_sql_export.service import JqSqlExportService
+from pytrace_features.live_pipeline.service import LivePipelineService
 from pytrace_infra.adapters.trace_collector_adapter import RealTraceCollectorAdapter
 
 
@@ -622,6 +623,25 @@ def main() -> None:
     jq_sql_export_parser = subparsers.add_parser("jq-sql-export", help="Convert JSON properties to SQL INSERT statements")
     jq_sql_export_parser.add_argument("pid", type=int, help="Target process PID")
     jq_sql_export_parser.add_argument("--table", type=str, default="payments", help="SQL target table name")
+
+    # Live Pipeline CLI Commands
+    pipeline_run_parser = subparsers.add_parser("pipeline-run", help="Run the source-agnostic live transformation pipeline")
+
+    pipeline_inject_parser = subparsers.add_parser("pipeline-inject", help="Inject a manual test record into the live pipeline")
+    pipeline_inject_parser.add_argument("record", type=str, help="Raw JSON string to inject")
+    pipeline_inject_parser.add_argument("--stage", type=str, default="ingest", help="Target stage FIFO (e.g. ingest, normalize)")
+
+    pipeline_replay_parser = subparsers.add_parser("pipeline-replay", help="Replay dead letter box records into the pipeline")
+    pipeline_replay_parser.add_argument("--filter", type=str, default=".", help="JQ query filter to select records to replay")
+    pipeline_replay_parser.add_argument("--stage", type=str, default="normalize", help="Target stage to replay into")
+
+    pipeline_test_stage_parser = subparsers.add_parser("pipeline-test-stage", help="Test a single stage transform without the full pipeline")
+    pipeline_test_stage_parser.add_argument("record", type=str, help="Raw JSON record input")
+    pipeline_test_stage_parser.add_argument("transform", type=str, help="Filename of transform (e.g. 01_normalize.jq)")
+
+    pipeline_tap_parser = subparsers.add_parser("pipeline-tap", help="Tap and display live logs from a specific pipeline stage")
+    pipeline_tap_parser.add_argument("stage", type=str, help="Stage name to tap (e.g. normalize, enrich, validate, route)")
+
 
 
 
@@ -1202,6 +1222,31 @@ def main() -> None:
     elif cmd == "jq-sql-export":
         service = JqSqlExportService(collector)
         service.run(args.pid, args.table)
+        sys.exit(0)
+
+    elif cmd == "pipeline-run":
+        service = LivePipelineService(collector)
+        service.run()
+        sys.exit(0)
+
+    elif cmd == "pipeline-inject":
+        service = LivePipelineService(collector)
+        service.inject(args.record, args.stage)
+        sys.exit(0)
+
+    elif cmd == "pipeline-replay":
+        service = LivePipelineService(collector)
+        service.replay(args.filter, args.stage)
+        sys.exit(0)
+
+    elif cmd == "pipeline-test-stage":
+        service = LivePipelineService(collector)
+        service.test_stage(args.record, args.transform)
+        sys.exit(0)
+
+    elif cmd == "pipeline-tap":
+        service = LivePipelineService(collector)
+        service.tap(args.stage)
         sys.exit(0)
 
 
