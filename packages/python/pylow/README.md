@@ -1526,6 +1526,13 @@ pylow awk-stats <PID>
 pylow tee-branch <PID>
 pylow pipe-decouple <PID> /tmp/payment_pipe
 pylow sed-mask <PID>
+pylow wire-grep --payload '{"payment_id": "pay_982"}' --pattern '"payment_id"\s*:\s*"([^"]+)"'
+pylow jq-foreach <PID>
+pylow jq-custom-stdlib --action percentile --data "10,20,30,40,50"
+pylow pipeline-etl
+pylow grep-jq-interleave --size 1000
+pylow jq-sql-export <PID> --table payments
+
 
 # ── JSON ANALYSIS ─────────────────────────────────────────────
 pylow jq-schema <PID>
@@ -1689,5 +1696,54 @@ Convert JSON payloads to TSV, CSV, Prometheus metrics, or Elasticsearch bulk ind
 ```bash
 pylow jq-format-matrix 4821 --format csv
 ```
+
+---
+
+### `pylow wire-grep`
+Extract raw structured values directly from text payloads using PCRE regex capture groups.
+```bash
+pylow wire-grep --payload '{"payment_id": "pay_982"}' --pattern '"payment_id"\s*:\s*"([^"]+)"'
+```
+
+---
+
+### `pylow jq-foreach <PID>`
+Track running average values and state bounds dynamically over lists of entries.
+```bash
+pylow jq-foreach 4821
+```
+
+---
+
+### `pylow jq-custom-stdlib`
+Run JQ Custom stdlib math routines (percentile, zscore, sliding window) over a list of parameters.
+```bash
+pylow jq-custom-stdlib --action percentile --data "10,20,30,40,50"
+```
+
+---
+
+### `pylow pipeline-etl`
+Perform multi-stage ETL extraction, data cleaning, type coercion, and validation checking.
+```bash
+pylow pipeline-etl
+```
+
+---
+
+### `pylow grep-jq-interleave`
+Benchmark DFA regex pre-filtering speeds vs JQ AST interpreter parser checks.
+```bash
+pylow grep-jq-interleave --size 1000
+```
+
+---
+
+### `pylow jq-sql-export <PID>`
+Convert JSON attributes into SQL INSERT statements.
+```bash
+pylow jq-sql-export 4821 --table payments
+```
+
 
 

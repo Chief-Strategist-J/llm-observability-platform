@@ -109,6 +109,12 @@ from pytrace_features.jq_path_find.service import JqPathFindService
 from pytrace_features.jq_stream_filter.service import JqStreamFilterService
 from pytrace_features.jq_flat_map.service import JqFlatMapService
 from pytrace_features.jq_format_matrix.service import JqFormatMatrixService
+from pytrace_features.wire_grep.service import WireGrepService
+from pytrace_features.jq_foreach.service import JqForeachService
+from pytrace_features.jq_custom_stdlib.service import JqCustomStdlibService
+from pytrace_features.pipeline_etl.service import PipelineEtlService
+from pytrace_features.grep_jq_interleave.service import GrepJqInterleaveService
+from pytrace_features.jq_sql_export.service import JqSqlExportService
 from pytrace_infra.adapters.trace_collector_adapter import RealTraceCollectorAdapter
 
 
@@ -590,6 +596,32 @@ def main() -> None:
     jq_format_matrix_parser = subparsers.add_parser("jq-format-matrix", help="Convert raw JSON streams to CSV, TSV, Prometheus, and Elasticsearch formats")
     jq_format_matrix_parser.add_argument("pid", type=int, help="Target process PID")
     jq_format_matrix_parser.add_argument("--format", type=str, default="csv", help="Target output format (csv, tsv, prometheus, elasticsearch)")
+
+    # Wire Grep CLI
+    wire_grep_parser = subparsers.add_parser("wire-grep", help="Extract raw structured values directly from text using regex groups")
+    wire_grep_parser.add_argument("--payload", type=str, required=True, help="Payload text to parse")
+    wire_grep_parser.add_argument("--pattern", type=str, required=True, help="PCRE-styled regex match pattern")
+
+    # Jq Foreach CLI
+    jq_foreach_parser = subparsers.add_parser("jq-foreach", help="Stateful loop accumulator tracking running averages")
+    jq_foreach_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Custom Stdlib CLI
+    jq_custom_stdlib_parser = subparsers.add_parser("jq-custom-stdlib", help="Run JQ Custom stdlib math routines (percentile, zscore, window)")
+    jq_custom_stdlib_parser.add_argument("--action", type=str, required=True, help="Helper action to run (percentile, zscore, sliding_window)")
+    jq_custom_stdlib_parser.add_argument("--data", type=str, default="", help="Comma-separated values to evaluate")
+
+    # Pipeline ETL CLI
+    pipeline_etl_parser = subparsers.add_parser("pipeline-etl", help="Run data cleaning, normalization, and aggregation ETL checks")
+
+    # GrepJq Interleave CLI
+    grep_jq_interleave_parser = subparsers.add_parser("grep-jq-interleave", help="Benchmark DFA pre-filter speeds vs JQ AST parser checks")
+    grep_jq_interleave_parser.add_argument("--size", type=int, default=1000, help="Benchmark dataset size")
+
+    # Jq SQL Export CLI
+    jq_sql_export_parser = subparsers.add_parser("jq-sql-export", help="Convert JSON properties to SQL INSERT statements")
+    jq_sql_export_parser.add_argument("pid", type=int, help="Target process PID")
+    jq_sql_export_parser.add_argument("--table", type=str, default="payments", help="SQL target table name")
 
 
 
@@ -1140,6 +1172,36 @@ def main() -> None:
     elif cmd == "jq-format-matrix":
         service = JqFormatMatrixService(collector)
         service.run(args.pid, args.format)
+        sys.exit(0)
+
+    elif cmd == "wire-grep":
+        service = WireGrepService(collector)
+        service.run(args.payload, args.pattern)
+        sys.exit(0)
+
+    elif cmd == "jq-foreach":
+        service = JqForeachService(collector)
+        service.run(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-custom-stdlib":
+        service = JqCustomStdlibService(collector)
+        service.run(args.action, args.data)
+        sys.exit(0)
+
+    elif cmd == "pipeline-etl":
+        service = PipelineEtlService(collector)
+        service.run()
+        sys.exit(0)
+
+    elif cmd == "grep-jq-interleave":
+        service = GrepJqInterleaveService(collector)
+        service.run(args.size)
+        sys.exit(0)
+
+    elif cmd == "jq-sql-export":
+        service = JqSqlExportService(collector)
+        service.run(args.pid, args.table)
         sys.exit(0)
 
 

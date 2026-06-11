@@ -758,6 +758,49 @@ def test_jq_format_matrix(capsys):
     captured = capsys.readouterr()
     assert "csv" in captured.out or "tsv" in captured.out or "id" in captured.out
 
+def test_wire_grep(capsys):
+    from pytrace_features.wire_grep.service import WireGrepService
+    service = WireGrepService()
+    service.run('{"payment_id": "pay_982"}', '"payment_id"\\s*:\\s*"([^"]+)"')
+    captured = capsys.readouterr()
+    assert "Match" in captured.out or "Results" in captured.out
+
+def test_jq_foreach(capsys):
+    from pytrace_features.jq_foreach.service import JqForeachService
+    service = JqForeachService()
+    service.run(1234)
+    captured = capsys.readouterr()
+    assert "foreach" in captured.out or "running_avg" in captured.out
+
+def test_jq_custom_stdlib(capsys):
+    from pytrace_features.jq_custom_stdlib.service import JqCustomStdlibService
+    service = JqCustomStdlibService()
+    service.run("percentile", "10,20,30,40,50")
+    captured = capsys.readouterr()
+    assert "Percentile" in captured.out or "Result" in captured.out
+
+def test_pipeline_etl(capsys):
+    from pytrace_features.pipeline_etl.service import PipelineEtlService
+    service = PipelineEtlService()
+    service.run()
+    captured = capsys.readouterr()
+    assert "ETL" in captured.out or "Normalize" in captured.out
+
+def test_grep_jq_interleave(capsys):
+    from pytrace_features.grep_jq_interleave.service import GrepJqInterleaveService
+    service = GrepJqInterleaveService()
+    service.run(10)
+    captured = capsys.readouterr()
+    assert "Benchmarking" in captured.out or "speedup" in captured.out
+
+def test_jq_sql_export(capsys):
+    from pytrace_features.jq_sql_export.service import JqSqlExportService
+    service = JqSqlExportService()
+    service.run(1234, "payments")
+    captured = capsys.readouterr()
+    assert "INSERT" in captured.out or "SQL" in captured.out
+
+
 
 
 
