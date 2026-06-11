@@ -2,7 +2,12 @@
 
 **One CLI. Zero code changes. Full system flow visibility for any Python service or distributed system.**
 
-Version `0.1.8` — 86 commands across kernel tracing, Python internals, JSON analysis, HTTP tooling, pipeline patterns, and distributed workflow orchestration.
+[![PyPI version](https://img.shields.io/pypi/v/pylow.svg)](https://pypi.org/project/pylow/)
+[![Python](https://img.shields.io/pypi/pyversions/pylow.svg)](https://pypi.org/project/pylow/)
+[![Docker](https://img.shields.io/docker/v/chiefj/pylow-mcp?label=docker&logo=docker)](https://hub.docker.com/r/chiefj/pylow-mcp)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+Version `0.1.13` — **113 MCP tools** + 113 CLI commands across kernel tracing, Python internals, JSON analysis, HTTP tooling, protocol diagnostics, pipeline patterns, distributed workflow orchestration, and MCP server.
 
 ---
 
@@ -19,6 +24,90 @@ pip install pylow
 > echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 > source ~/.bashrc
 > ```
+
+---
+
+## MCP Server
+
+pylow ships a fully-featured **Model Context Protocol server** — every CLI command is available as an MCP tool, callable directly from Claude Desktop, Cursor, or any MCP-compatible client.
+
+### Run locally (stdio — Claude Desktop)
+
+```bash
+pip install pylow
+pylow-mcp --stdio
+```
+
+Add to `claude_desktop_config.json`:
+```json
+{
+  "mcpServers": {
+    "pylow": {
+      "command": "pylow-mcp",
+      "args": ["--stdio"]
+    }
+  }
+}
+```
+
+### Run via Docker (Streamable-HTTP — MCP Inspector / remote clients)
+
+```bash
+# Pull and run
+docker run -p 8765:8765 chiefj/pylow-mcp:latest
+
+# Full stack: MCP server + Inspector UI + Jaeger + Prometheus
+docker compose up
+
+# Then open MCP Inspector at http://localhost:6274
+```
+
+Add to MCP client config (HTTP transport):
+```json
+{
+  "mcpServers": {
+    "pylow": {
+      "url": "http://localhost:8765/mcp"
+    }
+  }
+}
+```
+
+> [!NOTE]
+> The MCP server registers **113 tools** — one per pylow command. All tools return the same plain-text diagnostic output the CLI prints. Pass `pid=0` for tools that use internal mock data and don't need a live process.
+
+---
+
+## Docker
+
+```bash
+# Pull the image
+docker pull chiefj/pylow-mcp:latest
+
+# Run standalone MCP server
+docker run --rm -p 8765:8765 chiefj/pylow-mcp:latest
+
+# Run with stdio transport (pipe into Claude)
+docker run --rm -i chiefj/pylow-mcp:latest pylow-mcp --stdio
+
+# Full observability stack (MCP + Inspector + Jaeger + Prometheus)
+docker compose up --build
+
+# Include optional webhook receiver
+docker compose --profile webhook up
+```
+
+**Ports exposed by docker-compose:**
+
+| Service | Port | URL |
+|---|---|---|
+| pylow MCP server | 8765 | `http://localhost:8765/mcp` |
+| MCP Inspector UI | 6274 | `http://localhost:6274` |
+| Jaeger trace UI | 16686 | `http://localhost:16686` |
+| Prometheus | 9090 | `http://localhost:9090` |
+| Webhook receiver | 9000 | `http://localhost:9000` |
+
+**Image:** [`chiefj/pylow-mcp`](https://hub.docker.com/r/chiefj/pylow-mcp) — multi-stage build on `python:3.10-slim`. Includes `curl`, `jq`, `tcpdump`, `openssl`, `iproute2` for the diagnostic sub-process pipelines. Non-root `pylow` user.
 
 ---
 
@@ -54,7 +143,7 @@ pylow triage <PID>
 
 ## Complete Command Reference
 
-All 86 commands, grouped by category.
+All 113 commands, grouped by category. Every command is also available as an MCP tool via `pylow-mcp`.
 
 ---
 
@@ -1745,5 +1834,48 @@ Convert JSON attributes into SQL INSERT statements.
 pylow jq-sql-export 4821 --table payments
 ```
 
+---
 
+## CATEGORY 10 — MCP Server
 
+### `pylow-mcp`
+Start the MCP server (Streamable-HTTP on port 8765 by default). Exposes all 113 pylow tools to any MCP-compatible client.
+```bash
+# HTTP mode (MCP Inspector, Cursor, remote clients)
+pylow-mcp
+
+# stdio mode (Claude Desktop local config)
+pylow-mcp --stdio
+
+# Custom host/port via env vars
+MCP_HOST=0.0.0.0 MCP_PORT=9000 pylow-mcp
+```
+
+---
+
+### MCP Tool Naming
+
+Every CLI command maps to an MCP tool with the same name (hyphens become underscores):
+
+| CLI command | MCP tool name |
+|---|---|
+| `pylow attach <PID>` | `attach(pid)` |
+| `pylow wire-grep --payload ... --pattern ...` | `wire_grep(payload, pattern)` |
+| `pylow jq-locate-value-contains <PID> <term>` | `jq_locate_value_contains(pid, partial_val)` |
+| `pylow dag-run --dag ...` | `dag_run(dag, dag_file, workers)` |
+| `pylow saga-run --steps ...` | `saga_run(steps, fail_at, log_file)` |
+| `pylow pipeline-etl` | `pipeline_etl()` |
+| `pylow graphql-nplus1 --url ...` | `graphql_nplus1(url)` |
+| `pylow mtls-diagnose --cert ... --key ...` | `mtls_diagnose(cert, key)` |
+
+> [!TIP]
+> Use MCP Inspector (`http://localhost:6274` when running docker-compose) to browse all 113 tools, view their schemas, and run them interactively from the browser.
+
+---
+
+## Links
+
+- **PyPI:** https://pypi.org/project/pylow/
+- **Docker Hub:** https://hub.docker.com/r/chiefj/pylow-mcp
+- **MCP Inspector:** https://github.com/modelcontextprotocol/inspector
+- **MCP Protocol:** https://modelcontextprotocol.io

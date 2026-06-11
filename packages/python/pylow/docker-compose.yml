@@ -1,0 +1,141 @@
+# ============================================================================
+# pylow — docker-compose.yml
+# ============================================================================
+# Services:
+#   pylow-mcp    — MCP server (Streamable-HTTP, port 8765)
+#   mcp-inspector— Optional MCP Inspector UI (port 6274) — comment out if unneeded
+#   prometheus   — Metrics scraping target (port 9090) — for load-gen / curl-perf demos
+#   jaeger       — Distributed trace UI (port 16686)   — for correlation / stitch demos
+# ============================================================================
+
+
+networks:
+  pylow-net:
+    driver: bridge
+
+volumes:
+  jaeger-data:
+  prometheus-data:
+
+# ── shared logging ────────────────────────────────────────────────────────────
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+services:
+
+  # ── pylow MCP server ────────────────────────────────────────────────────────
+  pylow-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: pylow-mcp:latest
+    container_name: pylow-mcp
+    restart: unless-stopped
+    ports:
+      - "${MCP_PORT:-8765}:8765"
+    environment:
+      MCP_HOST: "0.0.0.0"
+      MCP_PORT: "8765"
+      # Jaeger OTLP endpoint for trace correlation features
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
+      OTEL_SERVICE_NAME: "pylow-mcp"
+    networks:
+      - pylow-net
+    volumes:
+      # Persist saga logs and ETL artefacts across restarts
+      - /tmp/pylow:/tmp
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8765/mcp"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging: *default-logging
+    depends_on:
+      jaeger:
+        condition: service_started
+
+  # ── MCP Inspector UI ────────────────────────────────────────────────────────
+  # Browse and test all MCP tools interactively in the browser.
+  # Visit: http://localhost:6274
+  mcp-inspector:
+    image: node:20-slim
+    container_name: mcp-inspector
+    restart: unless-stopped
+    command: >
+      sh -c "npx --yes @modelcontextprotocol/inspector@latest
+             --server-url http://pylow-mcp:8765/mcp"
+    ports:
+      - "6274:6274"
+    networks:
+      - pylow-net
+    depends_on:
+      pylow-mcp:
+        condition: service_healthy
+    logging: *default-logging
+
+  # ── Jaeger (distributed tracing) ────────────────────────────────────────────
+  # Used by: stitch, correlation, timeline, net-tcp tools.
+  # UI: http://localhost:16686
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: jaeger
+    restart: unless-stopped
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC
+      - "4318:4318"     # OTLP HTTP
+      - "14268:14268"   # Jaeger HTTP collector
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    volumes:
+      - jaeger-data:/badger
+    networks:
+      - pylow-net
+    logging: *default-logging
+
+  # ── Prometheus ───────────────────────────────────────────────────────────────
+  # Used by: load-gen, jq-format-matrix (prometheus output), curl-perf demos.
+  # UI: http://localhost:9090
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    volumes:
+      - prometheus-data:/prometheus
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - pylow-net
+    logging: *default-logging
+
+  # ── Webhook receiver mock (standalone) ──────────────────────────────────────
+  # Run webhook-mock separately if you need a persistent receiver
+  # (the pylow-mcp tool version is ephemeral per call).
+  webhook-receiver:
+    image: pylow-mcp:latest
+    container_name: pylow-webhook
+    restart: unless-stopped
+    command: ["python", "-m", "pylow_api.cli.controller", "webhook-mock",
+              "--port", "9000", "--secret", "${WEBHOOK_SECRET:-whsec_abc123}"]
+    ports:
+      - "9000:9000"
+    environment:
+      PYTHONPATH: /app/src
+    networks:
+      - pylow-net
+    depends_on:
+      - pylow-mcp
+    logging: *default-logging
+    profiles:
+      - webhook
+
