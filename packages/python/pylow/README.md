@@ -1586,3 +1586,52 @@ pylow ws-handshake --url wss://api.example.com/ws
 pylow infra-fingerprint --url https://api.example.com/payments
 pylow diff-fuzz --url-a https://api-v1.example.com --url-b https://api-v2.example.com
 ```
+
+---
+
+### `pylow mtls-diagnose`
+Verify mutual TLS configuration, certificate chains validity and pin server certificates.
+```bash
+pylow mtls-diagnose --cert /tmp/client.crt --key /tmp/client.key
+```
+
+---
+
+### `pylow grpc-proto`
+Encode protobuf structures to gRPC 5-byte frame binary formats and analyze status trailers.
+```bash
+pylow grpc-proto --method PaymentsService/GetPayment --payload '{"id": 462}'
+```
+
+---
+
+### `pylow graphql-nplus1`
+Audit GraphQL schemas for N+1 database round-trip loop overheads and depth limits checks.
+```bash
+pylow graphql-nplus1 --url https://api.example.com/graphql
+```
+
+---
+
+### `pylow ws-handshake`
+Verify WebSocket protocol upgrades and handshake connection status.
+```bash
+pylow ws-handshake --url wss://api.example.com/ws
+```
+
+---
+
+### `pylow infra-fingerprint`
+Probe reverse proxy paths, CDN edge caching latency, and WAF rulesets.
+```bash
+pylow infra-fingerprint --url https://api.example.com/payments
+```
+
+---
+
+### `pylow diff-fuzz`
+Execute differential fuzz testing between two API versions using prototype pollution and boundary payloads.
+```bash
+pylow diff-fuzz --url-a https://api-v1.example.com --url-b https://api-v2.example.com
+```
+
