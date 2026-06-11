@@ -97,6 +97,12 @@ from pytrace_features.shadow_compare.service import ShadowCompareService
 from pytrace_features.load_gen.service import LoadGenService
 from pytrace_features.webhook_mock.service import WebhookMockService
 from pytrace_features.behavior_fingerprint.service import BehaviorFingerprintService
+from pytrace_features.mtls_diagnose.service import MtlsDiagnoseService
+from pytrace_features.grpc_proto.service import GrpcProtoService
+from pytrace_features.graphql_nplus1.service import GraphqlNplus1Service
+from pytrace_features.ws_handshake.service import WsHandshakeService
+from pytrace_features.infra_fingerprint.service import InfraFingerprintService
+from pytrace_features.diff_fuzz.service import DiffFuzzService
 from pytrace_infra.adapters.trace_collector_adapter import RealTraceCollectorAdapter
 
 
@@ -524,6 +530,33 @@ def main() -> None:
     # Behavior Fingerprint CLI
     behavior_fingerprint_parser = subparsers.add_parser("behavior-fingerprint", help="Probe target API endpoints for robust boundary edge cases")
     behavior_fingerprint_parser.add_argument("--url", type=str, required=True, help="Endpoint URL to probe")
+
+    # Mtls Diagnose CLI
+    mtls_diagnose_parser = subparsers.add_parser("mtls-diagnose", help="Verify and diagnose mutual TLS (mTLS) configurations and CA chains")
+    mtls_diagnose_parser.add_argument("--cert", type=str, default="", help="Path to client cert PEM")
+    mtls_diagnose_parser.add_argument("--key", type=str, default="", help="Path to client key PEM")
+
+    # Grpc Proto CLI
+    grpc_proto_parser = subparsers.add_parser("grpc-proto", help="Encode protobuf request to 5-byte big-endian gRPC binary frame")
+    grpc_proto_parser.add_argument("--method", type=str, required=True, help="gRPC Service/Method endpoint")
+    grpc_proto_parser.add_argument("--payload", type=str, required=True, help="Protobuf message content in string format")
+
+    # Graphql Nplus1 CLI
+    graphql_nplus1_parser = subparsers.add_parser("graphql-nplus1", help="Profile GraphQL schema fields for N+1 ORM overheads")
+    graphql_nplus1_parser.add_argument("--url", type=str, required=True, help="GraphQL endpoint URL")
+
+    # Ws Handshake CLI
+    ws_handshake_parser = subparsers.add_parser("ws-handshake", help="Verify WebSocket HTTP upgrade headers and mask binary text frames")
+    ws_handshake_parser.add_argument("--url", type=str, required=True, help="WebSocket URL to handshake (e.g. ws://...)")
+
+    # Infra Fingerprint CLI
+    infra_fingerprint_parser = subparsers.add_parser("infra-fingerprint", help="Analyze reverse proxy, WAF blocking rules, and CDN cache headers")
+    infra_fingerprint_parser.add_argument("--url", type=str, required=True, help="API URL to fingerprint")
+
+    # Diff Fuzz CLI
+    diff_fuzz_parser = subparsers.add_parser("diff-fuzz", help="Drive differential fuzzing comparisons against two environments")
+    diff_fuzz_parser.add_argument("--url-a", type=str, required=True, help="Target URL endpoint A")
+    diff_fuzz_parser.add_argument("--url-b", type=str, required=True, help="Target URL endpoint B")
 
 
 
@@ -1014,6 +1047,36 @@ def main() -> None:
     elif cmd == "behavior-fingerprint":
         service = BehaviorFingerprintService(collector)
         service.probe(args.url)
+        sys.exit(0)
+
+    elif cmd == "mtls-diagnose":
+        service = MtlsDiagnoseService(collector)
+        service.run(args.cert, args.key)
+        sys.exit(0)
+
+    elif cmd == "grpc-proto":
+        service = GrpcProtoService(collector)
+        service.run(args.method, args.payload)
+        sys.exit(0)
+
+    elif cmd == "graphql-nplus1":
+        service = GraphqlNplus1Service(collector)
+        service.run(args.url)
+        sys.exit(0)
+
+    elif cmd == "ws-handshake":
+        service = WsHandshakeService(collector)
+        service.run(args.url)
+        sys.exit(0)
+
+    elif cmd == "infra-fingerprint":
+        service = InfraFingerprintService(collector)
+        service.run(args.url)
+        sys.exit(0)
+
+    elif cmd == "diff-fuzz":
+        service = DiffFuzzService(collector)
+        service.run(args.url_a, args.url_b)
         sys.exit(0)
 
 

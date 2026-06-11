@@ -674,6 +674,49 @@ def test_behavior_fingerprint(capsys):
     captured = capsys.readouterr()
     assert "Fingerprint" in captured.out or "Edge Case" in captured.out
 
+def test_mtls_diagnose(capsys):
+    from pytrace_features.mtls_diagnose.service import MtlsDiagnoseService
+    service = MtlsDiagnoseService()
+    service.run()
+    captured = capsys.readouterr()
+    assert "mutual TLS" in captured.out or "mTLS" in captured.out
+
+def test_grpc_proto(capsys):
+    from pytrace_features.grpc_proto.service import GrpcProtoService
+    service = GrpcProtoService()
+    service.run("PaymentsService/GetPayment", "test_id")
+    captured = capsys.readouterr()
+    assert "Protobuf" in captured.out or "gRPC" in captured.out
+
+def test_graphql_nplus1(capsys):
+    from pytrace_features.graphql_nplus1.service import GraphqlNplus1Service
+    service = GraphqlNplus1Service()
+    service.run("https://api.example.com/graphql")
+    captured = capsys.readouterr()
+    assert "GraphQL" in captured.out or "N+1" in captured.out
+
+def test_ws_handshake(capsys):
+    from pytrace_features.ws_handshake.service import WsHandshakeService
+    service = WsHandshakeService()
+    service.run("wss://api.example.com/ws")
+    captured = capsys.readouterr()
+    assert "WebSocket" in captured.out or "handshake" in captured.out
+
+def test_infra_fingerprint(capsys):
+    from pytrace_features.infra_fingerprint.service import InfraFingerprintService
+    service = InfraFingerprintService()
+    service.run("https://api.example.com")
+    captured = capsys.readouterr()
+    assert "Fingerprint" in captured.out or "CDN" in captured.out
+
+def test_diff_fuzz(capsys):
+    from pytrace_features.diff_fuzz.service import DiffFuzzService
+    service = DiffFuzzService()
+    service.run("https://a.example.com", "https://b.example.com")
+    captured = capsys.readouterr()
+    assert "Fuzzing" in captured.out or "Divergences" in captured.out
+
+
 
 
 

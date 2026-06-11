@@ -1579,4 +1579,10 @@ pylow shadow-compare --prod-file /tmp/prod.json --staging-file /tmp/staging.json
 pylow load-gen --url https://api.example.com/payments --rps 20 --duration 10
 pylow webhook-mock --port 9000 --secret whsec_secretkey
 pylow behavior-fingerprint --url https://api.example.com/payments
+pylow mtls-diagnose --cert /tmp/client.crt --key /tmp/client.key
+pylow grpc-proto --method PaymentsService/GetPayment --payload '{"id": 462}'
+pylow graphql-nplus1 --url https://api.example.com/graphql
+pylow ws-handshake --url wss://api.example.com/ws
+pylow infra-fingerprint --url https://api.example.com/payments
+pylow diff-fuzz --url-a https://api-v1.example.com --url-b https://api-v2.example.com
 ```
