@@ -103,6 +103,12 @@ from pytrace_features.graphql_nplus1.service import GraphqlNplus1Service
 from pytrace_features.ws_handshake.service import WsHandshakeService
 from pytrace_features.infra_fingerprint.service import InfraFingerprintService
 from pytrace_features.diff_fuzz.service import DiffFuzzService
+from pytrace_features.jq_reduce.service import JqReduceService
+from pytrace_features.jq_early_exit.service import JqEarlyExitService
+from pytrace_features.jq_path_find.service import JqPathFindService
+from pytrace_features.jq_stream_filter.service import JqStreamFilterService
+from pytrace_features.jq_flat_map.service import JqFlatMapService
+from pytrace_features.jq_format_matrix.service import JqFormatMatrixService
 from pytrace_infra.adapters.trace_collector_adapter import RealTraceCollectorAdapter
 
 
@@ -557,6 +563,33 @@ def main() -> None:
     diff_fuzz_parser = subparsers.add_parser("diff-fuzz", help="Drive differential fuzzing comparisons against two environments")
     diff_fuzz_parser.add_argument("--url-a", type=str, required=True, help="Target URL endpoint A")
     diff_fuzz_parser.add_argument("--url-b", type=str, required=True, help="Target URL endpoint B")
+
+    # Jq Reduce CLI
+    jq_reduce_parser = subparsers.add_parser("jq-reduce", help="Summarize arrays by group totals and running averages")
+    jq_reduce_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Early Exit CLI
+    jq_early_exit_parser = subparsers.add_parser("jq-early-exit", help="Perform early-exit label-breaks on large JSON payloads")
+    jq_early_exit_parser.add_argument("pid", type=int, help="Target process PID")
+    jq_early_exit_parser.add_argument("--threshold", type=float, default=1000.0, help="Search value threshold")
+
+    # Jq Path Find CLI
+    jq_path_find_parser = subparsers.add_parser("jq-path-find", help="Find absolute path nodes matching target types")
+    jq_path_find_parser.add_argument("pid", type=int, help="Target process PID")
+    jq_path_find_parser.add_argument("--type", type=str, default="null", help="Type mapping query (e.g. null, string, number)")
+
+    # Jq Stream Filter CLI
+    jq_stream_filter_parser = subparsers.add_parser("jq-stream-filter", help="Filter streams incrementally using streaming parsed paths")
+    jq_stream_filter_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Flat Map CLI
+    jq_flat_map_parser = subparsers.add_parser("jq-flat-map", help="Serialize nested objects to flat dotted keys and reconstruct them")
+    jq_flat_map_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Format Matrix CLI
+    jq_format_matrix_parser = subparsers.add_parser("jq-format-matrix", help="Convert raw JSON streams to CSV, TSV, Prometheus, and Elasticsearch formats")
+    jq_format_matrix_parser.add_argument("pid", type=int, help="Target process PID")
+    jq_format_matrix_parser.add_argument("--format", type=str, default="csv", help="Target output format (csv, tsv, prometheus, elasticsearch)")
 
 
 
@@ -1077,6 +1110,36 @@ def main() -> None:
     elif cmd == "diff-fuzz":
         service = DiffFuzzService(collector)
         service.run(args.url_a, args.url_b)
+        sys.exit(0)
+
+    elif cmd == "jq-reduce":
+        service = JqReduceService(collector)
+        service.run(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-early-exit":
+        service = JqEarlyExitService(collector)
+        service.run(args.pid, args.threshold)
+        sys.exit(0)
+
+    elif cmd == "jq-path-find":
+        service = JqPathFindService(collector)
+        service.run(args.pid, args.type)
+        sys.exit(0)
+
+    elif cmd == "jq-stream-filter":
+        service = JqStreamFilterService(collector)
+        service.run(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-flat-map":
+        service = JqFlatMapService(collector)
+        service.run(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-format-matrix":
+        service = JqFormatMatrixService(collector)
+        service.run(args.pid, args.format)
         sys.exit(0)
 
 

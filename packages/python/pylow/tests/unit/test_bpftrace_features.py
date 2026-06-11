@@ -716,6 +716,49 @@ def test_diff_fuzz(capsys):
     captured = capsys.readouterr()
     assert "Fuzzing" in captured.out or "Divergences" in captured.out
 
+def test_jq_reduce(capsys):
+    from pytrace_features.jq_reduce.service import JqReduceService
+    service = JqReduceService()
+    service.run(1234)
+    captured = capsys.readouterr()
+    assert "reduce" in captured.out or "Totals" in captured.out
+
+def test_jq_early_exit(capsys):
+    from pytrace_features.jq_early_exit.service import JqEarlyExitService
+    service = JqEarlyExitService()
+    service.run(1234, 100.0)
+    captured = capsys.readouterr()
+    assert "exit" in captured.out.lower() or "scanned" in captured.out.lower()
+
+def test_jq_path_find(capsys):
+    from pytrace_features.jq_path_find.service import JqPathFindService
+    service = JqPathFindService()
+    service.run(1234, "null")
+    captured = capsys.readouterr()
+    assert "Paths" in captured.out or "Dotted" in captured.out
+
+def test_jq_stream_filter(capsys):
+    from pytrace_features.jq_stream_filter.service import JqStreamFilterService
+    service = JqStreamFilterService()
+    service.run(1234)
+    captured = capsys.readouterr()
+    assert "fromstream" in captured.out or "Reconstruction" in captured.out
+
+def test_jq_flat_map(capsys):
+    from pytrace_features.jq_flat_map.service import JqFlatMapService
+    service = JqFlatMapService()
+    service.run(1234)
+    captured = capsys.readouterr()
+    assert "Flat" in captured.out or "Nested" in captured.out
+
+def test_jq_format_matrix(capsys):
+    from pytrace_features.jq_format_matrix.service import JqFormatMatrixService
+    service = JqFormatMatrixService()
+    service.run(1234, "csv")
+    captured = capsys.readouterr()
+    assert "csv" in captured.out or "tsv" in captured.out or "id" in captured.out
+
+
 
 
 

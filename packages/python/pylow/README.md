@@ -1555,6 +1555,13 @@ pylow jq-common-audit <PID>
 pylow jq-schema-evolution <PID>
 pylow jq-validate-fields <PID>
 pylow jq-watch-changes <PID>
+pylow jq-reduce <PID>
+pylow jq-early-exit <PID> --threshold 1000.0
+pylow jq-path-find <PID> --type null
+pylow jq-stream-filter <PID>
+pylow jq-flat-map <PID>
+pylow jq-format-matrix <PID> --format csv
+
 
 # ── DAG ENGINE ────────────────────────────────────────────────
 pylow dag-dry-run --dag "auth: get_user:auth get_catalog:auth create_order:get_user,get_catalog"
@@ -1634,4 +1641,53 @@ Execute differential fuzz testing between two API versions using prototype pollu
 ```bash
 pylow diff-fuzz --url-a https://api-v1.example.com --url-b https://api-v2.example.com
 ```
+
+---
+
+### `pylow jq-reduce <PID>`
+Calculate group summary reductions and running averages from streaming lists.
+```bash
+pylow jq-reduce 4821
+```
+
+---
+
+### `pylow jq-early-exit <PID>`
+Perform conditional breaks inside pipelines to exit loops early when values exceed thresholds.
+```bash
+pylow jq-early-exit 4821 --threshold 1000.0
+```
+
+---
+
+### `pylow jq-path-find <PID>`
+Locate absolute nested keys matching targeted types (e.g. null, number, string, boolean).
+```bash
+pylow jq-path-find 4821 --type null
+```
+
+---
+
+### `pylow jq-stream-filter <PID>`
+Process heavy arrays incrementally without memory overflows using streaming paths.
+```bash
+pylow jq-stream-filter 4821
+```
+
+---
+
+### `pylow jq-flat-map <PID>`
+Serialize nested structures into a flat map of dotted keys, and reconstruct them back.
+```bash
+pylow jq-flat-map 4821
+```
+
+---
+
+### `pylow jq-format-matrix <PID>`
+Convert JSON payloads to TSV, CSV, Prometheus metrics, or Elasticsearch bulk index maps.
+```bash
+pylow jq-format-matrix 4821 --format csv
+```
+
 
