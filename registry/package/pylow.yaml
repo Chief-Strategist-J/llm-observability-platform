@@ -1,6 +1,7 @@
 packages:
-  - name: pytrace
+  - name: pylow
     language: python
+
     version: 0.1.0
     description: "One CLI. Zero code changes. Full system flow visibility for any Python service or distributed system."
     owner: "@platform-observability-team"
