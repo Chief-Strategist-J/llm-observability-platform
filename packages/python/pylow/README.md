@@ -448,3 +448,373 @@ pylow pysingle 4821 handle_request
 [     0.011ms]   → validate_token()  auth.py:12
 [     0.015ms]   ← validate_token()  total=0.004ms  self=0.003ms
 ```
+
+### 30. `pylow page-faults <pid>`
+Trace page fault hotspots to identify cold memory access patterns.
+```bash
+pylow page-faults 4821
+```
+**Output:**
+```text
+Attaching page faults tracer to PID 4821...
+✓ Attached. Collecting page fault events... Ctrl+C to stop.
+
+=== PAGE FAULT HOTSPOTS ===
+@faults[
+    malloc+0x24
+    PyBytes_FromStringAndSize+0x18
+    load_dataset @ ml/data.py:12
+]: 421
+```
+
+### 31. `pylow context-switches <pid>`
+Profile preemption context switches and voluntary/involuntary off-CPU delays.
+```bash
+pylow context-switches 4821
+```
+**Output:**
+```text
+Attaching context switches tracer to PID 4821...
+✓ Attached. Collecting context switch events... Ctrl+C to stop.
+
+OFF CPU 87ms next_cpu=2
+
+--- BPF Map: @off_cpu_ms ---
+[0, 1]                12 |@@@@                                |
+[2, 4]                89 |@@@@@@@@@@@@@@                      |
+[64, 128]            210 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+```
+
+### 32. `pylow kernel-blocked <pid>`
+Trace the exact kernel blocked code path where a process is sleeping in an uninterruptible wait.
+```bash
+pylow kernel-blocked 4821
+```
+**Output:**
+```text
+Attaching kernel blocked stack tracer to PID 4821...
+✓ Attached. Monitoring blocked states... Ctrl+C to stop.
+
+BLOCKED IN KERNEL:
+        __schedule+0x310
+        schedule+0x44
+        futex_wait_queue_me+0xb8
+        futex_wait+0x120
+        do_futex+0x340
+        __x64_sys_futex+0x140
+        [ustack]:
+        pthread_cond_wait+0x12
+        take_gil+0x42
+        execute_query+0x91  db.py:102
+```
+
+### 33. `pylow tlb-shootdowns <pid>`
+Profile Translation Lookaside Buffer (TLB) flush rates and reasons.
+```bash
+pylow tlb-shootdowns 4821
+```
+**Output:**
+```text
+Attaching TLB shootdowns tracer to PID 4821...
+✓ Attached. Monitoring TLB flushes... Ctrl+C to stop.
+
+--- BPF Map: @tlb_reason ---
+[0] (TLB_FLUSH_ON_TASK_SWITCH)              42
+[1] (TLB_FLUSH_ON_PAGE_FAULT)              187
+```
+
+### 34. `pylow irq-impact <pid>`
+Monitor soft and hard IRQ impact vectors to detect when CPU cycles are stolen.
+```bash
+pylow irq-impact 4821
+```
+**Output:**
+```text
+Attaching Soft/Hard IRQ tracer to PID 4821...
+✓ Attached. Collecting IRQ impact events... Ctrl+C to stop.
+
+--- BPF Map: @sirq_type ---
+[1] (TIMER_SOFTIRQ)                         84
+[3] (NET_RX_SOFTIRQ)                        187
+
+--- BPF Map: @sirq_lat (us) ---
+[0, 1]                12 |@@@@                                |
+[2, 4]                43 |@@@@@@@@@@@@@@                      |
+[8, 16]              187 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+```
+
+---
+
+## Diagnostic Decision Tree & Multi-Layer Debugging Workflow
+
+Use this decision tree to diagnose performance degradation layer-by-layer:
+
+```
+What are you seeing?
+│
+├── App is slow
+│   │
+│   ├── CPU high?
+│   │   └── profile:hz:999 + ustack → hottest function
+│   │
+│   └── CPU normal?
+│       └── raw_syscalls timer → which syscall blocking + stack
+│
+├── Memory growing
+│   ├── malloc sum by stack → top allocator
+│   └── alloc vs free count → confirm leak
+│
+├── Random crashes
+│   └── raise__exception + ustack → every throw point
+│
+├── Process hangs
+│   ├── sched_switch + ustack → where it sleeps
+│   └── PyThread_acquire_lock → deadlock check
+│
+└── Too much noise from other queries
+    └── add /str(arg1) == "your_func"/ filter
+        or /str(arg0) == "your_file.py"/
+        or /tid == <specific_thread>/
+```
+
+### The Mental Model — Layers of Execution
+
+```
+Your Python code
+      ↓
+CPython interpreter (ceval loop)
+      ↓
+Standard library / third party (SQLAlchemy, requests, asyncio)
+      ↓
+Python C extensions (.so files)
+      ↓
+libc (malloc, free, connect, read)
+      ↓
+System calls (read, write, futex, mmap, connect)
+      ↓
+Kernel (TCP stack, VFS, scheduler, memory manager)
+      ↓
+Hardware (CPU, disk, NIC)
+```
+
+---
+
+### Step 0 — Quick Triaging (Run first)
+
+Run this for 10 seconds to pinpoint the category of the problem:
+
+```bash
+sudo bpftrace -e '
+profile:hz:99 /pid == $1/ { @cpu[ustack(perf,3)] = count(); }
+tracepoint:sched:sched_switch /args->prev_pid == $1/ { @offcpu = count(); }
+tracepoint:raw_syscalls:sys_enter /pid == $1/ { @syscalls = count(); }
+software:page-faults:1 /pid == $1/ { @faults = count(); }
+interval:s:10 {
+  printf("cpu_samples : %d\n", @cpu);
+  printf("off_cpu     : %d\n", @offcpu);
+  printf("syscalls    : %d\n", @syscalls);
+  printf("page_faults : %d\n", @faults);
+  exit();
+}' <PID>
+```
+
+#### Triage Criteria:
+* `cpu_samples` high + `offcpu` low &rarr; **CPU BOUND**
+* `cpu_samples` low + `offcpu` high &rarr; **I/O BOUND**
+* `syscalls` very high &rarr; **SYSCALL STORM**
+* `page_faults` high &rarr; **MEMORY**
+* All counts low &rarr; **DEADLOCK / STUCK**
+
+---
+
+### CPU BOUND — Your Code Is Burning CPU
+
+#### A. Find exactly which function is hot:
+```bash
+sudo bpftrace -p <PID> -e '
+profile:hz:999 {
+  @[ustack(perf, 5)] = count();
+}
+interval:s:10 {
+  print(@, 3);   // top 3 stacks only
+  exit();
+}'
+```
+
+#### B. Confirm with duration:
+```bash
+sudo bpftrace -p <PID> -e '
+usdt:/usr/bin/python3:python:function__entry { @t[tid,str(arg1)] = nsecs; }
+usdt:/usr/bin/python3:python:function__return {
+  $d = nsecs - @t[tid,str(arg1)];
+  if ($d > 10000000) {
+    printf("%lldms %s %s:%d\n", $d/1000000, str(arg1), str(arg0), arg2);
+  }
+  delete(@t[tid,str(arg1)]);
+}'
+```
+
+---
+
+### I/O BOUND — Your Code Is Waiting
+
+#### A. Find which syscall and Python line caused it:
+```bash
+sudo bpftrace -e '
+tracepoint:raw_syscalls:sys_enter /pid == $1/ {
+  @t[tid,args->id] = nsecs;
+}
+tracepoint:raw_syscalls:sys_exit /pid == $1/ {
+  $d = nsecs - @t[tid,args->id];
+  if ($d > 5000000) {
+    printf("BLOCKED syscall=%d %lldms\n", args->id, $d/1000000);
+    print(ustack(perf, 5));
+    exit();   // stop after first hit
+  }
+  delete(@t[tid,args->id]);
+}' <PID>
+```
+*(Translate syscall ID using `ausyscall <ID>`)*
+
+#### B. If it's a read — find which file descriptor:
+```bash
+sudo bpftrace -e '
+tracepoint:syscalls:sys_enter_read /pid == $1/ {
+  @t[tid] = nsecs;
+  @fd[tid] = args->fd;
+}
+tracepoint:syscalls:sys_exit_read /pid == $1/ {
+  $d = nsecs - @t[tid];
+  if ($d > 5000000) {
+    printf("SLOW READ fd=%d %lldms\n", @fd[tid], $d/1000000);
+    print(ustack(perf,5));
+    exit();
+  }
+  delete(@t[tid]); delete(@fd[tid]);
+}' <PID>
+```
+*(Translate fd to file: `ls -la /proc/<PID>/fd/<FD>`)*
+
+---
+
+### SYSCALL STORM — Too Many Kernel Transitions
+
+#### A. Find which syscall is called most:
+```bash
+sudo bpftrace -e '
+tracepoint:raw_syscalls:sys_enter /pid == $1/ {
+  @[args->id] = count();
+}
+interval:s:5 {
+  print(@, 5);   // top 5 syscalls by count
+  exit();
+}' <PID>
+```
+
+#### B. Find which Python code is calling it:
+```bash
+sudo bpftrace -e '
+tracepoint:raw_syscalls:sys_enter /pid == $1 && args->id == <ID>/ {
+  @[ustack(perf,5)] = count();
+}
+interval:s:5 {
+  print(@, 3);
+  exit();
+}' <PID>
+```
+
+---
+
+### MEMORY — Growing, Leaking, Slow GC
+
+#### A. Find what is allocating most:
+```bash
+sudo bpftrace -p <PID> -e '
+uprobe:/lib/x86_64-linux-gnu/libc.so.6:malloc {
+  @[ustack(perf,5)] = sum(arg0);
+}
+interval:s:10 {
+  print(@, 3);   // top 3 allocating callsites
+  exit();
+}'
+```
+
+#### B. Confirm it's a leak (allocations without frees):
+```bash
+sudo bpftrace -p <PID> -e '
+uprobe:/lib/x86_64-linux-gnu/libc.so.6:malloc {
+  @alloc = sum(arg0);
+  @alloc_count = count();
+}
+uprobe:/lib/x86_64-linux-gnu/libc.so.6:free {
+  @free_count = count();
+}
+interval:s:5 {
+  printf("allocated: %lldMB  alloc_calls: %d  free_calls: %d\n",
+    @alloc/1048576, @alloc_count, @free_count);
+  clear(@alloc); clear(@alloc_count); clear(@free_count);
+}'
+```
+
+#### C. Trace GC pauses:
+```bash
+sudo bpftrace -p <PID> -e '
+usdt:/usr/bin/python3:python:gc__start { @t[tid] = nsecs; @gen[tid] = arg0; }
+usdt:/usr/bin/python3:python:gc__done {
+  printf("GC gen%d %lldms\n", @gen[tid], (nsecs-@t[tid])/1000000);
+}'
+```
+
+---
+
+### DEADLOCK / STUCK — Process Is Stuck
+
+#### A. Find where the process is sleeping:
+```bash
+sudo bpftrace -e '
+tracepoint:sched:sched_switch /args->prev_pid == $1/ {
+  @stack = ustack(perf, 10);
+  @kstack = kstack(perf, 10);
+}
+interval:s:1 {
+  printf("=== WHERE PROCESS SLEEPS ===\n");
+  print(@stack);
+  print(@kstack);
+}' <PID>
+```
+
+#### B. Confirm deadlock (lock never released):
+```bash
+sudo bpftrace -p <PID> -e '
+uprobe:/usr/bin/python3:PyThread_acquire_lock {
+  @lock[tid, arg0] = nsecs;
+}
+uprobe:/usr/bin/python3:PyThread_release_lock {
+  delete(@lock[tid, arg0]);
+}
+interval:s:5 {
+  printf("=== LOCKS HELD > 5s ===\n");
+  print(@lock);
+}'
+```
+
+---
+
+### Noise Elimination — Surgical Filters
+
+Every diagnostic query can be customized using target filters:
+
+```bash
+# Filter by function name
+/str(arg1) == "execute_query"/
+
+# Filter by file name
+/str(arg0) == "db.py"/
+
+# Filter by thread ID
+/tid == 140234/
+
+# Filter by slow execution threshold (e.g. > 50ms)
+/nsecs - @t[tid] > 50000000/
+```
+
