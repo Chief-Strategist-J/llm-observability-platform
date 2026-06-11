@@ -205,6 +205,77 @@ def test_irq_impact_service_runs(capsys):
     captured = capsys.readouterr()
     assert "IRQ" in captured.out or "IRQ impact tracer active" in captured.out
 
+def test_triage_service_runs(capsys):
+    from pytrace_features.triage.service import TriageService
+    service = TriageService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "triage" in captured.out or "Triage" in captured.out
+
+def test_cpu_bound_service_runs(capsys):
+    from pytrace_features.cpu_bound.service import CpuBoundService
+    service = CpuBoundService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "CPU" in captured.out or "slow" in captured.out or "diagnostic" in captured.out
+
+def test_io_bound_service_runs(capsys):
+    from pytrace_features.io_bound.service import IoBoundService
+    service = IoBoundService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "BLOCKED" in captured.out or "I/O bound" in captured.out
+
+def test_syscall_storm_service_runs(capsys):
+    from pytrace_features.syscall_storm.service import SyscallStormService
+    service = SyscallStormService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "storm" in captured.out or "SYSCALLS" in captured.out
+
+def test_deadlock_service_runs(capsys):
+    from pytrace_features.deadlock.service import DeadlockService
+    service = DeadlockService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "SLEEPS" in captured.out or "Deadlock" in captured.out
+
+def test_service_map_service_runs(capsys):
+    from pytrace_features.service_map.service import ServiceMapService
+    service = ServiceMapService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "SERVICE" in captured.out or "Service flow" in captured.out
+
+def test_ordered_log_service_runs(capsys):
+    from pytrace_features.ordered_log.service import OrderedLogService
+    service = OrderedLogService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "ENTER" in captured.out or "Ordered" in captured.out
+
+def test_intercept_service_runs(capsys):
+    from pytrace_features.intercept.service import InterceptService
+    service = InterceptService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "CALLED" in captured.out or "intercept" in captured.out
+
+def test_anomaly_trigger_service_runs(capsys):
+    from pytrace_features.anomaly_trigger.service import AnomalyTriggerService
+    service = AnomalyTriggerService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "EXCEPTION" in captured.out or "Anomaly trigger" in captured.out
+
+def test_correlation_service_runs(capsys):
+    from pytrace_features.correlation.service import CorrelationService
+    service = CorrelationService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "SVC" in captured.out or "Correlation" in captured.out
+
+
 
 
 

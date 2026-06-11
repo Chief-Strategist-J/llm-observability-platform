@@ -50,6 +50,17 @@ run_cmd pylow context-switches 1234
 run_cmd pylow kernel-blocked 1234
 run_cmd pylow tlb-shootdowns 1234
 run_cmd pylow irq-impact 1234
+run_cmd pylow triage 1234
+run_cmd pylow cpu-bound 1234
+run_cmd pylow io-bound 1234
+run_cmd pylow syscall-storm 1234
+run_cmd pylow deadlock 1234
+run_cmd pylow service-map 1234
+run_cmd pylow ordered-log 1234
+run_cmd pylow intercept 1234
+run_cmd pylow anomaly-trigger 1234
+run_cmd pylow correlation 1234
+
 
 
 echo ""

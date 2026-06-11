@@ -40,7 +40,18 @@ from pytrace_features.context_switches.service import ContextSwitchesService
 from pytrace_features.kernel_blocked.service import KernelBlockedService
 from pytrace_features.tlb_shootdowns.service import TlbShootdownsService
 from pytrace_features.irq_impact.service import IrqImpactService
+from pytrace_features.triage.service import TriageService
+from pytrace_features.cpu_bound.service import CpuBoundService
+from pytrace_features.io_bound.service import IoBoundService
+from pytrace_features.syscall_storm.service import SyscallStormService
+from pytrace_features.deadlock.service import DeadlockService
+from pytrace_features.service_map.service import ServiceMapService
+from pytrace_features.ordered_log.service import OrderedLogService
+from pytrace_features.intercept.service import InterceptService
+from pytrace_features.anomaly_trigger.service import AnomalyTriggerService
+from pytrace_features.correlation.service import CorrelationService
 from pytrace_infra.adapters.trace_collector_adapter import RealTraceCollectorAdapter
+
 
 
 def main() -> None:
@@ -191,6 +202,52 @@ def main() -> None:
     # IRQ Impact CLI
     irq_impact_parser = subparsers.add_parser("irq-impact", aliases=["irq"], help="Trace soft and hard IRQ CPU impact")
     irq_impact_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Triage CLI
+    triage_parser = subparsers.add_parser("triage", help="Run quick 10s triage profile")
+    triage_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # CPU Bound CLI
+    cpu_bound_parser = subparsers.add_parser("cpu-bound", help="Diagnose CPU bound hotspots")
+    cpu_bound_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # I/O Bound CLI
+    io_bound_parser = subparsers.add_parser("io-bound", help="Diagnose I/O bound blocked paths")
+    io_bound_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Syscall Storm CLI
+    syscall_storm_parser = subparsers.add_parser("syscall-storm", help="Diagnose high frequency syscall storms")
+    syscall_storm_parser.add_argument("pid", type=int, help="Target process PID")
+    syscall_storm_parser.add_argument("--id", type=int, default=None, help="Filter to specific syscall ID")
+
+    # Deadlock CLI
+    deadlock_parser = subparsers.add_parser("deadlock", help="Diagnose deadlocks and thread contention locks")
+    deadlock_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Service Map CLI
+    service_map_parser = subparsers.add_parser("service-map", help="Map inbound and outbound request flow")
+    service_map_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Ordered Log CLI
+    ordered_log_parser = subparsers.add_parser("ordered-log", help="Output ordered log of every function call")
+    ordered_log_parser.add_argument("pid", type=int, help="Target process PID")
+    ordered_log_parser.add_argument("--filter-internals", action="store_true", help="Strip CPython internal bootstrap and thread files")
+
+    # Intercept CLI
+    intercept_parser = subparsers.add_parser("intercept", help="Intercept payloads at boundary functions")
+    intercept_parser.add_argument("pid", type=int, help="Target process PID")
+    intercept_parser.add_argument("target_func", type=str, default="process_payment", nargs="?", help="Target function to watch")
+
+    # Anomaly Trigger CLI
+    anomaly_trigger_parser = subparsers.add_parser("anomaly-trigger", help="Monitor exception trigger anomalies and early returns")
+    anomaly_trigger_parser.add_argument("pid", type=int, help="Target process PID")
+    anomaly_trigger_parser.add_argument("target_func", type=str, default="validate_payment", nargs="?", help="Target function to watch")
+
+    # Correlation CLI
+    correlation_parser = subparsers.add_parser("correlation", help="Trace cross-service chronological correlation")
+    correlation_parser.add_argument("pid", type=int, help="Target process PID")
+    correlation_parser.add_argument("service_name", type=str, default="py-service", nargs="?", help="Name of this service")
+
 
 
     if argcomplete:
@@ -376,6 +433,57 @@ def main() -> None:
         service = IrqImpactService(collector)
         service.trace(args.pid)
         sys.exit(0)
+
+    elif cmd == "triage":
+        service = TriageService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "cpu-bound":
+        service = CpuBoundService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "io-bound":
+        service = IoBoundService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "syscall-storm":
+        service = SyscallStormService(collector)
+        service.trace(args.pid, args.id)
+        sys.exit(0)
+
+    elif cmd == "deadlock":
+        service = DeadlockService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "service-map":
+        service = ServiceMapService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "ordered-log":
+        service = OrderedLogService(collector)
+        service.trace(args.pid, args.filter_internals)
+        sys.exit(0)
+
+    elif cmd == "intercept":
+        service = InterceptService(collector)
+        service.trace(args.pid, args.target_func)
+        sys.exit(0)
+
+    elif cmd == "anomaly-trigger":
+        service = AnomalyTriggerService(collector)
+        service.trace(args.pid, args.target_func)
+        sys.exit(0)
+
+    elif cmd == "correlation":
+        service = CorrelationService(collector)
+        service.trace(args.pid, args.service_name)
+        sys.exit(0)
+
 
 
 if __name__ == "__main__":
