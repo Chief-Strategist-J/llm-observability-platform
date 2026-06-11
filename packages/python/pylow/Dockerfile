@@ -36,7 +36,7 @@ FROM python:3.10-slim AS runtime
 
 LABEL org.opencontainers.image.title="pylow-mcp"
 LABEL org.opencontainers.image.description="pylow MCP server — zero-instrumentation observability toolkit"
-LABEL org.opencontainers.image.version="0.1.12"
+LABEL org.opencontainers.image.version="0.1.14"
 
 # Observability tools available to service scripts (curl, jq, tcpdump, etc.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
