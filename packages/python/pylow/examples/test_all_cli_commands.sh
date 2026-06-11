@@ -70,6 +70,22 @@ run_cmd pylow jwt-decode 1234
 run_cmd pylow cert-check 1234
 run_cmd pylow rate-limit-test 1234
 run_cmd pylow sed-mask 1234
+run_cmd pylow jq-schema 1234
+run_cmd pylow jq-nulls 1234
+run_cmd pylow jq-null-paths 1234
+run_cmd pylow jq-locate-key 1234
+run_cmd pylow jq-key-path 1234
+run_cmd pylow jq-all-keys 1234
+run_cmd pylow jq-leaf-paths 1234
+run_cmd pylow jq-clean-nulls 1234
+run_cmd pylow jq-depth-map 1234
+run_cmd pylow jq-type-map 1234
+run_cmd pylow jq-find-value 1234
+run_cmd pylow jq-structural-diff 1234
+run_cmd pylow jq-extract-subtree 1234
+run_cmd pylow jq-summary 1234
+run_cmd pylow jq-validate-schema 1234
+
 
 
 

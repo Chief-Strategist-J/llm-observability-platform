@@ -60,7 +60,23 @@ from pytrace_features.jwt_decode.service import JwtDecodeService
 from pytrace_features.cert_check.service import CertCheckService
 from pytrace_features.rate_limit_test.service import RateLimitTestService
 from pytrace_features.sed_mask.service import SedMaskService
+from pytrace_features.jq_schema.service import JqSchemaService
+from pytrace_features.jq_nulls.service import JqNullsService
+from pytrace_features.jq_null_paths.service import JqNullPathsService
+from pytrace_features.jq_locate_key.service import JqLocateKeyService
+from pytrace_features.jq_key_path.service import JqKeyPathService
+from pytrace_features.jq_all_keys.service import JqAllKeysService
+from pytrace_features.jq_leaf_paths.service import JqLeafPathsService
+from pytrace_features.jq_clean_nulls.service import JqCleanNullsService
+from pytrace_features.jq_depth_map.service import JqDepthMapService
+from pytrace_features.jq_type_map.service import JqTypeMapService
+from pytrace_features.jq_find_value.service import JqFindValueService
+from pytrace_features.jq_structural_diff.service import JqStructuralDiffService
+from pytrace_features.jq_extract_subtree.service import JqExtractSubtreeService
+from pytrace_features.jq_summary.service import JqSummaryService
+from pytrace_features.jq_validate_schema.service import JqValidateSchemaService
 from pytrace_infra.adapters.trace_collector_adapter import RealTraceCollectorAdapter
+
 
 
 
@@ -303,6 +319,73 @@ def main() -> None:
     # Sed Mask CLI
     sed_mask_parser = subparsers.add_parser("sed-mask", help="Monitor stream for PII masking and character sanitizing filters")
     sed_mask_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Schema CLI
+    jq_schema_parser = subparsers.add_parser("jq-schema", help="Discover structure schema shapes from streams recursively")
+    jq_schema_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Nulls CLI
+    jq_nulls_parser = subparsers.add_parser("jq-nulls", help="List all null fields flat representation")
+    jq_nulls_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Null Paths CLI
+    jq_null_paths_parser = subparsers.add_parser("jq-null-paths", help="Discover all null fields with full dotted paths")
+    jq_null_paths_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Locate Key CLI
+    jq_locate_key_parser = subparsers.add_parser("jq-locate-key", help="Find all paths containing target key")
+    jq_locate_key_parser.add_argument("pid", type=int, help="Target process PID")
+    jq_locate_key_parser.add_argument("target_key", type=str, default="salesActivities", nargs="?", help="Key to locate path of")
+
+    # Jq Key Path CLI
+    jq_key_path_parser = subparsers.add_parser("jq-key-path", help="Find path and values of matching key name")
+    jq_key_path_parser.add_argument("pid", type=int, help="Target process PID")
+    jq_key_path_parser.add_argument("target_key", type=str, default="name", nargs="?", help="Key name to retrieve paths and values for")
+
+    # Jq All Keys CLI
+    jq_all_keys_parser = subparsers.add_parser("jq-all-keys", help="Discover entire document vocabulary keys unique list")
+    jq_all_keys_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Leaf Paths CLI
+    jq_leaf_paths_parser = subparsers.add_parser("jq-leaf-paths", help="List all leaf paths and values flat map")
+    jq_leaf_paths_parser.add_argument("pid", type=int, help="Target process PID")
+    jq_leaf_paths_parser.add_argument("--filter-val", type=str, default="", help="Filter leaf paths having matching term")
+
+    # Jq Clean Nulls CLI
+    jq_clean_nulls_parser = subparsers.add_parser("jq-clean-nulls", help="Clean stream to filter out nulls and noise")
+    jq_clean_nulls_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Depth Map CLI
+    jq_depth_map_parser = subparsers.add_parser("jq-depth-map", help="Calculate structure depth per key branch")
+    jq_depth_map_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Type Map CLI
+    jq_type_map_parser = subparsers.add_parser("jq-type-map", help="Map every leaf path to its resolved data type")
+    jq_type_map_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Find Value CLI
+    jq_find_value_parser = subparsers.add_parser("jq-find-value", help="Locate path where specific value occurs")
+    jq_find_value_parser.add_argument("pid", type=int, help="Target process PID")
+    jq_find_value_parser.add_argument("target_val", type=str, default="gravity_admin", nargs="?", help="Value to search for")
+
+    # Jq Structural Diff CLI
+    jq_structural_diff_parser = subparsers.add_parser("jq-structural-diff", help="Diagnose schema changes and structural diff")
+    jq_structural_diff_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Extract Subtree CLI
+    jq_extract_subtree_parser = subparsers.add_parser("jq-extract-subtree", help="Surgically extract subtree by key")
+    jq_extract_subtree_parser.add_argument("pid", type=int, help="Target process PID")
+    jq_extract_subtree_parser.add_argument("target_key", type=str, default="appModulesId", nargs="?", help="Subtree key to extract")
+
+    # Jq Summary CLI
+    jq_summary_parser = subparsers.add_parser("jq-summary", help="Analyze response statistics and summary parameters")
+    jq_summary_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # Jq Validate Schema CLI
+    jq_validate_schema_parser = subparsers.add_parser("jq-validate-schema", help="Verify documents shape against schema template")
+    jq_validate_schema_parser.add_argument("pid", type=int, help="Target process PID")
+    jq_validate_schema_parser.add_argument("schema_file", type=str, default="schema.json", nargs="?", help="Path to schema JSON file")
+
 
 
 
@@ -590,6 +673,82 @@ def main() -> None:
         service = SedMaskService(collector)
         service.trace(args.pid)
         sys.exit(0)
+
+    elif cmd == "jq-schema":
+        service = JqSchemaService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-nulls":
+        service = JqNullsService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-null-paths":
+        service = JqNullPathsService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-locate-key":
+        service = JqLocateKeyService(collector)
+        service.trace(args.pid, args.target_key)
+        sys.exit(0)
+
+    elif cmd == "jq-key-path":
+        service = JqKeyPathService(collector)
+        service.trace(args.pid, args.target_key)
+        sys.exit(0)
+
+    elif cmd == "jq-all-keys":
+        service = JqAllKeysService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-leaf-paths":
+        service = JqLeafPathsService(collector)
+        service.trace(args.pid, args.filter_val)
+        sys.exit(0)
+
+    elif cmd == "jq-clean-nulls":
+        service = JqCleanNullsService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-depth-map":
+        service = JqDepthMapService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-type-map":
+        service = JqTypeMapService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-find-value":
+        service = JqFindValueService(collector)
+        service.trace(args.pid, args.target_val)
+        sys.exit(0)
+
+    elif cmd == "jq-structural-diff":
+        service = JqStructuralDiffService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-extract-subtree":
+        service = JqExtractSubtreeService(collector)
+        service.trace(args.pid, args.target_key)
+        sys.exit(0)
+
+    elif cmd == "jq-summary":
+        service = JqSummaryService(collector)
+        service.trace(args.pid)
+        sys.exit(0)
+
+    elif cmd == "jq-validate-schema":
+        service = JqValidateSchemaService(collector)
+        service.trace(args.pid, args.schema_file)
+        sys.exit(0)
+
 
 
 

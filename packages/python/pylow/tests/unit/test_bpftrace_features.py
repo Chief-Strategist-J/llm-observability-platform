@@ -345,6 +345,112 @@ def test_sed_mask_service_runs(capsys):
     captured = capsys.readouterr()
     assert "Masked" in captured.out or "sed-mask" in captured.out
 
+def test_jq_schema_service_runs(capsys):
+    from pytrace_features.jq_schema.service import JqSchemaService
+    service = JqSchemaService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Schema" in captured.out or "jq-schema" in captured.out
+
+def test_jq_nulls_service_runs(capsys):
+    from pytrace_features.jq_nulls.service import JqNullsService
+    service = JqNullsService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Null" in captured.out or "jq-nulls" in captured.out
+
+def test_jq_null_paths_service_runs(capsys):
+    from pytrace_features.jq_null_paths.service import JqNullPathsService
+    service = JqNullPathsService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Null" in captured.out or "jq-null-paths" in captured.out
+
+def test_jq_locate_key_service_runs(capsys):
+    from pytrace_features.jq_locate_key.service import JqLocateKeyService
+    service = JqLocateKeyService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Path" in captured.out or "jq-locate-key" in captured.out
+
+def test_jq_key_path_service_runs(capsys):
+    from pytrace_features.jq_key_path.service import JqKeyPathService
+    service = JqKeyPathService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Path" in captured.out or "jq-key-path" in captured.out
+
+def test_jq_all_keys_service_runs(capsys):
+    from pytrace_features.jq_all_keys.service import JqAllKeysService
+    service = JqAllKeysService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Unique" in captured.out or "jq-all-keys" in captured.out
+
+def test_jq_leaf_paths_service_runs(capsys):
+    from pytrace_features.jq_leaf_paths.service import JqLeafPathsService
+    service = JqLeafPathsService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Leaf" in captured.out or "jq-leaf-paths" in captured.out
+
+def test_jq_clean_nulls_service_runs(capsys):
+    from pytrace_features.jq_clean_nulls.service import JqCleanNullsService
+    service = JqCleanNullsService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Cleaned" in captured.out or "jq-clean-nulls" in captured.out
+
+def test_jq_depth_map_service_runs(capsys):
+    from pytrace_features.jq_depth_map.service import JqDepthMapService
+    service = JqDepthMapService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Depth" in captured.out or "jq-depth-map" in captured.out
+
+def test_jq_type_map_service_runs(capsys):
+    from pytrace_features.jq_type_map.service import JqTypeMapService
+    service = JqTypeMapService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Type" in captured.out or "jq-type-map" in captured.out
+
+def test_jq_find_value_service_runs(capsys):
+    from pytrace_features.jq_find_value.service import JqFindValueService
+    service = JqFindValueService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Value" in captured.out or "jq-find-value" in captured.out
+
+def test_jq_structural_diff_service_runs(capsys):
+    from pytrace_features.jq_structural_diff.service import JqStructuralDiffService
+    service = JqStructuralDiffService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Diff" in captured.out or "jq-structural-diff" in captured.out
+
+def test_jq_extract_subtree_service_runs(capsys):
+    from pytrace_features.jq_extract_subtree.service import JqExtractSubtreeService
+    service = JqExtractSubtreeService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Subtree" in captured.out or "jq-extract-subtree" in captured.out
+
+def test_jq_summary_service_runs(capsys):
+    from pytrace_features.jq_summary.service import JqSummaryService
+    service = JqSummaryService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Summary" in captured.out or "jq-summary" in captured.out
+
+def test_jq_validate_schema_service_runs(capsys):
+    from pytrace_features.jq_validate_schema.service import JqValidateSchemaService
+    service = JqValidateSchemaService()
+    service.trace(1234)
+    captured = capsys.readouterr()
+    assert "Validation" in captured.out or "jq-validate-schema" in captured.out
+
+
 
 
 
