@@ -52,13 +52,24 @@ Preference Alignment, Reinforcement Learning, and Reward Modeling}}
 \section{Reinforcement Learning from Human Feedback (RLHF)}
 
 \subsection{Mathematical Foundation}
-RLHF has two phases. First, a Reward Model (RM) $r_\phi$ is trained on human-ranked pairs $(y_w \succ y_l \mid x)$ with the Bradley-Terry objective:
+RLHF aligns language models with human preferences in a two-stage process. 
+
+First, a Reward Model (RM) $r_\phi(x, y)$ is trained on a dataset of human comparisons $\mathcal{D} = \{(x, y_w, y_l)\}$, where $y_w$ is preferred to $y_l$ given prompt $x$. The preference is modeled using the Bradley-Terry preference model:
 \begin{equation}
-  \mathcal{L}_{\text{RM}} = -\mathbb{E}_{(x,y_w,y_l)}\bigl[\log \sigma(r_\phi(x,y_w) - r_\phi(x,y_l))\bigr]
+  P(y_w \succ y_l \mid x) = \sigma\bigl( r_\phi(x, y_w) - r_\phi(x, y_l) \bigr) = \frac{1}{1 + \exp\bigl( - (r_\phi(x, y_w) - r_\phi(x, y_l)) \bigr)}
 \end{equation}
-Then, the policy $\pi_\theta$ is optimised via PPO to maximise expected reward while staying close to the reference policy $\pi_{\text{ref}}$:
+The RM is trained by minimizing the negative log-likelihood of this pairwise choice:
 \begin{equation}
-  \mathcal{J}_{\text{RLHF}} = \mathbb{E}_{x,y \sim \pi_\theta}\bigl[r_\phi(x,y)\bigr] - \beta\,\mathbb{KL}\bigl[\pi_\theta(\cdot\mid x) \| \pi_{\text{ref}}(\cdot\mid x)\bigr]
+  \mathcal{L}_{\text{RM}}(\phi) = -\mathbb{E}_{(x, y_w, y_l) \sim \mathcal{D}} \left[ \log \sigma \bigl( r_\phi(x, y_w) - r_\phi(x, y_l) \bigr) \right]
+\end{equation}
+
+Second, the SFT policy parameters $\theta$ are fine-tuned to maximize the expected reward under the learned RM, while regularized by a Kullback-Leibler (KL) divergence constraint to the reference policy $\pi_{\text{ref}}$ (preventing policy collapse and reward hacking):
+\begin{equation}
+  \mathcal{J}_{\text{RLHF}}(\theta) = \mathbb{E}_{x \sim \mathcal{D}_x, y \sim \pi_\theta(\cdot \mid x)} \left[ r_\phi(x, y) - \beta D_{\text{KL}}\bigl( \pi_\theta(y \mid x) \parallel \pi_{\text{ref}}(y \mid x) \bigr) \right]
+\end{equation}
+where $\beta$ is a regularizing coefficient, and the KL term at each token generation step is factorized as:
+\begin{equation}
+  D_{\text{KL}}\bigl( \pi_\theta(y \mid x) \parallel \pi_{\text{ref}}(y \mid x) \bigr) = \sum_{t=1}^T \log \frac{\pi_\theta(y_t \mid x, y_{<t})}{\pi_{\text{ref}}(y_t \mid x, y_{<t})}
 \end{equation}
 
 \subsection{Architecture Flow Diagram}
@@ -109,11 +120,26 @@ Training complexity & Single loop & Two-phase (RM + PPO)\\\bottomrule
 \section{Direct Preference Optimization (DPO)}
 
 \subsection{Mathematical Foundation}
-DPO reformulates RLHF into a single supervised objective, bypassing the explicit reward model. Starting from the closed-form optimal policy under KL constraint, the loss becomes:
+DPO eliminates the need for training an explicit reward model or running reinforcement learning. Starting from the KL-constrained RL objective:
 \begin{equation}
-  \mathcal{L}_{\text{DPO}} = -\mathbb{E}\!\left[\log\sigma\!\left(\beta\log\frac{\pi_\theta(y_w|x)}{\pi_{\text{ref}}(y_w|x)} - \beta\log\frac{\pi_\theta(y_l|x)}{\pi_{\text{ref}}(y_l|x)}\right)\right]
+  \max_{\pi} \mathbb{E}_{x, y \sim \pi} \left[ r(x, y) \right] - \beta D_{\text{KL}}(\pi(y \mid x) \parallel \pi_{\text{ref}}(y \mid x))
 \end{equation}
-The implicit reward is $r(x,y) = \beta\log(\pi_\theta(y|x)/\pi_{\text{ref}}(y|x))$. No sampling loop or value network is needed.
+we formulate the unconstrained objective using a partition function $Z(x)$:
+\begin{equation}
+  \max_{\pi} \mathbb{E}_{x} \left[ \mathbb{E}_{y \sim \pi} \left[ r(x, y) - \beta \log \frac{\pi(y \mid x)}{\pi_{\text{ref}}(y \mid x)} \right] \right]
+\end{equation}
+The closed-form optimal policy solution $\pi^*(y \mid x)$ under this objective is:
+\begin{equation}
+  \pi^*(y \mid x) = \frac{1}{Z(x)} \pi_{\text{ref}}(y \mid x) \exp\left( \frac{r(x, y)}{\beta} \right), \quad Z(x) = \sum_{y} \pi_{\text{ref}}(y \mid x) \exp\left( \frac{r(x, y)}{\beta} \right)
+\end{equation}
+By rearranging this relation, we express the implicit reward function $r(x, y)$ in terms of the policy likelihoods:
+\begin{equation}
+  r(x, y) = \beta \log \frac{\pi^*(y \mid x)}{\pi_{\text{ref}}(y \mid x)} + \beta \log Z(x)
+\end{equation}
+Substituting this expression into the Bradley-Terry preference probability $P(y_w \succ y_l \mid x) = \sigma(r(x, y_w) - r(x, y_l))$, the partition function $Z(x)$ cancels out, resulting in the DPO loss function:
+\begin{equation}
+  \mathcal{L}_{\text{DPO}}(\theta; \pi_{\text{ref}}) = -\mathbb{E}_{(x, y_w, y_l) \sim \mathcal{D}} \left[ \log \sigma \left( \beta \log \frac{\pi_\theta(y_w \mid x)}{\pi_{\text{ref}}(y_w \mid x)} - \beta \log \frac{\pi_\theta(y_l \mid x)}{\pi_{\text{ref}}(y_l \mid x)} \right) \right]
+\end{equation}
 
 \subsection{Architecture Flow Diagram}
 
@@ -155,14 +181,15 @@ Compute cost & High (2-phase) & Lower (single SFT-like pass)\\\bottomrule
 \section{Identity Preference Optimization (IPO)}
 
 \subsection{Mathematical Foundation}
-IPO fixes a theoretical limitation of DPO: when the optimal policy places all mass on $y_w$, the DPO log-ratio diverges. IPO introduces a bounded objective by replacing the log-sigmoid with a squared-error hinge on the preference gap $h$:
+IPO relaxes the Bradley-Terry preference assumption of DPO to prevent overfitting and improve generalization on preference pairs. By applying identity mapping directly to the pairwise probability, the IPO objective minimizes the mean squared error between the policy log-ratio difference and a target preference margin:
 \begin{equation}
-  h(x,y_w,y_l) = \log\frac{\pi_\theta(y_w|x)}{\pi_{\text{ref}}(y_w|x)} - \log\frac{\pi_\theta(y_l|x)}{\pi_{\text{ref}}(y_l|x)}
+  \mathcal{L}_{\text{IPO}}(\theta) = -\mathbb{E}_{(x, y_w, y_l) \sim \mathcal{D}} \left[ \log \sigma \left( \beta \log \frac{\pi_\theta(y_w \mid x)}{\pi_{\text{ref}}(y_w \mid x)} - \beta \log \frac{\pi_\theta(y_l \mid x)}{\pi_{\text{ref}}(y_l \mid x)} \right) \right] + \text{regularization}
 \end{equation}
+Formally, IPO minimizes the quadratic loss of the difference of log-ratios relative to a regularizing parameter $\tau$:
 \begin{equation}
-  \mathcal{L}_{\text{IPO}} = \mathbb{E}\!\left[\left(h(x,y_w,y_l) - \frac{1}{2\beta}\right)^2\right]
+  \mathcal{L}_{\text{IPO}}(\theta) = \mathbb{E}_{(x, y_w, y_l) \sim \mathcal{D}} \left[ \left( \log \frac{\pi_\theta(y_w \mid x)}{\pi_{\text{ref}}(y_w \mid x)} - \log \frac{\pi_\theta(y_l \mid x)}{\pi_{\text{ref}}(y_l \mid x)} - \frac{\tau}{2 \beta} \right)^2 \right]
 \end{equation}
-The target $\frac{1}{2\beta}$ acts as a regulariser preventing the preference gap from growing unboundedly.
+This bounds the likelihood shift of both preferred and dispreferred sequences, preventing the model from outputting degenerate probabilities for preferred responses.
 
 \subsection{Architecture Flow Diagram}
 
@@ -252,14 +279,20 @@ Data format & Prompt + completion & Triplet $(x, y_w, y_l)$\\\bottomrule
 \section{Kahneman-Tversky Optimization (KTO)}
 
 \subsection{Mathematical Foundation}
-KTO aligns LLMs by maximising a utility function inspired by Kahneman-Tversky prospect theory. It operates on \emph{individual} samples labelled good ($z=1$) or bad ($z=0$), not pairwise comparisons:
+KTO aligns language models using binary preference labels (e.g., correct/incorrect, helpful/harmful) instead of comparative pairs. This objective mathematically models human utility based on Kahneman and Tversky's prospect theory, which describes how humans weigh losses and gains asymmetricaly.
+Let $y$ be a response to prompt $x$, and $r \in \{0, 1\}$ be its correctness label. The utility of the policy is defined as:
 \begin{equation}
-  v(y, z) = \begin{cases} w_+(r(x,y) - r_{\text{KL}}) & z = 1 \\ w_-(r(x,y) - r_{\text{KL}}) & z = 0 \end{cases}
+  \mathcal{L}_{\text{KTO}}(\pi_\theta; \pi_{\text{ref}}) = -\mathbb{E}_{x, y} \left[ w(y) \cdot v\left( \log \frac{\pi_\theta(y \mid x)}{\pi_{\text{ref}}(y \mid x)} - z(x) \right) \right]
 \end{equation}
+where $v(u)$ is the value function mapping gains and losses:
 \begin{equation}
-  \mathcal{L}_{\text{KTO}} = \mathbb{E}\bigl[1 - v(y, z)\bigr]
+  v(u) = \begin{cases} u & \text{if } u > 0 \\ \lambda u & \text{if } u \le 0 \end{cases}
 \end{equation}
-where $r_{\text{KL}} = \beta\,\text{KL}[\pi_\theta \| \pi_{\text{ref}}]$ is a KL-penalty baseline. The asymmetric weights $w_+ \neq w_-$ model loss-aversion.
+where $\lambda > 1$ represents loss aversion. The term $z(x)$ is a running reference point representing the expected log-ratio of the policy relative to the reference:
+\begin{equation}
+  z(x) = \mathbb{E}_{y' \sim \pi_{\text{ref}}(\cdot \mid x)} \left[ \log \frac{\pi_\theta(y' \mid x)}{\pi_{\text{ref}}(y' \mid x)} \right]
+\end{equation}
+and $w(y)$ is a weighting factor balancing positive and negative feedback frequencies.
 
 \subsection{Architecture Flow Diagram}
 
@@ -303,14 +336,16 @@ Applicable at scale & Full pairs required & Works with any ratio\\\bottomrule
 \section{Simple Preference Optimization (SimPO)}
 
 \subsection{Mathematical Foundation}
-SimPO eliminates the reference model by using average log-probability as an implicit reward and adding a target reward margin $\gamma$:
+SimPO improves upon DPO by removing the reference policy $\pi_{\text{ref}}$ during training, reducing memory usage, and introducing a length-normalized reward with a target margin $\gamma$.
+The SimPO implicit reward for a sequence $y$ given $x$ is defined as the average log-likelihood:
 \begin{equation}
-  r_{\text{SimPO}}(x,y) = \frac{\beta}{|y|}\log\pi_\theta(y \mid x)
+  r_{\text{SimPO}}(x, y) = \frac{\beta}{|y|} \log \pi_\theta(y \mid x)
 \end{equation}
+where $|y|$ is the sequence length in tokens. The SimPO pairwise loss function is formulated as:
 \begin{equation}
-  \mathcal{L}_{\text{SimPO}} = -\mathbb{E}\!\left[\log\sigma\!\left(r_{\text{SimPO}}(x,y_w) - r_{\text{SimPO}}(x,y_l) - \gamma\right)\right]
+  \mathcal{L}_{\text{SimPO}}(\theta) = -\mathbb{E}_{(x, y_w, y_l) \sim \mathcal{D}} \left[ \log \sigma \left( \frac{\beta}{|y_w|} \log \pi_\theta(y_w \mid x) - \frac{\beta}{|y_l|} \log \pi_\theta(y_l \mid x) - \gamma \right) \right]
 \end{equation}
-Length normalisation prevents the model from favouring short responses, and $\gamma > 0$ enforces a minimum gap between chosen and rejected rewards.
+where $\gamma > 0$ is a target margin that forces the average likelihood of the winning response to exceed the losing response by a strict buffer, preventing over-optimization of short sequences.
 
 \subsection{Architecture Flow Diagram}
 
@@ -604,14 +639,18 @@ Helpfulness trade-off & N/A & Explicitly balanced\\\bottomrule
 \section{Proximal Policy Optimization (PPO)}
 
 \subsection{Mathematical Foundation}
-PPO is the core RL algorithm used in RLHF. It clips the probability ratio to prevent large policy updates:
+PPO optimizes policy parameters $\theta$ using a clipped objective function to prevent destabilizing parameter updates. Let $\rho_t(\theta) = \frac{\pi_\theta(a_t \mid s_t)}{\pi_{\theta_{\text{old}}}(a_t \mid s_t)}$ be the action probability ratio. The surrogate objective maximizes:
 \begin{equation}
-  \rho_t = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{\text{old}}}(a_t|s_t)},\quad \hat{A}_t = r_t + \gamma V(s_{t+1}) - V(s_t)
+  \mathcal{L}^{\text{CLIP}}(\theta) = \hat{\mathbb{E}}_t \left[ \min\left( \rho_t(\theta) \hat{A}_t, \, \text{clip}(\rho_t(\theta), 1-\epsilon, 1+\epsilon) \hat{A}_t \right) \right]
 \end{equation}
+where $\epsilon$ is a clipping hyperparameter (typically $0.1$ or $0.2$), and $\hat{A}_t$ is the advantage estimated using Generalized Advantage Estimation (GAE):
 \begin{equation}
-  \mathcal{L}_{\text{PPO}} = -\mathbb{E}_t\bigl[\min\!\bigl(\rho_t \hat{A}_t,\; \text{clip}(\rho_t, 1-\epsilon, 1+\epsilon)\hat{A}_t\bigr)\bigr]
+  \hat{A}_t = \sum_{l=0}^\infty (\gamma \lambda)^l \delta_{t+l}^V, \quad \delta_t^V = r_t + \gamma V_\phi(s_{t+1}) - V_\phi(s_t)
 \end{equation}
-A value network $V_\phi$ is trained simultaneously. For LLMs, tokens are actions and the RM score at end-of-sequence provides the sparse reward.
+where $V_\phi$ is the value network parameters, $\gamma$ is the discount factor, and $\lambda$ controls bias-variance trade-offs. The value function loss is clipped to match policy updates:
+\begin{equation}
+  \mathcal{L}^{\text{VF}}(\phi) = \hat{\mathbb{E}}_t \left[ \max\left( (V_\phi(s_t) - V_t^{\text{target}})^2, \, (V_{\phi_{\text{old}}}(s_t) + \text{clip}(V_\phi(s_t) - V_{\phi_{\text{old}}}(s_t), -c, c) - V_t^{\text{target}})^2 \right) \right]
+\end{equation}
 
 \subsection{Architecture Flow Diagram}
 
@@ -656,12 +695,19 @@ Reward signal & Sparse (end of seq) & Discounted returns\\\bottomrule
 \section{Group Relative Policy Optimization (GRPO)}
 
 \subsection{Mathematical Foundation}
-GRPO removes the critic (value network) by using group-level reward statistics. For a prompt $x$, it samples $G$ outputs $\{y^{(1)},\ldots,y^{(G)}\}$ and computes relative advantages within the group:
+GRPO optimizes policies by calculating rewards relative to a group of sampled outputs, eliminating the need for a separate critic model.
+For a given prompt $x$, the policy generates a group of $G$ candidate completions $\{y_1, y_2, \dots, y_G\}$. Each candidate $y_i$ is evaluated by a reward function (or judge) yielding score $r_i$.
+The relative advantage $A_i$ of each candidate is computed as:
 \begin{equation}
-  \hat{A}^{(i)} = \frac{r^{(i)} - \text{mean}(r^{(1:G)})}{\text{std}(r^{(1:G)})}
+  A_i = \frac{r_i - \text{mean}(r)}{\text{std}(r)} = \frac{r_i - \frac{1}{G}\sum_j r_j}{\sqrt{\frac{1}{G}\sum_j (r_j - \bar{r})^2 + \epsilon}}
 \end{equation}
+The policy objective maximizes the clipped advantage with a KL penalty directly evaluated on the generated tokens:
 \begin{equation}
-  \mathcal{L}_{\text{GRPO}} = -\frac{1}{G}\sum_{i=1}^G \min\!\bigl(\rho^{(i)}\hat{A}^{(i)},\; \text{clip}(\rho^{(i)},1\pm\epsilon)\hat{A}^{(i)}\bigr) + \beta\,\text{KL}[\pi_\theta\|\pi_{\text{ref}}]
+  \mathcal{L}_{\text{GRPO}}(\theta) = -\frac{1}{G} \sum_{i=1}^G \left[ \min\left( \rho_i(\theta) A_i, \, \text{clip}(\rho_i(\theta), 1-\epsilon, 1+\epsilon) A_i \right) - \beta D_{\text{KL}}\left( \pi_\theta(y_i \mid x) \parallel \pi_{\text{ref}}(y_i \mid x) \right) \right]
+\end{equation}
+where the probability ratio $\rho_i(\theta)$ is defined as:
+\begin{equation}
+  \rho_i(\theta) = \frac{\pi_\theta(y_i \mid x)}{\pi_{\theta_{\text{old}}}(y_i \mid x)}
 \end{equation}
 
 \subsection{Architecture Flow Diagram}
@@ -1358,5 +1404,6 @@ Use case & RM scoring & Self-refinement / RLHF\\\bottomrule
 \end{tabular}
 \caption{State properties before and after Critic Model training.}
 \end{table}
+
 
 \end{document}

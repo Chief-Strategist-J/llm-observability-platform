@@ -124,66 +124,6 @@ requires\_grad & True (all params) & True (all params)\\\bottomrule
 \caption{State properties before and after pretraining.}
 \end{table}
 
-\subsection{Python Implementation}
-\begin{lstlisting}[language=Python]
-import torch
-import torch.nn as nn
-import math
-
-class CausalSelfAttention(nn.Module):
-    def __init__(self, d_model, num_heads):
-        super().__init__()
-        assert d_model % num_heads == 0
-        self.d_model = d_model
-        self.num_heads = num_heads
-        self.head_dim = d_model // num_heads
-        
-        self.q_proj = nn.Linear(d_model, d_model)
-        self.k_proj = nn.Linear(d_model, d_model)
-        self.v_proj = nn.Linear(d_model, d_model)
-        self.out_proj = nn.Linear(d_model, d_model)
-
-    def forward(self, x):
-        # x shape: (batch_size, seq_len, d_model)
-        b, t, c = x.size()
-        
-        q = self.q_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
-        k = self.k_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
-        v = self.v_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
-        
-        # Compute scaled query-key dot product attention
-        scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.head_dim)
-        
-        # Apply causal attention mask
-        mask = torch.triu(torch.ones(t, t, device=x.device), diagonal=1) * -1e9
-        scores = scores + mask.view(1, 1, t, t)
-        
-        attn_weights = torch.softmax(scores, dim=-1)
-        out = torch.matmul(attn_weights, v) # (b, num_heads, t, head_dim)
-        out = out.transpose(1, 2).contiguous().view(b, t, c)
-        return self.out_proj(out)
-
-class PretrainingCausalLM(nn.Module):
-    def __init__(self, vocab_size, d_model, num_heads):
-        super().__init__()
-        self.attn = CausalSelfAttention(d_model, num_heads)
-        self.vocab_proj = nn.Linear(d_model, vocab_size)
-        self.loss_fn = nn.CrossEntropyLoss(reduction='mean')
-
-    def forward(self, x, targets=None):
-        # x: hidden states or token embeddings, shape: (batch_size, seq_len, d_model)
-        # targets: target token ids, shape: (batch_size, seq_len)
-        h = self.attn(x)
-        logits = self.vocab_proj(h)
-        
-        loss = None
-        if targets is not None:
-            shift_logits = logits[..., :-1, :].contiguous()
-            shift_targets = targets[..., 1:].contiguous()
-            loss = self.loss_fn(shift_logits.view(-1, shift_logits.size(-1)), shift_targets.view(-1))
-            
-        return logits, loss
-\end{lstlisting}
 \newpage
 %% ------------------------------------------------------------
 \section{Continued Pretraining (CPT)}
@@ -257,66 +197,6 @@ Perplexity on new domain & High & Significantly reduced\\\bottomrule
 \caption{State properties before and after continued pretraining.}
 \end{table}
 
-\subsection{Python Implementation}
-\begin{lstlisting}[language=Python]
-import torch
-import torch.nn as nn
-import math
-
-class CausalSelfAttention(nn.Module):
-    def __init__(self, d_model, num_heads):
-        super().__init__()
-        assert d_model % num_heads == 0
-        self.d_model = d_model
-        self.num_heads = num_heads
-        self.head_dim = d_model // num_heads
-        
-        self.q_proj = nn.Linear(d_model, d_model)
-        self.k_proj = nn.Linear(d_model, d_model)
-        self.v_proj = nn.Linear(d_model, d_model)
-        self.out_proj = nn.Linear(d_model, d_model)
-
-    def forward(self, x):
-        # x shape: (batch_size, seq_len, d_model)
-        b, t, c = x.size()
-        
-        q = self.q_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
-        k = self.k_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
-        v = self.v_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
-        
-        # Compute scaled query-key dot product attention
-        scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.head_dim)
-        
-        # Apply causal attention mask
-        mask = torch.triu(torch.ones(t, t, device=x.device), diagonal=1) * -1e9
-        scores = scores + mask.view(1, 1, t, t)
-        
-        attn_weights = torch.softmax(scores, dim=-1)
-        out = torch.matmul(attn_weights, v) # (b, num_heads, t, head_dim)
-        out = out.transpose(1, 2).contiguous().view(b, t, c)
-        return self.out_proj(out)
-
-class PretrainingCausalLM(nn.Module):
-    def __init__(self, vocab_size, d_model, num_heads):
-        super().__init__()
-        self.attn = CausalSelfAttention(d_model, num_heads)
-        self.vocab_proj = nn.Linear(d_model, vocab_size)
-        self.loss_fn = nn.CrossEntropyLoss(reduction='mean')
-
-    def forward(self, x, targets=None):
-        # x: hidden states or token embeddings, shape: (batch_size, seq_len, d_model)
-        # targets: target token ids, shape: (batch_size, seq_len)
-        h = self.attn(x)
-        logits = self.vocab_proj(h)
-        
-        loss = None
-        if targets is not None:
-            shift_logits = logits[..., :-1, :].contiguous()
-            shift_targets = targets[..., 1:].contiguous()
-            loss = self.loss_fn(shift_logits.view(-1, shift_logits.size(-1)), shift_targets.view(-1))
-            
-        return logits, loss
-\end{lstlisting}
 \newpage
 %% ------------------------------------------------------------
 \section{Domain Adaptive Pretraining (DAPT)}
@@ -389,66 +269,6 @@ Training data type & General web text & Domain-specific unlabelled\\\bottomrule
 \caption{State properties before and after domain adaptive pretraining.}
 \end{table}
 
-\subsection{Python Implementation}
-\begin{lstlisting}[language=Python]
-import torch
-import torch.nn as nn
-import math
-
-class CausalSelfAttention(nn.Module):
-    def __init__(self, d_model, num_heads):
-        super().__init__()
-        assert d_model % num_heads == 0
-        self.d_model = d_model
-        self.num_heads = num_heads
-        self.head_dim = d_model // num_heads
-        
-        self.q_proj = nn.Linear(d_model, d_model)
-        self.k_proj = nn.Linear(d_model, d_model)
-        self.v_proj = nn.Linear(d_model, d_model)
-        self.out_proj = nn.Linear(d_model, d_model)
-
-    def forward(self, x):
-        # x shape: (batch_size, seq_len, d_model)
-        b, t, c = x.size()
-        
-        q = self.q_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
-        k = self.k_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
-        v = self.v_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
-        
-        # Compute scaled query-key dot product attention
-        scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.head_dim)
-        
-        # Apply causal attention mask
-        mask = torch.triu(torch.ones(t, t, device=x.device), diagonal=1) * -1e9
-        scores = scores + mask.view(1, 1, t, t)
-        
-        attn_weights = torch.softmax(scores, dim=-1)
-        out = torch.matmul(attn_weights, v) # (b, num_heads, t, head_dim)
-        out = out.transpose(1, 2).contiguous().view(b, t, c)
-        return self.out_proj(out)
-
-class PretrainingCausalLM(nn.Module):
-    def __init__(self, vocab_size, d_model, num_heads):
-        super().__init__()
-        self.attn = CausalSelfAttention(d_model, num_heads)
-        self.vocab_proj = nn.Linear(d_model, vocab_size)
-        self.loss_fn = nn.CrossEntropyLoss(reduction='mean')
-
-    def forward(self, x, targets=None):
-        # x: hidden states or token embeddings, shape: (batch_size, seq_len, d_model)
-        # targets: target token ids, shape: (batch_size, seq_len)
-        h = self.attn(x)
-        logits = self.vocab_proj(h)
-        
-        loss = None
-        if targets is not None:
-            shift_logits = logits[..., :-1, :].contiguous()
-            shift_targets = targets[..., 1:].contiguous()
-            loss = self.loss_fn(shift_logits.view(-1, shift_logits.size(-1)), shift_targets.view(-1))
-            
-        return logits, loss
-\end{lstlisting}
 \newpage
 %% ------------------------------------------------------------
 \section{Task Adaptive Pretraining (TAPT)}
@@ -520,66 +340,6 @@ Transfer to other tasks & Good & Reduced (narrow focus)\\\bottomrule
 \caption{State properties before and after task adaptive pretraining.}
 \end{table}
 
-\subsection{Python Implementation}
-\begin{lstlisting}[language=Python]
-import torch
-import torch.nn as nn
-import math
-
-class CausalSelfAttention(nn.Module):
-    def __init__(self, d_model, num_heads):
-        super().__init__()
-        assert d_model % num_heads == 0
-        self.d_model = d_model
-        self.num_heads = num_heads
-        self.head_dim = d_model // num_heads
-        
-        self.q_proj = nn.Linear(d_model, d_model)
-        self.k_proj = nn.Linear(d_model, d_model)
-        self.v_proj = nn.Linear(d_model, d_model)
-        self.out_proj = nn.Linear(d_model, d_model)
-
-    def forward(self, x):
-        # x shape: (batch_size, seq_len, d_model)
-        b, t, c = x.size()
-        
-        q = self.q_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
-        k = self.k_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
-        v = self.v_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
-        
-        # Compute scaled query-key dot product attention
-        scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.head_dim)
-        
-        # Apply causal attention mask
-        mask = torch.triu(torch.ones(t, t, device=x.device), diagonal=1) * -1e9
-        scores = scores + mask.view(1, 1, t, t)
-        
-        attn_weights = torch.softmax(scores, dim=-1)
-        out = torch.matmul(attn_weights, v) # (b, num_heads, t, head_dim)
-        out = out.transpose(1, 2).contiguous().view(b, t, c)
-        return self.out_proj(out)
-
-class PretrainingCausalLM(nn.Module):
-    def __init__(self, vocab_size, d_model, num_heads):
-        super().__init__()
-        self.attn = CausalSelfAttention(d_model, num_heads)
-        self.vocab_proj = nn.Linear(d_model, vocab_size)
-        self.loss_fn = nn.CrossEntropyLoss(reduction='mean')
-
-    def forward(self, x, targets=None):
-        # x: hidden states or token embeddings, shape: (batch_size, seq_len, d_model)
-        # targets: target token ids, shape: (batch_size, seq_len)
-        h = self.attn(x)
-        logits = self.vocab_proj(h)
-        
-        loss = None
-        if targets is not None:
-            shift_logits = logits[..., :-1, :].contiguous()
-            shift_targets = targets[..., 1:].contiguous()
-            loss = self.loss_fn(shift_logits.view(-1, shift_logits.size(-1)), shift_targets.view(-1))
-            
-        return logits, loss
-\end{lstlisting}
 \newpage
 %% ============================================================
 \part{Supervised Fine-Tuning Methods}
@@ -638,50 +398,6 @@ Output quality & Random completion & Task-aligned responses\\\bottomrule
 \caption{State properties before and after supervised fine-tuning.}
 \end{table}
 
-\subsection{Python Implementation}
-\begin{lstlisting}[language=Python]
-import torch
-import torch.nn as nn
-
-class SFTDatasetCollator:
-    def __init__(self, tokenizer, ignore_index=-100):
-        self.tokenizer = tokenizer
-        self.ignore_index = ignore_index
-
-    def __call__(self, batch):
-        # batch: list of dicts with 'prompt' and 'response' strings
-        input_ids_list = []
-        labels_list = []
-        
-        for item in batch:
-            prompt_tokens = self.tokenizer.encode(item['prompt'])
-            res_tokens = self.tokenizer.encode(item['response'])
-            
-            # Concatenate prompt + response
-            input_ids = prompt_tokens + res_tokens
-            # Mask the prompt tokens in the label
-            labels = [self.ignore_index] * len(prompt_tokens) + res_tokens
-            
-            input_ids_list.append(torch.tensor(input_ids))
-            labels_list.append(torch.tensor(labels))
-            
-        # Pad sequences to max length in batch
-        padded_inputs = nn.utils.rnn.pad_sequence(input_ids_list, batch_first=True, padding_value=self.tokenizer.pad_token_id)
-        padded_labels = nn.utils.rnn.pad_sequence(labels_list, batch_first=True, padding_value=self.ignore_index)
-        
-        return padded_inputs, padded_labels
-
-class SFTModuleLoss(nn.Module):
-    def __init__(self, ignore_index=-100):
-        super().__init__()
-        self.ce = nn.CrossEntropyLoss(ignore_index=ignore_index)
-
-    def forward(self, logits, targets):
-        # Shifting logits and targets for next-token prediction
-        shift_logits = logits[..., :-1, :].contiguous()
-        shift_targets = targets[..., 1:].contiguous()
-        return self.ce(shift_logits.view(-1, shift_logits.size(-1)), shift_targets.view(-1))
-\end{lstlisting}
 \newpage
 %% ------------------------------------------------------------
 \section{Instruction Tuning}
@@ -736,35 +452,6 @@ Held-out task performance & Weak & Strong (FLAN, InstructGPT)\\\bottomrule
 \caption{State properties before and after instruction tuning.}
 \end{table}
 
-\subsection{Python Implementation}
-\begin{lstlisting}[language=Python]
-import torch
-import torch.nn as nn
-
-class InstructionFormatter(nn.Module):
-    def __init__(self, tokenizer, ignore_index=-100):
-        super().__init__()
-        self.tokenizer = tokenizer
-        self.ignore_index = ignore_index
-        self.ce = nn.CrossEntropyLoss(ignore_index=ignore_index)
-
-    def format_chatml(self, instruction, context, response):
-        prompt_text = f"<|im_start|>user\n{instruction}\n{context}<|im_end|>\n<|im_start|>assistant\n"
-        response_text = f"{response}<|im_end|>\n"
-        
-        prompt_ids = self.tokenizer.encode(prompt_text)
-        response_ids = self.tokenizer.encode(response_text)
-        
-        input_ids = prompt_ids + response_ids
-        targets = [self.ignore_index] * len(prompt_ids) + response_ids
-        
-        return torch.tensor(input_ids), torch.tensor(targets)
-
-    def forward(self, logits, targets):
-        shift_logits = logits[..., :-1, :].contiguous()
-        shift_targets = targets[..., 1:].contiguous()
-        return self.ce(shift_logits.view(-1, shift_logits.size(-1)), shift_targets.view(-1))
-\end{lstlisting}
 \newpage
 %% ------------------------------------------------------------
 \section{Multi-Task Training}
@@ -827,64 +514,6 @@ Gradient conflicts & N/A & Managed via $\lambda_k$\\\bottomrule
 \caption{State properties before and after multi-task training.}
 \end{table}
 
-\subsection{Python Implementation}
-\begin{lstlisting}[language=Python]
-import torch
-import torch.nn as nn
-
-class GradNormMultiTaskTrainer:
-    def __init__(self, model, num_tasks, alpha=0.12, lr_w=0.025):
-        self.model = model
-        self.num_tasks = num_tasks
-        self.alpha = alpha
-        self.lr_w = lr_w
-        
-        # Learnable task weights, initialized to 1.0
-        self.w = nn.Parameter(torch.ones(num_tasks, requires_grad=True))
-        self.initial_losses = None
-        self.optimizer_w = torch.optim.Adam([self.w], lr=lr_w)
-
-    def train_step(self, task_losses, shared_weights_layer, optimizer_model):
-        # task_losses: tensor of shape (num_tasks,) containing current task losses
-        if self.initial_losses is None:
-            self.initial_losses = task_losses.detach().clone()
-            
-        weighted_losses = self.w * task_losses
-        total_loss = weighted_losses.sum()
-        
-        # Backward pass on the main model parameters
-        optimizer_model.zero_grad()
-        total_loss.backward(retain_graph=True)
-        
-        # Compute gradient norms G_k for each task with respect to shared weights
-        norms = []
-        for i in range(self.num_tasks):
-            grads = torch.autograd.grad(weighted_losses[i], list(shared_weights_layer.parameters()), retain_graph=True, create_graph=True)
-            # Accumulate squared norms of all parameters in shared weights layer
-            norm = torch.sqrt(sum(g.pow(2).sum() for g in grads if g is not None))
-            norms.append(norm)
-        norms = torch.stack(norms)
-        
-        # Calculate loss ratios and target gradient norms
-        loss_ratios = task_losses.detach() / self.initial_losses
-        mean_norm = norms.mean().detach()
-        mean_ratio = loss_ratios.mean()
-        
-        targets = mean_norm * (loss_ratios / mean_ratio) ** self.alpha
-        
-        # Update task weights w
-        self.optimizer_w.zero_grad()
-        grad_loss = torch.sum(torch.abs(norms - targets))
-        grad_loss.backward()
-        
-        # Update weights and normalize them
-        self.optimizer_w.step()
-        with torch.no_grad():
-            self.w.copy_(self.w / self.w.sum() * self.num_tasks)
-            
-        optimizer_model.step()
-        return total_loss.item(), self.w.detach().tolist()
-\end{lstlisting}
 \newpage
 %% ------------------------------------------------------------
 \section{Chain-of-Thought SFT}
@@ -946,49 +575,6 @@ Accuracy on complex tasks & Low & Substantially improved\\\bottomrule
 \caption{State properties before and after Chain-of-Thought SFT.}
 \end{table}
 
-\subsection{Python Implementation}
-\begin{lstlisting}[language=Python]
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
-class CoTGenerator(nn.Module):
-    def __init__(self, model):
-        super().__init__()
-        self.model = model
-
-    def sample_top_p(self, logits, top_p=0.9, temperature=0.7):
-        # logits shape: (1, vocab_size)
-        scaled_logits = logits / temperature
-        probs = F.softmax(scaled_logits, dim=-1)
-        
-        sorted_probs, sorted_indices = torch.sort(probs, descending=True, dim=-1)
-        cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
-        
-        # Remove tokens with cumulative probability above top_p (but keep the first one)
-        sorted_indices_to_remove = cumulative_probs > top_p
-        sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
-        sorted_indices_to_remove[..., 0] = False
-        
-        # Set filtered logits to negative infinity
-        indices_to_remove = sorted_indices_to_remove.scatter(1, sorted_indices, sorted_indices_to_remove)
-        scaled_logits[indices_to_remove] = -1e9
-        
-        # Re-compute probabilities and sample
-        filtered_probs = F.softmax(scaled_logits, dim=-1)
-        next_token = torch.multinomial(filtered_probs, num_samples=1)
-        return next_token
-
-    def generate(self, input_ids, max_len=100, top_p=0.9, temp=0.7):
-        # Autoregressive generation loop
-        generated = input_ids.clone()
-        for _ in range(max_len):
-            outputs, _ = self.model(generated)
-            next_logit = outputs[:, -1, :]
-            next_token = self.sample_top_p(next_logit, top_p=top_p, temperature=temp)
-            generated = torch.cat([generated, next_token], dim=1)
-        return generated
-\end{lstlisting}
 \newpage
 %% ------------------------------------------------------------
 \section{Step-by-Step SFT}
@@ -1044,48 +630,6 @@ Task decomposition ability & Implicit & Explicit\\\bottomrule
 \caption{State properties before and after Step-by-Step SFT.}
 \end{table}
 
-\subsection{Python Implementation}
-\begin{lstlisting}[language=Python]
-import torch
-import torch.nn as nn
-
-class StepByStepLossAndConfidence(nn.Module):
-    def __init__(self, step_token_id=50257, ignore_index=-100):
-        super().__init__()
-        self.step_token_id = step_token_id
-        self.ignore_index = ignore_index
-        self.ce = nn.CrossEntropyLoss(reduction='none')
-
-    def forward(self, logits, targets):
-        # logits: (batch_size, seq_len, vocab_size)
-        # targets: (batch_size, seq_len)
-        shift_logits = logits[..., :-1, :].contiguous()
-        shift_targets = targets[..., 1:].contiguous()
-        
-        batch_size, seq_len = shift_targets.size()
-        
-        flat_logits = shift_logits.view(-1, shift_logits.size(-1))
-        flat_targets = shift_targets.view(-1)
-        
-        # Calculate loss per token position
-        losses = self.ce(flat_logits, flat_targets).view(batch_size, seq_len)
-        
-        step_perplexities = []
-        for b in range(batch_size):
-            step_indices = (shift_targets[b] == self.step_token_id).nonzero(as_tuple=True)[0]
-            start = 0
-            for idx in step_indices:
-                step_loss = losses[b, start:idx.item()]
-                # Exclude masked tokens
-                valid_losses = step_loss[shift_targets[b, start:idx.item()] != self.ignore_index]
-                if len(valid_losses) > 0:
-                    step_ppl = torch.exp(valid_losses.mean())
-                    step_perplexities.append(step_ppl.item())
-                start = idx.item() + 1
-                
-        mean_loss = losses[shift_targets != self.ignore_index].mean()
-        return mean_loss, step_perplexities
-\end{lstlisting}
 \newpage
 %% ------------------------------------------------------------
 \section{Process Supervision}
@@ -1141,38 +685,6 @@ Reasoning quality & Outcome-driven & Step-correctness driven\\\bottomrule
 \caption{State properties before and after process supervision.}
 \end{table}
 
-\subsection{Python Implementation}
-\begin{lstlisting}[language=Python]
-import torch
-import torch.nn as nn
-
-class ProcessRewardModel(nn.Module):
-    def __init__(self, hidden_dim, step_token_id=50257):
-        super().__init__()
-        self.step_token_id = step_token_id
-        # Binary classification head
-        self.value_head = nn.Linear(hidden_dim, 1)
-        self.bce = nn.BCEWithLogitsLoss()
-
-    def forward(self, hidden_states, input_ids, step_labels=None):
-        # hidden_states shape: (batch_size, seq_len, hidden_dim)
-        # input_ids shape: (batch_size, seq_len)
-        # step_labels: tensor containing float correctness labels {0.0, 1.0} at step boundaries, shape: (batch_size, seq_len)
-        logits = self.value_head(hidden_states).squeeze(-1) # (batch_size, seq_len)
-        
-        step_mask = (input_ids == self.step_token_id)
-        
-        loss = None
-        if step_labels is not None:
-            # Mask out non-step boundary token positions in loss calculation
-            valid_logits = logits[step_mask]
-            valid_labels = step_labels[step_mask]
-            loss = self.bce(valid_logits, valid_labels)
-            
-        # Compute predicted step probabilities
-        probs = torch.sigmoid(logits) * step_mask.float()
-        return probs, loss
-\end{lstlisting}
 \newpage
 %% ============================================================
 \part{Parameter-Efficient Fine-Tuning (PEFT)}
@@ -1257,45 +769,6 @@ Inference overhead & None & Extra BA multiply (or merged)\\\bottomrule
 \caption{State properties before and after LoRA injection.}
 \end{table}
 
-\subsection{Python Implementation}
-\begin{lstlisting}[language=Python]
-import torch
-import torch.nn as nn
-
-class LoRALinear(nn.Module):
-    def __init__(self, in_features, out_features, r=8, alpha=16):
-        super().__init__()
-        self.linear = nn.Linear(in_features, out_features)
-        self.linear.weight.requires_grad = False  # Freeze base weight
-        
-        self.r = r
-        self.alpha = alpha
-        self.scaling = alpha / r
-        
-        # Low-rank adapter matrices
-        self.lora_A = nn.Parameter(torch.zeros(r, in_features))
-        self.lora_B = nn.Parameter(torch.zeros(out_features, r))
-        
-        # Initialization
-        nn.init.kaiming_uniform_(self.lora_A, a=5**0.5)
-        nn.init.zeros_(self.lora_B) # B is initialized to 0, making Delta W = 0 initially
-
-    def merge_weights(self):
-        # Update base weights directly
-        with torch.no_grad():
-            self.linear.weight.add_(self.scaling * (self.lora_B @ self.lora_A))
-
-    def unmerge_weights(self):
-        # Subtract back the low rank product
-        with torch.no_grad():
-            self.linear.weight.sub_(self.scaling * (self.lora_B @ self.lora_A))
-
-    def forward(self, x):
-        # Compute forward pass: W0*x + (alpha/r)*B*A*x
-        base_out = self.linear(x)
-        lora_out = (x @ self.lora_A.t() @ self.lora_B.t()) * self.scaling
-        return base_out + lora_out
-\end{lstlisting}
 \newpage
 %% ------------------------------------------------------------
 \section{Quantized LoRA (QLoRA)}
@@ -1353,56 +826,6 @@ Inference latency & Baseline & $+$dequant overhead\\\bottomrule
 \caption{State properties before and after QLoRA.}
 \end{table}
 
-\subsection{Python Implementation}
-\begin{lstlisting}[language=Python]
-import torch
-import torch.nn as nn
-
-class QLoRALinear(nn.Module):
-    def __init__(self, in_features, out_features, r=8, alpha=16, block_size=64):
-        super().__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        self.block_size = block_size
-        self.scaling = alpha / r
-        
-        # Simulated NF4 weights stored as half precision, frozen
-        self.weight_nf4 = nn.Parameter(torch.randn(out_features, in_features).half(), requires_grad=False)
-        # Block-wise scales for dequantization
-        self.scales = nn.Parameter(torch.zeros(out_features, (in_features + block_size - 1) // block_size).half(), requires_grad=False)
-        self.compute_simulated_scales()
-        
-        self.lora_A = nn.Parameter(torch.zeros(r, in_features))
-        self.lora_B = nn.Parameter(torch.zeros(out_features, r))
-        nn.init.kaiming_uniform_(self.lora_A, a=5**0.5)
-        nn.init.zeros_(self.lora_B)
-
-    def compute_simulated_scales(self):
-        # Group weights into blocks and compute max values
-        w = self.weight_nf4.data
-        for i in range(self.scales.size(1)):
-            start = i * self.block_size
-            end = min(start + self.block_size, self.in_features)
-            block = w[:, start:end]
-            self.scales[:, i] = torch.max(torch.abs(block), dim=-1).values
-
-    def dequantize(self):
-        # Dequantize simulated NF4 block-by-block
-        dequantized = torch.zeros_like(self.weight_nf4)
-        for i in range(self.scales.size(1)):
-            start = i * self.block_size
-            end = min(start + self.block_size, self.in_features)
-            scale = self.scales[:, i].unsqueeze(-1)
-            dequantized[:, start:end] = self.weight_nf4[:, start:end] * scale
-        return dequantized
-
-    def forward(self, x):
-        # Dequantize base weights on the fly
-        weight = self.dequantize()
-        base_out = torch.nn.functional.linear(x, weight)
-        lora_out = (x @ self.lora_A.t() @ self.lora_B.t()) * self.scaling
-        return base_out + lora_out
-\end{lstlisting}
 \newpage
 %% ------------------------------------------------------------
 \section{Adaptive LoRA (AdaLoRA)}
@@ -1469,47 +892,6 @@ Training stability & Standard & Constrained by SVD orthogonality\\\bottomrule
 \caption{State properties before and after AdaLoRA.}
 \end{table}
 
-\subsection{Python Implementation}
-\begin{lstlisting}[language=Python]
-import torch
-import torch.nn as nn
-
-class AdaLoRALinear(nn.Module):
-    def __init__(self, in_features, out_features, r=8, gamma=0.1):
-        super().__init__()
-        self.linear = nn.Linear(in_features, out_features)
-        self.linear.weight.requires_grad = False
-        self.r = r
-        self.gamma = gamma
-        
-        # SVD Parameterization
-        self.lora_P = nn.Parameter(torch.randn(out_features, r))
-        self.lora_E = nn.Parameter(torch.randn(r)) # Singular values
-        self.lora_Q = nn.Parameter(torch.randn(r, in_features))
-        
-        nn.init.orthogonal_(self.lora_P)
-        nn.init.zeros_(self.lora_E)
-        nn.init.orthogonal_(self.lora_Q)
-
-    def compute_orthogonality_loss(self):
-        # P^T * P - I
-        p_orth = torch.matmul(self.lora_P.t(), self.lora_P) - torch.eye(self.r, device=self.lora_P.device)
-        # Q * Q^T - I
-        q_orth = torch.matmul(self.lora_Q, self.lora_Q.t()) - torch.eye(self.r, device=self.lora_Q.device)
-        return self.gamma * (torch.norm(p_orth, p='fro')**2 + torch.norm(q_orth, p='fro')**2)
-
-    def prune_rank(self, keep_mask):
-        # keep_mask: boolean tensor of shape (r,) indicating active singular values
-        with torch.no_grad():
-            self.lora_E.copy_(self.lora_E * keep_mask.float())
-
-    def forward(self, x):
-        base_out = self.linear(x)
-        # Delta W = P * diag(E) * Q
-        delta_W = self.lora_P @ torch.diag(self.lora_E) @ self.lora_Q
-        lora_out = x @ delta_W.t()
-        return base_out + lora_out
-\end{lstlisting}
 \newpage
 %% ------------------------------------------------------------
 \section{Weight-Decomposed LoRA (DoRA)}
@@ -1576,43 +958,6 @@ Catastrophic forgetting & Low & Lower\\\bottomrule
 \caption{State properties comparing LoRA and DoRA.}
 \end{table}
 
-\subsection{Python Implementation}
-\begin{lstlisting}[language=Python]
-import torch
-import torch.nn as nn
-
-class DoRALinear(nn.Module):
-    def __init__(self, in_features, out_features, r=8, alpha=16):
-        super().__init__()
-        self.linear = nn.Linear(in_features, out_features)
-        self.linear.weight.requires_grad = False
-        
-        self.r = r
-        self.alpha = alpha
-        self.scaling = alpha / r
-        
-        # Directional adapter matrices
-        self.lora_A = nn.Parameter(torch.zeros(r, in_features))
-        self.lora_B = nn.Parameter(torch.zeros(out_features, r))
-        nn.init.kaiming_uniform_(self.lora_A, a=5**0.5)
-        nn.init.zeros_(self.lora_B)
-        
-        # Magnitude parameters m, initialized to column norm of base weights
-        W0 = self.linear.weight.data
-        self.m = nn.Parameter(torch.norm(W0, p=2, dim=1))
-
-    def forward(self, x):
-        W0 = self.linear.weight
-        delta_W = (self.lora_B @ self.lora_A) * self.scaling
-        
-        # Calculate updated direction matrix V
-        V = W0 + delta_W
-        V_norm = torch.norm(V, p=2, dim=1, keepdim=True)
-        
-        # Construct weight matrix with separate magnitude and direction components
-        W = self.m.unsqueeze(1) * (V / V_norm)
-        return torch.nn.functional.linear(x, W, self.linear.bias)
-\end{lstlisting}
 \newpage
 %% ------------------------------------------------------------
 \section{IA$^3$ (Infused Adapter by Inhibiting and Amplifying Inner Activations)}
@@ -1679,34 +1024,6 @@ Task adaptation strength & None & Moderate\\\bottomrule
 \caption{State properties before and after IA$^3$ injection.}
 \end{table}
 
-\subsection{Python Implementation}
-\begin{lstlisting}[language=Python]
-import torch
-import torch.nn as nn
-
-class IA3AttentionWrapper(nn.Module):
-    def __init__(self, key_dim, value_dim):
-        super().__init__()
-        # Scaling vectors initialized to ones
-        self.l_K = nn.Parameter(torch.ones(key_dim))
-        self.l_V = nn.Parameter(torch.ones(value_dim))
-
-    def scale_keys(self, K):
-        # K shape: (batch_size, num_heads, seq_len, head_dim) or (batch_size, seq_len, key_dim)
-        return K * self.l_K
-
-    def scale_values(self, V):
-        return V * self.l_V
-
-class IA3FFNWrapper(nn.Module):
-    def __init__(self, ffn_dim):
-        super().__init__()
-        self.l_FFN = nn.Parameter(torch.ones(ffn_dim))
-
-    def scale_hidden(self, hidden_states):
-        # hidden_states: intermediate feedforward layer activations
-        return hidden_states * self.l_FFN
-\end{lstlisting}
 \newpage
 %% ------------------------------------------------------------
 \section{Adapter Tuning}
@@ -1760,31 +1077,6 @@ Inference latency & Baseline & $+$two extra matmuls per layer\\\bottomrule
 \caption{State properties before and after adapter insertion.}
 \end{table}
 
-\subsection{Python Implementation}
-\begin{lstlisting}[language=Python]
-import torch
-import torch.nn as nn
-
-class BottleneckAdapter(nn.Module):
-    def __init__(self, d_model, bottleneck_dim=16):
-        super().__init__()
-        self.down_proj = nn.Linear(d_model, bottleneck_dim)
-        self.act = nn.GELU()
-        self.up_proj = nn.Linear(bottleneck_dim, d_model)
-        self.layer_norm = nn.LayerNorm(d_model)
-        
-        # Initialize up projection to zero to act as identity mapping at start
-        nn.init.normal_(self.down_proj.weight, std=1e-3)
-        nn.init.zeros_(self.up_proj.weight)
-
-    def forward(self, x):
-        residual = x
-        out = self.down_proj(x)
-        out = self.act(out)
-        out = self.up_proj(out)
-        # Apply layer normalization with residual connection
-        return self.layer_norm(residual + out)
-\end{lstlisting}
 \newpage
 %% ------------------------------------------------------------
 \section{Prefix Tuning}
@@ -1840,44 +1132,6 @@ Task switch at inference & Reload model & Swap prefix only\\\bottomrule
 \caption{State properties before and after prefix tuning.}
 \end{table}
 
-\subsection{Python Implementation}
-\begin{lstlisting}[language=Python]
-import torch
-import torch.nn as nn
-
-class PrefixTuningAttention(nn.Module):
-    def __init__(self, d_model, num_heads, prefix_len=10):
-        super().__init__()
-        self.d_model = d_model
-        self.num_heads = num_heads
-        self.head_dim = d_model // num_heads
-        self.prefix_len = prefix_len
-        
-        # Key/Value projection layers
-        self.q_proj = nn.Linear(d_model, d_model)
-        self.k_proj = nn.Linear(d_model, d_model)
-        self.v_proj = nn.Linear(d_model, d_model)
-        self.out_proj = nn.Linear(d_model, d_model)
-
-    def forward(self, x, past_keys=None, past_values=None):
-        # past_keys, past_values: prefix cache parameters, shape (batch_size, num_heads, prefix_len, head_dim)
-        b, t, c = x.size()
-        
-        q = self.q_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
-        k = self.k_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
-        v = self.v_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
-        
-        if past_keys is not None and past_values is not None:
-            # Prepend virtual prefix keys/values to the computed sequences
-            k = torch.cat([past_keys, k], dim=-2)
-            v = torch.cat([past_values, v], dim=-2)
-            
-        scores = torch.matmul(q, k.transpose(-2, -1)) / (self.head_dim ** 0.5)
-        attn_weights = torch.softmax(scores, dim=-1)
-        out = torch.matmul(attn_weights, v)
-        out = out.transpose(1, 2).contiguous().view(b, t, c)
-        return self.out_proj(out)
-\end{lstlisting}
 \newpage
 %% ------------------------------------------------------------
 \section{Prompt Tuning}
@@ -1927,32 +1181,6 @@ Sensitivity to init & N/A & Strong (init from class labels helps)\\\bottomrule
 \caption{State properties before and after prompt tuning.}
 \end{table}
 
-\subsection{Python Implementation}
-\begin{lstlisting}[language=Python]
-import torch
-import torch.nn as nn
-
-class PromptTuningEmbedding(nn.Module):
-    def __init__(self, base_embeddings, prompt_len=10):
-        super().__init__()
-        self.base_embeddings = base_embeddings
-        for p in self.base_embeddings.parameters():
-            p.requires_grad = False
-            
-        self.prompt_len = prompt_len
-        self.prompt_embeddings = nn.Parameter(torch.randn(prompt_len, base_embeddings.embedding_dim))
-
-    def forward(self, input_ids):
-        # input_ids shape: (batch_size, seq_len)
-        batch_size = input_ids.size(0)
-        base_embs = self.base_embeddings(input_ids) # (batch_size, seq_len, d_emb)
-        
-        # Expand prompt embeddings to batch size
-        prompts = self.prompt_embeddings.unsqueeze(0).expand(batch_size, -1, -1) # (batch_size, prompt_len, d_emb)
-        
-        # Concatenate prompt prefix with token embeddings
-        return torch.cat([prompts, base_embs], dim=1)
-\end{lstlisting}
 \newpage
 %% ------------------------------------------------------------
 \section{P-Tuning v2}
@@ -2004,27 +1232,5 @@ Task-specific storage & Single $P$ matrix & $L$ prefix matrices\\\bottomrule
 \caption{State properties comparing Prompt Tuning and P-Tuning v2.}
 \end{table}
 
-\subsection{Python Implementation}
-\begin{lstlisting}[language=Python]
-import torch
-import torch.nn as nn
 
-class PTuningV2Model(nn.Module):
-    def __init__(self, num_layers, num_heads, head_dim, prefix_len=10):
-        super().__init__()
-        self.num_layers = num_layers
-        self.num_heads = num_heads
-        self.head_dim = head_dim
-        self.prefix_len = prefix_len
-        
-        # Directly optimized layer-wise prefixes
-        self.prefixes = nn.ParameterList([
-            nn.Parameter(torch.randn(2, num_heads, prefix_len, head_dim))
-            for _ in range(num_layers)
-        ])
-
-    def forward(self, batch_size, layer_idx):
-        layer_prefixes = self.prefixes[layer_idx]
-        return layer_prefixes.unsqueeze(1).expand(-1, batch_size, -1, -1, -1)
-\end{lstlisting}
 \end{document}

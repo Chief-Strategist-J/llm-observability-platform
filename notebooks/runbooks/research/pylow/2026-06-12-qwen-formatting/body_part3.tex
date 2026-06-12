@@ -541,11 +541,18 @@ Difficulty metric & N/A & Perplexity, length, or task-specific\\\bottomrule
 \section{Knowledge Distillation}
 
 \subsection{Mathematical Foundation}
-Knowledge Distillation transfers the ``dark knowledge'' of a large teacher $P_T$ to a small student $P_S$ by minimising a combination of cross-entropy with hard labels and KL divergence from teacher soft logits at temperature $\tau$:
+Knowledge distillation transfers dark knowledge from a large teacher model $f_{\text{teacher}}$ to a compact student model $f_{\text{student}}$. Let $z_s$ and $z_t$ be the logits of the student and teacher models respectively. The soft probability distribution at temperature $T$ is computed as:
 \begin{equation}
-  \mathcal{L}_{\text{KD}} = \alpha\,\mathcal{L}_{\text{CE}}(P_S, y_{\text{hard}}) + (1-\alpha)\,\tau^2\,\mathbb{KL}\!\left[P_T^{(\tau)} \| P_S^{(\tau)}\right]
+  p_i(z, T) = \frac{\exp(z_i / T)}{\sum_j \exp(z_j / T)}
 \end{equation}
-where $P^{(\tau)}_k = \text{softmax}(z_k/\tau)$. Temperature $\tau > 1$ softens distributions to expose similarity structure between classes not visible in hard labels.
+The total distillation loss is a weighted combination of hard target cross-entropy and soft target Kullback-Leibler (KL) divergence:
+\begin{equation}
+  \mathcal{L}_{\text{KD}} = (1-\alpha) \mathcal{L}_{\text{CE}}(y, p(z_s, 1)) + \alpha T^2 D_{\text{KL}}\bigl( p(z_t, T) \parallel p(z_s, T) \bigr)
+\end{equation}
+where $\alpha \in [0, 1]$ balances the loss terms, and the temperature scaling factor $T^2$ scales the soft gradient updates to remain invariant of temperature changes:
+\begin{equation}
+  \frac{\partial \mathcal{L}_{\text{KL}}}{\partial z_{s,i}} = \frac{1}{T} \bigl( p_i(z_s, T) - p_i(z_t, T) \bigr)
+\end{equation}
 
 \subsection{Architecture Flow Diagram}
 
@@ -827,15 +834,16 @@ Training signal & Human judgments & Teacher soft scores\\\bottomrule
 \section{Quantization-Aware Training (QAT)}
 
 \subsection{Mathematical Foundation}
-QAT simulates quantization during training using a straight-through estimator (STE) for gradients. For weight $w$, the quantized value at $b$ bits with scale $s$:
+QAT simulates low-bit precision during model training, allowing the optimizer to adjust parameters to compensate for quantization errors.
+Let $w$ be the continuous weights. The quantized representation $\bar{w}$ is calculated as:
 \begin{equation}
-  \hat{w} = \text{clamp}\!\left(\text{round}(w/s), -2^{b-1}, 2^{b-1}-1\right) \cdot s
+  \bar{w} = S \cdot \text{clip}\left( \text{round}\left( \frac{w}{S} \right) - Z, \, q_{\text{min}}, \, q_{\text{max}} \right)
 \end{equation}
-During the backward pass the STE treats quantization as identity for gradient flow:
+where $S$ is the quantization scale factor, $Z$ is the zero-point, and $[q_{\text{min}}, q_{\text{max}}]$ defines the integer boundary (e.g. $[-128, 127]$ for 8-bit quantization).
+Because the rounding function has zero gradients almost everywhere ($\frac{\partial \text{round}(x)}{\partial x} = 0$), standard backpropagation fails. QAT resolves this by applying the Straight-Through Estimator (STE) during the backward pass, approximating the gradient of the rounding operator as identity:
 \begin{equation}
-  \frac{\partial \mathcal{L}}{\partial w} \approx \frac{\partial \mathcal{L}}{\partial \hat{w}} \cdot \mathbf{1}\!\left[|w| \leq s \cdot 2^{b-1}\right]
+  \frac{\partial \bar{w}}{\partial w} \approx \begin{cases} 1 & \text{if } w \in [w_{\text{min}}, w_{\text{max}}] \\ 0 & \text{otherwise} \end{cases}
 \end{equation}
-This makes the model aware of quantization error during training, yielding better accuracy than post-training quantization.
 
 \subsection{Architecture Flow Diagram}
 
@@ -1478,11 +1486,24 @@ Large model feasibility & Memory OOM & Enabled\\\bottomrule
 \section{Flash Attention}
 
 \subsection{Mathematical Foundation}
-Flash Attention computes attention in IO-aware tiles that fit in SRAM, avoiding materialising the full $N \times N$ attention matrix in HBM. The standard attention complexity is $O(N^2 d)$ in FLOPs and $O(N^2)$ in memory; Flash Attention maintains $O(N^2 d)$ FLOPs but reduces memory to $O(N)$:
+FlashAttention accelerates attention computation by tiling input blocks in SRAM and utilizing online softmax reduction to avoid materializing the massive $N \times N$ attention matrix in HBM.
+Let $Q, K, V$ be split into blocks $Q_i, K_j, V_j$ of sizes $B_c, B_r$. The online softmax computes running scaling statistics. For a query block $Q_i$:
+At step $j$ (processing key block $K_j$), we compute raw attention scores:
 \begin{equation}
-  \text{Attention}(Q,K,V) = \text{softmax}\!\left(\frac{QK^\top}{\sqrt{d}}\right)V
+  S^{(j)} = \frac{Q_i K_j^\top}{\sqrt{d}}
 \end{equation}
-Computed in blocks of size $B_r \times B_c$ where $B_r = \lceil M/4d \rceil$, $M$ = SRAM size, using online softmax to accumulate numerically stable output without full matrix materialisation.
+We update running row-wise maximums $m^{(j)}$ and denominators $d^{(j)}$:
+\begin{align}
+  \tilde{m}^{(j)} &= \max(S^{(j)}) \\
+  m^{(j)} &= \max(m^{(j-1)}, \, \tilde{m}^{(j)}) \\
+  \tilde{d}^{(j)} &= \sum_k \exp(S^{(j)}_k - m^{(j)}) \\
+  d^{(j)} &= d^{(j-1)} \exp(m^{(j-1)} - m^{(j)}) + \tilde{d}^{(j)}
+\end{align}
+The running attention output block $O_i$ is updated dynamically using:
+\begin{equation}
+  O_i^{(j)} = \frac{d^{(j-1)} \exp(m^{(j-1)} - m^{(j)}) \cdot O_i^{(j-1)} + \exp(\tilde{m}^{(j)} - m^{(j)}) \cdot \tilde{P}^{(j)} V_j}{d^{(j)}}
+\end{equation}
+where $\tilde{P}^{(j)} = \exp(S^{(j)} - \tilde{m}^{(j)})$. This achieves exact attention outputs with $O(N)$ memory access instead of $O(N^2)$.
 
 \subsection{Architecture Flow Diagram}
 
@@ -1524,14 +1545,17 @@ Long-sequence feasibility & OOM at $N > 4096$ & $N > 100{,}000$ feasible\\\botto
 \section{Fully Sharded Data Parallel (FSDP)}
 
 \subsection{Mathematical Foundation}
-FSDP shards model parameters, gradients, and optimizer states across $D$ devices, reducing per-device memory from $O(|\theta|)$ to $O(|\theta|/D)$. Before each layer's forward/backward, an All-Gather reconstructs the full parameter shard:
+FSDP shards all three components of the model state (Parameters $\Psi$, Gradients $G$, and Optimizer States $O$) across all $N$ available GPUs.
+Let the model parameters occupy $M_{\text{param}} = 2\Psi$ bytes in 16-bit precision, gradients occupy $M_{\text{grad}} = 2\Psi$ bytes, and Adam optimizer states occupy $M_{\text{opt}} = 12\Psi$ bytes (storing FP32 copies of weights, first moments, and second moments).
+Under standard Distributed Data Parallel (DDP), the parameters, gradients, and optimizer states are fully duplicated on each GPU:
 \begin{equation}
-  \theta_{\text{full}} = \text{AllGather}(\theta^{(1)}, \ldots, \theta^{(D)}),\quad \theta_{\text{full}} \in \mathbb{R}^{|\theta|}
+  M_{\text{baseline}} = 2\Psi + 2\Psi + 12\Psi = 16\Psi \text{ bytes}
 \end{equation}
-After the operation, $\theta_{\text{full}}$ is discarded. Gradient shards are reduced-scattered after the backward:
+FSDP shards these states across $N$ GPUs. The peak memory occupancy per GPU is:
 \begin{equation}
-  g^{(d)} = \text{ReduceScatter}(g_{\text{full}})[d],\quad \theta^{(d)} \leftarrow \theta^{(d)} - \eta g^{(d)}
+  M_{\text{FSDP}} = \underbrace{\frac{2\Psi}{N}}_{\text{sharded params}} + \underbrace{\frac{2\Psi}{N}}_{\text{sharded grads}} + \underbrace{\frac{12\Psi}{N}}_{\text{sharded optimizer}} + \underbrace{2\Psi_{\text{block}}}_{\text{reconstructed block}}
 \end{equation}
+During the forward pass, an `All-Gather` operation reconstructs parameters block-by-block on the fly, which are discarded immediately after computing the block activation. During the backward pass, parameters are gathered again, gradients are computed, and a `Reduce-Scatter` operation synchronizes and shards the gradients across GPUs.
 
 \subsection{Architecture Flow Diagram}
 
@@ -1579,13 +1603,23 @@ Training throughput & Baseline & Near-linear scaling\\\bottomrule
 \section{DeepSpeed ZeRO}
 
 \subsection{Mathematical Foundation}
-DeepSpeed ZeRO (Zero Redundancy Optimizer) progressively eliminates redundancy across three stages. For $D$ devices and mixed-precision with Adam, the per-device memory at each stage:
-\begin{align}
-  \text{ZeRO-1:}&\quad \text{optimizer states sharded: } 4|\theta|/D + 6|\theta|\\
-  \text{ZeRO-2:}&\quad \text{+ gradients sharded: } 4|\theta|/D + 4|\theta|/D + 4|\theta|\\
-  \text{ZeRO-3:}&\quad \text{+ parameters sharded: } (4+4+4)|\theta|/D
-\end{align}
-ZeRO-3 achieves $12|\theta|/D$ bytes per device vs $16|\theta|$ bytes for full mixed-precision without sharding.
+ZeRO (Zero Redundancy Optimizer) partitions the memory footprint of the model across data-parallel processes. It consists of three successive stages:
+
+1. **ZeRO-1 (Optimizer State Partitioning)**: The optimizer states (e.g. Adam states) are sharded across $N_{\text{dp}}$ data-parallel ranks. Parameters and gradients remain fully replicated. Peak memory per GPU is:
+\begin{equation}
+  M_{\text{ZeRO-1}} = 2\Psi + 2\Psi + \frac{12\Psi}{N_{\text{dp}}}
+\end{equation}
+
+2. **ZeRO-2 (Gradient Partitioning)**: Gradients are sharded immediately after their calculation in the backward pass. Peak memory per GPU is:
+\begin{equation}
+  M_{\text{ZeRO-2}} = 2\Psi + \frac{2\Psi}{N_{\text{dp}}} + \frac{12\Psi}{N_{\text{dp}}}
+\end{equation}
+
+3. **ZeRO-3 (Parameter Partitioning)**: Parameters are sharded across the ranks. The forward and backward passes reconstruct individual layer weights on the fly via `All-Gather`. Peak memory per GPU is:
+\begin{equation}
+  M_{\text{ZeRO-3}} = \frac{2\Psi}{N_{\text{dp}}} + \frac{2\Psi}{N_{\text{dp}}} + \frac{12\Psi}{N_{\text{dp}}}
+\end{equation}
+Additionally, **ZeRO-Offload** offloads partitioned states to host CPU memory, utilizing PCIe bandwidth to scale training to trillion-parameter models on limited GPU nodes.
 
 \subsection{Architecture Flow Diagram}
 
