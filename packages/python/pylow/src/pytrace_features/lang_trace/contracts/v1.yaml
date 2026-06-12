@@ -1,0 +1,50 @@
+contract: pylow.lang_trace
+version: v1
+kind: cli-mcp-tool
+description: >
+  Multi-language runtime tracing for Go, Rust, Java, and TypeScript/Node.
+  Orchestrates each ecosystem's native tooling (dlv, perf, strace, jcmd,
+  jstack, jfr, V8 inspector) — never re-implements a tracer.
+
+commands:
+  - name: trace-go
+    aliases: [gotrace]
+    mcp_tool: trace_go
+    input:
+      pid:        { type: int,    required: true,  description: Target Go process PID }
+      duration:   { type: float,  default: 10.0,   description: Sampling window seconds }
+      func_regex: { type: string, default: 'main\..*', description: delve function trace pattern }
+    backends: [dlv, perf, strace]
+    output: plain-text trace/sample report; echoes every external command executed
+
+  - name: trace-rust
+    aliases: [rusttrace]
+    mcp_tool: trace_rust
+    input:
+      pid:      { type: int,   required: true }
+      duration: { type: float, default: 10.0 }
+    backends: [perf, strace]
+    output: on-CPU stack report or syscall summary
+
+  - name: trace-java
+    aliases: [javatrace, jvm]
+    mcp_tool: trace_java
+    input:
+      pid:      { type: int,   required: true }
+      duration: { type: float, default: 10.0 }
+    backends: [jcmd (Thread.print + JFR), jstack]
+    output: thread snapshot plus flight-recording summary
+
+  - name: trace-ts
+    aliases: [tstrace, node-trace]
+    mcp_tool: trace_ts
+    input:
+      pid:      { type: int,   required: true }
+      duration: { type: float, default: 10.0 }
+    backends: [SIGUSR1 V8 inspector, perf, strace]
+    output: inspector endpoint + on-CPU/syscall report
+
+guarantees:
+  - every external command is printed before execution
+  - graceful simulated fallback when no native tooling is installed
+  - attach-only by default; never modifies the target process (except SIGUSR1 for Node inspector)
