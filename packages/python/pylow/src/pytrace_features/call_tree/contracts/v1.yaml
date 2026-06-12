@@ -1,0 +1,39 @@
+contract: pylow.call_tree
+version: v1
+kind: cli-mcp-tool
+description: >
+  Exact, noise-filtered execution call tree for Python / Go / Rust / Java /
+  TypeScript: every function entry with its file:line (and duration where the
+  backend provides it), indented by call depth, so any node can be jumped to
+  and edited directly. Backends are language-native tools selected from the
+  shared LanguageRegistry — adding a language is a registry entry, not code.
+
+commands:
+  - name: calltree
+    aliases: [tracetree]
+    mcp_tool: call_tree
+    input:
+      target:   { type: string, required: true, description: source file / project dir / binary }
+      pid:      { type: int,    default: 0,     description: attach to a running PID where the backend supports it }
+      lang:     { type: string, default: "",    description: override detected language }
+      filter:   { type: string, default: "",    description: only show frames whose path/package matches (default = project files only) }
+      depth:    { type: int,    default: 25,    description: max tree depth }
+      out:      { type: string, default: "",    description: also write the tree to this file (default pylow_calltree_<lang>.txt) }
+      args:     { type: string, default: "",    description: program arguments }
+
+backends:                       # priority per language, first installed wins
+  python: [settrace bootstrap (stdlib, exact, timed)]
+  go:     [dlv trace (exact entry/exit), uftrace, perf call-graph (sampled)]
+  rust:   [uftrace (exact, needs -pg build), perf call-graph (sampled)]
+  java:   [jdb method trace (exact entry/exit), jfr execution samples]
+  ts:     [node --cpu-prof → parsed .cpuprofile tree (functionName + url:line)]
+
+output:
+  - indented tree lines: "└─ <function>  <file>:<line>  [<ms>]"
+  - noise removed: stdlib / node_modules / node:internal / non-project frames
+  - tree always saved to a text file; path printed at the end
+
+guarantees:
+  - exact function names and clickable file:line for every kept frame
+  - sampled backends (perf) are labeled as sampled in the output header
+  - every external command echoed before execution
