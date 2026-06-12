@@ -90,7 +90,54 @@ Read the step snapshots inside `qsteps/`:
 cat qsteps/step_001.txt
 ```
 
+### 4. Unified Debug Automation (One Command)
+You don't need separate terminals or scripts to start and debug the server. `pylow` manages everything in a single command. By pointing directly to the project folder, it cleans up ports, boots the Spring Boot app in debug-suspend mode, waits for the JVM socket, and attaches:
+
+```bash
+pylow debug-steps packages/python/pylow/examples/java-springboot \
+  --break com.example.controller.AlgorithmController:57 \
+  --watch pivot \
+  --out qsteps
+```
+
 ---
+
+## Debugging Architecture Flow (Unified Command Mode)
+
+```text
+               ┌──────────────────────────────────────┐
+               │ pylow debug-steps java-springboot/  │
+               └──────────────────┬───────────────────┘
+                                  │
+      ┌───────────────────────────┴───────────────────────────┐
+      ▼ (Auto JVM Boot)                                       ▼ (jdb Attachment)
+[ Terminal 1: Background ]                              [ Terminal 2: Foreground ]
+ mvn spring-boot:run (suspend=y)                         Monitoring port 5005...
+     └── Listens on port 5005                                 │
+           │                                                  │
+           │ ◄────────────── Connect & Set Breaks ────────────┤ (Auto-Attach!)
+           │                                                  │
+           ▼                                                  ▼
+ Tomcat starts on 8080                                  Enters active debug shell
+           │                                                  │
+           │ ◄─────────────── Trigger Request ────────────────┼─── [ curl http://... ]
+           │                                                  │
+ QuickSort execution begins                                   │
+     └── Hits AlgorithmController:57                          │
+           │                                                  │
+           ▼ (Pauses VM execution)                            │
+           │ ─────────────── Hit Breakpoint ─────────────────►│ Execution Pauses
+           │                                                  │   └── Snapshot variables
+           │                                                  │       (pivot, low, high)
+           │                                                  │   └── Write files to qsteps/
+           │ ◄─────────────── Resume (cont) ──────────────────┤
+           ▼                                                  │
+ Return HTTP JSON Response ───────────────────────────────────┘
+```
+
+
+---
+
 
 
 ## 35+ Critical Daily Java / Spring Boot Commands

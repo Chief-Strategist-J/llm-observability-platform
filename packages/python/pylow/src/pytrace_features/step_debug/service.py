@@ -32,7 +32,29 @@ class StepDebugService:
 
     def _resolve(self, request: DebugRequest):
         """Returns (spec, debugger_spec, tool, argv) or None with an explanation."""
-        lang = request.lang or LanguageRegistry.lang_for_extension(request.target)
+        is_attach = False
+        target_str = request.target.strip()
+        is_java_project = False
+        
+        # Check if target is a Java project directory (contains Maven/Gradle markers)
+        if os.path.isdir(target_str):
+            files = os.listdir(target_str)
+            if "pom.xml" in files or "build.gradle" in files or "build.gradle.kts" in files:
+                is_java_project = True
+                is_attach = True
+                target_str = "5005"
+                request.lang = "java"
+        
+        # Check if target is a port or PID (e.g., "5005" or ":5005")
+        elif target_str.isdigit() or (target_str.startswith(":") and target_str[1:].isdigit()):
+            is_attach = True
+            if target_str.startswith(":"):
+                target_str = target_str[1:]
+        
+        lang = request.lang
+        if not lang and not is_attach:
+            lang = LanguageRegistry.lang_for_extension(request.target)
+            
         spec = LanguageRegistry.get(lang) if lang else None
         if spec and spec.trace_as:
             spec = LanguageRegistry.get(spec.trace_as)
@@ -45,16 +67,59 @@ class StepDebugService:
         if tool is None:
             print(f"✗ None of {', '.join(debugger.tools)} found on PATH — install one first.")
             return None
-        mapping = {
-            "tool": tool,
-            "target": request.target,
-            "target_stem": os.path.splitext(os.path.basename(request.target))[0],
-        }
-        argv = format_argv(debugger.argv, mapping)
+            
+        if is_java_project:
+            import socket
+            import time
+            # Clean up old port processes to avoid socket conflicts
+            try:
+                subprocess.run("kill -9 $(lsof -t -i:5005 -i:8080 2>/dev/null)", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except Exception:
+                pass
+                
+            files = os.listdir(request.target)
+            if "pom.xml" in files:
+                cmd = ["mvn", "spring-boot:run", "-Dspring-boot.run.jvmArguments=-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005"]
+            else:
+                cmd = ["gradle", "bootRun", "--debug-jvm"]
+                
+            print(f"[pylow] Spawning Java service via: {' '.join(cmd)}")
+            subprocess.Popen(cmd, cwd=request.target, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            
+            print("[pylow] Waiting for JVM debug socket on port 5005 to initialize...")
+            for _ in range(100):
+                # Check if port 5005 is listening using lsof to avoid consuming JDWP slot
+                rc = subprocess.run("lsof -i:5005 -sTCP:LISTEN", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode
+                if rc == 0:
+                    break
+                time.sleep(0.3)
+            time.sleep(0.5)
+
+        if is_attach:
+            # Dynamically rewrite command arguments for attach mode
+            if spec.name == "java":
+                argv = [tool, "-attach", target_str]
+            elif spec.name == "go":
+                argv = [tool, "attach", target_str]
+            elif spec.name in ("ts", "js", "node"):
+                argv = [tool, "inspect", "-p", target_str]
+            else:
+                argv = [tool, "-p", target_str]
+        else:
+            mapping = {
+                "tool": tool,
+                "target": request.target,
+                "target_stem": os.path.splitext(os.path.basename(request.target))[0],
+            }
+            argv = format_argv(debugger.argv, mapping)
+            
         if debugger.note:
             print(f"note: {debugger.note}")
-        self._prepare(debugger, request.target, mapping)
-        return spec, debugger, tool, argv
+            
+        if not is_attach:
+            self._prepare(debugger, request.target, mapping)
+            
+        return spec, debugger, tool, argv, is_attach
 
     def _prepare(self, debugger, target: str, mapping: dict) -> None:
         ctx = StageContext(target=target, is_dir=os.path.isdir(target))
@@ -72,7 +137,7 @@ class StepDebugService:
         resolved = self._resolve(request)
         if resolved is None:
             return 1
-        spec, debugger, tool, argv = resolved
+        spec, debugger, tool, argv, is_attach = resolved
         bp_cmds, skipped = break_commands(debugger, request.breaks)
         self._warn_skipped(skipped)
         final_argv, paste = InteractiveStyles.build(
@@ -107,13 +172,13 @@ class StepDebugService:
         resolved = self._resolve(request)
         if resolved is None:
             return 1
-        spec, debugger, tool, argv = resolved
+        spec, debugger, tool, argv, is_attach = resolved
         if not request.breaks:
             print("✗ debug-steps needs at least one --break (file:line or function)")
             return 1
         bp_cmds, skipped = break_commands(debugger, request.breaks)
         self._warn_skipped(skipped)
-        setup = (*debugger.prelude, *bp_cmds, debugger.run)
+        setup = (*debugger.prelude, *bp_cmds, debugger.cont if is_attach else debugger.run)
         per_stop = (*step_dump_commands(debugger, request.watches), debugger.cont)
         print(f"[debug-steps] {spec.name} via {tool} — script:")
         for cmd in setup:
