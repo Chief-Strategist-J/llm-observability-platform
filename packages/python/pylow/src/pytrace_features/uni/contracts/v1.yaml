@@ -1,0 +1,44 @@
+contract: pylow.uni
+version: v1
+kind: cli-mcp-tool
+description: >
+  Universal polyglot front door: detect language, then compile, run, debug,
+  and trace any Python / Go / Rust / Java / TypeScript / JavaScript target
+  through its own native toolchain. One daily-driver command; nothing
+  re-implemented — uni only orchestrates installed tools.
+
+commands:
+  - name: uni
+    aliases: [x, dev]
+    mcp_tools: [uni_detect, uni_doctor, uni_build, uni_run, uni_debug, uni_trace, uni_all]
+    input:
+      action: { type: enum, values: [detect, doctor, build, run, debug, trace, all], required: true }
+      target: { type: string, description: file or project directory (not needed for doctor) }
+      args:   { type: string, default: "", description: extra args passed through to the program }
+      pid:    { type: int,    default: 0,  description: attach trace to a running PID instead of launching }
+      duration: { type: float, default: 10.0, description: trace sampling window seconds }
+
+language_detection:
+  by_extension: { .py: python, .go: go, .rs: rust, .java: java, .ts/.tsx: ts, .js/.jsx/.mjs: js }
+  by_marker:
+    go.mod: go
+    Cargo.toml: rust
+    pom.xml | build.gradle(.kts): java
+    tsconfig.json: ts
+    package.json: js
+    pyproject.toml | setup.py: python
+
+toolchains:
+  python: { build: py_compile/compileall, run: python3, debug: pdb,  trace: pylow native / strace }
+  go:     { build: go build,              run: go run,  debug: dlv,  trace: lang_trace }
+  rust:   { build: cargo build | rustc,   run: cargo run, debug: rust-gdb/gdb/lldb, trace: lang_trace }
+  java:   { build: mvn | gradle | javac,  run: java (JEP 330), debug: jdb, trace: lang_trace }
+  ts:     { build: tsc,                   run: tsx | ts-node | tsc+node, debug: node inspect, trace: lang_trace }
+  js:     { build: node --check,          run: node, debug: node inspect, trace: lang_trace }
+
+guarantees:
+  - every external command is echoed before execution
+  - compiler/runtime errors from all languages are normalized to a unified
+    "file:line  message" issue list
+  - "uni all" stops at the first failing stage and reports why
+  - interactive debuggers only launch on a TTY; otherwise the exact command is printed
