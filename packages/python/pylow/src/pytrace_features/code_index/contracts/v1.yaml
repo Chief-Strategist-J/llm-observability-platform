@@ -1,0 +1,43 @@
+contract: pylow.code_index
+version: v1
+kind: cli-mcp-tool
+description: >
+  Persistent, incremental symbol index over a polyglot codebase so symbols
+  are found instantly instead of re-scanning from scratch. Uses
+  universal-ctags when installed; falls back to built-in extractors for
+  Python / Go / Rust / Java / TypeScript / JavaScript.
+
+commands:
+  - name: index-build
+    mcp_tool: index_build
+    input:
+      path:  { type: string, default: ".",    description: root directory to index }
+      force: { type: bool,   default: false,  description: reindex even unchanged files }
+    behavior:
+      - incremental — unchanged files (same mtime) are skipped
+      - deleted files are pruned from the index
+    storage: SQLite at <path>/.pylow_index.db
+
+  - name: index-search
+    aliases: [find-symbol]
+    mcp_tool: index_search
+    input:
+      query: { type: string, required: true, description: symbol name or substring }
+      path:  { type: string, default: "." }
+      lang:  { type: string, default: "",  description: filter (python/go/rust/java/ts/js) }
+      kind:  { type: string, default: "",  description: filter (function/class/struct/...) }
+      limit: { type: int,    default: 25 }
+    output: ranked matches (exact > prefix > substring) as "name  kind  lang  file:line"
+
+  - name: index-stats
+    mcp_tool: index_stats
+    input:
+      path: { type: string, default: "." }
+    output: file/symbol counts per language and kind
+
+symbol_kinds: [function, method, class, struct, enum, trait, interface, type, const]
+skipped_dirs: [.git, node_modules, target, dist, build, __pycache__, .venv, venv, vendor, .idea, .pylow]
+
+guarantees:
+  - read-only over source files; writes only the .pylow_index.db file
+  - prefers existing tooling (universal-ctags) over built-in extraction
