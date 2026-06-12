@@ -31,13 +31,13 @@ The growing pool is used to fine-tune $\theta$, improving the quality of subsequ
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[datblk] (seed) {Seed Pool\\$\mathcal{S}$ (175 seeds)};
-  \node[grayblk, right=of seed] (sample) {Sample $k$\\Instructions};
-  \node[trnblk, right=of sample] (gen) {LLM\\Generates\\$(\hat{x},\hat{i},\hat{y})$};
-  \node[orangeblk, right=of gen] (filt) {Quality\\Filter\\ROUGE $< \delta$};
-  \node[datblk, right=of filt] (pool) {Expanded\\Pool $\mathcal{S}'$};
-  \node[mrgblk, below=0.9cm of pool] (sft) {SFT on\\$\mathcal{S}'$};
-  \node[trnblk, left=2.6cm of sft] (better) {Better\\LLM $\theta'$};
+  \node[datblk] (seed) {\textbf{Seed Pool} \\ ($\mathcal{S}$ (175 seeds))};
+  \node[grayblk, right=of seed] (sample) {\textbf{Sample $k$} \\ (Instructions)};
+  \node[trnblk, right=of sample] (gen) {\textbf{LLM} \\ \textbf{Generates} \\ ($(\hat{x},\hat{i},\hat{y})$)};
+  \node[orangeblk, right=of gen] (filt) {\textbf{Quality} \\ \textbf{Filter} \\ (ROUGE $< \delta$)};
+  \node[datblk, right=of filt] (pool) {\textbf{Expanded} \\ (Pool $\mathcal{S}'$)};
+  \node[mrgblk, below=0.9cm of pool] (sft) {\textbf{SFT on} \\ ($\mathcal{S}'$)};
+  \node[trnblk, left=2.6cm of sft] (better) {\textbf{Better} \\ (LLM $\theta'$)};
 
   \draw[arr] (seed)--(sample);
   \draw[arr] (sample)--(gen);
@@ -83,13 +83,13 @@ Evolved instructions are validated (non-empty, no refusal, dissimilar from paren
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
-  \node[datblk] (orig) {Original\\Instruction $x$};
-  \node[trnblk, above right=0.5cm and 1.2cm of orig] (depth) {In-Depth\\Mutation};
-  \node[trnblk, below right=0.5cm and 1.2cm of orig] (breadth) {In-Breadth\\Mutation};
-  \node[grayblk, right=3.0cm of orig] (evolved) {Evolved\\$\hat{x}$};
-  \node[orangeblk, right=of evolved] (val) {Validate\\(reject refusals)};
-  \node[datblk, right=of val] (pool) {Evolved\\Dataset};
-  \node[mrgblk, below=0.8cm of pool] (sft) {SFT\\(WizardLM style)};
+  \node[datblk] (orig) {\textbf{Original} \\ (Instruction $x$)};
+  \node[trnblk, above right=0.5cm and 1.2cm of orig] (depth) {\textbf{In-Depth} \\ (Mutation)};
+  \node[trnblk, below right=0.5cm and 1.2cm of orig] (breadth) {\textbf{In-Breadth} \\ (Mutation)};
+  \node[grayblk, right=3.0cm of orig] (evolved) {\textbf{Evolved} \\ ($\hat{x}$)};
+  \node[orangeblk, right=of evolved] (val) {\textbf{Validate} \\ (reject refusals)};
+  \node[datblk, right=of val] (pool) {\textbf{Evolved} \\ (Dataset)};
+  \node[mrgblk, below=0.8cm of pool] (sft) {\textbf{SFT} \\ (WizardLM style)};
 
   \draw[arr] (orig.east) |- (depth.west);
   \draw[arr] (orig.east) |- (breadth.west);
@@ -135,14 +135,14 @@ Each evolved problem $\hat{p}$ is solved by a teacher model, and the (problem, s
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
-  \node[datblk] (seed) {Seed Code\\Problems};
-  \node[trnblk, right=of seed] (mutate) {Code\\Mutator};
-  \node[grayblk, right=of mutate] (prob) {Evolved\\Problem $\hat{p}$};
-  \node[orangeblk, right=of prob] (solve) {Teacher\\LLM Solves};
-  \node[grayblk, right=of solve] (sol) {Solution $\hat{s}$};
-  \node[cyanblk, below=0.9cm of sol] (test) {Unit Test\\Execution};
-  \node[datblk, left=1.4cm of test] (pass) {Pass: add to\\$\mathcal{D}_{\text{code}}$};
-  \node[lossblk, right=0.8cm of test] (fail) {Fail: discard};
+  \node[datblk] (seed) {\textbf{Seed Code} \\ (Problems)};
+  \node[trnblk, right=of seed] (mutate) {\textbf{Code} \\ (Mutator)};
+  \node[grayblk, right=of mutate] (prob) {\textbf{Evolved} \\ (Problem $\hat{p}$)};
+  \node[orangeblk, right=of prob] (solve) {\textbf{Teacher} \\ (LLM Solves)};
+  \node[grayblk, right=of solve] (sol) {\textbf{Solution $\hat{s}$}};
+  \node[cyanblk, below=0.9cm of sol] (test) {\textbf{Unit Test} \\ (Execution)};
+  \node[datblk, left=1.4cm of test] (pass) {\textbf{Pass: add to} \\ ($\mathcal{D}_{\text{code}}$)};
+  \node[lossblk, right=0.8cm of test] (fail) {\textbf{Fail: discard}};
 
   \draw[arr] (seed)--(mutate);
   \draw[arr] (mutate)--(prob);
@@ -188,12 +188,12 @@ Quality is improved by filtering on a scoring model or perplexity threshold $\ta
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[datblk] (schema) {Schema /\\Topic Seeds};
-  \node[frzblk, right=of schema] (teacher) {Teacher Model\\$P_T$ (large)};
-  \node[grayblk, right=of teacher] (synth) {Synthetic\\Pairs $(x,y)$};
-  \node[orangeblk, right=of synth] (score) {Quality\\Scorer};
-  \node[datblk, right=of score] (final) {Filtered\\$\mathcal{D}_{\text{final}}$};
-  \node[trnblk, below=0.9cm of final] (student) {Train Student\\$P_S$ (small)};
+  \node[datblk] (schema) {\textbf{Schema /} \\ (Topic Seeds)};
+  \node[frzblk, right=of schema] (teacher) {\textbf{Teacher Model} \\ ($P_T$ (large))};
+  \node[grayblk, right=of teacher] (synth) {\textbf{Synthetic} \\ (Pairs $(x,y)$)};
+  \node[orangeblk, right=of synth] (score) {\textbf{Quality} \\ (Scorer)};
+  \node[datblk, right=of score] (final) {\textbf{Filtered} \\ ($\mathcal{D}_{\text{final}}$)};
+  \node[trnblk, below=0.9cm of final] (student) {\textbf{Train Student} \\ ($P_S$ (small))};
 
   \draw[arr] (schema)--(teacher);
   \draw[arr] (teacher)--(synth);
@@ -237,13 +237,13 @@ Expected acceptance rate at threshold $\tau$: $\alpha = P_{y \sim \pi_\theta}[r(
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[datblk] (x) {Prompts $\{x_i\}$};
-  \node[trnblk, right=of x] (pol) {Policy $\pi_\theta$\\Sample $N$};
-  \node[grayblk, right=of pol, minimum height=2.0cm] (cands) {$N$ Candidates\\per prompt};
-  \node[orangeblk, right=of cands] (rm) {Reward Model\\$r(x,y)$};
-  \node[datblk, right=of rm] (keep) {Keep\\$r \geq \tau$};
-  \node[lossblk, below=0.9cm of cands] (drop) {Discard\\$r < \tau$};
-  \node[mrgblk, right=0.8cm of keep] (sft) {SFT on\\accepted};
+  \node[datblk] (x) {\textbf{Prompts $\{x_i\}$}};
+  \node[trnblk, right=of x] (pol) {\textbf{Policy $\pi_\theta$} \\ (Sample $N$)};
+  \node[grayblk, right=of pol, minimum height=2.0cm] (cands) {\textbf{$N$ Candidates} \\ (per prompt)};
+  \node[orangeblk, right=of cands] (rm) {\textbf{Reward Model} \\ ($r(x,y)$)};
+  \node[datblk, right=of rm] (keep) {\textbf{Keep} \\ ($r \geq \tau$)};
+  \node[lossblk, below=0.9cm of cands] (drop) {\textbf{Discard} \\ ($r < \tau$)};
+  \node[mrgblk, right=0.8cm of keep] (sft) {\textbf{SFT on} \\ (accepted)};
 
   \draw[arr] (x)--(pol);
   \draw[arr] (pol)--(cands);
@@ -288,12 +288,12 @@ where $\mu_r, \sigma_r$ are the reward mean and std under $\pi_\theta$, and $\Ph
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.5cm and 0.9cm]
-  \node[datblk,minimum width=1.8cm] (x) {Prompt $x$};
-  \node[trnblk,minimum width=1.6cm, above right=0.3cm and 1.0cm of x] (y1) {$y^{(1)}$};
-  \node[trnblk,minimum width=1.6cm, right=1.0cm of x] (y2) {$y^{(2)}$};
-  \node[trnblk,minimum width=1.6cm, below right=0.3cm and 1.0cm of x] (yN) {$y^{(N)}$};
-  \node[orangeblk, right=1.6cm of y2] (rm) {Reward\\$r(x,y^{(k)})$};
-  \node[mrgblk, right=of rm] (best) {$y^*=\arg\max$};
+  \node[datblk,minimum width=1.8cm] (x) {\textbf{Prompt $x$}};
+  \node[trnblk,minimum width=1.6cm, above right=0.3cm and 1.0cm of x] (y1) {\textbf{$y^{(1)}$}};
+  \node[trnblk,minimum width=1.6cm, right=1.0cm of x] (y2) {\textbf{$y^{(2)}$}};
+  \node[trnblk,minimum width=1.6cm, below right=0.3cm and 1.0cm of x] (yN) {\textbf{$y^{(N)}$}};
+  \node[orangeblk, right=1.6cm of y2] (rm) {\textbf{Reward} \\ ($r(x,y^{(k)})$)};
+  \node[mrgblk, right=of rm] (best) {\textbf{$y^*=\arg\max$}};
 
   \draw[arr] (x.east) |- (y1.west);
   \draw[arr] (x)--(y2);
@@ -343,14 +343,14 @@ Common signals include perplexity under a small LM (detects gibberish), toxic co
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
-  \node[datblk] (raw) {Raw Corpus\\(noisy, large)};
-  \node[grayblk, right=of raw] (ppl) {Perplexity\\Filter};
-  \node[grayblk, right=of ppl] (tox) {Toxicity\\Classifier};
-  \node[grayblk, right=of tox] (lang) {Language\\ID};
-  \node[orangeblk, right=of lang] (thresh) {Threshold\\Gates $\tau_m$};
-  \node[trnblk, above right=0.4cm and 1.0cm of thresh] (pass) {PASS\\$\rightarrow$ keep};
-  \node[lossblk, below right=0.4cm and 1.0cm of thresh] (fail) {FAIL\\$\rightarrow$ drop};
-  \node[datblk, right=1.8cm of thresh] (clean) {Filtered\\$\mathcal{D}_{\text{clean}}$};
+  \node[datblk] (raw) {\textbf{Raw Corpus} \\ (noisy, large)};
+  \node[grayblk, right=of raw] (ppl) {\textbf{Perplexity} \\ (Filter)};
+  \node[grayblk, right=of ppl] (tox) {\textbf{Toxicity} \\ (Classifier)};
+  \node[grayblk, right=of tox] (lang) {\textbf{Language} \\ (ID)};
+  \node[orangeblk, right=of lang] (thresh) {\textbf{Threshold} \\ (Gates $\tau_m$)};
+  \node[trnblk, above right=0.4cm and 1.0cm of thresh] (pass) {\textbf{PASS} \\ ($\rightarrow$ keep)};
+  \node[lossblk, below right=0.4cm and 1.0cm of thresh] (fail) {\textbf{FAIL} \\ ($\rightarrow$ drop)};
+  \node[datblk, right=1.8cm of thresh] (clean) {\textbf{Filtered} \\ ($\mathcal{D}_{\text{clean}}$)};
 
   \draw[arr] (raw)--(ppl);
   \draw[arr] (ppl)--(tox);
@@ -395,13 +395,13 @@ where $\{h_k\}$ are $K$ independent hash functions and $h_k(A) = \min_{w \in \te
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[datblk] (corpus) {Corpus\\$\mathcal{D}$};
-  \node[grayblk, right=of corpus] (ngrams) {N-gram\\Shingles};
-  \node[trnblk, right=of ngrams] (minhash) {MinHash\\Signatures};
-  \node[grayblk, right=of minhash] (lsh) {LSH\\Bucketing};
-  \node[orangeblk, right=of lsh] (cmp) {Pairwise\\$J > \tau_J$?};
-  \node[datblk, above right=0.4cm and 1.0cm of cmp] (keep) {Keep (unique)};
-  \node[lossblk, below right=0.4cm and 1.0cm of cmp] (drop) {Drop (dup.)};
+  \node[datblk] (corpus) {\textbf{Corpus} \\ ($\mathcal{D}$)};
+  \node[grayblk, right=of corpus] (ngrams) {\textbf{N-gram} \\ (Shingles)};
+  \node[trnblk, right=of ngrams] (minhash) {\textbf{MinHash} \\ (Signatures)};
+  \node[grayblk, right=of minhash] (lsh) {\textbf{LSH} \\ (Bucketing)};
+  \node[orangeblk, right=of lsh] (cmp) {\textbf{Pairwise} \\ ($J > \tau_J$?)};
+  \node[datblk, above right=0.4cm and 1.0cm of cmp] (keep) {\textbf{Keep (unique)}};
+  \node[lossblk, below right=0.4cm and 1.0cm of cmp] (drop) {\textbf{Drop (dup.)}};
 
   \draw[arr] (corpus)--(ngrams);
   \draw[arr] (ngrams)--(minhash);
@@ -445,13 +445,13 @@ Query-by-committee uses disagreement between an ensemble $\{\theta_1,\ldots,\the
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[datblk] (unlabeled) {Unlabelled\\Pool $\mathcal{U}$};
-  \node[frzblk, right=of unlabeled] (model) {Current\\Model $\theta$};
-  \node[orangeblk, right=of model] (unc) {Uncertainty\\Estimator};
-  \node[grayblk, right=of unc] (select) {Select top-$b$\\examples};
-  \node[datblk, right=of select] (annot) {Human\\Annotator};
-  \node[trnblk, below=0.9cm of annot] (retrain) {Retrain\\on $\mathcal{L}$};
-  \node[mrgblk, left=2.4cm of retrain] (better) {Better\\$\theta'$};
+  \node[datblk] (unlabeled) {\textbf{Unlabelled} \\ (Pool $\mathcal{U}$)};
+  \node[frzblk, right=of unlabeled] (model) {\textbf{Current} \\ (Model $\theta$)};
+  \node[orangeblk, right=of model] (unc) {\textbf{Uncertainty} \\ (Estimator)};
+  \node[grayblk, right=of unc] (select) {\textbf{Select top-$b$} \\ (examples)};
+  \node[datblk, right=of select] (annot) {\textbf{Human} \\ (Annotator)};
+  \node[trnblk, below=0.9cm of annot] (retrain) {\textbf{Retrain} \\ (on $\mathcal{L}$)};
+  \node[mrgblk, left=2.4cm of retrain] (better) {\textbf{Better} \\ ($\theta'$)};
 
   \draw[arr] (unlabeled)--(model);
   \draw[arr] (model)--(unc);
@@ -496,13 +496,13 @@ The training distribution at step $t$ only samples from examples with $d(x,y) \l
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
-  \node[datblk] (all) {Full Dataset\\$\mathcal{D}$};
-  \node[grayblk, right=of all] (score) {Difficulty\\Scorer $d(\cdot)$};
-  \node[orangeblk, right=of score] (sort) {Sort by\\Difficulty};
-  \node[trnblk, right=of sort] (easy) {Easy\\Batch $t{=}0$};
-  \node[frzblk, below=0.5cm of easy] (med) {Medium\\Batch $t{=}T/2$};
-  \node[mrgblk, below=0.5cm of med] (hard) {Hard\\Batch $t{=}T$};
-  \node[lossblk, right=1.6cm of med] (model) {Model\\Training};
+  \node[datblk] (all) {\textbf{Full Dataset} \\ ($\mathcal{D}$)};
+  \node[grayblk, right=of all] (score) {\textbf{Difficulty} \\ (Scorer $d(\cdot)$)};
+  \node[orangeblk, right=of score] (sort) {\textbf{Sort by} \\ (Difficulty)};
+  \node[trnblk, right=of sort] (easy) {\textbf{Easy} \\ (Batch $t{=}0$)};
+  \node[frzblk, below=0.5cm of easy] (med) {\textbf{Medium} \\ (Batch $t{=}T/2$)};
+  \node[mrgblk, below=0.5cm of med] (hard) {\textbf{Hard} \\ (Batch $t{=}T$)};
+  \node[lossblk, right=1.6cm of med] (model) {\textbf{Model} \\ (Training)};
 
   \draw[arr] (all)--(score);
   \draw[arr] (score)--(sort);
@@ -559,12 +559,12 @@ where $\alpha \in [0, 1]$ balances the loss terms, and the temperature scaling f
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[datblk] (x) {Input $x$};
-  \node[frzblk, above right=0.5cm and 1.2cm of x] (teacher) {Teacher $P_T$\\(frozen, large)};
-  \node[trnblk, below right=0.5cm and 1.2cm of x] (student) {Student $P_S$\\(trainable, small)};
-  \node[lossblk, right=3.0cm of x] (kl) {KL Div\\$\tau^2\,\text{KL}[P_T^\tau \| P_S^\tau]$};
-  \node[lossblk, below=0.7cm of kl] (ce) {CE Loss\\$\mathcal{L}_{\text{CE}}(P_S, y)$};
-  \node[mrgblk, right=2.0cm of $(kl)!0.5!(ce)$] (total) {$\mathcal{L}_{\text{KD}}$\\(combined)};
+  \node[datblk] (x) {\textbf{Input $x$}};
+  \node[frzblk, above right=0.5cm and 1.2cm of x] (teacher) {\textbf{Teacher $P_T$} \\ (frozen, large)};
+  \node[trnblk, below right=0.5cm and 1.2cm of x] (student) {\textbf{Student $P_S$} \\ (trainable, small)};
+  \node[lossblk, right=3.0cm of x] (kl) {\textbf{KL Div} \\ ($\tau^2\,\text{KL}[P_T^\tau \| P_S^\tau]$)};
+  \node[lossblk, below=0.7cm of kl] (ce) {\textbf{CE Loss} \\ ($\mathcal{L}_{\text{CE}}(P_S, y)$)};
+  \node[mrgblk, right=2.0cm of $(kl)!0.5!(ce)$] (total) {\textbf{$\mathcal{L}_{\text{KD}}$} \\ (combined)};
 
   \draw[arr] (x.east) |- (teacher.west);
   \draw[arr] (x.east) |- (student.west);
@@ -606,12 +606,12 @@ where $y_T \sim P_T(\cdot \mid x)$ are teacher completions. This is simpler than
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[datblk] (prompts) {Prompts $\{x_i\}$};
-  \node[frzblk, right=of prompts] (teacher) {Teacher $P_T$\\(API or local)};
-  \node[datblk, right=of teacher] (responses) {Teacher\\Responses $y_T$};
-  \node[trnblk, right=of responses] (student) {Student $P_S$\\SFT on $y_T$};
-  \node[lossblk, below=0.9cm of student] (loss) {CE Loss\\$-\log P_S(y_T|x)$};
-  \node[mrgblk, left=1.4cm of loss] (out) {Distilled\\Student};
+  \node[datblk] (prompts) {\textbf{Prompts $\{x_i\}$}};
+  \node[frzblk, right=of prompts] (teacher) {\textbf{Teacher $P_T$} \\ (API or local)};
+  \node[datblk, right=of teacher] (responses) {\textbf{Teacher} \\ (Responses $y_T$)};
+  \node[trnblk, right=of responses] (student) {\textbf{Student $P_S$} \\ (SFT on $y_T$)};
+  \node[lossblk, below=0.9cm of student] (loss) {\textbf{CE Loss} \\ ($-\log P_S(y_T|x)$)};
+  \node[mrgblk, left=1.4cm of loss] (out) {\textbf{Distilled} \\ (Student)};
 
   \draw[arr] (prompts)--(teacher);
   \draw[arr] (teacher)--(responses);
@@ -653,12 +653,12 @@ This allows a small student to match the accuracy of a large teacher that reason
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[datblk] (x) {Problem $x$};
-  \node[frzblk, right=of x] (teacher) {Teacher $P_T$};
-  \node[grayblk, right=of teacher] (cot) {Chain $c_T$\\+ Answer $y_T$};
-  \node[trnblk, below=1.0cm of teacher] (student) {Student $P_S$};
-  \node[lossblk, right=of student] (loss) {CoT + Answer\\CE Loss};
-  \node[mrgblk, right=of loss] (out) {Reasoning\\Student};
+  \node[datblk] (x) {\textbf{Problem $x$}};
+  \node[frzblk, right=of x] (teacher) {\textbf{Teacher $P_T$}};
+  \node[grayblk, right=of teacher] (cot) {\textbf{Chain $c_T$} \\ (+ Answer $y_T$)};
+  \node[trnblk, below=1.0cm of teacher] (student) {\textbf{Student $P_S$}};
+  \node[lossblk, right=of student] (loss) {\textbf{CoT + Answer} \\ (CE Loss)};
+  \node[mrgblk, right=of loss] (out) {\textbf{Reasoning} \\ (Student)};
 
   \draw[arr] (x)--(teacher);
   \draw[arr] (teacher)--(cot);
@@ -699,11 +699,11 @@ Unlike response distillation (which uses sampled strings), policy distillation u
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[datblk] (x) {Context $(x, y_{<t})$};
-  \node[frzblk, above right=0.5cm and 1.3cm of x] (tpol) {Teacher\\$\pi_T(\cdot|x,y_{<t})$\\full distribution};
-  \node[trnblk, below right=0.5cm and 1.3cm of x] (spol) {Student\\$\pi_S(\cdot|x,y_{<t})$\\full distribution};
-  \node[lossblk, right=3.2cm of x] (kl) {KL$[\pi_T \| \pi_S]$\\at every step $t$};
-  \node[mrgblk, right=of kl] (out) {Aligned\\Policy $\pi_S^*$};
+  \node[datblk] (x) {\textbf{Context $(x, y_{<t})$}};
+  \node[frzblk, above right=0.5cm and 1.3cm of x] (tpol) {\textbf{Teacher} \\ \textbf{$\pi_T(\cdot|x,y_{<t})$} \\ (full distribution)};
+  \node[trnblk, below right=0.5cm and 1.3cm of x] (spol) {\textbf{Student} \\ \textbf{$\pi_S(\cdot|x,y_{<t})$} \\ (full distribution)};
+  \node[lossblk, right=3.2cm of x] (kl) {\textbf{KL$[\pi_T \| \pi_S]$} \\ (at every step $t$)};
+  \node[mrgblk, right=of kl] (out) {\textbf{Aligned} \\ (Policy $\pi_S^*$)};
 
   \draw[arr] (x.east) |- (tpol.west);
   \draw[arr] (x.east) |- (spol.west);
@@ -748,12 +748,12 @@ The student can also be trained with a ranking-consistency loss to preserve rela
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[datblk] (pairs) {$(x, y)$ Pairs};
-  \node[frzblk, right=of pairs] (trm) {Teacher RM $r_T$\\(frozen, large)};
-  \node[grayblk, right=of trm] (scores) {Teacher\\Scores $r_T(x,y)$};
-  \node[trnblk, below=1.0cm of trm] (srm) {Student RM $r_S$\\(small, trainable)};
-  \node[lossblk, right=of srm] (loss) {MSE +\\Ranking Loss};
-  \node[mrgblk, right=of loss] (out) {Compact\\RM $r_S^*$};
+  \node[datblk] (pairs) {\textbf{$(x, y)$ Pairs}};
+  \node[frzblk, right=of pairs] (trm) {\textbf{Teacher RM $r_T$} \\ (frozen, large)};
+  \node[grayblk, right=of trm] (scores) {\textbf{Teacher} \\ (Scores $r_T(x,y)$)};
+  \node[trnblk, below=1.0cm of trm] (srm) {\textbf{Student RM $r_S$} \\ (small, trainable)};
+  \node[lossblk, right=of srm] (loss) {\textbf{MSE +} \\ (Ranking Loss)};
+  \node[mrgblk, right=of loss] (out) {\textbf{Compact} \\ (RM $r_S^*$)};
 
   \draw[arr] (pairs)--(trm);
   \draw[arr] (trm)--(scores);
@@ -794,12 +794,12 @@ where $q_\phi$ is the query encoder and $e(d)$ is the document embedding.
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[datblk] (q) {Query $q$};
-  \node[frzblk, above right=0.5cm and 1.2cm of q] (tret) {Teacher\\Retriever $q_T$\\(cross-encoder)};
-  \node[trnblk, below right=0.5cm and 1.2cm of q] (sret) {Student\\Retriever $q_S$\\(bi-encoder)};
-  \node[datblk, right=3.2cm of q] (corpus) {Document\\Corpus $\mathcal{C}$};
-  \node[lossblk, right=4.5cm of q] (kl) {KL[$P_T \| P_S$]\\over doc ranks};
-  \node[mrgblk, right=of kl] (out) {Efficient\\Retriever};
+  \node[datblk] (q) {\textbf{Query $q$}};
+  \node[frzblk, above right=0.5cm and 1.2cm of q] (tret) {\textbf{Teacher} \\ \textbf{Retriever $q_T$} \\ (cross-encoder)};
+  \node[trnblk, below right=0.5cm and 1.2cm of q] (sret) {\textbf{Student} \\ \textbf{Retriever $q_S$} \\ (bi-encoder)};
+  \node[datblk, right=3.2cm of q] (corpus) {\textbf{Document} \\ (Corpus $\mathcal{C}$)};
+  \node[lossblk, right=4.5cm of q] (kl) {\textbf{KL[$P_T \| P_S$]} \\ (over doc ranks)};
+  \node[mrgblk, right=of kl] (out) {\textbf{Efficient} \\ (Retriever)};
 
   \draw[arr] (q.east) |- (tret.west);
   \draw[arr] (q.east) |- (sret.west);
@@ -850,13 +850,13 @@ Because the rounding function has zero gradients almost everywhere ($\frac{\part
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[datblk] (x) {Input $x$};
-  \node[trnblk, right=of x] (fp32) {FP32 Weights\\(master copy)};
-  \node[grayblk, right=of fp32] (fakeq) {Fake Quantize\\$w \to \hat{w}$};
-  \node[frzblk, right=of fakeq] (fwd) {Forward Pass\\(with $\hat{w}$)};
-  \node[lossblk, right=of fwd] (loss) {Task Loss\\$\mathcal{L}$};
-  \node[trnblk, below=0.9cm of loss] (ste) {STE Backward\\$\partial\mathcal{L}/\partial w$};
-  \node[mrgblk, left=3.6cm of ste] (deploy) {Deploy\\INT$b$ Model};
+  \node[datblk] (x) {\textbf{Input $x$}};
+  \node[trnblk, right=of x] (fp32) {\textbf{FP32 Weights} \\ (master copy)};
+  \node[grayblk, right=of fp32] (fakeq) {\textbf{Fake Quantize} \\ ($w \to \hat{w}$)};
+  \node[frzblk, right=of fakeq] (fwd) {\textbf{Forward Pass} \\ (with $\hat{w}$)};
+  \node[lossblk, right=of fwd] (loss) {\textbf{Task Loss} \\ ($\mathcal{L}$)};
+  \node[trnblk, below=0.9cm of loss] (ste) {\textbf{STE Backward} \\ ($\partial\mathcal{L}/\partial w$)};
+  \node[mrgblk, left=3.6cm of ste] (deploy) {\textbf{Deploy} \\ (INT$b$ Model)};
 
   \draw[arr] (x)--(fp32);
   \draw[arr] (fp32)--(fakeq);
@@ -901,12 +901,12 @@ where $\tau_p$ is chosen to achieve sparsity ratio $s = 1 - \|m\|_1 / \|m\|_0$. 
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[frzblk] (dense) {Dense Model\\$W$ (all weights)};
-  \node[grayblk, right=of dense] (score) {Importance\\Scoring};
-  \node[orangeblk, right=of score] (mask) {Binary\\Mask $m$};
-  \node[trnblk, right=of mask] (sparse) {Sparse Model\\$W \odot m$};
-  \node[lossblk, below=0.9cm of sparse] (finetune) {Fine-tune to\\Recover Acc.};
-  \node[mrgblk, left=2.2cm of finetune] (out) {Pruned\\Model};
+  \node[frzblk] (dense) {\textbf{Dense Model} \\ ($W$ (all weights))};
+  \node[grayblk, right=of dense] (score) {\textbf{Importance} \\ (Scoring)};
+  \node[orangeblk, right=of score] (mask) {\textbf{Binary} \\ (Mask $m$)};
+  \node[trnblk, right=of mask] (sparse) {\textbf{Sparse Model} \\ ($W \odot m$)};
+  \node[lossblk, below=0.9cm of sparse] (finetune) {\textbf{Fine-tune to} \\ (Recover Acc.)};
+  \node[mrgblk, left=2.2cm of finetune] (out) {\textbf{Pruned} \\ (Model)};
 
   \draw[arr] (dense)--(score);
   \draw[arr] (score)--(mask);
@@ -951,11 +951,11 @@ GPTQ computes optimal quantization for each weight row by minimising the second-
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[frzblk] (fp32) {FP32 Model\\(pretrained)};
-  \node[datblk, right=of fp32] (cal) {Calibration\\Data $\mathcal{D}_{\text{cal}}$};
-  \node[grayblk, right=of cal] (hess) {Hessian /\\Scale Est.};
-  \node[orangeblk, right=of hess] (quant) {Round Weights\\to INT$b$};
-  \node[mrgblk, right=of quant] (int) {INT$b$ Model\\(fast inference)};
+  \node[frzblk] (fp32) {\textbf{FP32 Model} \\ (pretrained)};
+  \node[datblk, right=of fp32] (cal) {\textbf{Calibration} \\ (Data $\mathcal{D}_{\text{cal}}$)};
+  \node[grayblk, right=of cal] (hess) {\textbf{Hessian /} \\ (Scale Est.)};
+  \node[orangeblk, right=of hess] (quant) {\textbf{Round Weights} \\ (to INT$b$)};
+  \node[mrgblk, right=of quant] (int) {\textbf{INT$b$ Model} \\ (fast inference)};
 
   \draw[arr] (fp32)--(cal);
   \draw[arr] (cal)--(hess);
@@ -999,13 +999,13 @@ Tool-Use Training teaches the model to generate structured tool invocations inte
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.5cm and 0.8cm]
-  \node[datblk,minimum width=1.6cm] (q) {Task $q$};
-  \node[trnblk,minimum width=1.6cm, right=0.7cm of q] (t1) {Thought\\$t_1$};
-  \node[orangeblk,minimum width=1.6cm, right=0.6cm of t1] (a1) {Tool Call\\$a_1$};
-  \node[cyanblk,minimum width=1.6cm, right=0.6cm of a1] (o1) {Obs.\\$o_1$};
-  \node[trnblk,minimum width=1.6cm, right=0.6cm of o1] (t2) {Thought\\$t_2$};
-  \node[orangeblk,minimum width=1.6cm, right=0.6cm of t2] (a2) {Tool Call\\$a_2$};
-  \node[mrgblk,minimum width=1.6cm, right=0.6cm of a2] (ans) {Answer\\$y$};
+  \node[datblk,minimum width=1.6cm] (q) {\textbf{Task $q$}};
+  \node[trnblk,minimum width=1.6cm, right=0.7cm of q] (t1) {\textbf{Thought} \\ ($t_1$)};
+  \node[orangeblk,minimum width=1.6cm, right=0.6cm of t1] (a1) {\textbf{Tool Call} \\ ($a_1$)};
+  \node[cyanblk,minimum width=1.6cm, right=0.6cm of a1] (o1) {\textbf{Obs.} \\ ($o_1$)};
+  \node[trnblk,minimum width=1.6cm, right=0.6cm of o1] (t2) {\textbf{Thought} \\ ($t_2$)};
+  \node[orangeblk,minimum width=1.6cm, right=0.6cm of t2] (a2) {\textbf{Tool Call} \\ ($a_2$)};
+  \node[mrgblk,minimum width=1.6cm, right=0.6cm of a2] (ans) {\textbf{Answer} \\ ($y$)};
 
   \foreach \a/\b in {q/t1, t1/a1, a1/o1, o1/t2, t2/a2, a2/ans}
     \draw[arr] (\a)--(\b);
@@ -1046,12 +1046,12 @@ where $c$ is the ground-truth function call. Schema-aware token masking ensures 
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[datblk] (x) {User Request $x$};
-  \node[grayblk, above=0.7cm of x] (schema) {Tool Schema $S$\\(JSON spec)};
-  \node[frzblk, right=1.6cm of $(x)!0.5!(schema)$] (model) {LLM\\$P_\theta$};
-  \node[trnblk, right=of model] (json) {JSON Call\\$c=\{$name, args$\}$};
-  \node[lossblk, below=0.9cm of json] (val) {Schema\\Validation};
-  \node[mrgblk, left=1.4cm of val] (exec) {Execute\\Function};
+  \node[datblk] (x) {\textbf{User Request $x$}};
+  \node[grayblk, above=0.7cm of x] (schema) {\textbf{Tool Schema $S$} \\ (JSON spec)};
+  \node[frzblk, right=1.6cm of $(x)!0.5!(schema)$] (model) {\textbf{LLM} \\ ($P_\theta$)};
+  \node[trnblk, right=of model] (json) {\textbf{JSON Call} \\ ($c=\{$name, args$\}$)};
+  \node[lossblk, below=0.9cm of json] (val) {\textbf{Schema} \\ (Validation)};
+  \node[mrgblk, left=1.4cm of val] (exec) {\textbf{Execute} \\ (Function)};
 
   \draw[arr] (x.east) -| (model.south);
   \draw[arr] (schema.east) -| (model.north);
@@ -1094,12 +1094,12 @@ Training uses task-completion reward at the full-task level, distributed to agen
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
-  \node[datblk] (task) {Complex\\Task $T$};
-  \node[frzblk,minimum height=1.4cm] (orch) at (3.2,0) {Orchestrator\\$\pi_0$};
-  \node[trnblk,minimum width=1.6cm] (s1) at (6.2,1.2) {Specialist $\pi_1$\\(code)};
-  \node[trnblk,minimum width=1.6cm] (s2) at (6.2,0.0) {Specialist $\pi_2$\\(search)};
-  \node[trnblk,minimum width=1.6cm] (s3) at (6.2,-1.2) {Specialist $\pi_K$\\(math)};
-  \node[mrgblk] (agg) at (9.2,0) {Aggregate\\Answer $y$};
+  \node[datblk] (task) {\textbf{Complex} \\ (Task $T$)};
+  \node[frzblk,minimum height=1.4cm] (orch) at (3.2,0) {\textbf{Orchestrator} \\ ($\pi_0$)};
+  \node[trnblk,minimum width=1.6cm] (s1) at (6.2,1.2) {\textbf{Specialist $\pi_1$} \\ (code)};
+  \node[trnblk,minimum width=1.6cm] (s2) at (6.2,0.0) {\textbf{Specialist $\pi_2$} \\ (search)};
+  \node[trnblk,minimum width=1.6cm] (s3) at (6.2,-1.2) {\textbf{Specialist $\pi_K$} \\ (math)};
+  \node[mrgblk] (agg) at (9.2,0) {\textbf{Aggregate} \\ (Answer $y$)};
 
   \draw[arr] (task)--(orch);
   \draw[arr] (orch.east) |- (s1.west);
@@ -1147,13 +1147,13 @@ Training uses a masked language modelling or auto-regressive loss on the text to
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[datblk] (img) {Image $I$};
-  \node[datblk, below=0.8cm of img] (txt) {Text $x$};
-  \node[frzblk, right=of img] (venc) {Visual\\Encoder $f_v$\\(ViT/CLIP)};
-  \node[grayblk, right=of venc] (proj) {Projection\\Layer $P$};
-  \node[trnblk, right=of txt] (emb) {Text\\Embeddings};
-  \node[frzblk, right=3.5cm of $(proj)!0.5!(emb)$] (llm) {LLM\\$f_l$};
-  \node[lossblk, right=of llm] (loss) {LM Loss\\on text};
+  \node[datblk] (img) {\textbf{Image $I$}};
+  \node[datblk, below=0.8cm of img] (txt) {\textbf{Text $x$}};
+  \node[frzblk, right=of img] (venc) {\textbf{Visual} \\ \textbf{Encoder $f_v$} \\ (ViT/CLIP)};
+  \node[grayblk, right=of venc] (proj) {\textbf{Projection} \\ (Layer $P$)};
+  \node[trnblk, right=of txt] (emb) {\textbf{Text} \\ (Embeddings)};
+  \node[frzblk, right=3.5cm of $(proj)!0.5!(emb)$] (llm) {\textbf{LLM} \\ ($f_l$)};
+  \node[lossblk, right=of llm] (loss) {\textbf{LM Loss} \\ (on text)};
 
   \draw[arr] (img)--(venc);
   \draw[arr] (venc)--(proj);
@@ -1194,12 +1194,12 @@ where $b^*$ is the ground-truth box and IoU is intersection-over-union. The mode
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[datblk] (img) {Image $I$};
-  \node[datblk, below=0.8cm of img] (expr) {Referring\\Expr.\ $e$};
-  \node[frzblk, right=1.6cm of $(img)!0.5!(expr)$] (vlm) {VLM\\$f_\theta$};
-  \node[trnblk, right=of vlm] (box) {Predicted Box\\$(x_1,y_1,x_2,y_2)$};
-  \node[lossblk, right=of box] (loss) {L1 +\\IoU Loss};
-  \node[datblk, above=0.7cm of loss] (gt) {GT Box\\$b^*$};
+  \node[datblk] (img) {\textbf{Image $I$}};
+  \node[datblk, below=0.8cm of img] (expr) {\textbf{Referring} \\ (Expr.\ $e$)};
+  \node[frzblk, right=1.6cm of $(img)!0.5!(expr)$] (vlm) {\textbf{VLM} \\ ($f_\theta$)};
+  \node[trnblk, right=of vlm] (box) {\textbf{Predicted Box} \\ ($(x_1,y_1,x_2,y_2)$)};
+  \node[lossblk, right=of box] (loss) {\textbf{L1 +} \\ (IoU Loss)};
+  \node[datblk, above=0.7cm of loss] (gt) {\textbf{GT Box} \\ ($b^*$)};
 
   \draw[arr] (img.east) -| (vlm.north);
   \draw[arr] (expr.east) -| (vlm.south);
@@ -1245,13 +1245,13 @@ Training includes both retrieval-present and retrieval-absent examples to preven
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[datblk] (q) {Query $x$};
-  \node[frzblk, above right=0.5cm and 1.2cm of q] (ret) {Retriever\\$\mathcal{R}(x)$};
-  \node[datblk, right=1.2cm of q] (docs) {Docs\\$d_1..d_K$};
-  \node[trnblk, right=of docs] (llm) {LLM\\$P_\theta$};
-  \node[lossblk, right=of llm] (loss) {Open-book\\Loss};
-  \node[lossblk, below=0.8cm of llm] (cbloss) {Closed-book\\Loss};
-  \node[mrgblk, right=1.6cm of $(loss)!0.5!(cbloss)$] (out) {RAG-tuned\\Model};
+  \node[datblk] (q) {\textbf{Query $x$}};
+  \node[frzblk, above right=0.5cm and 1.2cm of q] (ret) {\textbf{Retriever} \\ ($\mathcal{R}(x)$)};
+  \node[datblk, right=1.2cm of q] (docs) {\textbf{Docs} \\ ($d_1..d_K$)};
+  \node[trnblk, right=of docs] (llm) {\textbf{LLM} \\ ($P_\theta$)};
+  \node[lossblk, right=of llm] (loss) {\textbf{Open-book} \\ (Loss)};
+  \node[lossblk, below=0.8cm of llm] (cbloss) {\textbf{Closed-book} \\ (Loss)};
+  \node[mrgblk, right=1.6cm of $(loss)!0.5!(cbloss)$] (out) {\textbf{RAG-tuned} \\ (Model)};
 
   \draw[arr] (q.east) |- (ret.west);
   \draw[arr] (ret.east) -| (docs.north);
@@ -1297,13 +1297,13 @@ Training uses a distractor task: memory-relevant queries should prefer correct m
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[datblk] (ep) {Episode\\$(x_t, y_t)$};
-  \node[trnblk, right=of ep] (write) {Write Head\\$w_\theta$};
-  \node[grayblk, right=of write, minimum height=2.0cm] (mem) {Memory\\Store\\$\mathcal{M}$};
-  \node[datblk, below=1.2cm of ep] (query) {Future\\Query $x_{t'}$};
-  \node[trnblk, right=of query] (read) {Read Head\\(dot-product)};
-  \node[mrgblk, right=of read] (ctx) {Retrieved\\Context $v$};
-  \node[lossblk, right=of ctx] (loss) {Contrastive\\Memory Loss};
+  \node[datblk] (ep) {\textbf{Episode} \\ ($(x_t, y_t)$)};
+  \node[trnblk, right=of ep] (write) {\textbf{Write Head} \\ ($w_\theta$)};
+  \node[grayblk, right=of write, minimum height=2.0cm] (mem) {\textbf{Memory} \\ \textbf{Store} \\ ($\mathcal{M}$)};
+  \node[datblk, below=1.2cm of ep] (query) {\textbf{Future} \\ (Query $x_{t'}$)};
+  \node[trnblk, right=of query] (read) {\textbf{Read Head} \\ (dot-product)};
+  \node[mrgblk, right=of read] (ctx) {\textbf{Retrieved} \\ (Context $v$)};
+  \node[lossblk, right=of ctx] (loss) {\textbf{Contrastive} \\ (Memory Loss)};
 
   \draw[arr] (ep)--(write);
   \draw[arr] (write)--(mem);
@@ -1347,13 +1347,13 @@ Training uses a knowledge grounding loss that verifies generated text against re
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[datblk] (kg) {Knowledge\\Graph $\mathcal{G}$};
-  \node[grayblk, right=of kg] (emb) {Entity/Relation\\Embeddings};
-  \node[datblk, below=1.0cm of kg] (text) {Text Tokens\\$h_t$};
-  \node[trnblk, right=of emb] (cross) {Cross-Attention\\Injection};
-  \node[frzblk, right=of cross] (llm) {LLM\\Layers};
-  \node[lossblk, right=of llm] (loss) {LM +\\Fact-check Loss};
-  \node[mrgblk, below=0.9cm of loss] (out) {Knowledge-\\Grounded Model};
+  \node[datblk] (kg) {\textbf{Knowledge} \\ (Graph $\mathcal{G}$)};
+  \node[grayblk, right=of kg] (emb) {\textbf{Entity/Relation} \\ (Embeddings)};
+  \node[datblk, below=1.0cm of kg] (text) {\textbf{Text Tokens} \\ ($h_t$)};
+  \node[trnblk, right=of emb] (cross) {\textbf{Cross-Attention} \\ (Injection)};
+  \node[frzblk, right=of cross] (llm) {\textbf{LLM} \\ (Layers)};
+  \node[lossblk, right=of llm] (loss) {\textbf{LM +} \\ (Fact-check Loss)};
+  \node[mrgblk, below=0.9cm of loss] (out) {\textbf{Knowledge-} \\ (Grounded Model)};
 
   \draw[arr] (kg)--(emb);
   \draw[arr] (emb)--(cross);
@@ -1400,12 +1400,12 @@ BF16 has the same exponent range as FP32 (8 bits) but fewer mantissa bits (7 vs 
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[frzblk] (master) {FP32 Master\\Weights $W$};
-  \node[grayblk, right=of master] (cast) {Cast to\\FP16/BF16};
-  \node[trnblk, right=of cast] (fwd) {Forward +\\Backward (FP16)};
-  \node[lossblk, right=of fwd] (scale) {Loss Scale\\$S \cdot \mathcal{L}$};
-  \node[trnblk, below=0.9cm of scale] (unscale) {Unscale Grad\\$g/S$};
-  \node[mrgblk, left=3.6cm of unscale] (upd) {Adam Update\\(FP32 master)};
+  \node[frzblk] (master) {\textbf{FP32 Master} \\ (Weights $W$)};
+  \node[grayblk, right=of master] (cast) {\textbf{Cast to} \\ (FP16/BF16)};
+  \node[trnblk, right=of cast] (fwd) {\textbf{Forward +} \\ (Backward (FP16))};
+  \node[lossblk, right=of fwd] (scale) {\textbf{Loss Scale} \\ ($S \cdot \mathcal{L}$)};
+  \node[trnblk, below=0.9cm of scale] (unscale) {\textbf{Unscale Grad} \\ ($g/S$)};
+  \node[mrgblk, left=3.6cm of unscale] (upd) {\textbf{Adam Update} \\ (FP32 master)};
 
   \draw[arr] (master)--(cast);
   \draw[arr] (cast)--(fwd);
@@ -1449,13 +1449,13 @@ For $L$ layers, optimal checkpointing every $\sqrt{L}$ layers minimises memory w
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.5cm and 0.8cm]
-  \node[datblk,minimum width=1.4cm] (in) {Input};
-  \node[trnblk,minimum width=1.4cm, right=0.6cm of in] (l1) {Layer 1\\{\tiny (stored)}};
-  \node[grayblk,minimum width=1.4cm, right=0.5cm of l1] (l2) {Layer 2\\{\tiny (drop)}};
-  \node[grayblk,minimum width=1.4cm, right=0.5cm of l2] (l3) {Layer 3\\{\tiny (drop)}};
-  \node[trnblk,minimum width=1.4cm, right=0.5cm of l3] (l4) {Layer 4\\{\tiny (stored)}};
-  \node[grayblk,minimum width=1.4cm, right=0.5cm of l4] (l5) {Layer 5\\{\tiny (drop)}};
-  \node[mrgblk,minimum width=1.4cm, right=0.5cm of l5] (out) {Output};
+  \node[datblk,minimum width=1.4cm] (in) {\textbf{Input}};
+  \node[trnblk,minimum width=1.4cm, right=0.6cm of in] (l1) {\textbf{Layer 1} \\ ({\tiny (stored)})};
+  \node[grayblk,minimum width=1.4cm, right=0.5cm of l1] (l2) {\textbf{Layer 2} \\ ({\tiny (drop)})};
+  \node[grayblk,minimum width=1.4cm, right=0.5cm of l2] (l3) {\textbf{Layer 3} \\ ({\tiny (drop)})};
+  \node[trnblk,minimum width=1.4cm, right=0.5cm of l3] (l4) {\textbf{Layer 4} \\ ({\tiny (stored)})};
+  \node[grayblk,minimum width=1.4cm, right=0.5cm of l4] (l5) {\textbf{Layer 5} \\ ({\tiny (drop)})};
+  \node[mrgblk,minimum width=1.4cm, right=0.5cm of l5] (out) {\textbf{Output}};
 
   \foreach \a/\b in {in/l1, l1/l2, l2/l3, l3/l4, l4/l5, l5/out}
     \draw[arr] (\a)--(\b);
@@ -1510,11 +1510,11 @@ where $\tilde{P}^{(j)} = \exp(S^{(j)} - \tilde{m}^{(j)})$. This achieves exact a
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[datblk] (qkv) {$Q, K, V$\\(HBM)};
-  \node[grayblk, right=of qkv] (tile) {Load Tile\\$B_r \times B_c$\\to SRAM};
-  \node[trnblk, right=of tile] (local) {Local Softmax\\+ $V$ accumulate};
-  \node[grayblk, right=of local] (write) {Write partial\\output to HBM};
-  \node[mrgblk, below=0.9cm of $(tile)!0.5!(write)$] (final) {Final $O$\\(no full $N^2$ stored)};
+  \node[datblk] (qkv) {\textbf{$Q, K, V$} \\ (HBM)};
+  \node[grayblk, right=of qkv] (tile) {\textbf{Load Tile} \\ \textbf{$B_r \times B_c$} \\ (to SRAM)};
+  \node[trnblk, right=of tile] (local) {\textbf{Local Softmax} \\ (+ $V$ accumulate)};
+  \node[grayblk, right=of local] (write) {\textbf{Write partial} \\ (output to HBM)};
+  \node[mrgblk, below=0.9cm of $(tile)!0.5!(write)$] (final) {\textbf{Final $O$} \\ (no full $N^2$ stored)};
 
   \draw[arr] (qkv)--(tile);
   \draw[arr] (tile)--(local);
@@ -1562,16 +1562,16 @@ During the forward pass, an `All-Gather` operation reconstructs parameters block
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
-  \node[grayblk,minimum width=1.4cm] (d1) {Device 1\\$\theta^{(1)}$};
-  \node[grayblk,minimum width=1.4cm, right=0.4cm of d1] (d2) {Device 2\\$\theta^{(2)}$};
-  \node[grayblk,minimum width=0.8cm, right=0.4cm of d2] (dots) {$\cdots$};
-  \node[grayblk,minimum width=1.4cm, right=0.4cm of dots] (dD) {Device $D$\\$\theta^{(D)}$};
+  \node[grayblk,minimum width=1.4cm] (d1) {\textbf{Device 1} \\ ($\theta^{(1)}$)};
+  \node[grayblk,minimum width=1.4cm, right=0.4cm of d1] (d2) {\textbf{Device 2} \\ ($\theta^{(2)}$)};
+  \node[grayblk,minimum width=0.8cm, right=0.4cm of d2] (dots) {\textbf{$\cdots$}};
+  \node[grayblk,minimum width=1.4cm, right=0.4cm of dots] (dD) {\textbf{Device $D$} \\ ($\theta^{(D)}$)};
 
-  \node[trnblk, below=0.9cm of d2] (ag) {All-Gather\\$\theta_{\text{full}}$};
-  \node[frzblk, right=1.6cm of ag] (fwd) {Layer\\Forward};
-  \node[lossblk, right=of fwd] (bwd) {Backward\\$g_{\text{full}}$};
-  \node[orangeblk, below=0.9cm of bwd] (rs) {Reduce-Scatter\\$g^{(d)}$};
-  \node[mrgblk, left=2.2cm of rs] (upd) {Local\\Adam Update};
+  \node[trnblk, below=0.9cm of d2] (ag) {\textbf{All-Gather} \\ ($\theta_{\text{full}}$)};
+  \node[frzblk, right=1.6cm of ag] (fwd) {\textbf{Layer} \\ (Forward)};
+  \node[lossblk, right=of fwd] (bwd) {\textbf{Backward} \\ ($g_{\text{full}}$)};
+  \node[orangeblk, below=0.9cm of bwd] (rs) {\textbf{Reduce-Scatter} \\ ($g^{(d)}$)};
+  \node[mrgblk, left=2.2cm of rs] (upd) {\textbf{Local} \\ (Adam Update)};
 
   \draw[arr] (d1.south) -| (ag.north);
   \draw[arr] (d2.south) -- (ag.north);
@@ -1626,10 +1626,10 @@ Additionally, **ZeRO-Offload** offloads partitioned states to host CPU memory, u
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.5cm and 0.9cm]
-  \node[datblk,minimum width=2.2cm] (full) {Standard\\DDP:\\$16|\theta|$ per GPU};
-  \node[grayblk,minimum width=2.2cm, right=0.7cm of full] (z1) {ZeRO-1:\\Shard Opt States\\$12|\theta|+ 4|\theta|/D$};
-  \node[trnblk,minimum width=2.2cm, right=0.7cm of z1] (z2) {ZeRO-2:\\+ Shard Gradients\\$4|\theta|+8|\theta|/D$};
-  \node[mrgblk,minimum width=2.2cm, right=0.7cm of z2] (z3) {ZeRO-3:\\+ Shard Params\\$12|\theta|/D$};
+  \node[datblk,minimum width=2.2cm] (full) {\textbf{Standard} \\ \textbf{DDP:} \\ ($16|\theta|$ per GPU)};
+  \node[grayblk,minimum width=2.2cm, right=0.7cm of full] (z1) {\textbf{ZeRO-1:} \\ \textbf{Shard Opt States} \\ ($12|\theta|+ 4|\theta|/D$)};
+  \node[trnblk,minimum width=2.2cm, right=0.7cm of z1] (z2) {\textbf{ZeRO-2:} \\ \textbf{+ Shard Gradients} \\ ($4|\theta|+8|\theta|/D$)};
+  \node[mrgblk,minimum width=2.2cm, right=0.7cm of z2] (z3) {\textbf{ZeRO-3:} \\ \textbf{+ Shard Params} \\ ($12|\theta|/D$)};
 
   \draw[arr] (full)--(z1);
   \draw[arr] (z1)--(z2);

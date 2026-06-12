@@ -41,15 +41,15 @@ where $\beta$ is a regularizing coefficient, and the KL term at each token gener
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   % Phase 1: RM training
-  \node[datblk] (human) {Human\\Comparisons\\$(y_w \succ y_l)$};
-  \node[trnblk, right=of human] (rm) {Reward\\Model $r_\phi$};
+  \node[datblk] (human) {\textbf{Human} \\ \textbf{Comparisons} \\ ($(y_w \succ y_l)$)};
+  \node[trnblk, right=of human] (rm) {\textbf{Reward} \\ (Model $r_\phi$)};
 
   % Phase 2: PPO
-  \node[frzblk, below=1.8cm of human] (ref) {Reference\\Policy $\pi_{\text{ref}}$};
-  \node[trnblk, right=of ref] (policy) {Policy\\$\pi_\theta$ (PPO)};
-  \node[grayblk, right=of policy] (sample) {Sample\\$y \sim \pi_\theta$};
-  \node[lossblk, right=of sample] (rloss) {$r_\phi(x,y)$\\$-\beta$KL};
-  \node[mrgblk, below=0.8cm of rloss] (aligned) {Aligned\\Model $\pi^*$};
+  \node[frzblk, below=1.8cm of human] (ref) {\textbf{Reference} \\ (Policy $\pi_{\text{ref}}$)};
+  \node[trnblk, right=of ref] (policy) {\textbf{Policy} \\ ($\pi_\theta$ (PPO))};
+  \node[grayblk, right=of policy] (sample) {\textbf{Sample} \\ ($y \sim \pi_\theta$)};
+  \node[lossblk, right=of sample] (rloss) {\textbf{$r_\phi(x,y)$} \\ ($-\beta$KL)};
+  \node[mrgblk, below=0.8cm of rloss] (aligned) {\textbf{Aligned} \\ (Model $\pi^*$)};
 
   \draw[arr] (human)--(rm);
   \draw[arr] (rm.south) -- ++(0,-0.4) -| (rloss.north);
@@ -109,11 +109,11 @@ Substituting this expression into the Bradley-Terry preference probability $P(y_
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[datblk] (pairs) {Preference Pairs\\$(x, y_w, y_l)$};
-  \node[trnblk, above right=0.6cm and 1.5cm of pairs] (pol) {Policy\\$\pi_\theta$};
-  \node[frzblk, below right=0.6cm and 1.5cm of pairs] (ref) {Reference\\$\pi_{\text{ref}}$};
-  \node[lossblk, right=3.0cm of pairs] (ratio) {Log Ratio\\$\log\frac{\pi_\theta}{\pi_{\text{ref}}}$};
-  \node[mrgblk, right=of ratio] (out) {DPO\\Loss};
+  \node[datblk] (pairs) {\textbf{Preference Pairs} \\ ($(x, y_w, y_l)$)};
+  \node[trnblk, above right=0.6cm and 1.5cm of pairs] (pol) {\textbf{Policy} \\ ($\pi_\theta$)};
+  \node[frzblk, below right=0.6cm and 1.5cm of pairs] (ref) {\textbf{Reference} \\ ($\pi_{\text{ref}}$)};
+  \node[lossblk, right=3.0cm of pairs] (ratio) {\textbf{Log Ratio} \\ ($\log\frac{\pi_\theta}{\pi_{\text{ref}}}$)};
+  \node[mrgblk, right=of ratio] (out) {\textbf{DPO} \\ (Loss)};
 
   \draw[arr] (pairs.east) |- (pol.west);
   \draw[arr] (pairs.east) |- (ref.west);
@@ -159,12 +159,12 @@ This bounds the likelihood shift of both preferred and dispreferred sequences, p
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[datblk] (pairs) {Pairs\\$(x,y_w,y_l)$};
-  \node[trnblk, above right=0.5cm and 1.4cm of pairs] (pol) {Policy $\pi_\theta$};
-  \node[frzblk, below right=0.5cm and 1.4cm of pairs] (ref) {Ref $\pi_{\text{ref}}$};
-  \node[grayblk, right=3.2cm of pairs] (h) {Gap $h$\\(log-ratio diff)};
-  \node[lossblk, right=of h] (loss) {Squared\\Loss $\mathcal{L}_{\text{IPO}}$};
-  \node[mrgblk, right=of loss] (tgt) {Target\\$\frac{1}{2\beta}$};
+  \node[datblk] (pairs) {\textbf{Pairs} \\ ($(x,y_w,y_l)$)};
+  \node[trnblk, above right=0.5cm and 1.4cm of pairs] (pol) {\textbf{Policy $\pi_\theta$}};
+  \node[frzblk, below right=0.5cm and 1.4cm of pairs] (ref) {\textbf{Ref $\pi_{\text{ref}}$}};
+  \node[grayblk, right=3.2cm of pairs] (h) {\textbf{Gap $h$} \\ (log-ratio diff)};
+  \node[lossblk, right=of h] (loss) {\textbf{Squared} \\ (Loss $\mathcal{L}_{\text{IPO}}$)};
+  \node[mrgblk, right=of loss] (tgt) {\textbf{Target} \\ ($\frac{1}{2\beta}$)};
 
   \draw[arr] (pairs.east)|-  (pol.west);
   \draw[arr] (pairs.east)|-  (ref.west);
@@ -207,11 +207,11 @@ The SFT term increases $\pi_\theta(y_w|x)$ while the odds-ratio term simultaneou
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[datblk] (data) {$(x, y_w, y_l)$};
-  \node[trnblk, right=of data] (pol) {Policy\\$\pi_\theta$};
-  \node[lossblk, above right=0.5cm and 1.4cm of pol] (sft) {SFT Loss\\on $y_w$};
-  \node[lossblk, below right=0.5cm and 1.4cm of pol] (or) {Odds Ratio\\Contrast};
-  \node[mrgblk, right=3.2cm of pol] (total) {ORPO\\Total Loss};
+  \node[datblk] (data) {\textbf{$(x, y_w, y_l)$}};
+  \node[trnblk, right=of data] (pol) {\textbf{Policy} \\ ($\pi_\theta$)};
+  \node[lossblk, above right=0.5cm and 1.4cm of pol] (sft) {\textbf{SFT Loss} \\ (on $y_w$)};
+  \node[lossblk, below right=0.5cm and 1.4cm of pol] (or) {\textbf{Odds Ratio} \\ (Contrast)};
+  \node[mrgblk, right=3.2cm of pol] (total) {\textbf{ORPO} \\ (Total Loss)};
 
   \draw[arr] (data)--(pol);
   \draw[arr] (pol.east) |- (sft.west);
@@ -262,13 +262,13 @@ and $w(y)$ is a weighting factor balancing positive and negative feedback freque
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[datblk] (data) {Individual Samples\\$(x, y, z\in\{0,1\})$};
-  \node[trnblk, right=of data] (pol) {Policy $\pi_\theta$};
-  \node[frzblk, below=0.8cm of pol] (ref) {Ref $\pi_{\text{ref}}$};
-  \node[grayblk, right=of pol] (r) {Implicit\\Reward $r$};
-  \node[grayblk, right=of ref] (kl) {KL\\Baseline};
-  \node[lossblk, right=2.0cm of r] (util) {Utility\\$v(y,z)$};
-  \node[mrgblk, right=of util] (out) {KTO\\Loss};
+  \node[datblk] (data) {\textbf{Individual Samples} \\ ($(x, y, z\in\{0,1\})$)};
+  \node[trnblk, right=of data] (pol) {\textbf{Policy $\pi_\theta$}};
+  \node[frzblk, below=0.8cm of pol] (ref) {\textbf{Ref $\pi_{\text{ref}}$}};
+  \node[grayblk, right=of pol] (r) {\textbf{Implicit} \\ (Reward $r$)};
+  \node[grayblk, right=of ref] (kl) {\textbf{KL} \\ (Baseline)};
+  \node[lossblk, right=2.0cm of r] (util) {\textbf{Utility} \\ ($v(y,z)$)};
+  \node[mrgblk, right=of util] (out) {\textbf{KTO} \\ (Loss)};
 
   \draw[arr] (data)--(pol);
   \draw[arr] (data.south) -- ++(0,-0.3) -| (ref.west);
@@ -315,11 +315,11 @@ where $\gamma > 0$ is a target margin that forces the average likelihood of the 
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[datblk] (data) {$(x, y_w, y_l)$};
-  \node[trnblk, right=of data] (pol) {Policy $\pi_\theta$\\(only copy)};
-  \node[grayblk, above right=0.5cm and 1.2cm of pol] (rw) {$r_w = \frac{\beta}{|y_w|}\log\pi(y_w|x)$};
-  \node[grayblk, below right=0.5cm and 1.2cm of pol] (rl) {$r_l = \frac{\beta}{|y_l|}\log\pi(y_l|x)$};
-  \node[lossblk, right=3.6cm of pol] (loss) {SimPO\\Loss $-\log\sigma(r_w - r_l - \gamma)$};
+  \node[datblk] (data) {\textbf{$(x, y_w, y_l)$}};
+  \node[trnblk, right=of data] (pol) {\textbf{Policy $\pi_\theta$} \\ (only copy)};
+  \node[grayblk, above right=0.5cm and 1.2cm of pol] (rw) {\textbf{$r_w = \frac{\beta}{|y_w|}\log\pi(y_w|x)$}};
+  \node[grayblk, below right=0.5cm and 1.2cm of pol] (rl) {\textbf{$r_l = \frac{\beta}{|y_l|}\log\pi(y_l|x)$}};
+  \node[lossblk, right=3.6cm of pol] (loss) {\textbf{SimPO} \\ (Loss $-\log\sigma(r_w - r_l - \gamma)$)};
 
   \draw[arr] (data)--(pol);
   \draw[arr] (pol.east) |- (rw.west);
@@ -365,13 +365,13 @@ where $\mu \geq 0$ is a dual variable updated online to enforce the constraint.
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[datblk] (data) {$(x, y_w, y_l)$};
-  \node[trnblk, right=of data] (pol) {Policy $\pi_\theta$};
-  \node[frzblk, below=0.9cm of pol] (ref) {Ref $\pi_{\text{ref}}$};
-  \node[lossblk, right=of pol] (rew) {Reward\\Objective};
-  \node[grayblk, right=of ref] (kl) {KL Constraint\\$\leq \epsilon$};
-  \node[orangeblk, right=2.5cm of pol] (mu) {Dual Var $\mu$\\(update online)};
-  \node[mrgblk, below=0.7cm of mu] (out) {CPO Loss};
+  \node[datblk] (data) {\textbf{$(x, y_w, y_l)$}};
+  \node[trnblk, right=of data] (pol) {\textbf{Policy $\pi_\theta$}};
+  \node[frzblk, below=0.9cm of pol] (ref) {\textbf{Ref $\pi_{\text{ref}}$}};
+  \node[lossblk, right=of pol] (rew) {\textbf{Reward} \\ (Objective)};
+  \node[grayblk, right=of ref] (kl) {\textbf{KL Constraint} \\ ($\leq \epsilon$)};
+  \node[orangeblk, right=2.5cm of pol] (mu) {\textbf{Dual Var $\mu$} \\ (update online)};
+  \node[mrgblk, below=0.7cm of mu] (out) {\textbf{CPO Loss}};
 
   \draw[arr] (data)--(pol);
   \draw[arr] (pol)--(rew);
@@ -413,12 +413,12 @@ The anchor term is minimised when both the chosen and rejected log-ratios equal 
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[datblk] (data) {$(x,y_w,y_l)$};
-  \node[trnblk, right=of data] (pol) {$\pi_\theta$};
-  \node[frzblk, below=0.9cm of pol] (ref) {$\pi_{\text{ref}}$};
-  \node[lossblk, above right=0.5cm and 1.4cm of pol] (pref) {Preference\\Term};
-  \node[orangeblk, below right=0.5cm and 1.4cm of pol] (anchor) {Anchor\\Regulariser};
-  \node[mrgblk, right=3.3cm of pol] (total) {APO\\Loss};
+  \node[datblk] (data) {\textbf{$(x,y_w,y_l)$}};
+  \node[trnblk, right=of data] (pol) {\textbf{$\pi_\theta$}};
+  \node[frzblk, below=0.9cm of pol] (ref) {\textbf{$\pi_{\text{ref}}$}};
+  \node[lossblk, above right=0.5cm and 1.4cm of pol] (pref) {\textbf{Preference} \\ (Term)};
+  \node[orangeblk, below right=0.5cm and 1.4cm of pol] (anchor) {\textbf{Anchor} \\ (Regulariser)};
+  \node[mrgblk, right=3.3cm of pol] (total) {\textbf{APO} \\ (Loss)};
 
   \draw[arr] (data)--(pol);
   \draw[arr] (pol.east) |- (pref.west);
@@ -460,12 +460,12 @@ where $\text{score}(y^{(k)}) = \log P_\theta(y^{(k)}|x)/|y^{(k)}|$ is the normal
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
-  \node[datblk] (x) {Prompt $x$};
-  \node[trnblk, right=of x] (gen) {Generate\\$K$ Responses};
-  \node[datblk, right=of gen, minimum height=2.2cm] (cands) {$y^{(1)}$\\$y^{(2)}$\\$\vdots$\\$y^{(K)}$};
-  \node[grayblk, right=of cands] (rank) {Human/AI\\Rank};
-  \node[lossblk, right=of rank] (loss) {Ranking\\Loss};
-  \node[mrgblk, below=0.8cm of loss] (out) {Aligned\\Policy};
+  \node[datblk] (x) {\textbf{Prompt $x$}};
+  \node[trnblk, right=of x] (gen) {\textbf{Generate} \\ ($K$ Responses)};
+  \node[datblk, right=of gen, minimum height=2.2cm] (cands) {\textbf{$y^{(1)}$} \\ \textbf{$y^{(2)}$} \\ \textbf{$\vdots$} \\ ($y^{(K)}$)};
+  \node[grayblk, right=of cands] (rank) {\textbf{Human/AI} \\ (Rank)};
+  \node[lossblk, right=of rank] (loss) {\textbf{Ranking} \\ (Loss)};
+  \node[mrgblk, below=0.8cm of loss] (out) {\textbf{Aligned} \\ (Policy)};
 
   \draw[arr] (x)--(gen);
   \draw[arr] (gen)--(cands);
@@ -508,12 +508,12 @@ These AI-generated preferences are then used identically to human preferences to
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[datblk] (pairs) {Response\\Pairs $(y_i, y_j)$};
-  \node[orangeblk, right=of pairs] (ai) {AI Annotator\\$\mathcal{A}$ (GPT-4, etc.)};
-  \node[datblk, right=of ai] (prefs) {AI Preference\\Labels};
-  \node[trnblk, right=of prefs] (rm) {Reward\\Model $r_\phi$};
-  \node[mrgblk, below=0.9cm of rm] (ppo) {RLHF/DPO\\Training};
-  \node[mrgblk, left=1.4cm of ppo] (out) {Aligned\\Policy};
+  \node[datblk] (pairs) {\textbf{Response} \\ (Pairs $(y_i, y_j)$)};
+  \node[orangeblk, right=of pairs] (ai) {\textbf{AI Annotator} \\ ($\mathcal{A}$ (GPT-4, etc.))};
+  \node[datblk, right=of ai] (prefs) {\textbf{AI Preference} \\ (Labels)};
+  \node[trnblk, right=of prefs] (rm) {\textbf{Reward} \\ (Model $r_\phi$)};
+  \node[mrgblk, below=0.9cm of rm] (ppo) {\textbf{RLHF/DPO} \\ (Training)};
+  \node[mrgblk, left=1.4cm of ppo] (out) {\textbf{Aligned} \\ (Policy)};
 
   \draw[arr] (pairs)--(ai);
   \draw[arr] (ai)--(prefs);
@@ -556,18 +556,18 @@ Two training phases: (1) supervised revision via critique-revise loop, (2) RLHF 
 \centering
 \begin{tikzpicture}[node distance=0.65cm and 1.0cm]
   % Critique-revise loop
-  \node[datblk] (red) {Red-team\\Prompt $x$};
-  \node[trnblk, right=of red] (gen) {Generate\\Response $y$};
-  \node[orangeblk, right=of gen] (crit) {Critique vs\\Constitution $\mathcal{C}$};
-  \node[trnblk, right=of crit] (rev) {Revise\\$y \to y'$};
+  \node[datblk] (red) {\textbf{Red-team} \\ (Prompt $x$)};
+  \node[trnblk, right=of red] (gen) {\textbf{Generate} \\ (Response $y$)};
+  \node[orangeblk, right=of gen] (crit) {\textbf{Critique vs} \\ (Constitution $\mathcal{C}$)};
+  \node[trnblk, right=of crit] (rev) {\textbf{Revise} \\ ($y \to y'$)};
 
   % SFT on revisions
-  \node[lossblk, below=1.0cm of rev] (sft) {SFT on\\Revisions};
+  \node[lossblk, below=1.0cm of rev] (sft) {\textbf{SFT on} \\ (Revisions)};
 
   % RL phase
-  \node[grayblk, below=1.0cm of sft] (aifb) {AI Feedback\\Score $r_{\text{CAI}}$};
-  \node[mrgblk, left=2.4cm of aifb] (rl) {RLHF/PPO\\Training};
-  \node[mrgblk, left=of rl] (out) {Safe\\Policy};
+  \node[grayblk, below=1.0cm of sft] (aifb) {\textbf{AI Feedback} \\ (Score $r_{\text{CAI}}$)};
+  \node[mrgblk, left=2.4cm of aifb] (rl) {\textbf{RLHF/PPO} \\ (Training)};
+  \node[mrgblk, left=of rl] (out) {\textbf{Safe} \\ (Policy)};
 
   \draw[arr] (red)--(gen);
   \draw[arr] (gen)--(crit);
@@ -620,13 +620,13 @@ where $V_\phi$ is the value network parameters, $\gamma$ is the discount factor,
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[datblk, minimum size=1.6cm] (env) {Prompt\\Environment};
-  \node[trnblk, right=of env] (actor) {Actor\\$\pi_\theta$};
-  \node[trnblk, below=0.8cm of actor] (critic) {Critic\\$V_\phi$};
-  \node[grayblk, right=of actor] (traj) {Token\\Trajectory};
-  \node[orangeblk, right=of traj] (rm) {Reward\\$r_\phi$};
-  \node[lossblk, below right=0.5cm and 1.0cm of traj] (adv) {Advantage\\$\hat{A}_t$};
-  \node[mrgblk, right=3.0cm of critic] (upd) {PPO\\Update};
+  \node[datblk, minimum size=1.6cm] (env) {\textbf{Prompt} \\ (Environment)};
+  \node[trnblk, right=of env] (actor) {\textbf{Actor} \\ ($\pi_\theta$)};
+  \node[trnblk, below=0.8cm of actor] (critic) {\textbf{Critic} \\ ($V_\phi$)};
+  \node[grayblk, right=of actor] (traj) {\textbf{Token} \\ (Trajectory)};
+  \node[orangeblk, right=of traj] (rm) {\textbf{Reward} \\ ($r_\phi$)};
+  \node[lossblk, below right=0.5cm and 1.0cm of traj] (adv) {\textbf{Advantage} \\ ($\hat{A}_t$)};
+  \node[mrgblk, right=3.0cm of critic] (upd) {\textbf{PPO} \\ (Update)};
 
   \draw[arr] (env)--(actor);
   \draw[arr] (actor)--(traj);
@@ -678,12 +678,12 @@ where the probability ratio $\rho_i(\theta)$ is defined as:
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
-  \node[datblk] (x) {Prompt $x$};
-  \node[trnblk, right=of x] (pol) {Policy $\pi_\theta$};
-  \node[grayblk, right=of pol, minimum height=2.0cm] (group) {Group of\\$G$ Responses\\$y^{(1)}\ldots y^{(G)}$};
-  \node[orangeblk, right=of group] (scores) {Rewards\\$r^{(1)}\ldots r^{(G)}$};
-  \node[lossblk, right=of scores] (adv) {Normalised\\Advantage $\hat{A}^{(i)}$};
-  \node[mrgblk, below=0.9cm of adv] (upd) {GRPO\\Update};
+  \node[datblk] (x) {\textbf{Prompt $x$}};
+  \node[trnblk, right=of x] (pol) {\textbf{Policy $\pi_\theta$}};
+  \node[grayblk, right=of pol, minimum height=2.0cm] (group) {\textbf{Group of} \\ \textbf{$G$ Responses} \\ ($y^{(1)}\ldots y^{(G)}$)};
+  \node[orangeblk, right=of group] (scores) {\textbf{Rewards} \\ ($r^{(1)}\ldots r^{(G)}$)};
+  \node[lossblk, right=of scores] (adv) {\textbf{Normalised} \\ (Advantage $\hat{A}^{(i)}$)};
+  \node[mrgblk, below=0.9cm of adv] (upd) {\textbf{GRPO} \\ (Update)};
 
   \draw[arr] (x)--(pol);
   \draw[arr] (pol)--(group);
@@ -728,13 +728,13 @@ The process repeats: train on correct outputs, generate new candidates, filter a
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[datblk] (prob) {Problems\\$\{x_i\}$};
-  \node[trnblk, right=of prob] (pol) {Policy $\pi_\theta$\\Sample $K$};
-  \node[grayblk, right=of pol, minimum height=1.8cm] (cands) {$K$ Candidate\\Solutions};
-  \node[orangeblk, right=of cands] (ver) {Verifier\\$\mathcal{V}$};
-  \node[datblk, right=of ver] (correct) {Correct\\Subset};
-  \node[lossblk, below=0.9cm of correct] (sft) {SFT on\\Correct};
-  \node[trnblk, left=2.4cm of sft] (newpol) {Updated\\Policy};
+  \node[datblk] (prob) {\textbf{Problems} \\ ($\{x_i\}$)};
+  \node[trnblk, right=of prob] (pol) {\textbf{Policy $\pi_\theta$} \\ (Sample $K$)};
+  \node[grayblk, right=of pol, minimum height=1.8cm] (cands) {\textbf{$K$ Candidate} \\ (Solutions)};
+  \node[orangeblk, right=of cands] (ver) {\textbf{Verifier} \\ ($\mathcal{V}$)};
+  \node[datblk, right=of ver] (correct) {\textbf{Correct} \\ (Subset)};
+  \node[lossblk, below=0.9cm of correct] (sft) {\textbf{SFT on} \\ (Correct)};
+  \node[trnblk, left=2.4cm of sft] (newpol) {\textbf{Updated} \\ (Policy)};
 
   \draw[arr] (prob)--(pol);
   \draw[arr] (pol)--(cands);
@@ -779,12 +779,12 @@ For LLMs, the trajectory is the token sequence, each token is an action, and $r_
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[datblk] (state) {State $s$\\Prompt};
-  \node[trnblk, right=of state] (pol) {Policy\\$\pi_\theta$};
-  \node[grayblk, right=of pol] (act) {Action $a$\\(token)};
-  \node[datblk, right=of act] (rew) {Reward\\$r_T$};
-  \node[lossblk, below=0.9cm of rew] (ret) {Return $G$\\$-$ baseline $b$};
-  \node[mrgblk, left=2.4cm of ret] (upd) {PG\\Update $\nabla\log\pi$};
+  \node[datblk] (state) {\textbf{State $s$} \\ (Prompt)};
+  \node[trnblk, right=of state] (pol) {\textbf{Policy} \\ ($\pi_\theta$)};
+  \node[grayblk, right=of pol] (act) {\textbf{Action $a$} \\ (token)};
+  \node[datblk, right=of act] (rew) {\textbf{Reward} \\ ($r_T$)};
+  \node[lossblk, below=0.9cm of rew] (ret) {\textbf{Return $G$} \\ ($-$ baseline $b$)};
+  \node[mrgblk, left=2.4cm of ret] (upd) {\textbf{PG} \\ (Update $\nabla\log\pi$)};
 
   \draw[arr] (state)--(pol);
   \draw[arr] (pol)--(act);
@@ -828,12 +828,12 @@ A3C extends A2C with asynchronous parallel workers each running independent envi
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[frzblk, minimum height=2.0cm] (backbone) {Shared\\Transformer\\Backbone};
-  \node[trnblk, above right=0.5cm and 1.3cm of backbone] (actor) {Policy\\Head $\pi_\theta$};
-  \node[trnblk, below right=0.5cm and 1.3cm of backbone] (critic) {Value\\Head $V_\phi$};
-  \node[datblk, left=1.5cm of backbone] (env) {Environment\\$(s_t, r_t)$};
-  \node[lossblk, right=3.0cm of backbone] (adv) {Advantage\\$A(s,a)$};
-  \node[mrgblk, right=of adv] (upd) {Joint\\Update};
+  \node[frzblk, minimum height=2.0cm] (backbone) {\textbf{Shared} \\ \textbf{Transformer} \\ (Backbone)};
+  \node[trnblk, above right=0.5cm and 1.3cm of backbone] (actor) {\textbf{Policy} \\ (Head $\pi_\theta$)};
+  \node[trnblk, below right=0.5cm and 1.3cm of backbone] (critic) {\textbf{Value} \\ (Head $V_\phi$)};
+  \node[datblk, left=1.5cm of backbone] (env) {\textbf{Environment} \\ ($(s_t, r_t)$)};
+  \node[lossblk, right=3.0cm of backbone] (adv) {\textbf{Advantage} \\ ($A(s,a)$)};
+  \node[mrgblk, right=of adv] (upd) {\textbf{Joint} \\ (Update)};
 
   \draw[arr] (env)--(backbone);
   \draw[arr] (backbone.east|-actor)--(actor.west);
@@ -878,12 +878,12 @@ This creates an ever-escalating difficulty curriculum since the opponent improve
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[trnblk] (cur) {Current Policy\\$\pi_\theta$ (trains)};
-  \node[frzblk, below=1.0cm of cur] (old) {Past Policy\\$\pi_{\theta_{\text{old}}}$ (frozen snapshot)};
-  \node[datblk, right=2.0cm of $(cur)!0.5!(old)$] (game) {Head-to-Head\\Comparison};
-  \node[orangeblk, right=of game] (judge) {Judge /\\Verifier $r$};
-  \node[lossblk, right=of judge] (rl) {RL Update\\$\nabla\log\pi \cdot r$};
-  \node[grayblk, below=0.9cm of rl] (snap) {Snapshot\\Archive};
+  \node[trnblk] (cur) {\textbf{Current Policy} \\ ($\pi_\theta$ (trains))};
+  \node[frzblk, below=1.0cm of cur] (old) {\textbf{Past Policy} \\ ($\pi_{\theta_{\text{old}}}$ (frozen snapshot))};
+  \node[datblk, right=2.0cm of $(cur)!0.5!(old)$] (game) {\textbf{Head-to-Head} \\ (Comparison)};
+  \node[orangeblk, right=of game] (judge) {\textbf{Judge /} \\ (Verifier $r$)};
+  \node[lossblk, right=of judge] (rl) {\textbf{RL Update} \\ ($\nabla\log\pi \cdot r$)};
+  \node[grayblk, below=0.9cm of rl] (snap) {\textbf{Snapshot} \\ (Archive)};
 
   \draw[arr] (cur.east) -| (game.north);
   \draw[arr] (old.east) -| (game.south);
@@ -928,12 +928,12 @@ where $W(n)$ is total rollout reward and $N(n)$ is visit count. The policy is im
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.5cm and 0.9cm]
-  \node[datblk,minimum width=1.6cm] (root) {Root\\State};
-  \node[trnblk, right=0.7cm of root,minimum width=1.6cm] (sel) {Select\\(UCT)};
-  \node[trnblk, right=0.6cm of sel,minimum width=1.6cm] (exp) {Expand\\Node};
-  \node[orangeblk, right=0.6cm of exp,minimum width=1.6cm] (roll) {Rollout\\to end};
-  \node[lossblk, right=0.6cm of roll,minimum width=1.6cm] (back) {Backup\\$W, N$};
-  \node[mrgblk, below=0.9cm of $(sel)!0.5!(back)$] (pol) {Policy Update\\from visit counts};
+  \node[datblk,minimum width=1.6cm] (root) {\textbf{Root} \\ (State)};
+  \node[trnblk, right=0.7cm of root,minimum width=1.6cm] (sel) {\textbf{Select} \\ (UCT)};
+  \node[trnblk, right=0.6cm of sel,minimum width=1.6cm] (exp) {\textbf{Expand} \\ (Node)};
+  \node[orangeblk, right=0.6cm of exp,minimum width=1.6cm] (roll) {\textbf{Rollout} \\ (to end)};
+  \node[lossblk, right=0.6cm of roll,minimum width=1.6cm] (back) {\textbf{Backup} \\ ($W, N$)};
+  \node[mrgblk, below=0.9cm of $(sel)!0.5!(back)$] (pol) {\textbf{Policy Update} \\ (from visit counts)};
 
   \draw[arr] (root)--(sel);
   \draw[arr] (sel)--(exp);
@@ -977,12 +977,12 @@ Training uses the full selected trajectory as RL experience:
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
-  \node[datblk] (x) {Problem $x$};
-  \node[trnblk, right=of x] (pol) {Policy $\pi_\theta$\\(beam $B$)};
-  \node[grayblk, right=of pol, minimum height=1.8cm] (cands) {Step\\Candidates\\$s^{(1..B)}$};
-  \node[orangeblk, right=of cands] (ver) {Step\\Verifier $V$};
-  \node[trnblk, right=of ver] (best) {Best Step\\$s^*$};
-  \node[mrgblk, below=0.9cm of best] (train) {RL Train\\on trajectory};
+  \node[datblk] (x) {\textbf{Problem $x$}};
+  \node[trnblk, right=of x] (pol) {\textbf{Policy $\pi_\theta$} \\ (beam $B$)};
+  \node[grayblk, right=of pol, minimum height=1.8cm] (cands) {\textbf{Step} \\ \textbf{Candidates} \\ ($s^{(1..B)}$)};
+  \node[orangeblk, right=of cands] (ver) {\textbf{Step} \\ (Verifier $V$)};
+  \node[trnblk, right=of ver] (best) {\textbf{Best Step} \\ ($s^*$)};
+  \node[mrgblk, below=0.9cm of best] (train) {\textbf{RL Train} \\ (on trajectory)};
 
   \draw[arr] (x)--(pol);
   \draw[arr] (pol)--(cands);
@@ -1023,13 +1023,13 @@ A separate scoring model $s_\phi(x, b_i)$ is trained to evaluate intermediate th
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.5cm and 0.8cm]
-  \node[datblk,minimum width=1.6cm] (root) {Root\\Thought};
-  \node[trnblk,minimum width=1.4cm, above right=0.3cm and 0.8cm of root] (b1) {Branch 1\\(good)};
-  \node[lossblk,minimum width=1.4cm, right=0.3cm and 0.8cm of root] (b2) {Branch 2\\(bad)};
-  \node[trnblk,minimum width=1.4cm, below right=0.3cm and 0.8cm of root] (b3) {Branch 3\\(good)};
-  \node[mrgblk,minimum width=1.4cm, right=0.9cm of b1] (ans1) {Ans $A_1$};
-  \node[mrgblk,minimum width=1.4cm, right=0.9cm of b3] (ans3) {Ans $A_3$};
-  \node[grayblk, below=1.0cm of b2] (score) {Branch\\Scorer $s_\phi$};
+  \node[datblk,minimum width=1.6cm] (root) {\textbf{Root} \\ (Thought)};
+  \node[trnblk,minimum width=1.4cm, above right=0.3cm and 0.8cm of root] (b1) {\textbf{Branch 1} \\ (good)};
+  \node[lossblk,minimum width=1.4cm, right=0.3cm and 0.8cm of root] (b2) {\textbf{Branch 2} \\ (bad)};
+  \node[trnblk,minimum width=1.4cm, below right=0.3cm and 0.8cm of root] (b3) {\textbf{Branch 3} \\ (good)};
+  \node[mrgblk,minimum width=1.4cm, right=0.9cm of b1] (ans1) {\textbf{Ans $A_1$}};
+  \node[mrgblk,minimum width=1.4cm, right=0.9cm of b3] (ans3) {\textbf{Ans $A_3$}};
+  \node[grayblk, below=1.0cm of b2] (score) {\textbf{Branch} \\ (Scorer $s_\phi$)};
 
   \draw[arr] (root)--(b1);
   \draw[arr] (root)--(b2);
@@ -1076,13 +1076,13 @@ Paths that agree with the majority vote are reinforced; minority paths are not t
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
-  \node[datblk] (x) {Prompt $x$};
-  \node[trnblk, right=of x] (pol) {Sample $K$\\Paths};
-  \node[grayblk, right=of pol, minimum height=2.0cm] (paths) {$y^{(1)}\ldots y^{(K)}$\\(different chains)};
-  \node[orangeblk, right=of paths] (vote) {Majority\\Vote $y^*$};
-  \node[trnblk, right=of vote] (winners) {Winning\\Paths};
-  \node[lossblk, below=0.9cm of winners] (sft) {SFT on\\winners};
-  \node[mrgblk, left=1.6cm of sft] (out) {Updated\\$\pi_\theta$};
+  \node[datblk] (x) {\textbf{Prompt $x$}};
+  \node[trnblk, right=of x] (pol) {\textbf{Sample $K$} \\ (Paths)};
+  \node[grayblk, right=of pol, minimum height=2.0cm] (paths) {\textbf{$y^{(1)}\ldots y^{(K)}$} \\ (different chains)};
+  \node[orangeblk, right=of paths] (vote) {\textbf{Majority} \\ (Vote $y^*$)};
+  \node[trnblk, right=of vote] (winners) {\textbf{Winning} \\ (Paths)};
+  \node[lossblk, below=0.9cm of winners] (sft) {\textbf{SFT on} \\ (winners)};
+  \node[mrgblk, left=1.6cm of sft] (out) {\textbf{Updated} \\ ($\pi_\theta$)};
 
   \draw[arr] (x)--(pol);
   \draw[arr] (pol)--(paths);
@@ -1129,15 +1129,15 @@ The RM is typically initialised from a fine-tuned LLM with the final token's hid
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[datblk] (inp) {$(x, y)$\\Input};
-  \node[frzblk, right=of inp] (backbone) {LLM\\Backbone};
-  \node[grayblk, right=of backbone] (last) {Last Token\\Hidden $h$};
-  \node[trnblk, right=of last] (head) {Scalar\\Head $W_r$};
-  \node[mrgblk, right=of head] (score) {Reward\\Score $r$};
+  \node[datblk] (inp) {\textbf{$(x, y)$} \\ (Input)};
+  \node[frzblk, right=of inp] (backbone) {\textbf{LLM} \\ (Backbone)};
+  \node[grayblk, right=of backbone] (last) {\textbf{Last Token} \\ (Hidden $h$)};
+  \node[trnblk, right=of last] (head) {\textbf{Scalar} \\ (Head $W_r$)};
+  \node[mrgblk, right=of head] (score) {\textbf{Reward} \\ (Score $r$)};
 
-  \node[datblk, above=1.0cm of backbone] (yw) {Chosen $y_w$};
-  \node[datblk, below=1.0cm of backbone] (yl) {Rejected $y_l$};
-  \node[lossblk, right=4.2cm of backbone] (loss) {BT Loss\\$\log\sigma(r_w - r_l)$};
+  \node[datblk, above=1.0cm of backbone] (yw) {\textbf{Chosen $y_w$}};
+  \node[datblk, below=1.0cm of backbone] (yl) {\textbf{Rejected $y_l$}};
+  \node[lossblk, right=4.2cm of backbone] (loss) {\textbf{BT Loss} \\ ($\log\sigma(r_w - r_l)$)};
 
   \draw[arr] (inp)--(backbone);
   \draw[arr] (backbone)--(last);
@@ -1182,16 +1182,16 @@ The PRM is trained on step-level human labels with binary cross-entropy:
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.5cm and 0.8cm]
-  \node[datblk,minimum width=1.6cm] (x) {Problem\\$x$};
-  \node[trnblk,minimum width=1.4cm, right=0.7cm of x] (s1) {Step 1\\$s_1$};
-  \node[trnblk,minimum width=1.4cm, right=0.6cm of s1] (s2) {Step 2\\$s_2$};
-  \node[grayblk,minimum width=0.6cm, right=0.6cm of s2] (dots) {$\cdots$};
-  \node[trnblk,minimum width=1.4cm, right=0.6cm of dots] (sT) {Step $T$\\$s_T$};
+  \node[datblk,minimum width=1.6cm] (x) {\textbf{Problem} \\ ($x$)};
+  \node[trnblk,minimum width=1.4cm, right=0.7cm of x] (s1) {\textbf{Step 1} \\ ($s_1$)};
+  \node[trnblk,minimum width=1.4cm, right=0.6cm of s1] (s2) {\textbf{Step 2} \\ ($s_2$)};
+  \node[grayblk,minimum width=0.6cm, right=0.6cm of s2] (dots) {\textbf{$\cdots$}};
+  \node[trnblk,minimum width=1.4cm, right=0.6cm of dots] (sT) {\textbf{Step $T$} \\ ($s_T$)};
 
-  \node[orangeblk,minimum width=1.4cm, below=0.7cm of s1] (r1) {$r_1$};
-  \node[orangeblk,minimum width=1.4cm, below=0.7cm of s2] (r2) {$r_2$};
-  \node[orangeblk,minimum width=1.4cm, below=0.7cm of sT] (rT) {$r_T$};
-  \node[mrgblk, right=0.6cm of rT] (prod) {$\prod r_t$\\PRM score};
+  \node[orangeblk,minimum width=1.4cm, below=0.7cm of s1] (r1) {\textbf{$r_1$}};
+  \node[orangeblk,minimum width=1.4cm, below=0.7cm of s2] (r2) {\textbf{$r_2$}};
+  \node[orangeblk,minimum width=1.4cm, below=0.7cm of sT] (rT) {\textbf{$r_T$}};
+  \node[mrgblk, right=0.6cm of rT] (prod) {\textbf{$\prod r_t$} \\ (PRM score)};
 
   \foreach \s/\r in {s1/r1, s2/r2, sT/rT}
     \draw[arr] (\s)--(\r);
@@ -1236,13 +1236,13 @@ For open-ended tasks, the ORM is a learned binary classifier trained on (correct
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[datblk] (x) {Problem $x$};
-  \node[trnblk, right=of x] (sol) {Full\\Solution $y$};
-  \node[frzblk, right=of sol] (lm) {ORM\\$P_\phi$};
-  \node[lossblk, right=of lm] (check) {Outcome\\Check};
-  \node[mrgblk, right=of check] (score) {Binary\\Score $c$};
+  \node[datblk] (x) {\textbf{Problem $x$}};
+  \node[trnblk, right=of x] (sol) {\textbf{Full} \\ (Solution $y$)};
+  \node[frzblk, right=of sol] (lm) {\textbf{ORM} \\ ($P_\phi$)};
+  \node[lossblk, right=of lm] (check) {\textbf{Outcome} \\ (Check)};
+  \node[mrgblk, right=of check] (score) {\textbf{Binary} \\ (Score $c$)};
 
-  \node[datblk,below=0.8cm of lm] (gold) {Gold Answer\\$y^*$};
+  \node[datblk,below=0.8cm of lm] (gold) {\textbf{Gold Answer} \\ ($y^*$)};
 
   \draw[arr] (x)--(sol);
   \draw[arr] (sol)--(lm);
@@ -1287,12 +1287,12 @@ Verifiers are used in test-time search (Best-of-N) and training-time filtering (
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[datblk] (x) {$(x, y)$\\Solution};
-  \node[frzblk, right=of x] (enc) {LLM\\Encoder};
-  \node[trnblk, right=of enc] (cls) {Binary\\Classifier $P_\phi$};
-  \node[grayblk, right=of cls] (thr) {Threshold\\$\tau$};
-  \node[trnblk, above right=0.4cm and 0.9cm of thr] (yes) {Correct $\checkmark$};
-  \node[lossblk, below right=0.4cm and 0.9cm of thr] (no) {Incorrect $\times$};
+  \node[datblk] (x) {\textbf{$(x, y)$} \\ (Solution)};
+  \node[frzblk, right=of x] (enc) {\textbf{LLM} \\ (Encoder)};
+  \node[trnblk, right=of enc] (cls) {\textbf{Binary} \\ (Classifier $P_\phi$)};
+  \node[grayblk, right=of cls] (thr) {\textbf{Threshold} \\ ($\tau$)};
+  \node[trnblk, above right=0.4cm and 0.9cm of thr] (yes) {\textbf{Correct $\checkmark$}};
+  \node[lossblk, below right=0.4cm and 0.9cm of thr] (no) {\textbf{Incorrect $\times$}};
 
   \draw[arr] (x)--(enc);
   \draw[arr] (enc)--(cls);
@@ -1335,13 +1335,13 @@ where $c$ is the gold critique. Critics enable self-refinement loops: the model 
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[datblk] (x) {Prompt $x$};
-  \node[trnblk, right=of x] (gen) {Generator\\$\pi_\theta$};
-  \node[grayblk, right=of gen] (y) {Draft $y$};
-  \node[orangeblk, right=of y] (crit) {Critic\\$P_\phi$};
-  \node[grayblk, right=of crit] (c) {Critique $c$\\+ Score};
-  \node[trnblk, below=0.9cm of c] (rev) {Revise\\$y \to y'$};
-  \node[mrgblk, left=2.0cm of rev] (out) {Final\\Output $y'$};
+  \node[datblk] (x) {\textbf{Prompt $x$}};
+  \node[trnblk, right=of x] (gen) {\textbf{Generator} \\ ($\pi_\theta$)};
+  \node[grayblk, right=of gen] (y) {\textbf{Draft $y$}};
+  \node[orangeblk, right=of y] (crit) {\textbf{Critic} \\ ($P_\phi$)};
+  \node[grayblk, right=of crit] (c) {\textbf{Critique $c$} \\ (+ Score)};
+  \node[trnblk, below=0.9cm of c] (rev) {\textbf{Revise} \\ ($y \to y'$)};
+  \node[mrgblk, left=2.0cm of rev] (out) {\textbf{Final} \\ (Output $y'$)};
 
   \draw[arr] (x)--(gen);
   \draw[arr] (gen)--(y);
