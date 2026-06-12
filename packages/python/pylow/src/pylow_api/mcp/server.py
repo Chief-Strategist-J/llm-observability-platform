@@ -136,6 +136,9 @@ from pytrace_features.pipeline_etl.service import PipelineEtlService
 from pytrace_features.grep_jq_interleave.service import GrepJqInterleaveService
 from pytrace_features.jq_sql_export.service import JqSqlExportService
 from pytrace_features.live_pipeline.service import LivePipelineService
+from pytrace_features.lang_trace.index import LangTraceService, LangTraceRequest
+from pytrace_features.uni.index import UniService
+from pytrace_features.code_index.index import CodeIndexService
 from pytrace_infra.adapters.trace_collector_adapter import RealTraceCollectorAdapter
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -783,6 +786,100 @@ def saga_replay(log_file: str = "/tmp/pylow_saga.log") -> str:
 
 
 # ===========================================================================
+# MULTI-LANGUAGE TRACING TOOLS
+# ===========================================================================
+
+@mcp.tool(description="Trace a running Go process via delve > perf > strace (best available).")
+def trace_go(pid: int, duration: float = 10.0, func_regex: Optional[str] = None) -> str:
+    return _capture(LangTraceService(_col).trace,
+                    LangTraceRequest(lang="go", pid=pid, duration=duration, func_regex=func_regex))
+
+
+@mcp.tool(description="Trace a running Rust process via perf on-CPU sampling > strace.")
+def trace_rust(pid: int, duration: float = 10.0) -> str:
+    return _capture(LangTraceService(_col).trace,
+                    LangTraceRequest(lang="rust", pid=pid, duration=duration))
+
+
+@mcp.tool(description="Trace a running JVM via jcmd Thread.print + Java Flight Recorder > jstack.")
+def trace_java(pid: int, duration: float = 10.0) -> str:
+    return _capture(LangTraceService(_col).trace,
+                    LangTraceRequest(lang="java", pid=pid, duration=duration))
+
+
+@mcp.tool(description="Trace a running Node/TypeScript process: V8 inspector (SIGUSR1) + perf/strace.")
+def trace_ts(pid: int, duration: float = 10.0) -> str:
+    return _capture(LangTraceService(_col).trace,
+                    LangTraceRequest(lang="ts", pid=pid, duration=duration))
+
+
+@mcp.tool(description="Launch a command of any supported language under the best available tracer.")
+def trace_cmd(language: str, command: str) -> str:
+    """language: go|rust|java|ts. command: full command line to launch traced."""
+    return _capture(LangTraceService(_col).trace,
+                    LangTraceRequest(lang=language, cmd=command))
+
+
+# ===========================================================================
+# UNI — UNIVERSAL BUILD/RUN/DEBUG/TRACE TOOLS
+# ===========================================================================
+
+@mcp.tool(description="Detect the language and toolchain of a file or project directory.")
+def uni_detect(target: str) -> str:
+    return _capture(UniService(_col).detect, target)
+
+
+@mcp.tool(description="Report which language toolchains (go/cargo/javac/tsc/dlv/perf/...) are installed.")
+def uni_doctor() -> str:
+    return _capture(UniService(_col).doctor)
+
+
+@mcp.tool(description="Compile any target (py/go/rust/java/ts/js) with its native toolchain; errors come back as a unified file:line issue list.")
+def uni_build(target: str) -> str:
+    return _capture(UniService(_col).build, target)
+
+
+@mcp.tool(description="Run any target with its native runtime; failures come back as a unified file:line issue list.")
+def uni_run(target: str, args: str = "") -> str:
+    return _capture(UniService(_col).run, target, args.split() if args else [])
+
+
+@mcp.tool(description="Show the native interactive debugger command for any target (pdb/dlv/gdb/jdb/node inspect).")
+def uni_debug(target: str) -> str:
+    return _capture(UniService(_col).debug, target)
+
+
+@mcp.tool(description="Trace any target: attach to a PID or launch it under the right language tracer.")
+def uni_trace(target: str, pid: int = 0, duration: float = 10.0) -> str:
+    return _capture(UniService(_col).trace, target, pid, duration)
+
+
+@mcp.tool(description="Daily driver: detect → build → run (→ trace) any target, stopping at the first failure with a unified issue list.")
+def uni_all(target: str, args: str = "", trace: bool = False) -> str:
+    return _capture(UniService(_col).all, target, args.split() if args else [], trace)
+
+
+# ===========================================================================
+# CODE INDEX TOOLS
+# ===========================================================================
+
+@mcp.tool(description="Build/refresh the incremental polyglot symbol index (SQLite) for a codebase root.")
+def index_build(path: str = ".", force: bool = False) -> str:
+    return _capture(CodeIndexService(_col).build, path, force)
+
+
+@mcp.tool(description="Search the symbol index instantly: returns name, kind, lang, file:line (exact > prefix > substring).")
+def index_search(query: str, path: str = ".", lang: str = "", kind: str = "", limit: int = 25) -> str:
+    return _capture(CodeIndexService(_col).search, query, path,
+                    {"lang": lang, "kind": kind, "limit": limit})
+
+
+@mcp.tool(description="Show symbol index statistics per language and symbol kind.")
+def index_stats(path: str = ".") -> str:
+    return _capture(CodeIndexService(_col).stats, path)
+
+
+# ===========================================================================
 # PROMPTS
 # ===========================================================================
 
@@ -808,6 +905,22 @@ def troubleshoot_memory(pid: int) -> str:
         f"1. Run `malloc(pid={pid})` to view live memory allocation sizes and traceback callers.\n"
         f"2. Run `pyleak(pid={pid})` to search for leak patterns and identify objects that aren't being garbage collected.\n"
         f"3. Run `page_faults(pid={pid})` to determine if frequent swapping or page re-allocations are slowing down process heap expansion."
+    )
+
+
+@mcp.prompt()
+def diagnose_polyglot_service(pid: int, language: str) -> str:
+    """Prompt template for tracing a non-Python service (go/rust/java/ts)."""
+    return (
+        f"You are investigating a {language} process with PID {pid}.\n"
+        "Follow this runbook to see exactly what the code is doing:\n"
+        f"1. Run `uni_doctor()` to confirm which native tools are available for {language}.\n"
+        f"2. Run `trace_{language}(pid={pid})` to attach the best available tracer "
+        "(delve/perf/jcmd/V8 inspector) and capture hot functions.\n"
+        f"3. If the codebase is local, run `index_build(path=...)` once, then "
+        "`index_search(query=<hot function name>)` to jump straight to the file:line.\n"
+        "4. For build/runtime errors, run `uni_all(target=...)` — failures are "
+        "normalized to a unified file:line issue list."
     )
 
 

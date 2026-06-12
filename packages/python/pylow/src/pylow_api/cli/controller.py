@@ -116,6 +116,9 @@ from pytrace_features.pipeline_etl.service import PipelineEtlService
 from pytrace_features.grep_jq_interleave.service import GrepJqInterleaveService
 from pytrace_features.jq_sql_export.service import JqSqlExportService
 from pytrace_features.live_pipeline.service import LivePipelineService
+from pytrace_features.lang_trace.index import LangTraceService, LangTraceRequest
+from pytrace_features.uni.index import UniService
+from pytrace_features.code_index.index import CodeIndexService
 from pytrace_infra.adapters.trace_collector_adapter import RealTraceCollectorAdapter
 
 
@@ -641,6 +644,43 @@ def main() -> None:
 
     pipeline_tap_parser = subparsers.add_parser("pipeline-tap", help="Tap and display live logs from a specific pipeline stage")
     pipeline_tap_parser.add_argument("stage", type=str, help="Stage name to tap (e.g. normalize, enrich, validate, route)")
+
+    # Multi-language tracing CLI (delegates to dlv / perf / strace / jcmd / V8 inspector)
+    for lt_name, lt_aliases, lt_help in (
+        ("trace-go", ["gotrace"], "Trace a running Go process (delve > perf > strace)"),
+        ("trace-rust", ["rusttrace"], "Trace a running Rust process (perf > strace)"),
+        ("trace-java", ["javatrace", "jvm"], "Trace a running JVM (jcmd Thread.print + JFR > jstack)"),
+        ("trace-ts", ["tstrace", "node-trace"], "Trace a running Node/TypeScript process (V8 inspector + perf/strace)"),
+    ):
+        lt_parser = subparsers.add_parser(lt_name, aliases=lt_aliases, help=lt_help)
+        lt_parser.add_argument("pid", type=int, help="Target process PID")
+        lt_parser.add_argument("--duration", type=float, default=10.0, help="Sampling window in seconds (default: 10)")
+        lt_parser.add_argument("--func-regex", type=str, default=None, help="Function pattern for delve tracing (go only)")
+        lt_parser.add_argument("--cmd", type=str, default=None, help="Launch this command under a tracer instead of attaching")
+
+    # Uni CLI — universal compile/run/debug/trace front door
+    uni_parser = subparsers.add_parser("uni", aliases=["x", "dev"], help="Universal tool: detect, build, run, debug, trace any language")
+    uni_parser.add_argument("action", type=str, choices=["detect", "doctor", "build", "run", "debug", "trace", "all"], help="Stage to execute")
+    uni_parser.add_argument("target", type=str, default=".", nargs="?", help="Source file or project directory")
+    uni_parser.add_argument("--args", type=str, default="", help="Arguments passed through to the program")
+    uni_parser.add_argument("--pid", type=int, default=0, help="Attach trace to a running PID instead of launching")
+    uni_parser.add_argument("--duration", type=float, default=10.0, help="Trace sampling window in seconds")
+    uni_parser.add_argument("--trace", action="store_true", help="Also trace after a successful `all` run")
+
+    # Code Index CLI — persistent symbol index, no rescanning from scratch
+    index_build_parser = subparsers.add_parser("index-build", help="Build/refresh the incremental symbol index for a codebase")
+    index_build_parser.add_argument("path", type=str, default=".", nargs="?", help="Root directory to index (default: .)")
+    index_build_parser.add_argument("--force", action="store_true", help="Reindex even unchanged files")
+
+    index_search_parser = subparsers.add_parser("index-search", aliases=["find-symbol"], help="Search symbols instantly from the index")
+    index_search_parser.add_argument("query", type=str, help="Symbol name or substring")
+    index_search_parser.add_argument("--path", type=str, default=".", help="Indexed root directory (default: .)")
+    index_search_parser.add_argument("--lang", type=str, default="", help="Filter by language (python/go/rust/java/ts/js)")
+    index_search_parser.add_argument("--kind", type=str, default="", help="Filter by kind (function/class/struct/...)")
+    index_search_parser.add_argument("--limit", type=int, default=25, help="Max results (default: 25)")
+
+    index_stats_parser = subparsers.add_parser("index-stats", help="Show symbol index statistics")
+    index_stats_parser.add_argument("path", type=str, default=".", nargs="?", help="Indexed root directory (default: .)")
 
 
 
@@ -1247,6 +1287,51 @@ def main() -> None:
     elif cmd == "pipeline-tap":
         service = LivePipelineService(collector)
         service.tap(args.stage)
+        sys.exit(0)
+
+    elif cmd in ["trace-go", "gotrace", "trace-rust", "rusttrace",
+                 "trace-java", "javatrace", "jvm", "trace-ts", "tstrace", "node-trace"]:
+        lang = {"gotrace": "go", "trace-go": "go", "rusttrace": "rust", "trace-rust": "rust",
+                "javatrace": "java", "jvm": "java", "trace-java": "java",
+                "tstrace": "ts", "node-trace": "ts", "trace-ts": "ts"}[cmd]
+        service = LangTraceService(collector)
+        service.trace(LangTraceRequest(lang=lang, pid=args.pid, duration=args.duration,
+                                       func_regex=args.func_regex, cmd=args.cmd))
+        sys.exit(0)
+
+    elif cmd in ["uni", "x", "dev"]:
+        service = UniService(collector)
+        prog_args = args.args.split() if args.args else []
+        if args.action == "detect":
+            sys.exit(0 if service.detect(args.target) else 1)
+        elif args.action == "doctor":
+            service.doctor()
+            sys.exit(0)
+        elif args.action == "build":
+            sys.exit(service.build(args.target))
+        elif args.action == "run":
+            sys.exit(service.run(args.target, prog_args))
+        elif args.action == "debug":
+            sys.exit(service.debug(args.target))
+        elif args.action == "trace":
+            sys.exit(service.trace(args.target, args.pid, args.duration))
+        elif args.action == "all":
+            sys.exit(service.all(args.target, prog_args, args.trace))
+
+    elif cmd == "index-build":
+        service = CodeIndexService(collector)
+        service.build(args.path, args.force)
+        sys.exit(0)
+
+    elif cmd in ["index-search", "find-symbol"]:
+        service = CodeIndexService(collector)
+        service.search(args.query, args.path,
+                       {"lang": args.lang, "kind": args.kind, "limit": args.limit})
+        sys.exit(0)
+
+    elif cmd == "index-stats":
+        service = CodeIndexService(collector)
+        service.stats(args.path)
         sys.exit(0)
 
 
