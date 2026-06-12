@@ -452,9 +452,9 @@ The final joint parameter objective is:
   \node[datblk, below=0.4cm of d1] (d2) {\textbf{Dataset $\mathcal{D}_2$}};
   \node[datblk, below=0.4cm of d2] (dk) {\textbf{Dataset $\mathcal{D}_K$}};
   \node[frzblk, right=1.8cm of d2, minimum height=3.2cm, minimum width=3.0cm] (backbone) {\textbf{Shared} \\ \textbf{Transformer} \\ (Backbone $\theta_{\text{shared}}$)};
-  \node[trnblk, right=1.6cm of d1] (h1) {\textbf{Head$_1$} \\ ($\theta_1$)};
-  \node[trnblk, right=1.6cm of d2] (h2) {\textbf{Head$_2$} \\ ($\theta_2$)};
-  \node[trnblk, right=1.6cm of dk] (hk) {\textbf{Head$_K$} \\ ($\theta_K$)};
+  \node[trnblk, right=1.6cm of backbone] (h2) {\textbf{Head$_2$} \\ ($\theta_2$)};
+  \node[trnblk] (h1) at (h2 |- d1) {\textbf{Head$_1$} \\ ($\theta_1$)};
+  \node[trnblk] (hk) at (h2 |- dk) {\textbf{Head$_K$} \\ ($\theta_K$)};
   \node[lossblk, right=1.6cm of h2] (loss) {\textbf{Weighted} \\ (Loss $\mathcal{L}_{\text{MT}}$)};
 
   \draw[arr] (d1)--(backbone.west|-h1);
