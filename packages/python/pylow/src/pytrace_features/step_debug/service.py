@@ -98,7 +98,7 @@ class StepDebugService:
         if is_attach:
             # Dynamically rewrite command arguments for attach mode
             if spec.name == "java":
-                argv = [tool, "-attach", target_str]
+                argv = [tool, "-sourcepath", "src/main/java:.", "-attach", target_str]
             elif spec.name == "go":
                 argv = [tool, "attach", target_str]
             elif spec.name in ("ts", "js", "node"):
@@ -179,17 +179,17 @@ class StepDebugService:
         bp_cmds, skipped = break_commands(debugger, request.breaks)
         self._warn_skipped(skipped)
         setup = (*debugger.prelude, *bp_cmds, debugger.cont if is_attach else debugger.run)
-        per_stop = (*step_dump_commands(debugger, request.watches), debugger.cont)
+        per_stop = step_dump_commands(debugger, request.watches)
         print(f"[debug-steps] {spec.name} via {tool} — script:")
         for cmd in setup:
             print(f"    {cmd}")
-        print(f"    at each stop: {' | '.join(per_stop)}  (× max {request.max_steps}, then {debugger.quit})")
+        print(f"    at each stop: {' | '.join(per_stop)} | {debugger.cont}  (× max {request.max_steps}, then {debugger.quit})")
         print(f"→ exec: {' '.join(argv)}  (commands paced on the debugger's stop markers)")
         output = run_paced(argv, PacedPlan(
             setup=setup, per_stop=per_stop,
             hit_marker=debugger.hit_marker, end_marker=debugger.end_marker,
-            quit_cmd=debugger.quit, skip_initial_stop=debugger.skip_initial_stop,
-            max_steps=request.max_steps))
+            quit_cmd=debugger.quit, continue_cmd=debugger.cont, skip_initial_stop=debugger.skip_initial_stop,
+            max_steps=request.max_steps, interactive=True))
         steps = split_steps(output, debugger.hit_marker,
                             debugger.skip_initial_stop, debugger.end_marker)
         return self._write_steps(steps, output, request)

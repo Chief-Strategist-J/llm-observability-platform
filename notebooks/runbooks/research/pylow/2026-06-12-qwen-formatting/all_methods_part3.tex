@@ -1,0 +1,1660 @@
+\documentclass{article}
+\usepackage{amsmath,amssymb,geometry,listings,xcolor,tikz,booktabs,titlesec,hyperref}
+\usetikzlibrary{arrows.meta,positioning,calc,shapes.geometric,fit,patterns,decorations.pathreplacing,backgrounds}
+
+\geometry{a4paper, margin=0.6in}
+\setcounter{secnumdepth}{3}
+\hypersetup{colorlinks=true,linkcolor=blue!60!black}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.97,0.97,0.97}
+
+\lstdefinestyle{mystyle}{
+  backgroundcolor=\color{backcolour},commentstyle=\color{codegreen},
+  keywordstyle=\color{blue},numberstyle=\tiny\color{codegray},
+  stringstyle=\color{codepurple},basicstyle=\ttfamily\footnotesize,
+  breaklines=true,captionpos=b,keepspaces=true,
+  numbers=left,numbersep=5pt,tabsize=4}
+\lstset{style=mystyle}
+
+\tikzset{
+  blk/.style={draw,rectangle,minimum width=2.6cm,minimum height=1.0cm,thick,align=center},
+  frzblk/.style={blk,fill=blue!10,draw=blue!70},
+  trnblk/.style={blk,fill=green!12,draw=green!70},
+  datblk/.style={blk,fill=yellow!15,draw=yellow!70!black},
+  lossblk/.style={blk,fill=red!10,draw=red!70},
+  mrgblk/.style={blk,fill=purple!10,draw=purple!70},
+  grayblk/.style={blk,fill=gray!10,draw=gray!60},
+  orangeblk/.style={blk,fill=orange!15,draw=orange!70},
+  cyanblk/.style={blk,fill=cyan!10,draw=cyan!60},
+  arr/.style={-Stealth,thick},
+  garr/.style={Stealth-,red,dashed,thick},
+  sumnode/.style={circle,draw,thick,minimum size=0.6cm,fill=yellow!15}
+}
+
+\begin{document}
+
+\title{\textbf{Mathematical Foundations, Architecture Diagrams, and State Analysis\\
+of Modern LLM Training Methods --- Part 3:\\
+Data Generation, Curation, Distillation, Compression,\\
+Agentic, Multimodal, Knowledge Injection, and Deployment}}
+\author{Chief Strategist J}
+\date{\today}
+\maketitle
+\tableofcontents
+\newpage
+
+%% ============================================================
+\part{Synthetic Data Generation}
+%% ============================================================
+
+\section{Self-Instruct}
+
+\subsection{Mathematical Foundation}
+Self-Instruct bootstraps an instruction dataset from a small seed pool $\mathcal{S}$ by using the LLM itself as a generator. At each iteration, $k$ seed instructions are sampled and the model generates a new instruction $\hat{x}$, its input, and output:
+\begin{equation}
+  (\hat{x}, \hat{i}, \hat{y}) \sim P_\theta(\cdot \mid \text{few-shot}(\mathcal{S}))
+\end{equation}
+Generated examples pass a quality filter (ROUGE similarity $< \delta$ to existing pool, length check):
+\begin{equation}
+  \mathcal{S} \leftarrow \mathcal{S} \cup \{(\hat{x},\hat{i},\hat{y})\} \;\text{ iff }\; \max_{s\in\mathcal{S}} \text{ROUGE}(\hat{x}, s) < \delta
+\end{equation}
+The growing pool is used to fine-tune $\theta$, improving the quality of subsequent generations.
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.0cm]
+  \node[datblk] (seed) {Seed Pool\\$\mathcal{S}$ (175 seeds)};
+  \node[grayblk, right=of seed] (sample) {Sample $k$\\Instructions};
+  \node[trnblk, right=of sample] (gen) {LLM\\Generates\\$(\hat{x},\hat{i},\hat{y})$};
+  \node[orangeblk, right=of gen] (filt) {Quality\\Filter\\ROUGE $< \delta$};
+  \node[datblk, right=of filt] (pool) {Expanded\\Pool $\mathcal{S}'$};
+  \node[mrgblk, below=0.9cm of pool] (sft) {SFT on\\$\mathcal{S}'$};
+  \node[trnblk, left=2.6cm of sft] (better) {Better\\LLM $\theta'$};
+
+  \draw[arr] (seed)--(sample);
+  \draw[arr] (sample)--(gen);
+  \draw[arr] (gen)--(filt);
+  \draw[arr] (filt)--(pool);
+  \draw[arr] (pool)--(sft);
+  \draw[arr] (sft)--(better);
+  \draw[arr,dashed,green!60!black] (better.north) |- (gen.south) node[midway,below,font=\tiny]{iterate};
+  \draw[arr,dashed,blue!60] (pool.north) -- ++(0,0.4) -| (seed.north) node[midway,above,font=\tiny]{pool grows};
+\end{tikzpicture}
+\caption{Self-Instruct: LLM generates new instructions from seed pool; quality filter expands the pool for SFT.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Pool size & 175 seed instructions & $52{,}000+$ generated\\
+Annotation source & Human-written seeds & LLM-generated\\
+Diversity filter & N/A & ROUGE deduplication\\
+Training data cost & Low (seeds only) & Essentially free to scale\\
+Instruction following & Weak & Strong\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Self-Instruct data generation.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Evol-Instruct}
+
+\subsection{Mathematical Foundation}
+Evol-Instruct evolves existing instructions into harder variants via two mutation strategies. \emph{In-depth} evolution adds constraints, increases steps, or requires deeper reasoning. \emph{In-breadth} evolution creates new topic-adjacent instructions:
+\begin{equation}
+  \hat{x} = M_\text{depth}(x) \;\text{ or }\; \hat{x} = M_\text{breadth}(x), \quad \hat{x} \sim P_{\text{teacher}}(\cdot \mid \text{evolve-prompt}, x)
+\end{equation}
+Evolved instructions are validated (non-empty, no refusal, dissimilar from parent) and collected into $\mathcal{D}_{\text{evol}}$. Difficulty increases monotonically with evolution rounds $E$:
+\begin{equation}
+  \mathbb{E}[\text{difficulty}(\hat{x}_E)] > \mathbb{E}[\text{difficulty}(\hat{x}_{E-1})]
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.6cm and 1.0cm]
+  \node[datblk] (orig) {Original\\Instruction $x$};
+  \node[trnblk, above right=0.5cm and 1.2cm of orig] (depth) {In-Depth\\Mutation};
+  \node[trnblk, below right=0.5cm and 1.2cm of orig] (breadth) {In-Breadth\\Mutation};
+  \node[grayblk, right=3.0cm of orig] (evolved) {Evolved\\$\hat{x}$};
+  \node[orangeblk, right=of evolved] (val) {Validate\\(reject refusals)};
+  \node[datblk, right=of val] (pool) {Evolved\\Dataset};
+  \node[mrgblk, below=0.8cm of pool] (sft) {SFT\\(WizardLM style)};
+
+  \draw[arr] (orig.east) |- (depth.west);
+  \draw[arr] (orig.east) |- (breadth.west);
+  \draw[arr] (depth.east) -| (evolved.north);
+  \draw[arr] (breadth.east) -| (evolved.south);
+  \draw[arr] (evolved)--(val);
+  \draw[arr] (val)--(pool);
+  \draw[arr] (pool)--(sft);
+  \draw[arr,dashed,green!60!black] (pool.north) -- ++(0,0.5) -| (orig.north) node[midway,above,font=\tiny]{$E$ rounds};
+\end{tikzpicture}
+\caption{Evol-Instruct: in-depth and in-breadth mutations generate harder variants; validated pool used for SFT.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Instruction difficulty & Low (seed) & Progressively higher (per round $E$)\\
+Instruction diversity & Limited & Broad via breadth mutations\\
+Data source & Human-written & LLM-evolved\\
+Evolution rounds & 0 & $E$ (typically 4--8)\\
+Model performance & Baseline & WizardLM-style improvements\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Evol-Instruct.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Evol-Code}
+
+\subsection{Mathematical Foundation}
+Evol-Code applies the same evolutionary principle to programming tasks, using code-specific mutation operators: adding input/output constraints, combining two functions, increasing time/space complexity, or switching programming language:
+\begin{equation}
+  \hat{p} = M_{\text{code}}(p),\quad M \in \{\text{constrain}, \text{combine}, \text{optimize}, \text{translate}\}
+\end{equation}
+Each evolved problem $\hat{p}$ is solved by a teacher model, and the (problem, solution) pair is validated by unit-test execution:
+\begin{equation}
+  (\hat{p},\hat{s}) \in \mathcal{D}_{\text{code}} \iff \text{unit\_tests}(\hat{s}, \hat{p}) = \text{PASS}
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.6cm and 1.0cm]
+  \node[datblk] (seed) {Seed Code\\Problems};
+  \node[trnblk, right=of seed] (mutate) {Code\\Mutator};
+  \node[grayblk, right=of mutate] (prob) {Evolved\\Problem $\hat{p}$};
+  \node[orangeblk, right=of prob] (solve) {Teacher\\LLM Solves};
+  \node[grayblk, right=of solve] (sol) {Solution $\hat{s}$};
+  \node[cyanblk, below=0.9cm of sol] (test) {Unit Test\\Execution};
+  \node[datblk, left=1.4cm of test] (pass) {Pass: add to\\$\mathcal{D}_{\text{code}}$};
+  \node[lossblk, right=0.8cm of test] (fail) {Fail: discard};
+
+  \draw[arr] (seed)--(mutate);
+  \draw[arr] (mutate)--(prob);
+  \draw[arr] (prob)--(solve);
+  \draw[arr] (solve)--(sol);
+  \draw[arr] (sol)--(test);
+  \draw[arr] (test)--(pass);
+  \draw[arr] (test)--(fail);
+  \draw[arr,dashed,green!60!black] (pass.west) -- ++(-0.5,0) |- (seed.west) node[midway,left,font=\tiny]{grow pool};
+\end{tikzpicture}
+\caption{Evol-Code: code problems are mutated, solved by teacher, validated by unit tests before dataset inclusion.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Problem complexity & Simple seed tasks & Multi-constraint, optimised\\
+Validation method & Human review & Automated unit tests\\
+Data quality gate & None & Unit-test pass rate\\
+Programming languages & Fixed & Multi-language via translate mutation\\
+Code reasoning ability & Baseline & Significantly improved\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Evol-Code data generation.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Synthetic Data Generation}
+
+\subsection{Mathematical Foundation}
+A powerful teacher model $P_T$ generates synthetic (input, output) pairs from topic/schema prompts, which are then used to train a smaller student $P_S$. The synthetic data distribution approximates the real task distribution $P_{\text{real}}$:
+\begin{equation}
+  \mathcal{D}_{\text{synth}} = \{(x_i, y_i) : x_i \sim P_{\text{topic}},\; y_i \sim P_T(\cdot \mid x_i)\}
+\end{equation}
+Quality is improved by filtering on a scoring model or perplexity threshold $\tau_p$:
+\begin{equation}
+  (x,y) \in \mathcal{D}_{\text{final}} \iff \text{score}(x,y) \geq \tau_s \;\text{ and }\; \text{PPL}(y) \leq \tau_p
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.0cm]
+  \node[datblk] (schema) {Schema /\\Topic Seeds};
+  \node[frzblk, right=of schema] (teacher) {Teacher Model\\$P_T$ (large)};
+  \node[grayblk, right=of teacher] (synth) {Synthetic\\Pairs $(x,y)$};
+  \node[orangeblk, right=of synth] (score) {Quality\\Scorer};
+  \node[datblk, right=of score] (final) {Filtered\\$\mathcal{D}_{\text{final}}$};
+  \node[trnblk, below=0.9cm of final] (student) {Train Student\\$P_S$ (small)};
+
+  \draw[arr] (schema)--(teacher);
+  \draw[arr] (teacher)--(synth);
+  \draw[arr] (synth)--(score);
+  \draw[arr] (score)--(final);
+  \draw[arr] (final)--(student);
+  \node[red,font=\tiny,below=0.2cm of score] {reject low-quality};
+\end{tikzpicture}
+\caption{Synthetic Data Generation: teacher generates pairs from schema seeds; quality filter builds training set for student.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Data source & Human annotation & LLM-generated at scale\\
+Annotation cost & High & Very low (API cost)\\
+Data volume & Thousands & Millions scalable\\
+Quality control & Human review & Automated scoring\\
+Domain coverage & Limited & Any topic via schema\\\bottomrule
+\end{tabular}
+\caption{State properties before and after synthetic data generation.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Rejection Sampling}
+
+\subsection{Mathematical Foundation}
+Rejection Sampling generates $N$ candidate completions from the current policy and keeps only those that pass a quality threshold, building a filtered fine-tuning corpus:
+\begin{equation}
+  \mathcal{D}_{\text{RS}} = \{(x, y^{(k)}) : y^{(k)} \sim \pi_\theta(x),\; r(x, y^{(k)}) \geq \tau,\; k = 1..N\}
+\end{equation}
+Expected acceptance rate at threshold $\tau$: $\alpha = P_{y \sim \pi_\theta}[r(x,y) \geq \tau]$. After SFT on $\mathcal{D}_{\text{RS}}$, the model's probability mass shifts toward high-reward completions:
+\begin{equation}
+  \mathbb{E}_{y \sim \pi_{\theta'}}[r(x,y)] > \mathbb{E}_{y \sim \pi_\theta}[r(x,y)]
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.0cm]
+  \node[datblk] (x) {Prompts $\{x_i\}$};
+  \node[trnblk, right=of x] (pol) {Policy $\pi_\theta$\\Sample $N$};
+  \node[grayblk, right=of pol, minimum height=2.0cm] (cands) {$N$ Candidates\\per prompt};
+  \node[orangeblk, right=of cands] (rm) {Reward Model\\$r(x,y)$};
+  \node[datblk, right=of rm] (keep) {Keep\\$r \geq \tau$};
+  \node[lossblk, below=0.9cm of cands] (drop) {Discard\\$r < \tau$};
+  \node[mrgblk, right=0.8cm of keep] (sft) {SFT on\\accepted};
+
+  \draw[arr] (x)--(pol);
+  \draw[arr] (pol)--(cands);
+  \draw[arr] (cands)--(rm);
+  \draw[arr] (rm)--(keep);
+  \draw[arr] (rm.south) -- ++(0,-0.3) -| (drop.east);
+  \draw[arr] (keep)--(sft);
+\end{tikzpicture}
+\caption{Rejection Sampling: $N$ completions generated; only those above reward threshold kept for SFT.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Training data quality & Mixed & High (above threshold $\tau$)\\
+Samples per prompt & 1 & $N$ (with $\alpha N$ accepted)\\
+Reward model & Optional & Required as filter\\
+Iteration benefit & None & Compound with model updates\\
+RL complexity & None & None (SFT only)\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Rejection Sampling.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Best-of-N Sampling}
+
+\subsection{Mathematical Foundation}
+Best-of-N (BoN) sampling selects the highest-reward completion from $N$ independent samples at inference time:
+\begin{equation}
+  y^* = \arg\max_{k \in 1..N} r(x, y^{(k)}),\quad y^{(k)} \sim \pi_\theta(\cdot \mid x)
+\end{equation}
+The expected reward improvement over single-sample baseline scales as:
+\begin{equation}
+  \mathbb{E}[\max_k r(x,y^{(k)})] \approx \mu_r + \sigma_r \cdot \Phi^{-1}\!\left(\frac{N}{N+1}\right)
+\end{equation}
+where $\mu_r, \sigma_r$ are the reward mean and std under $\pi_\theta$, and $\Phi^{-1}$ is the inverse normal CDF. BoN can also be used to build SFT datasets by collecting $(x, y^*)$ pairs.
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.5cm and 0.9cm]
+  \node[datblk,minimum width=1.8cm] (x) {Prompt $x$};
+  \node[trnblk,minimum width=1.6cm, above right=0.3cm and 1.0cm of x] (y1) {$y^{(1)}$};
+  \node[trnblk,minimum width=1.6cm, right=1.0cm of x] (y2) {$y^{(2)}$};
+  \node[trnblk,minimum width=1.6cm, below right=0.3cm and 1.0cm of x] (yN) {$y^{(N)}$};
+  \node[orangeblk, right=1.6cm of y2] (rm) {Reward\\$r(x,y^{(k)})$};
+  \node[mrgblk, right=of rm] (best) {$y^*=\arg\max$};
+
+  \draw[arr] (x.east) |- (y1.west);
+  \draw[arr] (x)--(y2);
+  \draw[arr] (x.east) |- (yN.west);
+  \draw[arr] (y1.east) -| (rm.north);
+  \draw[arr] (y2)--(rm);
+  \draw[arr] (yN.east) -| (rm.south);
+  \draw[arr] (rm)--(best);
+
+  \node[font=\tiny,below=0.2cm of y2] {$N$ samples};
+\end{tikzpicture}
+\caption{Best-of-N: $N$ samples scored by reward model; highest reward selected as final output.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before (single)} & \textbf{After (BoN)}\\\midrule
+Samples per query & 1 & $N$\\
+Compute at inference & $1\times$ & $N\times$\\
+Expected reward & $\mu_r$ & $\mu_r + O(\sigma_r \log N)$\\
+Model weights & Unchanged & Unchanged\\
+Best usage & Cheap inference & Quality-critical generation\\\bottomrule
+\end{tabular}
+\caption{State properties comparing single-sample and Best-of-N sampling.}
+\end{table}
+
+\newpage
+%% ============================================================
+\part{Data Curation}
+%% ============================================================
+
+\section{Data Filtering}
+
+\subsection{Mathematical Foundation}
+Data filtering removes low-quality examples from a raw corpus using a set of quality signals $\{q_1,\ldots,q_M\}$. A sample $(x,y)$ is accepted iff it passes all signal thresholds:
+\begin{equation}
+  (x,y) \in \mathcal{D}_{\text{clean}} \iff \bigwedge_{m=1}^M q_m(x,y) \geq \tau_m
+\end{equation}
+Common signals include perplexity under a small LM (detects gibberish), toxic content classifiers, length ratios, and language identification. A learned quality classifier $c_\phi$ can consolidate multiple signals:
+\begin{equation}
+  c_\phi(x,y) = \sigma(w^\top [q_1(x,y),\ldots,q_M(x,y)])
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.6cm and 1.0cm]
+  \node[datblk] (raw) {Raw Corpus\\(noisy, large)};
+  \node[grayblk, right=of raw] (ppl) {Perplexity\\Filter};
+  \node[grayblk, right=of ppl] (tox) {Toxicity\\Classifier};
+  \node[grayblk, right=of tox] (lang) {Language\\ID};
+  \node[orangeblk, right=of lang] (thresh) {Threshold\\Gates $\tau_m$};
+  \node[trnblk, above right=0.4cm and 1.0cm of thresh] (pass) {PASS\\$\rightarrow$ keep};
+  \node[lossblk, below right=0.4cm and 1.0cm of thresh] (fail) {FAIL\\$\rightarrow$ drop};
+  \node[datblk, right=1.8cm of thresh] (clean) {Filtered\\$\mathcal{D}_{\text{clean}}$};
+
+  \draw[arr] (raw)--(ppl);
+  \draw[arr] (ppl)--(tox);
+  \draw[arr] (tox)--(lang);
+  \draw[arr] (lang)--(thresh);
+  \draw[arr] (thresh.east) |- (pass.west);
+  \draw[arr] (thresh.east) |- (fail.west);
+  \draw[arr] (pass.east) -| (clean.north);
+\end{tikzpicture}
+\caption{Data filtering pipeline: multiple quality signals applied in sequence; only passing samples retained.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Corpus size & Very large (noisy) & Smaller (high quality)\\
+Noise level & High & Low\\
+Domain coverage & Broad (noisy) & Focused (clean)\\
+Filter signals & None & $M$ quality signals\\
+Training efficiency & Low & Higher (less wasted compute)\\\bottomrule
+\end{tabular}
+\caption{State properties before and after data filtering.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Deduplication}
+
+\subsection{Mathematical Foundation}
+Deduplication removes near-duplicate documents to prevent memorisation and improve sample diversity. MinHash LSH estimates Jaccard similarity between documents:
+\begin{equation}
+  J(A,B) = \frac{|A \cap B|}{|A \cup B|} \approx \frac{1}{K}\sum_{k=1}^K \mathbf{1}[h_k(A) = h_k(B)]
+\end{equation}
+where $\{h_k\}$ are $K$ independent hash functions and $h_k(A) = \min_{w \in \text{ngrams}(A)} h_k(w)$. Documents with $J(A,B) > \tau_J$ are considered duplicates and one is removed:
+\begin{equation}
+  \mathcal{D}_{\text{dedup}} = \{d_i : \forall j < i,\; J(d_i, d_j) \leq \tau_J\}
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.0cm]
+  \node[datblk] (corpus) {Corpus\\$\mathcal{D}$};
+  \node[grayblk, right=of corpus] (ngrams) {N-gram\\Shingles};
+  \node[trnblk, right=of ngrams] (minhash) {MinHash\\Signatures};
+  \node[grayblk, right=of minhash] (lsh) {LSH\\Bucketing};
+  \node[orangeblk, right=of lsh] (cmp) {Pairwise\\$J > \tau_J$?};
+  \node[datblk, above right=0.4cm and 1.0cm of cmp] (keep) {Keep (unique)};
+  \node[lossblk, below right=0.4cm and 1.0cm of cmp] (drop) {Drop (dup.)};
+
+  \draw[arr] (corpus)--(ngrams);
+  \draw[arr] (ngrams)--(minhash);
+  \draw[arr] (minhash)--(lsh);
+  \draw[arr] (lsh)--(cmp);
+  \draw[arr] (cmp.east) |- (keep.west);
+  \draw[arr] (cmp.east) |- (drop.west);
+\end{tikzpicture}
+\caption{Deduplication: MinHash signatures group near-duplicates via LSH; high-similarity pairs discarded.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Near-duplicate rate & 15--30\% (web data) & Near zero\\
+Memorisation risk & High & Reduced\\
+Effective token diversity & Low & High\\
+Corpus size & $|\mathcal{D}|$ & $|\mathcal{D}_{\text{dedup}}| < |\mathcal{D}|$\\
+Compute wasted on duplicates & High & Eliminated\\\bottomrule
+\end{tabular}
+\caption{State properties before and after deduplication.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Active Learning}
+
+\subsection{Mathematical Foundation}
+Active Learning selects the most \emph{informative} unlabelled examples for annotation, maximising model improvement per annotation dollar. Uncertainty sampling selects $x^*$ with highest predictive entropy:
+\begin{equation}
+  x^* = \arg\max_{x \in \mathcal{U}} \mathbb{H}[P_\theta(y \mid x)] = \arg\max_x -\sum_y P_\theta(y|x)\log P_\theta(y|x)
+\end{equation}
+Query-by-committee uses disagreement between an ensemble $\{\theta_1,\ldots,\theta_C\}$:
+\begin{equation}
+  x^* = \arg\max_{x \in \mathcal{U}} \frac{1}{C}\sum_c \mathbb{KL}[P_{\theta_c}(\cdot|x) \| \bar{P}(\cdot|x)]
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.0cm]
+  \node[datblk] (unlabeled) {Unlabelled\\Pool $\mathcal{U}$};
+  \node[frzblk, right=of unlabeled] (model) {Current\\Model $\theta$};
+  \node[orangeblk, right=of model] (unc) {Uncertainty\\Estimator};
+  \node[grayblk, right=of unc] (select) {Select top-$b$\\examples};
+  \node[datblk, right=of select] (annot) {Human\\Annotator};
+  \node[trnblk, below=0.9cm of annot] (retrain) {Retrain\\on $\mathcal{L}$};
+  \node[mrgblk, left=2.4cm of retrain] (better) {Better\\$\theta'$};
+
+  \draw[arr] (unlabeled)--(model);
+  \draw[arr] (model)--(unc);
+  \draw[arr] (unc)--(select);
+  \draw[arr] (select)--(annot);
+  \draw[arr] (annot)--(retrain);
+  \draw[arr] (retrain)--(better);
+  \draw[arr,dashed,green!60!black] (better.north) |- (model.south) node[midway,below,font=\tiny]{loop};
+\end{tikzpicture}
+\caption{Active Learning: uncertainty estimator selects most informative examples; human annotates; model retrains.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Annotation strategy & Random sampling & Uncertainty-driven\\
+Labels per accuracy gain & Many & Few (targeted)\\
+Unlabelled pool & Fully unused & Iteratively queried\\
+Annotation budget & Fixed & Allocated by informativeness\\
+Model improvement per label & Low & High\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Active Learning.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Curriculum Learning}
+
+\subsection{Mathematical Foundation}
+Curriculum Learning trains on examples ordered by difficulty $d(x,y)$, starting with easy examples and progressively introducing harder ones. A competence function $c(t) \in [0,1]$ controls what fraction of the difficulty range is accessible at step $t$:
+\begin{equation}
+  c(t) = \min\!\left(1,\; c_0 + (1-c_0)\frac{t}{T_{\text{ramp}}}\right)
+\end{equation}
+The training distribution at step $t$ only samples from examples with $d(x,y) \leq c(t) \cdot d_{\max}$:
+\begin{equation}
+  \mathcal{D}_t = \{(x,y) : d(x,y) \leq c(t) \cdot d_{\max}\},\quad (x,y) \sim \text{Uniform}(\mathcal{D}_t)
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.6cm and 1.0cm]
+  \node[datblk] (all) {Full Dataset\\$\mathcal{D}$};
+  \node[grayblk, right=of all] (score) {Difficulty\\Scorer $d(\cdot)$};
+  \node[orangeblk, right=of score] (sort) {Sort by\\Difficulty};
+  \node[trnblk, right=of sort] (easy) {Easy\\Batch $t{=}0$};
+  \node[frzblk, below=0.5cm of easy] (med) {Medium\\Batch $t{=}T/2$};
+  \node[mrgblk, below=0.5cm of med] (hard) {Hard\\Batch $t{=}T$};
+  \node[lossblk, right=1.6cm of med] (model) {Model\\Training};
+
+  \draw[arr] (all)--(score);
+  \draw[arr] (score)--(sort);
+  \draw[arr] (sort)--(easy);
+  \draw[arr] (easy.south)--(med.north);
+  \draw[arr] (med.south)--(hard.north);
+  \draw[arr] (easy.east) -| (model.north);
+  \draw[arr] (med)--(model);
+  \draw[arr] (hard.east) -| (model.south);
+
+  \node[font=\tiny,left=0.1cm of easy] {$c(t){=}0.2$};
+  \node[font=\tiny,left=0.1cm of med] {$c(t){=}0.6$};
+  \node[font=\tiny,left=0.1cm of hard] {$c(t){=}1.0$};
+\end{tikzpicture}
+\caption{Curriculum Learning: examples sorted by difficulty; competence function progressively unlocks harder batches.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Training order & Random & Difficulty-ordered\\
+Early training batches & Mixed difficulty & Easy only\\
+Convergence speed & Slower & Faster (easier start)\\
+Final performance & Baseline & Improved\\
+Difficulty metric & N/A & Perplexity, length, or task-specific\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Curriculum Learning.}
+\end{table}
+
+\newpage
+%% ============================================================
+\part{Knowledge Distillation}
+%% ============================================================
+
+\section{Knowledge Distillation}
+
+\subsection{Mathematical Foundation}
+Knowledge Distillation transfers the ``dark knowledge'' of a large teacher $P_T$ to a small student $P_S$ by minimising a combination of cross-entropy with hard labels and KL divergence from teacher soft logits at temperature $\tau$:
+\begin{equation}
+  \mathcal{L}_{\text{KD}} = \alpha\,\mathcal{L}_{\text{CE}}(P_S, y_{\text{hard}}) + (1-\alpha)\,\tau^2\,\mathbb{KL}\!\left[P_T^{(\tau)} \| P_S^{(\tau)}\right]
+\end{equation}
+where $P^{(\tau)}_k = \text{softmax}(z_k/\tau)$. Temperature $\tau > 1$ softens distributions to expose similarity structure between classes not visible in hard labels.
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.0cm]
+  \node[datblk] (x) {Input $x$};
+  \node[frzblk, above right=0.5cm and 1.2cm of x] (teacher) {Teacher $P_T$\\(frozen, large)};
+  \node[trnblk, below right=0.5cm and 1.2cm of x] (student) {Student $P_S$\\(trainable, small)};
+  \node[lossblk, right=3.0cm of x] (kl) {KL Div\\$\tau^2\,\text{KL}[P_T^\tau \| P_S^\tau]$};
+  \node[lossblk, below=0.7cm of kl] (ce) {CE Loss\\$\mathcal{L}_{\text{CE}}(P_S, y)$};
+  \node[mrgblk, right=2.0cm of $(kl)!0.5!(ce)$] (total) {$\mathcal{L}_{\text{KD}}$\\(combined)};
+
+  \draw[arr] (x.east) |- (teacher.west);
+  \draw[arr] (x.east) |- (student.west);
+  \draw[arr] (teacher.east) -| (kl.north);
+  \draw[arr] (student.east) -| (kl.south);
+  \draw[arr] (student.east) -| (ce.west);
+  \draw[arr] (kl.east) -| (total.north);
+  \draw[arr] (ce.east) -| (total.south);
+\end{tikzpicture}
+\caption{Knowledge Distillation: student learns from both hard labels (CE) and teacher soft logits (KL) simultaneously.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Student accuracy & Low (random) & Near-teacher accuracy\\
+Training signal & Hard labels only & Hard labels + soft teacher logits\\
+Temperature $\tau$ & N/A & $>1$ (typically 2--5)\\
+Dark knowledge transfer & None & Via inter-class similarities\\
+Student size & Large (teacher) & Small (${\sim}10$--$100\times$ fewer params)\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Knowledge Distillation.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Response Distillation}
+
+\subsection{Mathematical Foundation}
+Response Distillation trains the student by directly imitating the teacher's \emph{full output sequence} rather than soft logits. The student minimises cross-entropy against teacher-generated responses:
+\begin{equation}
+  \mathcal{L}_{\text{RD}} = -\sum_{(x,y_T) \in \mathcal{D}_T} \sum_t \log P_S(y_{T,t} \mid x, y_{T,<t})
+\end{equation}
+where $y_T \sim P_T(\cdot \mid x)$ are teacher completions. This is simpler than logit matching (no access to teacher logits required) and enables distillation from black-box APIs.
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.1cm]
+  \node[datblk] (prompts) {Prompts $\{x_i\}$};
+  \node[frzblk, right=of prompts] (teacher) {Teacher $P_T$\\(API or local)};
+  \node[datblk, right=of teacher] (responses) {Teacher\\Responses $y_T$};
+  \node[trnblk, right=of responses] (student) {Student $P_S$\\SFT on $y_T$};
+  \node[lossblk, below=0.9cm of student] (loss) {CE Loss\\$-\log P_S(y_T|x)$};
+  \node[mrgblk, left=1.4cm of loss] (out) {Distilled\\Student};
+
+  \draw[arr] (prompts)--(teacher);
+  \draw[arr] (teacher)--(responses);
+  \draw[arr] (responses)--(student);
+  \draw[arr] (student)--(loss);
+  \draw[arr] (loss)--(out);
+
+  \node[font=\tiny,red,align=center,below=0.2cm of teacher] {black-box OK\\(only outputs needed)};
+\end{tikzpicture}
+\caption{Response Distillation: teacher generates responses; student trained via SFT to imitate those outputs.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before (KD)} & \textbf{After (Response KD)}\\\midrule
+Teacher access required & Logits (white-box) & Outputs only (black-box OK)\\
+Loss type & KL on logits & CE on token sequence\\
+Sequence-level knowledge & Partial & Full (complete generation)\\
+Implementation complexity & High & Same as SFT\\
+Applicable to proprietary APIs & No & Yes\\\bottomrule
+\end{tabular}
+\caption{State properties comparing logit-level KD and Response Distillation.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Chain-of-Thought Distillation}
+
+\subsection{Mathematical Foundation}
+CoT Distillation transfers the teacher's \emph{reasoning traces} to the student, so the student learns not just the answer but how to think step by step. The student is trained on $(x, c_T, y_T)$ triplets where $c_T$ is the teacher-generated chain:
+\begin{equation}
+  \mathcal{L}_{\text{CoTD}} = -\sum_{(x,c_T,y_T)} \left[\sum_m \log P_S(c_{T,m} \mid x, c_{T,<m}) + \sum_t \log P_S(y_{T,t} \mid x, c_T, y_{T,<t})\right]
+\end{equation}
+This allows a small student to match the accuracy of a large teacher that reasons step by step.
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.0cm]
+  \node[datblk] (x) {Problem $x$};
+  \node[frzblk, right=of x] (teacher) {Teacher $P_T$};
+  \node[grayblk, right=of teacher] (cot) {Chain $c_T$\\+ Answer $y_T$};
+  \node[trnblk, below=1.0cm of teacher] (student) {Student $P_S$};
+  \node[lossblk, right=of student] (loss) {CoT + Answer\\CE Loss};
+  \node[mrgblk, right=of loss] (out) {Reasoning\\Student};
+
+  \draw[arr] (x)--(teacher);
+  \draw[arr] (teacher)--(cot);
+  \draw[arr] (cot.south) -- ++(0,-0.3) -| (loss.north);
+  \draw[arr] (x.south) -- ++(0,-0.7) -| (student.west);
+  \draw[arr] (student)--(loss);
+  \draw[arr] (loss)--(out);
+\end{tikzpicture}
+\caption{CoT Distillation: teacher's reasoning chains and answers jointly train student to produce similar traces.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Student reasoning & Direct answer & Step-by-step chain\\
+Training target & Answer only & Chain + answer\\
+Reasoning data source & None & Teacher-generated\\
+Multi-step problem accuracy & Low & Significantly higher\\
+Output verbosity & Terse & Explanatory\\\bottomrule
+\end{tabular}
+\caption{State properties before and after CoT Distillation.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Policy Distillation}
+
+\subsection{Mathematical Foundation}
+Policy Distillation minimises the KL divergence between a teacher policy $\pi_T$ and student policy $\pi_S$ over the full output distribution at every decoding step, not just the final token:
+\begin{equation}
+  \mathcal{L}_{\text{PD}} = \mathbb{E}_{x \sim \mathcal{D}} \sum_t \mathbb{KL}\!\left[\pi_T(\cdot \mid x, y_{<t}) \| \pi_S(\cdot \mid x, y_{<t})\right]
+\end{equation}
+Unlike response distillation (which uses sampled strings), policy distillation uses teacher token-level distributions and requires teacher logit access. This aligns the student's generation \emph{process} with the teacher's, not just its outputs.
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.0cm]
+  \node[datblk] (x) {Context $(x, y_{<t})$};
+  \node[frzblk, above right=0.5cm and 1.3cm of x] (tpol) {Teacher\\$\pi_T(\cdot|x,y_{<t})$\\full distribution};
+  \node[trnblk, below right=0.5cm and 1.3cm of x] (spol) {Student\\$\pi_S(\cdot|x,y_{<t})$\\full distribution};
+  \node[lossblk, right=3.2cm of x] (kl) {KL$[\pi_T \| \pi_S]$\\at every step $t$};
+  \node[mrgblk, right=of kl] (out) {Aligned\\Policy $\pi_S^*$};
+
+  \draw[arr] (x.east) |- (tpol.west);
+  \draw[arr] (x.east) |- (spol.west);
+  \draw[arr] (tpol.east) -| (kl.north);
+  \draw[arr] (spol.east) -| (kl.south);
+  \draw[arr] (kl)--(out);
+
+  \node[red,font=\tiny,align=center,below=0.2cm of tpol] {logits required\\(white-box)};
+\end{tikzpicture}
+\caption{Policy Distillation: KL divergence between teacher and student distributions minimised at every token step.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before (Response KD)} & \textbf{After (Policy KD)}\\\midrule
+Teacher signal & Sampled string & Full token distribution\\
+KL divergence & N/A & Minimised per step\\
+Teacher access & Black-box & White-box (logits)\\
+Process alignment & Output only & Step-by-step\\
+Overconfidence risk & Higher & Lower (distribution match)\\\bottomrule
+\end{tabular}
+\caption{State properties comparing Response and Policy Distillation.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Reward Distillation}
+
+\subsection{Mathematical Foundation}
+Reward Distillation compresses a large teacher reward model $r_T$ into a smaller student reward model $r_S$ by regression on teacher-generated scores:
+\begin{equation}
+  \mathcal{L}_{\text{RewardD}} = \mathbb{E}_{(x,y)}\bigl[(r_T(x,y) - r_S(x,y))^2\bigr]
+\end{equation}
+The student can also be trained with a ranking-consistency loss to preserve relative orderings even if absolute score values differ:
+\begin{equation}
+  \mathcal{L}_{\text{rank}} = -\log\sigma\!\left(r_S(x,y_w) - r_S(x,y_l)\right) \text{ whenever } r_T(x,y_w) > r_T(x,y_l)
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.0cm]
+  \node[datblk] (pairs) {$(x, y)$ Pairs};
+  \node[frzblk, right=of pairs] (trm) {Teacher RM $r_T$\\(frozen, large)};
+  \node[grayblk, right=of trm] (scores) {Teacher\\Scores $r_T(x,y)$};
+  \node[trnblk, below=1.0cm of trm] (srm) {Student RM $r_S$\\(small, trainable)};
+  \node[lossblk, right=of srm] (loss) {MSE +\\Ranking Loss};
+  \node[mrgblk, right=of loss] (out) {Compact\\RM $r_S^*$};
+
+  \draw[arr] (pairs)--(trm);
+  \draw[arr] (trm)--(scores);
+  \draw[arr] (scores.south) -- ++(0,-0.3) -| (loss.north);
+  \draw[arr] (pairs.south) -- ++(0,-0.7) -| (srm.west);
+  \draw[arr] (srm)--(loss);
+  \draw[arr] (loss)--(out);
+\end{tikzpicture}
+\caption{Reward Distillation: small student reward model trained via regression on large teacher reward scores.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Reward model size & Large teacher & Small student\\
+Inference latency & Slow & Fast\\
+Score accuracy & High (teacher) & Near-teacher (distilled)\\
+Training objective & Human preferences & Teacher score regression\\
+Deployment cost & High & Low\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Reward Distillation.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Retrieval Distillation}
+
+\subsection{Mathematical Foundation}
+Retrieval Distillation trains a student retriever $q_S$ to match the relevance judgments of a larger teacher retriever $q_T$ (or cross-encoder) without requiring access to teacher gradients. The student minimises the KL divergence between teacher and student retrieval distributions over a document set $\mathcal{C}$:
+\begin{equation}
+  \mathcal{L}_{\text{RD}} = \mathbb{KL}\!\left[P_T(\cdot \mid q) \| P_S(\cdot \mid q)\right],\quad P(d \mid q) \propto \exp(q_\phi(q)^\top e(d))
+\end{equation}
+where $q_\phi$ is the query encoder and $e(d)$ is the document embedding.
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.1cm]
+  \node[datblk] (q) {Query $q$};
+  \node[frzblk, above right=0.5cm and 1.2cm of q] (tret) {Teacher\\Retriever $q_T$\\(cross-encoder)};
+  \node[trnblk, below right=0.5cm and 1.2cm of q] (sret) {Student\\Retriever $q_S$\\(bi-encoder)};
+  \node[datblk, right=3.2cm of q] (corpus) {Document\\Corpus $\mathcal{C}$};
+  \node[lossblk, right=4.5cm of q] (kl) {KL[$P_T \| P_S$]\\over doc ranks};
+  \node[mrgblk, right=of kl] (out) {Efficient\\Retriever};
+
+  \draw[arr] (q.east) |- (tret.west);
+  \draw[arr] (q.east) |- (sret.west);
+  \draw[arr] (tret.east) -| (kl.north);
+  \draw[arr] (sret.east) -| (kl.south);
+  \draw[arr] (corpus.west) -- (kl.east|-corpus) -- (kl.east);
+  \draw[arr] (kl)--(out);
+
+  \node[red,font=\tiny,align=center,below=0.2cm of sret] {fast at inference\\(ANN search)};
+\end{tikzpicture}
+\caption{Retrieval Distillation: student bi-encoder trained to match teacher cross-encoder relevance distributions.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before (Teacher)} & \textbf{After (Student)}\\\midrule
+Retriever type & Cross-encoder (slow) & Bi-encoder (fast ANN)\\
+Query latency & $O(|\mathcal{C}|)$ & $O(\log|\mathcal{C}|)$\\
+Ranking quality & Very high & Near-teacher\\
+Index requirement & None & Pre-computed embeddings\\
+Training signal & Human judgments & Teacher soft scores\\\bottomrule
+\end{tabular}
+\caption{State properties comparing teacher cross-encoder and student bi-encoder after retrieval distillation.}
+\end{table}
+
+\newpage
+%% ============================================================
+\part{Model Compression}
+%% ============================================================
+
+\section{Quantization-Aware Training (QAT)}
+
+\subsection{Mathematical Foundation}
+QAT simulates quantization during training using a straight-through estimator (STE) for gradients. For weight $w$, the quantized value at $b$ bits with scale $s$:
+\begin{equation}
+  \hat{w} = \text{clamp}\!\left(\text{round}(w/s), -2^{b-1}, 2^{b-1}-1\right) \cdot s
+\end{equation}
+During the backward pass the STE treats quantization as identity for gradient flow:
+\begin{equation}
+  \frac{\partial \mathcal{L}}{\partial w} \approx \frac{\partial \mathcal{L}}{\partial \hat{w}} \cdot \mathbf{1}\!\left[|w| \leq s \cdot 2^{b-1}\right]
+\end{equation}
+This makes the model aware of quantization error during training, yielding better accuracy than post-training quantization.
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.1cm]
+  \node[datblk] (x) {Input $x$};
+  \node[trnblk, right=of x] (fp32) {FP32 Weights\\(master copy)};
+  \node[grayblk, right=of fp32] (fakeq) {Fake Quantize\\$w \to \hat{w}$};
+  \node[frzblk, right=of fakeq] (fwd) {Forward Pass\\(with $\hat{w}$)};
+  \node[lossblk, right=of fwd] (loss) {Task Loss\\$\mathcal{L}$};
+  \node[trnblk, below=0.9cm of loss] (ste) {STE Backward\\$\partial\mathcal{L}/\partial w$};
+  \node[mrgblk, left=3.6cm of ste] (deploy) {Deploy\\INT$b$ Model};
+
+  \draw[arr] (x)--(fp32);
+  \draw[arr] (fp32)--(fakeq);
+  \draw[arr] (fakeq)--(fwd);
+  \draw[arr] (fwd)--(loss);
+  \draw[arr] (loss)--(ste);
+  \draw[arr] (ste) -- node[below,font=\tiny]{update FP32 master} (deploy);
+  \draw[arr,dashed,green!60!black] (ste.west) -- (fp32.south|-ste) -- (fp32.south);
+\end{tikzpicture}
+\caption{QAT: fake quantization in forward pass; STE allows gradients to flow to FP32 master weights.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before (PTQ)} & \textbf{After (QAT)}\\\midrule
+Quantization awareness & None during training & Simulated in forward pass\\
+Accuracy loss & 1--5\% degradation & $<$1\% typical\\
+Calibration data & Small set required & Full training data\\
+Weight format & FP32 & FP32 master, INT$b$ deploy\\
+Gradient flow & Normal & Via STE\\\bottomrule
+\end{tabular}
+\caption{State properties comparing Post-Training Quantization and QAT.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Pruning}
+
+\subsection{Mathematical Foundation}
+Pruning removes weights whose contribution to the model output is below a threshold, producing a sparse network. Magnitude-based unstructured pruning removes the fraction $p$ of weights with the smallest absolute values:
+\begin{equation}
+  m_i = \mathbf{1}[|w_i| \geq \tau_p],\quad W_{\text{sparse}} = W \odot m
+\end{equation}
+where $\tau_p$ is chosen to achieve sparsity ratio $s = 1 - \|m\|_1 / \|m\|_0$. Structured pruning removes entire heads or neurons (rows/columns) and is hardware-friendly:
+\begin{equation}
+  \text{importance}(h) = \sum_{i \in h} |w_i| \cdot |\nabla_{w_i}\mathcal{L}|
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.0cm]
+  \node[frzblk] (dense) {Dense Model\\$W$ (all weights)};
+  \node[grayblk, right=of dense] (score) {Importance\\Scoring};
+  \node[orangeblk, right=of score] (mask) {Binary\\Mask $m$};
+  \node[trnblk, right=of mask] (sparse) {Sparse Model\\$W \odot m$};
+  \node[lossblk, below=0.9cm of sparse] (finetune) {Fine-tune to\\Recover Acc.};
+  \node[mrgblk, left=2.2cm of finetune] (out) {Pruned\\Model};
+
+  \draw[arr] (dense)--(score);
+  \draw[arr] (score)--(mask);
+  \draw[arr] (mask)--(sparse);
+  \draw[arr] (sparse)--(finetune);
+  \draw[arr] (finetune)--(out);
+
+  \node[font=\tiny,below=0.2cm of mask] {sparsity $s = 50$--$90$\%};
+\end{tikzpicture}
+\caption{Pruning: importance scores determine binary mask; sparse model fine-tuned to recover accuracy.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Model sparsity & 0\% & 50--90\%\\
+Parameter count & $|\theta|$ & $(1-s)|\theta|$\\
+Inference FLOPs & Baseline & Reduced (structured)\\
+Accuracy & Baseline & Slightly reduced\\
+Memory footprint & Full & Reduced by $s$\\\bottomrule
+\end{tabular}
+\caption{State properties before and after pruning.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Post-Training Quantization (PTQ)}
+
+\subsection{Mathematical Foundation}
+PTQ converts a trained FP32 model to reduced precision (INT8, INT4) without additional training. Per-channel scale factors $s_c$ are calibrated on a small unlabelled dataset $\mathcal{D}_{\text{cal}}$:
+\begin{equation}
+  s_c = \frac{\max_{x \in \mathcal{D}_{\text{cal}}}|a_c(x)|}{2^{b-1}-1},\quad \hat{a}_c = \text{round}(a_c / s_c) \cdot s_c
+\end{equation}
+GPTQ computes optimal quantization for each weight row by minimising the second-order reconstruction error using the Hessian:
+\begin{equation}
+  \min_{\hat{W}} \|\hat{W} X - W X\|_F^2 \approx \sum_i (w_i - \hat{w}_i)^2 [H^{-1}]_{ii}
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.0cm]
+  \node[frzblk] (fp32) {FP32 Model\\(pretrained)};
+  \node[datblk, right=of fp32] (cal) {Calibration\\Data $\mathcal{D}_{\text{cal}}$};
+  \node[grayblk, right=of cal] (hess) {Hessian /\\Scale Est.};
+  \node[orangeblk, right=of hess] (quant) {Round Weights\\to INT$b$};
+  \node[mrgblk, right=of quant] (int) {INT$b$ Model\\(fast inference)};
+
+  \draw[arr] (fp32)--(cal);
+  \draw[arr] (cal)--(hess);
+  \draw[arr] (hess)--(quant);
+  \draw[arr] (quant)--(int);
+  \draw[arr] (fp32.south) -- ++(0,-0.5) -| (quant.south);
+
+  \node[font=\tiny,below=0.2cm of cal] {small unlabelled};
+\end{tikzpicture}
+\caption{PTQ: calibration statistics guide per-channel scales; weights rounded to INT$b$ without retraining.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Weight precision & FP32 / BF16 & INT8 / INT4\\
+Memory usage & $4 \times n$ bytes & $1$--$0.5 \times n$ bytes\\
+Retraining required & N/A & None (calibration only)\\
+Accuracy loss & 0\% & 0.5--3\% (INT8), higher INT4\\
+Calibration data & Not needed & Small sample ($128$--$512$ examples)\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Post-Training Quantization.}
+\end{table}
+
+\newpage
+%% ============================================================
+\part{Agentic Training}
+%% ============================================================
+
+\section{Tool-Use Training}
+
+\subsection{Mathematical Foundation}
+Tool-Use Training teaches the model to generate structured tool invocations interleaved with reasoning (ReAct-style). The training data consists of trajectories $\tau = (t_1, a_1, o_1, \ldots, t_N, a_N, o_N, y)$ where $t_i$ is a thought, $a_i$ is a tool call, and $o_i$ is the observation. The model is trained to predict thought and action tokens conditioned on prior context and observations:
+\begin{equation}
+  \mathcal{L}_{\text{tool}} = -\sum_{i=1}^N \sum_j \log P_\theta(t_{i,j} \mid \text{context}_{<i}) + \log P_\theta(a_{i,j} \mid \text{context}_{<i}, t_i)
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.5cm and 0.8cm]
+  \node[datblk,minimum width=1.6cm] (q) {Task $q$};
+  \node[trnblk,minimum width=1.6cm, right=0.7cm of q] (t1) {Thought\\$t_1$};
+  \node[orangeblk,minimum width=1.6cm, right=0.6cm of t1] (a1) {Tool Call\\$a_1$};
+  \node[cyanblk,minimum width=1.6cm, right=0.6cm of a1] (o1) {Obs.\\$o_1$};
+  \node[trnblk,minimum width=1.6cm, right=0.6cm of o1] (t2) {Thought\\$t_2$};
+  \node[orangeblk,minimum width=1.6cm, right=0.6cm of t2] (a2) {Tool Call\\$a_2$};
+  \node[mrgblk,minimum width=1.6cm, right=0.6cm of a2] (ans) {Answer\\$y$};
+
+  \foreach \a/\b in {q/t1, t1/a1, a1/o1, o1/t2, t2/a2, a2/ans}
+    \draw[arr] (\a)--(\b);
+
+  \node[red,font=\tiny,below=0.3cm of a1] {trained};
+  \node[red,font=\tiny,below=0.3cm of t1] {trained};
+  \node[blue!60!black,font=\tiny,below=0.3cm of o1] {env reply};
+\end{tikzpicture}
+\caption{Tool-Use Training: thought-action-observation trajectory; model trained on thought and action tokens.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Output format & Free text & Thought + tool call interleaved\\
+Tool invocation & None & Structured API calls\\
+Observation integration & N/A & Conditioned on tool results\\
+Multi-step planning & Weak & Strong\\
+Training data type & Static QA & Trajectory (thought, action, obs)\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Tool-Use Training.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Function Calling Training}
+
+\subsection{Mathematical Foundation}
+Function Calling Training specifically trains the model to produce well-formed JSON function-call objects given a natural-language request and a tool schema. The model maps input $x$ and schema $S = \{f_1,\ldots,f_K\}$ to a structured call $c = \{$\texttt{name}: $f_k$, \texttt{args}: $\{a_1{:}v_1,\ldots\}\}$:
+\begin{equation}
+  \mathcal{L}_{\text{FC}} = -\log P_\theta(c \mid x, S)
+\end{equation}
+where $c$ is the ground-truth function call. Schema-aware token masking ensures the model only generates valid JSON that matches the function signature, reducing hallucination of non-existent arguments.
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.1cm]
+  \node[datblk] (x) {User Request $x$};
+  \node[grayblk, above=0.7cm of x] (schema) {Tool Schema $S$\\(JSON spec)};
+  \node[frzblk, right=1.6cm of $(x)!0.5!(schema)$] (model) {LLM\\$P_\theta$};
+  \node[trnblk, right=of model] (json) {JSON Call\\$c=\{$name, args$\}$};
+  \node[lossblk, below=0.9cm of json] (val) {Schema\\Validation};
+  \node[mrgblk, left=1.4cm of val] (exec) {Execute\\Function};
+
+  \draw[arr] (x.east) -| (model.south);
+  \draw[arr] (schema.east) -| (model.north);
+  \draw[arr] (model)--(json);
+  \draw[arr] (json)--(val);
+  \draw[arr] (val)--(exec);
+\end{tikzpicture}
+\caption{Function Calling Training: model receives request + schema, outputs structured JSON call validated against spec.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Output format & Natural language & Structured JSON\\
+Schema adherence & None & Enforced\\
+Argument hallucination & High & Low\\
+API integration & Manual parsing & Direct execution\\
+Training data & Text completions & (request, schema, call) triplets\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Function Calling Training.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Multi-Agent Training}
+
+\subsection{Mathematical Foundation}
+Multi-Agent Training trains a collection of specialised agents $\{\pi_1,\ldots,\pi_K\}$ and an orchestrator $\pi_0$ to collaboratively solve complex tasks. The orchestrator decomposes a task $T$ into sub-tasks $\{t_1,\ldots,t_K\}$ and assigns them to specialists:
+\begin{equation}
+  \pi_0: T \to \{(t_k, k)\}_{k=1}^K, \quad \pi_k: t_k \to y_k, \quad y = \pi_0(\{y_k\})
+\end{equation}
+Training uses task-completion reward at the full-task level, distributed to agents via credit assignment:
+\begin{equation}
+  r_k = r_{\text{task}} \cdot \mathbf{1}[\pi_k \text{ contributed to solution}]
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.6cm and 1.0cm]
+  \node[datblk] (task) {Complex\\Task $T$};
+  \node[frzblk,minimum height=1.4cm] (orch) at (3.2,0) {Orchestrator\\$\pi_0$};
+  \node[trnblk,minimum width=1.6cm] (s1) at (6.2,1.2) {Specialist $\pi_1$\\(code)};
+  \node[trnblk,minimum width=1.6cm] (s2) at (6.2,0.0) {Specialist $\pi_2$\\(search)};
+  \node[trnblk,minimum width=1.6cm] (s3) at (6.2,-1.2) {Specialist $\pi_K$\\(math)};
+  \node[mrgblk] (agg) at (9.2,0) {Aggregate\\Answer $y$};
+
+  \draw[arr] (task)--(orch);
+  \draw[arr] (orch.east) |- (s1.west);
+  \draw[arr] (orch.east) -- (s2.west);
+  \draw[arr] (orch.east) |- (s3.west);
+  \draw[arr] (s1.east) -| (agg.north);
+  \draw[arr] (s2)--(agg);
+  \draw[arr] (s3.east) -| (agg.south);
+\end{tikzpicture}
+\caption{Multi-Agent Training: orchestrator decomposes task and assigns sub-tasks to specialised agents.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Task handling & Single monolithic model & Orchestrator + specialists\\
+Specialisation & None & Per-domain agents\\
+Credit assignment & N/A & Per-agent contribution\\
+Task complexity ceiling & Single-context limit & Decomposable to multiple contexts\\
+Coordination & N/A & Learned delegation protocol\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Multi-Agent Training.}
+\end{table}
+
+\newpage
+%% ============================================================
+\part{Multimodal Training}
+%% ============================================================
+
+\section{Vision-Language Training}
+
+\subsection{Mathematical Foundation}
+Vision-Language Training jointly trains a visual encoder $f_v$ and language model $f_l$ to process image-text pairs. A projection layer $P$ aligns visual features to the LLM's token embedding space:
+\begin{equation}
+  v_{\text{tokens}} = P(f_v(I)),\quad \tilde{x} = [v_{\text{tokens}};\, E(x_{\text{text}})]
+\end{equation}
+Training uses a masked language modelling or auto-regressive loss on the text tokens conditioned on visual tokens:
+\begin{equation}
+  \mathcal{L}_{\text{VL}} = -\sum_t \log P_{f_l}(x_t \mid v_{\text{tokens}}, x_{<t})
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.1cm]
+  \node[datblk] (img) {Image $I$};
+  \node[datblk, below=0.8cm of img] (txt) {Text $x$};
+  \node[frzblk, right=of img] (venc) {Visual\\Encoder $f_v$\\(ViT/CLIP)};
+  \node[grayblk, right=of venc] (proj) {Projection\\Layer $P$};
+  \node[trnblk, right=of txt] (emb) {Text\\Embeddings};
+  \node[frzblk, right=3.5cm of $(proj)!0.5!(emb)$] (llm) {LLM\\$f_l$};
+  \node[lossblk, right=of llm] (loss) {LM Loss\\on text};
+
+  \draw[arr] (img)--(venc);
+  \draw[arr] (venc)--(proj);
+  \draw[arr] (txt)--(emb);
+  \draw[arr] (proj.east) -| (llm.north);
+  \draw[arr] (emb.east) -| (llm.south);
+  \draw[arr] (llm)--(loss);
+\end{tikzpicture}
+\caption{Vision-Language Training: visual encoder outputs projected to LLM token space; joint auto-regressive loss.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Input modality & Text only & Text + images\\
+Visual understanding & None & Strong (via encoder)\\
+Projection layer & Not present & Trained to align modalities\\
+Alignment quality & N/A & Measured by VQA, captioning\\
+Training data & Text corpora & Image-caption / VQA pairs\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Vision-Language Training.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Grounding Training}
+
+\subsection{Mathematical Foundation}
+Grounding Training teaches the model to link text spans to image regions (bounding boxes). Given a referring expression $e$ and image $I$, the model predicts box coordinates $(x_1,y_1,x_2,y_2)$ normalised to $[0,1]^4$:
+\begin{equation}
+  \hat{b} = f_\theta(I, e),\quad \mathcal{L}_{\text{GND}} = \text{L1}(\hat{b}, b^*) + \lambda(1 - \text{IoU}(\hat{b}, b^*))
+\end{equation}
+where $b^*$ is the ground-truth box and IoU is intersection-over-union. The model generates boxes as text tokens (serialised coordinates), enabling unified seq2seq training.
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.1cm]
+  \node[datblk] (img) {Image $I$};
+  \node[datblk, below=0.8cm of img] (expr) {Referring\\Expr.\ $e$};
+  \node[frzblk, right=1.6cm of $(img)!0.5!(expr)$] (vlm) {VLM\\$f_\theta$};
+  \node[trnblk, right=of vlm] (box) {Predicted Box\\$(x_1,y_1,x_2,y_2)$};
+  \node[lossblk, right=of box] (loss) {L1 +\\IoU Loss};
+  \node[datblk, above=0.7cm of loss] (gt) {GT Box\\$b^*$};
+
+  \draw[arr] (img.east) -| (vlm.north);
+  \draw[arr] (expr.east) -| (vlm.south);
+  \draw[arr] (vlm)--(box);
+  \draw[arr] (box)--(loss);
+  \draw[arr] (gt.south)--(loss.north);
+\end{tikzpicture}
+\caption{Grounding Training: VLM predicts bounding box coordinates from image and referring expression.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Output type & Text description & Bounding box coordinates\\
+Spatial understanding & Implicit & Explicit (pixel-level)\\
+Loss type & Cross-entropy & L1 + IoU\\
+Grounding ability & None & Text-to-region linking\\
+Training data & Captions & (image, expression, bbox) triplets\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Grounding Training.}
+\end{table}
+
+\newpage
+%% ============================================================
+\part{Knowledge Injection}
+%% ============================================================
+
+\section{Retrieval-Augmented Training}
+
+\subsection{Mathematical Foundation}
+Retrieval-Augmented Training (RAT) trains the model to use retrieved documents $\mathcal{R}(x) = \{d_1,\ldots,d_K\}$ as context. The model generates $y$ conditioned on the query and retrieved set:
+\begin{equation}
+  P_\theta(y \mid x, \mathcal{R}(x)) = \prod_t P_\theta(y_t \mid x, d_1,\ldots,d_K, y_{<t})
+\end{equation}
+Training includes both retrieval-present and retrieval-absent examples to prevent over-reliance on context. A closed-book loss component ensures the model retains parametric knowledge:
+\begin{equation}
+  \mathcal{L}_{\text{RAT}} = \lambda\,\mathcal{L}_{\text{open-book}} + (1-\lambda)\,\mathcal{L}_{\text{closed-book}}
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.1cm]
+  \node[datblk] (q) {Query $x$};
+  \node[frzblk, above right=0.5cm and 1.2cm of q] (ret) {Retriever\\$\mathcal{R}(x)$};
+  \node[datblk, right=1.2cm of q] (docs) {Docs\\$d_1..d_K$};
+  \node[trnblk, right=of docs] (llm) {LLM\\$P_\theta$};
+  \node[lossblk, right=of llm] (loss) {Open-book\\Loss};
+  \node[lossblk, below=0.8cm of llm] (cbloss) {Closed-book\\Loss};
+  \node[mrgblk, right=1.6cm of $(loss)!0.5!(cbloss)$] (out) {RAG-tuned\\Model};
+
+  \draw[arr] (q.east) |- (ret.west);
+  \draw[arr] (ret.east) -| (docs.north);
+  \draw[arr] (q)--(docs);
+  \draw[arr] (docs)--(llm);
+  \draw[arr] (llm)--(loss);
+  \draw[arr] (q.south) -- ++(0,-0.5) -| (cbloss.west);
+  \draw[arr] (cbloss.east)-|(out.south);
+  \draw[arr] (loss.east)-|(out.north);
+\end{tikzpicture}
+\caption{RAT: model trained on both retrieval-augmented and closed-book losses to balance open/parametric knowledge.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Context awareness & Parametric only & Retrieved + parametric\\
+Knowledge staleness & Fixed (training cutoff) & Dynamic (fresh retrieval)\\
+Hallucination rate & Higher & Lower (grounded in docs)\\
+Retriever dependency & None & Required at inference\\
+Parametric retention & Full & Preserved (closed-book loss)\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Retrieval-Augmented Training.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Memory Tuning}
+
+\subsection{Mathematical Foundation}
+Memory Tuning trains the model to store and retrieve episodic memories $\mathcal{M} = \{(k_i, v_i)\}$ in an external key-value store. The model learns to write memories via a write head $w_\theta$ and retrieve via dot-product attention:
+\begin{equation}
+  \text{retrieve}(q) = \sum_i \text{softmax}(q^\top k_i / \sqrt{d}) \cdot v_i,\quad q = f_\theta^{\text{query}}(x)
+\end{equation}
+Training uses a distractor task: memory-relevant queries should prefer correct memory entries, trained with a contrastive retrieval loss:
+\begin{equation}
+  \mathcal{L}_{\text{mem}} = -\log \frac{\exp(q^\top k^+ / \tau)}{\sum_j \exp(q^\top k_j / \tau)}
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.1cm]
+  \node[datblk] (ep) {Episode\\$(x_t, y_t)$};
+  \node[trnblk, right=of ep] (write) {Write Head\\$w_\theta$};
+  \node[grayblk, right=of write, minimum height=2.0cm] (mem) {Memory\\Store\\$\mathcal{M}$};
+  \node[datblk, below=1.2cm of ep] (query) {Future\\Query $x_{t'}$};
+  \node[trnblk, right=of query] (read) {Read Head\\(dot-product)};
+  \node[mrgblk, right=of read] (ctx) {Retrieved\\Context $v$};
+  \node[lossblk, right=of ctx] (loss) {Contrastive\\Memory Loss};
+
+  \draw[arr] (ep)--(write);
+  \draw[arr] (write)--(mem);
+  \draw[arr] (query)--(read);
+  \draw[arr] (mem.south) -| (read.north);
+  \draw[arr] (read)--(ctx);
+  \draw[arr] (ctx)--(loss);
+\end{tikzpicture}
+\caption{Memory Tuning: write head stores episodes; read head retrieves via attention; contrastive loss trains both.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Memory type & Parametric only & Parametric + episodic KV store\\
+Context window & Fixed $T$ tokens & Unbounded (external memory)\\
+Personalisation & None & Per-user episodic recall\\
+Read/write mechanism & None & Learned attention-based\\
+Long-term recall & Poor & Strong\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Memory Tuning.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Domain Knowledge Injection}
+
+\subsection{Mathematical Foundation}
+Domain Knowledge Injection embeds structured domain knowledge (ontologies, knowledge graphs, fact databases) into the model. Entities $e$ and relations $r$ from a KG are embedded alongside token embeddings and injected via cross-attention:
+\begin{equation}
+  h'_t = h_t + \text{CrossAttn}(h_t,\, \{e_i, r_{ij}\}_{(i,j) \in \mathcal{G}})
+\end{equation}
+Training uses a knowledge grounding loss that verifies generated text against retrieved facts:
+\begin{equation}
+  \mathcal{L}_{\text{KI}} = \mathcal{L}_{\text{LM}} + \mu\,\mathcal{L}_{\text{fact-check}}
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.1cm]
+  \node[datblk] (kg) {Knowledge\\Graph $\mathcal{G}$};
+  \node[grayblk, right=of kg] (emb) {Entity/Relation\\Embeddings};
+  \node[datblk, below=1.0cm of kg] (text) {Text Tokens\\$h_t$};
+  \node[trnblk, right=of emb] (cross) {Cross-Attention\\Injection};
+  \node[frzblk, right=of cross] (llm) {LLM\\Layers};
+  \node[lossblk, right=of llm] (loss) {LM +\\Fact-check Loss};
+  \node[mrgblk, below=0.9cm of loss] (out) {Knowledge-\\Grounded Model};
+
+  \draw[arr] (kg)--(emb);
+  \draw[arr] (emb)--(cross);
+  \draw[arr] (text.east) -| (cross.south);
+  \draw[arr] (cross)--(llm);
+  \draw[arr] (llm)--(loss);
+  \draw[arr] (loss)--(out);
+\end{tikzpicture}
+\caption{Domain Knowledge Injection: KG entity/relation embeddings injected into LLM via cross-attention.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Knowledge source & Implicit (pretraining) & Explicit KG entities\\
+Fact accuracy & Moderate & Significantly higher\\
+Knowledge update & Retrain required & KG update sufficient\\
+Cross-attention overhead & None & One extra module per layer\\
+Domain coverage & General & Domain-specific + general\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Domain Knowledge Injection.}
+\end{table}
+
+\newpage
+%% ============================================================
+\part{Deployment and Training Efficiency}
+%% ============================================================
+
+\section{Mixed Precision Training}
+
+\subsection{Mathematical Foundation}
+Mixed Precision Training maintains FP32 master weights but computes forward and backward passes in FP16/BF16. A loss scaling factor $S$ prevents underflow of small gradients:
+\begin{equation}
+  \tilde{\mathcal{L}} = S \cdot \mathcal{L},\quad g_{\text{FP32}} = \frac{1}{S} g_{\text{FP16}}
+\end{equation}
+BF16 has the same exponent range as FP32 (8 bits) but fewer mantissa bits (7 vs 23), making it more numerically stable without loss scaling:
+\begin{equation}
+  \text{memory}(\text{FP16}) = 2N \text{ bytes vs } \text{memory}(\text{FP32}) = 4N \text{ bytes}
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.1cm]
+  \node[frzblk] (master) {FP32 Master\\Weights $W$};
+  \node[grayblk, right=of master] (cast) {Cast to\\FP16/BF16};
+  \node[trnblk, right=of cast] (fwd) {Forward +\\Backward (FP16)};
+  \node[lossblk, right=of fwd] (scale) {Loss Scale\\$S \cdot \mathcal{L}$};
+  \node[trnblk, below=0.9cm of scale] (unscale) {Unscale Grad\\$g/S$};
+  \node[mrgblk, left=3.6cm of unscale] (upd) {Adam Update\\(FP32 master)};
+
+  \draw[arr] (master)--(cast);
+  \draw[arr] (cast)--(fwd);
+  \draw[arr] (fwd)--(scale);
+  \draw[arr] (scale)--(unscale);
+  \draw[arr] (unscale) -- node[below,font=\tiny]{check overflow} (upd);
+  \draw[arr,dashed,green!60!black] (upd.north) |- (master.south) node[midway,below,font=\tiny]{update};
+\end{tikzpicture}
+\caption{Mixed Precision Training: FP16 compute with FP32 master weights; loss scaling prevents gradient underflow.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before (FP32)} & \textbf{After (Mixed FP16)}\\\midrule
+Compute precision & FP32 & FP16/BF16\\
+Memory footprint & $4N$ bytes & $2N + 4N$ (half + master)\\
+Training speed & Baseline & $2$--$3\times$ faster\\
+Numerical stability & High & Managed via loss scaling\\
+GPU tensor cores & Unused & Utilised (FP16/BF16 native)\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Mixed Precision Training.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Gradient Checkpointing}
+
+\subsection{Mathematical Foundation}
+Gradient Checkpointing trades compute for memory by not storing all intermediate activations during the forward pass. Instead, activations at checkpoint nodes $\mathcal{C} \subset \{1,\ldots,L\}$ are stored; all others are recomputed during the backward pass:
+\begin{equation}
+  \text{Memory}_{\text{GC}} = O(\sqrt{L} \cdot d),\quad \text{vs }\; O(L \cdot d) \text{ without GC}
+\end{equation}
+For $L$ layers, optimal checkpointing every $\sqrt{L}$ layers minimises memory while adding one extra forward pass overhead:
+\begin{equation}
+  \text{Compute}_{\text{GC}} \approx 2 \cdot \text{Compute}_{\text{standard}}
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.5cm and 0.8cm]
+  \node[datblk,minimum width=1.4cm] (in) {Input};
+  \node[trnblk,minimum width=1.4cm, right=0.6cm of in] (l1) {Layer 1\\{\tiny (stored)}};
+  \node[grayblk,minimum width=1.4cm, right=0.5cm of l1] (l2) {Layer 2\\{\tiny (drop)}};
+  \node[grayblk,minimum width=1.4cm, right=0.5cm of l2] (l3) {Layer 3\\{\tiny (drop)}};
+  \node[trnblk,minimum width=1.4cm, right=0.5cm of l3] (l4) {Layer 4\\{\tiny (stored)}};
+  \node[grayblk,minimum width=1.4cm, right=0.5cm of l4] (l5) {Layer 5\\{\tiny (drop)}};
+  \node[mrgblk,minimum width=1.4cm, right=0.5cm of l5] (out) {Output};
+
+  \foreach \a/\b in {in/l1, l1/l2, l2/l3, l3/l4, l4/l5, l5/out}
+    \draw[arr] (\a)--(\b);
+
+  \draw[red,thick,decorate,decoration={brace,amplitude=5pt,mirror,raise=4pt}]
+    (l2.south west) -- (l3.south east) node[midway,below=9pt,font=\tiny,red]{recomputed in backward};
+  \draw[green!60!black,thick,decorate,decoration={brace,amplitude=5pt,raise=4pt}]
+    (l1.north west) -- (l1.north east) node[midway,above=9pt,font=\tiny,green!60!black]{checkpoint};
+\end{tikzpicture}
+\caption{Gradient Checkpointing: only checkpoint activations stored; intermediate activations recomputed in backward.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Activation memory & $O(L \cdot d)$ & $O(\sqrt{L} \cdot d)$\\
+Recomputation & None & Extra forward for non-checkpoints\\
+Max batch size & Limited by activations & Larger (mem freed)\\
+Compute overhead & Baseline & ${\sim}30$\% more FLOPs\\
+Large model feasibility & Memory OOM & Enabled\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Gradient Checkpointing.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Flash Attention}
+
+\subsection{Mathematical Foundation}
+Flash Attention computes attention in IO-aware tiles that fit in SRAM, avoiding materialising the full $N \times N$ attention matrix in HBM. The standard attention complexity is $O(N^2 d)$ in FLOPs and $O(N^2)$ in memory; Flash Attention maintains $O(N^2 d)$ FLOPs but reduces memory to $O(N)$:
+\begin{equation}
+  \text{Attention}(Q,K,V) = \text{softmax}\!\left(\frac{QK^\top}{\sqrt{d}}\right)V
+\end{equation}
+Computed in blocks of size $B_r \times B_c$ where $B_r = \lceil M/4d \rceil$, $M$ = SRAM size, using online softmax to accumulate numerically stable output without full matrix materialisation.
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.0cm]
+  \node[datblk] (qkv) {$Q, K, V$\\(HBM)};
+  \node[grayblk, right=of qkv] (tile) {Load Tile\\$B_r \times B_c$\\to SRAM};
+  \node[trnblk, right=of tile] (local) {Local Softmax\\+ $V$ accumulate};
+  \node[grayblk, right=of local] (write) {Write partial\\output to HBM};
+  \node[mrgblk, below=0.9cm of $(tile)!0.5!(write)$] (final) {Final $O$\\(no full $N^2$ stored)};
+
+  \draw[arr] (qkv)--(tile);
+  \draw[arr] (tile)--(local);
+  \draw[arr] (local)--(write);
+  \draw[arr,dashed,green!60!black] (write.east) -- ++(0.4,0) |- (tile.east) node[midway,right,font=\tiny]{next tile};
+  \draw[arr] (write.south) -- ++(0,-0.3) -| (final.east);
+
+  \node[red,font=\tiny,align=center,below=0.2cm of tile] {only tile in SRAM\\not full $N^2$};
+\end{tikzpicture}
+\caption{Flash Attention: tiled block-wise computation avoids materialising the full attention matrix in HBM.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before (Standard)} & \textbf{After (Flash Attention)}\\\midrule
+Attention matrix memory & $O(N^2)$ HBM & $O(N)$ (tiles in SRAM)\\
+HBM read/write passes & Multiple & Minimal (one pass)\\
+Compute FLOPs & $O(N^2 d)$ & $O(N^2 d)$ (same)\\
+Speed (wall-clock) & Baseline & $2$--$4\times$ faster\\
+Long-sequence feasibility & OOM at $N > 4096$ & $N > 100{,}000$ feasible\\\bottomrule
+\end{tabular}
+\caption{State properties comparing Standard and Flash Attention.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{Fully Sharded Data Parallel (FSDP)}
+
+\subsection{Mathematical Foundation}
+FSDP shards model parameters, gradients, and optimizer states across $D$ devices, reducing per-device memory from $O(|\theta|)$ to $O(|\theta|/D)$. Before each layer's forward/backward, an All-Gather reconstructs the full parameter shard:
+\begin{equation}
+  \theta_{\text{full}} = \text{AllGather}(\theta^{(1)}, \ldots, \theta^{(D)}),\quad \theta_{\text{full}} \in \mathbb{R}^{|\theta|}
+\end{equation}
+After the operation, $\theta_{\text{full}}$ is discarded. Gradient shards are reduced-scattered after the backward:
+\begin{equation}
+  g^{(d)} = \text{ReduceScatter}(g_{\text{full}})[d],\quad \theta^{(d)} \leftarrow \theta^{(d)} - \eta g^{(d)}
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.6cm and 1.0cm]
+  \node[grayblk,minimum width=1.4cm] (d1) {Device 1\\$\theta^{(1)}$};
+  \node[grayblk,minimum width=1.4cm, right=0.4cm of d1] (d2) {Device 2\\$\theta^{(2)}$};
+  \node[grayblk,minimum width=0.8cm, right=0.4cm of d2] (dots) {$\cdots$};
+  \node[grayblk,minimum width=1.4cm, right=0.4cm of dots] (dD) {Device $D$\\$\theta^{(D)}$};
+
+  \node[trnblk, below=0.9cm of d2] (ag) {All-Gather\\$\theta_{\text{full}}$};
+  \node[frzblk, right=1.6cm of ag] (fwd) {Layer\\Forward};
+  \node[lossblk, right=of fwd] (bwd) {Backward\\$g_{\text{full}}$};
+  \node[orangeblk, below=0.9cm of bwd] (rs) {Reduce-Scatter\\$g^{(d)}$};
+  \node[mrgblk, left=2.2cm of rs] (upd) {Local\\Adam Update};
+
+  \draw[arr] (d1.south) -| (ag.north);
+  \draw[arr] (d2.south) -- (ag.north);
+  \draw[arr] (dD.south) -| (ag.north);
+  \draw[arr] (ag)--(fwd);
+  \draw[arr] (fwd)--(bwd);
+  \draw[arr] (bwd)--(rs);
+  \draw[arr] (rs)--(upd);
+  \draw[arr,dashed,green!60!black] (upd.north) |- (d2.south) node[near start,left,font=\tiny]{re-shard};
+\end{tikzpicture}
+\caption{FSDP: parameters sharded across devices; All-Gather for compute, Reduce-Scatter for gradient aggregation.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before (DDP)} & \textbf{After (FSDP)}\\\midrule
+Per-device param memory & $O(|\theta|)$ & $O(|\theta|/D)$\\
+Optimizer state memory & $O(|\theta|)$ per device & $O(|\theta|/D)$ per device\\
+Communication pattern & AllReduce (gradients) & All-Gather + Reduce-Scatter\\
+Max model size & GPU VRAM limited & $D \times$ larger\\
+Training throughput & Baseline & Near-linear scaling\\\bottomrule
+\end{tabular}
+\caption{State properties comparing DDP and FSDP.}
+\end{table}
+
+\newpage
+%% ------------------------------------------------------------
+\section{DeepSpeed ZeRO}
+
+\subsection{Mathematical Foundation}
+DeepSpeed ZeRO (Zero Redundancy Optimizer) progressively eliminates redundancy across three stages. For $D$ devices and mixed-precision with Adam, the per-device memory at each stage:
+\begin{align}
+  \text{ZeRO-1:}&\quad \text{optimizer states sharded: } 4|\theta|/D + 6|\theta|\\
+  \text{ZeRO-2:}&\quad \text{+ gradients sharded: } 4|\theta|/D + 4|\theta|/D + 4|\theta|\\
+  \text{ZeRO-3:}&\quad \text{+ parameters sharded: } (4+4+4)|\theta|/D
+\end{align}
+ZeRO-3 achieves $12|\theta|/D$ bytes per device vs $16|\theta|$ bytes for full mixed-precision without sharding.
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.5cm and 0.9cm]
+  \node[datblk,minimum width=2.2cm] (full) {Standard\\DDP:\\$16|\theta|$ per GPU};
+  \node[grayblk,minimum width=2.2cm, right=0.7cm of full] (z1) {ZeRO-1:\\Shard Opt States\\$12|\theta|+ 4|\theta|/D$};
+  \node[trnblk,minimum width=2.2cm, right=0.7cm of z1] (z2) {ZeRO-2:\\+ Shard Gradients\\$4|\theta|+8|\theta|/D$};
+  \node[mrgblk,minimum width=2.2cm, right=0.7cm of z2] (z3) {ZeRO-3:\\+ Shard Params\\$12|\theta|/D$};
+
+  \draw[arr] (full)--(z1);
+  \draw[arr] (z1)--(z2);
+  \draw[arr] (z2)--(z3);
+
+  \node[red,font=\tiny,below=0.25cm of full] {full redundancy};
+  \node[green!60!black,font=\tiny,below=0.25cm of z3] {min per-GPU};
+\end{tikzpicture}
+\caption{DeepSpeed ZeRO stages: each stage shards an additional component, progressively reducing per-GPU memory.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Standard DDP} & \textbf{ZeRO-3}\\\midrule
+Optimizer state memory & $8|\theta|$ per device & $8|\theta|/D$\\
+Gradient memory & $4|\theta|$ per device & $4|\theta|/D$\\
+Parameter memory & $4|\theta|$ per device & $4|\theta|/D$\\
+Total per device & $16|\theta|$ & $16|\theta|/D$\\
+Max trainable size & GPU VRAM bound & $D \times$ larger\\\bottomrule
+\end{tabular}
+\caption{Memory comparison between standard DDP and DeepSpeed ZeRO-3.}
+\end{table}
+
+\end{document}

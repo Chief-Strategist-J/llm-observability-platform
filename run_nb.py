@@ -4,7 +4,7 @@ matplotlib.use('Agg')
 import traceback
 import sys
 
-path = 'notebooks/runbooks/research/nli-worker/2026-06-05-decoupling/research.ipynb'
+path = 'notebooks/runbooks/research/pylow/2026-06-12-qwen-formatting/research.ipynb'
 with open(path) as f:
     nb = json.load(f)
 

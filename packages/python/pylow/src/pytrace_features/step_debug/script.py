@@ -36,7 +36,7 @@ def break_commands(spec, breaks: tuple) -> tuple:
 
 def step_dump_commands(spec, watches: tuple) -> tuple:
     watch_cmds = tuple(spec.watch_cmd.format(expr=expr) for expr in watches if spec.watch_cmd)
-    return (*spec.locals_cmds, *watch_cmds)
+    return (*spec.locals_cmds, *spec.post_dump_cmds, *watch_cmds)
 
 
 def build_commands(spec, breaks: tuple, watches: tuple, max_steps: int) -> list:

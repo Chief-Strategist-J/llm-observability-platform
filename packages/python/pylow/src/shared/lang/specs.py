@@ -49,6 +49,7 @@ class DebuggerSpec:
     run: str = ""                    # command that starts/continues to the first stop
     locals_cmds: tuple = ()          # commands that dump variables at a stop
     watch_cmd: str = ""              # "print {expr}"
+    post_dump_cmds: tuple = ()       # commands to run after watched variables
     cont: str = ""                   # continue to next stop
     quit: str = ""                   # exit the debugger
     hit_marker: str = ""             # regex marking "stopped at a breakpoint" lines

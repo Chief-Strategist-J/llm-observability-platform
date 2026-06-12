@@ -144,12 +144,13 @@ LanguageRegistry.register(LanguageSpec(
     ),
     debugger=DebuggerSpec(
         tools=("jdb",),
-        argv=("{tool}", "{target_stem}"),
+        argv=("{tool}", "-sourcepath", "src/main/java:.", "{target_stem}"),
         break_line="stop at {file}:{line}",       # {file} = fully-qualified class name
         break_func="stop in {func}",
         run="run",
         locals_cmds=("locals",),
-        watch_cmd="print {expr}",
+        watch_cmd="dump {expr}",
+        post_dump_cmds=("print \"--- CALL STACK ---\"", "where", "print \"--- SOURCE CODE ---\"", "list"),
         cont="cont",
         quit="quit",
         hit_marker=r"Breakpoint hit:",

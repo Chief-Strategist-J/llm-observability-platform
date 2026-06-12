@@ -1,0 +1,32 @@
+Set uncaught java.lang.Throwable
+Set deferred uncaught java.lang.Throwable
+Initializing jdb ...
+> 
+VM Started: No frames on the current call stack
+
+main[1] Deferring breakpoint com.example.controller.AlgorithmController:57.
+It will be set after the class is loaded.
+main[1] > Set deferred breakpoint com.example.controller.AlgorithmController:57
+
+Breakpoint hit: "thread=http-nio-8080-exec-1", com.example.controller.AlgorithmController.quickSort(), line=57 bci=24
+
+http-nio-8080-exec-1[1] Method arguments:
+arr = instance of int[4] (id=5666)
+low = 0
+high = 3
+Local variables:
+pi = 0
+http-nio-8080-exec-1[1] > 
+Breakpoint hit: "thread=http-nio-8080-exec-1", com.example.controller.AlgorithmController.quickSort(), line=57 bci=24
+
+http-nio-8080-exec-1[1] com.sun.tools.example.debug.expr.ParseException: Name unknown: pivot
+ pivot = null
+Method arguments:
+http-nio-8080-exec-1[1] arr = instance of int[4] (id=5666)
+low = 1
+high = 3
+Local variables:
+pi = 2
+http-nio-8080-exec-1[1] > com.sun.tools.example.debug.expr.ParseException: Name unknown: pivot
+ pivot = null
+http-nio-8080-exec-1[1] 

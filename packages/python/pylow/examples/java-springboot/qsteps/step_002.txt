@@ -1,0 +1,15 @@
+# step 2 — Breakpoint hit: "thread=http-nio-8080-exec-1", com.example.controller.AlgorithmController.quickSort(), line=57 bci=24
+
+Breakpoint hit: "thread=http-nio-8080-exec-1", com.example.controller.AlgorithmController.quickSort(), line=57 bci=24
+
+http-nio-8080-exec-1[1] com.sun.tools.example.debug.expr.ParseException: Name unknown: pivot
+ pivot = null
+Method arguments:
+http-nio-8080-exec-1[1] arr = instance of int[4] (id=5666)
+low = 1
+high = 3
+Local variables:
+pi = 2
+http-nio-8080-exec-1[1] > com.sun.tools.example.debug.expr.ParseException: Name unknown: pivot
+ pivot = null
+http-nio-8080-exec-1[1]

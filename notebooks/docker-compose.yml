@@ -31,7 +31,7 @@ services:
     image: blang/latex:latest
     volumes:
       - ../:/workdir
-    working_dir: /workdir/notebooks/runbooks/research/nli-worker/2026-06-05-decoupling
+    working_dir: /workdir/notebooks/runbooks/research/pylow/2026-06-12-qwen-formatting
     # Two passes: first builds aux/toc, second resolves \cref cross-references
     command: >
       bash -c "

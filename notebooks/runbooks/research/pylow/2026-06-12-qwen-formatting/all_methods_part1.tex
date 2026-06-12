@@ -1,0 +1,2030 @@
+\documentclass{article}
+\usepackage{amsmath,amssymb,geometry,listings,xcolor,tikz,booktabs,titlesec,hyperref}
+\usetikzlibrary{arrows.meta,positioning,calc,shapes.geometric,fit,patterns,decorations.pathreplacing,backgrounds}
+
+\geometry{a4paper, margin=0.6in}
+\setcounter{secnumdepth}{3}
+\hypersetup{colorlinks=true,linkcolor=blue!60!black}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.97,0.97,0.97}
+\definecolor{frozen}{rgb}{0.2,0.4,0.8}
+\definecolor{trainable}{rgb}{0.1,0.6,0.2}
+\definecolor{datacolor}{rgb}{0.8,0.7,0.0}
+\definecolor{losscolor}{rgb}{0.8,0.1,0.1}
+\definecolor{mergedcolor}{rgb}{0.5,0.0,0.8}
+
+\lstdefinestyle{mystyle}{
+  backgroundcolor=\color{backcolour},commentstyle=\color{codegreen},
+  keywordstyle=\color{blue},numberstyle=\tiny\color{codegray},
+  stringstyle=\color{codepurple},basicstyle=\ttfamily\footnotesize,
+  breaklines=true,captionpos=b,keepspaces=true,
+  numbers=left,numbersep=5pt,showspaces=false,tabsize=4}
+\lstset{style=mystyle}
+
+\tikzset{
+  blk/.style={draw,rectangle,minimum width=2.6cm,minimum height=1.0cm,thick,align=center},
+  frzblk/.style={blk,fill=blue!10,draw=blue!70},
+  trnblk/.style={blk,fill=green!12,draw=green!70},
+  datblk/.style={blk,fill=yellow!15,draw=yellow!70!black},
+  lossblk/.style={blk,fill=red!10,draw=red!70},
+  mrgblk/.style={blk,fill=purple!10,draw=purple!70},
+  grayblk/.style={blk,fill=gray!10,draw=gray!60},
+  neuron/.style={circle,draw,minimum size=0.55cm,fill=blue!10,thick},
+  bneck/.style={circle,draw,minimum size=0.55cm,fill=green!15,thick},
+  outnrn/.style={circle,draw,minimum size=0.55cm,fill=yellow!15,thick},
+  arr/.style={-Stealth,thick},
+  garr/.style={Stealth-,red,dashed,thick},
+  sumnode/.style={circle,draw,thick,minimum size=0.6cm,fill=yellow!15},
+  lbl/.style={font=\footnotesize\bfseries,align=center}
+}
+
+\begin{document}
+
+\title{\textbf{Mathematical Foundations, Architecture Diagrams,\\and State Analysis of Modern LLM Training Methods}}
+\author{Chief Strategist J}
+\date{\today}
+\maketitle
+\tableofcontents
+\newpage
+
+%% ============================================================
+\part{Foundation Training Methods}
+%% ============================================================
+
+\section{Pretraining}
+
+\subsection{Mathematical Foundation}
+Causal language modeling models the probability of a sequence $x = (x_1, \ldots, x_T)$ as the product of autoregressive conditional probabilities:
+\begin{equation}
+  P(x) = \prod_{t=1}^T P(x_t \mid x_{<t})
+\end{equation}
+The hidden representation $h_t^{(l)}$ at layer $l$ and token position $t$ is computed using multi-head causal self-attention. The causal attention mask matrix $M \in \mathbb{R}^{T \times T}$ is defined as:
+\begin{equation}
+  M_{i,j} = \begin{cases} 0 & \text{if } j \le i \\ -\infty & \text{if } j > i \end{cases}
+\end{equation}
+This mask is added directly to the scaled query-key dot products:
+\begin{equation}
+  \text{Attention}(Q, K, V) = \text{softmax}\left( \frac{Q K^\top}{\sqrt{d_k}} + M \right) V
+\end{equation}
+where $Q = X W_Q$, $K = X W_K$, $V = X W_V$. This prevents information leakage from future tokens. At the output layer, the logits $z_t \in \mathbb{R}^{|\mathcal{V}|}$ are computed via $z_t = h_t^{(L)} W_{\text{vocab}}$. To maintain numerical stability, softmax is computed by subtracting the maximum logit:
+\begin{equation}
+  P(x_t = v \mid x_{<t}) = \frac{\exp(z_{t,v} - \max_k z_{t,k})}{\sum_{j \in \mathcal{V}} \exp(z_{t,j} - \max_k z_{t,k})}
+\end{equation}
+The causal model parameters $\theta$ are trained by minimizing the cross-entropy loss over a dataset $\mathcal{D}$:
+\begin{equation}
+  \mathcal{L}_{\text{PT}}(\theta) = -\frac{1}{|\mathcal{D}|}\sum_{x \in \mathcal{D}} \sum_{t=1}^T \log P_\theta(x_t \mid x_{<t})
+\end{equation}
+Updates are made using the AdamW optimizer. Let $g_t = \nabla_\theta \mathcal{L}_t$ be the gradient at step $t$. The update equations are:
+\begin{align}
+  m_t &= \beta_1 m_{t-1} + (1-\beta_1) g_t \\
+  v_t &= \beta_2 v_{t-1} + (1-\beta_2) g_t^2 \\
+  \hat{m}_t &= \frac{m_t}{1-\beta_1^t}, \quad \hat{v}_t = \frac{v_t}{1-\beta_2^t} \\
+  \theta_t &= \theta_{t-1} - \eta \left( \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon} + \lambda \theta_{t-1} \right)
+\end{align}
+where $\eta$ is the learning rate, $\lambda$ is the weight decay rate, $\beta_1, \beta_2$ are the exponential decay rates, and $\epsilon$ prevents division by zero. A cosine learning rate schedule with linear warmup is employed:
+\begin{equation}
+  \eta_t = \eta_{\text{min}} + \frac{1}{2}(\eta_{\text{max}} - \eta_{\text{min}})\left(1 + \cos\left(\frac{t - T_{\text{warmup}}}{T_{\text{max}} - T_{\text{warmup}}}\pi\right)\right)
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.9cm and 1.4cm]
+  \node[datblk] (corpus) {Raw Text\\Corpus $\mathcal{D}$};
+  \node[grayblk, right=of corpus] (tok) {Tokenise\\$x_{1..T}$};
+  \node[frzblk, right=of tok] (fwd) {Transformer\\Forward Pass};
+  \node[lossblk, right=of fwd] (loss) {Cross-Entropy\\Loss $\mathcal{L}$};
+  \node[trnblk, below=0.8cm of loss] (bwd) {Backprop +\\Adam Step};
+  \node[mrgblk, left=3.6cm of bwd] (model) {Base Model\\$\theta^*$};
+
+  \draw[arr] (corpus)--(tok);
+  \draw[arr] (tok)--(fwd);
+  \draw[arr] (fwd)--(loss);
+  \draw[arr] (loss)--(bwd);
+  \draw[arr] (bwd)--node[below,font=\tiny]{update $\theta$}(model);
+  \draw[arr] (model.north) |- ($(fwd.south)+(0,-0.3)$) -- (fwd.south);
+\end{tikzpicture}
+\caption{Pretraining pipeline: corpus sampling, forward pass, loss computation, and weight update loop.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Parameter source & Random init $\theta_0 \sim \mathcal{N}(0,\sigma^2)$ & Converged weights $\theta^*$\\
+Training corpus & Not consumed & Trillions of tokens processed\\
+Perplexity & Very high ($>10^3$) & Low ($<20$ on held-out data)\\
+World knowledge & None & Broad language \& factual knowledge\\
+requires\_grad & True (all params) & True (all params)\\\bottomrule
+\end{tabular}
+\caption{State properties before and after pretraining.}
+\end{table}
+
+\subsection{Python Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+import math
+
+class CausalSelfAttention(nn.Module):
+    def __init__(self, d_model, num_heads):
+        super().__init__()
+        assert d_model % num_heads == 0
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.head_dim = d_model // num_heads
+        
+        self.q_proj = nn.Linear(d_model, d_model)
+        self.k_proj = nn.Linear(d_model, d_model)
+        self.v_proj = nn.Linear(d_model, d_model)
+        self.out_proj = nn.Linear(d_model, d_model)
+
+    def forward(self, x):
+        # x shape: (batch_size, seq_len, d_model)
+        b, t, c = x.size()
+        
+        q = self.q_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
+        k = self.k_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
+        v = self.v_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
+        
+        # Compute scaled query-key dot product attention
+        scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.head_dim)
+        
+        # Apply causal attention mask
+        mask = torch.triu(torch.ones(t, t, device=x.device), diagonal=1) * -1e9
+        scores = scores + mask.view(1, 1, t, t)
+        
+        attn_weights = torch.softmax(scores, dim=-1)
+        out = torch.matmul(attn_weights, v) # (b, num_heads, t, head_dim)
+        out = out.transpose(1, 2).contiguous().view(b, t, c)
+        return self.out_proj(out)
+
+class PretrainingCausalLM(nn.Module):
+    def __init__(self, vocab_size, d_model, num_heads):
+        super().__init__()
+        self.attn = CausalSelfAttention(d_model, num_heads)
+        self.vocab_proj = nn.Linear(d_model, vocab_size)
+        self.loss_fn = nn.CrossEntropyLoss(reduction='mean')
+
+    def forward(self, x, targets=None):
+        # x: hidden states or token embeddings, shape: (batch_size, seq_len, d_model)
+        # targets: target token ids, shape: (batch_size, seq_len)
+        h = self.attn(x)
+        logits = self.vocab_proj(h)
+        
+        loss = None
+        if targets is not None:
+            shift_logits = logits[..., :-1, :].contiguous()
+            shift_targets = targets[..., 1:].contiguous()
+            loss = self.loss_fn(shift_logits.view(-1, shift_logits.size(-1)), shift_targets.view(-1))
+            
+        return logits, loss
+\end{lstlisting}
+\newpage
+%% ------------------------------------------------------------
+\section{Continued Pretraining (CPT)}
+
+\subsection{Mathematical Foundation}
+Causal language modeling models the probability of a sequence $x = (x_1, \ldots, x_T)$ as the product of autoregressive conditional probabilities:
+\begin{equation}
+  P(x) = \prod_{t=1}^T P(x_t \mid x_{<t})
+\end{equation}
+The hidden representation $h_t^{(l)}$ at layer $l$ and token position $t$ is computed using multi-head causal self-attention. The causal attention mask matrix $M \in \mathbb{R}^{T \times T}$ is defined as:
+\begin{equation}
+  M_{i,j} = \begin{cases} 0 & \text{if } j \le i \\ -\infty & \text{if } j > i \end{cases}
+\end{equation}
+This mask is added directly to the scaled query-key dot products:
+\begin{equation}
+  \text{Attention}(Q, K, V) = \text{softmax}\left( \frac{Q K^\top}{\sqrt{d_k}} + M \right) V
+\end{equation}
+where $Q = X W_Q$, $K = X W_K$, $V = X W_V$. This prevents information leakage from future tokens. At the output layer, the logits $z_t \in \mathbb{R}^{|\mathcal{V}|}$ are computed via $z_t = h_t^{(L)} W_{\text{vocab}}$. To maintain numerical stability, softmax is computed by subtracting the maximum logit:
+\begin{equation}
+  P(x_t = v \mid x_{<t}) = \frac{\exp(z_{t,v} - \max_k z_{t,k})}{\sum_{j \in \mathcal{V}} \exp(z_{t,j} - \max_k z_{t,k})}
+\end{equation}
+The causal model parameters $\theta$ are trained by minimizing the cross-entropy loss over a dataset $\mathcal{D}$:
+\begin{equation}
+  \mathcal{L}_{\text{PT}}(\theta) = -\frac{1}{|\mathcal{D}|}\sum_{x \in \mathcal{D}} \sum_{t=1}^T \log P_\theta(x_t \mid x_{<t})
+\end{equation}
+Updates are made using the AdamW optimizer. Let $g_t = \nabla_\theta \mathcal{L}_t$ be the gradient at step $t$. The update equations are:
+\begin{align}
+  m_t &= \beta_1 m_{t-1} + (1-\beta_1) g_t \\
+  v_t &= \beta_2 v_{t-1} + (1-\beta_2) g_t^2 \\
+  \hat{m}_t &= \frac{m_t}{1-\beta_1^t}, \quad \hat{v}_t = \frac{v_t}{1-\beta_2^t} \\
+  \theta_t &= \theta_{t-1} - \eta \left( \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon} + \lambda \theta_{t-1} \right)
+\end{align}
+where $\eta$ is the learning rate, $\lambda$ is the weight decay rate, $\beta_1, \beta_2$ are the exponential decay rates, and $\epsilon$ prevents division by zero. A cosine learning rate schedule with linear warmup is employed:
+\begin{equation}
+  \eta_t = \eta_{\text{min}} + \frac{1}{2}(\eta_{\text{max}} - \eta_{\text{min}})\left(1 + \cos\left(\frac{t - T_{\text{warmup}}}{T_{\text{max}} - T_{\text{warmup}}}\pi\right)\right)
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.9cm and 1.3cm]
+  \node[frzblk] (base) {Pretrained\\Base $\theta_{\text{base}}$};
+  \node[datblk, above right=0.6cm and 1.4cm of base] (new) {New Corpus\\$\mathcal{D}_{\text{new}}$};
+  \node[grayblk, below right=0.6cm and 1.4cm of base] (replay) {Replay Buffer\\$\mathcal{D}_{\text{replay}}$};
+  \node[grayblk, right=3.2cm of base] (mix) {Batch\\Mixer $\lambda$};
+  \node[lossblk, right=of mix] (loss) {LM Loss\\$\mathcal{L}_{\text{CPT}}$};
+  \node[trnblk, right=of loss] (upd) {Gradient\\Update};
+  \node[mrgblk, below=1.1cm of upd] (out) {Adapted\\Model $\theta'$};
+
+  \draw[arr] (new.east) -| (mix.north);
+  \draw[arr] (replay.east) -| (mix.south);
+  \draw[arr] (base) -- (mix);
+  \draw[arr] (mix) -- (loss);
+  \draw[arr] (loss) -- (upd);
+  \draw[arr] (upd) -- (out);
+\end{tikzpicture}
+\caption{CPT mixes new corpus and replay buffer batches to update a pretrained checkpoint.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Starting checkpoint & Pretrained $\theta_{\text{base}}$ & $\theta' = \theta_{\text{base}} + \Delta\theta$\\
+New domain knowledge & Absent & Incorporated\\
+Original knowledge & Retained & Partially retained via replay\\
+Learning rate schedule & Finished & Warm-restart applied\\
+Perplexity on new domain & High & Significantly reduced\\\bottomrule
+\end{tabular}
+\caption{State properties before and after continued pretraining.}
+\end{table}
+
+\subsection{Python Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+import math
+
+class CausalSelfAttention(nn.Module):
+    def __init__(self, d_model, num_heads):
+        super().__init__()
+        assert d_model % num_heads == 0
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.head_dim = d_model // num_heads
+        
+        self.q_proj = nn.Linear(d_model, d_model)
+        self.k_proj = nn.Linear(d_model, d_model)
+        self.v_proj = nn.Linear(d_model, d_model)
+        self.out_proj = nn.Linear(d_model, d_model)
+
+    def forward(self, x):
+        # x shape: (batch_size, seq_len, d_model)
+        b, t, c = x.size()
+        
+        q = self.q_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
+        k = self.k_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
+        v = self.v_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
+        
+        # Compute scaled query-key dot product attention
+        scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.head_dim)
+        
+        # Apply causal attention mask
+        mask = torch.triu(torch.ones(t, t, device=x.device), diagonal=1) * -1e9
+        scores = scores + mask.view(1, 1, t, t)
+        
+        attn_weights = torch.softmax(scores, dim=-1)
+        out = torch.matmul(attn_weights, v) # (b, num_heads, t, head_dim)
+        out = out.transpose(1, 2).contiguous().view(b, t, c)
+        return self.out_proj(out)
+
+class PretrainingCausalLM(nn.Module):
+    def __init__(self, vocab_size, d_model, num_heads):
+        super().__init__()
+        self.attn = CausalSelfAttention(d_model, num_heads)
+        self.vocab_proj = nn.Linear(d_model, vocab_size)
+        self.loss_fn = nn.CrossEntropyLoss(reduction='mean')
+
+    def forward(self, x, targets=None):
+        # x: hidden states or token embeddings, shape: (batch_size, seq_len, d_model)
+        # targets: target token ids, shape: (batch_size, seq_len)
+        h = self.attn(x)
+        logits = self.vocab_proj(h)
+        
+        loss = None
+        if targets is not None:
+            shift_logits = logits[..., :-1, :].contiguous()
+            shift_targets = targets[..., 1:].contiguous()
+            loss = self.loss_fn(shift_logits.view(-1, shift_logits.size(-1)), shift_targets.view(-1))
+            
+        return logits, loss
+\end{lstlisting}
+\newpage
+%% ------------------------------------------------------------
+\section{Domain Adaptive Pretraining (DAPT)}
+
+\subsection{Mathematical Foundation}
+Causal language modeling models the probability of a sequence $x = (x_1, \ldots, x_T)$ as the product of autoregressive conditional probabilities:
+\begin{equation}
+  P(x) = \prod_{t=1}^T P(x_t \mid x_{<t})
+\end{equation}
+The hidden representation $h_t^{(l)}$ at layer $l$ and token position $t$ is computed using multi-head causal self-attention. The causal attention mask matrix $M \in \mathbb{R}^{T \times T}$ is defined as:
+\begin{equation}
+  M_{i,j} = \begin{cases} 0 & \text{if } j \le i \\ -\infty & \text{if } j > i \end{cases}
+\end{equation}
+This mask is added directly to the scaled query-key dot products:
+\begin{equation}
+  \text{Attention}(Q, K, V) = \text{softmax}\left( \frac{Q K^\top}{\sqrt{d_k}} + M \right) V
+\end{equation}
+where $Q = X W_Q$, $K = X W_K$, $V = X W_V$. This prevents information leakage from future tokens. At the output layer, the logits $z_t \in \mathbb{R}^{|\mathcal{V}|}$ are computed via $z_t = h_t^{(L)} W_{\text{vocab}}$. To maintain numerical stability, softmax is computed by subtracting the maximum logit:
+\begin{equation}
+  P(x_t = v \mid x_{<t}) = \frac{\exp(z_{t,v} - \max_k z_{t,k})}{\sum_{j \in \mathcal{V}} \exp(z_{t,j} - \max_k z_{t,k})}
+\end{equation}
+The causal model parameters $\theta$ are trained by minimizing the cross-entropy loss over a dataset $\mathcal{D}$:
+\begin{equation}
+  \mathcal{L}_{\text{PT}}(\theta) = -\frac{1}{|\mathcal{D}|}\sum_{x \in \mathcal{D}} \sum_{t=1}^T \log P_\theta(x_t \mid x_{<t})
+\end{equation}
+Updates are made using the AdamW optimizer. Let $g_t = \nabla_\theta \mathcal{L}_t$ be the gradient at step $t$. The update equations are:
+\begin{align}
+  m_t &= \beta_1 m_{t-1} + (1-\beta_1) g_t \\
+  v_t &= \beta_2 v_{t-1} + (1-\beta_2) g_t^2 \\
+  \hat{m}_t &= \frac{m_t}{1-\beta_1^t}, \quad \hat{v}_t = \frac{v_t}{1-\beta_2^t} \\
+  \theta_t &= \theta_{t-1} - \eta \left( \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon} + \lambda \theta_{t-1} \right)
+\end{align}
+where $\eta$ is the learning rate, $\lambda$ is the weight decay rate, $\beta_1, \beta_2$ are the exponential decay rates, and $\epsilon$ prevents division by zero. A cosine learning rate schedule with linear warmup is employed:
+\begin{equation}
+  \eta_t = \eta_{\text{min}} + \frac{1}{2}(\eta_{\text{max}} - \eta_{\text{min}})\left(1 + \cos\left(\frac{t - T_{\text{warmup}}}{T_{\text{max}} - T_{\text{warmup}}}\pi\right)\right)
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.9cm and 1.2cm]
+  \node[datblk] (domain) {Domain Corpus\\(Medical/Legal/Code)};
+  \node[grayblk, right=of domain] (clean) {Clean \&\\Deduplicate};
+  \node[frzblk, right=of clean] (base) {Base Model\\$\theta_{\text{base}}$};
+  \node[lossblk, right=of base] (loss) {Domain LM\\Loss $\mathcal{L}$};
+  \node[trnblk, below=0.9cm of loss] (step) {Adam Step\\low LR};
+  \node[mrgblk, left=2.2cm of step] (dapt) {DAPT Model\\$\theta_{\text{domain}}$};
+
+  \draw[arr] (domain)--(clean);
+  \draw[arr] (clean)--(base);
+  \draw[arr] (base)--(loss);
+  \draw[arr] (loss)--(step);
+  \draw[arr] (step)--node[below,font=\tiny]{converged}(dapt);
+  \draw[arr,dashed,blue!60] (dapt.north) -- ++(0,0.5) -| (base.south) node[midway,above,font=\tiny]{checkpoint};
+\end{tikzpicture}
+\caption{DAPT pipeline: domain corpus is cleaned, fed into the base model, and trained with standard LM loss.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Domain vocabulary familiarity & Low & High\\
+Domain perplexity & High ($\rho \gg 1$) & Low (near 1)\\
+General language ability & Strong & Marginally reduced\\
+Downstream task (same domain) & Weak & Significantly stronger\\
+Training data type & General web text & Domain-specific unlabelled\\\bottomrule
+\end{tabular}
+\caption{State properties before and after domain adaptive pretraining.}
+\end{table}
+
+\subsection{Python Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+import math
+
+class CausalSelfAttention(nn.Module):
+    def __init__(self, d_model, num_heads):
+        super().__init__()
+        assert d_model % num_heads == 0
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.head_dim = d_model // num_heads
+        
+        self.q_proj = nn.Linear(d_model, d_model)
+        self.k_proj = nn.Linear(d_model, d_model)
+        self.v_proj = nn.Linear(d_model, d_model)
+        self.out_proj = nn.Linear(d_model, d_model)
+
+    def forward(self, x):
+        # x shape: (batch_size, seq_len, d_model)
+        b, t, c = x.size()
+        
+        q = self.q_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
+        k = self.k_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
+        v = self.v_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
+        
+        # Compute scaled query-key dot product attention
+        scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.head_dim)
+        
+        # Apply causal attention mask
+        mask = torch.triu(torch.ones(t, t, device=x.device), diagonal=1) * -1e9
+        scores = scores + mask.view(1, 1, t, t)
+        
+        attn_weights = torch.softmax(scores, dim=-1)
+        out = torch.matmul(attn_weights, v) # (b, num_heads, t, head_dim)
+        out = out.transpose(1, 2).contiguous().view(b, t, c)
+        return self.out_proj(out)
+
+class PretrainingCausalLM(nn.Module):
+    def __init__(self, vocab_size, d_model, num_heads):
+        super().__init__()
+        self.attn = CausalSelfAttention(d_model, num_heads)
+        self.vocab_proj = nn.Linear(d_model, vocab_size)
+        self.loss_fn = nn.CrossEntropyLoss(reduction='mean')
+
+    def forward(self, x, targets=None):
+        # x: hidden states or token embeddings, shape: (batch_size, seq_len, d_model)
+        # targets: target token ids, shape: (batch_size, seq_len)
+        h = self.attn(x)
+        logits = self.vocab_proj(h)
+        
+        loss = None
+        if targets is not None:
+            shift_logits = logits[..., :-1, :].contiguous()
+            shift_targets = targets[..., 1:].contiguous()
+            loss = self.loss_fn(shift_logits.view(-1, shift_logits.size(-1)), shift_targets.view(-1))
+            
+        return logits, loss
+\end{lstlisting}
+\newpage
+%% ------------------------------------------------------------
+\section{Task Adaptive Pretraining (TAPT)}
+
+\subsection{Mathematical Foundation}
+Causal language modeling models the probability of a sequence $x = (x_1, \ldots, x_T)$ as the product of autoregressive conditional probabilities:
+\begin{equation}
+  P(x) = \prod_{t=1}^T P(x_t \mid x_{<t})
+\end{equation}
+The hidden representation $h_t^{(l)}$ at layer $l$ and token position $t$ is computed using multi-head causal self-attention. The causal attention mask matrix $M \in \mathbb{R}^{T \times T}$ is defined as:
+\begin{equation}
+  M_{i,j} = \begin{cases} 0 & \text{if } j \le i \\ -\infty & \text{if } j > i \end{cases}
+\end{equation}
+This mask is added directly to the scaled query-key dot products:
+\begin{equation}
+  \text{Attention}(Q, K, V) = \text{softmax}\left( \frac{Q K^\top}{\sqrt{d_k}} + M \right) V
+\end{equation}
+where $Q = X W_Q$, $K = X W_K$, $V = X W_V$. This prevents information leakage from future tokens. At the output layer, the logits $z_t \in \mathbb{R}^{|\mathcal{V}|}$ are computed via $z_t = h_t^{(L)} W_{\text{vocab}}$. To maintain numerical stability, softmax is computed by subtracting the maximum logit:
+\begin{equation}
+  P(x_t = v \mid x_{<t}) = \frac{\exp(z_{t,v} - \max_k z_{t,k})}{\sum_{j \in \mathcal{V}} \exp(z_{t,j} - \max_k z_{t,k})}
+\end{equation}
+The causal model parameters $\theta$ are trained by minimizing the cross-entropy loss over a dataset $\mathcal{D}$:
+\begin{equation}
+  \mathcal{L}_{\text{PT}}(\theta) = -\frac{1}{|\mathcal{D}|}\sum_{x \in \mathcal{D}} \sum_{t=1}^T \log P_\theta(x_t \mid x_{<t})
+\end{equation}
+Updates are made using the AdamW optimizer. Let $g_t = \nabla_\theta \mathcal{L}_t$ be the gradient at step $t$. The update equations are:
+\begin{align}
+  m_t &= \beta_1 m_{t-1} + (1-\beta_1) g_t \\
+  v_t &= \beta_2 v_{t-1} + (1-\beta_2) g_t^2 \\
+  \hat{m}_t &= \frac{m_t}{1-\beta_1^t}, \quad \hat{v}_t = \frac{v_t}{1-\beta_2^t} \\
+  \theta_t &= \theta_{t-1} - \eta \left( \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon} + \lambda \theta_{t-1} \right)
+\end{align}
+where $\eta$ is the learning rate, $\lambda$ is the weight decay rate, $\beta_1, \beta_2$ are the exponential decay rates, and $\epsilon$ prevents division by zero. A cosine learning rate schedule with linear warmup is employed:
+\begin{equation}
+  \eta_t = \eta_{\text{min}} + \frac{1}{2}(\eta_{\text{max}} - \eta_{\text{min}})\left(1 + \cos\left(\frac{t - T_{\text{warmup}}}{T_{\text{max}} - T_{\text{warmup}}}\pi\right)\right)
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.8cm and 1.2cm]
+  \node[datblk] (labeled) {Labelled Task\\Data (small)};
+  \node[grayblk, above=0.7cm of labeled] (unlabeled) {Unlabelled Task-\\Adjacent Text};
+  \node[frzblk, right=2.0cm of labeled] (dapt) {DAPT / Base\\Model $\theta$};
+  \node[lossblk, right=of dapt] (loss) {Task LM\\Loss};
+  \node[trnblk, right=of loss] (update) {Update\\$\theta \to \theta_{\text{task}}$};
+  \node[mrgblk, below=0.9cm of update] (sft) {SFT\\(next step)};
+
+  \draw[arr] (unlabeled.east) -| (dapt.north);
+  \draw[arr] (labeled.east) -- node[above,font=\tiny]{strip labels} (dapt.west);
+  \draw[arr] (dapt)--(loss);
+  \draw[arr] (loss)--(update);
+  \draw[arr] (update)--(sft);
+\end{tikzpicture}
+\caption{TAPT uses task-adjacent unlabelled text to bridge base model and supervised fine-tuning.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Task vocabulary alignment & Partial & Strong\\
+Corpus size & Millions of docs & Thousands of docs\\
+Training epochs & 1--3 & 10--100 (small corpus)\\
+Downstream label efficiency & Requires more labels & Requires fewer labels\\
+Transfer to other tasks & Good & Reduced (narrow focus)\\\bottomrule
+\end{tabular}
+\caption{State properties before and after task adaptive pretraining.}
+\end{table}
+
+\subsection{Python Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+import math
+
+class CausalSelfAttention(nn.Module):
+    def __init__(self, d_model, num_heads):
+        super().__init__()
+        assert d_model % num_heads == 0
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.head_dim = d_model // num_heads
+        
+        self.q_proj = nn.Linear(d_model, d_model)
+        self.k_proj = nn.Linear(d_model, d_model)
+        self.v_proj = nn.Linear(d_model, d_model)
+        self.out_proj = nn.Linear(d_model, d_model)
+
+    def forward(self, x):
+        # x shape: (batch_size, seq_len, d_model)
+        b, t, c = x.size()
+        
+        q = self.q_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
+        k = self.k_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
+        v = self.v_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
+        
+        # Compute scaled query-key dot product attention
+        scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.head_dim)
+        
+        # Apply causal attention mask
+        mask = torch.triu(torch.ones(t, t, device=x.device), diagonal=1) * -1e9
+        scores = scores + mask.view(1, 1, t, t)
+        
+        attn_weights = torch.softmax(scores, dim=-1)
+        out = torch.matmul(attn_weights, v) # (b, num_heads, t, head_dim)
+        out = out.transpose(1, 2).contiguous().view(b, t, c)
+        return self.out_proj(out)
+
+class PretrainingCausalLM(nn.Module):
+    def __init__(self, vocab_size, d_model, num_heads):
+        super().__init__()
+        self.attn = CausalSelfAttention(d_model, num_heads)
+        self.vocab_proj = nn.Linear(d_model, vocab_size)
+        self.loss_fn = nn.CrossEntropyLoss(reduction='mean')
+
+    def forward(self, x, targets=None):
+        # x: hidden states or token embeddings, shape: (batch_size, seq_len, d_model)
+        # targets: target token ids, shape: (batch_size, seq_len)
+        h = self.attn(x)
+        logits = self.vocab_proj(h)
+        
+        loss = None
+        if targets is not None:
+            shift_logits = logits[..., :-1, :].contiguous()
+            shift_targets = targets[..., 1:].contiguous()
+            loss = self.loss_fn(shift_logits.view(-1, shift_logits.size(-1)), shift_targets.view(-1))
+            
+        return logits, loss
+\end{lstlisting}
+\newpage
+%% ============================================================
+\part{Supervised Fine-Tuning Methods}
+%% ============================================================
+
+\section{Supervised Fine-Tuning (SFT)}
+
+\subsection{Mathematical Foundation}
+SFT trains the model on structured prompt-response pairs $(x, y) \sim \mathcal{D}_{\text{SFT}}$ using teacher forcing. Let $s = [x ; y]$ be the concatenated token sequence of length $M + U$, where $x = (s_1, \ldots, s_M)$ is the prompt and $y = (s_{M+1}, \ldots, s_{M+U})$ is the response. The key math lies in applying a target label mask $L \in \{-100, \mathcal{V}\}^{M+U}$ defined as:
+\begin{equation}
+  L_t = \begin{cases} -100 & \text{if } t \le M \\ s_t & \text{if } t > M \end{cases}
+\end{equation}
+The cross-entropy loss function ignores targets set to $-100$, directing gradient updates exclusively to the response generation tokens:
+\begin{equation}
+  \mathcal{L}_{\text{SFT}}(\theta) = -\frac{1}{U} \sum_{t=M+1}^{M+U} \log P_\theta(s_t \mid s_{<t})
+\end{equation}
+This loss ignores the prompt distribution $P(x)$, preventing the model from degrading its output generation capability to match arbitrary prompts.
+The gradients only backpropagate through response tokens:
+\begin{equation}
+  \nabla_\theta \mathcal{L}_{\text{SFT}} = -\frac{1}{U} \sum_{t=M+1}^{M+U} \nabla_\theta \log P_\theta(s_t \mid s_{<t})
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.8cm and 1.2cm]
+  \node[datblk] (pairs) {$(x, y)$\\Curated Pairs};
+  \node[grayblk, right=of pairs] (concat) {Concat\\{[x ; y]}};
+  \node[frzblk, right=of concat] (fwd) {Transformer\\Forward};
+  \node[lossblk, right=of fwd] (loss) {Masked CE\\Loss $\mathcal{L}_{\text{SFT}}$};
+  \node[trnblk, below=0.9cm of loss] (bwd) {Backprop\\(response only)};
+  \node[mrgblk, left=3.5cm of bwd] (out) {Instruction-\\Following $\theta^*$};
+
+  \draw[arr] (pairs)--(concat);
+  \draw[arr] (concat)--(fwd);
+  \draw[arr] (fwd)--(loss);
+  \draw[arr] (loss)--(bwd);
+  \draw[arr] (bwd)--(out);
+
+  \node[red,font=\tiny,text width=2cm,align=center] at ($(fwd.south)+(0,-0.3)$) {prompt tokens\\masked in labels};
+\end{tikzpicture}
+\caption{SFT pipeline with prompt-masked loss: gradients flow only through response tokens.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Behaviour & Completion only & Instruction following\\
+Loss region & N/A & Response tokens only\\
+Label masking & None & Prompt masked to $-100$\\
+Data format & Raw text & (instruction, response) pairs\\
+Output quality & Random completion & Task-aligned responses\\\bottomrule
+\end{tabular}
+\caption{State properties before and after supervised fine-tuning.}
+\end{table}
+
+\subsection{Python Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+class SFTDatasetCollator:
+    def __init__(self, tokenizer, ignore_index=-100):
+        self.tokenizer = tokenizer
+        self.ignore_index = ignore_index
+
+    def __call__(self, batch):
+        # batch: list of dicts with 'prompt' and 'response' strings
+        input_ids_list = []
+        labels_list = []
+        
+        for item in batch:
+            prompt_tokens = self.tokenizer.encode(item['prompt'])
+            res_tokens = self.tokenizer.encode(item['response'])
+            
+            # Concatenate prompt + response
+            input_ids = prompt_tokens + res_tokens
+            # Mask the prompt tokens in the label
+            labels = [self.ignore_index] * len(prompt_tokens) + res_tokens
+            
+            input_ids_list.append(torch.tensor(input_ids))
+            labels_list.append(torch.tensor(labels))
+            
+        # Pad sequences to max length in batch
+        padded_inputs = nn.utils.rnn.pad_sequence(input_ids_list, batch_first=True, padding_value=self.tokenizer.pad_token_id)
+        padded_labels = nn.utils.rnn.pad_sequence(labels_list, batch_first=True, padding_value=self.ignore_index)
+        
+        return padded_inputs, padded_labels
+
+class SFTModuleLoss(nn.Module):
+    def __init__(self, ignore_index=-100):
+        super().__init__()
+        self.ce = nn.CrossEntropyLoss(ignore_index=ignore_index)
+
+    def forward(self, logits, targets):
+        # Shifting logits and targets for next-token prediction
+        shift_logits = logits[..., :-1, :].contiguous()
+        shift_targets = targets[..., 1:].contiguous()
+        return self.ce(shift_logits.view(-1, shift_logits.size(-1)), shift_targets.view(-1))
+\end{lstlisting}
+\newpage
+%% ------------------------------------------------------------
+\section{Instruction Tuning}
+
+\subsection{Mathematical Foundation}
+Instruction Tuning exposes the model to multi-turn conversational patterns. A prompt template $T(I, x)$ converts an instruction $I$ and context $x$ into structured sequences. Turn boundaries are defined using chat-formatting systems (like ChatML). A single sequence layout is:
+\begin{equation}
+  S = \langle\text{user}\rangle I \parallel x \langle\text{assistant}\rangle y \langle\text{eos}\rangle
+\end{equation}
+Let $\mathcal{D}_{\text{inst}}$ consist of instructions spanning hundreds of tasks. The model parameters $\theta$ are optimized on the joint multi-task dataset:
+\begin{equation}
+  \mathcal{L}_{\text{IT}}(\theta) = -\mathbb{E}_{(I, x, y) \sim \mathcal{D}_{\text{inst}}} \sum_{t=1}^{|y|} \log P_\theta\bigl(y_t \mid T(I, x), y_{<t}\bigr)
+\end{equation}
+We mask all prompt-side tokens, including conversational format tags (like $\langle\text{user}\rangle$ and instruction text), ensuring parameters are trained only on synthesizing assistant responses:
+\begin{equation}
+  \mathcal{L}_{\text{IT}}(\theta) = -\frac{1}{|y|} \sum_{i=1}^{|T(I,x)|+|y|} M_i \log P_\theta(S_i \mid S_{<i}), \quad M_i = \mathbb{I}(i > |T(I, x)|)
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.1cm]
+  \node[datblk] (t1) {Summarise\\Task $\mathcal{T}_1$};
+  \node[datblk, below=0.4cm of t1] (t2) {Translate\\Task $\mathcal{T}_2$};
+  \node[datblk, below=0.4cm of t2] (t3) {QA / Code\\Task $\mathcal{T}_K$};
+  \node[grayblk, right=1.6cm of t2] (tmpl) {Chat Template\\Formatter};
+  \node[frzblk, right=of tmpl] (model) {LLM\\$\theta$};
+  \node[lossblk, right=of model] (loss) {SFT Loss\\(multi-task)};
+  \node[mrgblk, below=0.8cm of loss] (out) {Instruction-\\Tuned $\theta^*$};
+
+  \draw[arr] (t1.east) -| (tmpl.north);
+  \draw[arr] (t2)--(tmpl);
+  \draw[arr] (t3.east) -| (tmpl.south);
+  \draw[arr] (tmpl)--(model);
+  \draw[arr] (model)--(loss);
+  \draw[arr] (loss)--(out);
+\end{tikzpicture}
+\caption{Instruction tuning over diverse task types funnelled through a unified chat template.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Zero-shot generalisation & Poor & Strong across task types\\
+Task diversity in training & N/A & $K$ heterogeneous tasks\\
+Input format & Free-form text & Structured chat template\\
+Prompt sensitivity & High & Reduced\\
+Held-out task performance & Weak & Strong (FLAN, InstructGPT)\\\bottomrule
+\end{tabular}
+\caption{State properties before and after instruction tuning.}
+\end{table}
+
+\subsection{Python Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+class InstructionFormatter(nn.Module):
+    def __init__(self, tokenizer, ignore_index=-100):
+        super().__init__()
+        self.tokenizer = tokenizer
+        self.ignore_index = ignore_index
+        self.ce = nn.CrossEntropyLoss(ignore_index=ignore_index)
+
+    def format_chatml(self, instruction, context, response):
+        prompt_text = f"<|im_start|>user\n{instruction}\n{context}<|im_end|>\n<|im_start|>assistant\n"
+        response_text = f"{response}<|im_end|>\n"
+        
+        prompt_ids = self.tokenizer.encode(prompt_text)
+        response_ids = self.tokenizer.encode(response_text)
+        
+        input_ids = prompt_ids + response_ids
+        targets = [self.ignore_index] * len(prompt_ids) + response_ids
+        
+        return torch.tensor(input_ids), torch.tensor(targets)
+
+    def forward(self, logits, targets):
+        shift_logits = logits[..., :-1, :].contiguous()
+        shift_targets = targets[..., 1:].contiguous()
+        return self.ce(shift_logits.view(-1, shift_logits.size(-1)), shift_targets.view(-1))
+\end{lstlisting}
+\newpage
+%% ------------------------------------------------------------
+\section{Multi-Task Training}
+
+\subsection{Mathematical Foundation}
+Multi-Task Training aggregates losses from $K$ distinct tasks. A simple summation can result in tasks with large gradient scales dominating the parameter updates. To resolve this, we use the GradNorm algorithm. Let $W$ be the shared parameter weights (e.g., the last transformer block weights). We define the gradient norm for task $k$ at training step $t$ as:
+\begin{equation}
+  G_k(t) = \|\nabla_W (w_k(t) \mathcal{L}_k(t))\|_2
+\end{equation}
+Let $\bar{G}(t) = \frac{1}{K} \sum_k G_k(t)$ be the average gradient norm. The target gradient norm for task $k$ balances task difficulties:
+\begin{equation}
+  \hat{G}_k(t) = \bar{G}(t) \times \left( \frac{\tilde{\mathcal{L}}_k(t)}{\frac{1}{K}\sum_j \tilde{\mathcal{L}}_j(t)} \right)^\alpha
+\end{equation}
+where $\tilde{\mathcal{L}}_k(t) = \mathcal{L}_k(t) / \mathcal{L}_k(0)$ is the task loss ratio indicating task training progress, and $\alpha$ is a hyperparameter managing structural gradient balancing. The task weights $w_k(t)$ are updated by minimizing the L1 distance between $G_k(t)$ and $\hat{G}_k(t)$:
+\begin{equation}
+  \mathcal{L}_{\text{grad}}(w_1, \dots, w_K; t) = \sum_{k=1}^K \left| G_k(t) - \hat{G}_k(t) \right|
+\end{equation}
+The final joint parameter objective is:
+\begin{equation}
+  \mathcal{L}_{\text{MT}}(\theta) = \sum_{k=1}^K w_k \mathcal{L}_k(\theta)
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.6cm and 1.1cm]
+  \node[datblk] (d1) {Dataset $\mathcal{D}_1$};
+  \node[datblk, below=0.4cm of d1] (d2) {Dataset $\mathcal{D}_2$};
+  \node[datblk, below=0.4cm of d2] (dk) {Dataset $\mathcal{D}_K$};
+  \node[frzblk, right=1.8cm of d2, minimum height=3.2cm, minimum width=3.0cm] (backbone) {Shared\\Transformer\\Backbone $\theta_{\text{shared}}$};
+  \node[trnblk, right=1.6cm of d1] (h1) {Head$_1$\\$\theta_1$};
+  \node[trnblk, right=1.6cm of d2] (h2) {Head$_2$\\$\theta_2$};
+  \node[trnblk, right=1.6cm of dk] (hk) {Head$_K$\\$\theta_K$};
+  \node[lossblk, right=1.6cm of h2] (loss) {Weighted\\Loss $\mathcal{L}_{\text{MT}}$};
+
+  \draw[arr] (d1)--(backbone.west|-h1);
+  \draw[arr] (d2)--(backbone);
+  \draw[arr] (dk)--(backbone.west|-hk);
+  \draw[arr] (backbone.east|-h1)--(h1);
+  \draw[arr] (backbone.east|-h2)--(h2);
+  \draw[arr] (backbone.east|-hk)--(hk);
+  \draw[arr] (h1.east) -| (loss.north);
+  \draw[arr] (h2)--(loss);
+  \draw[arr] (hk.east) -| (loss.south);
+\end{tikzpicture}
+\caption{Multi-task training: each dataset feeds task-specific heads on a shared backbone.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Backbone specialisation & Single task & $K$ tasks jointly\\
+Task heads & 1 & $K$ heads\\
+Generalisation & Narrow & Broad\\
+Data efficiency & Per-task only & Cross-task transfer\\
+Gradient conflicts & N/A & Managed via $\lambda_k$\\\bottomrule
+\end{tabular}
+\caption{State properties before and after multi-task training.}
+\end{table}
+
+\subsection{Python Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+class GradNormMultiTaskTrainer:
+    def __init__(self, model, num_tasks, alpha=0.12, lr_w=0.025):
+        self.model = model
+        self.num_tasks = num_tasks
+        self.alpha = alpha
+        self.lr_w = lr_w
+        
+        # Learnable task weights, initialized to 1.0
+        self.w = nn.Parameter(torch.ones(num_tasks, requires_grad=True))
+        self.initial_losses = None
+        self.optimizer_w = torch.optim.Adam([self.w], lr=lr_w)
+
+    def train_step(self, task_losses, shared_weights_layer, optimizer_model):
+        # task_losses: tensor of shape (num_tasks,) containing current task losses
+        if self.initial_losses is None:
+            self.initial_losses = task_losses.detach().clone()
+            
+        weighted_losses = self.w * task_losses
+        total_loss = weighted_losses.sum()
+        
+        # Backward pass on the main model parameters
+        optimizer_model.zero_grad()
+        total_loss.backward(retain_graph=True)
+        
+        # Compute gradient norms G_k for each task with respect to shared weights
+        norms = []
+        for i in range(self.num_tasks):
+            grads = torch.autograd.grad(weighted_losses[i], list(shared_weights_layer.parameters()), retain_graph=True, create_graph=True)
+            # Accumulate squared norms of all parameters in shared weights layer
+            norm = torch.sqrt(sum(g.pow(2).sum() for g in grads if g is not None))
+            norms.append(norm)
+        norms = torch.stack(norms)
+        
+        # Calculate loss ratios and target gradient norms
+        loss_ratios = task_losses.detach() / self.initial_losses
+        mean_norm = norms.mean().detach()
+        mean_ratio = loss_ratios.mean()
+        
+        targets = mean_norm * (loss_ratios / mean_ratio) ** self.alpha
+        
+        # Update task weights w
+        self.optimizer_w.zero_grad()
+        grad_loss = torch.sum(torch.abs(norms - targets))
+        grad_loss.backward()
+        
+        # Update weights and normalize them
+        self.optimizer_w.step()
+        with torch.no_grad():
+            self.w.copy_(self.w / self.w.sum() * self.num_tasks)
+            
+        optimizer_model.step()
+        return total_loss.item(), self.w.detach().tolist()
+\end{lstlisting}
+\newpage
+%% ------------------------------------------------------------
+\section{Chain-of-Thought SFT}
+
+\subsection{Mathematical Foundation}
+CoT SFT trains models to output intermediate reasoning steps before generating the final answer. Let $x$ be the prompt, $c = (c_1, \dots, c_M)$ be the reasoning chain tokens, and $y = (y_1, \dots, y_U)$ be the final answer tokens. The joint probability factorization is:
+\begin{equation}
+  P(c, y \mid x) = \prod_{i=1}^M P_\theta(c_i \mid x, c_{<i}) \prod_{j=1}^U P_\theta(y_j \mid x, c, y_{<j})
+\end{equation}
+The model is trained by minimizing the joint loss:
+\begin{equation}
+  \mathcal{L}_{\text{CoT}}(\theta) = -\beta \sum_{i=1}^M \log P_\theta(c_i \mid x, c_{<i}) - (1 - \beta) \sum_{j=1}^U \log P_\theta(y_j \mid x, c, y_{<j})
+\end{equation}
+During autoregressive generation, we sample tokens using Temperature-scaled softmax and Nucleus (top-$p$) filtering. The logits $z_t$ are modified as:
+\begin{equation}
+  \tilde{z}_{t,i} = \frac{z_{t,i}}{T}
+\end{equation}
+where $T > 0$ is the temperature. The top-$p$ vocabulary subset $\mathcal{V}^{(p)}$ at step $t$ is the smallest set satisfying:
+\begin{equation}
+  \sum_{v \in \mathcal{V}^{(p)}} P(v \mid x, s_{<t}) \ge p
+\end{equation}
+Tokens outside $\mathcal{V}^{(p)}$ are assigned probability 0 before final selection.
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.6cm and 0.9cm]
+  \node[datblk] (q) {Question $x$};
+  \node[grayblk, right=of q] (cot) {Reasoning\\Chain $c_1..c_M$};
+  \node[trnblk, right=of cot] (ans) {Final\\Answer $y$};
+  \node[lossblk, below=0.8cm of cot] (lc) {Chain Loss\\$\mathcal{L}_c$};
+  \node[lossblk, below=0.8cm of ans] (la) {Answer Loss\\$\mathcal{L}_y$};
+  \node[mrgblk, below=0.8cm of $(lc)!0.5!(la)$] (total) {Total Loss\\$\mathcal{L}_{\text{CoT}}$};
+
+  \draw[arr] (q)--(cot);
+  \draw[arr] (cot)--(ans);
+  \draw[arr] (cot)--(lc);
+  \draw[arr] (ans)--(la);
+  \draw[arr] (lc)--(total);
+  \draw[arr] (la)--(total);
+
+  \draw[losscolor,thick,decorate,decoration={brace,amplitude=6pt,raise=4pt}]
+    (cot.north west) -- (ans.north east) node[midway,above=10pt,font=\tiny]{loss applied to entire output};
+\end{tikzpicture}
+\caption{CoT SFT: loss is computed over both the reasoning chain and the final answer.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Output format & Direct answer & Reasoning chain + answer\\
+Training signal per example & $|y|$ tokens & $|c| + |y|$ tokens\\
+Multi-step reasoning & Weak & Strong\\
+Data annotation cost & Low & High (chain annotation)\\
+Accuracy on complex tasks & Low & Substantially improved\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Chain-of-Thought SFT.}
+\end{table}
+
+\subsection{Python Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class CoTGenerator(nn.Module):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+    def sample_top_p(self, logits, top_p=0.9, temperature=0.7):
+        # logits shape: (1, vocab_size)
+        scaled_logits = logits / temperature
+        probs = F.softmax(scaled_logits, dim=-1)
+        
+        sorted_probs, sorted_indices = torch.sort(probs, descending=True, dim=-1)
+        cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
+        
+        # Remove tokens with cumulative probability above top_p (but keep the first one)
+        sorted_indices_to_remove = cumulative_probs > top_p
+        sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
+        sorted_indices_to_remove[..., 0] = False
+        
+        # Set filtered logits to negative infinity
+        indices_to_remove = sorted_indices_to_remove.scatter(1, sorted_indices, sorted_indices_to_remove)
+        scaled_logits[indices_to_remove] = -1e9
+        
+        # Re-compute probabilities and sample
+        filtered_probs = F.softmax(scaled_logits, dim=-1)
+        next_token = torch.multinomial(filtered_probs, num_samples=1)
+        return next_token
+
+    def generate(self, input_ids, max_len=100, top_p=0.9, temp=0.7):
+        # Autoregressive generation loop
+        generated = input_ids.clone()
+        for _ in range(max_len):
+            outputs, _ = self.model(generated)
+            next_logit = outputs[:, -1, :]
+            next_token = self.sample_top_p(next_logit, top_p=top_p, temperature=temp)
+            generated = torch.cat([generated, next_token], dim=1)
+        return generated
+\end{lstlisting}
+\newpage
+%% ------------------------------------------------------------
+\section{Step-by-Step SFT}
+
+\subsection{Mathematical Foundation}
+Step-by-Step SFT formats the reasoning chain into discrete steps separated by a boundary token $T_{\text{step}} = \text{\texttt{[STEP]}}$. Let the response contain $S$ steps: $s = (s_1, T_{\text{step}}, s_2, T_{\text{step}}, \dots, s_S, T_{\text{step}})$. The step-level loss is:
+\begin{equation}
+  \mathcal{L}_{\text{SBS}}(\theta) = -\sum_{k=1}^S \sum_{t=1}^{|s_k|} \log P_\theta(s_{k,t} \mid x, s_{<k}, s_{k,<t}) - \sum_{k=1}^S \log P_\theta(T_{\text{step}} \mid x, s_{\le k})
+\end{equation}
+We define the average step perplexity $\text{PPL}_k$ as:
+\begin{equation}
+  \text{PPL}_k = \exp\left( -\frac{1}{|s_k|} \sum_{t=1}^{|s_k|} \log P_\theta(s_{k,t} \mid x, s_{<k}, s_{k,<t}) \right)
+\end{equation}
+Steps with high perplexity ($\text{PPL}_k > \tau$, where $\tau$ is a threshold) indicate low model confidence and can be flagged for step-level revision during generation.
+The model is trained to minimize the combined cross-entropy loss over all steps.
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.5cm and 0.8cm]
+  \node[datblk,minimum width=1.8cm] (inp) {Input $x$};
+  \node[trnblk,right=0.7cm of inp,minimum width=1.8cm] (s1) {Step 1\\$s_1$};
+  \node[trnblk,right=0.6cm of s1,minimum width=1.8cm] (s2) {Step 2\\$s_2$};
+  \node[grayblk,right=0.6cm of s2,minimum width=0.6cm] (dots) {$\cdots$};
+  \node[trnblk,right=0.6cm of dots,minimum width=1.8cm] (sn) {Step $N$\\$s_N$};
+  \node[mrgblk,right=0.7cm of sn,minimum width=1.8cm] (out) {Answer\\$y$};
+
+  \foreach \a/\b in {inp/s1, s1/s2, s2/dots, dots/sn, sn/out}
+    \draw[arr] (\a)--(\b);
+
+  \node[losscolor,font=\tiny] at ($(s1.south)+(0,-0.45)$) {$\mathcal{L}_1$};
+  \node[losscolor,font=\tiny] at ($(s2.south)+(0,-0.45)$) {$\mathcal{L}_2$};
+  \node[losscolor,font=\tiny] at ($(sn.south)+(0,-0.45)$) {$\mathcal{L}_N$};
+  \node[losscolor,font=\tiny] at ($(out.south)+(0,-0.45)$) {$\mathcal{L}_y$};
+
+  \foreach \n in {s1,s2,sn,out}
+    \draw[garr] (\n.south) -- ++(0,-0.35);
+\end{tikzpicture}
+\caption{Step-by-Step SFT: each numbered step and the final answer contribute to the total loss.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Solution structure & Unstructured & Numbered procedural steps\\
+Step delimiter tokens & Not in vocabulary & Learned as first-class tokens\\
+Interpretability & Low & Step-level traceability\\
+Annotation format & Raw answer & $(x, [s_1,...,s_N], y)$\\
+Task decomposition ability & Implicit & Explicit\\\bottomrule
+\end{tabular}
+\caption{State properties before and after Step-by-Step SFT.}
+\end{table}
+
+\subsection{Python Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+class StepByStepLossAndConfidence(nn.Module):
+    def __init__(self, step_token_id=50257, ignore_index=-100):
+        super().__init__()
+        self.step_token_id = step_token_id
+        self.ignore_index = ignore_index
+        self.ce = nn.CrossEntropyLoss(reduction='none')
+
+    def forward(self, logits, targets):
+        # logits: (batch_size, seq_len, vocab_size)
+        # targets: (batch_size, seq_len)
+        shift_logits = logits[..., :-1, :].contiguous()
+        shift_targets = targets[..., 1:].contiguous()
+        
+        batch_size, seq_len = shift_targets.size()
+        
+        flat_logits = shift_logits.view(-1, shift_logits.size(-1))
+        flat_targets = shift_targets.view(-1)
+        
+        # Calculate loss per token position
+        losses = self.ce(flat_logits, flat_targets).view(batch_size, seq_len)
+        
+        step_perplexities = []
+        for b in range(batch_size):
+            step_indices = (shift_targets[b] == self.step_token_id).nonzero(as_tuple=True)[0]
+            start = 0
+            for idx in step_indices:
+                step_loss = losses[b, start:idx.item()]
+                # Exclude masked tokens
+                valid_losses = step_loss[shift_targets[b, start:idx.item()] != self.ignore_index]
+                if len(valid_losses) > 0:
+                    step_ppl = torch.exp(valid_losses.mean())
+                    step_perplexities.append(step_ppl.item())
+                start = idx.item() + 1
+                
+        mean_loss = losses[shift_targets != self.ignore_index].mean()
+        return mean_loss, step_perplexities
+\end{lstlisting}
+\newpage
+%% ------------------------------------------------------------
+\section{Process Supervision}
+
+\subsection{Mathematical Foundation}
+Process Supervision trains a Process Reward Model (PRM) using step-level binary correctness labels. Let $x$ be the problem description, and $s_1, \dots, s_S$ be the generated steps. Human or model-based annotations assign correctness labels $r_k \in \{0, 1\}$ for each step $s_k$.
+The PRM model outputs correctness probabilities by applying a logistic sigmoid function to the step boundary token representation:
+\begin{equation}
+  \hat{r}_k = \sigma\left( \text{PRM}_\phi(h_{t_k}) \right) = \frac{1}{1 + \exp\left( -\text{PRM}_\phi(h_{t_k}) \right)}
+\end{equation}
+where $h_{t_k}$ is the transformer hidden output at index $t_k$ representing the step boundary token. The PRM parameters $\phi$ are optimized using binary cross entropy:
+\begin{equation}
+  \mathcal{L}_{\text{PRM}}(\phi) = -\sum_{k=1}^S \left[ r_k \log \hat{r}_k + (1-r_k) \log(1 - \hat{r}_k) \right]
+\end{equation}
+During inference, candidate sequences are generated. The total sequence correctness score is calculated as the product of step correctness probabilities:
+\begin{equation}
+  \text{Score}(s_{\le S}) = \prod_{k=1}^S \hat{r}_k
+\end{equation}
+This score is used to rank candidate rollouts in Best-of-$N$ sampling or guide selection during Monte Carlo Tree Search (MCTS).
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.6cm and 1.0cm]
+  \node[datblk] (sol) {Solution\\Steps $s_{1..N}$};
+  \node[grayblk, right=of sol] (prm) {Process Reward\\Annotator};
+  \node[trnblk, right=0.6cm of prm, minimum height=2.2cm, minimum width=2.2cm] (labels) {Step\\Labels\\$r_1,..,r_N$};
+  \node[lossblk, right=of labels] (loss) {Weighted\\SFT Loss};
+  \node[mrgblk, below=0.9cm of loss] (out) {Process-Supervised\\Model};
+
+  \node[green!60!black,draw,rounded corners,font=\tiny,minimum width=1.5cm] at ($(labels.east)+(0,0.5)$) {$r_n{=}{+}1$: train};
+  \node[red!70!black,draw,rounded corners,font=\tiny,minimum width=1.5cm] at ($(labels.east)+(0,-0.5)$) {$r_n{=}{-}1$: skip};
+
+  \draw[arr] (sol)--(prm);
+  \draw[arr] (prm)--(labels);
+  \draw[arr] (labels)--(loss);
+  \draw[arr] (loss)--(out);
+\end{tikzpicture}
+\caption{Process supervision: a step annotator labels each reasoning step; only correct steps contribute to the SFT loss.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Supervision granularity & Final answer only & Per-step labels\\
+Error signal & Outcome-level & Step-level\\
+Error localisation & None & Identifies which step failed\\
+Annotation cost & Low & High (step-level labelling)\\
+Reasoning quality & Outcome-driven & Step-correctness driven\\\bottomrule
+\end{tabular}
+\caption{State properties before and after process supervision.}
+\end{table}
+
+\subsection{Python Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+class ProcessRewardModel(nn.Module):
+    def __init__(self, hidden_dim, step_token_id=50257):
+        super().__init__()
+        self.step_token_id = step_token_id
+        # Binary classification head
+        self.value_head = nn.Linear(hidden_dim, 1)
+        self.bce = nn.BCEWithLogitsLoss()
+
+    def forward(self, hidden_states, input_ids, step_labels=None):
+        # hidden_states shape: (batch_size, seq_len, hidden_dim)
+        # input_ids shape: (batch_size, seq_len)
+        # step_labels: tensor containing float correctness labels {0.0, 1.0} at step boundaries, shape: (batch_size, seq_len)
+        logits = self.value_head(hidden_states).squeeze(-1) # (batch_size, seq_len)
+        
+        step_mask = (input_ids == self.step_token_id)
+        
+        loss = None
+        if step_labels is not None:
+            # Mask out non-step boundary token positions in loss calculation
+            valid_logits = logits[step_mask]
+            valid_labels = step_labels[step_mask]
+            loss = self.bce(valid_logits, valid_labels)
+            
+        # Compute predicted step probabilities
+        probs = torch.sigmoid(logits) * step_mask.float()
+        return probs, loss
+\end{lstlisting}
+\newpage
+%% ============================================================
+\part{Parameter-Efficient Fine-Tuning (PEFT)}
+%% ============================================================
+
+\section{Low-Rank Adaptation (LoRA)}
+
+\subsection{Mathematical Foundation}
+LoRA represents the weight update matrix $\Delta W \in \mathbb{R}^{k \times d}$ for a linear projection layer as the product of two low-rank matrices $B \in \mathbb{R}^{k \times r}$ and $A \in \mathbb{R}^{r \times d}$, where the rank satisfies $r \ll \min(d, k)$:
+\begin{equation}
+  h = W_0 x + \Delta W x = W_0 x + \frac{\alpha}{r} B A x
+\end{equation}
+where $\alpha$ is a constant scaling parameter. The base weight matrix $W_0 \in \mathbb{R}^{k \times d}$ is frozen; only $B$ and $A$ are updated. Under a loss $\mathcal{L}$, the gradient propagation rules using the chain rule are derived as follows:
+Let $z = A x \in \mathbb{R}^r$ be the intermediate bottleneck activation. Then $h = W_0 x + \frac{\alpha}{r} B z$.
+The gradient with respect to output activation is $\nabla_h \mathcal{L} \in \mathbb{R}^{k \times 1}$ (represented as a column vector).
+The gradient with respect to the intermediate bottleneck representation $z$:
+\begin{equation}
+  \nabla_z \mathcal{L} = \frac{\alpha}{r} B^\top \nabla_h \mathcal{L} \in \mathbb{R}^{r \times 1}
+\end{equation}
+The gradient with respect to the matrix $B$:
+\begin{equation}
+  \nabla_B \mathcal{L} = \frac{\alpha}{r} \nabla_h \mathcal{L} z^\top = \frac{\alpha}{r} \nabla_h \mathcal{L} x^\top A^\top \in \mathbb{R}^{k \times r}
+\end{equation}
+The gradient with respect to the matrix $A$:
+\begin{equation}
+  \nabla_A \mathcal{L} = \nabla_z \mathcal{L} x^\top = \frac{\alpha}{r} B^\top \nabla_h \mathcal{L} x^\top \in \mathbb{R}^{r \times d}
+\end{equation}
+To eliminate latency at deployment, the weights are merged directly into the base model:
+\begin{equation}
+  W_{\text{merged}} = W_0 + \frac{\alpha}{r} B A
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.1cm]
+  \node[neuron] (x1) at (0,1.5) {$x_1$};
+  \node[neuron] (x2) at (0,0.5) {$x_2$};
+  \node[neuron] (xd) at (0,-0.8) {$x_d$};
+  \node[font=\tiny] at (0,-0.15) {$\vdots$};
+
+  \node[frzblk, minimum width=2.8cm, minimum height=2.0cm] (W0) at (3.8,1.5) {Frozen\\$W_0 \in \mathbb{R}^{k\times d}$};
+  \node[bneck] (z1) at (3.8,-0.2) {$z_1$};
+  \node[bneck] (zr) at (3.8,-1.2) {$z_r$};
+  \node[font=\tiny] at (3.8,-0.7) {$\vdots$};
+
+  \node[outnrn] (h1) at (7.6,1.5) {$h_1$};
+  \node[outnrn] (h2) at (7.6,0.5) {$h_2$};
+  \node[outnrn] (hk) at (7.6,-0.8) {$h_k$};
+  \node[font=\tiny] at (7.6,-0.15) {$\vdots$};
+
+  \draw[arr] (x1.east) -- ($(W0.west)+(0,0.5)$);
+  \draw[arr] (x2.east) -- ($(W0.west)+(0,0)$);
+  \draw[arr] (xd.east) -- ($(W0.west)+(0,-0.5)$);
+  \foreach \s in {x1,x2,xd} \foreach \t in {z1,zr}
+    \draw[arr,green!70!black,thin] (\s.east)--(\t.west);
+  \foreach \s in {z1,zr} \foreach \t in {h1,h2,hk}
+    \draw[arr,green!70!black,thin] (\s.east)--(\t.west);
+  \draw[arr] ($(W0.east)+(0,0.5)$)--(h1.west);
+  \draw[arr] ($(W0.east)+(0,0.0)$)--(h2.west);
+  \draw[arr] ($(W0.east)+(0,-0.5)$)--(hk.west);
+
+  \node[green!60!black,font=\tiny] at (1.9,-0.9) {$A$ (train)};
+  \node[green!60!black,font=\tiny] at (5.7,-0.9) {$B$ (train)};
+  \draw[garr] (h1.east)--++(0.6,0) node[right,red,font=\tiny]{$g_1$};
+  \draw[garr] (hk.east)--++(0.6,0) node[right,red,font=\tiny]{$g_k$};
+\end{tikzpicture}
+\caption{LoRA: input flows through frozen $W_0$ and trainable low-rank path $A \to B$; outputs are summed.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Base weights $W_0$ & requires\_grad = True & Frozen (False)\\
+Trainable params & $k \times d$ & $r(k+d) \ll kd$\\
+Matrix $B$ & Does not exist & $\mathbb{R}^{k\times r}$, init $= 0$\\
+Matrix $A$ & Does not exist & $\mathbb{R}^{r\times d}$, init $\sim \mathcal{N}$\\
+Inference overhead & None & Extra BA multiply (or merged)\\\bottomrule
+\end{tabular}
+\caption{State properties before and after LoRA injection.}
+\end{table}
+
+\subsection{Python Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+class LoRALinear(nn.Module):
+    def __init__(self, in_features, out_features, r=8, alpha=16):
+        super().__init__()
+        self.linear = nn.Linear(in_features, out_features)
+        self.linear.weight.requires_grad = False  # Freeze base weight
+        
+        self.r = r
+        self.alpha = alpha
+        self.scaling = alpha / r
+        
+        # Low-rank adapter matrices
+        self.lora_A = nn.Parameter(torch.zeros(r, in_features))
+        self.lora_B = nn.Parameter(torch.zeros(out_features, r))
+        
+        # Initialization
+        nn.init.kaiming_uniform_(self.lora_A, a=5**0.5)
+        nn.init.zeros_(self.lora_B) # B is initialized to 0, making Delta W = 0 initially
+
+    def merge_weights(self):
+        # Update base weights directly
+        with torch.no_grad():
+            self.linear.weight.add_(self.scaling * (self.lora_B @ self.lora_A))
+
+    def unmerge_weights(self):
+        # Subtract back the low rank product
+        with torch.no_grad():
+            self.linear.weight.sub_(self.scaling * (self.lora_B @ self.lora_A))
+
+    def forward(self, x):
+        # Compute forward pass: W0*x + (alpha/r)*B*A*x
+        base_out = self.linear(x)
+        lora_out = (x @ self.lora_A.t() @ self.lora_B.t()) * self.scaling
+        return base_out + lora_out
+\end{lstlisting}
+\newpage
+%% ------------------------------------------------------------
+\section{Quantized LoRA (QLoRA)}
+
+\subsection{Mathematical Foundation}
+QLoRA quantizes the base weight $W_0$ to 4-bit NormalFloat (NF4) and uses Double Quantization (DQ) to minimize memory requirements.
+NF4 divides the standard normal distribution $\mathcal{N}(0, 1)$ into $2^k=16$ equal-area intervals. The quantization levels $q_i$ are calculated using the standard normal quantile function $Q_X$:
+\begin{equation}
+  q_i = \frac{1}{2} \left( Q_X\left(\frac{i}{2^k}\right) + Q_X\left(\frac{i+1}{2^k}\right) \right)
+\end{equation}
+The base weights are normalized to $[-1, 1]$ using block-wise scaling. Let the block size be $B=64$. For a block $W_b$, the scale is $c_b = \max(|W_b|)$. The quantized values are:
+\begin{equation}
+  q_t = \arg\min_{i \in \{0, \dots, 15\}} \left| \frac{W_{b,t}}{c_b} - q_i \right|
+\end{equation}
+Double Quantization (DQ) quantizes the scaling factors $c_b$ themselves to 8-bit floats ($c_b^{\text{FP8}}$) with a second scale block size of 256, reducing scale memory overhead from $32/64 = 0.5$ bits/weight to $8/64 + 32/(64 \times 256) \approx 0.127$ bits/weight.
+During backpropagation, the NF4 weights are dequantized to FP16/BF16 to compute outputs, and gradients are computed only for the low-rank parameters:
+\begin{equation}
+  h = \text{dequant}(c_b, W^{\text{NF4}}) x + \frac{\alpha}{r} B A x
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.2cm]
+  \node[datblk] (x) {Input\\$x$ (BF16)};
+  \node[frzblk, right=of x] (nf4) {$W_0^{\text{NF4}}$\\4-bit frozen};
+  \node[grayblk, right=of nf4] (deq) {Dequantise\\to BF16};
+  \node[sumnode, right=of deq] (sum) {$\oplus$};
+  \node[trnblk, above=0.8cm of sum] (lora) {LoRA\\$BA$ (BF16)};
+  \node[mrgblk, right=of sum] (out) {Output\\$h$ (BF16)};
+
+  \draw[arr] (x)--(nf4);
+  \draw[arr] (nf4)--(deq);
+  \draw[arr] (deq)--(sum);
+  \draw[arr] (lora)--(sum);
+  \draw[arr] (x.north) |- (lora.west);
+  \draw[arr] (sum)--(out);
+
+  \node[red,font=\tiny,text width=2.5cm,align=center,below=0.3cm of nf4] {4-bit: $\sim$4 GB\\vs BF16: $\sim$16 GB};
+\end{tikzpicture}
+\caption{QLoRA: 4-bit frozen base dequantised at runtime; LoRA adapters trained in BF16.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+$W_0$ precision & BF16 / FP16 & NF4 (4-bit)\\
+GPU memory for 70B model & ${\sim}140$ GB & ${\sim}35$ GB\\
+LoRA adapter precision & N/A & BF16\\
+Training fidelity & Full & Near-full (straight-through)\\
+Inference latency & Baseline & $+$dequant overhead\\\bottomrule
+\end{tabular}
+\caption{State properties before and after QLoRA.}
+\end{table}
+
+\subsection{Python Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+class QLoRALinear(nn.Module):
+    def __init__(self, in_features, out_features, r=8, alpha=16, block_size=64):
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.block_size = block_size
+        self.scaling = alpha / r
+        
+        # Simulated NF4 weights stored as half precision, frozen
+        self.weight_nf4 = nn.Parameter(torch.randn(out_features, in_features).half(), requires_grad=False)
+        # Block-wise scales for dequantization
+        self.scales = nn.Parameter(torch.zeros(out_features, (in_features + block_size - 1) // block_size).half(), requires_grad=False)
+        self.compute_simulated_scales()
+        
+        self.lora_A = nn.Parameter(torch.zeros(r, in_features))
+        self.lora_B = nn.Parameter(torch.zeros(out_features, r))
+        nn.init.kaiming_uniform_(self.lora_A, a=5**0.5)
+        nn.init.zeros_(self.lora_B)
+
+    def compute_simulated_scales(self):
+        # Group weights into blocks and compute max values
+        w = self.weight_nf4.data
+        for i in range(self.scales.size(1)):
+            start = i * self.block_size
+            end = min(start + self.block_size, self.in_features)
+            block = w[:, start:end]
+            self.scales[:, i] = torch.max(torch.abs(block), dim=-1).values
+
+    def dequantize(self):
+        # Dequantize simulated NF4 block-by-block
+        dequantized = torch.zeros_like(self.weight_nf4)
+        for i in range(self.scales.size(1)):
+            start = i * self.block_size
+            end = min(start + self.block_size, self.in_features)
+            scale = self.scales[:, i].unsqueeze(-1)
+            dequantized[:, start:end] = self.weight_nf4[:, start:end] * scale
+        return dequantized
+
+    def forward(self, x):
+        # Dequantize base weights on the fly
+        weight = self.dequantize()
+        base_out = torch.nn.functional.linear(x, weight)
+        lora_out = (x @ self.lora_A.t() @ self.lora_B.t()) * self.scaling
+        return base_out + lora_out
+\end{lstlisting}
+\newpage
+%% ------------------------------------------------------------
+\section{Adaptive LoRA (AdaLoRA)}
+
+\subsection{Mathematical Foundation}
+AdaLoRA parameterizes incremental weight updates using a singular value decomposition (SVD) representation to dynamically adjust the adapter rank during training:
+\begin{equation}
+  \Delta W = P \Lambda Q
+\end{equation}
+where $P \in \mathbb{R}^{d \times r}$ and $Q \in \mathbb{R}^{r \times k}$ are left and right singular vectors, and $\Lambda = \text{diag}(\lambda_1, \dots, \lambda_r) \in \mathbb{R}^{r \times r}$ contains singular values.
+To prevent SVD divergence and maintain parameter stability, we enforce orthogonality constraints:
+\begin{equation}
+  \mathcal{L}_{\text{orth}}(P, Q) = \gamma \left( \|P^\top P - I\|_F^2 + \|Q Q^\top - I\|_F^2 \right)
+\end{equation}
+We estimate the training importance of each singular triplet $(P_{*,i}, \lambda_i, Q_{i,*})$ using gradient-weight product magnitude:
+\begin{equation}
+  S_i = s(\lambda_i) + \frac{1}{d} \sum_{j=1}^d s(P_{j,i}) + \frac{1}{k} \sum_{j=1}^k s(Q_{i,j})
+\end{equation}
+where $s(\theta) = |\theta \cdot \nabla_\theta \mathcal{L}|$. At designated intervals, triplets with the lowest importance scores $S_i$ are pruned by zeroing out their singular values $\lambda_i$, dynamically reducing the adapter rank budget.
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.1cm]
+  \node[datblk] (x) {Input $x$};
+  \node[frzblk, right=1.5cm of x] (W0) {Frozen $W_0$};
+  
+  % Parallel SVD Adapter path
+  \node[trnblk, above=1.0cm of W0] (Q) {$Q$ (down-proj)};
+  \node[trnblk, right=1.2cm of Q] (L) {$\Lambda$ (diag)};
+  \node[trnblk, right=1.2cm of L] (P) {$P$ (up-proj)};
+  
+  \node[grayblk, above=0.6cm of L] (prune) {Rank Pruner};
+  \node[sumnode, right=1.5cm of W0] (sum) {$\oplus$};
+  \node[mrgblk, right=1.5cm of sum] (out) {Output $h$};
+
+  % Connections
+  \draw[arr] (x)--(W0);
+  \draw[arr] (x.north) |- (Q.west);
+  \draw[arr] (Q)--(L);
+  \draw[arr] (L)--(P);
+  \draw[arr] (P.east) -| (sum.north);
+  \draw[arr] (W0)--(sum);
+  \draw[arr] (sum)--(out);
+  
+  % Pruning monitor line
+  \draw[arr,dashed,red] (prune)--node[right,font=\tiny]{prunes $\lambda_i$}(L);
+  \node[red,font=\tiny,align=center] at ($(prune.north)+(0,0.25)$) {$S_i{<}\gamma \Rightarrow \lambda_i{=}0$};
+\end{tikzpicture}
+\caption{AdaLoRA: SVD-decomposed update with importance-based rank pruning per layer.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Rank per layer & Fixed $r$ & Adaptive (varies by importance)\\
+Update structure & $BA$ product & $P\Lambda Q$ SVD triplet\\
+Parameter budget & Fixed & Redistributed across layers\\
+Low-importance ranks & Included & Pruned ($\lambda_i = 0$)\\
+Training stability & Standard & Constrained by SVD orthogonality\\\bottomrule
+\end{tabular}
+\caption{State properties before and after AdaLoRA.}
+\end{table}
+
+\subsection{Python Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+class AdaLoRALinear(nn.Module):
+    def __init__(self, in_features, out_features, r=8, gamma=0.1):
+        super().__init__()
+        self.linear = nn.Linear(in_features, out_features)
+        self.linear.weight.requires_grad = False
+        self.r = r
+        self.gamma = gamma
+        
+        # SVD Parameterization
+        self.lora_P = nn.Parameter(torch.randn(out_features, r))
+        self.lora_E = nn.Parameter(torch.randn(r)) # Singular values
+        self.lora_Q = nn.Parameter(torch.randn(r, in_features))
+        
+        nn.init.orthogonal_(self.lora_P)
+        nn.init.zeros_(self.lora_E)
+        nn.init.orthogonal_(self.lora_Q)
+
+    def compute_orthogonality_loss(self):
+        # P^T * P - I
+        p_orth = torch.matmul(self.lora_P.t(), self.lora_P) - torch.eye(self.r, device=self.lora_P.device)
+        # Q * Q^T - I
+        q_orth = torch.matmul(self.lora_Q, self.lora_Q.t()) - torch.eye(self.r, device=self.lora_Q.device)
+        return self.gamma * (torch.norm(p_orth, p='fro')**2 + torch.norm(q_orth, p='fro')**2)
+
+    def prune_rank(self, keep_mask):
+        # keep_mask: boolean tensor of shape (r,) indicating active singular values
+        with torch.no_grad():
+            self.lora_E.copy_(self.lora_E * keep_mask.float())
+
+    def forward(self, x):
+        base_out = self.linear(x)
+        # Delta W = P * diag(E) * Q
+        delta_W = self.lora_P @ torch.diag(self.lora_E) @ self.lora_Q
+        lora_out = x @ delta_W.t()
+        return base_out + lora_out
+\end{lstlisting}
+\newpage
+%% ------------------------------------------------------------
+\section{Weight-Decomposed LoRA (DoRA)}
+
+\subsection{Mathematical Foundation}
+DoRA decomposes the weight matrix $W \in \mathbb{R}^{k \times d}$ into its magnitude vector $m \in \mathbb{R}^k$ and direction matrix $V \in \mathbb{R}^{k \times d}$:
+\begin{equation}
+  W = m \cdot \frac{V}{\|V\|_r} = m \cdot \frac{W_0 + \Delta W}{\|W_0 + \Delta W\|_r}
+\end{equation}
+where $\|\cdot\|_r$ is the L2 norm computed along each row (corresponding to output channels). In parameter-efficient training, we freeze the direction matrix to the base weight $V = W_0$ and introduce low-rank directional updates using adapters $\Delta V = \frac{\alpha}{r} B A$ (where $A \in \mathbb{R}^{r \times d}$ and $B \in \mathbb{R}^{k \times r}$):
+\begin{equation}
+  W = m \cdot \frac{W_0 + \frac{\alpha}{r} B A}{\|W_0 + \frac{\alpha}{r} B A\|_r}
+\end{equation}
+Only the magnitude vector $m$ and low-rank directional matrices $B$ and $A$ are trainable.
+The gradient flow for the directional components is:
+\begin{equation}
+  \nabla_V \mathcal{L} = \frac{m}{\|V\|_c} \left( \nabla_W \mathcal{L} - \frac{V}{\|V\|_c^2} \odot \left( V^\top \nabla_W \mathcal{L} \right) \right)
+\end{equation}
+This mathematically separates the updates to magnitude and direction, mimicking full parameter fine-tuning behavior while retaining low parameter overhead.
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.1cm]
+  \node[frzblk] (W0) {$W_0$ (frozen)};
+  \node[trnblk, above=1.0cm of W0] (ba) {$BA$ (LoRA)};
+  
+  \node[sumnode, right=1.2cm of W0] (sumV) {$\oplus$};
+  
+  \node[grayblk, right=1.0cm of sumV] (norm) {Norm $\|\cdot\|_r$};
+  \node[sumnode, right=1.2cm of norm] (div) {$\div$};
+  
+  \node[trnblk, above=1.0cm of div] (m) {Magnitude $m$};
+  \node[sumnode, right=1.2cm of div] (mul) {$\otimes$};
+  \node[mrgblk, right=1.2cm of mul] (out) {Weight $W'$};
+
+  % Connections
+  \draw[arr] (W0)--(sumV);
+  \draw[arr] (ba.east) -| (sumV.north);
+  \draw[arr] (sumV)--(norm);
+  \draw[arr] (sumV.east) -- ++(0.2,0) |- ($(div.west)+(0,0.2)$);
+  \draw[arr] (norm)--(div);
+  \draw[arr] (div)--(mul);
+  \draw[arr] (m)--(mul);
+  \draw[arr] (mul)--(out);
+
+  \node[font=\tiny,below=0.3cm of norm] {direction component};
+  \node[font=\tiny,above=0.3cm of m] {amplitude scaling};
+\end{tikzpicture}
+\caption{DoRA: weight decomposed into direction (LoRA-adapted) and magnitude (trainable scalar).}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before (LoRA)} & \textbf{After (DoRA)}\\\midrule
+Magnitude component & Implicit in $W_0$ & Explicit trainable $m$\\
+Direction component & $W_0 + BA$ unnorm & Column-normalised\\
+Full FT similarity & Lower & Higher\\
+Trainable params & $r(d+k)$ & $r(d+k) + k$\\
+Catastrophic forgetting & Low & Lower\\\bottomrule
+\end{tabular}
+\caption{State properties comparing LoRA and DoRA.}
+\end{table}
+
+\subsection{Python Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+class DoRALinear(nn.Module):
+    def __init__(self, in_features, out_features, r=8, alpha=16):
+        super().__init__()
+        self.linear = nn.Linear(in_features, out_features)
+        self.linear.weight.requires_grad = False
+        
+        self.r = r
+        self.alpha = alpha
+        self.scaling = alpha / r
+        
+        # Directional adapter matrices
+        self.lora_A = nn.Parameter(torch.zeros(r, in_features))
+        self.lora_B = nn.Parameter(torch.zeros(out_features, r))
+        nn.init.kaiming_uniform_(self.lora_A, a=5**0.5)
+        nn.init.zeros_(self.lora_B)
+        
+        # Magnitude parameters m, initialized to column norm of base weights
+        W0 = self.linear.weight.data
+        self.m = nn.Parameter(torch.norm(W0, p=2, dim=1))
+
+    def forward(self, x):
+        W0 = self.linear.weight
+        delta_W = (self.lora_B @ self.lora_A) * self.scaling
+        
+        # Calculate updated direction matrix V
+        V = W0 + delta_W
+        V_norm = torch.norm(V, p=2, dim=1, keepdim=True)
+        
+        # Construct weight matrix with separate magnitude and direction components
+        W = self.m.unsqueeze(1) * (V / V_norm)
+        return torch.nn.functional.linear(x, W, self.linear.bias)
+\end{lstlisting}
+\newpage
+%% ------------------------------------------------------------
+\section{IA$^3$ (Infused Adapter by Inhibiting and Amplifying Inner Activations)}
+
+\subsection{Mathematical Foundation}
+IA$^3$ introduces element-wise scaling vectors to directly modify inner activations in attention keys, values, and intermediate feed-forward layers. Let the scaling vectors be $l_K \in \mathbb{R}^d$, $l_V \in \mathbb{R}^d$, and $l_{FFN} \in \mathbb{R}^{d_{FFN}}$.
+The attention layer activations are computed as:
+\begin{align}
+  \tilde{K} &= K \odot l_K = K \cdot \text{diag}(l_K) \\
+  \tilde{V} &= V \odot l_V = V \cdot \text{diag}(l_V) \\
+  \text{Attention}(Q, \tilde{K}, \tilde{V}) &= \text{softmax}\left( \frac{Q \tilde{K}^\top}{\sqrt{d_k}} \right) \tilde{V}
+\end{align}
+In the feed-forward network (FFN), let $W_1$ and $W_2$ be the weight matrices. The intermediate activations are scaled before the output projection:
+\begin{equation}
+  \text{FFN}(x) = \sigma\bigl(x W_1 \odot l_{FFN}\bigr) W_2 = \sigma\bigl(x W_1 \cdot \text{diag}(l_{FFN})\bigr) W_2
+\end{equation}
+The base model weights $W_Q, W_K, W_V, W_1, W_2$ are frozen. This diagonal matrix transformation scales the columns of the projection matrices with minimal parameter updates.
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.6cm and 1.0cm]
+  \node[datblk] (x) {Input $x$};
+  
+  % Attention Block
+  \node[frzblk, right=1.0cm of x] (qkv) {Compute\\$Q, K, V$};
+  \node[trnblk, above right=0.3cm and 0.8cm of qkv] (lk) {$l_K \odot K$};
+  \node[trnblk, below right=0.3cm and 0.8cm of qkv] (lv) {$l_V \odot V$};
+  \node[frzblk, right=2.8cm of qkv] (attn) {Attention\\Softmax};
+  
+  % FFN Block
+  \node[frzblk, right=1.0cm of attn] (w1) {FFN $W_1$};
+  \node[trnblk, right=0.8cm of w1] (lffn) {$l_{FFN} \odot$};
+  \node[frzblk, right=0.8cm of lffn] (w2) {FFN $W_2$};
+  \node[mrgblk, right=1.0cm of w2] (out) {Output};
+
+  % Connections
+  \draw[arr] (x)--(qkv);
+  \draw[arr] (qkv.east) -- ++(0.2,0) |- (lk.west);
+  \draw[arr] (qkv.east) -- ++(0.2,0) |- (lv.west);
+  \draw[arr] (qkv.east) -- ++(0.2,0) |- ($(attn.west)+(0,0.4)$); % Q direct
+  \draw[arr] (lk.east) -| ($(attn.west)+(0,0.15)$);
+  \draw[arr] (lv.east) -| ($(attn.west)+(0,-0.15)$);
+  
+  \draw[arr] (attn)--(w1);
+  \draw[arr] (w1)--(lffn);
+  \draw[arr] (lffn)--(w2);
+  \draw[arr] (w2)--(out);
+\end{tikzpicture}
+\caption{IA$^3$: three tiny scaling vectors rescale keys, values, and FFN intermediate activations.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Trainable params & 0 (frozen) & $3dL$ scalars\\
+Init value of $l$ vectors & N/A & $\mathbf{1}$ (identity behaviour)\\
+K, V, FFN activations & Unchanged & Element-wise scaled\\
+Param overhead vs LoRA & N/A & ${\sim}10\times$ fewer params\\
+Task adaptation strength & None & Moderate\\\bottomrule
+\end{tabular}
+\caption{State properties before and after IA$^3$ injection.}
+\end{table}
+
+\subsection{Python Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+class IA3AttentionWrapper(nn.Module):
+    def __init__(self, key_dim, value_dim):
+        super().__init__()
+        # Scaling vectors initialized to ones
+        self.l_K = nn.Parameter(torch.ones(key_dim))
+        self.l_V = nn.Parameter(torch.ones(value_dim))
+
+    def scale_keys(self, K):
+        # K shape: (batch_size, num_heads, seq_len, head_dim) or (batch_size, seq_len, key_dim)
+        return K * self.l_K
+
+    def scale_values(self, V):
+        return V * self.l_V
+
+class IA3FFNWrapper(nn.Module):
+    def __init__(self, ffn_dim):
+        super().__init__()
+        self.l_FFN = nn.Parameter(torch.ones(ffn_dim))
+
+    def scale_hidden(self, hidden_states):
+        # hidden_states: intermediate feedforward layer activations
+        return hidden_states * self.l_FFN
+\end{lstlisting}
+\newpage
+%% ------------------------------------------------------------
+\section{Adapter Tuning}
+
+\subsection{Mathematical Foundation}
+Adapter tuning inserts small bottleneck layers into the transformer block, typically after attention and feed-forward modules. Let $h \in \mathbb{R}^d$ be the input hidden state.
+In the Pfeiffer architecture, a single adapter is inserted per block. In the Houlsby architecture, two adapters are inserted per block. The mathematical transformation for an adapter block is:
+\begin{equation}
+  h' = h + \sigma(h W_{down}) W_{up}
+\end{equation}
+where $W_{down} \in \mathbb{R}^{d \times r}$ projects to a bottleneck dimension $r \ll d$, $\sigma$ is an activation function (typically GELU), and $W_{up} \in \mathbb{R}^{r \times d}$ projects back to the original dimension.
+To ensure the adapter behaves as an identity mapping at the start of training, $W_{up}$ is initialized to zero:
+\begin{equation}
+  h' \bigr|_{t=0} = h + \sigma(h W_{down}) \cdot 0 = h
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.5cm and 0.9cm]
+  \node[datblk,minimum width=2.2cm] (h) {Hidden $h$\\(from layer)};
+  \node[trnblk,right=of h,minimum width=2.0cm] (dn) {Down-proj\\$W_{\text{dn}}$ ($d{\to}r$)};
+  \node[grayblk,right=of dn,minimum width=1.8cm] (act) {ReLU};
+  \node[trnblk,right=of act,minimum width=2.0cm] (up) {Up-proj\\$W_{\text{up}}$ ($r{\to}d$)};
+  \node[sumnode,right=of up] (add) {$+$};
+  \node[mrgblk,right=of add,minimum width=2.0cm] (out) {Adapter\\Output $h'$};
+
+  \draw[arr] (h)--(dn);
+  \draw[arr] (dn)--(act);
+  \draw[arr] (act)--(up);
+  \draw[arr] (up)--(add);
+  \draw[arr] (h.south) -- ++(0,-0.6) -| (add.south) node[midway,below,font=\tiny]{skip connection};
+  \draw[arr] (add)--(out);
+
+  \node[red,font=\tiny,below=0.2cm of dn] {bottleneck $r \ll d$};
+\end{tikzpicture}
+\caption{Adapter module: down-project to rank $r$, apply nonlinearity, up-project back, plus skip connection.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Sub-layer output path & Direct pass-through & $+$adapter bottleneck\\
+Transformer weights & Trainable & Frozen\\
+New params per layer & 0 & $2dr + 2d$\\
+Adapter init & N/A & Near-identity ($W_{\text{dn}} \sim \mathcal{N}$)\\
+Inference latency & Baseline & $+$two extra matmuls per layer\\\bottomrule
+\end{tabular}
+\caption{State properties before and after adapter insertion.}
+\end{table}
+
+\subsection{Python Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+class BottleneckAdapter(nn.Module):
+    def __init__(self, d_model, bottleneck_dim=16):
+        super().__init__()
+        self.down_proj = nn.Linear(d_model, bottleneck_dim)
+        self.act = nn.GELU()
+        self.up_proj = nn.Linear(bottleneck_dim, d_model)
+        self.layer_norm = nn.LayerNorm(d_model)
+        
+        # Initialize up projection to zero to act as identity mapping at start
+        nn.init.normal_(self.down_proj.weight, std=1e-3)
+        nn.init.zeros_(self.up_proj.weight)
+
+    def forward(self, x):
+        residual = x
+        out = self.down_proj(x)
+        out = self.act(out)
+        out = self.up_proj(out)
+        # Apply layer normalization with residual connection
+        return self.layer_norm(residual + out)
+\end{lstlisting}
+\newpage
+%% ------------------------------------------------------------
+\section{Prefix Tuning}
+
+\subsection{Mathematical Foundation}
+Prefix Tuning prepends continuous task-specific virtual prefix vectors $P_K, P_V \in \mathbb{R}^{l \times d}$ directly to the Key and Value matrices at every transformer layer. Let the original Key and Value matrices for sequence length $T$ be $K, V \in \mathbb{R}^{T \times d}$. The modified Key and Value matrices become:
+\begin{align}
+  \tilde{K} &= [P_K ; K] \in \mathbb{R}^{(l+T) \times d} \\
+  \tilde{V} &= [P_V ; V] \in \mathbb{R}^{(l+T) \times d}
+\end{align}
+To stabilize optimization, during training the prefix is reparameterized using a Multilayer Perceptron (MLP) over a small source embedding $E_k$:
+\begin{equation}
+  P_K = \text{MLP}_K(E_k), \quad P_V = \text{MLP}_V(E_k)
+\end{equation}
+where $E_k \in \mathbb{R}^{l \times d_{\text{mid}}}$. The MLP is discarded at inference, and only the generated static prefix matrices $P_K, P_V$ are saved and used.
+The attention output is computed as:
+\begin{equation}
+  \text{Attention}(Q, \tilde{K}, \tilde{V}) = \text{softmax}\left( \frac{Q [P_K ; K]^\top}{\sqrt{d_k}} \right) [P_V ; V]
+\end{equation}
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.6cm and 1.0cm]
+  \node[trnblk,minimum width=2.5cm] (prefix) {Trainable Prefix\\$P_k, P_v$ (per layer)};
+  \node[datblk, below=1.2cm of prefix] (tokens) {Input Token\\Keys \& Values};
+  \node[grayblk, right=1.5cm of $(prefix)!0.5!(tokens)$] (concat) {Concat\\$[P_k;K],\,[P_v;V]$};
+  \node[frzblk, right=of concat] (attn) {Frozen\\Attention};
+  \node[mrgblk, right=of attn] (out) {Contextual\\Output};
+
+  \draw[arr] (prefix.east) -| (concat.north);
+  \draw[arr] (tokens.east) -| (concat.south);
+  \draw[arr] (concat)--(attn);
+  \draw[arr] (attn)--(out);
+
+  \node[font=\tiny,green!60!black] at ($(prefix.south)+(0,-0.2)$) {only these trained};
+  \node[font=\tiny,blue!60!black] at ($(attn.south)+(0,-0.2)$) {all frozen};
+\end{tikzpicture}
+\caption{Prefix Tuning: trainable prefix vectors extend the key/value context at every attention layer.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Attention context length & $T$ tokens & $T + l$ tokens (prefix prepended)\\
+Transformer params & Trainable & Fully frozen\\
+Trainable params & 0 & $2 \times l \times d_h \times L$\\
+Prefix init & N/A & Via MLP reparameterisation\\
+Task switch at inference & Reload model & Swap prefix only\\\bottomrule
+\end{tabular}
+\caption{State properties before and after prefix tuning.}
+\end{table}
+
+\subsection{Python Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+class PrefixTuningAttention(nn.Module):
+    def __init__(self, d_model, num_heads, prefix_len=10):
+        super().__init__()
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.head_dim = d_model // num_heads
+        self.prefix_len = prefix_len
+        
+        # Key/Value projection layers
+        self.q_proj = nn.Linear(d_model, d_model)
+        self.k_proj = nn.Linear(d_model, d_model)
+        self.v_proj = nn.Linear(d_model, d_model)
+        self.out_proj = nn.Linear(d_model, d_model)
+
+    def forward(self, x, past_keys=None, past_values=None):
+        # past_keys, past_values: prefix cache parameters, shape (batch_size, num_heads, prefix_len, head_dim)
+        b, t, c = x.size()
+        
+        q = self.q_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
+        k = self.k_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
+        v = self.v_proj(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
+        
+        if past_keys is not None and past_values is not None:
+            # Prepend virtual prefix keys/values to the computed sequences
+            k = torch.cat([past_keys, k], dim=-2)
+            v = torch.cat([past_values, v], dim=-2)
+            
+        scores = torch.matmul(q, k.transpose(-2, -1)) / (self.head_dim ** 0.5)
+        attn_weights = torch.softmax(scores, dim=-1)
+        out = torch.matmul(attn_weights, v)
+        out = out.transpose(1, 2).contiguous().view(b, t, c)
+        return self.out_proj(out)
+\end{lstlisting}
+\newpage
+%% ------------------------------------------------------------
+\section{Prompt Tuning}
+
+\subsection{Mathematical Foundation}
+Prompt tuning prepends $p$ learnable embedding vectors $P \in \mathbb{R}^{p \times d_{emb}}$ to the input word representations:
+\begin{equation}
+  \tilde{X} = [P ; X_e] \in \mathbb{R}^{(p + T) \times d_{emb}}
+\end{equation}
+where $X_e \in \mathbb{R}^{T \times d_{emb}}$ is the original sequence word embedding matrix. The entire transformer backbone parameters $\theta_{base}$ remain frozen, and gradients are backpropagated only to the prompt parameters $P$:
+\begin{equation}
+  \nabla_P \mathcal{L} = \frac{\partial \mathcal{L}}{\partial \tilde{X}_{1..p}}
+\end{equation}
+During backpropagation, the gradients are passed through all layers of the frozen transformer and update only the prompt embeddings.
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 1.0cm]
+  \node[trnblk,minimum width=2.2cm] (soft) {Soft Prompt\\$P \in \mathbb{R}^{k\times d}$\\(trainable)};
+  \node[datblk, right=of soft] (emb) {Input\\Embeddings\\$E(x_{1..T})$};
+  \node[grayblk, right=of emb] (concat) {Concat\\$[\tilde{x}]$};
+  \node[frzblk, right=of concat] (lm) {Frozen\\Transformer\\$f_\theta$};
+  \node[lossblk, right=of lm] (loss) {SFT Loss\\on $y$};
+
+  \draw[arr] (soft.east) -| (concat.north);
+  \draw[arr] (emb)--(concat);
+  \draw[arr] (concat)--(lm);
+  \draw[arr] (lm)--(loss);
+
+  \node[font=\tiny,green!60!black,align=center,below=0.25cm of soft] {only $P$\\is trained};
+\end{tikzpicture}
+\caption{Prompt Tuning: soft tokens prepended at the embedding layer; the full transformer is frozen.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before} & \textbf{After}\\\midrule
+Trainable params & Full model & $k \times d_{\text{emb}}$ only\\
+Prompt format & Discrete hand-crafted & Continuous soft vectors\\
+Transformer weights & All trainable & All frozen\\
+Task switching & Reload fine-tuned model & Swap $P$ only\\
+Sensitivity to init & N/A & Strong (init from class labels helps)\\\bottomrule
+\end{tabular}
+\caption{State properties before and after prompt tuning.}
+\end{table}
+
+\subsection{Python Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+class PromptTuningEmbedding(nn.Module):
+    def __init__(self, base_embeddings, prompt_len=10):
+        super().__init__()
+        self.base_embeddings = base_embeddings
+        for p in self.base_embeddings.parameters():
+            p.requires_grad = False
+            
+        self.prompt_len = prompt_len
+        self.prompt_embeddings = nn.Parameter(torch.randn(prompt_len, base_embeddings.embedding_dim))
+
+    def forward(self, input_ids):
+        # input_ids shape: (batch_size, seq_len)
+        batch_size = input_ids.size(0)
+        base_embs = self.base_embeddings(input_ids) # (batch_size, seq_len, d_emb)
+        
+        # Expand prompt embeddings to batch size
+        prompts = self.prompt_embeddings.unsqueeze(0).expand(batch_size, -1, -1) # (batch_size, prompt_len, d_emb)
+        
+        # Concatenate prompt prefix with token embeddings
+        return torch.cat([prompts, base_embs], dim=1)
+\end{lstlisting}
+\newpage
+%% ------------------------------------------------------------
+\section{P-Tuning v2}
+
+\subsection{Mathematical Foundation}
+P-Tuning v2 extends prompt tuning by prepending learnable virtual tokens $P^{(l)} \in \mathbb{R}^{p \times 2 d_{attn}}$ directly to the attention key and value states at every layer $l \in [1, L]$ of the network. Unlike prefix tuning, P-Tuning v2 removes the MLP reparameterization network, directly optimizing the prefix parameters $P^{(l)}$:
+\begin{align}
+  \tilde{K}^{(l)} &= [P^{(l)}_K ; K^{(l)}] \\
+  \tilde{V}^{(l)} &= [P^{(l)}_V ; V^{(l)}]
+\end{align}
+This deep prefix injection resolves the capacity limitation of shallow prompt tuning, allowing small models ($<10\text{B}$ parameters) to achieve performance comparable to full fine-tuning.
+
+\subsection{Architecture Flow Diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.5cm and 0.9cm]
+  \node[datblk,minimum width=2.0cm] (emb) {Embedding\\Layer};
+  \node[frzblk, right=0.9cm of emb,minimum width=2.0cm] (l1) {Layer 1\\(Attn + FFN)};
+  \node[frzblk, right=0.9cm of l1,minimum width=2.0cm] (l2) {Layer 2\\(Attn + FFN)};
+  \node[grayblk, right=0.6cm of l2,minimum width=0.6cm] (dots) {$\cdots$};
+  \node[frzblk, right=0.6cm of dots,minimum width=2.0cm] (lL) {Layer $L$\\(Attn + FFN)};
+
+  \node[trnblk,minimum width=1.6cm,above=0.6cm of emb] (p0) {$P^{(0)}$};
+  \node[trnblk,minimum width=1.6cm,above=0.6cm of l1] (p1) {$P^{(1)}$};
+  \node[trnblk,minimum width=1.6cm,above=0.6cm of l2] (p2) {$P^{(2)}$};
+  \node[trnblk,minimum width=1.6cm,above=0.6cm of lL] (pL) {$P^{(L)}$};
+
+  \foreach \a/\b in {emb/l1, l1/l2, l2/dots, dots/lL}
+    \draw[arr] (\a)--(\b);
+  \foreach \p/\l in {p0/emb, p1/l1, p2/l2, pL/lL}
+    \draw[arr,green!70!black] (\p)--(\l);
+
+  \node[green!60!black,font=\tiny,align=center] at ($(p1.east)+(0.35,0)$) {deep\\prefix};
+\end{tikzpicture}
+\caption{P-Tuning v2: independent trainable prefix tokens injected at every transformer layer.}
+\end{figure}
+
+\subsection{State Transition Table}
+\begin{table}[h]\centering
+\begin{tabular}{lll}\toprule
+\textbf{Property} & \textbf{Before (Prompt Tuning)} & \textbf{After (P-Tuning v2)}\\\midrule
+Prefix layers & Embedding only & All $L$ layers\\
+Trainable params & $k \times d$ & $L \times l \times d$\\
+NLU performance & Degrades at small scale & Competitive at all scales\\
+Conditioning depth & Shallow (first layer) & Deep (every layer)\\
+Task-specific storage & Single $P$ matrix & $L$ prefix matrices\\\bottomrule
+\end{tabular}
+\caption{State properties comparing Prompt Tuning and P-Tuning v2.}
+\end{table}
+
+\subsection{Python Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+class PTuningV2Model(nn.Module):
+    def __init__(self, num_layers, num_heads, head_dim, prefix_len=10):
+        super().__init__()
+        self.num_layers = num_layers
+        self.num_heads = num_heads
+        self.head_dim = head_dim
+        self.prefix_len = prefix_len
+        
+        # Directly optimized layer-wise prefixes
+        self.prefixes = nn.ParameterList([
+            nn.Parameter(torch.randn(2, num_heads, prefix_len, head_dim))
+            for _ in range(num_layers)
+        ])
+
+    def forward(self, batch_size, layer_idx):
+        layer_prefixes = self.prefixes[layer_idx]
+        return layer_prefixes.unsqueeze(1).expand(-1, batch_size, -1, -1, -1)
+\end{lstlisting}
+\end{document}

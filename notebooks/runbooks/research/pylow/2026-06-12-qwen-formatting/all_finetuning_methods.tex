@@ -1,0 +1,78 @@
+\documentclass{article}
+\usepackage{amsmath,amssymb,geometry,listings,xcolor,tikz,booktabs,titlesec,hyperref}
+\usetikzlibrary{arrows.meta,positioning,calc,shapes.geometric,fit,patterns,decorations.pathreplacing,backgrounds}
+
+\geometry{a4paper, margin=0.6in}
+\setcounter{secnumdepth}{3}
+\hypersetup{colorlinks=true,linkcolor=blue!60!black,bookmarksnumbered=true}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.97,0.97,0.97}
+\definecolor{frozen}{rgb}{0.2,0.4,0.8}
+\definecolor{trainable}{rgb}{0.1,0.6,0.2}
+\definecolor{losscolor}{rgb}{0.8,0.1,0.1}
+\definecolor{mergedcolor}{rgb}{0.5,0.0,0.8}
+
+\lstdefinestyle{mystyle}{
+  backgroundcolor=\color{backcolour},commentstyle=\color{codegreen},
+  keywordstyle=\color{blue},numberstyle=\tiny\color{codegray},
+  stringstyle=\color{codepurple},basicstyle=\ttfamily\footnotesize,
+  breaklines=true,captionpos=b,keepspaces=true,
+  numbers=left,numbersep=5pt,tabsize=4}
+\lstset{style=mystyle}
+
+\tikzset{
+  blk/.style={draw,rectangle,minimum width=2.6cm,minimum height=1.0cm,thick,align=center},
+  frzblk/.style={blk,fill=blue!10,draw=blue!70},
+  trnblk/.style={blk,fill=green!12,draw=green!70},
+  datblk/.style={blk,fill=yellow!15,draw=yellow!70!black},
+  lossblk/.style={blk,fill=red!10,draw=red!70},
+  mrgblk/.style={blk,fill=purple!10,draw=purple!70},
+  grayblk/.style={blk,fill=gray!10,draw=gray!60},
+  orangeblk/.style={blk,fill=orange!15,draw=orange!70},
+  cyanblk/.style={blk,fill=cyan!10,draw=cyan!60},
+  neuron/.style={circle,draw,minimum size=0.55cm,fill=blue!10,thick},
+  bneck/.style={circle,draw,minimum size=0.55cm,fill=green!15,thick},
+  outnrn/.style={circle,draw,minimum size=0.55cm,fill=yellow!15,thick},
+  arr/.style={-Stealth,thick},
+  garr/.style={Stealth-,red,dashed,thick},
+  sumnode/.style={circle,draw,thick,minimum size=0.6cm,fill=yellow!15},
+  lbl/.style={font=\footnotesize\bfseries,align=center}
+}
+
+\begin{document}
+
+\title{\textbf{Mathematical Foundations, Architecture Diagrams,\\
+and State Analysis of All Modern LLM Training Methods}}
+\author{Chief Strategist J}
+\date{\today}
+\maketitle
+
+\begin{center}
+\large\textbf{Colour Legend}\\[0.4em]
+\begin{tabular}{cl}
+\fcolorbox{blue!70}{blue!10}{\phantom{XX}} & Frozen / base weights (not trained)\\
+\fcolorbox{green!70}{green!12}{\phantom{XX}} & Trainable components\\
+\fcolorbox{yellow!70!black}{yellow!15}{\phantom{XX}} & Data / activations\\
+\fcolorbox{red!70}{red!10}{\phantom{XX}} & Loss / gradients\\
+\fcolorbox{purple!70}{purple!10}{\phantom{XX}} & Merged / deployed outputs\\
+\fcolorbox{orange!70}{orange!15}{\phantom{XX}} & External models / judges / scorers\\
+\fcolorbox{cyan!60}{cyan!10}{\phantom{XX}} & Environment / external systems\\
+\end{tabular}
+\end{center}
+
+\vspace{1em}
+\noindent\textbf{Document structure:}
+This reference covers \textbf{85 LLM training methods} organised into 14 parts.
+Each method includes: (1) the core mathematical objective, (2) a TikZ architecture diagram, and (3) a before/after state table.
+
+\tableofcontents
+\newpage
+
+\input{body_part1}
+\input{body_part2}
+\input{body_part3}
+
+\end{document}

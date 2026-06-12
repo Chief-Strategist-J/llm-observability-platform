@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Interactive Low-Rank Adaptation (LoRA) visualizer detailing mathematical proofs, model shapes, and functional states.">
+    <title>LoRA Shape Dynamics & Neural Flow Visualizer</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --accent-primary: #3b82f6; /* Blue */
+            --accent-green: #10b981; /* Green */
+            --accent-red: #ef4444; /* Red */
+            --accent-purple: #8b5cf6; /* Purple */
+            --glass-blur: blur(12px);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Modern Grid Background */
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Glowing Orbs */
+        .orb {
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: -2;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+        .orb-blue {
+            top: -100px;
+            left: -100px;
+            background: var(--accent-primary);
+        }
+        .orb-purple {
+            bottom: -100px;
+            right: -100px;
+            background: var(--accent-purple);
+        }
+
+        header {
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(11, 15, 25, 0.8);
+            backdrop-filter: var(--glass-blur);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 1.25rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-meta {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 2rem;
+        }
+
+        /* Sidebar Tabs */
+        aside {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            padding: 1rem 1.25rem;
+            text-align: left;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            background: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--accent-primary);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Main Workspace */
+        main {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: var(--glass-blur);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            min-height: 70vh;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            font-size: 1.05rem;
+        }
+
+        /* Interactive Diagram Controls */
+        .diagram-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .control-btn.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        /* SVG Neural Flow Wrapper */
+        .svg-container {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+        }
+
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Info Overlay / Tooltip Panel */
+        .info-panel {
+            margin-top: 1.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        .info-panel h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent-primary);
+        }
+
+        /* Function Walkthrough Grid */
+        .func-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        .func-card {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s;
+        }
+
+        .func-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .func-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 0.75rem;
+        }
+
+        .func-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: var(--accent-green);
+            font-size: 1.15rem;
+        }
+
+        .state-badge {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .state-before {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .state-after {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        /* Before/After Columns */
+        .state-transition-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .state-box {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .state-box-title {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .state-details {
+            font-size: 0.95rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Code Block Styling */
+        pre {
+            font-family: 'JetBrains Mono', monospace;
+            background: #05070c;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1.25rem;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            color: #d1d5db;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .keyword { color: #f472b6; }
+        .function { color: #60a5fa; }
+        .string { color: #34d399; }
+        .comment { color: #6b7280; }
+        .number { color: #fbbf24; }
+
+        /* Animation Keyframes */
+        @keyframes pulse-forward {
+            0% { stroke-dashoffset: 24; }
+            100% { stroke-dashoffset: 0; }
+        }
+
+        @keyframes pulse-backward {
+            0% { stroke-dashoffset: 0; }
+            100% { stroke-dashoffset: 24; }
+        }
+
+        .pulse-path-fwd {
+            stroke-dasharray: 8, 4;
+            animation: pulse-forward 1s linear infinite;
+        }
+
+        .pulse-path-bwd {
+            stroke-dasharray: 8, 4;
+            animation: pulse-backward 1s linear infinite;
+            stroke: var(--accent-red) !important;
+        }
+
+        /* Interactive Equations */
+        .math-expr {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .math-expr:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--accent-primary);
+        }
+
+        .math-breakdown {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .math-part {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .math-part span {
+            display: block;
+            font-weight: 700;
+            color: var(--accent-primary);
+            margin-bottom: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+    <div class="orb orb-blue"></div>
+    <div class="orb orb-purple"></div>
+
+    <header>
+        <h1>LoRA Dynamics Dashboard</h1>
+        <div class="header-meta">Chief-Strategist-J / llm-observability-platform</div>
+    </header>
+
+    <div class="container">
+        <aside>
+            <button class="tab-btn active" onclick="switchTab('diagram-tab')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"></rect><rect x="14" y="3" width="7" height="5" rx="1"></rect><rect x="14" y="12" width="7" height="9" rx="1"></rect><rect x="3" y="16" width="7" height="5" rx="1"></rect></svg>
+                Interactive Neural Flow
+            </button>
+            <button class="tab-btn" onclick="switchTab('math-tab')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9h16M4 15h16"></path></svg>
+                Detailed Math Derivations
+            </button>
+            <button class="tab-btn" onclick="switchTab('code-tab')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                State Transitions & Code
+            </button>
+        </aside>
+
+        <main>
+            <!-- Tab 1: Interactive Diagram -->
+            <div id="diagram-tab" class="tab-content active">
+                <h2>Interactive Neural Flow Visualizer</h2>
+                <p>Hover over components or neurons to inspect their mathematical role and shape parameters. Use the control buttons below to toggle state simulations.</p>
+                
+                <div class="diagram-controls">
+                    <button class="control-btn active" id="btn-static" onclick="setDiagramMode('static')">Static View</button>
+                    <button class="control-btn" id="btn-forward" onclick="setDiagramMode('forward')">Simulate Forward Pass</button>
+                    <button class="control-btn" id="btn-backward" onclick="setDiagramMode('backward')">Simulate Backward Pass</button>
+                </div>
+
+                <div class="svg-container">
+                    <!-- Dynamic Interactive SVG -->
+                    <svg width="800" height="400" viewBox="0 0 800 400" id="neural-svg">
+                        <!-- Input Layer Group -->
+                        <g class="layer" id="layer-input" style="cursor: pointer;" onmouseover="showTooltip('input')" onmouseout="clearTooltip()">
+                            <circle cx="100" cy="100" r="18" fill="#1e293b" stroke="#3b82f6" stroke-width="3"></circle>
+                            <text x="100" y="105" fill="#fff" text-anchor="middle" font-size="12" font-family="'Outfit'">x₁</text>
+                            
+                            <circle cx="100" cy="180" r="18" fill="#1e293b" stroke="#3b82f6" stroke-width="3"></circle>
+                            <text x="100" y="185" fill="#fff" text-anchor="middle" font-size="12" font-family="'Outfit'">x₂</text>
+
+                            <circle cx="100" cy="260" r="18" fill="#1e293b" stroke="#3b82f6" stroke-width="3"></circle>
+                            <text x="100" y="265" fill="#fff" text-anchor="middle" font-size="12" font-family="'Outfit'">x₃</text>
+                            <text x="100" y="330" fill="#9ca3af" text-anchor="middle" font-size="14" font-weight="600">INPUT (x)</text>
+                        </g>
+
+                        <!-- Base Weights Matrix Box -->
+                        <g class="layer" id="layer-w0" style="cursor: pointer;" onmouseover="showTooltip('w0')" onmouseout="clearTooltip()">
+                            <rect x="250" y="50" width="140" height="120" rx="8" fill="#1e293b" stroke="#60a5fa" stroke-width="2"></rect>
+                            <text x="320" y="105" fill="#fff" text-anchor="middle" font-size="15" font-weight="600" font-family="'Outfit'">Frozen Base</text>
+                            <text x="320" y="125" fill="#9ca3af" text-anchor="middle" font-size="13" font-family="'Outfit'">Matrix W₀ (896x896)</text>
+                        </g>
+
+                        <!-- LoRA B Matrix Neurons (Bottleneck) -->
+                        <g class="layer" id="layer-lora-b" style="cursor: pointer;" onmouseover="showTooltip('lora-b')" onmouseout="clearTooltip()">
+                            <circle cx="320" cy="250" r="18" fill="#064e3b" stroke="#10b981" stroke-width="3"></circle>
+                            <text x="320" y="255" fill="#fff" text-anchor="middle" font-size="12" font-family="'Outfit'">z₁</text>
+
+                            <circle cx="320" cy="310" r="18" fill="#064e3b" stroke="#10b981" stroke-width="3"></circle>
+                            <text x="320" y="315" fill="#fff" text-anchor="middle" font-size="12" font-family="'Outfit'">z₂</text>
+                            <text x="320" y="360" fill="#10b981" text-anchor="middle" font-size="13" font-weight="600">LoRA B (896x8)</text>
+                        </g>
+
+                        <!-- LoRA A Matrix Neurons -->
+                        <g class="layer" id="layer-lora-a" style="cursor: pointer;" onmouseover="showTooltip('lora-a')" onmouseout="clearTooltip()">
+                            <circle cx="500" cy="250" r="18" fill="#064e3b" stroke="#10b981" stroke-width="3"></circle>
+                            <text x="500" y="255" fill="#fff" text-anchor="middle" font-size="12" font-family="'Outfit'">a₁</text>
+
+                            <circle cx="500" cy="310" r="18" fill="#064e3b" stroke="#10b981" stroke-width="3"></circle>
+                            <text x="500" y="315" fill="#fff" text-anchor="middle" font-size="12" font-family="'Outfit'">a₂</text>
+                            <text x="500" y="360" fill="#10b981" text-anchor="middle" font-size="13" font-weight="600">LoRA A (8x896)</text>
+                        </g>
+
+                        <!-- Sum / Scale Group -->
+                        <g class="layer" id="layer-sum" style="cursor: pointer;" onmouseover="showTooltip('sum')" onmouseout="clearTooltip()">
+                            <circle cx="600" cy="150" r="22" fill="#1e1b4b" stroke="#8b5cf6" stroke-width="3"></circle>
+                            <text x="600" y="156" fill="#fff" text-anchor="middle" font-size="20" font-weight="bold">+</text>
+                        </g>
+
+                        <!-- Output Neurons -->
+                        <g class="layer" id="layer-output" style="cursor: pointer;" onmouseover="showTooltip('output')" onmouseout="clearTooltip()">
+                            <circle cx="720" cy="110" r="18" fill="#1e293b" stroke="#fbbf24" stroke-width="3"></circle>
+                            <text x="720" y="115" fill="#fff" text-anchor="middle" font-size="12" font-family="'Outfit'">h₁</text>
+
+                            <circle cx="720" cy="190" r="18" fill="#1e293b" stroke="#fbbf24" stroke-width="3"></circle>
+                            <text x="720" y="195" fill="#fff" text-anchor="middle" font-size="12" font-family="'Outfit'">h₂</text>
+                            <text x="720" y="250" fill="#fbbf24" text-anchor="middle" font-size="14" font-weight="600">OUTPUT (h)</text>
+                        </g>
+
+                        <!-- Connective Paths/Lines -->
+                        <!-- Input to W0 -->
+                        <path id="path-x-w0" d="M118,180 C180,180 180,110 250,110" stroke="#4b5563" stroke-width="2" fill="none"></path>
+                        <!-- Input to LoRA B -->
+                        <path id="path-x-lorab" d="M118,180 C180,180 220,280 302,280" stroke="#10b981" stroke-width="2" fill="none"></path>
+                        <!-- B to A -->
+                        <path id="path-b-a" d="M338,280 L482,280" stroke="#10b981" stroke-width="2" fill="none"></path>
+                        <!-- A to Sum -->
+                        <path id="path-a-sum" d="M518,280 C560,280 570,180 585,165" stroke="#10b981" stroke-width="2" fill="none"></path>
+                        <!-- W0 to Sum -->
+                        <path id="path-w0-sum" d="M390,110 C460,110 520,135 578,145" stroke="#60a5fa" stroke-width="2" fill="none"></path>
+                        <!-- Sum to Output -->
+                        <path id="path-sum-out" d="M622,150 L702,150" stroke="#fbbf24" stroke-width="3" fill="none"></path>
+                    </svg>
+                </div>
+
+                <div class="info-panel" id="tooltip-panel">
+                    <h3 id="tooltip-title">Inspect Component</h3>
+                    <p id="tooltip-desc">Hover over any node in the diagram above to visualize dynamic tensor transformations and parameters.</p>
+                </div>
+            </div>
+
+            <!-- Tab 2: Detailed Math -->
+            <div id="math-tab" class="tab-content">
+                <h2>Low-Rank Backpropagation Proofs</h2>
+                <p>Click on the equation blocks to see the detailed step-by-step index component derivations.</p>
+
+                <div class="math-expr" onclick="revealMath('fwd-break')">
+                    h = xW₀ + <sup>α</sup>/<sub>r</sub> xBA
+                </div>
+                <div class="math-breakdown" id="fwd-break" style="display: none;">
+                    <div class="math-part">
+                        <span>x W₀</span>
+                        Maps raw activations to hidden vectors via frozen base parameters. Shape: [1 × 896] @ [896 × 896].
+                    </div>
+                    <div class="math-part">
+                        <span>B (Rank r)</span>
+                        Compresses input dimension d down to r: xB. Shape: [1 × 896] @ [896 × 8].
+                    </div>
+                    <div class="math-part">
+                        <span>A (Output Projection)</span>
+                        Projects bottleneck features back to output size: (xB)A. Shape: [1 × 8] @ [8 × 896].
+                    </div>
+                </div>
+
+                <div class="math-expr" onclick="revealMath('grad-break')">
+                    <sup>∂ℒ</sup>/<sub>∂A</sub> = <sup>α</sup>/<sub>r</sub> (xB)ᵀ g
+                </div>
+                <div class="math-breakdown" id="grad-break" style="display: none;">
+                    <div class="math-part">
+                        <span>(xB)ᵀ</span>
+                        Transpose of inner bottleneck layer activations. Shape: [8 × 1].
+                    </div>
+                    <div class="math-part">
+                        <span>g</span>
+                        Incoming gradient vector from upper layer. Shape: [1 × 896].
+                    </div>
+                    <div class="math-part">
+                        <span>Result</span>
+                        Matrix gradient matching the adapter matrix A dimension. Shape: [8 × 896].
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: State Transitions & Code -->
+            <div id="code-tab" class="tab-content">
+                <h2>Function State Transitions & Code</h2>
+                <p>Examine the exact input and output states of each script function along with the formatted executable Python code blocks.</p>
+
+                <div class="func-grid">
+                    <!-- Function 1 -->
+                    <div class="func-card">
+                        <div class="func-header">
+                            <span class="func-name">initialize_base_model()</span>
+                        </div>
+                        <div class="state-transition-grid">
+                            <div class="state-box">
+                                <div class="state-box-title">
+                                    <span class="state-badge state-before">Before State</span>
+                                </div>
+                                <div class="state-details">
+                                    Empty Virtual Memory / Config file string values.
+                                </div>
+                            </div>
+                            <div class="state-box">
+                                <div class="state-box-title">
+                                    <span class="state-badge state-after">After State</span>
+                                </div>
+                                <div class="state-details">
+                                    model.dtype = torch.bfloat16<br>
+                                    W_0.shape = [896, 896]<br>
+                                    requires_grad = True
+                                </div>
+                            </div>
+                        </div>
+                        <pre><code><span class="keyword">def</span> <span class="function">initialize_base_model</span>(model_id=<span class="string">"Qwen/Qwen2.5-0.5B-Instruct"</span>):
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16)
+    <span class="keyword">return</span> model, tokenizer</code></pre>
+                    </div>
+
+                    <!-- Function 2 -->
+                    <div class="func-card">
+                        <div class="func-header">
+                            <span class="func-name">apply_lora_adapters()</span>
+                        </div>
+                        <div class="state-transition-grid">
+                            <div class="state-box">
+                                <div class="state-box-title">
+                                    <span class="state-badge state-before">Before State</span>
+                                </div>
+                                <div class="state-details">
+                                    Full trainable base model (500M parameters).
+                                </div>
+                            </div>
+                            <div class="state-box">
+                                <div class="state-box-title">
+                                    <span class="state-badge state-after">After State</span>
+                                </div>
+                                <div class="state-details">
+                                    W_0.requires_grad = False<br>
+                                    lora_B.shape = [896, 8] (Trainable)<br>
+                                    lora_A.shape = [8, 896] (Trainable)
+                                </div>
+                            </div>
+                        </div>
+                        <pre><code><span class="keyword">def</span> <span class="function">apply_lora_adapters</span>(model, rank=<span class="number">8</span>, alpha=<span class="number">16</span>):
+    peft_config = LoraConfig(
+        task_type=TaskType.CAUSAL_LM,
+        r=rank, lora_alpha=alpha,
+        target_modules=[<span class="string">"q_proj"</span>, <span class="string">"v_proj"</span>]
+    )
+    <span class="keyword">return</span> get_peft_model(model, peft_config)</code></pre>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        function revealMath(id) {
+            const el = document.getElementById(id);
+            if(el.style.display === 'none') {
+                el.style.display = 'grid';
+            } else {
+                el.style.display = 'none';
+            }
+        }
+
+        const tooltips = {
+            'input': {
+                title: "Input Vector (x)",
+                desc: "Represents hidden state activations from previous layers. Dimensions: [1 × 896]."
+            },
+            'w0': {
+                title: "Frozen Base Matrix (W₀)",
+                desc: "Original pre-trained parameter weights. Freezing W₀ ensures we consume zero optimizer variables for these weights. Dimensions: [896 × 896]."
+            },
+            'lora-b': {
+                title: "LoRA Down-Projection Matrix (B)",
+                desc: "Trainable linear layer factorizing the weight update. Reduces hidden dimensionality to rank r (r=8). Dimensions: [896 × 8]."
+            },
+            'lora-a': {
+                title: "LoRA Up-Projection Matrix (A)",
+                desc: "Trainable linear layer projecting rank r back to hidden layer output size. Initialized to random Gaussian values. Dimensions: [8 × 896]."
+            },
+            'sum': {
+                title: "Output Summation Block (+)",
+                desc: "Merges base projection with low-rank update activations: h = xW₀ + (α/r)xBA."
+            },
+            'output': {
+                title: "Output Projection Activations (h)",
+                desc: "Aggregated projection fed forward into subsequent layers. Dimensions: [1 × 896]."
+            }
+        };
+
+        function showTooltip(key) {
+            const panel = document.getElementById('tooltip-panel');
+            const data = tooltips[key];
+            if(data) {
+                document.getElementById('tooltip-title').innerText = data.title;
+                document.getElementById('tooltip-desc').innerText = data.desc;
+            }
+        }
+
+        function clearTooltip() {
+            document.getElementById('tooltip-title').innerText = "Inspect Component";
+            document.getElementById('tooltip-desc').innerText = "Hover over any node in the diagram above to visualize dynamic tensor transformations and parameters.";
+        }
+
+        function setDiagramMode(mode) {
+            document.querySelectorAll('.control-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-' + mode).classList.add('active');
+
+            const svg = document.getElementById('neural-svg');
+            const paths = svg.querySelectorAll('path');
+            
+            paths.forEach(p => {
+                p.className.baseVal = ''; // Clear classes
+                p.style.stroke = '';
+            });
+
+            if (mode === 'forward') {
+                paths.forEach(p => p.className.baseVal = 'pulse-path-fwd');
+            } else if (mode === 'backward') {
+                paths.forEach(p => p.className.baseVal = 'pulse-path-bwd');
+            }
+        }
+    </script>
+</body>
+</html>
