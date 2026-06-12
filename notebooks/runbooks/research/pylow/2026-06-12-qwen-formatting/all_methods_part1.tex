@@ -44,7 +44,6 @@
 }
 
 \begin{document}
-
 \title{\textbf{Mathematical Foundations, Architecture Diagrams,\\and State Analysis of Modern LLM Training Methods}}
 \author{Chief Strategist J}
 \date{\today}
@@ -95,13 +94,14 @@ where $\eta$ is the learning rate, $\lambda$ is the weight decay rate, $\beta_1,
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.9cm and 1.4cm]
-  \node[datblk] (corpus) {Raw Text\\Corpus $\mathcal{D}$};
-  \node[grayblk, right=of corpus] (tok) {Tokenise\\$x_{1..T}$};
-  \node[frzblk, right=of tok] (fwd) {Transformer\\Forward Pass};
-  \node[lossblk, right=of fwd] (loss) {Cross-Entropy\\Loss $\mathcal{L}$};
-  \node[trnblk, below=0.8cm of loss] (bwd) {Backprop +\\Adam Step};
-  \node[mrgblk, left=3.6cm of bwd] (model) {Base Model\\$\theta^*$};
+  \node[datblk] (corpus) {\textbf{Raw Text} \\ (Corpus $\mathcal{D}$)};
+  \node[grayblk, right=of corpus] (tok) {\textbf{Tokenise} \\ ($x_{1..T}$)};
+  \node[frzblk, right=of tok] (fwd) {\textbf{Transformer} \\ (Forward Pass)};
+  \node[lossblk, right=of fwd] (loss) {\textbf{Cross-Entropy} \\ (Loss $\mathcal{L}$)};
+  \node[trnblk, below=0.8cm of loss] (bwd) {\textbf{Backprop +} \\ (Adam Step)};
+  \node[mrgblk, left=3.6cm of bwd] (model) {\textbf{Base Model} \\ ($\theta^*$)};
 
   \draw[arr] (corpus)--(tok);
   \draw[arr] (tok)--(fwd);
@@ -110,6 +110,7 @@ where $\eta$ is the learning rate, $\lambda$ is the weight decay rate, $\beta_1,
   \draw[arr] (bwd)--node[below,font=\tiny]{update $\theta$}(model);
   \draw[arr] (model.north) |- ($(fwd.south)+(0,-0.3)$) -- (fwd.south);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Pretraining pipeline: corpus sampling, forward pass, loss computation, and weight update loop.}
 \end{figure}
 
@@ -167,14 +168,15 @@ where $\eta$ is the learning rate, $\lambda$ is the weight decay rate, $\beta_1,
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.9cm and 1.3cm]
-  \node[frzblk] (base) {Pretrained\\Base $\theta_{\text{base}}$};
-  \node[datblk, above right=0.6cm and 1.4cm of base] (new) {New Corpus\\$\mathcal{D}_{\text{new}}$};
-  \node[grayblk, below right=0.6cm and 1.4cm of base] (replay) {Replay Buffer\\$\mathcal{D}_{\text{replay}}$};
-  \node[grayblk, right=3.2cm of base] (mix) {Batch\\Mixer $\lambda$};
-  \node[lossblk, right=of mix] (loss) {LM Loss\\$\mathcal{L}_{\text{CPT}}$};
-  \node[trnblk, right=of loss] (upd) {Gradient\\Update};
-  \node[mrgblk, below=1.1cm of upd] (out) {Adapted\\Model $\theta'$};
+  \node[frzblk] (base) {\textbf{Pretrained} \\ (Base $\theta_{\text{base}}$)};
+  \node[datblk, above right=0.6cm and 1.4cm of base] (new) {\textbf{New Corpus} \\ ($\mathcal{D}_{\text{new}}$)};
+  \node[grayblk, below right=0.6cm and 1.4cm of base] (replay) {\textbf{Replay Buffer} \\ ($\mathcal{D}_{\text{replay}}$)};
+  \node[grayblk, right=3.2cm of base] (mix) {\textbf{Batch} \\ (Mixer $\lambda$)};
+  \node[lossblk, right=of mix] (loss) {\textbf{LM Loss} \\ ($\mathcal{L}_{\text{CPT}}$)};
+  \node[trnblk, right=of loss] (upd) {\textbf{Gradient} \\ (Update)};
+  \node[mrgblk, below=1.1cm of upd] (out) {\textbf{Adapted} \\ (Model $\theta'$)};
 
   \draw[arr] (new.east) -| (mix.north);
   \draw[arr] (replay.east) -| (mix.south);
@@ -183,6 +185,7 @@ where $\eta$ is the learning rate, $\lambda$ is the weight decay rate, $\beta_1,
   \draw[arr] (loss) -- (upd);
   \draw[arr] (upd) -- (out);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{CPT mixes new corpus and replay buffer batches to update a pretrained checkpoint.}
 \end{figure}
 
@@ -240,13 +243,14 @@ where $\eta$ is the learning rate, $\lambda$ is the weight decay rate, $\beta_1,
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.9cm and 1.2cm]
-  \node[datblk] (domain) {Domain Corpus\\(Medical/Legal/Code)};
-  \node[grayblk, right=of domain] (clean) {Clean \&\\Deduplicate};
-  \node[frzblk, right=of clean] (base) {Base Model\\$\theta_{\text{base}}$};
-  \node[lossblk, right=of base] (loss) {Domain LM\\Loss $\mathcal{L}$};
-  \node[trnblk, below=0.9cm of loss] (step) {Adam Step\\low LR};
-  \node[mrgblk, left=2.2cm of step] (dapt) {DAPT Model\\$\theta_{\text{domain}}$};
+  \node[datblk] (domain) {\textbf{Domain Corpus} \\ (Medical/Legal/Code)};
+  \node[grayblk, right=of domain] (clean) {\textbf{Clean \&} \\ (Deduplicate)};
+  \node[frzblk, right=of clean] (base) {\textbf{Base Model} \\ ($\theta_{\text{base}}$)};
+  \node[lossblk, right=of base] (loss) {\textbf{Domain LM} \\ (Loss $\mathcal{L}$)};
+  \node[trnblk, below=0.9cm of loss] (step) {\textbf{Adam Step} \\ (low LR)};
+  \node[mrgblk, left=2.2cm of step] (dapt) {\textbf{DAPT Model} \\ ($\theta_{\text{domain}}$)};
 
   \draw[arr] (domain)--(clean);
   \draw[arr] (clean)--(base);
@@ -255,6 +259,7 @@ where $\eta$ is the learning rate, $\lambda$ is the weight decay rate, $\beta_1,
   \draw[arr] (step)--node[below,font=\tiny]{converged}(dapt);
   \draw[arr,dashed,blue!60] (dapt.north) -- ++(0,0.5) -| (base.south) node[midway,above,font=\tiny]{checkpoint};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{DAPT pipeline: domain corpus is cleaned, fed into the base model, and trained with standard LM loss.}
 \end{figure}
 
@@ -312,13 +317,14 @@ where $\eta$ is the learning rate, $\lambda$ is the weight decay rate, $\beta_1,
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.8cm and 1.2cm]
-  \node[datblk] (labeled) {Labelled Task\\Data (small)};
-  \node[grayblk, above=0.7cm of labeled] (unlabeled) {Unlabelled Task-\\Adjacent Text};
-  \node[frzblk, right=2.0cm of labeled] (dapt) {DAPT / Base\\Model $\theta$};
-  \node[lossblk, right=of dapt] (loss) {Task LM\\Loss};
-  \node[trnblk, right=of loss] (update) {Update\\$\theta \to \theta_{\text{task}}$};
-  \node[mrgblk, below=0.9cm of update] (sft) {SFT\\(next step)};
+  \node[datblk] (labeled) {\textbf{Labelled Task} \\ (Data (small))};
+  \node[grayblk, above=0.7cm of labeled] (unlabeled) {\textbf{Unlabelled Task-} \\ (Adjacent Text)};
+  \node[frzblk, right=2.0cm of labeled] (dapt) {\textbf{DAPT / Base} \\ (Model $\theta$)};
+  \node[lossblk, right=of dapt] (loss) {\textbf{Task LM} \\ (Loss)};
+  \node[trnblk, right=of loss] (update) {\textbf{Update} \\ ($\theta \to \theta_{\text{task}}$)};
+  \node[mrgblk, below=0.9cm of update] (sft) {\textbf{SFT} \\ (next step)};
 
   \draw[arr] (unlabeled.east) -| (dapt.north);
   \draw[arr] (labeled.east) -- node[above,font=\tiny]{strip labels} (dapt.west);
@@ -326,6 +332,7 @@ where $\eta$ is the learning rate, $\lambda$ is the weight decay rate, $\beta_1,
   \draw[arr] (loss)--(update);
   \draw[arr] (update)--(sft);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{TAPT uses task-adjacent unlabelled text to bridge base model and supervised fine-tuning.}
 \end{figure}
 
@@ -368,13 +375,14 @@ The gradients only backpropagate through response tokens:
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.8cm and 1.2cm]
-  \node[datblk] (pairs) {$(x, y)$\\Curated Pairs};
-  \node[grayblk, right=of pairs] (concat) {Concat\\{[x ; y]}};
-  \node[frzblk, right=of concat] (fwd) {Transformer\\Forward};
-  \node[lossblk, right=of fwd] (loss) {Masked CE\\Loss $\mathcal{L}_{\text{SFT}}$};
-  \node[trnblk, below=0.9cm of loss] (bwd) {Backprop\\(response only)};
-  \node[mrgblk, left=3.5cm of bwd] (out) {Instruction-\\Following $\theta^*$};
+  \node[datblk] (pairs) {\textbf{$(x, y)$} \\ (Curated Pairs)};
+  \node[grayblk, right=of pairs] (concat) {\textbf{Concat} \\ ({[x ; y]})};
+  \node[frzblk, right=of concat] (fwd) {\textbf{Transformer} \\ (Forward)};
+  \node[lossblk, right=of fwd] (loss) {\textbf{Masked CE} \\ (Loss $\mathcal{L}_{\text{SFT}}$)};
+  \node[trnblk, below=0.9cm of loss] (bwd) {\textbf{Backprop} \\ (response only)};
+  \node[mrgblk, left=3.5cm of bwd] (out) {\textbf{Instruction-} \\ (Following $\theta^*$)};
 
   \draw[arr] (pairs)--(concat);
   \draw[arr] (concat)--(fwd);
@@ -384,6 +392,7 @@ The gradients only backpropagate through response tokens:
 
   \node[red,font=\tiny,text width=2cm,align=center] at ($(fwd.south)+(0,-0.3)$) {prompt tokens\\masked in labels};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{SFT pipeline with prompt-masked loss: gradients flow only through response tokens.}
 \end{figure}
 
@@ -422,14 +431,15 @@ We mask all prompt-side tokens, including conversational format tags (like $\lan
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[datblk] (t1) {Summarise\\Task $\mathcal{T}_1$};
-  \node[datblk, below=0.4cm of t1] (t2) {Translate\\Task $\mathcal{T}_2$};
-  \node[datblk, below=0.4cm of t2] (t3) {QA / Code\\Task $\mathcal{T}_K$};
-  \node[grayblk, right=1.6cm of t2] (tmpl) {Chat Template\\Formatter};
-  \node[frzblk, right=of tmpl] (model) {LLM\\$\theta$};
-  \node[lossblk, right=of model] (loss) {SFT Loss\\(multi-task)};
-  \node[mrgblk, below=0.8cm of loss] (out) {Instruction-\\Tuned $\theta^*$};
+  \node[datblk] (t1) {\textbf{Summarise} \\ (Task $\mathcal{T}_1$)};
+  \node[datblk, below=0.4cm of t1] (t2) {\textbf{Translate} \\ (Task $\mathcal{T}_2$)};
+  \node[datblk, below=0.4cm of t2] (t3) {\textbf{QA / Code} \\ (Task $\mathcal{T}_K$)};
+  \node[grayblk, right=1.6cm of t2] (tmpl) {\textbf{Chat Template} \\ (Formatter)};
+  \node[frzblk, right=of tmpl] (model) {\textbf{LLM} \\ ($\theta$)};
+  \node[lossblk, right=of model] (loss) {\textbf{SFT Loss} \\ (multi-task)};
+  \node[mrgblk, below=0.8cm of loss] (out) {\textbf{Instruction-} \\ (Tuned $\theta^*$)};
 
   \draw[arr] (t1.east) -| (tmpl.north);
   \draw[arr] (t2)--(tmpl);
@@ -438,6 +448,7 @@ We mask all prompt-side tokens, including conversational format tags (like $\lan
   \draw[arr] (model)--(loss);
   \draw[arr] (loss)--(out);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Instruction tuning over diverse task types funnelled through a unified chat template.}
 \end{figure}
 
@@ -480,15 +491,16 @@ The final joint parameter objective is:
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.6cm and 1.1cm]
-  \node[datblk] (d1) {Dataset $\mathcal{D}_1$};
-  \node[datblk, below=0.4cm of d1] (d2) {Dataset $\mathcal{D}_2$};
-  \node[datblk, below=0.4cm of d2] (dk) {Dataset $\mathcal{D}_K$};
-  \node[frzblk, right=1.8cm of d2, minimum height=3.2cm, minimum width=3.0cm] (backbone) {Shared\\Transformer\\Backbone $\theta_{\text{shared}}$};
-  \node[trnblk, right=1.6cm of d1] (h1) {Head$_1$\\$\theta_1$};
-  \node[trnblk, right=1.6cm of d2] (h2) {Head$_2$\\$\theta_2$};
-  \node[trnblk, right=1.6cm of dk] (hk) {Head$_K$\\$\theta_K$};
-  \node[lossblk, right=1.6cm of h2] (loss) {Weighted\\Loss $\mathcal{L}_{\text{MT}}$};
+  \node[datblk] (d1) {\textbf{Dataset $\mathcal{D}_1$}};
+  \node[datblk, below=0.4cm of d1] (d2) {\textbf{Dataset $\mathcal{D}_2$}};
+  \node[datblk, below=0.4cm of d2] (dk) {\textbf{Dataset $\mathcal{D}_K$}};
+  \node[frzblk, right=1.8cm of d2, minimum height=3.2cm, minimum width=3.0cm] (backbone) {\textbf{Shared} \\ \textbf{Transformer} \\ (Backbone $\theta_{\text{shared}}$)};
+  \node[trnblk, right=1.6cm of backbone] (h2) {\textbf{Head$_2$} \\ ($\theta_2$)};
+  \node[trnblk] (h1) at (h2 |- d1) {\textbf{Head$_1$} \\ ($\theta_1$)};
+  \node[trnblk] (hk) at (h2 |- dk) {\textbf{Head$_K$} \\ ($\theta_K$)};
+  \node[lossblk, right=1.6cm of h2] (loss) {\textbf{Weighted} \\ (Loss $\mathcal{L}_{\text{MT}}$)};
 
   \draw[arr] (d1)--(backbone.west|-h1);
   \draw[arr] (d2)--(backbone);
@@ -500,6 +512,7 @@ The final joint parameter objective is:
   \draw[arr] (h2)--(loss);
   \draw[arr] (hk.east) -| (loss.south);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Multi-task training: each dataset feeds task-specific heads on a shared backbone.}
 \end{figure}
 
@@ -543,13 +556,14 @@ Tokens outside $\mathcal{V}^{(p)}$ are assigned probability 0 before final selec
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.6cm and 0.9cm]
-  \node[datblk] (q) {Question $x$};
-  \node[grayblk, right=of q] (cot) {Reasoning\\Chain $c_1..c_M$};
-  \node[trnblk, right=of cot] (ans) {Final\\Answer $y$};
-  \node[lossblk, below=0.8cm of cot] (lc) {Chain Loss\\$\mathcal{L}_c$};
-  \node[lossblk, below=0.8cm of ans] (la) {Answer Loss\\$\mathcal{L}_y$};
-  \node[mrgblk, below=0.8cm of $(lc)!0.5!(la)$] (total) {Total Loss\\$\mathcal{L}_{\text{CoT}}$};
+  \node[datblk] (q) {\textbf{Question $x$}};
+  \node[grayblk, right=of q] (cot) {\textbf{Reasoning} \\ (Chain $c_1..c_M$)};
+  \node[trnblk, right=of cot] (ans) {\textbf{Final} \\ (Answer $y$)};
+  \node[lossblk, below=0.8cm of cot] (lc) {\textbf{Chain Loss} \\ ($\mathcal{L}_c$)};
+  \node[lossblk, below=0.8cm of ans] (la) {\textbf{Answer Loss} \\ ($\mathcal{L}_y$)};
+  \node[mrgblk, below=0.8cm of $(lc)!0.5!(la)$] (total) {\textbf{Total Loss} \\ ($\mathcal{L}_{\text{CoT}}$)};
 
   \draw[arr] (q)--(cot);
   \draw[arr] (cot)--(ans);
@@ -561,6 +575,7 @@ Tokens outside $\mathcal{V}^{(p)}$ are assigned probability 0 before final selec
   \draw[losscolor,thick,decorate,decoration={brace,amplitude=6pt,raise=4pt}]
     (cot.north west) -- (ans.north east) node[midway,above=10pt,font=\tiny]{loss applied to entire output};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{CoT SFT: loss is computed over both the reasoning chain and the final answer.}
 \end{figure}
 
@@ -597,13 +612,14 @@ The model is trained to minimize the combined cross-entropy loss over all steps.
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.5cm and 0.8cm]
-  \node[datblk,minimum width=1.8cm] (inp) {Input $x$};
-  \node[trnblk,right=0.7cm of inp,minimum width=1.8cm] (s1) {Step 1\\$s_1$};
-  \node[trnblk,right=0.6cm of s1,minimum width=1.8cm] (s2) {Step 2\\$s_2$};
-  \node[grayblk,right=0.6cm of s2,minimum width=0.6cm] (dots) {$\cdots$};
-  \node[trnblk,right=0.6cm of dots,minimum width=1.8cm] (sn) {Step $N$\\$s_N$};
-  \node[mrgblk,right=0.7cm of sn,minimum width=1.8cm] (out) {Answer\\$y$};
+  \node[datblk,minimum width=1.8cm] (inp) {\textbf{Input $x$}};
+  \node[trnblk,right=0.7cm of inp,minimum width=1.8cm] (s1) {\textbf{Step 1} \\ ($s_1$)};
+  \node[trnblk,right=0.6cm of s1,minimum width=1.8cm] (s2) {\textbf{Step 2} \\ ($s_2$)};
+  \node[grayblk,right=0.6cm of s2,minimum width=0.6cm] (dots) {\textbf{$\cdots$}};
+  \node[trnblk,right=0.6cm of dots,minimum width=1.8cm] (sn) {\textbf{Step $N$} \\ ($s_N$)};
+  \node[mrgblk,right=0.7cm of sn,minimum width=1.8cm] (out) {\textbf{Answer} \\ ($y$)};
 
   \foreach \a/\b in {inp/s1, s1/s2, s2/dots, dots/sn, sn/out}
     \draw[arr] (\a)--(\b);
@@ -616,6 +632,7 @@ The model is trained to minimize the combined cross-entropy loss over all steps.
   \foreach \n in {s1,s2,sn,out}
     \draw[garr] (\n.south) -- ++(0,-0.35);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Step-by-Step SFT: each numbered step and the final answer contribute to the total loss.}
 \end{figure}
 
@@ -656,21 +673,23 @@ This score is used to rank candidate rollouts in Best-of-$N$ sampling or guide s
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
-  \node[datblk] (sol) {Solution\\Steps $s_{1..N}$};
-  \node[grayblk, right=of sol] (prm) {Process Reward\\Annotator};
-  \node[trnblk, right=0.6cm of prm, minimum height=2.2cm, minimum width=2.2cm] (labels) {Step\\Labels\\$r_1,..,r_N$};
-  \node[lossblk, right=of labels] (loss) {Weighted\\SFT Loss};
-  \node[mrgblk, below=0.9cm of loss] (out) {Process-Supervised\\Model};
+  \node[datblk] (sol) {\textbf{Solution} \\ (Steps $s_{1..N}$)};
+  \node[grayblk, right=of sol] (prm) {\textbf{Process Reward} \\ (Annotator)};
+  \node[trnblk, right=0.6cm of prm, minimum height=2.2cm, minimum width=2.2cm] (labels) {\textbf{Step} \\ \textbf{Labels} \\ ($r_1,..,r_N$)};
+  \node[lossblk, right=1.6cm of labels] (loss) {\textbf{Weighted} \\ (SFT Loss)};
+  \node[mrgblk, below=0.9cm of loss] (out) {\textbf{Process-Supervised} \\ (Model)};
 
-  \node[green!60!black,draw,rounded corners,font=\tiny,minimum width=1.5cm] at ($(labels.east)+(0,0.5)$) {$r_n{=}{+}1$: train};
-  \node[red!70!black,draw,rounded corners,font=\tiny,minimum width=1.5cm] at ($(labels.east)+(0,-0.5)$) {$r_n{=}{-}1$: skip};
+  \node[green!60!black,draw,rounded corners,font=\tiny,minimum width=1.5cm] at ($(labels.east)+(0.8,0.5)$) {$r_n{=}{+}1$: train};
+  \node[red!70!black,draw,rounded corners,font=\tiny,minimum width=1.5cm] at ($(labels.east)+(0.8,-0.5)$) {$r_n{=}{-}1$: skip};
 
   \draw[arr] (sol)--(prm);
   \draw[arr] (prm)--(labels);
   \draw[arr] (labels)--(loss);
   \draw[arr] (loss)--(out);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Process supervision: a step annotator labels each reasoning step; only correct steps contribute to the SFT loss.}
 \end{figure}
 
@@ -723,13 +742,14 @@ To eliminate latency at deployment, the weights are merged directly into the bas
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   \node[neuron] (x1) at (0,1.5) {$x_1$};
   \node[neuron] (x2) at (0,0.5) {$x_2$};
   \node[neuron] (xd) at (0,-0.8) {$x_d$};
   \node[font=\tiny] at (0,-0.15) {$\vdots$};
 
-  \node[frzblk, minimum width=2.8cm, minimum height=2.0cm] (W0) at (3.8,1.5) {Frozen\\$W_0 \in \mathbb{R}^{k\times d}$};
+  \node[frzblk, minimum width=2.8cm, minimum height=2.0cm] (W0) at (3.8,1.5) {\textbf{Frozen} \\ ($W_0 \in \mathbb{R}^{k\times d}$)};
   \node[bneck] (z1) at (3.8,-0.2) {$z_1$};
   \node[bneck] (zr) at (3.8,-1.2) {$z_r$};
   \node[font=\tiny] at (3.8,-0.7) {$\vdots$};
@@ -755,6 +775,7 @@ To eliminate latency at deployment, the weights are merged directly into the bas
   \draw[garr] (h1.east)--++(0.6,0) node[right,red,font=\tiny]{$g_1$};
   \draw[garr] (hk.east)--++(0.6,0) node[right,red,font=\tiny]{$g_k$};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{LoRA: input flows through frozen $W_0$ and trainable low-rank path $A \to B$; outputs are summed.}
 \end{figure}
 
@@ -795,13 +816,14 @@ During backpropagation, the NF4 weights are dequantized to FP16/BF16 to compute 
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.2cm]
-  \node[datblk] (x) {Input\\$x$ (BF16)};
-  \node[frzblk, right=of x] (nf4) {$W_0^{\text{NF4}}$\\4-bit frozen};
-  \node[grayblk, right=of nf4] (deq) {Dequantise\\to BF16};
+  \node[datblk] (x) {\textbf{Input} \\ ($x$ (BF16))};
+  \node[frzblk, right=of x] (nf4) {\textbf{$W_0^{\text{NF4}}$} \\ (4-bit frozen)};
+  \node[grayblk, right=of nf4] (deq) {\textbf{Dequantise} \\ (to BF16)};
   \node[sumnode, right=of deq] (sum) {$\oplus$};
-  \node[trnblk, above=0.8cm of sum] (lora) {LoRA\\$BA$ (BF16)};
-  \node[mrgblk, right=of sum] (out) {Output\\$h$ (BF16)};
+  \node[trnblk, above=0.8cm of sum] (lora) {\textbf{LoRA} \\ ($BA$ (BF16))};
+  \node[mrgblk, right=of sum] (out) {\textbf{Output} \\ ($h$ (BF16))};
 
   \draw[arr] (x)--(nf4);
   \draw[arr] (nf4)--(deq);
@@ -812,6 +834,7 @@ During backpropagation, the NF4 weights are dequantized to FP16/BF16 to compute 
 
   \node[red,font=\tiny,text width=2.5cm,align=center,below=0.3cm of nf4] {4-bit: $\sim$4 GB\\vs BF16: $\sim$16 GB};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{QLoRA: 4-bit frozen base dequantised at runtime; LoRA adapters trained in BF16.}
 \end{figure}
 
@@ -852,18 +875,19 @@ where $s(\theta) = |\theta \cdot \nabla_\theta \mathcal{L}|$. At designated inte
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[datblk] (x) {Input $x$};
-  \node[frzblk, right=1.5cm of x] (W0) {Frozen $W_0$};
+  \node[datblk] (x) {\textbf{Input $x$}};
+  \node[frzblk, right=1.5cm of x] (W0) {\textbf{Frozen $W_0$}};
   
   % Parallel SVD Adapter path
-  \node[trnblk, above=1.0cm of W0] (Q) {$Q$ (down-proj)};
-  \node[trnblk, right=1.2cm of Q] (L) {$\Lambda$ (diag)};
-  \node[trnblk, right=1.2cm of L] (P) {$P$ (up-proj)};
+  \node[trnblk, above=1.0cm of W0] (Q) {\textbf{$Q$ (down-proj)}};
+  \node[trnblk, right=1.2cm of Q] (L) {\textbf{$\Lambda$ (diag)}};
+  \node[trnblk, right=1.2cm of L] (P) {\textbf{$P$ (up-proj)}};
   
-  \node[grayblk, above=0.6cm of L] (prune) {Rank Pruner};
+  \node[grayblk, above=0.6cm of L] (prune) {\textbf{Rank Pruner}};
   \node[sumnode, right=1.5cm of W0] (sum) {$\oplus$};
-  \node[mrgblk, right=1.5cm of sum] (out) {Output $h$};
+  \node[mrgblk, right=1.5cm of sum] (out) {\textbf{Output $h$}};
 
   % Connections
   \draw[arr] (x)--(W0);
@@ -878,6 +902,7 @@ where $s(\theta) = |\theta \cdot \nabla_\theta \mathcal{L}|$. At designated inte
   \draw[arr,dashed,red] (prune)--node[right,font=\tiny]{prunes $\lambda_i$}(L);
   \node[red,font=\tiny,align=center] at ($(prune.north)+(0,0.25)$) {$S_i{<}\gamma \Rightarrow \lambda_i{=}0$};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{AdaLoRA: SVD-decomposed update with importance-based rank pruning per layer.}
 \end{figure}
 
@@ -918,18 +943,19 @@ This mathematically separates the updates to magnitude and direction, mimicking 
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
-  \node[frzblk] (W0) {$W_0$ (frozen)};
-  \node[trnblk, above=1.0cm of W0] (ba) {$BA$ (LoRA)};
+  \node[frzblk] (W0) {\textbf{$W_0$ (frozen)}};
+  \node[trnblk, above=1.0cm of W0] (ba) {\textbf{$BA$ (LoRA)}};
   
   \node[sumnode, right=1.2cm of W0] (sumV) {$\oplus$};
   
-  \node[grayblk, right=1.0cm of sumV] (norm) {Norm $\|\cdot\|_r$};
+  \node[grayblk, right=1.0cm of sumV] (norm) {\textbf{Norm $\|\cdot\|_r$}};
   \node[sumnode, right=1.2cm of norm] (div) {$\div$};
   
-  \node[trnblk, above=1.0cm of div] (m) {Magnitude $m$};
+  \node[trnblk, above=1.0cm of div] (m) {\textbf{Magnitude $m$}};
   \node[sumnode, right=1.2cm of div] (mul) {$\otimes$};
-  \node[mrgblk, right=1.2cm of mul] (out) {Weight $W'$};
+  \node[mrgblk, right=1.2cm of mul] (out) {\textbf{Weight $W'$}};
 
   % Connections
   \draw[arr] (W0)--(sumV);
@@ -944,6 +970,7 @@ This mathematically separates the updates to magnitude and direction, mimicking 
   \node[font=\tiny,below=0.3cm of norm] {direction component};
   \node[font=\tiny,above=0.3cm of m] {amplitude scaling};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{DoRA: weight decomposed into direction (LoRA-adapted) and magnitude (trainable scalar).}
 \end{figure}
 
@@ -982,20 +1009,21 @@ The base model weights $W_Q, W_K, W_V, W_1, W_2$ are frozen. This diagonal matri
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
-  \node[datblk] (x) {Input $x$};
+  \node[datblk] (x) {\textbf{Input $x$}};
   
   % Attention Block
-  \node[frzblk, right=1.0cm of x] (qkv) {Compute\\$Q, K, V$};
-  \node[trnblk, above right=0.3cm and 0.8cm of qkv] (lk) {$l_K \odot K$};
-  \node[trnblk, below right=0.3cm and 0.8cm of qkv] (lv) {$l_V \odot V$};
-  \node[frzblk, right=2.8cm of qkv] (attn) {Attention\\Softmax};
+  \node[frzblk, right=1.0cm of x] (qkv) {\textbf{Compute} \\ ($Q, K, V$)};
+  \node[trnblk, above right=0.3cm and 0.8cm of qkv] (lk) {\textbf{$l_K \odot K$}};
+  \node[trnblk, below right=0.3cm and 0.8cm of qkv] (lv) {\textbf{$l_V \odot V$}};
+  \node[frzblk, right=2.8cm of qkv] (attn) {\textbf{Attention} \\ (Softmax)};
   
   % FFN Block
-  \node[frzblk, right=1.0cm of attn] (w1) {FFN $W_1$};
-  \node[trnblk, right=0.8cm of w1] (lffn) {$l_{FFN} \odot$};
-  \node[frzblk, right=0.8cm of lffn] (w2) {FFN $W_2$};
-  \node[mrgblk, right=1.0cm of w2] (out) {Output};
+  \node[frzblk, right=1.0cm of attn] (w1) {\textbf{FFN $W_1$}};
+  \node[trnblk, right=0.8cm of w1] (lffn) {\textbf{$l_{FFN} \odot$}};
+  \node[frzblk, right=0.8cm of lffn] (w2) {\textbf{FFN $W_2$}};
+  \node[mrgblk, right=1.0cm of w2] (out) {\textbf{Output}};
 
   % Connections
   \draw[arr] (x)--(qkv);
@@ -1010,6 +1038,7 @@ The base model weights $W_Q, W_K, W_V, W_1, W_2$ are frozen. This diagonal matri
   \draw[arr] (lffn)--(w2);
   \draw[arr] (w2)--(out);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{IA$^3$: three tiny scaling vectors rescale keys, values, and FFN intermediate activations.}
 \end{figure}
 
@@ -1046,13 +1075,14 @@ To ensure the adapter behaves as an identity mapping at the start of training, $
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.5cm and 0.9cm]
-  \node[datblk,minimum width=2.2cm] (h) {Hidden $h$\\(from layer)};
-  \node[trnblk,right=of h,minimum width=2.0cm] (dn) {Down-proj\\$W_{\text{dn}}$ ($d{\to}r$)};
-  \node[grayblk,right=of dn,minimum width=1.8cm] (act) {ReLU};
-  \node[trnblk,right=of act,minimum width=2.0cm] (up) {Up-proj\\$W_{\text{up}}$ ($r{\to}d$)};
+  \node[datblk,minimum width=2.2cm] (h) {\textbf{Hidden $h$} \\ (from layer)};
+  \node[trnblk,right=of h,minimum width=2.0cm] (dn) {\textbf{Down-proj} \\ ($W_{\text{dn}}$ ($d{\to}r$))};
+  \node[grayblk,right=of dn,minimum width=1.8cm] (act) {\textbf{ReLU}};
+  \node[trnblk,right=of act,minimum width=2.0cm] (up) {\textbf{Up-proj} \\ ($W_{\text{up}}$ ($r{\to}d$))};
   \node[sumnode,right=of up] (add) {$+$};
-  \node[mrgblk,right=of add,minimum width=2.0cm] (out) {Adapter\\Output $h'$};
+  \node[mrgblk,right=of add,minimum width=2.0cm] (out) {\textbf{Adapter} \\ (Output $h'$)};
 
   \draw[arr] (h)--(dn);
   \draw[arr] (dn)--(act);
@@ -1063,6 +1093,7 @@ To ensure the adapter behaves as an identity mapping at the start of training, $
 
   \node[red,font=\tiny,below=0.2cm of dn] {bottleneck $r \ll d$};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Adapter module: down-project to rank $r$, apply nonlinearity, up-project back, plus skip connection.}
 \end{figure}
 
@@ -1103,12 +1134,13 @@ The attention output is computed as:
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
-  \node[trnblk,minimum width=2.5cm] (prefix) {Trainable Prefix\\$P_k, P_v$ (per layer)};
-  \node[datblk, below=1.2cm of prefix] (tokens) {Input Token\\Keys \& Values};
-  \node[grayblk, right=1.5cm of $(prefix)!0.5!(tokens)$] (concat) {Concat\\$[P_k;K],\,[P_v;V]$};
-  \node[frzblk, right=of concat] (attn) {Frozen\\Attention};
-  \node[mrgblk, right=of attn] (out) {Contextual\\Output};
+  \node[trnblk,minimum width=2.5cm] (prefix) {\textbf{Trainable Prefix} \\ ($P_k, P_v$ (per layer))};
+  \node[datblk, below=1.2cm of prefix] (tokens) {\textbf{Input Token} \\ (Keys \& Values)};
+  \node[grayblk, right=1.5cm of $(prefix)!0.5!(tokens)$] (concat) {\textbf{Concat} \\ ($[P_k;K],\,[P_v;V]$)};
+  \node[frzblk, right=of concat] (attn) {\textbf{Frozen} \\ (Attention)};
+  \node[mrgblk, right=of attn] (out) {\textbf{Contextual} \\ (Output)};
 
   \draw[arr] (prefix.east) -| (concat.north);
   \draw[arr] (tokens.east) -| (concat.south);
@@ -1118,6 +1150,7 @@ The attention output is computed as:
   \node[font=\tiny,green!60!black] at ($(prefix.south)+(0,-0.2)$) {only these trained};
   \node[font=\tiny,blue!60!black] at ($(attn.south)+(0,-0.2)$) {all frozen};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Prefix Tuning: trainable prefix vectors extend the key/value context at every attention layer.}
 \end{figure}
 
@@ -1153,12 +1186,13 @@ During backpropagation, the gradients are passed through all layers of the froze
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[trnblk,minimum width=2.2cm] (soft) {Soft Prompt\\$P \in \mathbb{R}^{k\times d}$\\(trainable)};
-  \node[datblk, right=of soft] (emb) {Input\\Embeddings\\$E(x_{1..T})$};
-  \node[grayblk, right=of emb] (concat) {Concat\\$[\tilde{x}]$};
-  \node[frzblk, right=of concat] (lm) {Frozen\\Transformer\\$f_\theta$};
-  \node[lossblk, right=of lm] (loss) {SFT Loss\\on $y$};
+  \node[trnblk,minimum width=2.2cm] (soft) {\textbf{Soft Prompt} \\ \textbf{$P \in \mathbb{R}^{k\times d}$} \\ (trainable)};
+  \node[datblk, right=of soft] (emb) {\textbf{Input} \\ \textbf{Embeddings} \\ ($E(x_{1..T})$)};
+  \node[grayblk, right=of emb] (concat) {\textbf{Concat} \\ ($[\tilde{x}]$)};
+  \node[frzblk, right=of concat] (lm) {\textbf{Frozen} \\ \textbf{Transformer} \\ ($f_\theta$)};
+  \node[lossblk, right=of lm] (loss) {\textbf{SFT Loss} \\ (on $y$)};
 
   \draw[arr] (soft.east) -| (concat.north);
   \draw[arr] (emb)--(concat);
@@ -1167,6 +1201,7 @@ During backpropagation, the gradients are passed through all layers of the froze
 
   \node[font=\tiny,green!60!black,align=center,below=0.25cm of soft] {only $P$\\is trained};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Prompt Tuning: soft tokens prepended at the embedding layer; the full transformer is frozen.}
 \end{figure}
 
@@ -1199,17 +1234,18 @@ This deep prefix injection resolves the capacity limitation of shallow prompt tu
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.5cm and 0.9cm]
-  \node[datblk,minimum width=2.0cm] (emb) {Embedding\\Layer};
-  \node[frzblk, right=0.9cm of emb,minimum width=2.0cm] (l1) {Layer 1\\(Attn + FFN)};
-  \node[frzblk, right=0.9cm of l1,minimum width=2.0cm] (l2) {Layer 2\\(Attn + FFN)};
-  \node[grayblk, right=0.6cm of l2,minimum width=0.6cm] (dots) {$\cdots$};
-  \node[frzblk, right=0.6cm of dots,minimum width=2.0cm] (lL) {Layer $L$\\(Attn + FFN)};
+  \node[datblk,minimum width=2.0cm] (emb) {\textbf{Embedding} \\ (Layer)};
+  \node[frzblk, right=0.9cm of emb,minimum width=2.0cm] (l1) {\textbf{Layer 1} \\ (Attn + FFN)};
+  \node[frzblk, right=0.9cm of l1,minimum width=2.0cm] (l2) {\textbf{Layer 2} \\ (Attn + FFN)};
+  \node[grayblk, right=0.6cm of l2,minimum width=0.6cm] (dots) {\textbf{$\cdots$}};
+  \node[frzblk, right=0.6cm of dots,minimum width=2.0cm] (lL) {\textbf{Layer $L$} \\ (Attn + FFN)};
 
-  \node[trnblk,minimum width=1.6cm,above=0.6cm of emb] (p0) {$P^{(0)}$};
-  \node[trnblk,minimum width=1.6cm,above=0.6cm of l1] (p1) {$P^{(1)}$};
-  \node[trnblk,minimum width=1.6cm,above=0.6cm of l2] (p2) {$P^{(2)}$};
-  \node[trnblk,minimum width=1.6cm,above=0.6cm of lL] (pL) {$P^{(L)}$};
+  \node[trnblk,minimum width=1.6cm,above=0.6cm of emb] (p0) {\textbf{$P^{(0)}$}};
+  \node[trnblk,minimum width=1.6cm,above=0.6cm of l1] (p1) {\textbf{$P^{(1)}$}};
+  \node[trnblk,minimum width=1.6cm,above=0.6cm of l2] (p2) {\textbf{$P^{(2)}$}};
+  \node[trnblk,minimum width=1.6cm,above=0.6cm of lL] (pL) {\textbf{$P^{(L)}$}};
 
   \foreach \a/\b in {emb/l1, l1/l2, l2/dots, dots/lL}
     \draw[arr] (\a)--(\b);
@@ -1218,6 +1254,7 @@ This deep prefix injection resolves the capacity limitation of shallow prompt tu
 
   \node[green!60!black,font=\tiny,align=center] at ($(p1.east)+(0.35,0)$) {deep\\prefix};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{P-Tuning v2: independent trainable prefix tokens injected at every transformer layer.}
 \end{figure}
 
@@ -1233,6 +1270,4 @@ Task-specific storage & Single $P$ matrix & $L$ prefix matrices\\\bottomrule
 \end{tabular}
 \caption{State properties comparing Prompt Tuning and P-Tuning v2.}
 \end{table}
-
-
 \end{document}

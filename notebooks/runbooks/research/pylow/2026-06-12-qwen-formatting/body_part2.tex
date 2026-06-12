@@ -649,7 +649,7 @@ where $V_\phi$ is the value network parameters, $\gamma$ is the discount factor,
   \node[grayblk, right=of actor] (traj) {\textbf{Token} \\ (Trajectory)};
   \node[orangeblk, right=of traj] (rm) {\textbf{Reward} \\ ($r_\phi$)};
   \node[lossblk, below right=0.5cm and 1.0cm of traj] (adv) {\textbf{Advantage} \\ ($\hat{A}_t$)};
-  \node[mrgblk, right=3.0cm of critic] (upd) {\textbf{PPO} \\ (Update)};
+  \node[mrgblk, right=1.6cm of adv] (upd) {\textbf{PPO} \\ (Update)};
 
   \draw[arr] (env)--(actor);
   \draw[arr] (actor)--(traj);
@@ -658,7 +658,7 @@ where $V_\phi$ is the value network parameters, $\gamma$ is the discount factor,
   \draw[arr] (rm.south) -| (adv.east);
   \draw[arr] (critic.east) -| (adv.west);
   \draw[arr] (adv)--(upd);
-  \draw[arr,dashed,blue!60] (upd.west) |- (actor.south) node[midway,below,font=\tiny]{clip $\rho \in [1\pm\epsilon]$};
+  \draw[arr,dashed,blue!60] (upd.east) -- ++(0.4,0) -- ++(0,2.2) -| (actor.north) node[near start,above,font=\tiny]{clip $\rho \in [1\pm\epsilon]$};
 \end{tikzpicture}
 \end{adjustbox}
 \caption{PPO: actor generates trajectory, critic estimates value, advantage drives clipped surrogate update.}
@@ -769,7 +769,7 @@ The process repeats: train on correct outputs, generate new candidates, filter a
   \draw[arr] (ver)--(correct);
   \draw[arr] (correct)--(sft);
   \draw[arr] (sft)--(newpol);
-  \draw[arr,dashed,green!60!black] (newpol.north) |- (pol.south) node[midway,below,font=\tiny]{iterate};
+  \draw[arr,dashed,green!60!black] (newpol.north) -| (pol.south) node[midway,below,font=\tiny]{iterate};
 \end{tikzpicture}
 \end{adjustbox}
 \caption{RFT: policy samples $K$ solutions, verifier filters correct ones, SFT improves the policy iteratively.}
@@ -820,7 +820,7 @@ For LLMs, the trajectory is the token sequence, each token is an action, and $r_
   \draw[arr] (act)--(rew);
   \draw[arr] (rew)--(ret);
   \draw[arr] (ret)--(upd);
-  \draw[arr,dashed,green!60!black] (upd.north) |- (pol.south) node[midway,below,font=\tiny]{update $\theta$};
+  \draw[arr,dashed,green!60!black] (upd.north) -| (pol.south) node[midway,below,font=\tiny]{update $\theta$};
 \end{tikzpicture}
 \end{adjustbox}
 \caption{REINFORCE: policy samples action sequence, receives return $G$, updates via policy gradient.}
@@ -923,8 +923,8 @@ This creates an ever-escalating difficulty curriculum since the opponent improve
   \draw[arr] (game)--(judge);
   \draw[arr] (judge)--(rl);
   \draw[arr] (rl.south)--(snap.north);
-  \draw[arr,dashed,green!60!black] (snap.west) -| (old.east) node[midway,right,font=\tiny]{update snapshot};
-  \draw[arr,dashed,green!60!black] (rl.north) |- (cur.east) node[midway,above,font=\tiny]{train};
+  \draw[arr,dashed,green!60!black] (snap.south) -- ++(0,-0.6) -| (old.south) node[near start,below,font=\tiny]{update snapshot};
+  \draw[arr,dashed,green!60!black] (rl.north) -- ++(0,1.5) -| (cur.north) node[near start,above,font=\tiny]{train};
 \end{tikzpicture}
 \end{adjustbox}
 \caption{Self-Play RL: current policy competes against a frozen past snapshot; win/loss drives RL updates.}
@@ -1026,7 +1026,7 @@ Training uses the full selected trajectory as RL experience:
   \draw[arr] (cands)--(ver);
   \draw[arr] (ver)--(best);
   \draw[arr] (best.south)--(train.north);
-  \draw[arr,dashed,green!60!black] (best.east) -- ++(0.5,0) |- (pol.east) node[midway,right,font=\tiny]{next step};
+  \draw[arr,dashed,green!60!black] (best.east) -- ++(0.4,0) -- ++(0,1.4) -| (pol.north) node[near start,above,font=\tiny]{next step};
 \end{tikzpicture}
 \end{adjustbox}
 \caption{Search-RL: at each step, beam search generates candidates; verifier selects best; policy trained on trajectory.}
@@ -1068,7 +1068,7 @@ A separate scoring model $s_\phi(x, b_i)$ is trained to evaluate intermediate th
   \node[trnblk,minimum width=1.4cm, below right=0.3cm and 0.8cm of root] (b3) {\textbf{Branch 3} \\ (good)};
   \node[mrgblk,minimum width=1.4cm, right=0.9cm of b1] (ans1) {\textbf{Ans $A_1$}};
   \node[mrgblk,minimum width=1.4cm, right=0.9cm of b3] (ans3) {\textbf{Ans $A_3$}};
-  \node[grayblk, below=1.0cm of b2] (score) {\textbf{Branch} \\ (Scorer $s_\phi$)};
+  \node[grayblk, below=1.0cm of b3] (score) {\textbf{Branch} \\ (Scorer $s_\phi$)};
 
   \draw[arr] (root)--(b1);
   \draw[arr] (root)--(b2);
@@ -1076,9 +1076,9 @@ A separate scoring model $s_\phi(x, b_i)$ is trained to evaluate intermediate th
   \draw[arr] (b1)--(ans1);
   \draw[arr] (b3)--(ans3);
   \draw[arr,red,dashed] (b2) -- ++(0.6,0) node[right,font=\tiny,red]{pruned};
-  \draw[arr] (b1.south) -| (score.north);
-  \draw[arr] (b2.south) -- (score.north);
-  \draw[arr] (b3.north) -| (score.north);
+  \draw[arr] (b1.west) -- ++(-0.2,0) |- (score.west);
+  \draw[arr] (b2.west) -- ++(-0.4,0) |- (score.west);
+  \draw[arr] (b3.south) -- (score.north);
 \end{tikzpicture}
 \end{adjustbox}
 \caption{ToT Training: good branches lead to answers; bad branches are pruned; scorer trained to evaluate all.}
@@ -1180,15 +1180,15 @@ The RM is typically initialised from a fine-tuned LLM with the final token's hid
 
   \node[datblk, above=1.0cm of backbone] (yw) {\textbf{Chosen $y_w$}};
   \node[datblk, below=1.0cm of backbone] (yl) {\textbf{Rejected $y_l$}};
-  \node[lossblk, right=4.2cm of backbone] (loss) {\textbf{BT Loss} \\ ($\log\sigma(r_w - r_l)$)};
+  \node[lossblk, below=1.0cm of head] (loss) {\textbf{BT Loss} \\ ($\log\sigma(r_w - r_l)$)};
 
   \draw[arr] (inp)--(backbone);
   \draw[arr] (backbone)--(last);
   \draw[arr] (last)--(head);
   \draw[arr] (head)--(score);
-  \draw[arr] (yw.east) -| (backbone.north);
-  \draw[arr] (yl.east) -| (backbone.south);
-  \draw[arr] (score.east) -- ++(0.3,0) |- (loss.west);
+  \draw[arr] (yw.south)--(backbone.north);
+  \draw[arr] (yl.north)--(backbone.south);
+  \draw[arr] (score.south) |- (loss.east);
 \end{tikzpicture}
 \end{adjustbox}
 \caption{Reward Model: LLM backbone maps $(x,y)$ pair to scalar via linear head; trained on chosen/rejected pairs.}
