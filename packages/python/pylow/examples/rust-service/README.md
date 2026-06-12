@@ -42,7 +42,36 @@ cargo new rust-service --bin
 * Configure metadata and dependencies inside [Cargo.toml](file:///home/btpl-lap-22/live/obs/packages/python/pylow/examples/rust-service/Cargo.toml).
 * Check and compile with `cargo check`.
 
+## Step-by-Step Tracing & Debugging Guide
+
+### 1. Launch-Mode Calltree Tracing
+Compile and run performance/exact tracing via `perf`/`uftrace`:
+```bash
+pylow calltree src/main.rs
+```
+
+### 2. Live Process Sampling (via PID)
+If you have a running Rust service binary:
+```bash
+# 1. Get process PID
+pgrep rust-service
+
+# 2. Run calltree trace on the PID for 30 seconds
+pylow calltree src/main.rs --pid <PID> --duration 30
+```
+
+### 3. Step Debugging with Watchers
+Pace the GDB/LLDB debugger to capture local stack values at line hits:
+```bash
+pylow debug-steps src/main.rs --break src/main.rs:2 --out ruststeps
+```
+Read the step snapshots:
+```bash
+cat ruststeps/step_001.txt
+```
+
 ---
+
 
 ## 35+ Critical Daily Rust Commands
 

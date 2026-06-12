@@ -1,0 +1,26 @@
+# java call tree via jdb method trace (exact, filter: Fibonacci)
+└─ Fibonacci.calculate(), line=9 bci=0
+  └─ Fibonacci.calculate(), line=9 bci=0
+    └─ Fibonacci.calculate(), line=9 bci=0
+      └─ Fibonacci.calculate(), line=9 bci=0
+        └─ Fibonacci.calculate(), line=9 bci=0
+          └─ Fibonacci.calculate(), line=9 bci=0
+          └─ Fibonacci.calculate(), line=9 bci=0
+        └─ Fibonacci.calculate(), line=9 bci=0
+      └─ Fibonacci.calculate(), line=9 bci=0
+        └─ Fibonacci.calculate(), line=9 bci=0
+        └─ Fibonacci.calculate(), line=9 bci=0
+    └─ Fibonacci.calculate(), line=9 bci=0
+      └─ Fibonacci.calculate(), line=9 bci=0
+        └─ Fibonacci.calculate(), line=9 bci=0
+        └─ Fibonacci.calculate(), line=9 bci=0
+      └─ Fibonacci.calculate(), line=9 bci=0
+  └─ Fibonacci.calculate(), line=9 bci=0
+    └─ Fibonacci.calculate(), line=9 bci=0
+      └─ Fibonacci.calculate(), line=9 bci=0
+        └─ Fibonacci.calculate(), line=9 bci=0
+        └─ Fibonacci.calculate(), line=9 bci=0
+      └─ Fibonacci.calculate(), line=9 bci=0
+    └─ Fibonacci.calculate(), line=9 bci=0
+      └─ Fibonacci.calculate(), line=9 bci=0
+      └─ Fibonacci.calculate(), line=9 bci=0

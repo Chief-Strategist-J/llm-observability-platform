@@ -42,7 +42,36 @@ npx create-vite@latest react-typescript --template react-ts
 * Bootstrapping entrypoint is in [main.tsx](file:///home/btpl-lap-22/live/obs/packages/python/pylow/examples/react-typescript/src/main.tsx).
 * App configuration is in [vite.config.ts](file:///home/btpl-lap-22/live/obs/packages/python/pylow/examples/react-typescript/vite.config.ts).
 
+## Step-by-Step Tracing & Debugging Guide
+
+### 1. Launch-Mode Calltree Tracing
+Run Node and sample the React component CPU profiles automatically:
+```bash
+pylow calltree src/main.tsx
+```
+
+### 2. Live Process Sampling (via PID)
+If you have a running Node application (e.g. running Vite development server):
+```bash
+# 1. Get process PID
+pgrep node
+
+# 2. Run calltree trace on the PID for 30 seconds
+pylow calltree src/main.tsx --pid <PID> --duration 30
+```
+
+### 3. Step Debugging with Watchers
+Pace the V8 debugger to snapshot state variables on line hits:
+```bash
+pylow debug-steps src/main.tsx --break src/App.tsx:6 --watch count --out reactsteps
+```
+Read the step snapshots:
+```bash
+cat reactsteps/step_001.txt
+```
+
 ---
+
 
 ## 35+ Critical Daily React / TypeScript Commands
 

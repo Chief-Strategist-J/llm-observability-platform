@@ -45,9 +45,53 @@ Then, update `pom.xml` to include Spring Boot dependencies and write your applic
 ### How to Code
 * Open [DemoApplication.java](file:///home/btpl-lap-22/live/obs/packages/python/pylow/examples/java-springboot/src/main/java/com/example/DemoApplication.java) to edit the main app entry.
 * Open [HelloController.java](file:///home/btpl-lap-22/live/obs/packages/python/pylow/examples/java-springboot/src/main/java/com/example/controller/HelloController.java) to add or modify endpoints.
+* Open [AlgorithmController.java](file:///home/btpl-lap-22/live/obs/packages/python/pylow/examples/java-springboot/src/main/java/com/example/controller/AlgorithmController.java) to edit algorithm endpoints.
 * Recompile and run using `mvn clean compile`.
 
+## Step-by-Step Tracing & Debugging Guide
+
+### 1. Standalone Class Calltree Tracing
+Trace a simple Java application flow (like [Fibonacci.java](file:///home/btpl-lap-22/live/obs/packages/python/pylow/examples/java-springboot/Fibonacci.java)) instantly with full debugger pacing:
+```bash
+pylow calltree Fibonacci.java --filter Fibonacci
+```
+
+### 2. Live Process Sampling (via PID)
+Attach to a running Spring Boot process and record call trees using JFR:
+```bash
+# 1. Get process PID
+jps -lm | grep java-springboot
+
+# 2. Start calltree trace for 60 seconds
+pylow calltree src/main/java/com/example/DemoApplication.java --filter com.example --pid <PID> --duration 60
+
+# 3. In another terminal, trigger the endpoints to record samples
+curl "http://localhost:8080/fibonacci?n=28"
+curl "http://localhost:8080/sort?items=9,2,8,3,7"
+curl "http://localhost:8080/pathfind?startX=0&startY=0&targetX=4&targetY=4"
+```
+
+### 3. Step Debugging with Watchers
+Capture element swap values inside QuickSort at partition steps:
+```bash
+pylow debug-steps src/main/java/com/example/DemoApplication.java \
+  --break AlgorithmController:57 \
+  --watch pivot \
+  --watch low \
+  --watch high \
+  --out qsteps
+```
+Then trigger the endpoint:
+```bash
+curl "http://localhost:8080/sort?items=5,2,9,1"
+```
+Read the step snapshots inside `qsteps/`:
+```bash
+cat qsteps/step_001.txt
+```
+
 ---
+
 
 ## 35+ Critical Daily Java / Spring Boot Commands
 

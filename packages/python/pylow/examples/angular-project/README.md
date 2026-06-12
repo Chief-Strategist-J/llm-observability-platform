@@ -43,7 +43,36 @@ npx @angular/cli new angular-project --defaults --routing=false --style=css --sk
 * Open [index.html](file:///home/btpl-lap-22/live/obs/packages/python/pylow/examples/angular-project/src/index.html) to edit global shell.
 * Configure Angular settings inside [angular.json](file:///home/btpl-lap-22/live/obs/packages/python/pylow/examples/angular-project/angular.json).
 
+## Step-by-Step Tracing & Debugging Guide
+
+### 1. Launch-Mode Calltree Tracing
+Run Node and sample the Angular component execution stack traces:
+```bash
+pylow calltree src/main.ts
+```
+
+### 2. Live Process Sampling (via PID)
+If you have a running Node application (e.g. running Angular dev server):
+```bash
+# 1. Get process PID
+pgrep node
+
+# 2. Run calltree trace on the PID for 30 seconds
+pylow calltree src/main.ts --pid <PID> --duration 30
+```
+
+### 3. Step Debugging with Watchers
+Pace the V8 debugger to snapshot Component state variables on line hits:
+```bash
+pylow debug-steps src/main.ts --break src/main.ts:15 --watch count --out angsteps
+```
+Read the step snapshots:
+```bash
+cat angsteps/step_001.txt
+```
+
 ---
+
 
 ## 35+ Critical Daily Angular Commands
 

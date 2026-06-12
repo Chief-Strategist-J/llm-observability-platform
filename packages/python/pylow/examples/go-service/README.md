@@ -44,7 +44,43 @@ Then create a simple `main.go` file with your handler logic.
 * Check dependencies in [go.mod](file:///home/btpl-lap-22/live/obs/packages/python/pylow/examples/go-service/go.mod).
 * Format code with `go fmt ./...`.
 
+## Step-by-Step Tracing & Debugging Guide
+
+### 1. Launch-Mode Calltree Tracing
+Compile, start, and trace the call tree of the main file automatically:
+```bash
+pylow calltree main.go
+```
+
+### 2. Live Process Sampling (via PID)
+If you have a running Go service binary (built with `-gcflags="all=-N -l"` to disable compiler optimization/inlining):
+```bash
+# 1. Get process PID
+pgrep go-service
+
+# 2. Run calltree trace on the PID for 30 seconds
+pylow calltree main.go --pid <PID> --duration 30
+
+# 3. Hit the service in another terminal to generate stacks
+curl "http://localhost:8080/"
+```
+
+### 3. Step Debugging with Watchers
+Pace the delve debugger to snapshot variables on line hits:
+```bash
+pylow debug-steps main.go --break main.go:8 --watch w --out gosteps
+```
+Trigger the handler:
+```bash
+curl "http://localhost:8080/"
+```
+Read the step snapshots:
+```bash
+cat gosteps/step_001.txt
+```
+
 ---
+
 
 ## 35+ Critical Daily Go Commands
 
