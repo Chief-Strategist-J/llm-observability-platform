@@ -40,6 +40,8 @@ def run_paced(argv: list, plan: PacedPlan) -> str:
     threading.Thread(target=_pump, args=(proc, lines), daemon=True).start()
 
     transcript: list = []
+    # Wait for the debugger process to initialize before sending setup commands
+    time.sleep(1.5)
     _send(proc, plan.setup)
     hit = re.compile(plan.hit_marker) if plan.hit_marker else None
     stops_seen = 0

@@ -42,7 +42,7 @@ class StepDebugService:
             if "pom.xml" in files or "build.gradle" in files or "build.gradle.kts" in files:
                 is_java_project = True
                 is_attach = True
-                target_str = "5005"
+                target_str = "5555"
                 request.lang = "java"
         
         # Check if target is a port or PID (e.g., "5005" or ":5005")
@@ -73,23 +73,23 @@ class StepDebugService:
             import time
             # Clean up old port processes to avoid socket conflicts
             try:
-                subprocess.run("kill -9 $(lsof -t -i:5005 -i:8080 2>/dev/null)", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.run("kill -9 $(lsof -t -i:5555 -i:8080 2>/dev/null)", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except Exception:
                 pass
                 
             files = os.listdir(request.target)
             if "pom.xml" in files:
-                cmd = ["mvn", "spring-boot:run", "-Dspring-boot.run.jvmArguments=-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005"]
+                cmd = ["mvn", "spring-boot:run", "-Dspring-boot.run.jvmArguments=-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5555"]
             else:
                 cmd = ["gradle", "bootRun", "--debug-jvm"]
                 
             print(f"[pylow] Spawning Java service via: {' '.join(cmd)}")
             subprocess.Popen(cmd, cwd=request.target, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             
-            print("[pylow] Waiting for JVM debug socket on port 5005 to initialize...")
+            print("[pylow] Waiting for JVM debug socket on port 5555 to initialize...")
             for _ in range(100):
-                # Check if port 5005 is listening using lsof to avoid consuming JDWP slot
-                rc = subprocess.run("lsof -i:5005 -sTCP:LISTEN", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode
+                # Check if port 5555 is listening using lsof to avoid consuming JDWP slot
+                rc = subprocess.run("lsof -i:5555 -sTCP:LISTEN", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode
                 if rc == 0:
                     break
                 time.sleep(0.3)
