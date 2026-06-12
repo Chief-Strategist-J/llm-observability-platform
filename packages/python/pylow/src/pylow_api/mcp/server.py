@@ -139,6 +139,8 @@ from pytrace_features.live_pipeline.service import LivePipelineService
 from pytrace_features.lang_trace.index import LangTraceService, LangTraceRequest
 from pytrace_features.uni.index import UniService
 from pytrace_features.code_index.index import CodeIndexService
+from pytrace_features.call_tree.index import CallTreeService, CallTreeRequest
+from pytrace_features.step_debug.index import StepDebugService, DebugRequest
 from pytrace_infra.adapters.trace_collector_adapter import RealTraceCollectorAdapter
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -877,6 +879,35 @@ def index_search(query: str, path: str = ".", lang: str = "", kind: str = "", li
 @mcp.tool(description="Show symbol index statistics per language and symbol kind.")
 def index_stats(path: str = ".") -> str:
     return _capture(CodeIndexService(_col).stats, path)
+
+
+# ===========================================================================
+# CALL TREE + STEP DEBUG TOOLS
+# ===========================================================================
+
+@mcp.tool(description="Exact noise-filtered call tree (function + file:line per frame, durations where exact) for python/go/rust/java/ts; tree is printed and saved to a text file.")
+def call_tree(target: str, pid: int = 0, lang: str = "", filter: str = "",
+              depth: int = 25, args: str = "") -> str:
+    return _capture(CallTreeService(_col).trace, CallTreeRequest(
+        target=target, pid=pid, lang=lang, filter=filter, depth=depth, args=args))
+
+
+@mcp.tool(description="Run the native debugger to each breakpoint and save variable values per stop as step_NNN.txt files. breaks/watches are comma-separated.")
+def debug_steps(target: str, breaks: str, watches: str = "", out: str = "pylow_steps",
+                max_steps: int = 50, lang: str = "") -> str:
+    return _capture(StepDebugService(_col).debug_steps, DebugRequest(
+        target=target,
+        breaks=tuple(b.strip() for b in breaks.split(",") if b.strip()),
+        watches=tuple(w.strip() for w in watches.split(",") if w.strip()),
+        out=out, max_steps=max_steps, lang=lang))
+
+
+@mcp.tool(description="Show the exact native-debugger command (pdb/dlv/gdb/jdb/node inspect) with breakpoints pre-set, ready to run in a terminal.")
+def debug_command(target: str, breaks: str = "", lang: str = "") -> str:
+    return _capture(StepDebugService(_col).debug, DebugRequest(
+        target=target,
+        breaks=tuple(b.strip() for b in breaks.split(",") if b.strip()),
+        lang=lang))
 
 
 # ===========================================================================

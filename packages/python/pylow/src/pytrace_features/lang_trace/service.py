@@ -1,16 +1,19 @@
 """Multi-language runtime tracing — Go, Rust, Java, TypeScript/Node.
 
-Extends pylow's "attach and watch" workflow beyond Python by orchestrating
-each ecosystem's native tooling instead of re-implementing tracers:
+Registry-driven: which backends a language has (and their priority) is
+declared in shared/lang/languages.py as TracerBackend entries; backend
+behaviors are registered in strategies.py. This engine never branches on
+language names — supporting a new language is a registry entry.
 
     Go        delve (dlv), perf, strace
     Rust      perf, strace
     Java      jcmd (JFR + Thread.print), jstack
     TS/Node   V8 inspector (SIGUSR1), perf, strace
 
-The best available backend is picked at runtime and every external command
-is printed before it executes, so the output always shows exactly what ran.
+Every external command is printed before it executes, so the output always
+shows exactly what ran.
 """
+import dataclasses
 import os
 import shutil
 import signal
@@ -18,8 +21,11 @@ import subprocess
 import tempfile
 import time
 
+from pytrace_features.lang_trace.strategies import TracerStrategies
 from pytrace_features.lang_trace.types import LangTraceRequest, SUPPORTED_LANGS
 from pytrace_infra.adapters.trace_collector_adapter import RealTraceCollectorAdapter
+from shared.lang import languages  # noqa: F401 — registers every LanguageSpec
+from shared.lang.registry import LanguageRegistry
 
 _SIMULATED_SAMPLES = {
     "go": [
@@ -52,13 +58,10 @@ class LangTraceService:
 
     # ── shared helpers ────────────────────────────────────────────────────
 
-    def _pick(self, candidates: list[str]) -> str | None:
-        for tool in candidates:
-            if shutil.which(tool):
-                return tool
-        return None
+    def _pick(self, candidates: list) -> str | None:
+        return next((tool for tool in candidates if shutil.which(tool)), None)
 
-    def _exec(self, argv: list[str], timeout: float | None = None) -> int:
+    def _exec(self, argv: list, timeout: float | None = None) -> int:
         print(f"→ exec: {' '.join(argv)}")
         try:
             return subprocess.run(argv, timeout=timeout).returncode
@@ -69,7 +72,7 @@ class LangTraceService:
             print(f"  ✗ {argv[0]} not found on PATH")
             return 127
 
-    def _exec_capture(self, argv: list[str], timeout: float | None = None) -> tuple[int, str]:
+    def _exec_capture(self, argv: list, timeout: float | None = None) -> tuple:
         print(f"→ exec: {' '.join(argv)}")
         try:
             proc = subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
@@ -98,28 +101,45 @@ class LangTraceService:
             self._exec(["perf", "report", "--stdio", "--max-stack", "8", "-i", out])
             print(f"\nRaw perf data kept at {out} (open with `perf report -i {out}`)")
 
-    def _launch_traced(self, cmd: list[str], lang: str) -> None:
-        if lang == "ts" and cmd and os.path.basename(cmd[0]) == "node":
-            prof_dir = os.path.join(tempfile.gettempdir(), "pylow_cpuprof")
-            os.makedirs(prof_dir, exist_ok=True)
-            self._exec([cmd[0], "--cpu-prof", "--cpu-prof-dir", prof_dir, *cmd[1:]])
-            print(f"\nV8 CPU profile written to {prof_dir}/*.cpuprofile (open in Chrome DevTools → Performance)")
-            return
-        tracer = self._pick(["perf", "strace", "ltrace"])
-        if tracer == "perf":
-            self._exec(["perf", "record", "-F", "99", "-g", "--", *cmd])
-            self._exec(["perf", "report", "--stdio", "--max-stack", "8"])
-        elif tracer:
-            self._exec([tracer, "-c", "-f", *cmd])
-        else:
-            print("No tracer (perf/strace/ltrace) found — running untraced:")
-            self._exec(cmd)
-
     def _simulated(self, lang: str) -> None:
         print(f"✓ Attached (simulated — no {lang} tooling found on PATH). Sampling...\n")
         time.sleep(1.0)
-        for line in _SIMULATED_SAMPLES[lang]:
+        for line in _SIMULATED_SAMPLES.get(lang, _SIMULATED_SAMPLES["go"]):
             print(line)
+
+    # ── traced launches (instead of attaching) ────────────────────────────
+
+    def _launch_traced(self, cmd: list, lang: str) -> None:
+        launchers = {
+            "node_cpu_prof": self._launch_node_cpu_prof,
+            "perf": self._launch_perf,
+            "strace": self._launch_counted,
+            "ltrace": self._launch_counted,
+        }
+        launchers.get(self._launch_strategy(cmd, lang), self._launch_untraced)(cmd)
+
+    def _launch_strategy(self, cmd: list, lang: str) -> str:
+        if lang == "ts" and cmd and os.path.basename(cmd[0]) == "node":
+            return "node_cpu_prof"
+        return self._pick(["perf", "strace", "ltrace"]) or "untraced"
+
+    def _launch_node_cpu_prof(self, cmd: list) -> None:
+        prof_dir = os.path.join(tempfile.gettempdir(), "pylow_cpuprof")
+        os.makedirs(prof_dir, exist_ok=True)
+        self._exec([cmd[0], "--cpu-prof", "--cpu-prof-dir", prof_dir, *cmd[1:]])
+        print(f"\nV8 CPU profile written to {prof_dir}/*.cpuprofile (open in Chrome DevTools → Performance)")
+
+    def _launch_perf(self, cmd: list) -> None:
+        self._exec(["perf", "record", "-F", "99", "-g", "--", *cmd])
+        self._exec(["perf", "report", "--stdio", "--max-stack", "8"])
+
+    def _launch_counted(self, cmd: list) -> None:
+        tracer = self._pick(["strace", "ltrace"])
+        self._exec([tracer, "-c", "-f", *cmd])
+
+    def _launch_untraced(self, cmd: list) -> None:
+        print("No tracer (perf/strace/ltrace) found — running untraced:")
+        self._exec(cmd)
 
     # ── dispatch ──────────────────────────────────────────────────────────
 
@@ -134,46 +154,36 @@ class LangTraceService:
             return
         getattr(self, f"trace_{lang}")(request.pid, request.duration, request.func_regex)
 
-    # ── per-language tracers ──────────────────────────────────────────────
+    def _run_backends(self, lang: str, request: LangTraceRequest) -> None:
+        spec = LanguageRegistry.get(lang)
+        backend = next(
+            (b for b in spec.tracers if not b.tool or self._pick([b.tool])),
+            None,
+        )
+        if backend is None:
+            self._simulated(lang)
+            return
+        TracerStrategies.run(backend.strategy, self, dataclasses.replace(request, lang=lang))
+
+    # ── per-language entry points (thin wrappers over the registry) ───────
 
     def trace_go(self, pid: int, duration: float = 10.0, func_regex: str | None = None) -> None:
         print(f"Attaching Go tracer to PID {pid}...")
-        backend = self._pick(["dlv", "perf", "strace"])
-        if backend == "dlv":
-            regex = func_regex or "main\\..*"
-            print(f"Using delve function tracing (pattern: {regex})")
-            self._exec(["dlv", "trace", "-p", str(pid), regex], timeout=duration)
-        elif backend == "perf":
-            print("delve not found — falling back to perf on-CPU sampling")
-            self._perf_profile(pid, duration)
-        elif backend == "strace":
-            print("delve/perf not found — falling back to strace syscall summary")
-            self._strace_summary(pid, duration)
-        else:
-            self._simulated("go")
+        self._run_backends("go", LangTraceRequest("go", pid, duration, func_regex))
 
     def trace_rust(self, pid: int, duration: float = 10.0, func_regex: str | None = None) -> None:
         print(f"Attaching Rust tracer to PID {pid}...")
-        backend = self._pick(["perf", "strace"])
-        if backend == "perf":
-            print("Using perf on-CPU sampling (demangles Rust symbols natively)")
-            self._perf_profile(pid, duration)
-        elif backend == "strace":
-            print("perf not found — falling back to strace syscall summary")
-            self._strace_summary(pid, duration)
-        else:
-            self._simulated("rust")
+        self._run_backends("rust", LangTraceRequest("rust", pid, duration, func_regex))
 
     def trace_java(self, pid: int, duration: float = 10.0, func_regex: str | None = None) -> None:
         print(f"Attaching Java tracer to PID {pid}...")
-        if shutil.which("jcmd"):
-            self._java_thread_snapshot(pid)
-            self._java_flight_recording(pid, duration)
-        elif shutil.which("jstack"):
-            _, out = self._exec_capture(["jstack", str(pid)], timeout=10)
-            print(out[:4000])
-        else:
-            self._simulated("java")
+        self._run_backends("java", LangTraceRequest("java", pid, duration, func_regex))
+
+    def trace_ts(self, pid: int, duration: float = 10.0, func_regex: str | None = None) -> None:
+        print(f"Attaching TypeScript/Node tracer to PID {pid}...")
+        self._run_backends("ts", LangTraceRequest("ts", pid, duration, func_regex))
+
+    # ── java/node helpers used by strategies ──────────────────────────────
 
     def _java_thread_snapshot(self, pid: int) -> None:
         rc, out = self._exec_capture(["jcmd", str(pid), "Thread.print"], timeout=10)
@@ -199,20 +209,6 @@ class LangTraceService:
             print(out[:4000] or "(no execution samples)")
         else:
             print(f"Recording saved to {jfr_file} — open with JDK Mission Control or `jfr print`.")
-
-    def trace_ts(self, pid: int, duration: float = 10.0, func_regex: str | None = None) -> None:
-        print(f"Attaching TypeScript/Node tracer to PID {pid}...")
-        inspector_opened = self._open_node_inspector(pid)
-        if inspector_opened is None:
-            return
-        backend = self._pick(["perf", "strace"])
-        if backend == "perf":
-            print("Sampling on-CPU stacks with perf (start node with --perf-basic-prof for JS symbol names)")
-            self._perf_profile(pid, duration)
-        elif backend == "strace":
-            self._strace_summary(pid, duration)
-        elif not inspector_opened:
-            self._simulated("ts")
 
     def _open_node_inspector(self, pid: int) -> bool | None:
         try:

@@ -1,43 +1,35 @@
-"""Pure detection + error-normalization logic for uni (no IO — unit-testable)."""
-import os
+"""Pure detection + error-normalization logic for uni (no IO — unit-testable).
+
+Detection data and error formats live in the shared LanguageRegistry
+(shared/lang/languages.py); this module only exposes pure lookups over it.
+"""
 import re
 
-EXT_LANG = {
-    ".py": "python", ".go": "go", ".rs": "rust", ".java": "java",
-    ".ts": "ts", ".tsx": "ts", ".js": "js", ".jsx": "js", ".mjs": "js",
-}
+from shared.lang import languages  # noqa: F401 — registers every LanguageSpec
+from shared.lang.registry import LanguageRegistry
 
-# project marker file → language, first match wins
-MARKERS = [
-    ("go.mod", "go"), ("Cargo.toml", "rust"), ("pom.xml", "java"),
-    ("build.gradle", "java"), ("build.gradle.kts", "java"),
-    ("tsconfig.json", "ts"), ("package.json", "js"),
-    ("pyproject.toml", "python"), ("setup.py", "python"),
-]
+MARKERS = tuple(
+    (marker, spec.name)
+    for spec in (LanguageRegistry.get(n) for n in LanguageRegistry.names())
+    for marker in spec.markers
+)
 
-# one regex per compiler/runtime error format → unified (file, line, message)
-ERROR_PATTERNS = [
-    re.compile(r"^(?P<file>[^\s:]+\.go):(?P<line>\d+)(?::\d+)?:\s*(?P<msg>.+)$"),          # go build
-    re.compile(r"^\s*-->\s*(?P<file>[^\s:]+\.rs):(?P<line>\d+):\d+"),                       # rustc/cargo
-    re.compile(r"^(?P<file>[^\s:]+\.java):(?P<line>\d+):\s*error:\s*(?P<msg>.+)$"),         # javac
-    re.compile(r"^(?P<file>[^\s(]+\.[cm]?tsx?)\((?P<line>\d+),\d+\):\s*error\s*(?P<msg>TS\d+:.+)$"),  # tsc
-    re.compile(r'^\s*File "(?P<file>[^"]+)", line (?P<line>\d+)'),                          # python traceback
-]
+ERROR_PATTERNS = tuple(
+    re.compile(pattern)
+    for spec in (LanguageRegistry.get(n) for n in LanguageRegistry.names())
+    for pattern in spec.error_patterns
+)
 
 
 def lang_from_extension(path: str) -> str | None:
-    return EXT_LANG.get(os.path.splitext(path)[1].lower())
+    return LanguageRegistry.lang_for_extension(path)
 
 
-def lang_from_markers(present_files: list[str]) -> str | None:
-    names = set(present_files)
-    for marker, lang in MARKERS:
-        if marker in names:
-            return lang
-    return None
+def lang_from_markers(present_files: list) -> str | None:
+    return LanguageRegistry.lang_for_markers(present_files)
 
 
-def _context_message(lines: list[str], idx: int) -> str:
+def _context_message(lines: list, idx: int) -> str:
     # rustc/python point at file:line on one line with the message on a neighbour
     for ctx in (lines[idx - 1] if idx else "", lines[idx + 1] if idx + 1 < len(lines) else ""):
         stripped = ctx.strip()
@@ -46,9 +38,9 @@ def _context_message(lines: list[str], idx: int) -> str:
     return ""
 
 
-def parse_issues(output: str) -> list[str]:
+def parse_issues(output: str) -> list:
     """Collapse any compiler/runtime output into a unified file:line issue list."""
-    issues: list[str] = []
+    issues: list = []
     lines = output.splitlines()
     for i, line in enumerate(lines):
         for pat in ERROR_PATTERNS:

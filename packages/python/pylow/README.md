@@ -7,7 +7,9 @@
 [![Docker](https://img.shields.io/docker/v/chiefj/pylow-mcp?label=docker&logo=docker)](https://hub.docker.com/r/chiefj/pylow-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Version `0.1.14` — **133 MCP tools** + 126 CLI commands across kernel tracing, Python internals, **multi-language tracing (Go / Rust / Java / TypeScript)**, a **universal build → run → debug → trace front door (`uni`)**, a **persistent polyglot code index**, JSON analysis, HTTP tooling, protocol diagnostics, pipeline patterns, distributed workflow orchestration, and MCP server.
+Version `0.1.14` — **136 MCP tools** + 129 CLI commands across kernel tracing, Python internals, **multi-language tracing (Go / Rust / Java / TypeScript)**, **exact call trees (`calltree`)**, **terminal step debugging with per-step value snapshots (`debug-steps`)**, a **universal build → run → debug → trace front door (`uni`)**, a **persistent polyglot code index**, JSON analysis, HTTP tooling, protocol diagnostics, pipeline patterns, distributed workflow orchestration, and MCP server.
+
+All polyglot features are driven by a single **declarative language registry** (`shared/lang/languages.py`) — supporting a new language means registering one `LanguageSpec`; no engine code changes.
 
 ---
 
@@ -74,7 +76,7 @@ Add to MCP client config (HTTP transport):
 ```
 
 > [!NOTE]
-> The MCP server registers **133 tools** — one per pylow command. All tools return the same plain-text diagnostic output the CLI prints. Pass `pid=0` for tools that use internal mock data and don't need a live process.
+> The MCP server registers **136 tools** — one per pylow command. All tools return the same plain-text diagnostic output the CLI prints. Pass `pid=0` for tools that use internal mock data and don't need a live process.
 
 ---
 
@@ -1709,6 +1711,14 @@ pylow uni all main.go --trace
 pylow index-build .
 pylow index-search process_payment --lang go --kind function
 pylow index-stats .
+
+# ── CALL TREE & STEP DEBUGGING ────────────────────────────────
+pylow calltree demo.py
+pylow calltree Demo.java --filter Demo
+pylow calltree main.go --pid 1234
+pylow debug demo.py --break demo.py:12 --break process_payment
+pylow debug-steps demo.py --break demo.py:2 --watch a --watch b --out steps
+pylow debug-steps Demo.java --break Demo:3 --watch total --out jsteps
 ```
 
 ---
@@ -2020,10 +2030,66 @@ pylow index-stats .
 
 ---
 
-## CATEGORY 13 — MCP Server
+## CATEGORY 13 — Exact Call Trees (`calltree`)
+
+See **exactly what the code does internally**: every function entry as an indented tree with its **exact function name and clickable `file:line`**, noise removed (stdlib, `node:internal`, `node_modules`, non-project frames). The tree is printed and always saved to a text file. Backends are each language's native tooling, chosen by priority from the registry.
+
+### `pylow calltree <target> [--pid N] [--filter f] [--depth N] [--out file] [--args "..."]`
+| Language | Backend (first installed wins) | Exactness |
+|---|---|---|
+| Python | stdlib trace bootstrap | **exact**, per-call durations |
+| Go | `dlv trace` → uftrace → perf | exact (delve) |
+| Java | `jdb` method trace → JFR (attach) | exact entry/exit |
+| Rust | uftrace (`-pg` build) → perf | exact (uftrace) / sampled (perf) |
+| TS/JS | `node --cpu-prof` → parsed `.cpuprofile` | sampled, file:line per frame |
+
+```text
+$ pylow calltree demo.py
+── call tree (exact, project frames only) ──
+└─ <module>  demo.py:1  [0.02ms]
+  └─ main  demo.py:5  [0.02ms]
+    └─ add  demo.py:1  [0.00ms]
+    └─ add  demo.py:1  [0.00ms]
+✓ call tree saved to pylow_calltree_python.txt
+```
+Every node is `function  file:line` — jump straight to the code and edit it.
+
+---
+
+## CATEGORY 14 — Terminal Step Debugging (`debug`, `debug-steps`)
+
+Pure terminal, code-level debugging through each language's **native debugger** (pdb / dlv / rust-gdb / jdb / node inspect), driven by one generic engine over declarative `DebuggerSpec`s. Commands are **paced on the debugger's stop markers** (sent only when the program is actually stopped), so it works even with jdb's async prompt.
+
+### `pylow debug <target> --break file:line --break func`
+Interactive native debugger with breakpoints pre-set (pdb via `-c` flags, dlv via `--init`, gdb via `-ex`; jdb/node print the commands to paste).
+
+### `pylow debug-steps <target> --break file:line [--watch expr ...] [--out dir] [--max-steps N]`
+Runs to **every breakpoint hit**, captures argument/local values (+ your `--watch` expressions), and saves **each stop as a text file**:
+
+```text
+$ pylow debug-steps demo.py --break demo.py:2 --watch a --watch b --out steps
+✓ 2 stop(s) captured → steps/
+  step 001  > /tmp/demo.py(2)add()
+  step 002  > /tmp/demo.py(2)add()
+
+$ cat steps/step_001.txt
+# step 1 — > /tmp/demo.py(2)add()
+-> total = a + b
+(Pdb) a = 2
+b = 3
+(Pdb) {'a': 2, 'b': 3}
+```
+`steps/` also contains `summary.txt` (step → location) and `transcript.txt` (full debugger log). Works identically for Java (`--break Demo:3` → jdb `locals`), Go (dlv `locals`/`args`), Rust (gdb `info locals`), and Node (use `--watch`; node inspect can't dump all locals).
+
+> [!NOTE]
+> **Adding a language**: register one `LanguageSpec` (detection, stage rules, tracer/calltree backends, `DebuggerSpec`) in `src/shared/lang/languages.py`. Every engine — `uni`, `trace-*`, `calltree`, `debug-steps` — picks it up automatically; there are no per-language if/else chains to edit.
+
+---
+
+## CATEGORY 15 — MCP Server
 
 ### `pylow-mcp`
-Start the MCP server (Streamable-HTTP on port 8765 by default). Exposes all 133 pylow tools to any MCP-compatible client.
+Start the MCP server (Streamable-HTTP on port 8765 by default). Exposes all 136 pylow tools to any MCP-compatible client.
 ```bash
 # HTTP mode (MCP Inspector, Cursor, remote clients)
 pylow-mcp
@@ -2053,7 +2119,7 @@ Every CLI command maps to an MCP tool with the same name (hyphens become undersc
 | `pylow mtls-diagnose --cert ... --key ...` | `mtls_diagnose(cert, key)` |
 
 > [!TIP]
-> Use MCP Inspector (`http://localhost:6274` when running docker-compose) to browse all 133 tools, view their schemas, and run them interactively from the browser.
+> Use MCP Inspector (`http://localhost:6274` when running docker-compose) to browse all 136 tools, view their schemas, and run them interactively from the browser.
 
 ---
 

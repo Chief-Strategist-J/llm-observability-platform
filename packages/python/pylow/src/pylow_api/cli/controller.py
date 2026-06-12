@@ -119,7 +119,40 @@ from pytrace_features.live_pipeline.service import LivePipelineService
 from pytrace_features.lang_trace.index import LangTraceService, LangTraceRequest
 from pytrace_features.uni.index import UniService
 from pytrace_features.code_index.index import CodeIndexService
+from pytrace_features.call_tree.index import CallTreeService, CallTreeRequest
+from pytrace_features.step_debug.index import StepDebugService, DebugRequest
 from pytrace_infra.adapters.trace_collector_adapter import RealTraceCollectorAdapter
+
+
+# ── declarative command handlers (registry pattern — no if/elif chains) ──────
+
+def _handle_calltree(args, collector) -> int:
+    service = CallTreeService(collector)
+    service.trace(CallTreeRequest(
+        target=args.target, pid=args.pid, lang=args.lang, filter=args.filter,
+        depth=args.depth, duration=args.duration, out=args.out, args=args.args))
+    return 0
+
+
+def _handle_debug(args, collector) -> int:
+    return StepDebugService(collector).debug(DebugRequest(
+        target=args.target, breaks=tuple(args.breaks or ()), lang=args.lang))
+
+
+def _handle_debug_steps(args, collector) -> int:
+    return StepDebugService(collector).debug_steps(DebugRequest(
+        target=args.target, breaks=tuple(args.breaks or ()),
+        watches=tuple(args.watches or ()), lang=args.lang,
+        out=args.out, max_steps=args.max_steps, args=args.args))
+
+
+COMMAND_HANDLERS = {
+    "calltree": _handle_calltree,
+    "tracetree": _handle_calltree,
+    "debug": _handle_debug,
+    "debug-steps": _handle_debug_steps,
+    "snapshot-debug": _handle_debug_steps,
+}
 
 
 
@@ -682,6 +715,32 @@ def main() -> None:
     index_stats_parser = subparsers.add_parser("index-stats", help="Show symbol index statistics")
     index_stats_parser.add_argument("path", type=str, default=".", nargs="?", help="Indexed root directory (default: .)")
 
+    # Call Tree CLI — exact noise-filtered call tree with file:line per frame
+    calltree_parser = subparsers.add_parser("calltree", aliases=["tracetree"], help="Exact call tree (function + file:line per frame) for any language")
+    calltree_parser.add_argument("target", type=str, help="Source file / project dir / binary")
+    calltree_parser.add_argument("--pid", type=int, default=0, help="Attach to a running PID (backend permitting)")
+    calltree_parser.add_argument("--lang", type=str, default="", help="Override detected language")
+    calltree_parser.add_argument("--filter", type=str, default="", help="Only frames matching this path/package fragment")
+    calltree_parser.add_argument("--depth", type=int, default=25, help="Max tree depth (default: 25)")
+    calltree_parser.add_argument("--duration", type=float, default=15.0, help="Window for attach-mode backends (default: 15s)")
+    calltree_parser.add_argument("--out", type=str, default="", help="Save tree to this file (default: pylow_calltree_<lang>.txt)")
+    calltree_parser.add_argument("--args", type=str, default="", help="Program arguments")
+
+    # Step Debug CLI — terminal debugger with breakpoints + per-step value snapshots
+    debug_parser = subparsers.add_parser("debug", help="Interactive native debugger (pdb/dlv/gdb/jdb/node inspect) with breakpoints pre-set")
+    debug_parser.add_argument("target", type=str, help="Source file / binary / class")
+    debug_parser.add_argument("--break", dest="breaks", action="append", default=[], help="Breakpoint: file:line or function (repeatable)")
+    debug_parser.add_argument("--lang", type=str, default="", help="Override detected language")
+
+    debug_steps_parser = subparsers.add_parser("debug-steps", aliases=["snapshot-debug"], help="Run to each breakpoint, capture variable values, save each stop to a text file")
+    debug_steps_parser.add_argument("target", type=str, help="Source file / binary / class")
+    debug_steps_parser.add_argument("--break", dest="breaks", action="append", default=[], help="Breakpoint: file:line or function (repeatable, required)")
+    debug_steps_parser.add_argument("--watch", dest="watches", action="append", default=[], help="Expression recorded at every stop (repeatable)")
+    debug_steps_parser.add_argument("--out", type=str, default="pylow_steps", help="Directory for step_NNN.txt snapshots (default: pylow_steps)")
+    debug_steps_parser.add_argument("--max-steps", type=int, default=50, help="Stop after this many breakpoint hits (default: 50)")
+    debug_steps_parser.add_argument("--lang", type=str, default="", help="Override detected language")
+    debug_steps_parser.add_argument("--args", type=str, default="", help="Program arguments")
+
 
 
 
@@ -692,6 +751,10 @@ def main() -> None:
     collector = RealTraceCollectorAdapter()
     
     cmd = args.command
+    handler = COMMAND_HANDLERS.get(cmd)
+    if handler:
+        sys.exit(handler(args, collector))
+
     if cmd in ["attach", "listen"]:
         service = AttachService(collector)
         sys.exit(service.attach_and_collect(args.pid))

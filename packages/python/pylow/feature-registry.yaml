@@ -39,3 +39,30 @@ features:
     depends_on_features: []
     depends_on_packages: []
     external_tools:   [ctags]
+
+  - name:             call_tree
+    status:           active
+    contract:         src/pytrace_features/call_tree/contracts/v1.yaml
+    contract_version: v1
+    owner:            "@jaydeep.v"
+    added:            2026-06-12
+    flags: []
+    migrations: []
+    depends_on_features:
+      - lang_trace        # jfr_delegate strategy, via index only
+    depends_on_packages: []
+    shared_modules:   [shared/lang (LanguageRegistry), shared/utils/paced_process]
+    external_tools:   [dlv, uftrace, perf, jdb, javac, node]
+
+  - name:             step_debug
+    status:           active
+    contract:         src/pytrace_features/step_debug/contracts/v1.yaml
+    contract_version: v1
+    owner:            "@jaydeep.v"
+    added:            2026-06-12
+    flags: []
+    migrations: []
+    depends_on_features: []
+    depends_on_packages: []
+    shared_modules:   [shared/lang (LanguageRegistry + DebuggerSpec), shared/utils/paced_process]
+    external_tools:   [python3 (pdb), dlv, rust-gdb, gdb, jdb, javac, node]
