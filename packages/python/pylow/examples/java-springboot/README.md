@@ -2,7 +2,20 @@
 
 This is a standalone Spring Boot project designed for testing compiler diagnostics, runtime instrumentation, and tracing with `pylow`.
 
+## Project Scaffolding (How to Create From Scratch)
+To bootstrap this default Maven project structure from the command line, run:
+```bash
+# Generate the quickstart project structure
+mvn archetype:generate \
+  -DgroupId=com.example \
+  -DartifactId=java-springboot \
+  -DarchetypeArtifactId=maven-archetype-quickstart \
+  -DinteractiveMode=false
+```
+Then, update `pom.xml` to include Spring Boot dependencies and write your application classes.
+
 ## How to Run, Debug, and Code
+
 
 ### How to Run
 * **Native Toolchain:** Run the Spring Boot application using Maven:

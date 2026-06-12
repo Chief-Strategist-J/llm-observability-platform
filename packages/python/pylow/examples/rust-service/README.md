@@ -2,7 +2,15 @@
 
 This is a standalone Rust package designed for testing Rust compile errors, cargo layouts, and debug capabilities using `pylow`.
 
+## Project Scaffolding (How to Create From Scratch)
+To bootstrap this default Rust project structure from the command line, run:
+```bash
+# Generate the cargo binary application template
+cargo new rust-service --bin
+```
+
 ## How to Run, Debug, and Code
+
 
 ### How to Run
 * **Native Toolchain:**

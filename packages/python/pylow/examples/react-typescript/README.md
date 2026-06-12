@@ -2,7 +2,15 @@
 
 This is a Vite-powered React and TypeScript project designed to test front-end compiler outputs, tsconfig/package configs, and runtime performance analyzer integrations.
 
+## Project Scaffolding (How to Create From Scratch)
+To bootstrap this default React TypeScript (Vite) project structure from the command line, run:
+```bash
+# Generate the Vite + React TS project structure
+npx create-vite@latest react-typescript --template react-ts
+```
+
 ## How to Run, Debug, and Code
+
 
 ### How to Run
 * **Native Toolchain:**

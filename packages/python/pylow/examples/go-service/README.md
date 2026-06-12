@@ -2,7 +2,18 @@
 
 This is a standalone Go service package designed for testing Go compiler diagnostics, symbol indexers, and tracing hooks inside `pylow`.
 
+## Project Scaffolding (How to Create From Scratch)
+To bootstrap this default Go module structure from the command line, run:
+```bash
+# Create directory and initialize module
+mkdir go-service
+cd go-service
+go mod init go-service
+```
+Then create a simple `main.go` file with your handler logic.
+
 ## How to Run, Debug, and Code
+
 
 ### How to Run
 * **Native Toolchain:**

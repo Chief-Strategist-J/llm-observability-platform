@@ -2,7 +2,15 @@
 
 This is a clean, workspace-configured Angular application designed to verify angular.json/tsconfig detection, component compiling, and runtime inspection tools in `pylow`.
 
+## Project Scaffolding (How to Create From Scratch)
+To bootstrap this default Angular project structure from the command line, run:
+```bash
+# Generate the Angular workspace and application
+npx @angular/cli new angular-project --defaults --routing=false --style=css --skip-git
+```
+
 ## How to Run, Debug, and Code
+
 
 ### How to Run
 * **Native Toolchain:**
