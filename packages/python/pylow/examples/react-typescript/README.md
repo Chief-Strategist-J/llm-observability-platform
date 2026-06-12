@@ -1,73 +1,82 @@
-# React + TypeScript + Vite
+# React TypeScript Example Project
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is a Vite-powered React and TypeScript project designed to test front-end compiler outputs, tsconfig/package configs, and runtime performance analyzer integrations.
 
-Currently, two official plugins are available:
+## How to Run, Debug, and Code
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### How to Run
+* **Native Toolchain:**
+  ```bash
+  npm install
+  npm run dev
+  ```
+* **Via pylow:**
+  ```bash
+  pylow uni run src/main.tsx
+  ```
 
-## React Compiler
+### How to Debug
+* **Native Toolchain:** Open browser devtools (`F12`), or inspect Node.js processes via inspect flags:
+  ```bash
+  node --inspect-brk node_modules/.bin/vite
+  ```
+* **Via pylow (Interactive):** Launch node inspect debugging:
+  ```bash
+  pylow uni debug src/main.tsx
+  ```
+* **Via pylow (Step Debugging):** Capture step snapshots:
+  ```bash
+  pylow debug-steps src/main.tsx --break App.tsx:6 --watch count --out reactsteps
+  ```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### How to Code
+* Main interface logic is in [App.tsx](file:///home/btpl-lap-22/live/obs/packages/python/pylow/examples/react-typescript/src/App.tsx).
+* Bootstrapping entrypoint is in [main.tsx](file:///home/btpl-lap-22/live/obs/packages/python/pylow/examples/react-typescript/src/main.tsx).
+* App configuration is in [vite.config.ts](file:///home/btpl-lap-22/live/obs/packages/python/pylow/examples/react-typescript/vite.config.ts).
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 35+ Critical Daily React / TypeScript Commands
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### NPM & Package Management
+1. `npm install` - Install project dependencies
+2. `npm install <pkg>` - Install package and save to dependencies
+3. `npm install -D <pkg>` - Install package to devDependencies
+4. `npm uninstall <pkg>` - Remove a package
+5. `npm update` - Update packages in package.json
+6. `npm audit` - Check for security vulnerabilities in dependencies
+7. `npm audit fix` - Automatically resolve dependency issues
+8. `npm outdated` - Check for outdated packages
+9. `npm ci` - Clean install dependencies (deterministic, uses lockfile)
+10. `npm run build` - Compile the React app for production
+11. `npm run dev` - Run Vite development server
+12. `npm run preview` - Serve production build locally
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### TypeScript & Linting
+13. `npx tsc` - Run TypeScript compiler check
+14. `npx tsc --noEmit` - Type-check code without generating files
+15. `npx tsc --watch` - Run compiler in watch mode
+16. `npx eslint .` - Lint JavaScript/TypeScript files
+17. `npx eslint . --fix` - Automatically fix lint warnings
+18. `npx prettier --write .` - Format code styling with Prettier
+19. `npx tsc-files <file>` - Type-check specific files on git-stage
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### Unified Dev commands (`pylow`)
+20. `pylow uni doctor` - View toolchain diagnoses (node, tsc, tsc-node)
+21. `pylow uni detect .` - Auto-detect package.json & tsconfig specs
+22. `pylow uni build package.json` - Compile Vite assets and catch errors
+23. `pylow uni run src/main.tsx` - Start dev/runtime services
+24. `pylow uni debug src/main.tsx` - Attach Node inspector session
+25. `pylow uni trace . --pid <PID>` - Inspect network requests / process events
+26. `pylow uni all src/main.tsx --trace` - Full build-run-trace flow
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### Performance & Symbol Search
+27. `pylow calltree src/main.tsx` - Sample and render component call-tree
+28. `pylow calltree package.json --depth 3` - Inspect app dependencies execution
+29. `pylow debug-steps src/App.tsx --break App.tsx:6` - Track hook and state changes
+30. `pylow index-build .` - Index components, types, interfaces, hooks
+31. `pylow index-search App` - Instantly locate React components in filesystem
+32. `npm run lint && npm run build` - Pre-flight staging verification
+33. `npx vite optimize` - Force pre-bundling of dependencies
+34. `npx depcheck` - Find unused dependencies in package.json
+35. `npm list --depth=0` - View high-level installed packages
