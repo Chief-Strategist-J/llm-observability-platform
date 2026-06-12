@@ -633,11 +633,11 @@ This score is used to rank candidate rollouts in Best-of-$N$ sampling or guide s
   \node[datblk] (sol) {\textbf{Solution} \\ (Steps $s_{1..N}$)};
   \node[grayblk, right=of sol] (prm) {\textbf{Process Reward} \\ (Annotator)};
   \node[trnblk, right=0.6cm of prm, minimum height=2.2cm, minimum width=2.2cm] (labels) {\textbf{Step} \\ \textbf{Labels} \\ ($r_1,..,r_N$)};
-  \node[lossblk, right=of labels] (loss) {\textbf{Weighted} \\ (SFT Loss)};
+  \node[lossblk, right=1.6cm of labels] (loss) {\textbf{Weighted} \\ (SFT Loss)};
   \node[mrgblk, below=0.9cm of loss] (out) {\textbf{Process-Supervised} \\ (Model)};
 
-  \node[green!60!black,draw,rounded corners,font=\tiny,minimum width=1.5cm] at ($(labels.east)+(0,0.5)$) {$r_n{=}{+}1$: train};
-  \node[red!70!black,draw,rounded corners,font=\tiny,minimum width=1.5cm] at ($(labels.east)+(0,-0.5)$) {$r_n{=}{-}1$: skip};
+  \node[green!60!black,draw,rounded corners,font=\tiny,minimum width=1.5cm] at ($(labels.east)+(0.8,0.5)$) {$r_n{=}{+}1$: train};
+  \node[red!70!black,draw,rounded corners,font=\tiny,minimum width=1.5cm] at ($(labels.east)+(0.8,-0.5)$) {$r_n{=}{-}1$: skip};
 
   \draw[arr] (sol)--(prm);
   \draw[arr] (prm)--(labels);
