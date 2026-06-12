@@ -1,13 +1,13 @@
 # pylow
 
-**One CLI. Zero code changes. Full system flow visibility for any Python service or distributed system.**
+**One CLI. Zero code changes. Full system flow visibility for any service — Python, Go, Rust, Java, TypeScript — or distributed system.**
 
 [![PyPI version](https://img.shields.io/pypi/v/pylow.svg)](https://pypi.org/project/pylow/)
 [![Python](https://img.shields.io/pypi/pyversions/pylow.svg)](https://pypi.org/project/pylow/)
 [![Docker](https://img.shields.io/docker/v/chiefj/pylow-mcp?label=docker&logo=docker)](https://hub.docker.com/r/chiefj/pylow-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Version `0.1.14` — **118 MCP tools** + 118 CLI commands across kernel tracing, Python internals, JSON analysis, HTTP tooling, protocol diagnostics, pipeline patterns, distributed workflow orchestration, and MCP server.
+Version `0.1.14` — **133 MCP tools** + 126 CLI commands across kernel tracing, Python internals, **multi-language tracing (Go / Rust / Java / TypeScript)**, a **universal build → run → debug → trace front door (`uni`)**, a **persistent polyglot code index**, JSON analysis, HTTP tooling, protocol diagnostics, pipeline patterns, distributed workflow orchestration, and MCP server.
 
 ---
 
@@ -74,7 +74,7 @@ Add to MCP client config (HTTP transport):
 ```
 
 > [!NOTE]
-> The MCP server registers **113 tools** — one per pylow command. All tools return the same plain-text diagnostic output the CLI prints. Pass `pid=0` for tools that use internal mock data and don't need a live process.
+> The MCP server registers **133 tools** — one per pylow command. All tools return the same plain-text diagnostic output the CLI prints. Pass `pid=0` for tools that use internal mock data and don't need a live process.
 
 ---
 
@@ -1688,6 +1688,27 @@ pylow graphql-nplus1 --url https://api.example.com/graphql
 pylow ws-handshake --url wss://api.example.com/ws
 pylow infra-fingerprint --url https://api.example.com/payments
 pylow diff-fuzz --url-a https://api-v1.example.com --url-b https://api-v2.example.com
+
+# ── MULTI-LANGUAGE TRACING ────────────────────────────────────
+pylow trace-go <PID> --duration 10 --func-regex 'main\..*'
+pylow trace-rust <PID> --duration 10
+pylow trace-java <PID> --duration 15
+pylow trace-ts <PID> --duration 10
+pylow trace-ts 0 --cmd "node app.js"
+
+# ── UNIVERSAL DEV TOOL ────────────────────────────────────────
+pylow uni doctor
+pylow uni detect ./my-service
+pylow uni build main.go
+pylow uni run app.ts --args "--port 3000"
+pylow uni debug svc.py
+pylow uni trace ./my-service --pid 1234
+pylow uni all main.go --trace
+
+# ── CODE INDEX ────────────────────────────────────────────────
+pylow index-build .
+pylow index-search process_payment --lang go --kind function
+pylow index-stats .
 ```
 
 ---
@@ -1896,10 +1917,113 @@ pylow pipeline-tap normalize
 ---
 
 
-## CATEGORY 10 — MCP Server
+## CATEGORY 10 — Multi-Language Tracing (Go / Rust / Java / TypeScript)
+
+pylow does not re-implement tracers for other runtimes — it orchestrates each ecosystem's **native tooling** and picks the best backend installed on your machine. Every external command is echoed before it runs, so you always see exactly what happened. If no native tooling is found, a simulated sample is shown (same behavior as the Python tracers).
+
+### `pylow trace-go <PID> [--duration <sec>] [--func-regex <re>] [--cmd <command>]`
+Trace a running Go process. Backend priority: **delve (`dlv trace`)** → **perf on-CPU sampling** → **strace syscall summary**.
+```bash
+pylow trace-go 1234 --duration 10
+pylow trace-go 1234 --func-regex 'main\..*'      # delve function pattern
+pylow trace-go 0 --cmd "go run ./cmd/server"     # launch traced instead of attaching
+```
+
+---
+
+### `pylow trace-rust <PID> [--duration <sec>]`
+Trace a running Rust process. Backend priority: **perf** (demangles Rust symbols natively) → **strace**.
+```bash
+pylow trace-rust 1234 --duration 10
+```
+
+---
+
+### `pylow trace-java <PID> [--duration <sec>]`
+Trace a running JVM. Uses **jcmd Thread.print** for an instant thread snapshot, then starts a **Java Flight Recorder** recording and prints execution samples (`jfr print`). Falls back to **jstack**.
+```bash
+pylow trace-java 1234 --duration 15
+```
+
+---
+
+### `pylow trace-ts <PID> [--duration <sec>]`
+Trace a running Node/TypeScript process. Sends **SIGUSR1** to open the **V8 inspector** (connect with chrome://inspect or VS Code) and samples on-CPU stacks with **perf**/**strace**.
+```bash
+pylow trace-ts 1234 --duration 10
+pylow trace-ts 0 --cmd "node app.js"             # launches with --cpu-prof, writes .cpuprofile
+```
+
+---
+
+## CATEGORY 11 — Universal Dev Tool (`uni`)
+
+One daily-driver command for polyglot work: detects the language of any file or project, then compiles, runs, debugs, and traces it through its **own native toolchain** (go/cargo/javac/mvn/gradle/tsc/node/python, dlv/gdb/jdb/pdb). Compiler and runtime errors from **every language** are normalized into one unified `file:line  message` issue list so the broken spot is always explicit.
+
+### `pylow uni <action> [target]`
+Actions: `detect` · `doctor` · `build` · `run` · `debug` · `trace` · `all` (aliases: `pylow x`, `pylow dev`)
+```bash
+pylow uni doctor                         # which toolchains are installed?
+pylow uni detect ./my-service            # language + toolchain availability
+pylow uni build main.go                  # go build (errors → unified issue list)
+pylow uni run app.ts --args "--port 3000"
+pylow uni debug svc.py                   # launches pdb / dlv / gdb / jdb / node inspect
+pylow uni trace ./my-service --pid 1234  # delegates to the right language tracer
+pylow uni all main.go --trace            # detect → build → run → trace, stops at first failure
+```
+
+Language detection: by extension (`.py .go .rs .java .ts .tsx .js`) or by project marker (`go.mod`, `Cargo.toml`, `pom.xml`, `build.gradle`, `tsconfig.json`, `package.json`, `pyproject.toml`).
+
+```text
+$ pylow uni build /tmp/Demo.java
+[uni] build (java)
+→ exec: javac /tmp/Demo.java
+
+── issues ──────────────────────────────────────
+  ✗ /tmp/Demo.java:3  cannot find symbol
+```
+
+---
+
+## CATEGORY 12 — Code Index
+
+A persistent, **incremental** symbol index over any polyglot codebase (SQLite at `<root>/.pylow_index.db`) — find any function/class/struct instantly instead of re-scanning from scratch. Uses **universal-ctags** when installed, built-in extractors for Python/Go/Rust/Java/TS/JS otherwise. Re-runs only touch files whose mtime changed.
+
+### `pylow index-build [path] [--force]`
+```bash
+pylow index-build .                      # first run indexes everything
+pylow index-build .                      # second run: "changed: 0" — instant
+```
+
+---
+
+### `pylow index-search <query> [--path <dir>] [--lang <l>] [--kind <k>] [--limit <n>]`
+Ranked exact > prefix > substring. Alias: `pylow find-symbol`.
+```bash
+pylow index-search process_payment
+pylow index-search Service --lang go --kind struct --limit 10
+```
+```text
+2 match(es) for 'LangTrace' (of 2 candidates):
+
+  LangTraceService                 class      python  pytrace_features/lang_trace/service.py:49
+  LangTraceRequest                 class      python  pytrace_features/lang_trace/types.py:15
+```
+
+---
+
+### `pylow index-stats [path]`
+File/symbol counts per language and kind.
+```bash
+pylow index-stats .
+```
+
+---
+
+## CATEGORY 13 — MCP Server
 
 ### `pylow-mcp`
-Start the MCP server (Streamable-HTTP on port 8765 by default). Exposes all 113 pylow tools to any MCP-compatible client.
+Start the MCP server (Streamable-HTTP on port 8765 by default). Exposes all 133 pylow tools to any MCP-compatible client.
 ```bash
 # HTTP mode (MCP Inspector, Cursor, remote clients)
 pylow-mcp
@@ -1929,7 +2053,7 @@ Every CLI command maps to an MCP tool with the same name (hyphens become undersc
 | `pylow mtls-diagnose --cert ... --key ...` | `mtls_diagnose(cert, key)` |
 
 > [!TIP]
-> Use MCP Inspector (`http://localhost:6274` when running docker-compose) to browse all 113 tools, view their schemas, and run them interactively from the browser.
+> Use MCP Inspector (`http://localhost:6274` when running docker-compose) to browse all 133 tools, view their schemas, and run them interactively from the browser.
 
 ---
 

@@ -1,0 +1,41 @@
+# pylow feature registry — tracks feature lifecycle, contracts, and dependencies.
+# Features added before 2026-06-12 predate this registry and are tracked in README.md;
+# every feature added from now on must be registered here.
+
+features:
+  - name:             lang_trace
+    status:           active
+    contract:         src/pytrace_features/lang_trace/contracts/v1.yaml
+    contract_version: v1
+    owner:            "@jaydeep.v"
+    added:            2026-06-12
+    flags: []
+    migrations: []
+    depends_on_features: []
+    depends_on_packages: []
+    external_tools:   [dlv, perf, strace, ltrace, jcmd, jstack, jfr, node]
+
+  - name:             uni
+    status:           active
+    contract:         src/pytrace_features/uni/contracts/v1.yaml
+    contract_version: v1
+    owner:            "@jaydeep.v"
+    added:            2026-06-12
+    flags: []
+    migrations: []
+    depends_on_features:
+      - lang_trace        # via pytrace_features.lang_trace.index only
+    depends_on_packages: []
+    external_tools:   [python3, go, cargo, rustc, javac, mvn, gradle, java, tsc, tsx, ts-node, node, dlv, rust-gdb, gdb, lldb, jdb, perf, strace]
+
+  - name:             code_index
+    status:           active
+    contract:         src/pytrace_features/code_index/contracts/v1.yaml
+    contract_version: v1
+    owner:            "@jaydeep.v"
+    added:            2026-06-12
+    flags: []
+    migrations: []    # storage is a local SQLite file (.pylow_index.db), no shared DB
+    depends_on_features: []
+    depends_on_packages: []
+    external_tools:   [ctags]

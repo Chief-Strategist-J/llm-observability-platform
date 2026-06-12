@@ -65,3 +65,11 @@ runbooks:
     description: Records the architecture and design decisions for Phase 2 Coherence and Faithfulness metrics aggregation, dynamic weight renormalization, and database migration safety rules.
 
 
+
+  - id: 20260612-006-pylow-polyglot-tracing-uni-code-index
+    title: "ADR-006: pylow Polyglot Tracing, Universal uni Tool, and Code Index"
+    category: decisions
+    status: accepted
+    path: decisions/20260612-006-pylow-polyglot-tracing-uni-code-index.md
+    package: packages/python/pylow
+    description: Records the decision to extend pylow tracing to Go/Rust/Java/TypeScript by orchestrating native tooling (dlv, perf, strace, jcmd, JFR, V8 inspector), add the universal uni build/run/debug/trace front door with unified file:line issue reporting, and add an incremental SQLite code index with ctags-preferred extraction.

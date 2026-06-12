@@ -1019,3 +1019,14 @@
         ├── adr-definition -> Add 20260609-005-coherence-faithfulness-pipeline.md detailing decisions, context, and FFSB prevention modes.
         ├── registry -> Add entry for ADR-005 in notebooks/runbooks/registry.yaml
         └── changelog -> Update change.log with the ascii decision tree
+
+[2026-06-12T13:05:00+05:30] Add pylow multi-language tracing (go/rust/java/ts), universal uni tool, and incremental code index
+└── File: packages/python/pylow/src/pytrace_features/lang_trace/{contracts/v1.yaml,contracts/changelog.md,index.py,types.py,service.py}, packages/python/pylow/src/pytrace_features/uni/{contracts/v1.yaml,contracts/changelog.md,index.py,detect.py,service.py}, packages/python/pylow/src/pytrace_features/code_index/{contracts/v1.yaml,contracts/changelog.md,index.py,extractors.py,service.py}, packages/python/pylow/src/pylow_api/cli/controller.py, packages/python/pylow/src/pylow_api/mcp/server.py, packages/python/pylow/feature-registry.yaml, packages/python/pylow/tests/unit/{test_lang_trace.py,test_uni_detect.py,test_uni_service.py,test_code_index_extractors.py}, packages/python/pylow/tests/integration/test_code_index_build.py, packages/python/pylow/README.md, notebooks/runbooks/decisions/20260612-006-pylow-polyglot-tracing-uni-code-index.md, notebooks/runbooks/registry.yaml, .gitignore
+    ├── Choice: Orchestrate existing native tooling (dlv, perf, strace, jcmd, JFR, jstack, V8 inspector, go/cargo/javac/mvn/gradle/tsc/node, ctags) instead of writing tracers/compilers/indexers from scratch; contracts-first per feature; pure logic split out (detect.py, extractors.py) for IO-free unit tests; ADR-006 records rationale and FFSB analysis.
+    └── Changes:
+        ├── lang_trace -> trace-go/trace-rust/trace-java/trace-ts CLI + trace_go/trace_rust/trace_java/trace_ts/trace_cmd MCP tools with priority backend fallback and simulated output when no tooling installed
+        ├── uni -> uni <detect|doctor|build|run|debug|trace|all> CLI (aliases x, dev) + uni_* MCP tools; language detection by extension/marker; unified file:line issue list parsed from go/rustc/javac/tsc/python error formats
+        ├── code_index -> index-build/index-search/index-stats CLI + index_* MCP tools; incremental SQLite index (.pylow_index.db, gitignored) with mtime skip, deleted-file pruning, ctags-preferred extraction, exact>prefix>substring ranking
+        ├── registration -> controller.py dispatch + server.py FastMCP tools (118 -> 133 MCP tools, 118 -> 126 CLI commands) + diagnose_polyglot_service MCP prompt
+        ├── governance -> pylow feature-registry.yaml introduced; ADR-006 added and registered in runbooks registry.yaml
+        └── tests/docs -> 33 unit tests (mock-based, no IO) + 4 integration tests (tmp FS/SQLite); README categories 10-12 added, tool counts and quick reference updated
