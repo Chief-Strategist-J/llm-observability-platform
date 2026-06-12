@@ -39,6 +39,7 @@ where $\beta$ is a regularizing coefficient, and the KL term at each token gener
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   % Phase 1: RM training
   \node[datblk] (human) {\textbf{Human} \\ \textbf{Comparisons} \\ ($(y_w \succ y_l)$)};
@@ -62,6 +63,7 @@ where $\beta$ is a regularizing coefficient, and the KL term at each token gener
   \node[font=\small\bfseries,red] at ($(human)!0.5!(rm)+(0,0.8)$) {Phase 1: RM};
   \node[font=\small\bfseries,blue!70] at ($(ref)!0.5!(policy)+(0,-0.7)$) {Phase 2: PPO};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{RLHF: reward model trained on human comparisons then used to guide PPO policy optimisation.}
 \end{figure}
 
@@ -108,6 +110,7 @@ Substituting this expression into the Bradley-Terry preference probability $P(y_
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   \node[datblk] (pairs) {\textbf{Preference Pairs} \\ ($(x, y_w, y_l)$)};
   \node[trnblk, above right=0.6cm and 1.5cm of pairs] (pol) {\textbf{Policy} \\ ($\pi_\theta$)};
@@ -123,6 +126,7 @@ Substituting this expression into the Bradley-Terry preference probability $P(y_
 
   \node[font=\tiny,red,align=center,below=0.3cm of ratio] {no RM needed\\no sampling loop};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{DPO: both policy and frozen reference score chosen/rejected responses; loss uses their log-ratio difference.}
 \end{figure}
 
@@ -158,6 +162,7 @@ This bounds the likelihood shift of both preferred and dispreferred sequences, p
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   \node[datblk] (pairs) {\textbf{Pairs} \\ ($(x,y_w,y_l)$)};
   \node[trnblk, above right=0.5cm and 1.4cm of pairs] (pol) {\textbf{Policy $\pi_\theta$}};
@@ -175,6 +180,7 @@ This bounds the likelihood shift of both preferred and dispreferred sequences, p
 
   \node[font=\tiny,align=center,below=0.3cm of loss] {bounded: $h \to \frac{1}{2\beta}$};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{IPO: like DPO but the log-ratio gap is penalised toward a finite target $1/(2\beta)$.}
 \end{figure}
 
@@ -206,6 +212,7 @@ The SFT term increases $\pi_\theta(y_w|x)$ while the odds-ratio term simultaneou
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[datblk] (data) {\textbf{$(x, y_w, y_l)$}};
   \node[trnblk, right=of data] (pol) {\textbf{Policy} \\ ($\pi_\theta$)};
@@ -221,6 +228,7 @@ The SFT term increases $\pi_\theta(y_w|x)$ while the odds-ratio term simultaneou
 
   \node[font=\tiny,red,align=center,below=0.2cm of or] {no ref model};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{ORPO: SFT loss on the chosen response combined with an odds-ratio preference contrast.}
 \end{figure}
 
@@ -261,6 +269,7 @@ and $w(y)$ is a weighting factor balancing positive and negative feedback freque
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[datblk] (data) {\textbf{Individual Samples} \\ ($(x, y, z\in\{0,1\})$)};
   \node[trnblk, right=of data] (pol) {\textbf{Policy $\pi_\theta$}};
@@ -278,6 +287,7 @@ and $w(y)$ is a weighting factor balancing positive and negative feedback freque
   \draw[arr] (kl.east) -| (util.south);
   \draw[arr] (util)--(out);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{KTO: each sample is individually labelled good/bad; utility function uses prospect theory asymmetry.}
 \end{figure}
 
@@ -314,6 +324,7 @@ where $\gamma > 0$ is a target margin that forces the average likelihood of the 
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[datblk] (data) {\textbf{$(x, y_w, y_l)$}};
   \node[trnblk, right=of data] (pol) {\textbf{Policy $\pi_\theta$} \\ (only copy)};
@@ -329,6 +340,7 @@ where $\gamma > 0$ is a target margin that forces the average likelihood of the 
 
   \node[red,font=\tiny,align=center,below=0.3cm of pol] {no reference\\model needed};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{SimPO: length-normalised log-probs replace the reference log-ratio; margin $\gamma$ enforces quality gap.}
 \end{figure}
 
@@ -364,6 +376,7 @@ where $\mu \geq 0$ is a dual variable updated online to enforce the constraint.
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   \node[datblk] (data) {\textbf{$(x, y_w, y_l)$}};
   \node[trnblk, right=of data] (pol) {\textbf{Policy $\pi_\theta$}};
@@ -381,6 +394,7 @@ where $\mu \geq 0$ is a dual variable updated online to enforce the constraint.
   \draw[arr] (kl.east)-|(mu.south);
   \draw[arr] (mu)--(out);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{CPO: reward maximisation with an explicit KL constraint; dual variable $\mu$ adapts online.}
 \end{figure}
 
@@ -412,6 +426,7 @@ The anchor term is minimised when both the chosen and rejected log-ratios equal 
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[datblk] (data) {\textbf{$(x,y_w,y_l)$}};
   \node[trnblk, right=of data] (pol) {\textbf{$\pi_\theta$}};
@@ -428,6 +443,7 @@ The anchor term is minimised when both the chosen and rejected log-ratios equal 
   \draw[arr] (pref.east) -| (total.north);
   \draw[arr] (anchor.east) -| (total.south);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{APO: combines standard preference loss with an anchor regulariser against the reference model.}
 \end{figure}
 
@@ -459,6 +475,7 @@ where $\text{score}(y^{(k)}) = \log P_\theta(y^{(k)}|x)/|y^{(k)}|$ is the normal
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
   \node[datblk] (x) {\textbf{Prompt $x$}};
   \node[trnblk, right=of x] (gen) {\textbf{Generate} \\ ($K$ Responses)};
@@ -473,6 +490,7 @@ where $\text{score}(y^{(k)}) = \log P_\theta(y^{(k)}|x)/|y^{(k)}|$ is the normal
   \draw[arr] (rank)--(loss);
   \draw[arr] (loss)--(out);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{RRHF: $K$ responses are generated and ranked; policy trained to match rank order via pairwise loss.}
 \end{figure}
 
@@ -507,6 +525,7 @@ These AI-generated preferences are then used identically to human preferences to
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   \node[datblk] (pairs) {\textbf{Response} \\ (Pairs $(y_i, y_j)$)};
   \node[orangeblk, right=of pairs] (ai) {\textbf{AI Annotator} \\ ($\mathcal{A}$ (GPT-4, etc.))};
@@ -523,6 +542,7 @@ These AI-generated preferences are then used identically to human preferences to
 
   \node[font=\tiny,red,align=center,below=0.3cm of ai] {replaces human\\annotation};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{RLAIF: an AI model generates preference labels at scale, replacing costly human annotators.}
 \end{figure}
 
@@ -554,6 +574,7 @@ Two training phases: (1) supervised revision via critique-revise loop, (2) RLHF 
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.65cm and 1.0cm]
   % Critique-revise loop
   \node[datblk] (red) {\textbf{Red-team} \\ (Prompt $x$)};
@@ -578,6 +599,7 @@ Two training phases: (1) supervised revision via critique-revise loop, (2) RLHF 
   \draw[arr] (aifb)--(rl);
   \draw[arr] (rl)--(out);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Constitutional AI: critique-revise loop creates SFT data; AI feedback from constitution guides RLHF.}
 \end{figure}
 
@@ -619,6 +641,7 @@ where $V_\phi$ is the value network parameters, $\gamma$ is the discount factor,
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   \node[datblk, minimum size=1.6cm] (env) {\textbf{Prompt} \\ (Environment)};
   \node[trnblk, right=of env] (actor) {\textbf{Actor} \\ ($\pi_\theta$)};
@@ -637,6 +660,7 @@ where $V_\phi$ is the value network parameters, $\gamma$ is the discount factor,
   \draw[arr] (adv)--(upd);
   \draw[arr,dashed,blue!60] (upd.west) |- (actor.south) node[midway,below,font=\tiny]{clip $\rho \in [1\pm\epsilon]$};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{PPO: actor generates trajectory, critic estimates value, advantage drives clipped surrogate update.}
 \end{figure}
 
@@ -677,6 +701,7 @@ where the probability ratio $\rho_i(\theta)$ is defined as:
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
   \node[datblk] (x) {\textbf{Prompt $x$}};
   \node[trnblk, right=of x] (pol) {\textbf{Policy $\pi_\theta$}};
@@ -693,6 +718,7 @@ where the probability ratio $\rho_i(\theta)$ is defined as:
 
   \node[red,font=\tiny,align=center,below=0.3cm of pol] {no critic\\network};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{GRPO: group of responses scored together; within-group normalised reward replaces value network.}
 \end{figure}
 
@@ -727,6 +753,7 @@ The process repeats: train on correct outputs, generate new candidates, filter a
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[datblk] (prob) {\textbf{Problems} \\ ($\{x_i\}$)};
   \node[trnblk, right=of prob] (pol) {\textbf{Policy $\pi_\theta$} \\ (Sample $K$)};
@@ -744,6 +771,7 @@ The process repeats: train on correct outputs, generate new candidates, filter a
   \draw[arr] (sft)--(newpol);
   \draw[arr,dashed,green!60!black] (newpol.north) |- (pol.south) node[midway,below,font=\tiny]{iterate};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{RFT: policy samples $K$ solutions, verifier filters correct ones, SFT improves the policy iteratively.}
 \end{figure}
 
@@ -778,6 +806,7 @@ For LLMs, the trajectory is the token sequence, each token is an action, and $r_
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[datblk] (state) {\textbf{State $s$} \\ (Prompt)};
   \node[trnblk, right=of state] (pol) {\textbf{Policy} \\ ($\pi_\theta$)};
@@ -793,6 +822,7 @@ For LLMs, the trajectory is the token sequence, each token is an action, and $r_
   \draw[arr] (ret)--(upd);
   \draw[arr,dashed,green!60!black] (upd.north) |- (pol.south) node[midway,below,font=\tiny]{update $\theta$};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{REINFORCE: policy samples action sequence, receives return $G$, updates via policy gradient.}
 \end{figure}
 
@@ -827,6 +857,7 @@ A3C extends A2C with asynchronous parallel workers each running independent envi
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[frzblk, minimum height=2.0cm] (backbone) {\textbf{Shared} \\ \textbf{Transformer} \\ (Backbone)};
   \node[trnblk, above right=0.5cm and 1.3cm of backbone] (actor) {\textbf{Policy} \\ (Head $\pi_\theta$)};
@@ -843,6 +874,7 @@ A3C extends A2C with asynchronous parallel workers each running independent envi
   \draw[arr] (adv)--(upd);
   \draw[arr,dashed,green!60!black] (upd.south) -- ++(0,-0.4) -| (backbone.south);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{A2C: shared backbone feeds actor (policy) and critic (value) heads; advantage combines their outputs.}
 \end{figure}
 
@@ -877,6 +909,7 @@ This creates an ever-escalating difficulty curriculum since the opponent improve
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[trnblk] (cur) {\textbf{Current Policy} \\ ($\pi_\theta$ (trains))};
   \node[frzblk, below=1.0cm of cur] (old) {\textbf{Past Policy} \\ ($\pi_{\theta_{\text{old}}}$ (frozen snapshot))};
@@ -893,6 +926,7 @@ This creates an ever-escalating difficulty curriculum since the opponent improve
   \draw[arr,dashed,green!60!black] (snap.west) -| (old.east) node[midway,right,font=\tiny]{update snapshot};
   \draw[arr,dashed,green!60!black] (rl.north) |- (cur.east) node[midway,above,font=\tiny]{train};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Self-Play RL: current policy competes against a frozen past snapshot; win/loss drives RL updates.}
 \end{figure}
 
@@ -927,6 +961,7 @@ where $W(n)$ is total rollout reward and $N(n)$ is visit count. The policy is im
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.5cm and 0.9cm]
   \node[datblk,minimum width=1.6cm] (root) {\textbf{Root} \\ (State)};
   \node[trnblk, right=0.7cm of root,minimum width=1.6cm] (sel) {\textbf{Select} \\ (UCT)};
@@ -942,6 +977,7 @@ where $W(n)$ is total rollout reward and $N(n)$ is visit count. The policy is im
   \draw[arr] (back.south) -- ++(0,-0.3) -| (pol.east);
   \draw[arr] (pol.west) -| (sel.south) node[near start,below,font=\tiny]{next iter};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{MCTS-RL: select (UCT), expand, rollout, backpropagate; visit counts guide policy improvement.}
 \end{figure}
 
@@ -976,6 +1012,7 @@ Training uses the full selected trajectory as RL experience:
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
   \node[datblk] (x) {\textbf{Problem $x$}};
   \node[trnblk, right=of x] (pol) {\textbf{Policy $\pi_\theta$} \\ (beam $B$)};
@@ -991,6 +1028,7 @@ Training uses the full selected trajectory as RL experience:
   \draw[arr] (best.south)--(train.north);
   \draw[arr,dashed,green!60!black] (best.east) -- ++(0.5,0) |- (pol.east) node[midway,right,font=\tiny]{next step};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Search-RL: at each step, beam search generates candidates; verifier selects best; policy trained on trajectory.}
 \end{figure}
 
@@ -1022,6 +1060,7 @@ A separate scoring model $s_\phi(x, b_i)$ is trained to evaluate intermediate th
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.5cm and 0.8cm]
   \node[datblk,minimum width=1.6cm] (root) {\textbf{Root} \\ (Thought)};
   \node[trnblk,minimum width=1.4cm, above right=0.3cm and 0.8cm of root] (b1) {\textbf{Branch 1} \\ (good)};
@@ -1041,6 +1080,7 @@ A separate scoring model $s_\phi(x, b_i)$ is trained to evaluate intermediate th
   \draw[arr] (b2.south) -- (score.north);
   \draw[arr] (b3.north) -| (score.north);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{ToT Training: good branches lead to answers; bad branches are pruned; scorer trained to evaluate all.}
 \end{figure}
 
@@ -1075,6 +1115,7 @@ Paths that agree with the majority vote are reinforced; minority paths are not t
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
   \node[datblk] (x) {\textbf{Prompt $x$}};
   \node[trnblk, right=of x] (pol) {\textbf{Sample $K$} \\ (Paths)};
@@ -1091,6 +1132,7 @@ Paths that agree with the majority vote are reinforced; minority paths are not t
   \draw[arr] (winners)--(sft);
   \draw[arr] (sft)--(out);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Self-Consistency Training: majority-vote over $K$ paths identifies winning chains; model trained on those.}
 \end{figure}
 
@@ -1128,6 +1170,7 @@ The RM is typically initialised from a fine-tuned LLM with the final token's hid
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   \node[datblk] (inp) {\textbf{$(x, y)$} \\ (Input)};
   \node[frzblk, right=of inp] (backbone) {\textbf{LLM} \\ (Backbone)};
@@ -1147,6 +1190,7 @@ The RM is typically initialised from a fine-tuned LLM with the final token's hid
   \draw[arr] (yl.east) -| (backbone.south);
   \draw[arr] (score.east) -- ++(0.3,0) |- (loss.west);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Reward Model: LLM backbone maps $(x,y)$ pair to scalar via linear head; trained on chosen/rejected pairs.}
 \end{figure}
 
@@ -1181,6 +1225,7 @@ The PRM is trained on step-level human labels with binary cross-entropy:
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.5cm and 0.8cm]
   \node[datblk,minimum width=1.6cm] (x) {\textbf{Problem} \\ ($x$)};
   \node[trnblk,minimum width=1.4cm, right=0.7cm of x] (s1) {\textbf{Step 1} \\ ($s_1$)};
@@ -1201,6 +1246,7 @@ The PRM is trained on step-level human labels with binary cross-entropy:
   \foreach \a/\b in {x/s1, s1/s2, s2/dots, dots/sT}
     \draw[arr] (\a)--(\b);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{PRM: each reasoning step independently scored; product of step scores gives overall process reward.}
 \end{figure}
 
@@ -1235,6 +1281,7 @@ For open-ended tasks, the ORM is a learned binary classifier trained on (correct
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   \node[datblk] (x) {\textbf{Problem $x$}};
   \node[trnblk, right=of x] (sol) {\textbf{Full} \\ (Solution $y$)};
@@ -1252,6 +1299,7 @@ For open-ended tasks, the ORM is a learned binary classifier trained on (correct
 
   \node[font=\tiny,green!60!black,align=center,above=0.2cm of check] {exact-match\\or learned};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{ORM: scores the final answer against gold; can be rule-based (exact-match) or learned classifier.}
 \end{figure}
 
@@ -1286,6 +1334,7 @@ Verifiers are used in test-time search (Best-of-N) and training-time filtering (
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   \node[datblk] (x) {\textbf{$(x, y)$} \\ (Solution)};
   \node[frzblk, right=of x] (enc) {\textbf{LLM} \\ (Encoder)};
@@ -1300,6 +1349,7 @@ Verifiers are used in test-time search (Best-of-N) and training-time filtering (
   \draw[arr] (thr.east) |- (yes.west);
   \draw[arr] (thr.east) |- (no.west);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Verifier Model: encodes solution, classifies as correct/incorrect via learned threshold.}
 \end{figure}
 
@@ -1334,6 +1384,7 @@ where $c$ is the gold critique. Critics enable self-refinement loops: the model 
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[datblk] (x) {\textbf{Prompt $x$}};
   \node[trnblk, right=of x] (gen) {\textbf{Generator} \\ ($\pi_\theta$)};
@@ -1352,6 +1403,7 @@ where $c$ is the gold critique. Critics enable self-refinement loops: the model 
   \draw[arr] (rev)--(out);
   \draw[arr,dashed,green!60!black] (rev.north) -- ++(0,0.5) -| (gen.north) node[midway,above,font=\tiny]{optional loop};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Critic Model: generates natural-language critique of a draft; generator revises using the critique.}
 \end{figure}
 

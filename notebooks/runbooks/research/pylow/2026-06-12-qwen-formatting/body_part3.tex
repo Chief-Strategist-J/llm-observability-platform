@@ -30,6 +30,7 @@ The growing pool is used to fine-tune $\theta$, improving the quality of subsequ
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[datblk] (seed) {\textbf{Seed Pool} \\ ($\mathcal{S}$ (175 seeds))};
   \node[grayblk, right=of seed] (sample) {\textbf{Sample $k$} \\ (Instructions)};
@@ -48,6 +49,7 @@ The growing pool is used to fine-tune $\theta$, improving the quality of subsequ
   \draw[arr,dashed,green!60!black] (better.north) |- (gen.south) node[midway,below,font=\tiny]{iterate};
   \draw[arr,dashed,blue!60] (pool.north) -- ++(0,0.4) -| (seed.north) node[midway,above,font=\tiny]{pool grows};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Self-Instruct: LLM generates new instructions from seed pool; quality filter expands the pool for SFT.}
 \end{figure}
 
@@ -82,6 +84,7 @@ Evolved instructions are validated (non-empty, no refusal, dissimilar from paren
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
   \node[datblk] (orig) {\textbf{Original} \\ (Instruction $x$)};
   \node[trnblk, above right=0.5cm and 1.2cm of orig] (depth) {\textbf{In-Depth} \\ (Mutation)};
@@ -100,6 +103,7 @@ Evolved instructions are validated (non-empty, no refusal, dissimilar from paren
   \draw[arr] (pool)--(sft);
   \draw[arr,dashed,green!60!black] (pool.north) -- ++(0,0.5) -| (orig.north) node[midway,above,font=\tiny]{$E$ rounds};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Evol-Instruct: in-depth and in-breadth mutations generate harder variants; validated pool used for SFT.}
 \end{figure}
 
@@ -134,6 +138,7 @@ Each evolved problem $\hat{p}$ is solved by a teacher model, and the (problem, s
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
   \node[datblk] (seed) {\textbf{Seed Code} \\ (Problems)};
   \node[trnblk, right=of seed] (mutate) {\textbf{Code} \\ (Mutator)};
@@ -153,6 +158,7 @@ Each evolved problem $\hat{p}$ is solved by a teacher model, and the (problem, s
   \draw[arr] (test)--(fail);
   \draw[arr,dashed,green!60!black] (pass.west) -- ++(-0.5,0) |- (seed.west) node[midway,left,font=\tiny]{grow pool};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Evol-Code: code problems are mutated, solved by teacher, validated by unit tests before dataset inclusion.}
 \end{figure}
 
@@ -187,6 +193,7 @@ Quality is improved by filtering on a scoring model or perplexity threshold $\ta
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[datblk] (schema) {\textbf{Schema /} \\ (Topic Seeds)};
   \node[frzblk, right=of schema] (teacher) {\textbf{Teacher Model} \\ ($P_T$ (large))};
@@ -202,6 +209,7 @@ Quality is improved by filtering on a scoring model or perplexity threshold $\ta
   \draw[arr] (final)--(student);
   \node[red,font=\tiny,below=0.2cm of score] {reject low-quality};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Synthetic Data Generation: teacher generates pairs from schema seeds; quality filter builds training set for student.}
 \end{figure}
 
@@ -236,6 +244,7 @@ Expected acceptance rate at threshold $\tau$: $\alpha = P_{y \sim \pi_\theta}[r(
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[datblk] (x) {\textbf{Prompts $\{x_i\}$}};
   \node[trnblk, right=of x] (pol) {\textbf{Policy $\pi_\theta$} \\ (Sample $N$)};
@@ -252,6 +261,7 @@ Expected acceptance rate at threshold $\tau$: $\alpha = P_{y \sim \pi_\theta}[r(
   \draw[arr] (rm.south) -- ++(0,-0.3) -| (drop.east);
   \draw[arr] (keep)--(sft);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Rejection Sampling: $N$ completions generated; only those above reward threshold kept for SFT.}
 \end{figure}
 
@@ -287,6 +297,7 @@ where $\mu_r, \sigma_r$ are the reward mean and std under $\pi_\theta$, and $\Ph
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.5cm and 0.9cm]
   \node[datblk,minimum width=1.8cm] (x) {\textbf{Prompt $x$}};
   \node[trnblk,minimum width=1.6cm, above right=0.3cm and 1.0cm of x] (y1) {\textbf{$y^{(1)}$}};
@@ -305,6 +316,7 @@ where $\mu_r, \sigma_r$ are the reward mean and std under $\pi_\theta$, and $\Ph
 
   \node[font=\tiny,below=0.2cm of y2] {$N$ samples};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Best-of-N: $N$ samples scored by reward model; highest reward selected as final output.}
 \end{figure}
 
@@ -342,6 +354,7 @@ Common signals include perplexity under a small LM (detects gibberish), toxic co
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
   \node[datblk] (raw) {\textbf{Raw Corpus} \\ (noisy, large)};
   \node[grayblk, right=of raw] (ppl) {\textbf{Perplexity} \\ (Filter)};
@@ -360,6 +373,7 @@ Common signals include perplexity under a small LM (detects gibberish), toxic co
   \draw[arr] (thresh.east) |- (fail.west);
   \draw[arr] (pass.east) -| (clean.north);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Data filtering pipeline: multiple quality signals applied in sequence; only passing samples retained.}
 \end{figure}
 
@@ -394,6 +408,7 @@ where $\{h_k\}$ are $K$ independent hash functions and $h_k(A) = \min_{w \in \te
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[datblk] (corpus) {\textbf{Corpus} \\ ($\mathcal{D}$)};
   \node[grayblk, right=of corpus] (ngrams) {\textbf{N-gram} \\ (Shingles)};
@@ -410,6 +425,7 @@ where $\{h_k\}$ are $K$ independent hash functions and $h_k(A) = \min_{w \in \te
   \draw[arr] (cmp.east) |- (keep.west);
   \draw[arr] (cmp.east) |- (drop.west);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Deduplication: MinHash signatures group near-duplicates via LSH; high-similarity pairs discarded.}
 \end{figure}
 
@@ -444,6 +460,7 @@ Query-by-committee uses disagreement between an ensemble $\{\theta_1,\ldots,\the
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[datblk] (unlabeled) {\textbf{Unlabelled} \\ (Pool $\mathcal{U}$)};
   \node[frzblk, right=of unlabeled] (model) {\textbf{Current} \\ (Model $\theta$)};
@@ -461,6 +478,7 @@ Query-by-committee uses disagreement between an ensemble $\{\theta_1,\ldots,\the
   \draw[arr] (retrain)--(better);
   \draw[arr,dashed,green!60!black] (better.north) |- (model.south) node[midway,below,font=\tiny]{loop};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Active Learning: uncertainty estimator selects most informative examples; human annotates; model retrains.}
 \end{figure}
 
@@ -495,6 +513,7 @@ The training distribution at step $t$ only samples from examples with $d(x,y) \l
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
   \node[datblk] (all) {\textbf{Full Dataset} \\ ($\mathcal{D}$)};
   \node[grayblk, right=of all] (score) {\textbf{Difficulty} \\ (Scorer $d(\cdot)$)};
@@ -517,6 +536,7 @@ The training distribution at step $t$ only samples from examples with $d(x,y) \l
   \node[font=\tiny,left=0.1cm of med] {$c(t){=}0.6$};
   \node[font=\tiny,left=0.1cm of hard] {$c(t){=}1.0$};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Curriculum Learning: examples sorted by difficulty; competence function progressively unlocks harder batches.}
 \end{figure}
 
@@ -558,6 +578,7 @@ where $\alpha \in [0, 1]$ balances the loss terms, and the temperature scaling f
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[datblk] (x) {\textbf{Input $x$}};
   \node[frzblk, above right=0.5cm and 1.2cm of x] (teacher) {\textbf{Teacher $P_T$} \\ (frozen, large)};
@@ -574,6 +595,7 @@ where $\alpha \in [0, 1]$ balances the loss terms, and the temperature scaling f
   \draw[arr] (kl.east) -| (total.north);
   \draw[arr] (ce.east) -| (total.south);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Knowledge Distillation: student learns from both hard labels (CE) and teacher soft logits (KL) simultaneously.}
 \end{figure}
 
@@ -605,6 +627,7 @@ where $y_T \sim P_T(\cdot \mid x)$ are teacher completions. This is simpler than
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   \node[datblk] (prompts) {\textbf{Prompts $\{x_i\}$}};
   \node[frzblk, right=of prompts] (teacher) {\textbf{Teacher $P_T$} \\ (API or local)};
@@ -621,6 +644,7 @@ where $y_T \sim P_T(\cdot \mid x)$ are teacher completions. This is simpler than
 
   \node[font=\tiny,red,align=center,below=0.2cm of teacher] {black-box OK\\(only outputs needed)};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Response Distillation: teacher generates responses; student trained via SFT to imitate those outputs.}
 \end{figure}
 
@@ -652,6 +676,7 @@ This allows a small student to match the accuracy of a large teacher that reason
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[datblk] (x) {\textbf{Problem $x$}};
   \node[frzblk, right=of x] (teacher) {\textbf{Teacher $P_T$}};
@@ -667,6 +692,7 @@ This allows a small student to match the accuracy of a large teacher that reason
   \draw[arr] (student)--(loss);
   \draw[arr] (loss)--(out);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{CoT Distillation: teacher's reasoning chains and answers jointly train student to produce similar traces.}
 \end{figure}
 
@@ -698,6 +724,7 @@ Unlike response distillation (which uses sampled strings), policy distillation u
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[datblk] (x) {\textbf{Context $(x, y_{<t})$}};
   \node[frzblk, above right=0.5cm and 1.3cm of x] (tpol) {\textbf{Teacher} \\ \textbf{$\pi_T(\cdot|x,y_{<t})$} \\ (full distribution)};
@@ -713,6 +740,7 @@ Unlike response distillation (which uses sampled strings), policy distillation u
 
   \node[red,font=\tiny,align=center,below=0.2cm of tpol] {logits required\\(white-box)};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Policy Distillation: KL divergence between teacher and student distributions minimised at every token step.}
 \end{figure}
 
@@ -747,6 +775,7 @@ The student can also be trained with a ranking-consistency loss to preserve rela
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[datblk] (pairs) {\textbf{$(x, y)$ Pairs}};
   \node[frzblk, right=of pairs] (trm) {\textbf{Teacher RM $r_T$} \\ (frozen, large)};
@@ -762,6 +791,7 @@ The student can also be trained with a ranking-consistency loss to preserve rela
   \draw[arr] (srm)--(loss);
   \draw[arr] (loss)--(out);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Reward Distillation: small student reward model trained via regression on large teacher reward scores.}
 \end{figure}
 
@@ -793,6 +823,7 @@ where $q_\phi$ is the query encoder and $e(d)$ is the document embedding.
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   \node[datblk] (q) {\textbf{Query $q$}};
   \node[frzblk, above right=0.5cm and 1.2cm of q] (tret) {\textbf{Teacher} \\ \textbf{Retriever $q_T$} \\ (cross-encoder)};
@@ -810,6 +841,7 @@ where $q_\phi$ is the query encoder and $e(d)$ is the document embedding.
 
   \node[red,font=\tiny,align=center,below=0.2cm of sret] {fast at inference\\(ANN search)};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Retrieval Distillation: student bi-encoder trained to match teacher cross-encoder relevance distributions.}
 \end{figure}
 
@@ -849,6 +881,7 @@ Because the rounding function has zero gradients almost everywhere ($\frac{\part
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   \node[datblk] (x) {\textbf{Input $x$}};
   \node[trnblk, right=of x] (fp32) {\textbf{FP32 Weights} \\ (master copy)};
@@ -866,6 +899,7 @@ Because the rounding function has zero gradients almost everywhere ($\frac{\part
   \draw[arr] (ste) -- node[below,font=\tiny]{update FP32 master} (deploy);
   \draw[arr,dashed,green!60!black] (ste.west) -- (fp32.south|-ste) -- (fp32.south);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{QAT: fake quantization in forward pass; STE allows gradients to flow to FP32 master weights.}
 \end{figure}
 
@@ -900,6 +934,7 @@ where $\tau_p$ is chosen to achieve sparsity ratio $s = 1 - \|m\|_1 / \|m\|_0$. 
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[frzblk] (dense) {\textbf{Dense Model} \\ ($W$ (all weights))};
   \node[grayblk, right=of dense] (score) {\textbf{Importance} \\ (Scoring)};
@@ -916,6 +951,7 @@ where $\tau_p$ is chosen to achieve sparsity ratio $s = 1 - \|m\|_1 / \|m\|_0$. 
 
   \node[font=\tiny,below=0.2cm of mask] {sparsity $s = 50$--$90$\%};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Pruning: importance scores determine binary mask; sparse model fine-tuned to recover accuracy.}
 \end{figure}
 
@@ -950,6 +986,7 @@ GPTQ computes optimal quantization for each weight row by minimising the second-
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[frzblk] (fp32) {\textbf{FP32 Model} \\ (pretrained)};
   \node[datblk, right=of fp32] (cal) {\textbf{Calibration} \\ (Data $\mathcal{D}_{\text{cal}}$)};
@@ -965,6 +1002,7 @@ GPTQ computes optimal quantization for each weight row by minimising the second-
 
   \node[font=\tiny,below=0.2cm of cal] {small unlabelled};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{PTQ: calibration statistics guide per-channel scales; weights rounded to INT$b$ without retraining.}
 \end{figure}
 
@@ -998,6 +1036,7 @@ Tool-Use Training teaches the model to generate structured tool invocations inte
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.5cm and 0.8cm]
   \node[datblk,minimum width=1.6cm] (q) {\textbf{Task $q$}};
   \node[trnblk,minimum width=1.6cm, right=0.7cm of q] (t1) {\textbf{Thought} \\ ($t_1$)};
@@ -1014,6 +1053,7 @@ Tool-Use Training teaches the model to generate structured tool invocations inte
   \node[red,font=\tiny,below=0.3cm of t1] {trained};
   \node[blue!60!black,font=\tiny,below=0.3cm of o1] {env reply};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Tool-Use Training: thought-action-observation trajectory; model trained on thought and action tokens.}
 \end{figure}
 
@@ -1045,6 +1085,7 @@ where $c$ is the ground-truth function call. Schema-aware token masking ensures 
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   \node[datblk] (x) {\textbf{User Request $x$}};
   \node[grayblk, above=0.7cm of x] (schema) {\textbf{Tool Schema $S$} \\ (JSON spec)};
@@ -1059,6 +1100,7 @@ where $c$ is the ground-truth function call. Schema-aware token masking ensures 
   \draw[arr] (json)--(val);
   \draw[arr] (val)--(exec);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Function Calling Training: model receives request + schema, outputs structured JSON call validated against spec.}
 \end{figure}
 
@@ -1093,6 +1135,7 @@ Training uses task-completion reward at the full-task level, distributed to agen
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
   \node[datblk] (task) {\textbf{Complex} \\ (Task $T$)};
   \node[frzblk,minimum height=1.4cm] (orch) at (3.2,0) {\textbf{Orchestrator} \\ ($\pi_0$)};
@@ -1109,6 +1152,7 @@ Training uses task-completion reward at the full-task level, distributed to agen
   \draw[arr] (s2)--(agg);
   \draw[arr] (s3.east) -| (agg.south);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Multi-Agent Training: orchestrator decomposes task and assigns sub-tasks to specialised agents.}
 \end{figure}
 
@@ -1146,6 +1190,7 @@ Training uses a masked language modelling or auto-regressive loss on the text to
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   \node[datblk] (img) {\textbf{Image $I$}};
   \node[datblk, below=0.8cm of img] (txt) {\textbf{Text $x$}};
@@ -1162,6 +1207,7 @@ Training uses a masked language modelling or auto-regressive loss on the text to
   \draw[arr] (emb.east) -| (llm.south);
   \draw[arr] (llm)--(loss);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Vision-Language Training: visual encoder outputs projected to LLM token space; joint auto-regressive loss.}
 \end{figure}
 
@@ -1193,6 +1239,7 @@ where $b^*$ is the ground-truth box and IoU is intersection-over-union. The mode
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   \node[datblk] (img) {\textbf{Image $I$}};
   \node[datblk, below=0.8cm of img] (expr) {\textbf{Referring} \\ (Expr.\ $e$)};
@@ -1207,6 +1254,7 @@ where $b^*$ is the ground-truth box and IoU is intersection-over-union. The mode
   \draw[arr] (box)--(loss);
   \draw[arr] (gt.south)--(loss.north);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Grounding Training: VLM predicts bounding box coordinates from image and referring expression.}
 \end{figure}
 
@@ -1244,6 +1292,7 @@ Training includes both retrieval-present and retrieval-absent examples to preven
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   \node[datblk] (q) {\textbf{Query $x$}};
   \node[frzblk, above right=0.5cm and 1.2cm of q] (ret) {\textbf{Retriever} \\ ($\mathcal{R}(x)$)};
@@ -1262,6 +1311,7 @@ Training includes both retrieval-present and retrieval-absent examples to preven
   \draw[arr] (cbloss.east)-|(out.south);
   \draw[arr] (loss.east)-|(out.north);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{RAT: model trained on both retrieval-augmented and closed-book losses to balance open/parametric knowledge.}
 \end{figure}
 
@@ -1296,6 +1346,7 @@ Training uses a distractor task: memory-relevant queries should prefer correct m
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   \node[datblk] (ep) {\textbf{Episode} \\ ($(x_t, y_t)$)};
   \node[trnblk, right=of ep] (write) {\textbf{Write Head} \\ ($w_\theta$)};
@@ -1312,6 +1363,7 @@ Training uses a distractor task: memory-relevant queries should prefer correct m
   \draw[arr] (read)--(ctx);
   \draw[arr] (ctx)--(loss);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Memory Tuning: write head stores episodes; read head retrieves via attention; contrastive loss trains both.}
 \end{figure}
 
@@ -1346,6 +1398,7 @@ Training uses a knowledge grounding loss that verifies generated text against re
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   \node[datblk] (kg) {\textbf{Knowledge} \\ (Graph $\mathcal{G}$)};
   \node[grayblk, right=of kg] (emb) {\textbf{Entity/Relation} \\ (Embeddings)};
@@ -1362,6 +1415,7 @@ Training uses a knowledge grounding loss that verifies generated text against re
   \draw[arr] (llm)--(loss);
   \draw[arr] (loss)--(out);
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Domain Knowledge Injection: KG entity/relation embeddings injected into LLM via cross-attention.}
 \end{figure}
 
@@ -1399,6 +1453,7 @@ BF16 has the same exponent range as FP32 (8 bits) but fewer mantissa bits (7 vs 
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.1cm]
   \node[frzblk] (master) {\textbf{FP32 Master} \\ (Weights $W$)};
   \node[grayblk, right=of master] (cast) {\textbf{Cast to} \\ (FP16/BF16)};
@@ -1414,6 +1469,7 @@ BF16 has the same exponent range as FP32 (8 bits) but fewer mantissa bits (7 vs 
   \draw[arr] (unscale) -- node[below,font=\tiny]{check overflow} (upd);
   \draw[arr,dashed,green!60!black] (upd.north) |- (master.south) node[midway,below,font=\tiny]{update};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Mixed Precision Training: FP16 compute with FP32 master weights; loss scaling prevents gradient underflow.}
 \end{figure}
 
@@ -1448,6 +1504,7 @@ For $L$ layers, optimal checkpointing every $\sqrt{L}$ layers minimises memory w
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.5cm and 0.8cm]
   \node[datblk,minimum width=1.4cm] (in) {\textbf{Input}};
   \node[trnblk,minimum width=1.4cm, right=0.6cm of in] (l1) {\textbf{Layer 1} \\ ({\tiny (stored)})};
@@ -1465,6 +1522,7 @@ For $L$ layers, optimal checkpointing every $\sqrt{L}$ layers minimises memory w
   \draw[green!60!black,thick,decorate,decoration={brace,amplitude=5pt,raise=4pt}]
     (l1.north west) -- (l1.north east) node[midway,above=9pt,font=\tiny,green!60!black]{checkpoint};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Gradient Checkpointing: only checkpoint activations stored; intermediate activations recomputed in backward.}
 \end{figure}
 
@@ -1509,6 +1567,7 @@ where $\tilde{P}^{(j)} = \exp(S^{(j)} - \tilde{m}^{(j)})$. This achieves exact a
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.7cm and 1.0cm]
   \node[datblk] (qkv) {\textbf{$Q, K, V$} \\ (HBM)};
   \node[grayblk, right=of qkv] (tile) {\textbf{Load Tile} \\ \textbf{$B_r \times B_c$} \\ (to SRAM)};
@@ -1524,6 +1583,7 @@ where $\tilde{P}^{(j)} = \exp(S^{(j)} - \tilde{m}^{(j)})$. This achieves exact a
 
   \node[red,font=\tiny,align=center,below=0.2cm of tile] {only tile in SRAM\\not full $N^2$};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{Flash Attention: tiled block-wise computation avoids materialising the full attention matrix in HBM.}
 \end{figure}
 
@@ -1561,6 +1621,7 @@ During the forward pass, an `All-Gather` operation reconstructs parameters block
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.6cm and 1.0cm]
   \node[grayblk,minimum width=1.4cm] (d1) {\textbf{Device 1} \\ ($\theta^{(1)}$)};
   \node[grayblk,minimum width=1.4cm, right=0.4cm of d1] (d2) {\textbf{Device 2} \\ ($\theta^{(2)}$)};
@@ -1582,6 +1643,7 @@ During the forward pass, an `All-Gather` operation reconstructs parameters block
   \draw[arr] (rs)--(upd);
   \draw[arr,dashed,green!60!black] (upd.north) |- (d2.south) node[near start,left,font=\tiny]{re-shard};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{FSDP: parameters sharded across devices; All-Gather for compute, Reduce-Scatter for gradient aggregation.}
 \end{figure}
 
@@ -1625,6 +1687,7 @@ Additionally, **ZeRO-Offload** offloads partitioned states to host CPU memory, u
 
 \begin{figure}[h]
 \centering
+\begin{adjustbox}{max width=\linewidth}
 \begin{tikzpicture}[node distance=0.5cm and 0.9cm]
   \node[datblk,minimum width=2.2cm] (full) {\textbf{Standard} \\ \textbf{DDP:} \\ ($16|\theta|$ per GPU)};
   \node[grayblk,minimum width=2.2cm, right=0.7cm of full] (z1) {\textbf{ZeRO-1:} \\ \textbf{Shard Opt States} \\ ($12|\theta|+ 4|\theta|/D$)};
@@ -1638,6 +1701,7 @@ Additionally, **ZeRO-Offload** offloads partitioned states to host CPU memory, u
   \node[red,font=\tiny,below=0.25cm of full] {full redundancy};
   \node[green!60!black,font=\tiny,below=0.25cm of z3] {min per-GPU};
 \end{tikzpicture}
+\end{adjustbox}
 \caption{DeepSpeed ZeRO stages: each stage shards an additional component, progressively reducing per-GPU memory.}
 \end{figure}
 
