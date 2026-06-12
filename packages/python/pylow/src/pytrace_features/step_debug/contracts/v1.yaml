@@ -1,0 +1,50 @@
+contract: pylow.step_debug
+version: v1
+kind: cli-mcp-tool
+description: >
+  Pure terminal, code-level debugging for Python / Go / Rust / Java /
+  TypeScript driven by each language's native debugger (pdb, dlv, rust-gdb/
+  gdb, jdb, node inspect). One generic engine consumes declarative
+  DebuggerSpecs from the shared LanguageRegistry: breakpoints are set, the
+  program runs, stops at each breakpoint, variable values are captured, and
+  every stop is saved as a numbered text file. Adding a language is a new
+  DebuggerSpec registration — the engine never changes.
+
+commands:
+  - name: debug
+    mcp_tool: debug_command
+    description: interactive native debugger with breakpoints pre-set (TTY); on non-TTY prints the exact command + commands to paste
+    input:
+      target: { type: string, required: true }
+      breaks: { type: list[string], description: "file:line or function name, repeatable via --break" }
+      lang:   { type: string, default: "", description: override detected language }
+
+  - name: debug-steps
+    aliases: [snapshot-debug]
+    mcp_tool: debug_steps
+    input:
+      target:    { type: string, required: true }
+      breaks:    { type: list[string], required: true, description: "file:line or function, repeatable" }
+      watches:   { type: list[string], description: expressions evaluated and recorded at every stop }
+      out:       { type: string, default: "pylow_steps", description: directory for per-step snapshot files }
+      max_steps: { type: int,    default: 50, description: stop after this many breakpoint hits }
+      lang:      { type: string, default: "" }
+    behavior:
+      - drives the native debugger non-interactively (commands piped to stdin)
+      - at every breakpoint hit dumps locals/args (per DebuggerSpec) + watch expressions
+      - writes <out>/step_001.txt, step_002.txt, ... each containing location + captured values
+      - writes <out>/summary.txt mapping step number -> stop location
+    output: per-step file paths + inline summary table
+
+debugger_specs:                  # declarative, in shared LanguageRegistry
+  python: { debugger: pdb,            locals: "filtered locals()",   interactive_init: "-c flags" }
+  go:     { debugger: dlv,            locals: "locals + args",       interactive_init: "--init file" }
+  rust:   { debugger: rust-gdb | gdb, locals: "info locals + args",  interactive_init: "-ex flags" }
+  java:   { debugger: jdb,            locals: "locals",              interactive_init: "paste commands" }
+  ts:     { debugger: node inspect,   locals: "source context; use watches for values", interactive_init: "paste commands" }
+
+guarantees:
+  - terminal only — no GUI, no IDE required
+  - snapshot files are plain text, one per stop, reproducible
+  - the generated debugger command script is shown so the run is auditable
+  - engine contains no per-language conditionals (registry + rules as data)
