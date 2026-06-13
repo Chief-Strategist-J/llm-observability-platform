@@ -1979,6 +1979,66 @@ import torch.nn as nn
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 class LoraLinear(nn.Module):
+    def __init__(self, base_layer: nn.Linear, bottleneck_rank: int = 8, lora_alpha_constant: float = 16.0):
+        super().__init__()
+        self.base_layer = base_layer
+        self.bottleneck_rank = bottleneck_rank
+        self.lora_alpha_constant = lora_alpha_constant
+        self.scaling_factor = lora_alpha_constant / bottleneck_rank
+        
+        input_dimension = base_layer.in_features
+        output_dimension = base_layer.out_features
+        
+        # Keep base layer weights frozen (no gradients computed)
+        self.base_layer.weight.requires_grad = False
+        if self.base_layer.bias is not None:
+            self.base_layer.bias.requires_grad = False
+            
+        # Define trainable low-rank adapters A and B
+        self.adapter_down_projection = nn.Parameter(torch.zeros((bottleneck_rank, input_dimension)))
+        self.adapter_up_projection = nn.Parameter(torch.zeros((output_dimension, bottleneck_rank)))
+        
+        # Standard LoRA initialization: Gaussian for A, Zeros for B
+        nn.init.kaiming_uniform_(self.adapter_down_projection, a=math.sqrt(5))
+        nn.init.zeros_(self.adapter_up_projection)
+
+    def forward(self, input_activations: torch.Tensor) -> torch.Tensor:
+        # Forward pass calculation: h = W_0 * x + (alpha / r) * B * A * x
+        base_path_output = self.base_layer(input_activations)
+        adapter_path_output = (input_activations @ self.adapter_down_projection.t()) @ self.adapter_up_projection.t()
+        return base_path_output + self.scaling_factor * adapter_path_output
+
+if __name__ == "__main__":
+    # Download a lightweight model (GPT-2) from Hugging Face
+    model_name = "gpt2"
+    print(f"Downloading base model: {model_name}")
+    base_model = AutoModelForCausalLM.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    
+    # Instantiate a base linear layer and wrap it
+    target_linear_layer = nn.Linear(768, 768)
+    lora_layer = LoraLinear(target_linear_layer, bottleneck_rank=8, lora_alpha_constant=16.0)
+    
+    # Run a forward pass
+    dummy_input_tokens = torch.randn(1, 10, 768)
+    output_predictions = lora_layer(dummy_input_tokens)
+    print("LoRA forward pass output shape:", output_predictions.shape)
+\end{lstlisting}
+
+\paragraph{Python Implementation (model.py)}
+To implement the forward pass in PyTorch, we download a lightweight pre-trained model (like GPT-2) and wrap its linear projection layers in a custom LoraLinear wrapper module. The folder structure for this part of the project is:
+\begin{verbatim}
+my_lora_project/
++-- model.py
+\end{verbatim}
+
+\begin{lstlisting}[style=pythonstyle, language=Python, caption={PyTorch implementation of the LoRA Forward Pass}]
+import math
+import torch
+import torch.nn as nn
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+class LoraLinear(nn.Module):
     def __init__(self, base_layer: nn.Linear, r: int = 8, lora_alpha: float = 16.0):
         super().__init__()
         self.base_layer = base_layer
@@ -2053,6 +2113,76 @@ if __name__ == "__main__":
       \item \textbf{Rank $r$ and Scaling $\alpha$}: Directly scale the gradients via the factor $\frac{\alpha}{r}$. Modifying them scales the gradient step size, affecting convergence stability.
     \end{itemize}
 \end{itemize}
+
+\paragraph{Python Implementation (manual\_grad.py)}
+To verify the backward pass, we write a validation script that computes the manual gradients for the adapter down-projection and up-projection weights based on the tensor chain rule, and compares them to PyTorch's autograd gradients. The folder structure for this verification is:
+\begin{verbatim}
+my_lora_project/
++-- manual_grad.py
+\end{verbatim}
+
+\begin{lstlisting}[style=pythonstyle, language=Python, caption={PyTorch validation of manual LoRA gradients}]
+import torch
+import torch.nn as nn
+
+def verify_gradients():
+    # Set seed for reproducibility
+    torch.manual_seed(42)
+    
+    # Dimensions: batch size=1, input dimensions k=4, output d=4, rank r=2
+    input_dim, output_dim, bottleneck_rank = 4, 4, 2
+    lora_alpha = 4.0
+    scaling_factor = lora_alpha / bottleneck_rank
+    
+    # Inputs and Targets
+    input_activations = torch.randn(1, input_dim, requires_grad=True)
+    target_activations = torch.randn(1, output_dim)
+    
+    # Base weight and adapters
+    base_weight_matrix = torch.randn(output_dim, input_dim)
+    adapter_down_weight = torch.randn(bottleneck_rank, input_dim, requires_grad=True)
+    adapter_up_weight = torch.randn(output_dim, bottleneck_rank, requires_grad=True)
+    
+    # --- PyTorch Autograd Path ---
+    base_output = input_activations @ base_weight_matrix.t()
+    bottleneck_activations = input_activations @ adapter_down_weight.t()
+    adapter_output = bottleneck_activations @ adapter_up_weight.t()
+    combined_output = base_output + scaling_factor * adapter_output
+    
+    # Mean Squared Error Loss
+    loss_value = 0.5 * torch.sum((combined_output - target_activations) ** 2)
+    loss_value.backward()
+    
+    # Extract Autograd Gradients
+    grad_down_weight_autograd = adapter_down_weight.grad.clone()
+    grad_up_weight_autograd = adapter_up_weight.grad.clone()
+    grad_input_autograd = input_activations.grad.clone()
+    
+    # --- Manual Gradient Calculation ---
+    # Gradient of loss w.r.t output: dL/dh = h - target
+    grad_combined_output = combined_output - target_activations
+    
+    # grad_B = scaling_factor * grad_h^T * z
+    grad_up_weight_manual = scaling_factor * grad_combined_output.t() @ bottleneck_activations
+    
+    # grad_z = scaling_factor * grad_h * B
+    grad_bottleneck_activations = scaling_factor * grad_combined_output @ adapter_up_weight
+    
+    # grad_A = grad_z^T * x
+    grad_down_weight_manual = grad_bottleneck_activations.t() @ input_activations
+    
+    # grad_x = grad_h * W0 + grad_z * A
+    grad_input_manual = grad_combined_output @ base_weight_matrix + grad_bottleneck_activations @ adapter_down_weight
+    
+    # --- Verification ---
+    assert torch.allclose(grad_down_weight_autograd, grad_down_weight_manual, atol=1e-6), "Gradients w.r.t A mismatch!"
+    assert torch.allclose(grad_up_weight_autograd, grad_up_weight_manual, atol=1e-6), "Gradients w.r.t B mismatch!"
+    assert torch.allclose(grad_input_autograd, grad_input_manual, atol=1e-6), "Gradients w.r.t x mismatch!"
+    print("Manual gradients successfully verified against PyTorch Autograd!")
+
+if __name__ == "__main__":
+    verify_gradients()
+\end{lstlisting}
 
 \paragraph{Python Implementation (manual\_grad.py)}
 To verify the backward pass, we write a validation script that computes the manual gradients for $A$, $B$, and $x$ based on the tensor chain rule, and compares them to PyTorch's autograd gradients. The folder structure for this verification is:
@@ -2165,6 +2295,78 @@ import torch
 import torch.nn as nn
 
 class MergeableLoraLinear(nn.Module):
+    def __init__(self, base_linear_layer: nn.Linear, bottleneck_rank: int = 8, lora_alpha_constant: float = 16.0):
+        super().__init__()
+        self.base_linear_layer = base_linear_layer
+        self.bottleneck_rank = bottleneck_rank
+        self.lora_alpha_constant = lora_alpha_constant
+        self.scaling_factor = lora_alpha_constant / bottleneck_rank
+        
+        self.adapter_down_projection = nn.Parameter(torch.randn(bottleneck_rank, base_linear_layer.in_features))
+        self.adapter_up_projection = nn.Parameter(torch.randn(base_linear_layer.out_features, bottleneck_rank))
+        self.merged = False
+
+    def forward(self, input_activations: torch.Tensor) -> torch.Tensor:
+        if self.merged:
+            return self.base_linear_layer(input_activations)
+        else:
+            base_path_output = self.base_linear_layer(input_activations)
+            adapter_path_output = (input_activations @ self.adapter_down_projection.t()) @ self.adapter_up_projection.t()
+            return base_path_output + self.scaling_factor * adapter_path_output
+
+    def merge_weights(self):
+        if self.merged:
+            return
+        # W = W0 + (alpha / r) * B * A
+        adapter_folded_weights = self.scaling_factor * (self.adapter_up_projection @ self.adapter_down_projection)
+        self.base_linear_layer.weight.data += adapter_folded_weights
+        self.merged = True
+        print("Adapter weights merged into base weights.")
+
+    def demerge_weights(self):
+        if not self.merged:
+            return
+        # W0 = W - (alpha / r) * B * A
+        adapter_folded_weights = self.scaling_factor * (self.adapter_up_projection @ self.adapter_down_projection)
+        self.base_linear_layer.weight.data -= adapter_folded_weights
+        self.merged = False
+        print("Adapter weights demeged successfully.")
+
+if __name__ == "__main__":
+    # Instantiate base linear layer and wrap it
+    base_linear = nn.Linear(512, 512)
+    model = MergeableLoraLinear(base_linear, bottleneck_rank=8, lora_alpha_constant=16.0)
+    
+    dummy_input_tokens = torch.randn(1, 10, 512)
+    
+    # 1. Output before merging
+    output_before = model(dummy_input_tokens)
+    
+    # 2. Merge weights
+    model.merge_weights()
+    output_after = model(dummy_input_tokens)
+    
+    # 3. Verify identical outputs
+    assert torch.allclose(output_before, output_after, atol=1e-5), "Outputs do not match!"
+    print("Inference verification passed. Merged output is identical.")
+    
+    # 4. Save state dictionary for latency-free deployment
+    torch.save(base_linear.state_dict(), "merged_linear.pt")
+    print("Saved merged state dict to 'merged_linear.pt'.")
+\end{lstlisting}
+
+\paragraph{Python Implementation (merge.py)}
+To deploy the model with zero inference latency, the adapter weights are folded directly into the base weights in-place. The folder structure for weight merging is:
+\begin{verbatim}
+my_lora_project/
++-- merge.py
+\end{verbatim}
+
+\begin{lstlisting}[style=pythonstyle, language=Python, caption={Merging and demerging LoRA weights in-place}]
+import torch
+import torch.nn as nn
+
+class MergeableLoraLinear(nn.Module):
     def __init__(self, base_layer: nn.Linear, r: int = 8, lora_alpha: float = 16.0):
         super().__init__()
         self.base_layer = base_layer
@@ -2257,6 +2459,157 @@ if __name__ == "__main__":
       \item \textbf{Momentum coefficients $\beta_1, \beta_2$}: Control the memory of past gradients.
     \end{itemize}
 \end{itemize}
+
+\paragraph{Python Implementation (train.py)}
+To train the model, we write a complete end-to-end script that loads a lightweight pre-trained causal model, freezes its original layers, registers the trainable adapter weights, and runs a forward-backward optimization step using AdamW. The folder structure for this training file is:
+\begin{verbatim}
+my_lora_project/
++-- train.py
+\end{verbatim}
+
+\begin{lstlisting}[style=pythonstyle, language=Python, caption={Complete LoRA training and optimization loop using AdamW}]
+import torch
+import torch.nn as nn
+from torch.optim import AdamW
+from transformers import AutoModelForCausalLM
+
+def train_lora_model():
+    # Download a lightweight base model from Hugging Face
+    model_name = "distilgpt2"
+    print(f"Loading pre-trained base model: {model_name}")
+    base_model = AutoModelForCausalLM.from_pretrained(model_name)
+    
+    # Freeze all original parameters in the base model
+    for parameter in base_model.parameters():
+        parameter.requires_grad = False
+        
+    # Inject adapters to the lm_head projection layer
+    target_linear_layer = base_model.lm_head
+    bottleneck_rank, lora_alpha = 8, 16.0
+    scaling_factor = lora_alpha / bottleneck_rank
+    
+    # Define and initialize trainable adapter parameters A and B
+    adapter_down_projection = nn.Parameter(torch.randn(bottleneck_rank, target_linear_layer.in_features) * 0.02)
+    adapter_up_projection = nn.Parameter(torch.zeros(target_linear_layer.out_features, bottleneck_rank))
+    
+    # Register adapters as parameters of the model
+    base_model.register_parameter("adapter_down_projection", adapter_down_projection)
+    base_model.register_parameter("adapter_up_projection", adapter_up_projection)
+    
+    # Override the lm_head forward pass to compute base + adapter paths
+    def custom_lm_head_forward(input_activations):
+        base_path_output = target_linear_layer(input_activations)
+        adapter_path_output = (input_activations @ adapter_down_projection.t()) @ adapter_up_projection.t()
+        return base_path_output + scaling_factor * adapter_path_output
+        
+    base_model.lm_head.forward = custom_lm_head_forward
+
+    # Collect parameters that require gradients (only our custom adapters)
+    trainable_adapter_parameters = [param for param in base_model.parameters() if param.requires_grad]
+    print(f"Number of trainable parameters: {sum(param.numel() for param in trainable_adapter_parameters)}")
+    
+    # Setup AdamW optimizer specifically for the adapter parameters
+    optimizer = AdamW(trainable_adapter_parameters, lr=1e-4, weight_decay=0.01)
+    
+    # Create dummy input tokens (Batch size 2, Sequence length 16)
+    dummy_input_tokens = torch.randint(0, 50257, (2, 16))
+    target_labels = dummy_input_tokens.clone()
+    
+    # Set model to training mode
+    base_model.train()
+    optimizer.zero_grad()
+    
+    # Forward pass through model (including modified lm_head)
+    model_outputs = base_model(dummy_input_tokens, labels=target_labels)
+    loss_value = model_outputs.loss
+    
+    # Backward pass to compute gradients for trainable adapters
+    loss_value.backward()
+    
+    # Optimizer step applies the AdamW updates to parameters
+    optimizer.step()
+    print(f"AdamW update step completed. Current loss: {loss_value.item():.4f}")
+
+if __name__ == "__main__":
+    train_lora_model()
+\end{lstlisting}
+
+\subsection{Hugging Face Deployment \& Hub Integration}
+After training the lightweight model, such as the \texttt{Qwen/Qwen2.5-0.5B} model (which has a lightweight weights file size of approximately 940MB, easily fitting within standard memory constraints), the newly trained adapter weights can be uploaded directly to the Hugging Face Hub. 
+
+This section details how to programmatically log in, upload the adapter weights, and save them so other users can easily pull them from the Hugging Face Hub. The folder structure for deployment is:
+\begin{verbatim}
+my_lora_project/
++-- deploy.py
+\end{verbatim}
+
+\begin{lstlisting}[style=pythonstyle, language=Python, caption={Hugging Face deployment script for Qwen adapters}]
+import os
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from huggingface_hub import HfApi, login
+
+def save_and_deploy_adapters():
+    # 1. Authenticate with Hugging Face Hub
+    # Replace with your Hugging Face write token or use environment variable HF_TOKEN
+    huggingface_write_token = "your_huggingface_api_write_token"
+    login(token=huggingface_write_token)
+    
+    # 2. Setup lightweight base model (Qwen 2.5 0.5B, approx. 940MB)
+    base_model_identifier = "Qwen/Qwen2.5-0.5B"
+    print(f"Loading tokenizer: {base_model_identifier}")
+    tokenizer = AutoTokenizer.from_pretrained(base_model_identifier)
+    
+    # 3. Save trained adapter weights locally
+    # For demonstration, we save our adapter tensors
+    trained_adapter_weights = {
+        "adapter_down_projection": torch.randn(8, 896),
+        "adapter_up_projection": torch.randn(896, 8)
+    }
+    local_output_path = "./my_trained_adapters"
+    os.makedirs(local_output_path, exist_ok=True)
+    torch.save(trained_adapter_weights, f"{local_output_path}/adapter_weights.bin")
+    
+    # Save tokenizer configuration alongside the adapters
+    tokenizer.save_pretrained(local_output_path)
+    print(f"Adapters saved locally to {local_output_path}")
+    
+    # 4. Upload folder to Hugging Face Hub
+    repository_identifier = "username/qwen-2.5-0.5b-lora-adapter"
+    huggingface_api = HfApi()
+    
+    print(f"Creating repository on Hugging Face: {repository_identifier}")
+    huggingface_api.create_repo(
+        repo_id=repository_identifier, 
+        repo_type="model", 
+        exist_ok=True
+    )
+    
+    print(f"Uploading files from {local_output_path} to Hugging Face Hub...")
+    huggingface_api.upload_folder(
+        folder_path=local_output_path,
+        repo_id=repository_identifier,
+        repo_type="model"
+    )
+    print(f"Successfully deployed adapters to: https://huggingface.co/{repository_identifier}")
+
+    # 5. How other users can load this newly trained model from the Hub
+    print("\nTo load and run inference on this model elsewhere, run:")
+    print(f"\"\"\"")
+    print(f"from transformers import AutoModelForCausalLM, AutoTokenizer")
+    print(f"from peft import PeftModel")
+    print(f"")
+    print(f"# Load base model (Qwen 2.5 0.5B)")
+    print(f"base_model = AutoModelForCausalLM.from_pretrained(\"{base_model_identifier}\")")
+    print(f"tokenizer = AutoTokenizer.from_pretrained(\"{base_model_identifier}\")")
+    print(f"")
+    print(f"# Load and overlay the trained adapter weights from Hugging Face Hub")
+    print(f"fine_tuned_model = PeftModel.from_pretrained(base_model, \"{repository_identifier}\")")
+    print(f"\"\"\"")
+
+if __name__ == "__main__":
+    save_and_deploy_adapters()
+\end{lstlisting}
 
 \paragraph{Python Implementation (train.py)}
 To train the model, we write a complete end-to-end script that loads a lightweight pre-trained causal model, freezes its original layers, registers the trainable adapter weights, and runs a forward-backward optimization step using AdamW. The folder structure for this training file is:
