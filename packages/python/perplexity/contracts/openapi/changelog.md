@@ -8,3 +8,8 @@
 - skip_reason enum: completion_tokens_too_few, finish_reason_blocked, scorer_unavailable
 - high_perplexity_flag when perplexity > 3 × prompt_type baseline
 - w_perplexity: 0.10 (active) / 0.00 (skipped)
+
+## [1.1.0] — 2026-06-15
+
+- Behavioral change: `high_perplexity_flag` thresholds are now loaded dynamically from `perplexity_baselines.yaml` via hot-reloading `PerplexityBaselineLoader` instead of static constants.
+

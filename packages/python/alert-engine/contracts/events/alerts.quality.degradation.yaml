@@ -1,0 +1,49 @@
+asyncapi: 2.6.0
+info:
+  title: Quality Degradation Alert Event
+  version: "1"
+  description: Quality degradation events consumed by alert-engine
+channels:
+  alerts.quality.degradation:
+    subscribe:
+      operationId: consumeQualityDegradation
+      message:
+        name: DegradationAlertEvent
+        contentType: application/json
+        headers:
+          type: object
+          properties:
+            traceparent:
+              type: string
+              description: W3C Trace Context traceparent header
+            tracestate:
+              type: string
+              description: W3C Trace Context tracestate header
+        payload:
+          type: object
+          required:
+            - model
+            - endpoint
+            - current_window_avg
+            - baseline
+            - ratio
+            - alerted_at
+          properties:
+            model:
+              type: string
+            endpoint:
+              type: string
+            current_window_avg:
+              type: number
+            baseline:
+              type: number
+            ratio:
+              type: number
+            alerted_at:
+              type: string
+              format: date-time
+            is_cold_start:
+              type: boolean
+              default: false
+consumer_group: alert-engine-group
+version: 1
