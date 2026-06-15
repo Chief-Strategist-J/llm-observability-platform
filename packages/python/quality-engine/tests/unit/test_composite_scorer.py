@@ -4,11 +4,16 @@ from handlers.span_quality.types import ScoreMap
 
 
 def test_all_scores_present():
+    import pytest
     scores = ScoreMap(coherence=0.8, toxicity=0.1, faithfulness=0.9, perplexity=2.0)
     result, weights = compute_composite(scores)
     assert result is not None
     assert 0.0 <= result <= 1.0
-    assert "perplexity" not in weights
+    assert "perplexity" in weights
+    assert weights["coherence"] == pytest.approx(0.25 / 0.85)
+    assert weights["faithfulness"] == pytest.approx(0.35 / 0.85)
+    assert weights["toxicity"] == pytest.approx(0.15 / 0.85)
+    assert weights["perplexity"] == pytest.approx(0.10 / 0.85)
 
 
 def test_no_scores_returns_none():
@@ -38,6 +43,6 @@ def test_weights_renormalized_correctly():
     import pytest
     scores = ScoreMap(coherence=0.8, toxicity=0.1, faithfulness=0.8)
     result, weights = compute_composite(scores)
-    assert weights["coherence"] == pytest.approx(0.30 / 0.90)
-    assert weights["faithfulness"] == pytest.approx(0.40 / 0.90)
-    assert weights["toxicity"] == pytest.approx(0.20 / 0.90)
+    assert weights["coherence"] == pytest.approx(0.25 / 0.75)
+    assert weights["faithfulness"] == pytest.approx(0.35 / 0.75)
+    assert weights["toxicity"] == pytest.approx(0.15 / 0.75)
