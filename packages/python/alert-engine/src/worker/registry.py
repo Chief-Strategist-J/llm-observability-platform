@@ -10,6 +10,7 @@ def build_registry(
     budget_handler: Callable,
     cost_anomaly_handler: Callable,
     toxicity_handler: Callable,
+    degradation_handler: Callable,
 ) -> dict[str, EventHandlerDefinition]:
     return {
         "alerts.budget": EventHandlerDefinition(
@@ -23,6 +24,10 @@ def build_registry(
         "llm.toxicity.flagged": EventHandlerDefinition(
             topic="llm.toxicity.flagged",
             handler=toxicity_handler,
+        ),
+        "alerts.quality.degradation": EventHandlerDefinition(
+            topic="alerts.quality.degradation",
+            handler=degradation_handler,
         ),
     }
 

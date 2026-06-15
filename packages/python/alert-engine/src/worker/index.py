@@ -22,6 +22,7 @@ from infra.adapters.metrics.prometheus_adapter import PrometheusAdapter
 from handlers.alerts_budget.handler import BudgetAlertHandler
 from handlers.alerts_cost_anomaly.handler import CostAnomalyAlertHandler
 from handlers.alerts_toxicity.handler import ToxicityAlertHandler
+from handlers.alerts_quality_degradation.handler import QualityDegradationAlertHandler
 
 
 logger = logging.getLogger(__name__)
@@ -99,10 +100,16 @@ def main() -> None:
         slack_port=slack_adapter
     )
 
+    degradation_handler = QualityDegradationAlertHandler(
+        redis_port=redis_adapter,
+        slack_port=slack_adapter
+    )
+
     handlers_registry = build_registry(
         budget_handler=budget_handler.handle,
         cost_anomaly_handler=cost_anomaly_handler.handle,
-        toxicity_handler=toxicity_handler.handle
+        toxicity_handler=toxicity_handler.handle,
+        degradation_handler=degradation_handler.handle
     )
 
 
