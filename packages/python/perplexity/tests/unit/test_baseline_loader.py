@@ -9,13 +9,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
-from features.score_perplexity.rules import (
-    HIGH_PERPLEXITY_MULTIPLIER,
+from features.score_perplexity.index import (
     PerplexityBaselineLoader,
-    _FALLBACK_P50,
     get_baseline_loader,
     is_high_perplexity,
     set_baseline_loader,
+)
+from features.score_perplexity.rules import (
+    HIGH_PERPLEXITY_MULTIPLIER,
+    _FALLBACK_P50,
 )
 
 

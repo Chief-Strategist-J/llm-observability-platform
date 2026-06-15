@@ -7,7 +7,7 @@ from fastapi import FastAPI
 
 from api.rest.v1.router import router as v1_router
 from shared.di.providers import build_gpt2_scorer, build_logprobs_scorer
-from features.score_perplexity.rules import PerplexityBaselineLoader, set_baseline_loader
+from features.score_perplexity.index import PerplexityBaselineLoader, set_baseline_loader
 
 
 @asynccontextmanager
