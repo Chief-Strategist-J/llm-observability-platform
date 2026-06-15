@@ -287,6 +287,26 @@ class SpanQualityHandler:
             # Use baseline:quality:{model}:{endpoint}:{prompt_type=chat} as reference baseline
             baseline = self._cache.get_baseline(model, endpoint, "chat")
 
+            # Cold-start: baseline is None means not enough historical data yet
+            is_cold_start = baseline is None
+
+            if is_cold_start:
+                # Emit event with is_cold_start=True so alert-engine suppresses Slack
+                if window_avg is not None:
+                    logger.info(
+                        "degradation.check cold-start suppressed model=%s endpoint=%s",
+                        model, endpoint,
+                    )
+                    self._emit_degradation_alert(
+                        model=model,
+                        endpoint=endpoint,
+                        current_window_avg=window_avg,
+                        baseline=0.0,
+                        alerted_at=scored_at,
+                        is_cold_start=True,
+                    )
+                return
+
             if should_alert_degradation(
                 current_window_avg=window_avg,
                 baseline=baseline,
@@ -299,6 +319,7 @@ class SpanQualityHandler:
                     current_window_avg=window_avg,  # type: ignore[arg-type]
                     baseline=baseline,  # type: ignore[arg-type]
                     alerted_at=scored_at,
+                    is_cold_start=False,
                 )
 
     def _emit_toxicity_flagged(
@@ -332,6 +353,7 @@ class SpanQualityHandler:
         current_window_avg: float,
         baseline: float,
         alerted_at: datetime,
+        is_cold_start: bool = False,
     ) -> None:
         event = {
             "model": model,
@@ -340,6 +362,7 @@ class SpanQualityHandler:
             "baseline": baseline,
             "ratio": current_window_avg / baseline if baseline > 0 else 0.0,
             "alerted_at": alerted_at.isoformat(),
+            "is_cold_start": is_cold_start,
         }
         self._producer.produce(
             topic="alerts.quality.degradation",
