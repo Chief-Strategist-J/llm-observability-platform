@@ -81,3 +81,20 @@ runbooks:
     path: decisions/20260612-007-pylow-calltree-stepdebug-language-registry.md
     package: packages/python/pylow
     description: Records the decision to add exact noise-filtered call trees (calltree) and terminal step debugging with per-stop value snapshots (debug-steps), and to refactor all polyglot features onto a single declarative LanguageSpec registry with a marker-paced debugger driver.
+
+  - id: 20260615-008-perplexity-baseline-degradation-alerts
+    title: "ADR-008: Perplexity, Quality Baselines, and Degradation Alerts"
+    category: decisions
+    status: accepted
+    path: decisions/20260615-008-perplexity-baseline-degradation-alerts.md
+    package: packages/python/quality-engine
+    branch: feature/phase-3-perplexity-baseline-degradation-alerts
+    description: Records the architecture and design decisions for Phase 3 including dual-path perplexity scoring, 4-weight renormalized composite scoring, YAML-driven hot-reloading baselines, and quality degradation alert suppression on cold-starts.
+
+  - id: 2026-06-15-degradation-alerts
+    title: Perplexity Baselines and Quality Degradation Alerts Evaluation
+    category: research
+    path: research/perplexity/2026-06-15-degradation-alerts
+    description: Verification of composite renormalization (4-weight system with perplexity), baseline watchdog file observers, and early-warning quality degradation alerts suppression gates.
+
+
