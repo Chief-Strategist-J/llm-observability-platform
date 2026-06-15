@@ -1019,11 +1019,6 @@
         ├── adr-definition -> Add 20260609-005-coherence-faithfulness-pipeline.md detailing decisions, context, and FFSB prevention modes.
         ├── registry -> Add entry for ADR-005 in notebooks/runbooks/registry.yaml
         └── changelog -> Update change.log with the ascii decision tree
-
-[2026-06-12T13:05:00+05:30] Add pylow multi-language tracing (go/rust/java/ts), universal uni tool, and incremental code index
-└── File: packages/python/pylow/src/pytrace_features/lang_trace/{contracts/v1.yaml,contracts/changelog.md,index.py,types.py,service.py}, packages/python/pylow/src/pytrace_features/uni/{contracts/v1.yaml,contracts/changelog.md,index.py,detect.py,service.py}, packages/python/pylow/src/pytrace_features/code_index/{contracts/v1.yaml,contracts/changelog.md,index.py,extractors.py,service.py}, packages/python/pylow/src/pylow_api/cli/controller.py, packages/python/pylow/src/pylow_api/mcp/server.py, packages/python/pylow/feature-registry.yaml, packages/python/pylow/tests/unit/{test_lang_trace.py,test_uni_detect.py,test_uni_service.py,test_code_index_extractors.py}, packages/python/pylow/tests/integration/test_code_index_build.py, packages/python/pylow/README.md, notebooks/runbooks/decisions/20260612-006-pylow-polyglot-tracing-uni-code-index.md, notebooks/runbooks/registry.yaml, .gitignore
-    ├── Choice: Orchestrate existing native tooling (dlv, perf, strace, jcmd, JFR, jstack, V8 inspector, go/cargo/javac/mvn/gradle/tsc/node, ctags) instead of writing tracers/compilers/indexers from scratch; contracts-first per feature; pure logic split out (detect.py, extractors.py) for IO-free unit tests; ADR-006 records rationale and FFSB analysis.
-    └── Changes:
         ├── lang_trace -> trace-go/trace-rust/trace-java/trace-ts CLI + trace_go/trace_rust/trace_java/trace_ts/trace_cmd MCP tools with priority backend fallback and simulated output when no tooling installed
         ├── uni -> uni <detect|doctor|build|run|debug|trace|all> CLI (aliases x, dev) + uni_* MCP tools; language detection by extension/marker; unified file:line issue list parsed from go/rustc/javac/tsc/python error formats
         ├── code_index -> index-build/index-search/index-stats CLI + index_* MCP tools; incremental SQLite index (.pylow_index.db, gitignored) with mtime skip, deleted-file pruning, ctags-preferred extraction, exact>prefix>substring ranking
@@ -1052,3 +1047,37 @@
         ├── agents/policy-guardian.md -> Full validation checklist (13 categories), all policy file paths, compliance report format
         ├── agents/code-generator.md -> Implementation order (contracts→migrations→ports→adapters→features→api→tests→changelog), Temporal patterns, commit rules
         └── agents/README.md -> Index with agent invocation order diagram and shared non-negotiables
+[2026-06-15T13:44:56+05:30] Phase 3 Step 3.5 — add QualityDegradationAlertHandler with cold-start suppression
+└── File: packages/python/alert-engine/src/handlers/alerts_quality_degradation/__init__.py, packages/python/alert-engine/src/handlers/alerts_quality_degradation/handler.py, packages/python/alert-engine/src/worker/registry.py, packages/python/alert-engine/src/worker/config.py, packages/python/alert-engine/src/worker/index.py
+    ├── Choice: Follow same hexagonal handler pattern as ToxicityAlertHandler; suppress Slack on cold-start (is_cold_start=True); dedup via Redis 1-hour TTL per model+endpoint
+    └── Changes:
+        ├── alerts_quality_degradation/handler.py -> QualityDegradationAlertHandler: OTel spans, WARNING for cold-start, ERROR + Slack to #llm-quality-alerts for real degradation
+        ├── worker/registry.py -> add degradation_handler param + alerts.quality.degradation entry
+        ├── worker/config.py -> add alerts.quality.degradation to default KAFKA_TOPICS
+        └── worker/index.py -> import, instantiate, and wire QualityDegradationAlertHandler
+
+[2026-06-15T13:44:56+05:30] Phase 3 Step 3.6 — add is_cold_start flag to quality-engine degradation alert event
+└── File: packages/python/quality-engine/src/handlers/span_quality/handler.py
+    ├── Choice: Use baseline is None as cold-start signal (no port protocol change needed); emit alert with is_cold_start=True when no baseline exists; alert-engine suppresses Slack on that flag
+    └── Changes:
+        ├── _check_degradation -> detect is_cold_start=True when baseline is None; emit cold-start event; log at INFO
+        └── _emit_degradation_alert -> add is_cold_start: bool=False param; include is_cold_start in event dict
+
+[2026-06-15T13:44:56+05:30] Phase 3 Step 3.3 — add seed_baselines.py script for p50 computation
+└── File: packages/python/perplexity/scripts/seed_baselines.py
+    ├── Choice: Pure-Python (no numpy) p50 via sorted median; urllib for HTTP (zero extra deps); fallback to hardcoded values if worker unavailable; --output and --sample-count CLI args
+    └── Changes:
+        └── scripts/seed_baselines.py -> generate synthetic responses per prompt_type, POST to PERPLEXITY_SERVICE_URL/v1/score/perplexity, compute p50, write perplexity_baselines.yaml
+
+[2026-06-15T13:44:56+05:30] Phase 3 Step 3.5 tests — add unit tests for QualityDegradationAlertHandler
+└── File: packages/python/alert-engine/tests/unit/test_quality_degradation_handler.py
+    ├── Choice: Follow same mock-class pattern as test_toxicity_handler.py; 7 test cases; 28/28 tests pass across full alert-engine suite
+    └── Changes:
+        ├── test_degradation_alert_success_sends_slack -> Slack sent to #llm-quality-alerts, rate limit key verified
+        ├── test_degradation_alert_cold_start_suppresses_slack -> no Slack, warning logged, no Redis call
+        ├── test_degradation_alert_missing_fields_no_crash -> empty payload, no crash
+        ├── test_degradation_alert_partial_missing_fields_no_crash -> partial payload, no crash
+        ├── test_degradation_alert_rate_limited_suppresses_second -> dedup gate verified
+        ├── test_degradation_alert_default_cold_start_is_false -> absent is_cold_start defaults to False
+        └── test_degradation_alert_rate_limit_key_format -> key format rate_limit:quality_degradation:{model}:{endpoint} verified
+
