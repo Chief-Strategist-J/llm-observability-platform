@@ -1042,3 +1042,13 @@
         ├── refactor -> uni/lang_trace if-else chains replaced by registry lookups + strategy registries; 195 tests green proves behavior preserved
         ├── wiring -> CLI handler-registry dispatch (calltree, debug, debug-steps) + 3 MCP tools (call_tree, debug_steps, debug_command): 136 MCP tools, 129 CLI commands
         └── verification -> 35 new unit/integration tests incl. real pdb run asserting a=2,b=3 captured per stop; live smoke on python+java+node call trees and java jdb snapshots
+
+[2026-06-15T13:30:00+05:30] Create branch and deploy 3 agents for Phase 3 — Perplexity + Baseline + Degradation Alerts
+└── File: policies/rules/agents/code-reviewer.md, policies/rules/agents/policy-guardian.md, policies/rules/agents/code-generator.md, policies/rules/agents/README.md
+    ├── Choice: Define 3 specialized agents as policy files so every agent invocation reads its own rules before acting; branch feature/phase-3-perplexity-baseline-degradation-alerts created from main
+    └── Changes:
+        ├── branch -> feature/phase-3-perplexity-baseline-degradation-alerts created
+        ├── agents/code-reviewer.md -> Review scope, output format, non-negotiables for read-only audit agent
+        ├── agents/policy-guardian.md -> Full validation checklist (13 categories), all policy file paths, compliance report format
+        ├── agents/code-generator.md -> Implementation order (contracts→migrations→ports→adapters→features→api→tests→changelog), Temporal patterns, commit rules
+        └── agents/README.md -> Index with agent invocation order diagram and shared non-negotiables
