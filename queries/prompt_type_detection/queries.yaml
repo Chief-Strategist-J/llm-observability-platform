@@ -7,22 +7,38 @@ queries:
     type: traceql
     query: '{resource.service.name="quality-engine"} | response_language != "en"'
     description: "Find trace spans where the response language is classified as non-English."
+    importance: "Identifies whether multi-lingual responses are processed differently or suffer from higher latency overheads."
+    expected_output: "Traces where spans contain the attribute response_language set to values like 'es', 'fr', or 'de'."
     how_to_use: "Query in Grafana Tempo Explorer."
 
   - id: log_non_english
     type: logql
     query: '{container_name="quality-engine"} |= "quality_non_english_total"'
     description: "Search logs for language detection warnings and count triggers."
+    importance: "Helps verify that the engine logs warning lines for non-English spans for tracking purposes."
+    expected_output: "Logs detailing warning counts: 'quality_non_english_total{language=fr} span_id=...'."
     how_to_use: "Query in Grafana Loki Explorer."
 
   - id: pg_prompt_types
     type: postgresql
-    query: "SELECT prompt_type, response_language, count(*) FROM quality_scores GROUP BY prompt_type, response_language;"
-    description: "Get aggregation counts of detected prompt types and languages."
+    query: "SELECT prompt_type, response_language, count(*) as count_spans, avg(composite_score) as avg_score FROM quality_scores GROUP BY prompt_type, response_language ORDER BY count_spans DESC;"
+    description: "Get aggregation counts and average composite scores of detected prompt types and languages."
+    importance: "Reveals how different types of prompts perform in terms of quality score and helps notice underperforming content categories."
+    expected_output: "A table listing prompt_type, response_language, counts, and average quality scores."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: pg_avg_tokens_by_prompt_type
+    type: postgresql
+    query: "SELECT prompt_type, avg(coherence_score) as avg_coherence, avg(perplexity_score) as avg_perplexity FROM quality_scores WHERE skipped_reason IS NULL GROUP BY prompt_type;"
+    description: "Average quality breakdown (coherence vs perplexity) by prompt type classification."
+    importance: "Tracks whether specific classes (e.g. code generation) have lower coherence by design, assisting in the calibration of scoring weights."
+    expected_output: "Rows showing prompt types ('code', 'chat') alongside their average coherence and perplexity values."
     how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
 
   - id: prom_prompt_distribution
     type: promql
     query: "sum(increase(quality_spans_processed_total[1h])) by (prompt_type)"
     description: "Hourly distribution of incoming spans by prompt type classification."
+    importance: "Allows capacity planning and shows if there is a sudden spike in code or classification requests."
+    expected_output: "A time-series chart showing traffic trends per prompt type."
     how_to_use: "Execute in Prometheus or Grafana."

@@ -7,34 +7,62 @@ queries:
     type: traceql
     query: '{resource.service.name="quality-engine" && name="quality_engine.consumer.process"}'
     description: "Finds the main Kafka consumer root process spans for quality evaluation."
+    importance: "Allows profiling of the overall message loop execution time, revealing overhead or delays in span ingestion."
+    expected_output: "A trace representation showing 'quality_engine.consumer.process' as the root span, with child spans for handlers and database writes."
     how_to_use: "Enter this query in the Grafana Explore page selecting the Tempo/Traces datasource."
 
   - id: trace_skipped_spans
     type: traceql
     query: '{resource.service.name="quality-engine" && name="preflight.skip"}'
     description: "Finds traces where a span was evaluated but skipped (e.g. content filters or token count below minimum)."
+    importance: "Helps verify that the engine is not wasting processing power on spans that violate pre-flight requirements."
+    expected_output: "Traces where the execution path halts immediately after the 'preflight.skip' span executes."
     how_to_use: "Use in Grafana Explore under Tempo datasource."
+
+  - id: trace_high_latency_ingestion
+    type: traceql
+    query: '{resource.service.name="quality-engine"} | latency_ms_total > 1000'
+    description: "Find spans that took over 1 second to complete execution in the upstream service."
+    importance: "Crucial for identifying severe performance degradation in LLM calls that should be flagged for performance review."
+    expected_output: "A list of traces with total latency duration fields exceeding 1000ms."
+    how_to_use: "Query in Grafana Explore under Tempo datasource."
 
   - id: log_kafka_ingestion
     type: logql
     query: '{container_name="quality-engine"} |= "consumer started" or |= "routing to DLQ"'
     description: "Filter consumer startup actions or Dead Letter Queue (DLQ) routing events."
+    importance: "Used to monitor the health of the consumer pipeline and alert if messages are failing retries and dropping to DLQ."
+    expected_output: "Logs with timestamps containing phrases like 'quality-engine consumer started' or 'handler_max_retries_exceeded — routing to DLQ'."
     how_to_use: "Use in Grafana Explore under Loki datasource."
 
-  - id: pg_skipped_rows
+  - id: pg_skipped_rows_analysis
     type: postgresql
-    query: "SELECT span_id, model, skipped_reason, scored_at FROM quality_scores WHERE skipped_reason IS NOT NULL ORDER BY scored_at DESC LIMIT 20;"
-    description: "Get the latest 20 skipped spans and their exact skip reasons."
+    query: "SELECT skipped_reason, count(*), avg(completion_tokens_below_minimum) FROM (SELECT skipped_reason, CASE WHEN skipped_reason LIKE 'completion_tokens_below_minimum%' THEN 1 ELSE 0 END as completion_tokens_below_minimum FROM quality_scores WHERE skipped_reason IS NOT NULL) sub GROUP BY skipped_reason;"
+    description: "Aggregate summary of skipped spans grouped by reason to show what trigger is filtering the most data."
+    importance: "Used to audit and tune preflight filters. If 95% of spans are skipped due to low token limits, the threshold may need revision."
+    expected_output: "Table with columns: skipped_reason, count, avg (e.g., 'completion_tokens_below_minimum:5', count: 1240)."
     how_to_use: "Run in PostgreSQL via: docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: pg_ingestion_hourly_volume
+    type: postgresql
+    query: "SELECT date_trunc('hour', scored_at) as hour_ts, model, count(*) as count_spans FROM quality_scores GROUP BY hour_ts, model ORDER BY hour_ts DESC LIMIT 24;"
+    description: "Calculate span ingestion rate per hour per model."
+    importance: "Tracks real-time usage traffic profiles, helping identify surge periods or ingestion drops."
+    expected_output: "List of hours with model names and corresponding ingested span counts (e.g., '2026-06-16 11:00:00', 'gpt-4o', 35)."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
 
   - id: kafka_consume_sampled
     type: kafka
     query: "kafka-console-consumer --topic llm.spans.sampled --bootstrap-server kafka:29092 --from-beginning --max-messages 10"
     description: "Consume and inspect the raw sampled spans entering the quality engine pipeline."
+    importance: "Allows real-time packet inspection of messages on the Kafka broker before database insertion or processing."
+    expected_output: "Raw JSON payloads detailing span attributes like trace_id, model, environment, prompt_tokens, and timestamp."
     how_to_use: "Run inside the Kafka container: docker exec -it docker-kafka-1 <query>"
 
   - id: prom_spans_processed
     type: promql
     query: "sum(increase(quality_spans_processed_total[5m])) by (model)"
     description: "Rate of spans processed by the quality pipeline grouped by model over 5 minutes."
+    importance: "Indicates processing throughput. Sudden drops point to broker connection issues or consumer lockups."
+    expected_output: "TimeSeries metric graph showing lines indicating spans processed/sec per model."
     how_to_use: "Enter in Prometheus UI (localhost:9090) or Grafana Explore Prometheus panel."

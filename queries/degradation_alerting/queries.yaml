@@ -7,22 +7,46 @@ queries:
     type: traceql
     query: '{resource.service.name="quality-engine" && name="degradation.check"}'
     description: "Finds evaluation spans checking window averages and evaluating alert thresholds."
+    importance: "Audits execution path of alert checking routine to see how long database queries take."
+    expected_output: "Traces containing 'degradation.check' and child queries to PostgreSQL."
     how_to_use: "Query in Grafana Tempo Explorer."
 
   - id: log_cold_start
     type: logql
     query: '{container_name="quality-engine"} |= "degradation.check cold-start"'
     description: "Search logs for baseline cold-start warnings (suppressed alerting)."
+    importance: "Monitors cold-start periods when the database does not have enough baseline entries, indicating suppressed alerts."
+    expected_output: "Logs like: 'degradation.check cold-start suppressed model=gpt-4o endpoint=/v1/chat/completions'."
     how_to_use: "Query in Grafana Loki Explorer."
+
+  - id: redis_alert_rate_limits
+    type: redis
+    query: "KEYS alert:limit:*"
+    description: "List all active rate-limiting locks stored in Redis to prevent alert spamming."
+    importance: "Audits that the 1-hour alerting rate limit (one alert per model/endpoint per hour) is working correctly."
+    expected_output: "List of rate-limit keys, e.g. 'alert:limit:gpt-4o:/v1/chat/completions'."
+    how_to_use: "docker exec -it quality-engine-redis redis-cli <query>"
+
+  - id: pg_degradation_audit
+    type: postgresql
+    query: "SELECT model, endpoint, count(*) as total_records, avg(composite_score) as last_24h_avg FROM quality_scores WHERE scored_at > now() - interval '24 hours' GROUP BY model, endpoint HAVING avg(composite_score) < 0.65;"
+    description: "SQL audit query to list endpoints whose 24-hour composite average is critically low."
+    importance: "Serves as an analytical verification tool to determine if degradation alerts should have been triggered based on rolling statistics."
+    expected_output: "Endpoints whose rolling quality is low, suggesting potential alert conditions."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
 
   - id: kafka_alerts_topic
     type: kafka
     query: "kafka-console-consumer --topic alerts.quality.degradation --bootstrap-server kafka:29092 --from-beginning --max-messages 10"
     description: "Listen to outgoing quality degradation alerts published to Kafka."
+    importance: "Verifies the alert payloads formatted as JSON contain required keys: model, endpoint, current_window_avg, and ratio."
+    expected_output: "Alert payloads like: '{\"model\": \"gpt-4o\", \"current_window_avg\": 0.60, \"baseline\": 0.85, ...}'"
     how_to_use: "docker exec -it docker-kafka-1 <query>"
 
   - id: prom_alerts_sent
     type: promql
     query: "sum(increase(quality_alerts_sent_total[1h])) by (model)"
     description: "Total number of quality alerts dispatched to Alert Engine per model hourly."
+    importance: "Allows infrastructure dashboards to track system alert dispatch rates and identify outliers."
+    expected_output: "Metric graph showing count of alerts."
     how_to_use: "Execute in Prometheus or Grafana."
