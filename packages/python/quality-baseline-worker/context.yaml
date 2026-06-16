@@ -1,0 +1,28 @@
+# Quality Baseline Worker Observability Context
+# This file provides the standardized command references to start, check, and stop the observability stack using the llm-observe CLI.
+
+commands:
+  start:
+    description: "Start the unified LLM observability stack (Grafana, Tempo, Prometheus, and API) with proper network routing"
+    command: "llm-observe start --name quality-observability-stack --api-port 8002 --grafana-port 3002 --otlp-port 4317 --prometheus-port 9090 && docker network connect docker_default quality-observability-stack"
+  status:
+    description: "Check the runtime status of the observability stack"
+    command: "llm-observe status --name quality-observability-stack"
+  stop:
+    description: "Stop and cleanly remove all containers in the observability stack"
+    command: "llm-observe stop --name quality-observability-stack"
+  setup_script:
+    description: "Automated network alignment, database migration, and topic creation script"
+    command: "./scripts/setup_pipeline.sh"
+
+ports:
+  api: 8002
+  grafana: 3002
+  otlp: 4317
+  prometheus: 9090
+
+networks:
+  default: "docker_default"
+  worker_alias: "kafka"
+  broker_bootstrap: "kafka:29092"
+

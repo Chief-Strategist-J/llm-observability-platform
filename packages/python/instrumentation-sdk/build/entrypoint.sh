@@ -8,9 +8,9 @@ if [ "$WITH_KAFKA" = "true" ]; then
     sleep 3
     su - postgres -c "psql -c \"CREATE USER admin WITH PASSWORD 'password' SUPERUSER;\"" || true
     su - postgres -c "psql -c \"CREATE DATABASE llm_observability OWNER admin;\"" || true
-    PGPASSWORD=password psql -h localhost -U admin -d llm_observability -f /app/database/migrations/postgres/0001_init.sql
+    PGPASSWORD=password psql -h localhost -U admin -d llm_observability -f /app/database/migrations/postgres/0001_init.sql || true
     KAFKA_CLUSTER_ID=$(/opt/kafka/bin/kafka-storage.sh random-uuid)
-    /opt/kafka/bin/kafka-storage.sh format -t "$KAFKA_CLUSTER_ID" -c /opt/kafka/config/kraft/server.properties
+    /opt/kafka/bin/kafka-storage.sh format -t "$KAFKA_CLUSTER_ID" -c /opt/kafka/config/kraft/server.properties || true
     /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kraft/server.properties > /var/log/app/kafka.log 2>&1 &
     sleep 5
     if [ -z "$KAFKA_BOOTSTRAP_SERVERS" ]; then

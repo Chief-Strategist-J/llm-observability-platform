@@ -1,0 +1,87 @@
+# docker-compose.local.yaml
+# Use this file to run quality-engine locally connecting to
+# the already-running Kafka/Zookeeper on the docker_default network.
+#
+# Run with:
+#   docker compose -f docker-compose.local.yaml up --build
+#
+# Requires:
+#   - docker-kafka-1 running on docker_default network (172.20.0.4:9092)
+#   - quality-observability-stack running (OTLP on 4317)
+
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: quality-engine-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: quality_engine_db
+    ports:
+      - "5441:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - quality-engine-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: quality-engine-redis
+    ports:
+      - "6391:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - quality-engine-net
+
+  quality-engine:
+    build:
+      context: ../..
+      dockerfile: build/Dockerfile
+    container_name: quality-engine
+    ports:
+      - "8010:8080"
+    environment:
+      # Connect to already-running Kafka on docker_default network
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - KAFKA_CONSUMER_GROUP=quality-engine-group
+      - KAFKA_TOPIC_INPUT=llm.spans.sampled
+      - KAFKA_TOPIC_SCORES=llm.quality.scores
+      - KAFKA_TOPIC_TOXICITY=llm.toxicity.flagged
+      - KAFKA_TOPIC_ALERTS=alerts.quality.degradation
+      # Local postgres/redis
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=quality_engine_db
+      - REDIS_URL=redis://redis:6379/0
+      # No Temporal in local mode
+      - TEMPORAL_HOST=
+      - TEMPORAL_NAMESPACE=default
+      - TEMPORAL_TASK_QUEUE=quality-engine-tasks
+      # OTLP traces to observability stack
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://quality-observability-stack:4317
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - quality-engine-net
+      - docker_default
+
+networks:
+  quality-engine-net:
+    driver: bridge
+  docker_default:
+    external: true
