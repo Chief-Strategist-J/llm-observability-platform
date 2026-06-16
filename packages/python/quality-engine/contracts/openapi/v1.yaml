@@ -40,6 +40,51 @@ paths:
         "422":
           description: Validation error
 
+  /v1/review/queue:
+    get:
+      summary: Retrieve pending quality review queue
+      operationId: getReviewQueue
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            default: pending
+      responses:
+        "200":
+          description: List of items in the review queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReviewQueueItem"
+
+  /v1/review/{span_id}:
+    post:
+      summary: Submit human review for a span
+      operationId: submitReview
+      parameters:
+        - name: span_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewUpdateRequest"
+      responses:
+        "200":
+          description: Review status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewUpdateResponse"
+
 components:
   schemas:
     HealthResponse:
@@ -110,3 +155,71 @@ components:
           type: object
           additionalProperties:
             type: number
+
+    ReviewQueueItem:
+      type: object
+      required: [span_id, trace_id, model, endpoint, prompt_type, response_language, quality_flags, review_status, scored_at]
+      properties:
+        span_id:
+          type: string
+        trace_id:
+          type: string
+        model:
+          type: string
+        endpoint:
+          type: string
+        prompt_type:
+          type: string
+        response_language:
+          type: string
+        composite_score:
+          type: number
+          nullable: true
+        coherence_score:
+          type: number
+          nullable: true
+        toxicity_score:
+          type: number
+          nullable: true
+        faithfulness_score:
+          type: number
+          nullable: true
+        perplexity_score:
+          type: number
+          nullable: true
+        quality_flags:
+          type: array
+          items:
+            type: string
+        skipped_reason:
+          type: string
+          nullable: true
+        review_status:
+          type: string
+        reviewed_at:
+          type: string
+          format: date-time
+          nullable: true
+        scored_at:
+          type: string
+          format: date-time
+
+    ReviewUpdateRequest:
+      type: object
+      required: [review_status]
+      properties:
+        review_status:
+          type: string
+
+    ReviewUpdateResponse:
+      type: object
+      required: [span_id, review_status, reviewed_at]
+      properties:
+        span_id:
+          type: string
+        review_status:
+          type: string
+        reviewed_at:
+          type: string
+          format: date-time
+

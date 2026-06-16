@@ -1,0 +1,52 @@
+# Queries for Feature: human_review
+feature: human_review
+description: "Human-in-the-loop review queue management, toxic span confirmation, and SLO metrics tracking."
+
+queries:
+  - id: pg_review_queue
+    type: postgresql
+    query: "SELECT span_id, model, composite_score, review_status, scored_at FROM quality_scores WHERE review_status = 'pending' ORDER BY scored_at ASC;"
+    description: "Get the queue of spans pending human review."
+    importance: "Allows developers and human reviewers to list and pull items that need manual auditing."
+    expected_output: "List of span rows with pending status, scores, and timestamps."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: pg_confirmed_issues
+    type: postgresql
+    query: "SELECT span_id, model, composite_score, reviewed_at FROM quality_scores WHERE review_status = 'confirmed_toxic' ORDER BY reviewed_at DESC;"
+    description: "View spans with confirmed toxicity or issues by reviewers."
+    importance: "Allows engineering to inspect real confirmed hallucination/toxic examples to patch model prompts."
+    expected_output: "Confirmed failure spans with reviewed timestamps."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: pg_review_duration_slo_check
+    type: postgresql
+    query: "SELECT span_id, model, scored_at, reviewed_at, (reviewed_at - scored_at) as review_duration, CASE WHEN (reviewed_at - scored_at) < interval '24 hours' THEN 'MEETS_SLO' ELSE 'BREACHES_SLO' END as slo_status FROM quality_scores WHERE review_status != 'pending';"
+    description: "SQL query calculating exact review duration and checking if it meets the 24-hour SLO."
+    importance: "Audits contractual human-in-the-loop response targets (SLO-Q-03 target: >95% reviewed within 24 hours)."
+    expected_output: "Table with span_id, model, review duration (e.g. 02:45:12), and SLO classification ('MEETS_SLO' / 'BREACHES_SLO')."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: pg_review_conversion_rates
+    type: postgresql
+    query: "SELECT review_status, count(*), round(count(*)::numeric / sum(count(*)) over() * 100, 2) as percentage FROM quality_scores GROUP BY review_status;"
+    description: "Retrieve confirmation conversion rates (e.g. what percentage of flagged spans are actual positive failures)."
+    importance: "Measures precision of automated guardrails. High percentage of false positives means thresholds are too tight."
+    expected_output: "List of review statuses with their absolute counts and respective percentages of the total dataset."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: prom_review_slo
+    type: promql
+    query: "quality_review_slo_ratio * 100"
+    description: "The percentage of items in the human review queue processed within 24 hours (SLO-Q-03 target: >95%)."
+    importance: "Tracks SLO adherence dynamically. Drops below 95% raise high-priority infrastructure alerts."
+    expected_output: "Percentage value (e.g., 98.4)."
+    how_to_use: "Execute in Prometheus or Grafana."
+
+  - id: prom_review_decisions
+    type: promql
+    query: "sum(quality_review_decisions_total) by (status)"
+    description: "Aggregation of review choices (confirmed vs false_positive)."
+    importance: "Monitors human auditor workload and output decisions."
+    expected_output: "Bar graph or metric value showing decisions count."
+    how_to_use: "Execute in Prometheus or Grafana."

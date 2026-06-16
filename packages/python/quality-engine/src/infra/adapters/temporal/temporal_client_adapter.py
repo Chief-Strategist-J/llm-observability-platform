@@ -1,15 +1,19 @@
 from __future__ import annotations
+import logging
 from temporalio.client import Client
 from shared.ports.temporal_trigger_port import TemporalTriggerPort
+
+logger = logging.getLogger(__name__)
 
 
 class TemporalClientAdapter(TemporalTriggerPort):
     """
     Triggers quality_score_workflow on the Temporal server.
     Workflow ID is deterministic from span_id to ensure idempotency.
+    When client is None (local/dev mode), trigger is a no-op.
     """
 
-    def __init__(self, client: Client, task_queue: str) -> None:
+    def __init__(self, client: Client | None, task_queue: str) -> None:
         self._client = client
         self._task_queue = task_queue
 
@@ -17,6 +21,12 @@ class TemporalClientAdapter(TemporalTriggerPort):
         self, span_id: str, payload: dict
     ) -> str:
         workflow_id = f"quality-score-{span_id}"
+        if self._client is None:
+            logger.warning(
+                "Temporal unavailable (local mode) — skipping workflow trigger for span_id=%s",
+                span_id,
+            )
+            return workflow_id
         await self._client.start_workflow(
             "quality_score_workflow",
             payload,

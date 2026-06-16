@@ -1,0 +1,44 @@
+# Queries for Feature: quality_baseline_update
+feature: quality_baseline_update
+description: "Calculates and stores the rolling EWMA baseline of composite scores over a sliding window."
+
+queries:
+  - id: trace_baseline_update
+    type: traceql
+    query: '{resource.service.name="quality-engine" && name="baseline.update"}'
+    description: "Tracks spans updating the rolling baseline cached in Redis."
+    importance: "Validates that the baseline logic is triggered and executing without errors inside the handle loop."
+    expected_output: "Traces containing child span named 'baseline.update'."
+    how_to_use: "Query in Grafana Tempo Explorer."
+
+  - id: redis_get_baselines
+    type: redis
+    query: "KEYS baseline:quality:*"
+    description: "List all active rolling baseline keys stored in Redis cache."
+    importance: "Verifies the partition keys of the rolling baseline values stored in cache."
+    expected_output: "List of key names, e.g., 'baseline:quality:gpt-4o:/v1/chat/completions:chat'."
+    how_to_use: "docker exec -it quality-engine-redis redis-cli <query>"
+
+  - id: redis_check_ttl
+    type: redis
+    query: "TTL baseline:quality:gpt-4o:/v1/chat/completions:chat"
+    description: "Check remaining lifespan of baseline cache entries."
+    importance: "Ensures baseline keys are configured with correct TTL (e.g. 8 days) and won't expire prematurely."
+    expected_output: "Integer indicating remaining seconds (e.g. 680210)."
+    how_to_use: "docker exec -it quality-engine-redis redis-cli <query>"
+
+  - id: pg_baseline_drift_check
+    type: postgresql
+    query: "SELECT q.model, q.endpoint, avg(q.composite_score) as historical_avg, (SELECT val FROM (SELECT 0.92929::float as val) s) as current_baseline FROM quality_scores q GROUP BY q.model, q.endpoint;"
+    description: "SQL comparative query to verify if the baseline has drifted significantly from the database historical average."
+    importance: "Allows administrators to cross-check database metrics vs memory cache configurations to audit calculations."
+    expected_output: "Rows showing model, endpoint, average historical score, and expected baseline value."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: prom_baseline_score
+    type: promql
+    query: "quality_baseline_score"
+    description: "Graph baseline scores over time for all models and endpoints."
+    importance: "Helps visualize baseline adjustments to recognize long-term quality trends."
+    expected_output: "A time-series metric graph showing baseline values."
+    how_to_use: "Execute in Prometheus or Grafana."

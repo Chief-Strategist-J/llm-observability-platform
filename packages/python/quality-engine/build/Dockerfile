@@ -5,6 +5,7 @@ WORKDIR /app
 # Install build dependencies if needed (e.g. for confluent-kafka or psycopg compiles)
 RUN apt-get update && apt-get install -y \
     build-essential \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml ./

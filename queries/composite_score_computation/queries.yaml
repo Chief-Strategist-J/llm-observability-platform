@@ -1,0 +1,52 @@
+# Queries for Feature: composite_score_computation
+feature: composite_score_computation
+description: "Calculates individual metrics (toxicity, coherence, faithfulness, perplexity) and computes the composite index."
+
+queries:
+  - id: trace_scorer_subspans
+    type: traceql
+    query: '{resource.service.name="quality-engine" && (name="embedding.fetch.prompt" || name="embedding.fetch.response")}'
+    description: "Tracks embedding generation calls and latencies for coherence evaluation."
+    importance: "Tracks performance of downstream embedding models. Slow response times here delay the overall pipeline loop."
+    expected_output: "Tempo trace timelines depicting execution durations of downstream embedding API calls."
+    how_to_use: "Query in Grafana Tempo Explorer."
+
+  - id: pg_dual_flagged_spans
+    type: postgresql
+    query: "SELECT span_id, model, composite_score, quality_flags, scored_at FROM quality_scores WHERE 'LOW_COHERENCE' = ANY(quality_flags) AND 'HALLUCINATION_RISK' = ANY(quality_flags) ORDER BY scored_at DESC LIMIT 10;"
+    description: "Finds the worst performing spans that have both low coherence and hallucination risk."
+    importance: "Identifies severe LLM failures (hallucination combined with logic failures) that require immediate developer review."
+    expected_output: "List of spans with combined flags, scores, and timestamps."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: pg_model_quality_aggregates
+    type: postgresql
+    query: "SELECT model, count(*) as total_evals, avg(composite_score) as avg_composite, avg(coherence_score) as avg_coherence, avg(toxicity_score) as avg_toxicity, avg(faithfulness_score) as avg_faithfulness FROM quality_scores GROUP BY model ORDER BY avg_composite DESC;"
+    description: "Calculates comprehensive quality averages across all models."
+    importance: "Provides comparative metrics for selecting the best performing LLM for production workloads."
+    expected_output: "Table with columns: model, total_evals, avg_composite, avg_coherence, avg_toxicity, avg_faithfulness."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: kafka_scores_topic
+    type: kafka
+    query: "kafka-console-consumer --topic llm.quality.scores --bootstrap-server kafka:29092 --from-beginning --max-messages 15"
+    description: "Consume and inspect the evaluation results emitted by the Temporal workflows."
+    importance: "Audits whether the scoring worker is correctly serialization/deserializing the telemetry data to Kafka."
+    expected_output: "JSON payloads showing keys: span_id, model, prompt_type, response_language, scores (dictionary), quality_flags (array)."
+    how_to_use: "docker exec -it docker-kafka-1 <query>"
+
+  - id: prom_embedding_reuse
+    type: promql
+    query: "sum(quality_embedding_reuse_total) by (status)"
+    description: "Calculates ratio of reused vs newly generated embeddings."
+    importance: "Shows how much latency and cost is saved by reusing prompt/response embeddings."
+    expected_output: "Pie chart or metrics showing counts of status='reused' versus status='generated'."
+    how_to_use: "Execute in Prometheus or Grafana."
+
+  - id: prom_toxic_ratio
+    type: promql
+    query: "sum(quality_toxic_flagged_total) / sum(quality_spans_processed_total) * 100"
+    description: "Percentage of ingested spans flagged as toxic (>0.50)."
+    importance: "Critical safety KPI. Spike in ratio indicates potential jailbreaks or model failures."
+    expected_output: "Graph detailing percentage value over time."
+    how_to_use: "Execute in Prometheus or Grafana."

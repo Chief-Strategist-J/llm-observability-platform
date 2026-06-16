@@ -93,6 +93,9 @@ services:
       - TEMPORAL_HOST=temporal:7233
       - TEMPORAL_NAMESPACE=default
       - TEMPORAL_TASK_QUEUE=quality-baseline-tasks
+      - KAFKA_BOOTSTRAP_SERVERS=172.20.0.8:9092
+
+
 
 volumes:
   postgres_data:

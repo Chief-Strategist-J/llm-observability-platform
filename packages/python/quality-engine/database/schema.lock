@@ -18,7 +18,10 @@ tables:
       - { name: quality_flags,      type: "TEXT[]",     nullable: false, default: "'{}'" }
       - { name: skipped_reason,     type: TEXT,         nullable: true }
       - { name: scored_at,          type: TIMESTAMPTZ,  nullable: false, default: "NOW()" }
+      - { name: review_status,      type: TEXT,         nullable: false, default: "'pending'" }
+      - { name: reviewed_at,        type: TIMESTAMPTZ,  nullable: true }
     indexes:
       - { name: idx_quality_scores_model_endpoint, columns: [model, endpoint, scored_at] }
       - { name: idx_quality_scores_scored_at,      columns: [scored_at] }
       - { name: idx_quality_scores_span_id,        columns: [span_id] }
+      - { name: idx_quality_scores_review_status,  columns: [review_status] }

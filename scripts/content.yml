@@ -1,0 +1,57 @@
+pipeline:
+  name: "LLM Observability and Quality Score Pipeline"
+  network:
+    name: "docker_default"
+  database:
+    container: "quality-engine-postgres"
+    db_name: "quality_engine_db"
+    user: "postgres"
+    table: "quality_scores"
+    schema: |
+      CREATE TABLE IF NOT EXISTS quality_scores (
+          span_id VARCHAR(255) PRIMARY KEY,
+          trace_id VARCHAR(255) NOT NULL,
+          model VARCHAR(255) NOT NULL,
+          provider VARCHAR(255) NOT NULL,
+          service_name VARCHAR(255) NOT NULL,
+          endpoint VARCHAR(255) NOT NULL,
+          prompt_tokens INTEGER NOT NULL,
+          completion_tokens INTEGER NOT NULL,
+          latency_ms_total DOUBLE PRECISION NOT NULL,
+          finish_reason VARCHAR(255) NOT NULL,
+          cost_usd_micro INTEGER NOT NULL,
+          price_version VARCHAR(255) NOT NULL,
+          timestamp_utc TIMESTAMPTZ NOT NULL,
+          prompt_text TEXT,
+          response_text TEXT,
+          review_status VARCHAR(50) DEFAULT 'pending',
+          reviewed_at TIMESTAMPTZ
+      );
+  kafka:
+    container: "docker-kafka-1"
+    bootstrap_server: "localhost:9094"
+    topics:
+      - "llm.spans.raw"
+      - "llm.spans.sampled"
+      - "llm.quality.scores"
+  observability_stack:
+    container: "quality-observability-stack"
+    ports:
+      - "4317:4317" # OTLP
+      - "9090:9090" # Prometheus
+      - "3002:3000" # Grafana
+      - "8002:8000" # Instrumentation API
+    env:
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:29092"
+  worker:
+    container: "quality-engine"
+    ports:
+      - "8010:8080" # REST API & Prometheus metrics
+    env:
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:29092"
+      KAFKA_TOPIC_INPUT: "llm.spans.sampled"
+      KAFKA_TOPIC_SCORES: "llm.quality.scores"
+      POSTGRES_HOST: "postgres"
+      REDIS_URL: "redis://redis:6379/0"
+      TEMPORAL_HOST: ""
+

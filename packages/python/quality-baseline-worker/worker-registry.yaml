@@ -8,7 +8,15 @@ workers:
     workflows:
       - RecomputeQualityBaseline
       - RollupQualityTrend
+      - QualityScoreWorkflow
     activities:
       - recompute_baseline_scores
       - write_redis_baselines
       - rollup_quality_trend
+      - detect_language
+      - detect_prompt_type
+      - compute_coherence
+      - compute_toxicity
+      - compute_faithfulness
+      - compute_perplexity
+      - aggregate_composite

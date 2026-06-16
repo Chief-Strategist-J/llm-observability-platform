@@ -1,0 +1,64 @@
+{
+  "uid": "llm-user-analytics-dashboard",
+  "title": "LLM User & Session Analytics",
+  "tags": ["llm", "user", "analytics"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Unique Users Activity (DAU/MAU)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(increase(llm_user_requests_total[1d]))",
+          "legendFormat": "Daily Active Users",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Average Tokens Consumed per Session",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(llm_tokens_consumed_total_sum[5m])) / sum(rate(llm_tokens_consumed_total_count[5m]))",
+          "legendFormat": "Average Tokens",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Top Users by Request Count",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        },
+        "orientation": "horizontal",
+        "displayMode": "gradient"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(llm_user_requests_total[1h])) by (user_id)",
+          "legendFormat": "{{user_id}}",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

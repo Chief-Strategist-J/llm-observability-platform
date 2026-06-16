@@ -15,9 +15,9 @@ class TestCompositeScorerBoundaries:
         assert comp is not None
         assert comp == pytest.approx(1.0, abs=0.001)
         # Verify normalization without perplexity
-        assert weights["coherence"] == pytest.approx(0.30 / 0.90)
-        assert weights["faithfulness"] == pytest.approx(0.40 / 0.90)
-        assert weights["toxicity"] == pytest.approx(0.20 / 0.90)
+        assert weights["coherence"] == pytest.approx(0.25 / 0.75)
+        assert weights["faithfulness"] == pytest.approx(0.35 / 0.75)
+        assert weights["toxicity"] == pytest.approx(0.15 / 0.75)
 
     def test_all_worst_scores_gives_zero_composite(self):
         """Worst: coherence=0, toxicity=1.0 (inverted=0), faithfulness=0"""
@@ -63,8 +63,8 @@ class TestCompositeScorerBoundaries:
         scores = ScoreMap(coherence=coh, toxicity=tox)
         comp, weights = compute_composite(scores)
         assert comp == pytest.approx(expected, abs=1e-9)
-        assert weights["coherence"] == pytest.approx(0.30 / 0.50)
-        assert weights["toxicity"] == pytest.approx(0.20 / 0.50)
+        assert weights["coherence"] == pytest.approx(0.25 / 0.40)
+        assert weights["toxicity"] == pytest.approx(0.15 / 0.40)
 
 
 class TestCompositeInvariantLogging:

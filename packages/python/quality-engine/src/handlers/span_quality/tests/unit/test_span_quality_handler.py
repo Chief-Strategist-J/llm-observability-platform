@@ -317,7 +317,7 @@ class TestScoreResultPersistence:
         repo.insert_score.assert_called_once()
         row = repo.insert_score.call_args[0][0]
         assert row.weights_used == weights
-        assert weights == {"coherence": 0.30 / 0.50, "toxicity": 0.20 / 0.50}
+        assert weights == {"coherence": 0.25 / 0.40, "toxicity": 0.15 / 0.40}
 
     @pytest.mark.asyncio
     async def test_repo_insert_failure_propagates(self):

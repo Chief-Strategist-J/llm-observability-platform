@@ -1,3 +1,13 @@
+[2026-06-16T11:55:00+05:30] Implement Phase 4 hardening, OTel tracing interceptors, and composite activity refactoring
+└── File: packages/python/quality-baseline-worker/worker-registry.yaml, packages/python/quality-baseline-worker/src/worker/index.py, packages/python/quality-baseline-worker/src/worker/activities.py, packages/python/quality-baseline-worker/src/worker/workflows.py, packages/python/quality-baseline-worker/tests/unit/test_quality_score_workflow.py
+    ├── Choice: Address code review feedback to add OTel tracing interceptors, wrap activities, and group activity arguments
+    └── Changes:
+        ├── worker-registry.yaml -> Register QualityScoreWorkflow and 7 activities
+        ├── index.py -> Import and register TracingInterceptor on client and worker
+        ├── activities.py -> Wrap 7 activities in OTel spans and use AggregateCompositeInput dataclass
+        ├── workflows.py -> Construct and pass AggregateCompositeInput to aggregate_composite activity
+        └── test_quality_score_workflow.py -> Update unit tests for AggregateCompositeInput
+
 [2026-05-21T10:20:00+05:30] Fix package versioning and align Docker tags for release 1.6.0
 └── File: packages/python/instrumentation-sdk/pyproject.toml, packages/python/instrumentation-sdk/contracts/changelog.md, packages/python/instrumentation-sdk/scripts/deploy_docker.sh
     ├── Choice: Deploy package with corrected version 1.6.0 instead of 1.8.0
@@ -1080,4 +1090,12 @@
         ├── test_degradation_alert_rate_limited_suppresses_second -> dedup gate verified
         ├── test_degradation_alert_default_cold_start_is_false -> absent is_cold_start defaults to False
         └── test_degradation_alert_rate_limit_key_format -> key format rate_limit:quality_degradation:{model}:{endpoint} verified
-
+[2026-06-16T11:20:00+05:30] Implement Phase 4 - Hardening, Human Review, and Load Test
+└── File: packages/python/quality-engine/contracts/openapi/v1.yaml, packages/python/quality-engine/database/migrations/0002_add_review_status.sql, packages/python/quality-engine/database/migrations/0002_add_review_status.rollback.sql, packages/python/quality-engine/database/schema.lock, packages/python/quality-baseline-worker/contracts/workflows/quality_score_workflow.yaml, registry/workers/quality-baseline-worker.yaml, packages/python/quality-baseline-worker/src/worker/registry.py, packages/python/quality-baseline-worker/src/worker/index.py, packages/python/quality-baseline-worker/src/worker/activities.py, packages/python/quality-baseline-worker/src/worker/workflows.py, packages/python/quality-baseline-worker/src/shared/ports/scorer_client_port.py, packages/python/quality-baseline-worker/src/shared/ports/kafka_producer_port.py, packages/python/quality-baseline-worker/src/infra/adapters/scorers/http_scorer_client_adapter.py, packages/python/quality-baseline-worker/src/infra/adapters/kafka/confluent_producer_adapter.py, packages/python/quality-baseline-worker/src/shared/ports/metrics_port.py, packages/python/quality-baseline-worker/src/infra/adapters/metrics/prometheus_adapter.py, packages/python/quality-engine/src/worker/index.py, packages/python/quality-engine/src/shared/types/quality_score_row.py, packages/python/quality-engine/src/infra/adapters/postgres/postgres_adapter.py, packages/python/quality-engine/src/shared/di/providers.py, packages/python/quality-engine/src/api/rest/v1/app.py, packages/python/quality-engine/src/api/rest/v1/handlers/review.py, packages/python/quality-engine/src/api/rest/v1/router.py, packages/python/quality-baseline-worker/tests/unit/test_quality_score_workflow.py, packages/python/quality-engine/tests/performance/test_review_load.py, packages/python/quality-engine/tests/unit/test_review_api.py
+    ├── Choice: Use Hexagonal architecture (Ports & Adapters) to implement the 7-activity quality scoring Temporal workflow, handle database review columns, and expose human review HTTP endpoints in quality-engine.
+    └── Changes:
+        ├── openapi -> Define /v1/review/queue and /v1/review/{span_id} endpoints in openapi/v1.yaml
+        ├── database -> Add migrations for review_status and reviewed_at columns and update schema.lock
+        ├── worker -> Implement quality_score_workflow with 7 activities and parallelized scoring tasks in Temporal
+        ├── quality-engine -> Add FastAPI handlers for human review queue retrieval and update submissions
+        └── testing -> Write unit, workflow, and load tests to cover human review and workflow activities

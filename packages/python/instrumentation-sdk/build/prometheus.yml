@@ -5,3 +5,8 @@ scrape_configs:
   - job_name: 'instrumentation-api'
     static_configs:
       - targets: ['localhost:9464']
+
+  - job_name: 'quality-engine'
+    static_configs:
+      - targets: ['quality-engine:8080']
+
