@@ -1,0 +1,74 @@
+{
+  "uid": "llm-model-parity-dashboard",
+  "title": "LLM Model Parity & A/B Testing",
+  "tags": ["llm", "model", "parity"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Average Model Latency Comparison (ms)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "ms" }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(llm_latency_ms_sum[5m])) by (model) / sum(rate(llm_latency_ms_count[5m])) by (model)",
+          "legendFormat": "{{model}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Average Quality Score Comparison",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(quality_composite_score_sum[5m])) by (model) / sum(rate(quality_composite_score_count[5m])) by (model)",
+          "legendFormat": "{{model}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Model Cost Comparison (USD micro)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(increase(llm_cost_micro_total[5m])) by (model)",
+          "legendFormat": "{{model}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Model Error Rates (%)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(llm_errors_total[5m])) by (model) / sum(rate(llm_requests_total[5m])) by (model) * 100",
+          "legendFormat": "{{model}}",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

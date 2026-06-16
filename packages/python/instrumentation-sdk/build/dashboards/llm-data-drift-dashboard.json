@@ -1,0 +1,71 @@
+{
+  "uid": "llm-data-drift-dashboard",
+  "title": "LLM Data Drift & Quality Baselines",
+  "tags": ["llm", "drift", "baselines"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Rolling Baseline Quality score (EWMA)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "quality_baseline_score",
+          "legendFormat": "{{model}} - {{endpoint}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Average Semantic Coherence Trends",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(quality_coherence_score_sum[5m])) / sum(rate(quality_coherence_score_count[5m]))",
+          "legendFormat": "Coherence",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Toxicity Baseline score Trends",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(quality_toxicity_score_sum[5m])) / sum(rate(quality_toxicity_score_count[5m]))",
+          "legendFormat": "Toxicity Avg",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Prompt Length Distribution Trends",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(llm_prompt_tokens_sum[5m])) / sum(rate(llm_prompt_tokens_count[5m]))",
+          "legendFormat": "Average Prompt Tokens",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}
