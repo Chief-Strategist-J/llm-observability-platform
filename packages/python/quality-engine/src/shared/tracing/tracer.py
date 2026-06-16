@@ -18,7 +18,7 @@ def configure_tracer(service_name: str = "quality-engine") -> None:
     otlp_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
     if otlp_endpoint:
         from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter  # type: ignore[import-untyped]
-        exporter = OTLPSpanExporter(endpoint=otlp_endpoint)
+        exporter = OTLPSpanExporter(endpoint=otlp_endpoint, insecure=True)
         provider.add_span_processor(BatchSpanProcessor(exporter))
 
     trace.set_tracer_provider(provider)

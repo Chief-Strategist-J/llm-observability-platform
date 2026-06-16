@@ -16,7 +16,8 @@ dependencies = [
     "prometheus-client>=0.17.0",
     "pyyaml>=6.0",
     "confluent-kafka>=2.3.0",
-    "langdetect>=1.0.9"
+    "langdetect>=1.0.9",
+    "httpx>=0.24.0"
 ]
 
 [project.optional-dependencies]

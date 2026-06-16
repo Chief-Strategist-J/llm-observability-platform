@@ -86,6 +86,8 @@ Every sub-package in every language follows this structure. Files use the langua
 │   ├── features/
 │   │   └── {feature-name}/
 │   │       ├── index
+│   │       ├── contex.ymal   <--- here create context of this feature what is the business logic we have,all dependcy, core architecture desision, networking,
+                               and how this is connected to each other, why its even exists? criticality
 │   │       ├── service
 │   │       ├── repository
 │   │       ├── types
