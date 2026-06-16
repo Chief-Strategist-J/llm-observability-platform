@@ -1,0 +1,34 @@
+# Queries for Feature: composite_score_computation
+feature: composite_score_computation
+description: "Calculates individual metrics (toxicity, coherence, faithfulness, perplexity) and computes the composite index."
+
+queries:
+  - id: trace_scorer_subspans
+    type: traceql
+    query: '{resource.service.name="quality-engine" && (name="embedding.fetch.prompt" || name="embedding.fetch.response")}'
+    description: "Tracks embedding generation calls and latencies for coherence evaluation."
+    how_to_use: "Query in Grafana Tempo Explorer."
+
+  - id: pg_low_quality_composite
+    type: postgresql
+    query: "SELECT span_id, model, composite_score, coherence_score, toxicity_score FROM quality_scores WHERE composite_score < 0.50 ORDER BY composite_score ASC LIMIT 15;"
+    description: "Retrieves the lowest quality score records for model debugging."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: kafka_scores_topic
+    type: kafka
+    query: "kafka-console-consumer --topic llm.quality.scores --bootstrap-server kafka:29092 --from-beginning --max-messages 15"
+    description: "Consume and inspect the evaluation results emitted by the Temporal workflows."
+    how_to_use: "docker exec -it docker-kafka-1 <query>"
+
+  - id: prom_embedding_reuse
+    type: promql
+    query: "sum(quality_embedding_reuse_total) by (status)"
+    description: "Calculates ratio of reused vs newly generated embeddings."
+    how_to_use: "Execute in Prometheus or Grafana."
+
+  - id: prom_toxic_ratio
+    type: promql
+    query: "sum(quality_toxic_flagged_total) / sum(quality_spans_processed_total) * 100"
+    description: "Percentage of ingested spans flagged as toxic (>0.50)."
+    how_to_use: "Execute in Prometheus or Grafana."

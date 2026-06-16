@@ -1,0 +1,40 @@
+# Queries for Feature: span_ingestion_preflight
+feature: span_ingestion_preflight
+description: "Inbound sampled span ingestion, pre-flight skip checks, and DLQ routing."
+
+queries:
+  - id: trace_consumer_root
+    type: traceql
+    query: '{resource.service.name="quality-engine" && name="quality_engine.consumer.process"}'
+    description: "Finds the main Kafka consumer root process spans for quality evaluation."
+    how_to_use: "Enter this query in the Grafana Explore page selecting the Tempo/Traces datasource."
+
+  - id: trace_skipped_spans
+    type: traceql
+    query: '{resource.service.name="quality-engine" && name="preflight.skip"}'
+    description: "Finds traces where a span was evaluated but skipped (e.g. content filters or token count below minimum)."
+    how_to_use: "Use in Grafana Explore under Tempo datasource."
+
+  - id: log_kafka_ingestion
+    type: logql
+    query: '{container_name="quality-engine"} |= "consumer started" or |= "routing to DLQ"'
+    description: "Filter consumer startup actions or Dead Letter Queue (DLQ) routing events."
+    how_to_use: "Use in Grafana Explore under Loki datasource."
+
+  - id: pg_skipped_rows
+    type: postgresql
+    query: "SELECT span_id, model, skipped_reason, scored_at FROM quality_scores WHERE skipped_reason IS NOT NULL ORDER BY scored_at DESC LIMIT 20;"
+    description: "Get the latest 20 skipped spans and their exact skip reasons."
+    how_to_use: "Run in PostgreSQL via: docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: kafka_consume_sampled
+    type: kafka
+    query: "kafka-console-consumer --topic llm.spans.sampled --bootstrap-server kafka:29092 --from-beginning --max-messages 10"
+    description: "Consume and inspect the raw sampled spans entering the quality engine pipeline."
+    how_to_use: "Run inside the Kafka container: docker exec -it docker-kafka-1 <query>"
+
+  - id: prom_spans_processed
+    type: promql
+    query: "sum(increase(quality_spans_processed_total[5m])) by (model)"
+    description: "Rate of spans processed by the quality pipeline grouped by model over 5 minutes."
+    how_to_use: "Enter in Prometheus UI (localhost:9090) or Grafana Explore Prometheus panel."

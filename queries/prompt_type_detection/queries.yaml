@@ -1,0 +1,28 @@
+# Queries for Feature: prompt_type_detection
+feature: prompt_type_detection
+description: "Heuristics and models classifying prompt types (chat, RAG, code, classification) and detecting languages."
+
+queries:
+  - id: trace_language_detection
+    type: traceql
+    query: '{resource.service.name="quality-engine"} | response_language != "en"'
+    description: "Find trace spans where the response language is classified as non-English."
+    how_to_use: "Query in Grafana Tempo Explorer."
+
+  - id: log_non_english
+    type: logql
+    query: '{container_name="quality-engine"} |= "quality_non_english_total"'
+    description: "Search logs for language detection warnings and count triggers."
+    how_to_use: "Query in Grafana Loki Explorer."
+
+  - id: pg_prompt_types
+    type: postgresql
+    query: "SELECT prompt_type, response_language, count(*) FROM quality_scores GROUP BY prompt_type, response_language;"
+    description: "Get aggregation counts of detected prompt types and languages."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: prom_prompt_distribution
+    type: promql
+    query: "sum(increase(quality_spans_processed_total[1h])) by (prompt_type)"
+    description: "Hourly distribution of incoming spans by prompt type classification."
+    how_to_use: "Execute in Prometheus or Grafana."

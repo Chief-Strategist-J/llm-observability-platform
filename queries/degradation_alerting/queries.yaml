@@ -1,0 +1,28 @@
+# Queries for Feature: degradation_alerting
+feature: degradation_alerting
+description: "Detects drop in quality score rolling averages compared to baselines and emits alerts."
+
+queries:
+  - id: trace_degradation_check
+    type: traceql
+    query: '{resource.service.name="quality-engine" && name="degradation.check"}'
+    description: "Finds evaluation spans checking window averages and evaluating alert thresholds."
+    how_to_use: "Query in Grafana Tempo Explorer."
+
+  - id: log_cold_start
+    type: logql
+    query: '{container_name="quality-engine"} |= "degradation.check cold-start"'
+    description: "Search logs for baseline cold-start warnings (suppressed alerting)."
+    how_to_use: "Query in Grafana Loki Explorer."
+
+  - id: kafka_alerts_topic
+    type: kafka
+    query: "kafka-console-consumer --topic alerts.quality.degradation --bootstrap-server kafka:29092 --from-beginning --max-messages 10"
+    description: "Listen to outgoing quality degradation alerts published to Kafka."
+    how_to_use: "docker exec -it docker-kafka-1 <query>"
+
+  - id: prom_alerts_sent
+    type: promql
+    query: "sum(increase(quality_alerts_sent_total[1h])) by (model)"
+    description: "Total number of quality alerts dispatched to Alert Engine per model hourly."
+    how_to_use: "Execute in Prometheus or Grafana."

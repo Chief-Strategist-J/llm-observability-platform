@@ -1,0 +1,28 @@
+# Queries for Feature: quality_baseline_update
+feature: quality_baseline_update
+description: "Calculates and stores the rolling EWMA baseline of composite scores over a sliding window."
+
+queries:
+  - id: trace_baseline_update
+    type: traceql
+    query: '{resource.service.name="quality-engine" && name="baseline.update"}'
+    description: "Tracks spans updating the rolling baseline cached in Redis."
+    how_to_use: "Query in Grafana Tempo Explorer."
+
+  - id: redis_get_baselines
+    type: redis
+    query: "KEYS baseline:quality:*"
+    description: "List all active rolling baseline keys stored in Redis cache."
+    how_to_use: "docker exec -it quality-engine-redis redis-cli <query>"
+
+  - id: redis_get_specific_baseline
+    type: redis
+    query: "GET baseline:quality:gpt-4o:/v1/chat/completions:chat"
+    description: "Get the current cached baseline value for GPT-4o chat."
+    how_to_use: "docker exec -it quality-engine-redis redis-cli <query>"
+
+  - id: prom_baseline_score
+    type: promql
+    query: "quality_baseline_score"
+    description: "Graph baseline scores over time for all models and endpoints."
+    how_to_use: "Execute in Prometheus or Grafana."

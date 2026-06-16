@@ -1,0 +1,28 @@
+# Queries for Feature: human_review
+feature: human_review
+description: "Human-in-the-loop review queue management, toxic span confirmation, and SLO metrics tracking."
+
+queries:
+  - id: pg_review_queue
+    type: postgresql
+    query: "SELECT span_id, model, composite_score, review_status, scored_at FROM quality_scores WHERE review_status = 'pending' ORDER BY scored_at ASC;"
+    description: "Get the queue of spans pending human review."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: pg_confirmed_issues
+    type: postgresql
+    query: "SELECT span_id, model, composite_score, reviewed_at FROM quality_scores WHERE review_status = 'confirmed_toxic' ORDER BY reviewed_at DESC;"
+    description: "View spans with confirmed toxicity or issues by reviewers."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: prom_review_slo
+    type: promql
+    query: "quality_review_slo_ratio * 100"
+    description: "The percentage of items in the human review queue processed within 24 hours (SLO-Q-03 target: >95%)."
+    how_to_use: "Execute in Prometheus or Grafana."
+
+  - id: prom_review_decisions
+    type: promql
+    query: "sum(quality_review_decisions_total) by (status)"
+    description: "Aggregation of review choices (confirmed vs false_positive)."
+    how_to_use: "Execute in Prometheus or Grafana."
