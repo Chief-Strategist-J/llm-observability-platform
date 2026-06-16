@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from shared.contracts.validator import load_workflow_contracts
-from worker.workflows import RecomputeQualityBaseline, RollupQualityTrend
+from worker.workflows import RecomputeQualityBaseline, RollupQualityTrend, QualityScoreWorkflow
 
 @dataclass(frozen=True)
 class WorkflowDefinition:
@@ -20,6 +20,11 @@ def build_registry() -> dict[str, WorkflowDefinition]:
             name="rollup_quality_trend", 
             handler=RollupQualityTrend, 
             contract=contracts["rollup"]
+        ),
+        "quality_score_workflow": WorkflowDefinition(
+            name="quality_score_workflow", 
+            handler=QualityScoreWorkflow, 
+            contract=contracts["quality_score"]
         )
     }
 

@@ -51,10 +51,10 @@ async def run() -> None:
         "auto.offset.reset": "earliest",
         "enable.auto.commit": False,  # manual offset commit after success
     })
-    consumer.subscribe([cfg.kafka_topic_input])
+    consumer.subscribe([cfg.kafka_topic_input, cfg.kafka_topic_scores])
     logger.info(
-        "quality-engine consumer started topic=%s group=%s",
-        cfg.kafka_topic_input, cfg.kafka_consumer_group,
+        "quality-engine consumer started topics=%s,%s group=%s",
+        cfg.kafka_topic_input, cfg.kafka_topic_scores, cfg.kafka_consumer_group,
     )
 
     loop = asyncio.get_event_loop()
@@ -88,11 +88,11 @@ async def run() -> None:
                 attributes={
                     "service.name": "quality-engine",
                     "worker.type": "event",
-                    "worker.queue_name": cfg.kafka_topic_input,
+                    "worker.queue_name": msg.topic(),
                     "worker.consumer_group": cfg.kafka_consumer_group,
                     "deployment.env": _DEPLOYMENT_ENV,
                     "messaging.system": "kafka",
-                    "messaging.destination": cfg.kafka_topic_input,
+                    "messaging.destination": msg.topic(),
                     "messaging.kafka.partition": str(msg.partition()),
                     "messaging.kafka.offset": str(msg.offset()),
                 },
@@ -101,7 +101,38 @@ async def run() -> None:
                 last_exc: Exception | None = None
                 for attempt in range(1, _MAX_RETRIES + 1):
                     try:
-                        await handler.handle(msg.value(), headers)
+                        if msg.topic() == cfg.kafka_topic_input:
+                            await handler.handle(msg.value(), headers)
+                        else:
+                            import json
+                            from datetime import datetime, timezone
+                            from handlers.span_quality.types import ScoreMap
+                            val = json.loads(msg.value())
+                            scores_raw = val.get("scores", {})
+                            scores = ScoreMap(
+                                coherence=scores_raw.get("coherence"),
+                                toxicity=scores_raw.get("toxicity"),
+                                faithfulness=scores_raw.get("faithfulness"),
+                                perplexity=scores_raw.get("perplexity"),
+                            )
+                            # scored_at string to datetime
+                            scored_at_str = val.get("scored_at")
+                            if scored_at_str:
+                                scored_at = datetime.fromisoformat(scored_at_str)
+                            else:
+                                scored_at = datetime.now(timezone.utc)
+                            await handler.handle_score_result(
+                                span_id=val["span_id"],
+                                model=val["model"],
+                                endpoint=val["endpoint"],
+                                prompt_type=val["prompt_type"],
+                                response_language=val["response_language"],
+                                scores=scores,
+                                quality_flags=val.get("quality_flags", []),
+                                scored_at=scored_at,
+                                trace_id=val["trace_id"],
+                                user_id=val.get("user_id"),
+                            )
                         last_exc = None
                         break
                     except Exception as exc:

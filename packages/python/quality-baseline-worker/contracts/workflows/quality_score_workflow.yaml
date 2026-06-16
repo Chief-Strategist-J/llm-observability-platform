@@ -1,0 +1,38 @@
+workflow: quality_score_workflow
+version: 1
+activities:
+  detect_language:
+    timeout_seconds: 5
+    retry:
+      max_attempts: 3
+      backoff_ms: 100
+  detect_prompt_type:
+    timeout_seconds: 5
+    retry:
+      max_attempts: 3
+      backoff_ms: 100
+  compute_coherence:
+    timeout_seconds: 10
+    retry:
+      max_attempts: 3
+      backoff_ms: 200
+  compute_toxicity:
+    timeout_seconds: 10
+    retry:
+      max_attempts: 3
+      backoff_ms: 200
+  compute_faithfulness:
+    timeout_seconds: 10
+    retry:
+      max_attempts: 3
+      backoff_ms: 200
+  compute_perplexity:
+    timeout_seconds: 10
+    retry:
+      max_attempts: 3
+      backoff_ms: 200
+  aggregate_composite:
+    timeout_seconds: 10
+    retry:
+      max_attempts: 3
+      backoff_ms: 200

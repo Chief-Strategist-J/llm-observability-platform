@@ -17,6 +17,12 @@ ROLLUP_ROWS_TOTAL = Counter(
     "Total rows rolled up into ClickHouse quality_trend",
 )
 
+INVARIANT_VIOLATION_TOTAL = Counter(
+    "invariant_violation_total",
+    "Total number of invariant violations",
+    ["invariant_id"]
+)
+
 class PrometheusAdapter(MetricsPort):
     def record_workflow_run_latency(self, workflow_name: str, latency_ms: float) -> None:
         WORKFLOW_RUN_LATENCY.labels(workflow_name=workflow_name).observe(latency_ms)
@@ -28,3 +34,6 @@ class PrometheusAdapter(MetricsPort):
     def record_rollup_rows(self, count: int) -> None:
         if count > 0:
             ROLLUP_ROWS_TOTAL.inc(count)
+
+    def record_invariant_violation(self, invariant_id: str) -> None:
+        INVARIANT_VIOLATION_TOTAL.labels(invariant_id=invariant_id).inc()

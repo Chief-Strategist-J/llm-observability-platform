@@ -28,3 +28,5 @@ class QualityScoreRow:
     skipped_reason: str | None
     scored_at: datetime
     weights_used: dict[str, float] | None = None
+    review_status: str = "pending"
+    reviewed_at: datetime | None = None
