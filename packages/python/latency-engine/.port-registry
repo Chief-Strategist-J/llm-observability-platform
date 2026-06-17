@@ -1,0 +1,13 @@
+ports:
+  - name: kafka_consumer
+    type: messaging
+    vendor: confluent-kafka
+    adapter: src/worker/index.py::Consumer
+  - name: redis_cache
+    type: cache
+    vendor: redis
+    adapter: src/handlers/latency_handler.py::LatencyHandler
+  - name: health_server
+    type: http
+    vendor: standard-http
+    adapter: src/worker/index.py::_HealthHandler

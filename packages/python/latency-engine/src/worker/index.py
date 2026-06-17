@@ -4,16 +4,72 @@ import logging
 import os
 import signal
 import json
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from typing import Any
 import redis
 from confluent_kafka import Consumer, KafkaError
+
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor, ConsoleSpanExporter
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
 from config import load_config
 from handlers.latency_handler import LatencyHandler
 
 logger = logging.getLogger(__name__)
 
+def _init_tracing() -> None:
+    res = Resource.create({
+        "service.name": "latency-engine",
+        "service.version": "0.1.0",
+        "deployment.env": os.getenv("DEPLOYMENT_ENV", "dev"),
+    })
+    provider = TracerProvider(resource=res)
+    if os.getenv("SKIP_CONSOLE_EXPORTER") != "true":
+        provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
+    if os.getenv("SKIP_OTLP_EXPORTER") != "true":
+        try:
+            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+            endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+            provider.add_span_processor(SimpleSpanProcessor(OTLPSpanExporter(endpoint=endpoint, insecure=True)))
+        except ImportError:
+            try:
+                from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+                endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318/v1/traces")
+                provider.add_span_processor(SimpleSpanProcessor(OTLPSpanExporter(endpoint=endpoint)))
+            except ImportError:
+                pass
+    trace.set_tracer_provider(provider)
+
+class _HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self) -> None:
+        if self.path == "/health":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"status":"ok"}')
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def log_message(self, format: str, *args: Any) -> None:
+        pass
+
+def _start_health_server(port: int = 8002) -> None:
+    server = HTTPServer(("0.0.0.0", port), _HealthHandler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    logger.info("Health server started on port %s", port)
+
 async def run() -> None:
+    _init_tracing()
     cfg = load_config()
+    
+    # Start health server
+    health_port = int(os.getenv("HEALTH_PORT", "8002"))
+    _start_health_server(health_port)
     
     # Initialize redis and handler
     redis_client = redis.from_url(cfg.redis_url)
@@ -55,6 +111,16 @@ async def run() -> None:
                 kafka_messages.append(msg)
                 try:
                     payload = json.loads(msg.value().decode('utf-8'))
+                    
+                    # Extract traceparent context from Kafka headers and add to payload
+                    headers = msg.headers()
+                    if headers:
+                        for key, val in headers:
+                            if key == "traceparent":
+                                payload["_traceparent"] = val.decode('utf-8') if isinstance(val, bytes) else val
+                            elif key == "tracestate":
+                                payload["_tracestate"] = val.decode('utf-8') if isinstance(val, bytes) else val
+                                
                     spans_batch.append(payload)
                 except Exception as e:
                     logger.error("Failed to parse span JSON: %s", e)
@@ -81,3 +147,4 @@ async def run() -> None:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     asyncio.run(run())
+
