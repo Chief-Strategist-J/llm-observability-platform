@@ -1,0 +1,4 @@
+name: latency-engine
+runtime: python
+platform: kafka
+entrypoint: src/worker/index.py
