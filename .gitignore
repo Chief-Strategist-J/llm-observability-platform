@@ -357,3 +357,10 @@ packages/go/ai-service/bin/
 packages/python/instrumentation-sdk/reports/allure-results/*
 # pylow code index databases (local, per-machine)
 .pylow_index.db
+
+# ML model weights - do not commit to git
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.gguf
