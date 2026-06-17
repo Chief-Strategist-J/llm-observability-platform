@@ -1,0 +1,58 @@
+asyncapi: 2.6.0
+info:
+  title: LLM Spans Raw Event for Latency Engine
+  version: "1"
+  description: Raw LLM span events consumed by latency-engine to compute TTFT, TPOT, and latency attribution metrics.
+
+channels:
+  llm.spans.raw:
+    subscribe:
+      operationId: consumeLlmSpansRaw
+      message:
+        name: RawSpanLatencyEvent
+        contentType: application/json
+        payload:
+          type: object
+          required:
+            - span_id
+            - model
+            - latency_ms_total
+            - timestamp_utc
+          properties:
+            span_id:
+              type: string
+            model:
+              type: string
+            endpoint:
+              type: string
+            latency_ms_ttft:
+              type: number
+              nullable: true
+            latency_ms_total:
+              type: number
+            retry_count:
+              type: integer
+              nullable: true
+            completion_tokens:
+              type: integer
+              nullable: true
+            finish_reason:
+              type: string
+              nullable: true
+            timestamp_utc:
+              type: string
+              format: date-time
+            attributes:
+              type: object
+              properties:
+                net.dns.latency_ms:
+                  type: number
+                net.tcp.latency_ms:
+                  type: number
+                llm.queue.latency_ms:
+                  type: number
+                llm.inference.latency_ms:
+                  type: number
+
+consumer_group: latency-engine-cg
+version: 1
