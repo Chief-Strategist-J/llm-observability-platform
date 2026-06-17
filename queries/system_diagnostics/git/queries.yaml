@@ -1,0 +1,303 @@
+# Queries for Tool: git
+feature: system_diagnostics_git
+tool: git
+description: "Git-based queries for detecting config drift, correlating deployments with incidents, auditing secrets, reviewing dependency changes, and understanding codebase history."
+
+queries:
+
+  - id: git_uncommitted_config_drift
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs diff HEAD -- docker-compose*.yml prometheus.yml .env* grafana/ | head -100"
+    description: "Show uncommitted changes to infra config files."
+    importance: "Config drift means the running stack differs from version control. Critical to catch before any deployment."
+    expected_output: "Empty diff = no drift. Any diff shows exactly what is running vs committed."
+    how_to_use: "Run from host shell."
+
+  - id: git_staged_but_uncommitted
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs diff --cached --stat"
+    description: "Show files staged for commit but not yet committed."
+    importance: "Staged changes not yet committed can be lost on a hard reset or branch switch during an incident."
+    expected_output: "Empty = clean staging area. Any staged file confirms in-progress work that could be lost."
+    how_to_use: "Run from project root."
+
+  - id: git_recent_deploy_commits
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs log --oneline --since='48 hours ago' --name-only -- 'docker-compose*.yml' 'requirements*.txt' 'pyproject.toml' '*.Dockerfile'"
+    description: "List commits from the last 48 hours touching deployment-affecting files."
+    importance: "Correlates a quality regression with a recent infra or dependency change without reading every commit."
+    expected_output: "Commit hashes with filenames. Cross-reference timestamps with incident start time."
+    how_to_use: "Run from project root."
+
+  - id: git_untracked_secrets
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs ls-files --others --exclude-standard | grep -iE '\\.env$|\\.pem$|\\.key$|credentials|secret|token'"
+    description: "Find untracked files in the project that look like credentials."
+    importance: "Untracked secret files are not caught by .gitignore audits and can be committed accidentally on git add ."
+    expected_output: "Empty output. Any file listed should be moved to a secrets manager and removed from the tree."
+    how_to_use: "Run from project root."
+
+  - id: git_log_requirements_changes
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs log --oneline --follow -p -- requirements*.txt pyproject.toml | head -80"
+    description: "Show full diff history of dependency manifest changes."
+    importance: "Dependency changes are the most common cause of regressions. Seeing the exact version bumps helps narrow down which library introduced a bug."
+    expected_output: "Commit log with diffs showing added/removed package lines."
+    how_to_use: "Run from project root."
+
+  - id: git_commits_ahead_of_main
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs log main..HEAD --oneline"
+    description: "List commits on the current branch not yet merged to main."
+    importance: "Before a hotfix deployment, confirms exactly what extra code is in the branch vs production baseline."
+    expected_output: "Commit list. Empty = current branch is at main. Long list before a 'hotfix' = risk of shipping unintended code."
+    how_to_use: "Run from project root."
+
+  - id: git_blame_scoring_thresholds
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs log -p --all --follow -S 'TOXICITY_THRESHOLD\\|DEGRADATION_THRESHOLD\\|COMPOSITE_THRESHOLD\\|review_threshold' -- '*.py' '*.yml' '*.env*' | head -80"
+    description: "Find all commits that changed scoring or alerting threshold values."
+    importance: "Threshold changes are high-risk and often undocumented. This surfaces every time thresholds were modified and who did it."
+    expected_output: "Commits with diff showing threshold value changes. Any undocumented change should have an ADR."
+    how_to_use: "Run from project root."
+
+  - id: git_diff_from_last_tag
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs diff $(git -C /home/btpl-lap-22/live/obs describe --tags --abbrev=0)..HEAD --stat"
+    description: "Show files changed since the last release tag."
+    importance: "Gives a complete picture of what changed since the last known-good release. Essential for post-incident change attribution."
+    expected_output: "File change summary. Large diffs from a tag labeled a hotfix indicate scope creep."
+    how_to_use: "Run from project root."
+
+  - id: git_contributors_to_scoring
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs log --oneline --format='%an' -- '**/scorer*' '**/scoring*' '**/quality*' | sort | uniq -c | sort -rn"
+    description: "List contributors who have committed to scorer-related files and their commit counts."
+    importance: "Identifies domain owners for scoring logic. Essential for routing incident escalations and code review requests."
+    expected_output: "Contributor names with commit counts. Top contributors are the first contacts for scoring logic questions."
+    how_to_use: "Run from project root."
+
+  - id: git_large_files_in_history
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs rev-list --objects --all | git -C /home/btpl-lap-22/live/obs cat-file --batch-check='%(objecttype) %(objectname) %(objectsize) %(rest)' | awk '/^blob/ && $3 > 1048576 {print $3, $4}' | sort -rn | head -10"
+    description: "Find large blobs (>1MB) in the full git history."
+    importance: "Large files accidentally committed bloat clone times. Must be removed with git filter-repo before the next CI run."
+    expected_output: "File sizes in bytes with paths. Any model weight, dataset, or binary in history needs removal."
+    how_to_use: "Run from project root."
+
+  - id: git_deleted_files_recently
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs log --diff-filter=D --name-only --oneline --since='7 days ago' | grep -v '^[a-f0-9]\\{7\\}' | sort -u"
+    description: "List files deleted from the repo in the last 7 days."
+    importance: "Deleted config files or migration scripts may explain why a feature stopped working after a recent deploy."
+    expected_output: "Deleted filenames. Any deleted config or migration file should have a corresponding deprecation ADR."
+    how_to_use: "Run from project root."
+
+  - id: git_stash_list
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs stash list"
+    description: "List all stashed changesets in the repository."
+    importance: "Old stashes accumulate and can contain in-progress hotfixes that were forgotten. Stashes with 'fix' or 'urgent' names represent unmerged work."
+    expected_output: "Empty = no stashes. Any stash entry should be reviewed for relevance before deployment."
+    how_to_use: "Run from project root."
+
+  - id: git_check_signed_commits
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs log --show-signature --oneline -10 2>&1 | grep -E 'Good signature|BAD signature|error|No signature'"
+    description: "Verify GPG signatures on the last 10 commits."
+    importance: "Unsigned or bad-signature commits on a secured branch indicate a policy bypass or possible commit tampering."
+    expected_output: "All lines should show 'Good signature'. Any 'BAD signature' is a security incident."
+    how_to_use: "Run from project root."
+
+  - id: git_active_branches
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs branch -a --sort=-committerdate --format='%(committerdate:short) %(refname:short)' | head -20"
+    description: "List all branches sorted by most recently committed, with dates."
+    importance: "Long-lived feature branches with recent commits that haven't been merged represent shadow work that may conflict with hotfixes."
+    expected_output: "Branch list with dates. Any branch with commits newer than main should be reviewed for merge readiness."
+    how_to_use: "Run from project root."
+
+  - id: git_merge_conflicts_markers
+    type: shell
+    tool: git
+    query: "grep -rn '<<<<<<< \\|>>>>>>> \\|=======' /home/btpl-lap-22/live/obs --include='*.py' --include='*.yml' --include='*.yaml' | grep -v '.git'"
+    description: "Find unresolved merge conflict markers in source and config files."
+    importance: "Committed merge conflict markers cause syntax errors or runtime failures. Python with <<< lines crashes on import."
+    expected_output: "Empty output always. Any result is a critical deploy blocker."
+    how_to_use: "Run from project root."
+
+  - id: git_log_docker_image_version_changes
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs log -p --follow -- docker-compose*.yml | grep -E '^[+-].*image:' | sort | uniq"
+    description: "Show all image version changes in docker-compose files across git history."
+    importance: "Image version changes are the most common cause of behavior regressions. This surfaces every bump chronologically."
+    expected_output: "Lines showing added/removed image tags. Correlate version bumps with incident timelines."
+    how_to_use: "Run from project root."
+
+  - id: git_submodule_status
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs submodule status"
+    description: "Show the status of all git submodules."
+    importance: "Submodules at wrong commits (prefix +) cause the stack to run outdated shared library code silently."
+    expected_output: "Clean submodule status without + or - prefix. Any + prefix means the submodule is ahead of or behind the pinned commit."
+    how_to_use: "Run from project root."
+
+  - id: git_log_env_file_changes
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs log --all --oneline --follow -- '.env*' '*.env' | head -20"
+    description: "Show all commits that modified .env files (should normally be empty)."
+    importance: ".env files with real secrets should never be committed. Any commit in this history is a security breach requiring secret rotation."
+    expected_output: "Empty output always. Any entry confirms secrets were committed and must be purged from history."
+    how_to_use: "Run from project root."
+
+  - id: git_show_last_infra_change
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs log -1 --format='%H %ai %an %s' -- docker-compose*.yml prometheus.yml grafana/"
+    description: "Show the most recent commit that modified any infra config file."
+    importance: "Immediate answer to 'when did we last change the infra config and who did it' during an incident."
+    expected_output: "Single line: commit hash, datetime, author, and message. Cross-reference with incident start time."
+    how_to_use: "Run from project root."
+
+  - id: git_whoami
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs config user.name && git -C /home/btpl-lap-22/live/obs config user.email"
+    description: "Show the configured git user name and email for the project."
+    importance: "Confirms commits will be attributed to the correct identity. Wrong author identity on hotfix commits creates audit trail confusion."
+    expected_output: "Name and email matching the engineer's identity. Bot identities on manual commits indicate CI tooling misconfiguration."
+    how_to_use: "Run from project root."
+
+  - id: git_log_migrations_only
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs log --oneline --follow -- '**/migrations/*.sql' '**/alembic/versions/*.py' | head -20"
+    description: "Show git history for database migration files only."
+    importance: "Migration history confirms which schema versions have been applied and in what order, critical for DB drift debugging."
+    expected_output: "Ordered migration commits. Any gap or out-of-order entry indicates a merge conflict in the migration sequence."
+    how_to_use: "Run from project root."
+
+  - id: git_diff_stat_last_commit
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs show --stat HEAD"
+    description: "Show the file change summary for the most recent commit."
+    importance: "Quick sanity check after a deployment — confirms the latest deployed commit touched only the expected files."
+    expected_output: "File list with insertions/deletions counts. Any unexpected files in the diff indicate scope creep."
+    how_to_use: "Run from project root."
+
+  - id: git_grep_todo_fixme
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs grep -n -iE 'TODO|FIXME|HACK|XXX|TEMP|NOCOMMIT' -- '*.py' '*.yml' | grep -v '.git' | head -30"
+    description: "Find all TODO/FIXME/HACK annotations in tracked source and config files."
+    importance: "NOCOMMIT and HACK annotations in deployed code indicate known technical debt that may be masking a quality guardrail bypass."
+    expected_output: "File:line:annotation. Any NOCOMMIT in production code is a deploy-blocking issue."
+    how_to_use: "Run from project root."
+
+  - id: git_count_commits_by_author_month
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs log --since='30 days ago' --format='%an' | sort | uniq -c | sort -rn"
+    description: "Count commits per author in the last 30 days."
+    importance: "Activity distribution shows which engineers are most active in the codebase. Sudden activity spikes correlate with high-change-risk periods."
+    expected_output: "Commit counts per author. An engineer with 10x their normal count during an incident = high-change-risk period."
+    how_to_use: "Run from project root."
+
+  - id: git_files_changed_in_last_release
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs diff $(git -C /home/btpl-lap-22/live/obs describe --tags --abbrev=0 HEAD^)..$(git -C /home/btpl-lap-22/live/obs describe --tags --abbrev=0 HEAD) --name-only"
+    description: "List all files changed between the last two release tags."
+    importance: "Defines the exact blast radius of the most recent release. Essential for scoping a rollback and identifying regression candidates."
+    expected_output: "File list. Scoring, threshold, or Kafka config files in this list are high-risk for quality regressions."
+    how_to_use: "Run from project root."
+
+  - id: git_verify_gitignore_coverage
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs check-ignore -v /home/btpl-lap-22/live/obs/.env /home/btpl-lap-22/live/obs/*.pem /home/btpl-lap-22/live/obs/*.key 2>/dev/null"
+    description: "Verify that .env, .pem, and .key files are covered by .gitignore rules."
+    importance: "If these paths are not ignored, the next git add . will commit secrets to the repository."
+    expected_output: "Each path prefixed with the matching .gitignore rule. Any path with no output is NOT ignored."
+    how_to_use: "Run from project root."
+
+  - id: git_reflog_recent
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs reflog --since='24 hours ago' | head -20"
+    description: "Show the git reflog for the past 24 hours."
+    importance: "Reflog records all HEAD movements including resets and force pushes that don't appear in git log, helping recover from accidental history rewrites."
+    expected_output: "Reflog entries. Any reset --hard or force push entries should match intentional actions."
+    how_to_use: "Run from project root."
+
+  - id: git_check_hook_scripts
+    type: shell
+    tool: git
+    query: "ls -la /home/btpl-lap-22/live/obs/.git/hooks/ | grep -v '\\.sample'"
+    description: "List all active (non-sample) git hook scripts installed in the project."
+    importance: "Active hooks run on every commit/push. Hooks failing silently can block deployments or skip required checks."
+    expected_output: "List of active hooks with permissions. All hooks should be executable and have a recent mtime if recently modified."
+    how_to_use: "Run from project root."
+
+  - id: git_remote_tracking_status
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs remote -v && git -C /home/btpl-lap-22/live/obs fetch --dry-run 2>&1"
+    description: "Show configured remotes and perform a dry-run fetch to confirm remote connectivity."
+    importance: "Disconnected remote means git push deployments and CI triggers will fail silently. Stale remote URL causes auth errors."
+    expected_output: "Remote URLs listed. Dry-run fetch output should show no errors."
+    how_to_use: "Run from project root."
+
+  - id: git_log_prometheus_rule_changes
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs log --oneline -p --follow -- '**/rules/*.yml' '**/alerts/*.yml' 'prometheus*.yml' | head -80"
+    description: "Show full diff history of Prometheus alerting rule changes."
+    importance: "Alert rule changes are high-risk — a wrong threshold silences or floods on-call. This shows every change with the exact delta."
+    expected_output: "Commit log with diffs showing added/removed alert rules and threshold values."
+    how_to_use: "Run from project root."
+
+  - id: git_log_scorer_weight_changes
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs log --all --oneline -p -S 'weight\\|WEIGHT\\|scorer_weight\\|composite_weight' -- '*.py' '*.yml' '*.env*' | head -80"
+    description: "Find all commits that changed composite score weighting values."
+    importance: "Weight changes shift which model behaviors are penalized most. Undocumented weight changes invalidate all historical baseline comparisons."
+    expected_output: "Commits showing weight value diffs. Any undocumented change needs a retroactive ADR."
+    how_to_use: "Run from project root."
+
+  - id: git_tag_list
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs tag --sort=-version:refname | head -10"
+    description: "List the 10 most recent release tags in semver order."
+    importance: "Confirms release cadence and identifies the correct tag to diff against or roll back to during an incident."
+    expected_output: "Semver tags like v1.4.2 in descending order. Irregular naming or missing tags indicate release process gaps."
+    how_to_use: "Run from project root."
+
+  - id: git_log_short_this_week
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs log --oneline --since='7 days ago' --format='%ai %an: %s'"
+    description: "One-line log of all commits from the past 7 days with timestamp and author."
+    importance: "Weekly activity summary for incident post-mortems — quickly shows what was merged in the window before a production issue."
+    expected_output: "Timestamped commit list. Cross-reference with alerting timestamps to identify causative commits."
+    how_to_use: "Run from project root."

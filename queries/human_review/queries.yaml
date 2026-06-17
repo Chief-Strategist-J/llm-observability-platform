@@ -50,3 +50,43 @@ queries:
     importance: "Monitors human auditor workload and output decisions."
     expected_output: "Bar graph or metric value showing decisions count."
     how_to_use: "Execute in Prometheus or Grafana."
+
+  - id: pg_stale_pending_reviews
+    type: postgresql
+    query: "SELECT span_id, model, composite_score, quality_flags, scored_at, now() - scored_at as age FROM quality_scores WHERE review_status = 'pending' AND scored_at < now() - interval '24 hours' ORDER BY scored_at ASC;"
+    description: "List all pending review items that have been waiting more than 24 hours (SLO breach candidates)."
+    importance: "These are the exact items that will breach SLO-Q-03 if not actioned. Use this as the daily reviewer triage queue."
+    expected_output: "Rows with span details and age column showing how long each has been waiting (e.g. '1 day 04:12:00')."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: pg_reviewer_workload
+    type: postgresql
+    query: "SELECT reviewed_by, count(*) as total_reviewed, sum(CASE WHEN review_status = 'confirmed_toxic' THEN 1 ELSE 0 END) as confirmed, sum(CASE WHEN review_status = 'false_positive' THEN 1 ELSE 0 END) as rejected, avg(reviewed_at - scored_at) as avg_time_to_review FROM quality_scores WHERE review_status != 'pending' AND reviewed_by IS NOT NULL GROUP BY reviewed_by ORDER BY total_reviewed DESC;"
+    description: "Per-reviewer breakdown of decision counts, confirmation rate, and average review turnaround time."
+    importance: "Identifies uneven reviewer workload distribution and outlier reviewers with very high/low confirmation rates (possible calibration drift)."
+    expected_output: "Table with reviewer ID, totals, confirmation/rejection split, and average review time."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: prom_review_queue_depth
+    type: promql
+    query: "quality_review_queue_depth"
+    description: "Current number of spans sitting in the pending human review queue."
+    importance: "Queue depth is the leading indicator of SLO risk. Depth >200 with no downward trend requires reviewer escalation."
+    expected_output: "Gauge showing current pending count. Alert if queue exceeds 200 for more than 30 minutes."
+    how_to_use: "Execute in Prometheus or Grafana."
+
+  - id: trace_review_submission
+    type: traceql
+    query: '{resource.service.name="quality-engine" && name="human_review.submit"}'
+    description: "Find traces for review submission API calls, including reviewer identity and decision payload."
+    importance: "Audits latency and correctness of the review submission path. Slow writes here delay the SLO clock from stopping."
+    expected_output: "Traces containing human_review.submit span with attributes: reviewer_id, decision, span_id."
+    how_to_use: "Query in Grafana Tempo Explorer."
+
+  - id: pg_false_positive_by_flag
+    type: postgresql
+    query: "SELECT unnest(quality_flags) as flag, count(*) as total_flagged, sum(CASE WHEN review_status = 'false_positive' THEN 1 ELSE 0 END) as false_positives, round(sum(CASE WHEN review_status = 'false_positive' THEN 1 ELSE 0 END)::numeric / count(*) * 100, 2) as fp_rate FROM quality_scores WHERE review_status IN ('confirmed_toxic', 'false_positive') GROUP BY flag ORDER BY fp_rate DESC;"
+    description: "False positive rate per quality flag — how often each flag type is overturned by a human reviewer."
+    importance: "High FP rate on a specific flag (e.g. >60% for HALLUCINATION_RISK) means that guardrail threshold is too aggressive and needs recalibration."
+    expected_output: "Table ranked by fp_rate descending — flags with highest overturn rates at the top."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""

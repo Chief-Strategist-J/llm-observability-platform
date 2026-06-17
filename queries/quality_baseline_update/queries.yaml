@@ -42,3 +42,35 @@ queries:
     importance: "Helps visualize baseline adjustments to recognize long-term quality trends."
     expected_output: "A time-series metric graph showing baseline values."
     how_to_use: "Execute in Prometheus or Grafana."
+
+  - id: prom_baseline_update_rate
+    type: promql
+    query: "sum(increase(quality_baseline_updates_total[10m])) by (model, endpoint)"
+    description: "Rate of baseline update writes per model/endpoint over 10 minutes."
+    importance: "Zero rate for any model means the EWMA is frozen — alerts will fire against a stale baseline, producing false positives."
+    expected_output: "Non-zero metric per active model/endpoint combination. Alert if any active pair shows 0 for >15 minutes."
+    how_to_use: "Execute in Prometheus or Grafana."
+
+  - id: redis_baseline_all_values
+    type: redis
+    query: "EVAL \"local keys=redis.call('KEYS','baseline:quality:*') local out={} for _,k in ipairs(keys) do out[#out+1]=k out[#out+1]=redis.call('GET',k) end return out\" 0"
+    description: "Retrieve all current baseline scores alongside their keys in one Redis Lua script call."
+    importance: "Provides a snapshot of every in-memory EWMA value without iterating with SCAN in a live environment."
+    expected_output: "Alternating key/value pairs: 'baseline:quality:gpt-4o:/v1/chat/completions:chat' → '0.87432'."
+    how_to_use: "docker exec -it quality-engine-redis redis-cli <query>"
+
+  - id: pg_ewma_drift_over_time
+    type: postgresql
+    query: "SELECT model, endpoint, date_trunc('day', scored_at) as day, avg(composite_score) as daily_avg FROM quality_scores WHERE scored_at > now() - interval '14 days' AND skipped_reason IS NULL GROUP BY model, endpoint, day ORDER BY model, endpoint, day;"
+    description: "Daily average composite score per model/endpoint for the past 14 days to visualize baseline drift."
+    importance: "Identifies slow quality degradation trends that EWMA smooths over. Persistent downward slope warrants manual baseline reset."
+    expected_output: "Time-series table showing daily average per model/endpoint over 14 days."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: log_baseline_update_failures
+    type: logql
+    query: '{container_name="quality-engine"} |= "baseline.update" |= "error" | json | line_format "model={{.model}} endpoint={{.endpoint}} error={{.error}}"'
+    description: "Filter logs for failed baseline write operations to Redis or PostgreSQL."
+    importance: "Baseline update failures mean the EWMA drifts from real performance. Silent failures are hard to detect without this query."
+    expected_output: "Log lines with model, endpoint, and error message for any failed update attempt."
+    how_to_use: "Query in Grafana Loki Explorer."

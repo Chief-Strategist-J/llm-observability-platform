@@ -9,6 +9,7 @@ This directory contains standardized query configuration files (`queries.yaml`) 
 * [quality_baseline_update/](file:///home/btpl-lap-22/live/obs/queries/quality_baseline_update/queries.yaml) - Redis baseline cache entries.
 * [degradation_alerting/](file:///home/btpl-lap-22/live/obs/queries/degradation_alerting/queries.yaml) - Average evaluation thresholds and notifications.
 * [human_review/](file:///home/btpl-lap-22/live/obs/queries/human_review/queries.yaml) - Pending reviews queue and SLO status.
+* [system_diagnostics/](file:///home/btpl-lap-22/live/obs/queries/system_diagnostics/queries.yaml) - Host and container-level CLI diagnostics (find, grep, git, ps, docker inspect, jq, ss, netstat, lsof, tcpdump, strace, journalctl, awk, sed).
 
 ---
 
@@ -54,3 +55,27 @@ This directory contains standardized query configuration files (`queries.yaml`) 
   ```bash
   docker exec -it quality-engine-redis redis-cli KEYS "baseline:*"
   ```
+
+### 7. Shell / CLI Queries (`type: shell`)
+* **Used for**: Host and container-level diagnostics — process inspection, port auditing, network capture, log search, config drift detection, payload parsing, syscall tracing, and systemd journal analysis.
+* **Tools covered**: `find`, `grep`, `git`, `ps`, `docker inspect`, `jq`, `ss`, `netstat`, `lsof`, `tcpdump`, `strace`, `journalctl`, `awk`, `sed`.
+* **How to run**: All shell queries run directly on the **host shell** unless the query begins with `docker exec`, in which case it targets the named container.
+* **Permissions**: `tcpdump`, `strace`, `nsenter`, `lsof`, and kernel log queries require `sudo`.
+* **Quick reference by tool**:
+
+| Tool | Purpose in this stack |
+|---|---|
+| `docker inspect` | Verify container image, env vars, network, healthcheck, and restart policy |
+| `ps` | Find runaway threads, zombie processes, and host-level memory hogs |
+| `find` | Locate stale lock files, oversized logs, core dumps, and orphaned secrets |
+| `grep` | Rank error patterns, catch Kafka failures, scan for OOM events and secret leaks |
+| `git` | Detect config drift, correlate deploys with incidents, audit untracked secrets |
+| `jq` | Parse and project Kafka payloads, docker-compose service manifests |
+| `ss` | Confirm service ports are listening and Kafka consumer connections are live |
+| `netstat` | Check for port conflicts on all critical service ports |
+| `lsof` | Detect Postgres connection pool exhaustion and FD limit pressure |
+| `tcpdump` | Confirm wire-level traffic to Kafka, Postgres, and Redis independently of app logs |
+| `strace` | Trace syscalls to find blocked I/O, slow writes, redundant file opens, and missing connections |
+| `journalctl` | Read host systemd journal for Docker daemon errors, OOM kills, and kernel network faults |
+| `awk` | Compute error rates, latency summaries, score histograms, and consumer lag from raw logs |
+| `sed` | Redact secrets, extract span IDs, normalize config values for safe log sharing |

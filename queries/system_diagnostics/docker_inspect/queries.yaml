@@ -1,0 +1,285 @@
+# Queries for Tool: docker inspect
+feature: system_diagnostics_docker_inspect
+tool: docker
+description: "Docker inspect queries for verifying container config, network topology, healthchecks, resource limits, volumes, and runtime state across the LLM observability stack."
+
+queries:
+
+  - id: docker_inspect_quality_engine_summary
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine | jq '.[0] | {Name, Status: .State.Status, RestartCount: .RestartCount, Image: .Config.Image, StartedAt: .State.StartedAt}'"
+    description: "Summarize quality-engine container status, image, and restart count."
+    importance: "Single command to confirm the correct image is running and the container hasn't restarted recently."
+    expected_output: "Status='running', RestartCount=0, Image showing expected tag."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_all_env_vars
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine | jq '.[0].Config.Env[]' | sort"
+    description: "List all environment variables injected into the quality-engine container."
+    importance: "Confirms all required env vars (KAFKA_BOOTSTRAP, POSTGRES_DSN, REDIS_URL, OTLP_ENDPOINT) are present and not empty."
+    expected_output: "Alphabetically sorted KEY=VALUE pairs. Any required key missing or set to an empty value is a misconfiguration."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_network_topology
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, Network: (.NetworkSettings.Networks | keys[0]), IP: (.NetworkSettings.Networks | to_entries[0].value.IPAddress)}'"
+    description: "Show network name and IP for all core containers."
+    importance: "Verifies all services share the same Docker network. A container on a different network causes silent connection failures."
+    expected_output: "All containers sharing the same network name with unique IP addresses in the same subnet."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_healthcheck_status
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, Health: .State.Health.Status, FailingStreak: .State.Health.FailingStreak, LastLog: (.State.Health.Log[-1].Output // \"no healthcheck\")}'"
+    description: "Show healthcheck status and last probe output for all core services."
+    importance: "An 'unhealthy' container keeps running but fails readiness probes — quality-engine may connect to a broken dependency."
+    expected_output: "All containers: Health='healthy', FailingStreak=0."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_restart_policy
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, RestartPolicy: .HostConfig.RestartPolicy.Name, RestartCount: .RestartCount}'"
+    description: "Inspect restart policy and cumulative restart count per container."
+    importance: "RestartCount >3 in a short window signals a crash-loop. Kafka restarts cause consumer rebalancing and message redelivery."
+    expected_output: "RestartPolicy='always' or 'unless-stopped' for all; RestartCount=0 under normal operation."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_memory_limits
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, MemoryLimit: (.HostConfig.Memory / 1048576 | floor | tostring) + \" MB\", MemorySwap: (.HostConfig.MemorySwap / 1048576 | floor | tostring) + \" MB\"}'"
+    description: "Show configured memory and swap limits per container."
+    importance: "Zero MemoryLimit means no memory cap — containers can consume all host RAM before OOM killer fires."
+    expected_output: "Non-zero memory limits for each container matching your docker-compose resource specs."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_cpu_limits
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, NanoCPUs: .HostConfig.NanoCpus, CPUShares: .HostConfig.CpuShares, CPUPeriod: .HostConfig.CpuPeriod, CPUQuota: .HostConfig.CpuQuota}'"
+    description: "Show CPU constraints per container."
+    importance: "Uncapped CPU (NanoCpus=0, CPUQuota=0) allows one container to starve all others during a load spike."
+    expected_output: "Non-zero NanoCpus or CPUQuota values matching docker-compose resource specs."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_volume_mounts
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine | jq '.[0].Mounts[] | {Type, Source, Destination, RW: .RW}'"
+    description: "List all volume mounts for quality-engine with read/write status."
+    importance: "Confirms config volumes are mounted read-only (RW=false) and data volumes are writable. RW=true on a config mount is a security risk."
+    expected_output: "Mount objects showing source path, container destination, and RW flag."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_port_bindings
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis grafana prometheus | jq '.[] | {Name: .Name, Ports: .NetworkSettings.Ports}'"
+    description: "Show all port bindings for every core service."
+    importance: "Confirms each service is bound on the expected host port. A missing binding means the service is unreachable from outside Docker."
+    expected_output: "Port mapping objects for each service. Any expected port showing null binding = not exposed to host."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_entrypoint_cmd
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, Entrypoint: .Config.Entrypoint, Cmd: .Config.Cmd}'"
+    description: "Show entrypoint and CMD for all containers."
+    importance: "Wrong entrypoint causes the container to run a shell instead of the application, succeeding silently while doing nothing."
+    expected_output: "Each container showing its expected application entrypoint, not sh or bash."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_log_driver
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, LogDriver: .HostConfig.LogConfig.Type, LogOpts: .HostConfig.LogConfig.Config}'"
+    description: "Show log driver and options per container."
+    importance: "Containers using the default json-file driver without max-size will fill the host disk. Confirms log rotation config is applied."
+    expected_output: "Log driver 'json-file' with max-size and max-file options set. Missing options = unbounded log growth."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_network_aliases
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, Aliases: (.NetworkSettings.Networks | to_entries[0].value.Aliases)}'"
+    description: "Show DNS aliases configured for each container on the shared network."
+    importance: "Services discover each other by alias name. Missing or wrong aliases cause connection failures despite containers being on the same network."
+    expected_output: "Alias lists per container. quality-engine-postgres alias 'postgres' is required for the DSN to resolve."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_oom_killed
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, OOMKilled: .State.OOMKilled, ExitCode: .State.ExitCode}'"
+    description: "Check whether any container was killed by the OOM killer."
+    importance: "OOMKilled=true is definitive proof of a memory kill, not an application crash. Changes the remediation path entirely."
+    expected_output: "All OOMKilled values should be false. Any true value requires memory limit increase."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_security_opts
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, SecurityOpt: .HostConfig.SecurityOpt, Privileged: .HostConfig.Privileged, CapAdd: .HostConfig.CapAdd}'"
+    description: "Show security options, privileged mode, and added capabilities per container."
+    importance: "A container running with Privileged=true has full root access to the host. CapAdd=SYS_PTRACE is needed for strace but is a security risk in production."
+    expected_output: "Privileged=false for all containers. No unexpected CapAdd entries."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_user
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, User: .Config.User}'"
+    description: "Show the user each container process runs as."
+    importance: "Containers running as root (User='') can write to host-mounted volumes as root, creating root-owned files that block developer access."
+    expected_output: "Non-root user for quality-engine (e.g. 'appuser' or '1000'). postgres and redis have their own service users."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_pid_mode
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, PidMode: .HostConfig.PidMode, NetworkMode: .HostConfig.NetworkMode}'"
+    description: "Show PID and network namespace modes per container."
+    importance: "PidMode='host' shares the host PID namespace — any container process can see and signal host processes. Should never be set for this stack."
+    expected_output: "PidMode='' (isolated) and NetworkMode='bridge' or the compose network name for all containers."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_extra_hosts
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, ExtraHosts: .HostConfig.ExtraHosts}'"
+    description: "List any extra /etc/hosts entries injected into containers."
+    importance: "Extra hosts override DNS resolution inside the container. An unexpected entry can silently reroute Kafka or Postgres connections to the wrong host."
+    expected_output: "Empty ExtraHosts for all containers, or only intentional development overrides."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_ulimits
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, Ulimits: .HostConfig.Ulimits}'"
+    description: "Show ulimit overrides per container."
+    importance: "Low nofile ulimit causes 'Too many open files' before the OS limit is reached. High nproc increases zombie process risk."
+    expected_output: "nofile ulimits of at least 65536 for quality-engine and Kafka. Missing entries inherit potentially low system defaults."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_image_digest
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, Image: .Config.Image, ImageDigest: .Image}'"
+    description: "Show the exact image SHA digest each container is running."
+    importance: "Mutable tags (latest) can pull different images on restart. The digest confirms exact image version independent of the tag."
+    expected_output: "SHA256 digest per container. Compare digests across environments to confirm identical images."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_shared_memory
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine | jq '.[0].HostConfig.ShmSize'"
+    description: "Show the shared memory size allocated to quality-engine."
+    importance: "Python multiprocessing uses /dev/shm. Default 64MB ShmSize causes worker failures when processing large embeddings."
+    expected_output: "Integer in bytes. Default 67108864 (64MB) may be insufficient for embedding-heavy workers — consider 512MB."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_dns_config
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 | jq '.[] | {Name: .Name, DNS: .HostConfig.Dns, DNSSearch: .HostConfig.DnsSearch, DNSOptions: .HostConfig.DnsOptions}'"
+    description: "Show custom DNS configuration for quality-engine and Kafka."
+    importance: "Custom DNS entries that point to an unreachable resolver cause all hostname lookups to hang, making every service connection time out."
+    expected_output: "Empty DNS arrays (uses Docker embedded DNS). Any custom DNS server should be verified as reachable."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_bind_mounts_vs_volumes
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, Mounts: [.Mounts[] | {Type, Source, Destination}]}'"
+    description: "List bind mounts vs named volumes for data-bearing containers."
+    importance: "Bind mounts use host paths and are not portable. Named volumes survive container recreation. Postgres and Redis should use named volumes, not bind mounts."
+    expected_output: "Postgres and Redis show Type='volume'. quality-engine config files may use Type='bind'."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_exposed_ports
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine | jq '.[0].Config.ExposedPorts'"
+    description: "List all ports declared in the quality-engine image EXPOSE directive."
+    importance: "EXPOSE documents which ports the application listens on. If the application port is missing from EXPOSE, Docker networking won't route to it."
+    expected_output: "The metrics port (e.g. 8000/tcp) and any health port exposed by the application."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_container_labels
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine | jq '.[0].Config.Labels'"
+    description: "Show all labels on the quality-engine container."
+    importance: "Labels carry version, commit SHA, and build metadata. Missing commit SHA label means the running container cannot be traced back to a git commit."
+    expected_output: "Labels including version, git_sha, and build_date. Missing labels indicate image build pipeline gaps."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_stop_signal
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, StopSignal: .Config.StopSignal, StopTimeout: .HostConfig.StopTimeout}'"
+    description: "Show stop signal and graceful stop timeout per container."
+    importance: "Default stop signal is SIGTERM. If the app only handles SIGINT, docker stop sends the wrong signal and immediately escalates to SIGKILL after timeout."
+    expected_output: "StopSignal matching what the app registers. StopTimeout should be >10 seconds to allow in-flight span processing to complete."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_runtime
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, Runtime: .HostConfig.Runtime, Isolation: .HostConfig.Isolation}'"
+    description: "Show container runtime (runc vs kata-containers) and isolation mode."
+    importance: "Unexpected runtime (e.g. nvidia runtime on quality-engine when no GPU is needed) wastes resources and indicates misconfiguration."
+    expected_output: "Runtime='runc' for all containers. Any other runtime should be intentional and documented."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_tmpfs_mounts
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine quality-engine-postgres | jq '.[] | {Name: .Name, Tmpfs: .HostConfig.Tmpfs}'"
+    description: "Show tmpfs (in-memory) mounts per container."
+    importance: "Tmpfs mounts can consume RAM without appearing in container memory metrics. Unexpected tmpfs indicates misread documentation applied to the wrong container."
+    expected_output: "Empty Tmpfs for most containers. Any tmpfs should be documented with its size limit."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_sysctls
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 | jq '.[] | {Name: .Name, Sysctls: .HostConfig.Sysctls}'"
+    description: "Show kernel sysctl overrides applied inside each container."
+    importance: "Kafka requires net.core.somaxconn tuning for high-throughput connections. Missing sysctls cause connection queue drops under load."
+    expected_output: "Kafka container should show net.core.somaxconn=65535. quality-engine may need net.ipv4.tcp_keepalive_time overrides."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_devices
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, Devices: .HostConfig.Devices}'"
+    description: "List host devices passed through to containers."
+    importance: "Unexpected device mounts (e.g. /dev/sda) give a container direct block device access, bypassing all filesystem permissions."
+    expected_output: "Empty Devices for all containers. Any device passthrough should be explicitly justified."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_auto_remove
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, AutoRemove: .HostConfig.AutoRemove}'"
+    description: "Check whether containers are configured to auto-remove on stop."
+    importance: "AutoRemove=true means the container and its logs are deleted on stop, making post-crash debugging impossible."
+    expected_output: "AutoRemove=false for all production containers."
+    how_to_use: "Run from host shell."
+
+  - id: docker_inspect_graphdriver
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine quality-engine-postgres | jq '.[] | {Name: .Name, GraphDriver: .GraphDriver.Name}'"
+    description: "Show the storage graph driver used by each container."
+    importance: "Mixed graph drivers (overlay2 vs devicemapper) on the same host cause layer cache misses and slow image builds."
+    expected_output: "All containers using overlay2 (recommended). Any other driver on a modern Linux kernel indicates a legacy storage setup."
+    how_to_use: "Run from host shell."

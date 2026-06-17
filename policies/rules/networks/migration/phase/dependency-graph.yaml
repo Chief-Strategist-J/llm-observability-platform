@@ -1,0 +1,41 @@
+# migration/phases/phase-0-audit/dependency-graph.yaml
+
+services:
+  <namespace-1>:
+    calls:
+      - <namespace-3>:9090
+      - <namespace-4>:8501
+    called-by:
+      - gateway
+    external-egress:
+      - vendor-a.external:443
+    migration-order: 3        ← derived from graph depth
+
+  <namespace-2>:
+    calls:
+      - <namespace-3>:9090
+    called-by:
+      - gateway
+      - <namespace-1>
+    migration-order: 3
+
+  <namespace-3>:
+    calls: []                 ← leaf node
+    called-by:
+      - <namespace-1>
+      - <namespace-2>
+    migration-order: 1        ← migrate first
+
+  <namespace-4>:
+    calls: []                 ← leaf node
+    called-by:
+      - <namespace-1>
+    migration-order: 1
+
+  gateway:
+    calls:
+      - <namespace-1>
+      - <namespace-2>
+    called-by:
+      - internet
+    migration-order: 5        ← migrate last
