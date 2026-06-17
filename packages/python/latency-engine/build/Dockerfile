@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir ".[dev]"
 
 COPY src/ src/
 COPY tests/ tests/
+COPY contracts/ contracts/
 
 RUN pip install --no-cache-dir ".[dev]" --no-deps
 
@@ -31,6 +32,8 @@ COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /app/src /app/src
 COPY --from=builder /app/pyproject.toml /app/pyproject.toml
+COPY --from=builder /app/contracts /app/contracts
+
 
 ENV PYTHONPATH=/app/src
 ENV PYTHONDONTWRITEBYTECODE=1

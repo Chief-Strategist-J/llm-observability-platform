@@ -18,6 +18,8 @@ services:
         condition: service_healthy
       redpanda:
         condition: service_healthy
+    networks:
+      - llm_obs_network
 
   redis:
     image: redis:7-alpine
@@ -28,6 +30,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - llm_obs_network
 
   redpanda:
     image: redpandadata/redpanda:latest
@@ -46,3 +50,10 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - llm_obs_network
+
+networks:
+  llm_obs_network:
+    name: llm_obs_network
+    driver: bridge
