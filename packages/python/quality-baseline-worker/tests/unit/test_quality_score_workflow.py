@@ -176,3 +176,53 @@ async def test_quality_score_workflow_e2e(mock_ports) -> None:
                 task_queue="test-queue",
             )
             assert res == {"composite": 0.85}
+
+@pytest.mark.asyncio
+async def test_numerical_mismatch_detection(activities) -> None:
+    # 1. No numbers -> no mismatch
+    payload1 = {
+        "span_id": "s1", "trace_id": "t1", "model": "m", "endpoint": "e",
+        "response_text": "Hello world", "rag_context": "Hello world",
+    }
+    inp1 = AggregateCompositeInput(
+        payload=payload1, coherence=0.8, toxicity=0.2, faithfulness=0.9, perplexity=None,
+        prompt_type="chat", response_language="en"
+    )
+    res1 = await activities.aggregate_composite(inp1)
+    assert "NUMERICAL_MISMATCH" not in res1["quality_flags"]
+
+    # 2. Number matches context -> no mismatch
+    payload2 = {
+        "span_id": "s1", "trace_id": "t1", "model": "m", "endpoint": "e",
+        "response_text": "The price is $42.", "rag_context": "The value is 42 USD.",
+    }
+    inp2 = AggregateCompositeInput(
+        payload=payload2, coherence=0.8, toxicity=0.2, faithfulness=0.9, perplexity=None,
+        prompt_type="chat", response_language="en"
+    )
+    res2 = await activities.aggregate_composite(inp2)
+    assert "NUMERICAL_MISMATCH" not in res2["quality_flags"]
+
+    # 3. Number within 5% -> no mismatch (43 is within 5% of 42)
+    payload3 = {
+        "span_id": "s1", "trace_id": "t1", "model": "m", "endpoint": "e",
+        "response_text": "The price is $43.", "rag_context": "The value is 42 USD.",
+    }
+    inp3 = AggregateCompositeInput(
+        payload=payload3, coherence=0.8, toxicity=0.2, faithfulness=0.9, perplexity=None,
+        prompt_type="chat", response_language="en"
+    )
+    res3 = await activities.aggregate_composite(inp3)
+    assert "NUMERICAL_MISMATCH" not in res3["quality_flags"]
+
+    # 4. Number outside 5% -> mismatch (45 is outside 5% of 42)
+    payload4 = {
+        "span_id": "s1", "trace_id": "t1", "model": "m", "endpoint": "e",
+        "response_text": "The price is $45.", "rag_context": "The value is 42 USD.",
+    }
+    inp4 = AggregateCompositeInput(
+        payload=payload4, coherence=0.8, toxicity=0.2, faithfulness=0.9, perplexity=None,
+        prompt_type="chat", response_language="en"
+    )
+    res4 = await activities.aggregate_composite(inp4)
+    assert "NUMERICAL_MISMATCH" in res4["quality_flags"]
