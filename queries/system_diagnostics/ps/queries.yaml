@@ -1,0 +1,303 @@
+# Queries for Tool: ps
+feature: system_diagnostics_ps
+tool: ps
+description: "Process inspection queries using ps to detect runaway threads, zombie processes, resource exhaustion, and unexpected runtime behavior inside containers and on the host."
+
+queries:
+
+  - id: ps_quality_engine_all_threads
+    type: shell
+    tool: ps
+    query: "docker exec quality-engine ps -eLf --sort=-%cpu | head -30"
+    description: "List all threads in quality-engine sorted by CPU usage."
+    importance: "Identifies runaway threads — a stuck scorer or infinite retry loop consuming CPU while the consumer log shows no activity."
+    expected_output: "Thread lines with CMD containing 'python'. No single thread should hold >90% CPU steadily during normal operation."
+    how_to_use: "Run from host shell."
+
+  - id: ps_zombie_processes
+    type: shell
+    tool: ps
+    query: "docker exec quality-engine ps aux | awk 'NR==1 || $8==\"Z\"'"
+    description: "Find zombie processes inside the quality-engine container."
+    importance: "Zombie processes accumulate when child workers are not reaped, eventually exhausting the PID namespace and blocking new span processing."
+    expected_output: "Only the header row. Any Z-state row indicates a zombie requiring investigation."
+    how_to_use: "Run from host shell."
+
+  - id: ps_host_memory_top_procs
+    type: shell
+    tool: ps
+    query: "ps aux --sort=-%mem | head -15"
+    description: "Show top 15 processes by memory consumption on the host."
+    importance: "Detects memory pressure before the OOM killer fires inside containers. Host-level memory hogs starve Docker containers."
+    expected_output: "Process list with RSS values. Flag if any single process RSS exceeds 4GB."
+    how_to_use: "Run on host shell."
+
+  - id: ps_host_cpu_top_procs
+    type: shell
+    tool: ps
+    query: "ps aux --sort=-%cpu | head -15"
+    description: "Show top 15 processes by CPU usage on the host."
+    importance: "A Docker or kernel process consuming excessive CPU starves container workloads even when container CPU limits are not set."
+    expected_output: "Process list with CPU%. Flag if any non-quality-engine process holds >50% CPU during normal operation."
+    how_to_use: "Run on host shell."
+
+  - id: ps_kafka_broker_threads
+    type: shell
+    tool: ps
+    query: "docker exec docker-kafka-1 ps -eLf | grep -v 'ps -e' | head -40"
+    description: "List all Kafka broker threads inside the broker container."
+    importance: "Kafka runs many internal threads (request handler, log cleaner, replica fetcher). Stuck or missing threads indicate broker instability."
+    expected_output: "Thread list dominated by kafka threads. Missing request-handler threads indicate partition leader election issues."
+    how_to_use: "Run from host shell."
+
+  - id: ps_postgres_backend_procs
+    type: shell
+    tool: ps
+    query: "docker exec quality-engine-postgres ps aux | grep -v grep | grep -E 'postgres'"
+    description: "List all PostgreSQL backend processes inside the Postgres container."
+    importance: "Each active connection spawns a backend process. Count above max_connections indicates connection pool exhaustion."
+    expected_output: "postgres: backend processes and the main server process. Count of backend rows = active connections."
+    how_to_use: "Run from host shell."
+
+  - id: ps_redis_server_proc
+    type: shell
+    tool: ps
+    query: "docker exec quality-engine-redis ps aux | grep -v grep | grep redis"
+    description: "Verify the Redis server process is running and show its resource usage."
+    importance: "Redis is a single-threaded process. If the process is missing, all baseline cache reads return errors and the pipeline defaults to cold-start mode."
+    expected_output: "One redis-server process line with low CPU and memory matching configured limits."
+    how_to_use: "Run from host shell."
+
+  - id: ps_quality_engine_main_pid
+    type: shell
+    tool: ps
+    query: "docker exec quality-engine ps -p 1 -o pid,ppid,cmd,%cpu,%mem,etime"
+    description: "Show PID 1 details (the main entrypoint process) in quality-engine."
+    importance: "Confirms the correct entrypoint is running (e.g. python worker.py, not sh). Wrong PID 1 indicates Dockerfile ENTRYPOINT misconfiguration."
+    expected_output: "Single row showing python command as CMD, with uptime (etime) matching expected runtime."
+    how_to_use: "Run from host shell."
+
+  - id: ps_defunct_worker_processes
+    type: shell
+    tool: ps
+    query: "ps aux | grep -E 'quality-engine|kafka|postgres|redis' | grep '<defunct>'"
+    description: "Find defunct (zombie) processes related to stack services on the host."
+    importance: "Host-level zombie processes from Docker containers indicate the container runtime is not reaping children correctly."
+    expected_output: "Empty output. Any <defunct> line with a stack service name needs docker restart investigation."
+    how_to_use: "Run on host shell."
+
+  - id: ps_long_running_processes
+    type: shell
+    tool: ps
+    query: "docker exec quality-engine ps -eo pid,etime,cmd --sort=-etime | grep -v ps | head -15"
+    description: "List the longest-running processes inside quality-engine by elapsed time."
+    importance: "Processes running significantly longer than the container uptime indicate leaked workers or stuck coroutines that were never cleaned up."
+    expected_output: "Process list with etime. All times should be close to the container start time. Ancient sub-processes are suspect."
+    how_to_use: "Run from host shell."
+
+  - id: ps_process_tree_quality_engine
+    type: shell
+    tool: ps
+    query: "docker exec quality-engine ps -ejH | head -30"
+    description: "Show the full process tree (hierarchy) inside quality-engine."
+    importance: "Reveals whether the worker is spawning the expected number of sub-processes (e.g. Temporal activity workers). Missing children indicate failed forks."
+    expected_output: "Indented process tree. PID 1 (entrypoint) with expected child worker processes below it."
+    how_to_use: "Run from host shell."
+
+  - id: ps_all_listening_processes_host
+    type: shell
+    tool: ps
+    query: "ps aux | grep -E 'LISTEN|:5432|:6379|:9092|:3002|:9090' | grep -v grep"
+    description: "Find processes associated with critical service ports on the host."
+    importance: "Cross-references port ownership with process identity. Unexpected processes owning stack ports indicates a misconfigured or rogue service."
+    expected_output: "Lines for known services (postgres, redis, kafka, grafana, prometheus). Any unknown process holding a stack port is a security concern."
+    how_to_use: "Run on host shell."
+
+  - id: ps_python_worker_count
+    type: shell
+    tool: ps
+    query: "docker exec quality-engine ps aux | grep -c python"
+    description: "Count the number of Python processes running inside quality-engine."
+    importance: "Expected count depends on worker concurrency config. Too few = workers crashed; too many = worker leak from improper shutdown."
+    expected_output: "Integer matching configured worker count (e.g. 4). Significantly higher counts indicate a fork bomb or leak."
+    how_to_use: "Run from host shell."
+
+  - id: ps_high_fd_processes
+    type: shell
+    tool: ps
+    query: "ps aux -o pid= | xargs -I{} sh -c 'echo -n \"{}:\"; ls /proc/{}/fd 2>/dev/null | wc -l' | sort -t: -k2 -rn | head -10"
+    description: "Rank all processes on the host by open file descriptor count."
+    importance: "A process leaking FDs will eventually hit the system FD limit, causing 'Too many open files' errors across all containers on the host."
+    expected_output: "PID:count pairs. Any process with >1000 FDs should be investigated for FD leaks."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: ps_docker_daemon_process
+    type: shell
+    tool: ps
+    query: "ps aux | grep -E 'dockerd|containerd' | grep -v grep"
+    description: "Show the Docker daemon and containerd processes and their resource usage."
+    importance: "A Docker daemon with high CPU or memory indicates an image pull, layer extraction, or volume operation consuming excessive resources."
+    expected_output: "dockerd and containerd processes with low CPU/memory during idle. Spikes during image operations are normal."
+    how_to_use: "Run on host shell."
+
+  - id: ps_prometheus_process
+    type: shell
+    tool: ps
+    query: "docker exec prometheus ps aux | grep -v grep | grep prometheus"
+    description: "Verify the Prometheus process is running inside its container."
+    importance: "A crashed Prometheus process silently disables all alerting. No process here = all degradation alerts are dark."
+    expected_output: "One prometheus process line with expected memory usage (typically 200-800MB for this stack)."
+    how_to_use: "Run from host shell."
+
+  - id: ps_grafana_process
+    type: shell
+    tool: ps
+    query: "docker exec grafana ps aux | grep -v grep | grep grafana"
+    description: "Verify the Grafana server process is running inside its container."
+    importance: "A crashed Grafana process means all dashboards are inaccessible. Operators lose visibility into all quality metrics."
+    expected_output: "One grafana-server process line. Missing = Grafana has crashed and needs restart."
+    how_to_use: "Run from host shell."
+
+  - id: ps_cpu_wait_state
+    type: shell
+    tool: ps
+    query: "ps aux | awk '$8 ~ /D/ {print}' | head -10"
+    description: "Find processes in uninterruptible sleep (D state) on the host."
+    importance: "D-state processes are blocked on I/O — typically disk or NFS. A container process in D state blocks its entire CPU thread."
+    expected_output: "Empty under normal operation. Any D-state process from the stack indicates an I/O bottleneck."
+    how_to_use: "Run on host shell."
+
+  - id: ps_memory_rss_per_container
+    type: shell
+    tool: ps
+    query: "for c in quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis; do echo \"=== $c ===\"; docker exec $c ps -o rss= | awk '{sum+=$1} END {printf \"Total RSS: %.1f MB\\n\", sum/1024}'; done"
+    description: "Calculate total RSS memory per container by summing all process RSS values."
+    importance: "Compares actual process memory usage against configured Docker memory limits to predict OOM headroom."
+    expected_output: "Total RSS in MB per container. Values approaching the Docker memory limit (docker inspect --format {{.HostConfig.Memory}}) indicate OOM risk."
+    how_to_use: "Run from host shell."
+
+  - id: ps_kernel_threads
+    type: shell
+    tool: ps
+    query: "ps aux | awk '$11 ~ /^\\[/ {print}' | head -20"
+    description: "List kernel threads running on the host."
+    importance: "Kernel threads like [kworker] with high CPU indicate kernel-level I/O or memory management pressure affecting all containers."
+    expected_output: "Normal kernel threads at low CPU. Any kernel thread consistently at >5% CPU indicates a kernel subsystem bottleneck."
+    how_to_use: "Run on host shell."
+
+  - id: ps_container_init_process
+    type: shell
+    tool: ps
+    query: "for c in quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis; do echo \"$c:\"; docker exec $c ps -p 1 -o pid,cmd; done"
+    description: "Show PID 1 command for all core containers."
+    importance: "PID 1 must handle SIGTERM for graceful shutdown. Using sh or bash as PID 1 does not forward signals to child processes, causing ungraceful kills."
+    expected_output: "Each container should show its actual application binary (python, kafka, postgres, redis-server) as PID 1, not sh."
+    how_to_use: "Run from host shell."
+
+  - id: ps_open_socket_count_per_process
+    type: shell
+    tool: ps
+    query: "ps aux -o pid= | xargs -I{} sh -c 'echo -n \"{}:\"; ls /proc/{}/fd 2>/dev/null | xargs -I@ readlink /proc/{}/fd/@ 2>/dev/null | grep -c socket' | sort -t: -k2 -rn | head -10"
+    description: "Rank all processes by open socket count."
+    importance: "A process holding thousands of sockets is leaking connections. Quality-engine with excess sockets indicates Kafka or Postgres connection pool leak."
+    expected_output: "PID:socket_count pairs. quality-engine should have <50 sockets under normal operation."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: ps_worker_uptime
+    type: shell
+    tool: ps
+    query: "docker exec quality-engine ps -p 1 -o pid,etime,lstart"
+    description: "Show the exact start time and elapsed uptime of the quality-engine main process."
+    importance: "Confirms when the last container restart occurred. A very recent start time explains cold-start behavior and empty baselines."
+    expected_output: "One row with start time and etime. Start time should match last intentional deployment."
+    how_to_use: "Run from host shell."
+
+  - id: ps_cpu_affinity
+    type: shell
+    tool: ps
+    query: "docker exec quality-engine ps -eo pid,psr,comm | head -20"
+    description: "Show which CPU core each process thread is scheduled on inside quality-engine."
+    importance: "If all threads are pinned to a single CPU core (PSR=0), the scheduler is not distributing work. This indicates a NUMA or CPU affinity misconfiguration."
+    expected_output: "Varied PSR values across threads. All PSR=0 on a multi-core host indicates CPU pinning that limits throughput."
+    how_to_use: "Run from host shell."
+
+  - id: ps_vsz_vs_rss
+    type: shell
+    tool: ps
+    query: "docker exec quality-engine ps aux --sort=-%vsz | awk 'NR==1 || NR<=10 {printf \"%-20s %8s %8s %6s\\n\", $11, $5, $6, $3}'"
+    description: "Compare virtual memory (VSZ) vs resident set size (RSS) for top processes in quality-engine."
+    importance: "A large VSZ/RSS gap indicates memory-mapped files or shared libraries. Unexpectedly large VSZ can trigger OOM even when RSS is low."
+    expected_output: "Formatted table of CMD, VSZ, RSS, CPU%. VSZ significantly larger than available RAM warrants memory mapping analysis."
+    how_to_use: "Run from host shell."
+
+  - id: ps_signal_pending
+    type: shell
+    tool: ps
+    query: "docker exec quality-engine ps -eo pid,sigpend,comm | awk '$2 != \"0000000000000000\" && NR > 1'"
+    description: "Find processes with pending (unhandled) signals inside quality-engine."
+    importance: "A process with pending SIGTERM that it is not handling will appear alive but not respond to shutdown commands, causing ungraceful container stops."
+    expected_output: "Empty under normal operation. Any process with a non-zero sigpend mask needs signal handler inspection."
+    how_to_use: "Run from host shell."
+
+  - id: ps_temporal_worker_threads
+    type: shell
+    tool: ps
+    query: "docker exec quality-engine ps -eLf | grep -iE 'temporal|workflow|activity' | grep -v grep | head -20"
+    description: "Find Temporal worker threads by name inside quality-engine."
+    importance: "Temporal workers spawn activity execution threads. Missing threads mean workflows are queued but not executing."
+    expected_output: "Thread lines for Temporal activity worker threads. Zero matching lines = Temporal worker is not running."
+    how_to_use: "Run from host shell."
+
+  - id: ps_process_nice_values
+    type: shell
+    tool: ps
+    query: "docker exec quality-engine ps -eo pid,ni,pri,comm --sort=-ni | head -15"
+    description: "List processes sorted by nice value (scheduling priority) inside quality-engine."
+    importance: "A scorer or consumer process with high nice value (low priority) gets CPU last, causing latency spikes under load."
+    expected_output: "All quality-engine worker processes should have nice=0. Non-zero nice values indicate unintended priority deprioritization."
+    how_to_use: "Run from host shell."
+
+  - id: ps_count_all_container_procs
+    type: shell
+    tool: ps
+    query: "for c in quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis; do echo -n \"$c: \"; docker exec $c ps aux --no-headers | wc -l; done"
+    description: "Count total running processes per container."
+    importance: "An unusually high process count in quality-engine indicates forked workers not being reaped, a precursor to PID namespace exhaustion."
+    expected_output: "Expected process counts per container (e.g. quality-engine: 8, kafka: 3). Counts 2-3x normal indicate a process leak."
+    how_to_use: "Run from host shell."
+
+  - id: ps_docker_compose_ps
+    type: shell
+    tool: ps
+    query: "docker compose -f /home/btpl-lap-22/live/obs/docker-compose.yml ps --format 'table {{.Name}}\\t{{.Status}}\\t{{.Ports}}'"
+    description: "Show status and port mappings of all docker-compose services."
+    importance: "Quick health check across the entire stack. Any service showing 'Exit' or 'Restarting' indicates a failure requiring investigation."
+    expected_output: "All services showing 'running' status with expected port bindings."
+    how_to_use: "Run from project root."
+
+  - id: ps_host_total_process_count
+    type: shell
+    tool: ps
+    query: "ps aux --no-headers | wc -l"
+    description: "Count total processes running on the host."
+    importance: "Approaching the host PID limit causes fork failures across all containers. Normal count for this stack is under 300."
+    expected_output: "Integer count. Values above 1000 on a single-stack host indicate a process leak at the host level."
+    how_to_use: "Run on host shell."
+
+  - id: ps_find_python_scoring_workers
+    type: shell
+    tool: ps
+    query: "docker exec quality-engine ps aux | grep -E 'scorer|worker|consumer|handler' | grep -v grep"
+    description: "Find scoring worker and consumer handler processes by name inside quality-engine."
+    importance: "Confirms that all expected worker types are running. Missing a scorer type means that metric is being defaulted, not computed."
+    expected_output: "Lines for toxicity, coherence, faithfulness, and perplexity workers/threads. Any missing type = silent score defaulting."
+    how_to_use: "Run from host shell."
+
+  - id: ps_cgroup_memory_limit
+    type: shell
+    tool: ps
+    query: "for c in quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis; do pid=$(docker inspect --format '{{.State.Pid}}' $c); limit=$(cat /proc/$pid/cgroup 2>/dev/null | head -3); echo \"$c: $limit\"; done"
+    description: "Show cgroup assignments for each container's main process."
+    importance: "Confirms each container is under a memory cgroup with limits set. Containers without cgroup memory limits can consume all host RAM unchecked."
+    expected_output: "Cgroup paths for each container. Missing memory controller in the path means no memory limit is enforced."
+    how_to_use: "Run on host shell with sudo."

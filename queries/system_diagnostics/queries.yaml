@@ -1,0 +1,434 @@
+# Queries for Feature: system_diagnostics
+feature: system_diagnostics
+description: "Host and container-level diagnostics using shell tools: find, grep, git, ps, docker inspect, jq, netstat, ss, lsof, tcpdump, strace, journalctl, awk, sed."
+
+queries:
+
+  # ─── docker inspect ───────────────────────────────────────────────────────
+
+  - id: docker_inspect_quality_engine
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine | jq '.[0] | {Name, Status: .State.Status, RestartCount: .RestartCount, Image: .Config.Image, Env: .Config.Env, Ports: .NetworkSettings.Ports, Mounts: .Mounts}'"
+    description: "Inspect the quality-engine container: image, env vars, port bindings, mounts, and restart count."
+    importance: "Confirms the container is running the expected image version and that critical env vars (KAFKA_BOOTSTRAP, POSTGRES_DSN, REDIS_URL) are correctly injected."
+    expected_output: "JSON object with Status='running', RestartCount=0, and all expected environment variable keys present."
+    how_to_use: "Run from the host shell."
+
+  - id: docker_inspect_network
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine kafka redis quality-engine-postgres | jq '.[] | {Name: .Name, Network: (.NetworkSettings.Networks | keys[0]), IP: (.NetworkSettings.Networks | to_entries[0].value.IPAddress)}'"
+    description: "List the internal IPs and shared network of quality-engine, Kafka, Redis, and Postgres containers."
+    importance: "Verifies all services are co-located on the same Docker network. A container on a different network causes silent connection failures."
+    expected_output: "Four JSON objects each sharing the same Network name with distinct IP addresses."
+    how_to_use: "Run from the host shell."
+
+  - id: docker_inspect_healthcheck
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine kafka quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, Health: .State.Health.Status, FailingStreak: .State.Health.FailingStreak, LastLog: (.State.Health.Log[-1].Output // \"no healthcheck\")}'"
+    description: "Show healthcheck status and last health probe output for all core services."
+    importance: "A container marked 'unhealthy' keeps running but fails readiness probes — quality-engine may connect to a broken dependency."
+    expected_output: "All containers should show Health='healthy' and FailingStreak=0."
+    how_to_use: "Run from the host shell."
+
+  - id: docker_inspect_restart_policy
+    type: shell
+    tool: docker
+    query: "docker inspect quality-engine kafka quality-engine-postgres quality-engine-redis | jq '.[] | {Name: .Name, RestartPolicy: .HostConfig.RestartPolicy.Name, MaxRetries: .HostConfig.RestartPolicy.MaximumRetryCount, RestartCount: .RestartCount}'"
+    description: "Inspect restart policy and cumulative restart count per container."
+    importance: "A quality-engine RestartCount >3 in a short window signals a crash-loop. Kafka restarts cause consumer rebalancing and message redelivery."
+    expected_output: "RestartPolicy='always' or 'unless-stopped' for all services; RestartCount=0 under normal operation."
+    how_to_use: "Run from the host shell."
+
+  # ─── ps ───────────────────────────────────────────────────────────────────
+
+  - id: ps_quality_engine_threads
+    type: shell
+    tool: ps
+    query: "docker exec quality-engine ps -eLf --sort=-%cpu | head -30"
+    description: "List all threads inside the quality-engine container sorted by CPU usage."
+    importance: "Identifies runaway threads (e.g., a stuck scorer or infinite retry loop) consuming CPU inside the container process."
+    expected_output: "Thread listing with CMD containing 'python' or 'gunicorn'. No single thread should hold >90% CPU steadily."
+    how_to_use: "Run from the host shell."
+
+  - id: ps_zombie_processes
+    type: shell
+    tool: ps
+    query: "docker exec quality-engine ps aux | awk 'NR==1 || $8==\"Z\"'"
+    description: "Find zombie processes inside the quality-engine container."
+    importance: "Zombie processes accumulate when child workers are not reaped, eventually exhausting the PID namespace and preventing new spans from being processed."
+    expected_output: "Only the header row — any Z-state row indicates a zombie requiring investigation."
+    how_to_use: "Run from the host shell."
+
+  - id: ps_host_container_procs
+    type: shell
+    tool: ps
+    query: "ps aux --sort=-%mem | grep -E 'docker|kafka|postgres|redis' | head -20"
+    description: "Show host-level memory consumption of Docker and service processes."
+    importance: "Detects memory pressure on the host that will trigger OOM kills inside containers before container-level metrics reflect it."
+    expected_output: "Process lines showing RSS/VSZ for each service. Flag if any single process RSS exceeds 4GB."
+    how_to_use: "Run on the host shell."
+
+  # ─── find ─────────────────────────────────────────────────────────────────
+
+  - id: find_stale_lock_files
+    type: shell
+    tool: find
+    query: "find /var/lib/docker/volumes -name '*.lock' -mmin +60 2>/dev/null | head -20"
+    description: "Find lock files inside Docker volumes that are older than 60 minutes."
+    importance: "Stale lock files from crashed workers can prevent Postgres WAL archiving or Redis AOF rewrites, causing silent data loss."
+    expected_output: "Empty output under normal operation. Any path returned needs investigation."
+    how_to_use: "Run on the host shell with sudo if needed."
+
+  - id: find_large_log_files
+    type: shell
+    tool: find
+    query: "find /var/lib/docker/containers -name '*.log' -size +500M 2>/dev/null | xargs -I{} du -sh {}"
+    description: "Find Docker container log files exceeding 500MB on the host."
+    importance: "Unbounded container logs fill the host disk, which kills all containers simultaneously when /var runs out of space."
+    expected_output: "Empty output is ideal. Any result should trigger log rotation configuration."
+    how_to_use: "Run on the host shell with sudo."
+
+  - id: find_core_dumps
+    type: shell
+    tool: find
+    query: "find /tmp /var/crash /home -name 'core*' -o -name '*.crash' 2>/dev/null | head -10"
+    description: "Search for core dump files that may have been produced by a quality-engine or Python worker crash."
+    importance: "Core dumps confirm a process received SIGSEGV or SIGABRT. Presence correlates with unexplained container restarts."
+    expected_output: "Empty output under normal operation. Any core file should be inspected with gdb."
+    how_to_use: "Run on the host shell."
+
+  - id: find_config_overrides
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -name '*.env' -o -name '.env*' -o -name '*.override.yml' 2>/dev/null | grep -v '.git'"
+    description: "Locate all environment and docker-compose override files in the project tree."
+    importance: "Orphaned .env or .override.yml files silently override production configuration. Every override file should be intentional."
+    expected_output: "Known .env files only. Any unexpected path should be audited before deployment."
+    how_to_use: "Run from the project root."
+
+  # ─── grep ─────────────────────────────────────────────────────────────────
+
+  - id: grep_errors_last_run
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 1h 2>&1 | grep -E 'ERROR|CRITICAL|Traceback|Exception' | sort | uniq -c | sort -rn | head -20"
+    description: "Count and rank unique error/exception patterns in quality-engine logs from the past hour."
+    importance: "Surfaces the top error categories without needing to scroll thousands of log lines. High counts of a single error class pinpoint the root cause."
+    expected_output: "Counted list of error strings, e.g. '  42 ERROR scorer timeout'. Zero output = clean hour."
+    how_to_use: "Run from the host shell."
+
+  - id: grep_kafka_connection_errors
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 30m 2>&1 | grep -iE 'kafka|broker|connection refused|topic not found|LEADER_NOT_AVAILABLE' | tail -30"
+    description: "Filter quality-engine logs for Kafka broker connection and topic errors in the last 30 minutes."
+    importance: "Kafka connection errors cause the consumer loop to stall silently. Catching them early prevents DLQ build-up."
+    expected_output: "Empty output is ideal. Any line containing 'connection refused' or 'LEADER_NOT_AVAILABLE' requires immediate broker investigation."
+    how_to_use: "Run from the host shell."
+
+  - id: grep_oom_events
+    type: shell
+    tool: grep
+    query: "grep -i 'oom\\|out of memory\\|killed process' /var/log/syslog /var/log/kern.log 2>/dev/null | tail -20"
+    description: "Check kernel logs for OOM kill events affecting any container or system process."
+    importance: "OOM kills appear as sudden container restarts with no in-container error logs. The kernel log is the only place this is recorded."
+    expected_output: "Empty output under normal operation. Any hit should trigger memory quota review."
+    how_to_use: "Run on the host shell with sudo."
+
+  - id: grep_secret_leaks_in_logs
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 1h 2>&1 | grep -iE 'password|secret|token|api_key|bearer' | grep -v 'REDACTED\\|***'"
+    description: "Scan recent quality-engine logs for any accidentally logged secrets or credentials."
+    importance: "Secrets appearing in logs violate compliance and get captured in log aggregators (Loki). Any hit requires immediate secret rotation."
+    expected_output: "Empty output. Any hit is a P0 security incident."
+    how_to_use: "Run from the host shell."
+
+  # ─── git ──────────────────────────────────────────────────────────────────
+
+  - id: git_config_drift
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs diff HEAD -- docker-compose*.yml prometheus.yml .env* | head -80"
+    description: "Show uncommitted changes to docker-compose, Prometheus, and env config files."
+    importance: "Config drift (uncommitted changes) means the running stack differs from what is version-controlled. Critical before any deployment."
+    expected_output: "Empty diff = no drift. Any diff shows exactly what is running vs. what is committed."
+    how_to_use: "Run from the host shell."
+
+  - id: git_recent_deploy_commits
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs log --oneline --since='48 hours ago' --name-only -- 'docker-compose*.yml' 'requirements*.txt' 'pyproject.toml' '*.Dockerfile'"
+    description: "List commits from the last 48 hours that touched deployment-affecting files."
+    importance: "Correlates a quality regression with a recent dependency or infra change without having to read every commit."
+    expected_output: "Commit hashes with filenames. Cross-reference timestamps with incident start time."
+    how_to_use: "Run from the project root."
+
+  - id: git_untracked_secrets
+    type: shell
+    tool: git
+    query: "git -C /home/btpl-lap-22/live/obs ls-files --others --exclude-standard | grep -iE '\\.env$|\\.pem$|\\.key$|credentials|secret'"
+    description: "Find untracked files in the project that look like credentials or secrets."
+    importance: "Untracked secret files are not caught by .gitignore audits and can be accidentally committed or accessed by other processes."
+    expected_output: "Empty output. Any file listed should be moved to a secrets manager and removed."
+    how_to_use: "Run from the project root."
+
+  # ─── jq ───────────────────────────────────────────────────────────────────
+
+  - id: jq_kafka_score_payload
+    type: shell
+    tool: jq
+    query: "docker exec docker-kafka-1 kafka-console-consumer --topic llm.quality.scores --bootstrap-server kafka:29092 --from-beginning --max-messages 5 2>/dev/null | jq '{span_id, model, prompt_type, composite_score: .scores.composite, flags: .quality_flags, ts: .scored_at}'"
+    description: "Consume 5 Kafka score messages and project only the critical fields using jq."
+    importance: "Validates that the scorer is publishing well-formed payloads with all required keys before they reach PostgreSQL."
+    expected_output: "5 compact JSON objects with span_id, model, composite_score (float 0–1), flags (array), and scored_at timestamp."
+    how_to_use: "Run from the host shell."
+
+  - id: jq_kafka_alert_payload
+    type: shell
+    tool: jq
+    query: "docker exec docker-kafka-1 kafka-console-consumer --topic alerts.quality.degradation --bootstrap-server kafka:29092 --from-beginning --max-messages 5 2>/dev/null | jq '{model, endpoint, current_window_avg: .current_window_avg, baseline: .baseline_score, ratio: (.current_window_avg / .baseline_score), ts: .alerted_at}'"
+    description: "Consume alert payloads and compute the degradation ratio inline with jq."
+    importance: "Confirms the alert payload contains the ratio field needed by downstream consumers. Also verifies the ratio matches the PromQL degradation signal."
+    expected_output: "Alert objects with ratio field (e.g. 0.78 means 22% drop). Ratio should be <0.85 for any legitimate alert."
+    how_to_use: "Run from the host shell."
+
+  - id: jq_docker_compose_service_names
+    type: shell
+    tool: jq
+    query: "docker compose -f /home/btpl-lap-22/live/obs/docker-compose.yml config --format json 2>/dev/null | jq '[.services | keys[]]'"
+    description: "Extract all service names from the resolved docker-compose config as a JSON array."
+    importance: "Confirms what services are actually defined after variable substitution — useful before a fresh stack bring-up."
+    expected_output: "JSON array of service name strings matching the expected topology."
+    how_to_use: "Run from the host shell."
+
+  # ─── ss / netstat ─────────────────────────────────────────────────────────
+
+  - id: ss_listening_ports
+    type: shell
+    tool: ss
+    query: "ss -tlnp | grep -E 'LISTEN' | awk '{print $4, $6}' | sort"
+    description: "List all TCP ports in LISTEN state on the host alongside the owning process."
+    importance: "Verifies that Grafana (3002), Prometheus (9090), Kafka (29092/9092), Postgres (5432), and Redis (6379) are bound and reachable from outside containers."
+    expected_output: "Lines showing 0.0.0.0:<port> or :::port for each expected service. Missing ports = service not started."
+    how_to_use: "Run on the host shell."
+
+  - id: ss_established_to_kafka
+    type: shell
+    tool: ss
+    query: "ss -tnp state established '( dport = :29092 or dport = :9092 )'"
+    description: "Show all established TCP connections to the Kafka broker port from the host."
+    importance: "Counts active Kafka consumer/producer connections. Zero connections while quality-engine is running means the consumer loop is not connected."
+    expected_output: "One or more ESTAB lines from the quality-engine container IP to the Kafka broker IP."
+    how_to_use: "Run on the host shell."
+
+  - id: netstat_port_conflicts
+    type: shell
+    tool: netstat
+    query: "netstat -tlnp 2>/dev/null | awk 'NR==1 || /LISTEN/' | grep -E ':3002|:9090|:5432|:6379|:9092|:29092'"
+    description: "Check for port binding conflicts on all critical service ports."
+    importance: "Port conflicts cause containers to fail silently at startup. This is the first check when a service appears down."
+    expected_output: "One line per port showing the PID/process holding the binding. Duplicate PIDs on the same port = conflict."
+    how_to_use: "Run on the host shell with sudo for full process visibility."
+
+  # ─── lsof ─────────────────────────────────────────────────────────────────
+
+  - id: lsof_open_postgres_connections
+    type: shell
+    tool: lsof
+    query: "docker exec quality-engine-postgres lsof -i :5432 -n -P 2>/dev/null | awk 'NR==1 || /ESTABLISHED/' | head -30"
+    description: "List all established TCP connections to Postgres port 5432 inside the Postgres container."
+    importance: "Detects connection pool exhaustion. More than max_connections ESTABLISHED rows means quality-engine workers are holding idle connections."
+    expected_output: "Rows showing COMMAND, PID, and remote address. Count should not exceed configured max_connections (default 100)."
+    how_to_use: "Run from the host shell."
+
+  - id: lsof_file_descriptor_count
+    type: shell
+    tool: lsof
+    query: "docker exec quality-engine sh -c 'ls /proc/1/fd | wc -l && cat /proc/1/limits | grep -i \"open files\"'"
+    description: "Count open file descriptors for the main quality-engine process and show the system limit."
+    importance: "FD exhaustion (open FDs near the limit) causes 'Too many open files' errors, silently dropping Kafka messages and blocking DB writes."
+    expected_output: "FD count followed by the soft/hard limit. Flag if current count exceeds 80% of the soft limit."
+    how_to_use: "Run from the host shell."
+
+  # ─── tcpdump ──────────────────────────────────────────────────────────────
+
+  - id: tcpdump_kafka_traffic
+    type: shell
+    tool: tcpdump
+    query: "tcpdump -i any -n -c 100 'tcp port 29092' -A 2>/dev/null | grep -aE 'llm\\.|quality\\.|span_id' | head -20"
+    description: "Capture 100 packets on Kafka port 29092 and grep for topic name or span_id strings in the payload."
+    importance: "Confirms actual wire-level traffic is flowing to Kafka. Use when metrics show zero throughput but the consumer claims to be running."
+    expected_output: "Lines containing topic names (llm.quality.scores, llm.spans.sampled) visible in raw packet output."
+    how_to_use: "Run on the host shell with sudo. Short-lived capture — stops after 100 packets."
+
+  - id: tcpdump_postgres_queries
+    type: shell
+    tool: tcpdump
+    query: "tcpdump -i any -n -c 50 'tcp port 5432' -A 2>/dev/null | grep -aE 'SELECT|INSERT|UPDATE|quality_scores' | head -20"
+    description: "Capture Postgres wire protocol traffic and grep for SQL keywords to confirm active DB activity."
+    importance: "Validates that quality-engine is actually writing to Postgres at the network level, independent of application-layer logs."
+    expected_output: "Lines containing INSERT or SELECT against quality_scores table. Empty output = no DB activity."
+    how_to_use: "Run on the host shell with sudo. Requires access to the Docker bridge interface."
+
+  - id: tcpdump_redis_commands
+    type: shell
+    tool: tcpdump
+    query: "tcpdump -i any -n -c 50 'tcp port 6379' -A 2>/dev/null | grep -aE 'SET|GET|KEYS|baseline|alert:limit' | head -20"
+    description: "Capture Redis RESP protocol traffic to confirm baseline SET/GET commands are being issued."
+    importance: "Confirms that baseline updates and alert rate-limit locks are hitting the wire. Useful when Redis logs are disabled."
+    expected_output: "Lines containing SET baseline:quality: or GET baseline:quality: alongside key names."
+    how_to_use: "Run on the host shell with sudo."
+
+  # ─── strace ───────────────────────────────────────────────────────────────
+
+  - id: strace_quality_engine_syscalls
+    type: shell
+    tool: strace
+    query: "docker exec quality-engine sh -c 'strace -p 1 -f -e trace=network,read,write -T -tt -c 2>&1 &' && sleep 10 && docker exec quality-engine sh -c 'kill $(pgrep strace)'"
+    description: "Attach strace to the quality-engine main process (PID 1) for 10 seconds, counting network and I/O syscalls."
+    importance: "Reveals at the syscall level whether the process is blocked on recv(), connect(), or write() — invisible from application logs. Useful when the consumer appears hung but CPU is 0."
+    expected_output: "Syscall summary table showing counts and time per call. A process blocked on recv() with huge elapsed time = network stall."
+    how_to_use: "Run from the host shell. Requires the container to have strace installed (apt-get install strace) or run via nsenter."
+
+  - id: strace_slow_postgres_writes
+    type: shell
+    tool: strace
+    query: "nsenter -t $(docker inspect --format '{{.State.Pid}}' quality-engine) -n strace -e trace=write,sendto -f -p 1 -T 2>&1 | grep -E 'write|sendto' | awk '$NF > 0.05' | head -20"
+    description: "Trace write and sendto syscalls from quality-engine and filter those taking more than 50ms."
+    importance: "Identifies individual slow Postgres or Kafka writes at the syscall level. Application-layer timeouts are often 500ms+ — this catches them earlier."
+    expected_output: "Lines showing write/sendto calls with elapsed time >0.05s (e.g. <write(9, ...) = 128 <0.078432>). Empty = all writes fast."
+    how_to_use: "Run on the host shell with sudo. Uses nsenter to enter the container's network namespace without needing strace inside the container."
+
+  - id: strace_file_open_trace
+    type: shell
+    tool: strace
+    query: "nsenter -t $(docker inspect --format '{{.State.Pid}}' quality-engine) -m strace -e trace=openat,open -f -p 1 2>&1 | grep -vE '/proc|/dev|/sys' | head -30"
+    description: "Trace all file open calls in the quality-engine process, excluding virtual filesystem paths."
+    importance: "Detects unexpected file access patterns — e.g. a scorer repeatedly reopening a model weights file on every evaluation instead of caching it in memory."
+    expected_output: "openat calls with file paths. Model files should appear only once at startup; any recurring openat on the same path is a caching bug."
+    how_to_use: "Run on the host shell with sudo."
+
+  - id: strace_redis_connect
+    type: shell
+    tool: strace
+    query: "nsenter -t $(docker inspect --format '{{.State.Pid}}' quality-engine) -n strace -e trace=connect,socket -f -p 1 -T 2>&1 | grep -E '6379|redis' | head -20"
+    description: "Trace socket connect calls targeting Redis port 6379 from the quality-engine process."
+    importance: "Confirms whether quality-engine is reconnecting to Redis on every baseline read (connection not being pooled) vs. reusing persistent connections."
+    expected_output: "Zero or very few connect() calls during steady state. Repeated connects per span = connection pool misconfiguration."
+    how_to_use: "Run on the host shell with sudo."
+
+  # ─── journalctl ───────────────────────────────────────────────────────────
+
+  - id: journalctl_docker_service
+    type: shell
+    tool: journalctl
+    query: "journalctl -u docker.service --since '1 hour ago' --no-pager | grep -iE 'error|oom|kill|failed|restart' | tail -30"
+    description: "Scan systemd journal for Docker daemon errors, OOM kills, and container restarts in the past hour."
+    importance: "Docker daemon errors (e.g. storage driver failures, network plugin crashes) are invisible inside containers — only visible in the host journal."
+    expected_output: "Empty output under normal operation. OOM kill lines confirm memory pressure; 'failed' lines indicate daemon-level faults."
+    how_to_use: "Run on the host shell with sudo."
+
+  - id: journalctl_kernel_oom
+    type: shell
+    tool: journalctl
+    query: "journalctl -k --since '6 hours ago' --no-pager | grep -iE 'oom_kill|out of memory|killed process|memory cgroup' | tail -20"
+    description: "Search the kernel ring buffer in the journal for OOM kill events from any cgroup (container or host process)."
+    importance: "The definitive source for OOM events — more reliable than /var/log/syslog. Shows exactly which container/process was killed and its memory usage at kill time."
+    expected_output: "Empty output is ideal. Lines like 'oom_kill_process: Kill process 12345 (python) ...' require immediate memory limit adjustment."
+    how_to_use: "Run on the host shell with sudo."
+
+  - id: journalctl_quality_engine_unit
+    type: shell
+    tool: journalctl
+    query: "journalctl CONTAINER_NAME=quality-engine --since '2 hours ago' --no-pager -o json | jq -r 'select(.PRIORITY <= \"3\") | [.__REALTIME_TIMESTAMP, .MESSAGE] | @tsv' | tail -40"
+    description: "Pull systemd-journald entries for the quality-engine container filtered to warning-level and above (PRIORITY ≤ 3), output as TSV."
+    importance: "Captures logs that Docker's own log driver may have dropped under high throughput. Journal is a separate write path and persists across container restarts."
+    expected_output: "TSV rows with Unix microsecond timestamp and message for any WARNING, ERROR, or CRITICAL log line."
+    how_to_use: "Run on the host shell. Requires journald Docker log driver to be configured."
+
+  - id: journalctl_boot_since_last_restart
+    type: shell
+    tool: journalctl
+    query: "journalctl --list-boots --no-pager | tail -3"
+    description: "List the last 3 boot entries to identify recent host reboots or systemd restarts."
+    importance: "An unexpected host reboot explains container state loss (e.g. Redis cache eviction, Kafka offset reset). Cross-reference boot time with alert timestamps."
+    expected_output: "Table showing boot index, boot ID, and start/end timestamps. Any boot within the incident window is suspicious."
+    how_to_use: "Run on the host shell."
+
+  - id: journalctl_network_namespace_errors
+    type: shell
+    tool: journalctl
+    query: "journalctl -k --since '1 hour ago' --no-pager | grep -iE 'net_namespace|veth|bridge|iptables|nf_conntrack' | tail -20"
+    description: "Check the kernel journal for Docker network namespace, veth, bridge, or iptables errors."
+    importance: "Container networking failures (dropped veth interfaces, full conntrack table) manifest as intermittent connection resets between services — not visible in application logs."
+    expected_output: "Empty output is expected. 'nf_conntrack: table full' is a common cause of random Kafka/Postgres connection drops under load."
+    how_to_use: "Run on the host shell with sudo."
+
+  # ─── awk + sed ────────────────────────────────────────────────────────────
+
+  - id: awk_error_rate_per_minute
+    type: shell
+    tool: awk
+    query: "docker logs quality-engine --since 1h --timestamps 2>&1 | awk '/ERROR/ {split($1,t,\"T\"); split(t[2],m,\":\"); minute=t[1]\"T\"m[1]\":\"m[2]; counts[minute]++} END {for (m in counts) print m, counts[m]}' | sort"
+    description: "Count ERROR log lines per minute from quality-engine logs over the last hour."
+    importance: "Produces a per-minute error rate histogram without external tooling. Spikes pinpoint the exact minute an incident started, independent of Grafana."
+    expected_output: "Lines like '2026-06-16T10:43 7' showing minute and error count. A sudden jump from 1 to 50+ marks the incident start."
+    how_to_use: "Run from the host shell."
+
+  - id: awk_scorer_latency_summary
+    type: shell
+    tool: awk
+    query: "docker logs quality-engine --since 30m 2>&1 | awk '/scorer_duration_ms/ {match($0, /scorer=([^ ]+)/, s); match($0, /duration_ms=([0-9.]+)/, d); if (s[1] && d[1]) {sum[s[1]]+=d[1]; cnt[s[1]]++}} END {for (sc in sum) printf \"%s avg=%.1fms samples=%d\\n\", sc, sum[sc]/cnt[sc], cnt[sc]}'"
+    description: "Compute per-scorer average latency from structured log lines over the last 30 minutes using awk."
+    importance: "Cheaper than a Prometheus histogram query during an outage when Grafana may be unreachable. Pinpoints which scorer is slow without needing a dashboard."
+    expected_output: "Lines like 'faithfulness avg=142.3ms samples=89' per scorer. Flag any scorer averaging >200ms."
+    how_to_use: "Run from the host shell. Assumes log lines contain scorer=<name> and duration_ms=<float> fields."
+
+  - id: awk_kafka_lag_from_logs
+    type: shell
+    tool: awk
+    query: "docker logs quality-engine --since 30m 2>&1 | awk '/consumer_lag/ {match($0, /consumer_lag=([0-9]+)/, l); if (l[1]+0 > max) max=l[1]+0} END {print \"max_consumer_lag=\"max}'"
+    description: "Extract the maximum consumer lag value logged by quality-engine in the last 30 minutes."
+    importance: "Quick lag check without a Prometheus query. If max_consumer_lag > 500, the consumer is falling behind the producer and DLQ risk is elevated."
+    expected_output: "Single line: 'max_consumer_lag=34'. Values above 500 require immediate investigation."
+    how_to_use: "Run from the host shell."
+
+  - id: sed_redact_secrets_from_logs
+    type: shell
+    tool: sed
+    query: "docker logs quality-engine --since 1h 2>&1 | sed -E 's/(password|token|api_key|secret|bearer)[=: ]+[^ &\"]+/\\1=REDACTED/gi'"
+    description: "Stream quality-engine logs with all credential-like values replaced by REDACTED before piping to further tools."
+    importance: "Prevents accidental secret exposure when sharing log excerpts with teammates or pasting into issue trackers. Always pipe logs through this before exporting."
+    expected_output: "Full log stream with values after password=, token=, api_key=, secret=, bearer= replaced by REDACTED."
+    how_to_use: "Use as a filter in a pipe: docker logs quality-engine ... | sed -E '...' | grep ERROR"
+
+  - id: sed_extract_span_ids_from_logs
+    type: shell
+    tool: sed
+    query: "docker logs quality-engine --since 1h 2>&1 | grep -i error | sed -nE 's/.*span_id=([a-f0-9-]+).*/\\1/p' | sort -u"
+    description: "Extract all unique span IDs that appeared in error log lines in the last hour."
+    importance: "Produces a direct list of span IDs to look up in Tempo traces or PostgreSQL — faster than manually scanning logs for individual IDs."
+    expected_output: "One UUID per line (e.g. 'a3f1c2d4-...'). Feed directly into a Tempo TraceQL query or pg_review_queue query."
+    how_to_use: "Run from the host shell. Output can be piped into xargs to bulk-query Postgres."
+
+  - id: awk_composite_score_histogram
+    type: shell
+    tool: awk
+    query: "docker exec quality-engine-postgres psql -U postgres -d quality_engine_db -t -c 'SELECT composite_score FROM quality_scores WHERE scored_at > now() - interval' \"'\" '1 hour' \"'\" ';' 2>/dev/null | awk '{b=int($1*10)/10; hist[b]++} END {for (i=0; i<=9; i++) {b=i/10; printf \"[%.1f-%.1f]: %d\\n\", b, b+0.1, hist[b]+0}}' | sort"
+    description: "Build a 10-bucket histogram of composite scores from the last hour entirely in awk."
+    importance: "Reveals score distribution shape (bimodal, skewed low) without needing Grafana. A bucket near 0.0–0.1 with high count signals a systematic scorer failure."
+    expected_output: "10 lines showing score bucket ranges and counts, e.g. '[0.7-0.8]: 142'. Healthy distribution peaks in 0.7–0.9 range."
+    how_to_use: "Run from the host shell."
+
+  - id: sed_normalize_docker_compose_ports
+    type: shell
+    tool: sed
+    query: "grep -A2 'ports:' /home/btpl-lap-22/live/obs/docker-compose.yml | sed -nE 's/.*-[[:space:]]+\"?([0-9]+):([0-9]+)\"?.*/host=\\1 container=\\2/p'"
+    description: "Extract all host:container port mappings from docker-compose.yml in a normalized key=value format."
+    importance: "Quick audit of which host ports are exposed before a deployment. Catches unintentional port exposure (e.g. Postgres 5432 bound to 0.0.0.0)."
+    expected_output: "Lines like 'host=3002 container=3000', 'host=9090 container=9090' for every mapped port."
+    how_to_use: "Run from the project root."

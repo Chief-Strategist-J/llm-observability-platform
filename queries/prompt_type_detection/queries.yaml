@@ -42,3 +42,35 @@ queries:
     importance: "Allows capacity planning and shows if there is a sudden spike in code or classification requests."
     expected_output: "A time-series chart showing traffic trends per prompt type."
     how_to_use: "Execute in Prometheus or Grafana."
+
+  - id: pg_unknown_prompt_types
+    type: postgresql
+    query: "SELECT count(*) as unclassified_count, round(count(*)::numeric / (SELECT count(*) FROM quality_scores) * 100, 2) as pct_total, min(scored_at) as first_seen, max(scored_at) as last_seen FROM quality_scores WHERE prompt_type IS NULL OR prompt_type = 'unknown';"
+    description: "Count spans the classifier could not categorize (NULL or 'unknown' prompt_type)."
+    importance: "Rising unknown rate indicates a regression in the heuristic classifier or a new prompt pattern outside training distribution."
+    expected_output: "Row with unclassified_count, pct_total (%), and time range of unclassified spans."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: pg_language_quality_outliers
+    type: postgresql
+    query: "SELECT response_language, avg(composite_score) as avg_score, stddev(composite_score) as score_stddev, count(*) as sample_size FROM quality_scores WHERE skipped_reason IS NULL GROUP BY response_language HAVING count(*) > 10 ORDER BY avg_score ASC;"
+    description: "Compare average composite score and score variance across response languages."
+    importance: "Non-English languages often score lower due to model bias. Identifies languages needing dedicated evaluation calibration."
+    expected_output: "Table showing languages ranked by avg_score, with stddev to flag high-variance groups."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: prom_classification_latency_p99
+    type: promql
+    query: "histogram_quantile(0.99, sum(rate(quality_classification_duration_seconds_bucket[5m])) by (le, prompt_type))"
+    description: "p99 latency of the prompt type classification step per prompt type."
+    importance: "Classification should complete in <20ms. p99 spikes above 100ms indicate model loading issues or resource contention."
+    expected_output: "Histogram quantile value in seconds per prompt type. Flag if any exceeds 0.1s."
+    how_to_use: "Execute in Prometheus or Grafana."
+
+  - id: log_classifier_fallback
+    type: logql
+    query: '{container_name="quality-engine"} |= "classifier fallback" | json | line_format "span={{.span_id}} fallback_reason={{.reason}} assigned_type={{.assigned_type}}"'
+    description: "Find log lines where the ML classifier fell back to the heuristic rule engine."
+    importance: "Frequent fallbacks mean the ML model is unavailable or slow — heuristics are less accurate and inflate unknown rates."
+    expected_output: "Log lines detailing which spans triggered fallback and the assigned type after heuristic override."
+    how_to_use: "Query in Grafana Loki Explorer."

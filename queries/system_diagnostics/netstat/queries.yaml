@@ -1,0 +1,294 @@
+# Queries for Tool: netstat
+feature: system_diagnostics_netstat
+tool: netstat
+description: "Network state inspection using netstat for port conflicts, connection counts, routing, interface stats, and protocol diagnostics on the LLM observability stack host."
+
+queries:
+
+  - id: netstat_all_listening_ports
+    type: shell
+    tool: netstat
+    query: "netstat -tlnp 2>/dev/null | awk 'NR<=2 || /LISTEN/' | sort -k4"
+    description: "List all TCP listening ports with owning process names."
+    importance: "Single command to verify all critical service ports are bound. Missing ports indicate startup failure."
+    expected_output: "Rows for ports 3002, 5432, 6379, 7233, 9090, 9092, 29092."
+    how_to_use: "Run on host shell with sudo for process names."
+
+  - id: netstat_port_conflicts
+    type: shell
+    tool: netstat
+    query: "netstat -tlnp 2>/dev/null | awk 'NR==1 || /LISTEN/' | grep -E ':3002|:9090|:5432|:6379|:9092|:29092|:7233'"
+    description: "Check for port bindings on all critical service ports."
+    importance: "Port conflicts cause containers to fail silently at startup. This is the first check when a service appears down."
+    expected_output: "One line per port. Multiple lines for the same port = conflict."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: netstat_established_connections
+    type: shell
+    tool: netstat
+    query: "netstat -tn 2>/dev/null | grep ESTABLISHED | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -rn | head -10"
+    description: "Count established connections grouped by remote IP."
+    importance: "Identifies which hosts have the most connections to the stack. Unexpected external IPs with many connections are suspicious."
+    expected_output: "Docker container IP/count pairs. External IPs should not appear unless intentional."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_connection_state_summary
+    type: shell
+    tool: netstat
+    query: "netstat -tn 2>/dev/null | awk 'NR>2 {print $6}' | sort | uniq -c | sort -rn"
+    description: "Summarize all TCP connections by state."
+    importance: "Elevated TIME_WAIT/CLOSE_WAIT counts indicate connection pool problems. High SYN_SENT indicates unreachable services."
+    expected_output: "ESTABLISHED dominating, small TIME_WAIT. Any CLOSE_WAIT or SYN_SENT >10 requires investigation."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_kafka_connections
+    type: shell
+    tool: netstat
+    query: "netstat -tn 2>/dev/null | grep -E ':29092|:9092' | awk '{print $6}' | sort | uniq -c"
+    description: "Count connections to Kafka by TCP state."
+    importance: "Only ESTABLISHED connections mean the consumer is connected. TIME_WAIT spikes indicate rapid reconnection cycles."
+    expected_output: "Only ESTABLISHED rows. TIME_WAIT > 5 means connections are cycling instead of being reused."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_postgres_connections
+    type: shell
+    tool: netstat
+    query: "netstat -tn 2>/dev/null | grep ':5432' | awk '{print $6}' | sort | uniq -c"
+    description: "Count connections to PostgreSQL by TCP state."
+    importance: "High ESTABLISHED count approaching max_connections means pool is saturated. CLOSE_WAIT indicates DB connections not being returned to pool."
+    expected_output: "ESTABLISHED count matching pool size. CLOSE_WAIT = 0."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_redis_connections
+    type: shell
+    tool: netstat
+    query: "netstat -tn 2>/dev/null | grep ':6379' | wc -l"
+    description: "Count all connections (any state) to Redis."
+    importance: "Redis is single-threaded. Many connections aren't necessarily better — high counts indicate connection-per-operation antipattern."
+    expected_output: "Count matching configured connection pool size (typically 2-5). Values >20 indicate pool misconfiguration."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_routing_table
+    type: shell
+    tool: netstat
+    query: "netstat -rn 2>/dev/null | head -20"
+    description: "Show the kernel IP routing table."
+    importance: "Missing Docker bridge routes prevent inter-container communication. Routes must include the Docker network subnet (typically 172.17.0.0/16)."
+    expected_output: "Routes for Docker bridge network (172.x.x.x) and host default gateway. Missing Docker routes = no container networking."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_docker_bridge_routes
+    type: shell
+    tool: netstat
+    query: "netstat -rn 2>/dev/null | grep -E '^172\\.' | head -10"
+    description: "List routing table entries for Docker bridge network subnets."
+    importance: "Each Docker network creates a route entry. Missing entry means containers on that network cannot reach external services."
+    expected_output: "One route per Docker network in use. Missing compose network route = quality-engine cannot reach Kafka."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_udp_listeners
+    type: shell
+    tool: netstat
+    query: "netstat -ulnp 2>/dev/null | head -15"
+    description: "List all UDP listening sockets on the host."
+    importance: "Unexpected UDP listeners may indicate misconfigured services. DNS on UDP:53 is expected; others should be verified."
+    expected_output: "Only expected UDP services (DNS, NTP). Any stack service on UDP is unexpected."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: netstat_interface_stats
+    type: shell
+    tool: netstat
+    query: "netstat -i 2>/dev/null | grep -v '^lo' | head -10"
+    description: "Show network interface packet statistics including errors and drops."
+    importance: "Interface RX-ERR or RX-DRP counts indicate physical or virtual network problems causing packet loss between containers."
+    expected_output: "All interface error and drop counts should be 0. Non-zero counts indicate hardware or driver issues."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_docker_bridge_interface
+    type: shell
+    tool: netstat
+    query: "netstat -i 2>/dev/null | grep -E 'docker|br-'"
+    description: "Show packet statistics specifically for Docker bridge interfaces."
+    importance: "High drop rates on the Docker bridge interface indicate the bridge is overwhelmed — common during high-throughput Kafka traffic."
+    expected_output: "Zero RX-DRP and TX-DRP on all docker/br- interfaces."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_time_wait_count
+    type: shell
+    tool: netstat
+    query: "netstat -tn 2>/dev/null | grep -c TIME_WAIT"
+    description: "Count connections in TIME_WAIT state."
+    importance: "High TIME_WAIT (>500) exhausts local port ranges, causing 'Cannot assign requested address' errors on new connections."
+    expected_output: "Integer count. Values above 200 on a single-service host indicate connection pool churn."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_close_wait_count
+    type: shell
+    tool: netstat
+    query: "netstat -tn 2>/dev/null | grep -c CLOSE_WAIT"
+    description: "Count connections stuck in CLOSE_WAIT state."
+    importance: "CLOSE_WAIT indicates the remote closed the connection but the local process hasn't called close(). Classic connection leak signature."
+    expected_output: "Zero. Any non-zero value indicates a connection leak in quality-engine Postgres or Kafka clients."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_per_process_connection_count
+    type: shell
+    tool: netstat
+    query: "netstat -tnp 2>/dev/null | grep ESTABLISHED | awk '{print $7}' | sort | uniq -c | sort -rn | head -10"
+    description: "Count established connections per process name/PID."
+    importance: "Identifies which process is holding the most connections. Unexpected processes with many connections indicate misconfiguration."
+    expected_output: "quality-engine process holding connections to Kafka, Postgres, Redis. Any unfamiliar process name is suspicious."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: netstat_syn_backlog
+    type: shell
+    tool: netstat
+    query: "netstat -tlnp 2>/dev/null | awk 'NR==1 || (/LISTEN/ && $2 > 0)'"
+    description: "Find listening sockets with non-zero receive queue (SYN backlog)."
+    importance: "Non-zero Recv-Q on LISTEN socket = accept queue full, incoming connections being dropped. Critical for high-traffic Kafka listener."
+    expected_output: "All Recv-Q values = 0. Any non-zero value means a service is too slow to accept connections."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_protocol_statistics_tcp
+    type: shell
+    tool: netstat
+    query: "netstat -st 2>/dev/null | grep -iE 'failed connection|reset|retransmit|timeout|listen.*overflow' | head -15"
+    description: "Show TCP protocol statistics for errors, resets, and retransmits."
+    importance: "Cumulative counters for reset and retransmit reveal chronic network instability even when current connections appear stable."
+    expected_output: "Zero or very low values for 'listen queue overflows' and 'connection resets'. Increasing retransmits indicate packet loss."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_protocol_statistics_ip
+    type: shell
+    tool: netstat
+    query: "netstat -su 2>/dev/null | head -20"
+    description: "Show UDP and IP protocol statistics including errors."
+    importance: "InErrors or SndbufErrors in UDP stats indicate DNS resolution failures affecting service discovery inside Docker."
+    expected_output: "Zero errors in InErrors, InCsumErrors, and SndbufErrors."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_multicast_groups
+    type: shell
+    tool: netstat
+    query: "netstat -g 2>/dev/null | head -15"
+    description: "List multicast group memberships for all interfaces."
+    importance: "Unexpected multicast groups on Docker bridge interfaces can cause unwanted broadcast traffic flooding all containers."
+    expected_output: "Standard multicast groups (224.0.0.1) only. Any application-layer multicast groups are unexpected."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_ports_above_1024_listening
+    type: shell
+    tool: netstat
+    query: "netstat -tlnp 2>/dev/null | awk '/LISTEN/ {split($4,a,\":\"); port=a[length(a)]; if (port+0 > 8000 && port+0 < 65535) print}'"
+    description: "Find high-port listeners (8000-65535) on the host."
+    importance: "Unexpected high-port listeners may be ephemeral debug servers or accidentally exposed internal services."
+    expected_output: "Known high-port services (29092 for Kafka external, 8000 for quality-engine metrics). Unknown ports need investigation."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: netstat_tcp_socket_buffer_sizes
+    type: shell
+    tool: netstat
+    query: "cat /proc/sys/net/ipv4/tcp_rmem && cat /proc/sys/net/ipv4/tcp_wmem && cat /proc/sys/net/core/rmem_max"
+    description: "Show TCP socket buffer size configuration from kernel parameters."
+    importance: "Small TCP buffers limit throughput on the Kafka consumer. Under-configured buffers cause kafka consumer lag even with healthy connections."
+    expected_output: "tcp_rmem and tcp_wmem max values should be at least 4MB (4194304). Smaller values limit streaming throughput."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_fin_wait_analysis
+    type: shell
+    tool: netstat
+    query: "netstat -tn 2>/dev/null | grep -E 'FIN_WAIT|LAST_ACK' | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -rn"
+    description: "Count FIN_WAIT and LAST_ACK connections grouped by remote IP."
+    importance: "Many FIN_WAIT connections to the same IP indicate the remote service is terminating connections faster than quality-engine can close them."
+    expected_output: "Empty or near-empty under normal operation. Any IP with >10 FIN_WAIT connections indicates connection cleanup issues."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_established_local_ports
+    type: shell
+    tool: netstat
+    query: "netstat -tn 2>/dev/null | grep ESTABLISHED | awk '{print $4}' | cut -d: -f2 | sort -n | uniq -c | sort -rn | head -10"
+    description: "Count established connections grouped by local port."
+    importance: "Identifies which local ports are most active. An unexpected local port with many connections indicates a rogue service binding on that port."
+    expected_output: "High counts on ports 5432, 29092, 6379. Unexpected high-count local ports need process identification."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_grafana_connections
+    type: shell
+    tool: netstat
+    query: "netstat -tn 2>/dev/null | grep ':3002' | awk '{print $6}' | sort | uniq -c"
+    description: "Count connections to Grafana by TCP state."
+    importance: "Grafana connection count reflects active dashboard users. Zero connections during business hours indicates Grafana is unreachable."
+    expected_output: "ESTABLISHED connections per active dashboard user. TIME_WAIT entries are normal for completed HTTP requests."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_tcp_keepalive_settings
+    type: shell
+    tool: netstat
+    query: "cat /proc/sys/net/ipv4/tcp_keepalive_time && cat /proc/sys/net/ipv4/tcp_keepalive_intvl && cat /proc/sys/net/ipv4/tcp_keepalive_probes"
+    description: "Show TCP keepalive configuration for the host."
+    importance: "Default keepalive time is 7200 seconds. With Kafka or Postgres connections left idle that long, firewall state tables expire and connections silently break."
+    expected_output: "tcp_keepalive_time should be ≤300 seconds for this stack. Default of 7200 causes silent connection drops."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_connection_to_external_host
+    type: shell
+    tool: netstat
+    query: "netstat -tn 2>/dev/null | grep ESTABLISHED | awk '{print $5}' | grep -vE '^172\\.|^127\\.|^10\\.' | head -10"
+    description: "Find established connections to non-Docker/non-loopback IP addresses."
+    importance: "Quality-engine should only connect to internal Docker services. External connections indicate unexpected outbound data flow."
+    expected_output: "Empty output for a fully containerized stack. Any external IP warrants security investigation."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_unix_socket_stats
+    type: shell
+    tool: netstat
+    query: "netstat -x 2>/dev/null | grep -v '^unix' | head -20"
+    description: "List all Unix domain socket connections on the host."
+    importance: "Docker daemon communicates over /var/run/docker.sock. Unexpected Unix socket activity from quality-engine indicates it has host-level access."
+    expected_output: "Docker socket and systemd sockets only. Any quality-engine process connected to /var/run/docker.sock is a security violation."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_retransmit_rate
+    type: shell
+    tool: netstat
+    query: "netstat -st 2>/dev/null | grep -i retransmit"
+    description: "Show cumulative TCP segment retransmit statistics."
+    importance: "Growing retransmit counters indicate chronic packet loss in the Docker network, causing scorer latency and Kafka lag."
+    expected_output: "Low and stable retransmit counts. Rapidly increasing counts indicate a network infrastructure problem."
+    how_to_use: "Run on host shell, compare two readings 60 seconds apart."
+
+  - id: netstat_port_scan_detection
+    type: shell
+    tool: netstat
+    query: "netstat -tn 2>/dev/null | grep SYN_RECV | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -rn | head -5"
+    description: "Detect SYN flood or port scan by finding IPs with many SYN_RECV connections."
+    importance: "A single IP with many SYN_RECV connections indicates a connection storm or port scan against the host, which can saturate the connection table."
+    expected_output: "Empty under normal operation. Any IP with >10 SYN_RECV is performing a scan or flood."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_all_ports_in_use
+    type: shell
+    tool: netstat
+    query: "netstat -tlnpu 2>/dev/null | awk 'NR>2 {print $4}' | grep -oE '[0-9]+$' | sort -n | uniq"
+    description: "List all unique ports currently in use (TCP and UDP)."
+    importance: "Comprehensive port inventory before opening firewall rules or adding new services. Prevents conflicts with existing bindings."
+    expected_output: "All active ports. Cross-reference against expected stack ports to identify any unexpected services."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: netstat_connections_per_minute_estimate
+    type: shell
+    tool: netstat
+    query: "count1=$(netstat -tn 2>/dev/null | grep -c ESTABLISHED); sleep 5; count2=$(netstat -tn 2>/dev/null | grep -c ESTABLISHED); echo \"Delta in 5s: $((count2 - count1)) connections, approx $((( count2 - count1 ) * 12))/min\""
+    description: "Estimate the rate of new connections per minute by sampling connection count delta over 5 seconds."
+    importance: "High connection creation rate (>60/min) under stable load indicates connection-per-request antipattern rather than pool reuse."
+    expected_output: "Delta close to 0 in steady state. Large positive delta = connections being created rapidly."
+    how_to_use: "Run on host shell."
+
+  - id: netstat_host_to_container_routing
+    type: shell
+    tool: netstat
+    query: "netstat -rn 2>/dev/null | awk '/^172/ {print \"Docker:\", $0} /^10\\./ {print \"Internal:\", $0} /^0\\.0\\.0\\.0/ {print \"Default:\", $0}'"
+    description: "Categorize routing table entries by type: Docker, internal, and default gateway."
+    importance: "Confirms correct routing exists for Docker networks without accidentally routing Docker traffic to the wrong gateway."
+    expected_output: "Docker routes pointing to bridge interfaces. Default route pointing to the host gateway, not a Docker interface."
+    how_to_use: "Run on host shell."

@@ -1,0 +1,303 @@
+# Queries for Tool: ss
+feature: system_diagnostics_ss
+tool: ss
+description: "Socket and network state queries using ss to audit port bindings, connection counts, TCP states, and inter-service connectivity for the LLM observability stack."
+
+queries:
+
+  - id: ss_all_listening_ports
+    type: shell
+    tool: ss
+    query: "ss -tlnp | awk 'NR==1 || /LISTEN/' | sort -k4"
+    description: "List all TCP listening sockets with owning process."
+    importance: "Verifies Grafana (3002), Prometheus (9090), Kafka (9092/29092), Postgres (5432), Redis (6379) are all bound and ready."
+    expected_output: "One LISTEN row per expected port. Missing ports = service not started or binding failed."
+    how_to_use: "Run on host shell."
+
+  - id: ss_established_to_kafka
+    type: shell
+    tool: ss
+    query: "ss -tnp state established '( dport = :29092 or dport = :9092 )'"
+    description: "Show all established connections to the Kafka broker."
+    importance: "Zero connections while quality-engine runs = consumer loop is disconnected. Expected: 1+ connection per consumer thread."
+    expected_output: "ESTAB lines from quality-engine container IP to kafka:29092."
+    how_to_use: "Run on host shell."
+
+  - id: ss_established_to_postgres
+    type: shell
+    tool: ss
+    query: "ss -tnp state established '( dport = :5432 )'"
+    description: "Show all established TCP connections to PostgreSQL port 5432."
+    importance: "Connection count reflects pool utilization. Near max_connections indicates pool exhaustion causing INSERT queuing."
+    expected_output: "One row per active DB connection. Count matching configured pool size is healthy."
+    how_to_use: "Run on host shell."
+
+  - id: ss_established_to_redis
+    type: shell
+    tool: ss
+    query: "ss -tnp state established '( dport = :6379 )'"
+    description: "Show all established connections to Redis."
+    importance: "Confirms quality-engine has a live Redis connection for baseline reads. Zero connections = all cache reads fail and cold-start mode activates."
+    expected_output: "One or more ESTAB rows. Persistent zero indicates Redis is down or the connection pool is not initialized."
+    how_to_use: "Run on host shell."
+
+  - id: ss_time_wait_sockets
+    type: shell
+    tool: ss
+    query: "ss -tn state time-wait | wc -l"
+    description: "Count TCP sockets in TIME_WAIT state on the host."
+    importance: "High TIME_WAIT counts (>1000) indicate rapid connection teardown — typical of connection pools creating new connections per request instead of reusing."
+    expected_output: "Integer count. Values above 500 suggest connection pool misconfiguration in quality-engine."
+    how_to_use: "Run on host shell."
+
+  - id: ss_close_wait_sockets
+    type: shell
+    tool: ss
+    query: "ss -tnp state close-wait"
+    description: "Find sockets in CLOSE_WAIT state (remote closed, local hasn't acknowledged)."
+    importance: "CLOSE_WAIT sockets accumulate when the app fails to close connections after the server disconnects — a classic connection leak pattern."
+    expected_output: "Empty under normal operation. Any CLOSE_WAIT socket from quality-engine indicates a connection leak in the DB or Kafka client."
+    how_to_use: "Run on host shell."
+
+  - id: ss_connection_count_per_port
+    type: shell
+    tool: ss
+    query: "ss -tn state established | awk 'NR>1 {print $5}' | awk -F: '{print $NF}' | sort | uniq -c | sort -rn | head -10"
+    description: "Count established connections per destination port across the host."
+    importance: "Shows which service has the most active connections. Unexpected high counts on a non-stack port indicate a rogue process."
+    expected_output: "Port/count pairs. Ports 5432, 29092, 6379 should be the highest. Any unknown port at high count is suspicious."
+    how_to_use: "Run on host shell."
+
+  - id: ss_udp_listening
+    type: shell
+    tool: ss
+    query: "ss -ulnp"
+    description: "List all UDP listening sockets on the host."
+    importance: "Unexpected UDP listeners may indicate misconfigured DNS or syslog daemons consuming ports needed by the stack."
+    expected_output: "Only known UDP listeners (DNS on :53, etc.). Any unexpected UDP port should be investigated."
+    how_to_use: "Run on host shell."
+
+  - id: ss_grafana_port_binding
+    type: shell
+    tool: ss
+    query: "ss -tlnp | grep ':3002'"
+    description: "Verify Grafana is listening on port 3002."
+    importance: "If Grafana is not bound, all dashboards are inaccessible. This is the first check before debugging Grafana config."
+    expected_output: "One LISTEN line showing 0.0.0.0:3002 or :::3002 with the grafana process."
+    how_to_use: "Run on host shell."
+
+  - id: ss_prometheus_port_binding
+    type: shell
+    tool: ss
+    query: "ss -tlnp | grep ':9090'"
+    description: "Verify Prometheus is listening on port 9090."
+    importance: "If Prometheus is not bound, all PromQL queries and alert evaluation are offline."
+    expected_output: "One LISTEN line for port 9090 showing the prometheus process."
+    how_to_use: "Run on host shell."
+
+  - id: ss_kafka_controller_port
+    type: shell
+    tool: ss
+    query: "ss -tlnp | grep -E ':9092|:29092|:2181'"
+    description: "Verify Kafka broker and ZooKeeper/KRaft controller ports are bound."
+    importance: "Kafka must bind both internal (9092) and external (29092) listeners. Missing internal listener breaks inter-broker replication."
+    expected_output: "LISTEN rows for 9092, 29092, and optionally 2181. Missing internal port = broker startup failure."
+    how_to_use: "Run on host shell."
+
+  - id: ss_syn_recv_backlog
+    type: shell
+    tool: ss
+    query: "ss -tlnp | awk 'NR==1 || /LISTEN/ {print $2, $4, $5, $6}'"
+    description: "Show the connection backlog (Recv-Q) for all listening sockets."
+    importance: "Non-zero Recv-Q on a LISTEN socket means the accept queue is full — new connections are being dropped. Critical for Kafka and Postgres under load."
+    expected_output: "Recv-Q=0 for all listening sockets. Non-zero indicates the service cannot keep up with incoming connection rate."
+    how_to_use: "Run on host shell."
+
+  - id: ss_fin_wait_connections
+    type: shell
+    tool: ss
+    query: "ss -tn state fin-wait-1 | wc -l && ss -tn state fin-wait-2 | wc -l"
+    description: "Count connections in FIN_WAIT states."
+    importance: "Elevated FIN_WAIT counts indicate connections not being properly closed, often due to missing graceful shutdown in the app."
+    expected_output: "Both counts should be near 0. Values above 50 indicate a connection teardown problem."
+    how_to_use: "Run on host shell."
+
+  - id: ss_connections_per_remote_ip
+    type: shell
+    tool: ss
+    query: "ss -tn state established | awk 'NR>1 {split($5,a,\":\"); print a[1]}' | sort | uniq -c | sort -rn | head -10"
+    description: "Count established connections grouped by remote IP address."
+    importance: "Identifies which remote host has the most connections. Unexpected external IPs with many connections may indicate a data exfiltration channel."
+    expected_output: "IP/count pairs showing Docker container IPs. Any public IP should be investigated."
+    how_to_use: "Run on host shell."
+
+  - id: ss_socket_send_queue_backlog
+    type: shell
+    tool: ss
+    query: "ss -tnp | awk '$2 > 0 || $3 > 0' | head -20"
+    description: "Find sockets with non-zero send (Send-Q) or receive (Recv-Q) buffer backlog."
+    importance: "Send-Q buildup means the remote end is slow to consume. On the Kafka connection, this indicates broker back-pressure."
+    expected_output: "Empty output under normal operation. Non-zero Send-Q on Kafka connection = broker is overwhelmed."
+    how_to_use: "Run on host shell."
+
+  - id: ss_unix_domain_sockets
+    type: shell
+    tool: ss
+    query: "ss -xlp | head -20"
+    description: "List Unix domain sockets on the host."
+    importance: "Unexpected Unix sockets in /tmp or /var/run may indicate a process communicating outside the expected Docker network."
+    expected_output: "Known sockets like /var/run/docker.sock and systemd sockets. Any sockets in /tmp with recent mtime are suspicious."
+    how_to_use: "Run on host shell."
+
+  - id: ss_port_reuse_check
+    type: shell
+    tool: ss
+    query: "ss -tlnp | awk 'NR>1 {print $4}' | sort | uniq -d"
+    description: "Find duplicate port bindings (same port appearing twice)."
+    importance: "Duplicate port bindings indicate a port conflict — one process stole the port from another. Second binder will fail, causing silent service failure."
+    expected_output: "Empty output. Any duplicate port in the list is a conflict requiring investigation."
+    how_to_use: "Run on host shell."
+
+  - id: ss_postgres_connection_states
+    type: shell
+    tool: ss
+    query: "ss -tn '( dport = :5432 or sport = :5432 )' | awk 'NR==1 || NR>1 {print $1}' | sort | uniq -c"
+    description: "Count connections to/from Postgres by TCP state."
+    importance: "High CLOSE_WAIT or TIME_WAIT counts on Postgres port indicate connection pool churn — connections being created/destroyed per request."
+    expected_output: "Only ESTAB connections in steady state. Any TIME_WAIT > 10 per minute indicates pool misconfiguration."
+    how_to_use: "Run on host shell."
+
+  - id: ss_temporal_port_binding
+    type: shell
+    tool: ss
+    query: "ss -tlnp | grep -E ':7233|:7234|:7235'"
+    description: "Verify Temporal server frontend (7233), internal (7234), and membership (7235) ports are bound."
+    importance: "Missing Temporal ports mean workflow execution is offline — quality-engine activity workers cannot connect to submit scoring jobs."
+    expected_output: "LISTEN rows for ports 7233, 7234, 7235. Any missing port indicates Temporal service startup failure."
+    how_to_use: "Run on host shell."
+
+  - id: ss_established_count_total
+    type: shell
+    tool: ss
+    query: "ss -tn state established | wc -l"
+    description: "Count total established TCP connections on the host."
+    importance: "Sudden spikes in total connections indicate a connection storm — often caused by a retry loop or connection pool reset event."
+    expected_output: "Stable count in range 20-100 for this stack. Spikes above 500 require immediate connection pool investigation."
+    how_to_use: "Run on host shell."
+
+  - id: ss_quality_engine_outbound_connections
+    type: shell
+    tool: ss
+    query: "ss -tnp state established | grep $(docker inspect quality-engine --format '{{.State.Pid}}' 2>/dev/null)"
+    description: "List all outbound connections from the quality-engine process by host PID."
+    importance: "Confirms quality-engine only connects to expected endpoints (Kafka, Postgres, Redis, Tempo). Unexpected connections indicate a dependency or security issue."
+    expected_output: "Connections to ports 29092, 5432, 6379, and 4317 (OTLP/Tempo). Any other destination requires investigation."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: ss_retransmit_count
+    type: shell
+    tool: ss
+    query: "ss -ti state established | grep -E 'retrans|data_segs' | head -20"
+    description: "Show TCP retransmit statistics for established connections."
+    importance: "High retransmit rates indicate network packet loss between containers, causing increased latency and potential connection resets."
+    expected_output: "Retrans values near 0. Retrans > 5 on the Kafka or Postgres connection indicates network-level issues inside Docker."
+    how_to_use: "Run on host shell."
+
+  - id: ss_otlp_tempo_connection
+    type: shell
+    tool: ss
+    query: "ss -tnp state established '( dport = :4317 or dport = :4318 )'"
+    description: "Verify quality-engine has an active OTLP connection to Tempo (gRPC port 4317 or HTTP port 4318)."
+    importance: "No OTLP connection means all traces are buffered locally in quality-engine and not appearing in Grafana Tempo."
+    expected_output: "One ESTAB connection from quality-engine to the Tempo OTLP endpoint."
+    how_to_use: "Run on host shell."
+
+  - id: ss_port_5432_bound_interface
+    type: shell
+    tool: ss
+    query: "ss -tlnp | grep ':5432'"
+    description: "Check which network interface Postgres is bound to on the host."
+    importance: "Postgres bound to 0.0.0.0 is accessible from outside Docker, which is a security risk. Should be bound only to the Docker bridge interface or 127.0.0.1."
+    expected_output: "Postgres listening on Docker bridge IP (172.x.x.x) or 127.0.0.1, not 0.0.0.0."
+    how_to_use: "Run on host shell."
+
+  - id: ss_kafka_replication_port
+    type: shell
+    tool: ss
+    query: "ss -tnp state established '( sport = :9092 )' | head -10"
+    description: "Show connections on Kafka's internal listener port (9092)."
+    importance: "Connections on the internal port are inter-broker or admin tool connections. Unexpected source IPs indicate external tools bypassing the external listener."
+    expected_output: "Only Docker internal IPs on the internal listener. Any external IP is a security misconfiguration."
+    how_to_use: "Run on host shell."
+
+  - id: ss_host_ephemeral_port_range
+    type: shell
+    tool: ss
+    query: "cat /proc/sys/net/ipv4/ip_local_port_range && ss -tn state time-wait | awk 'NR>1 {split($4,a,\":\"); print a[length(a)]}' | sort -n | tail -5"
+    description: "Show the ephemeral port range and the highest TIME_WAIT port numbers."
+    importance: "Ephemeral port exhaustion (TIME_WAIT ports approaching ip_local_port_range max) causes 'Cannot assign requested address' errors."
+    expected_output: "Range like '32768 60999' and highest TIME_WAIT ports. Highest TIME_WAIT approaching 60999 indicates port exhaustion."
+    how_to_use: "Run on host shell."
+
+  - id: ss_redis_connection_count
+    type: shell
+    tool: ss
+    query: "ss -tn state established '( dport = :6379 )' | wc -l"
+    description: "Count established connections to Redis."
+    importance: "Too many connections to Redis (>50 for a single quality-engine instance) indicates connection pool not being reused properly."
+    expected_output: "Integer matching configured Redis connection pool size. High values indicate pool misconfiguration."
+    how_to_use: "Run on host shell."
+
+  - id: ss_docker_bridge_interfaces
+    type: shell
+    tool: ss
+    query: "ss -tlnp | awk '{print $4}' | grep -oE '^[0-9]+\\.[0-9]+' | sort -u"
+    description: "List unique IP prefixes all listening sockets are bound to."
+    importance: "Services should bind to Docker bridge IPs (172.x.x) not 0.0.0.0 unless host access is intentional. Identifies over-exposed services."
+    expected_output: "Expected: Docker bridge (172.x), loopback (127.0), and optionally 0.0.0.0 for intentionally exposed services only."
+    how_to_use: "Run on host shell."
+
+  - id: ss_connection_storm_detection
+    type: shell
+    tool: ss
+    query: "ss -tn state syn-sent | wc -l"
+    description: "Count connections in SYN_SENT state (connection attempts that haven't received a response)."
+    importance: "High SYN_SENT count indicates quality-engine is trying to connect to an unreachable service. Identifies the first moment of connectivity failure."
+    expected_output: "Near 0 in steady state. Any SYN_SENT count >5 indicates active connection failures."
+    how_to_use: "Run on host shell."
+
+  - id: ss_mtu_and_rtt_stats
+    type: shell
+    tool: ss
+    query: "ss -tio state established '( dport = :29092 )' | grep -E 'rto:|rtt:|pmtu:'"
+    description: "Show RTT and MTU info for Kafka connections."
+    importance: "High RTT on the Kafka connection (>5ms inside Docker) indicates network path issues between containers. MTU mismatch causes fragmentation."
+    expected_output: "RTT values <1ms inside Docker. pmtu should match the Docker bridge MTU (typically 1500 or 1450 for overlays)."
+    how_to_use: "Run on host shell."
+
+  - id: ss_process_socket_count
+    type: shell
+    tool: ss
+    query: "ss -tnp state established | grep -oP 'pid=\\K[0-9]+' | sort | uniq -c | sort -rn | head -10"
+    description: "Count open TCP connections per process PID."
+    importance: "A process with hundreds of connections is either a connection-per-request antipattern or a connection leak. Identifies the culprit PID for further investigation."
+    expected_output: "PID/count pairs. quality-engine PID should hold connections equal to its pool size."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: ss_all_failed_connections
+    type: shell
+    tool: ss
+    query: "ss -tn state syn-recv | head -10 && ss -tn state syn-sent | head -10"
+    description: "Show connections in SYN_RECV (waiting for client ACK) and SYN_SENT (waiting for server SYN-ACK) states."
+    importance: "Persistent SYN_RECV indicates half-open connection attacks or firewall dropping ACKs. Persistent SYN_SENT = service is unreachable."
+    expected_output: "Both lists should be empty in steady state. Any entries lingering for >30 seconds indicate network faults."
+    how_to_use: "Run on host shell."
+
+  - id: ss_kafka_consumer_lag_connection_correlation
+    type: shell
+    tool: ss
+    query: "ss -tn state established '( dport = :29092 or dport = :9092 )' | wc -l"
+    description: "Count total active TCP connections to Kafka from the host."
+    importance: "Correlate connection count with consumer lag: if connections drop but lag rises, the consumer reconnected but lost its position."
+    expected_output: "Stable count matching (consumer threads + admin connections). Any drop to 0 means consumer is disconnected."
+    how_to_use: "Run on host shell."

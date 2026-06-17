@@ -50,3 +50,43 @@ queries:
     importance: "Critical safety KPI. Spike in ratio indicates potential jailbreaks or model failures."
     expected_output: "Graph detailing percentage value over time."
     how_to_use: "Execute in Prometheus or Grafana."
+
+  - id: prom_scorer_latency_p95
+    type: promql
+    query: "histogram_quantile(0.95, sum(rate(quality_scoring_duration_seconds_bucket[5m])) by (le, scorer))"
+    description: "p95 latency of each individual scorer (toxicity, coherence, faithfulness, perplexity) over 5 minutes."
+    importance: "Pinpoints which scorer is the bottleneck. Coherence (embedding-based) should stay below 200ms p95; breaches delay the whole pipeline."
+    expected_output: "Per-scorer latency histogram quantile in seconds. Alert if any scorer exceeds 0.5s at p95."
+    how_to_use: "Execute in Prometheus or Grafana."
+
+  - id: pg_score_percentile_distribution
+    type: postgresql
+    query: "SELECT model, percentile_cont(0.10) WITHIN GROUP (ORDER BY composite_score) as p10, percentile_cont(0.25) WITHIN GROUP (ORDER BY composite_score) as p25, percentile_cont(0.50) WITHIN GROUP (ORDER BY composite_score) as p50, percentile_cont(0.75) WITHIN GROUP (ORDER BY composite_score) as p75, percentile_cont(0.90) WITHIN GROUP (ORDER BY composite_score) as p90 FROM quality_scores WHERE skipped_reason IS NULL GROUP BY model ORDER BY p50 DESC;"
+    description: "Percentile distribution of composite scores (p10–p90) per model."
+    importance: "Mean scores hide tail behavior. A model with p50=0.80 but p10=0.30 has a dangerous low-quality tail that averages mask."
+    expected_output: "Table with model and composite score percentiles (p10, p25, p50, p75, p90)."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: pg_flag_co_occurrence_matrix
+    type: postgresql
+    query: "SELECT unnest(quality_flags) as flag_a, unnest(quality_flags) as flag_b, count(*) as co_occurrences FROM quality_scores WHERE array_length(quality_flags, 1) > 1 GROUP BY flag_a, flag_b HAVING flag_a < flag_b ORDER BY co_occurrences DESC LIMIT 20;"
+    description: "Find which pairs of quality flags most frequently appear together on the same span."
+    importance: "Flag co-occurrence reveals correlated failure modes (e.g. LOW_COHERENCE always pairs with HALLUCINATION_RISK), which can simplify triage rules."
+    expected_output: "Top 20 flag pairs with their co-occurrence count."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: redis_embedding_cache_size
+    type: redis
+    query: "DBSIZE"
+    description: "Return total number of keys in the Redis instance — proxy for embedding cache size."
+    importance: "A cache that grows unbounded eventually evicts old entries under memory pressure, degrading reuse rates. Track alongside TTL config."
+    expected_output: "Integer representing total key count (e.g. 18420)."
+    how_to_use: "docker exec -it quality-engine-redis redis-cli <query>"
+
+  - id: log_scorer_errors
+    type: logql
+    query: '{container_name="quality-engine"} |= "scorer error" | json | line_format "scorer={{.scorer}} span={{.span_id}} error={{.error}}"'
+    description: "Find log lines where an individual scorer threw an exception and was skipped or defaulted."
+    importance: "Scorer errors fall back to default scores (0.5), silently skewing composite output. Catch before they affect model rankings."
+    expected_output: "Structured lines: 'scorer=faithfulness span=xyz error=timeout_after_500ms'."
+    how_to_use: "Query in Grafana Loki Explorer."

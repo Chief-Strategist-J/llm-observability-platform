@@ -1,0 +1,258 @@
+# Queries for Tool: lsof
+feature: system_diagnostics_lsof
+tool: lsof
+description: "Open file and network descriptor queries using lsof to detect connection leaks, FD exhaustion, locked files, and unexpected resource access in the LLM observability stack."
+
+queries:
+
+  - id: lsof_quality_engine_fd_count
+    type: shell
+    tool: lsof
+    query: "docker exec quality-engine sh -c 'ls /proc/1/fd | wc -l && cat /proc/1/limits | grep -i \"open files\"'"
+    description: "Count open FDs for the quality-engine main process and show the system limit."
+    importance: "FD exhaustion causes 'Too many open files' errors that silently drop Kafka messages and block DB writes."
+    expected_output: "FD count and soft/hard limit. Flag if current count exceeds 80% of soft limit."
+    how_to_use: "Run from host shell."
+
+  - id: lsof_postgres_connections_detail
+    type: shell
+    tool: lsof
+    query: "docker exec quality-engine-postgres lsof -i :5432 -n -P 2>/dev/null | awk 'NR==1 || /ESTABLISHED/' | head -30"
+    description: "List all established TCP connections to Postgres port 5432."
+    importance: "Connection count exceeding max_connections means quality-engine workers are holding idle connections, blocking new DB operations."
+    expected_output: "ESTAB rows with COMMAND, PID, and remote address. Count should not exceed configured max_connections (default 100)."
+    how_to_use: "Run from host shell."
+
+  - id: lsof_kafka_open_files
+    type: shell
+    tool: lsof
+    query: "docker exec docker-kafka-1 lsof -p 1 2>/dev/null | grep -cE 'REG|DIR'"
+    description: "Count open file descriptors (files and directories) for the Kafka broker process."
+    importance: "Kafka holds file handles for every log segment. High FD count near system limit causes EMFILE errors, stopping partition writes."
+    expected_output: "Integer count. For a healthy broker with moderate partitions, expect 200-500. Values near ulimit require adjustment."
+    how_to_use: "Run from host shell."
+
+  - id: lsof_redis_data_files
+    type: shell
+    tool: lsof
+    query: "docker exec quality-engine-redis lsof -p 1 2>/dev/null | grep -E 'REG' | awk '{print $9}' | head -10"
+    description: "List files opened by the Redis process including dump.rdb and appendonly.aof."
+    importance: "Confirms Redis has the persistence files open. Missing dump.rdb open handle means persistence is disabled."
+    expected_output: "Lines showing /data/dump.rdb and optionally /data/appendonly.aof as open file handles."
+    how_to_use: "Run from host shell."
+
+  - id: lsof_deleted_but_open_files
+    type: shell
+    tool: lsof
+    query: "lsof 2>/dev/null | grep '(deleted)' | awk '{print $1, $2, $9}' | head -20"
+    description: "Find files that have been deleted on disk but are still held open by a process."
+    importance: "Deleted but open files continue consuming disk space. A rotated log file held by quality-engine will not free disk space until the handle is released."
+    expected_output: "Empty ideally. Any '(deleted)' file consuming significant space requires the holding process to be restarted."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: lsof_socket_leaks_quality_engine
+    type: shell
+    tool: lsof
+    query: "docker exec quality-engine sh -c 'ls /proc/1/fd 2>/dev/null | xargs -I@ readlink /proc/1/fd/@ 2>/dev/null | grep socket | wc -l'"
+    description: "Count socket file descriptors open by the quality-engine main process."
+    importance: "Growing socket FD count over time (without connection count growing) indicates socket leaks in Kafka or DB client libraries."
+    expected_output: "Stable count matching expected connections (pool size + overhead). Steadily increasing count = socket leak."
+    how_to_use: "Run from host shell."
+
+  - id: lsof_network_connections_quality_engine
+    type: shell
+    tool: lsof
+    query: "nsenter -t $(docker inspect --format '{{.State.Pid}}' quality-engine) -n lsof -i -n -P 2>/dev/null | head -30"
+    description: "List all network connections from quality-engine's network namespace."
+    importance: "Shows exactly which remote endpoints quality-engine is connected to at the OS level, independent of application logs."
+    expected_output: "Connections to Kafka (29092), Postgres (5432), Redis (6379), and Tempo (4317). Any unexpected remote IP is a concern."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: lsof_postgres_lock_files
+    type: shell
+    tool: lsof
+    query: "docker exec quality-engine-postgres lsof 2>/dev/null | grep -E 'LOCK|lock|\\.pid' | head -10"
+    description: "Find lock and PID files held open by PostgreSQL."
+    importance: "Stale Postgres lock files prevent server restart after a crash. Knowing which process holds them is required before manual recovery."
+    expected_output: "postmaster.pid and lock files held by the postgres process. Any orphaned lock file with no backing process = stale lock."
+    how_to_use: "Run from host shell."
+
+  - id: lsof_large_open_files
+    type: shell
+    tool: lsof
+    query: "lsof 2>/dev/null | awk 'NR==1 || ($7+0 > 104857600)' | head -20"
+    description: "Find files larger than 100MB currently open by any process on the host."
+    importance: "Large open files (growing logs, unreleased Postgres WAL) consume disk silently. Identifying the holding process enables targeted cleanup."
+    expected_output: "Large file paths with holding process. Postgres WAL files and Kafka segment logs are expected; application debug logs are not."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: lsof_pipe_fds
+    type: shell
+    tool: lsof
+    query: "docker exec quality-engine sh -c 'ls /proc/1/fd 2>/dev/null | xargs -I@ readlink /proc/1/fd/@ 2>/dev/null | grep pipe | wc -l'"
+    description: "Count pipe file descriptors open in quality-engine."
+    importance: "Accumulating pipe FDs indicate subprocess spawning without proper cleanup — a precursor to FD exhaustion."
+    expected_output: "Low stable count (2-4 for stdin/stdout/stderr). Growing count over time = subprocess leak."
+    how_to_use: "Run from host shell."
+
+  - id: lsof_kafka_log_segment_handles
+    type: shell
+    tool: lsof
+    query: "docker exec docker-kafka-1 lsof 2>/dev/null | grep -c '\\.log$'"
+    description: "Count open Kafka log segment file handles inside the broker."
+    importance: "Each active partition holds multiple log segment handles. Count growing beyond partition_count × 3 indicates segments not being rolled/cleaned."
+    expected_output: "Integer count. For 4 topics × 1 partition each, expect ~12-20 handles. Much higher = cleanup thread stuck."
+    how_to_use: "Run from host shell."
+
+  - id: lsof_fd_by_process_type
+    type: shell
+    tool: lsof
+    query: "lsof 2>/dev/null | awk '{print $5}' | sort | uniq -c | sort -rn | head -10"
+    description: "Count open file descriptors by type (REG, IPv4, IPv6, FIFO, etc.) across all processes."
+    importance: "Unusual distribution (thousands of FIFO or too many IPv6) indicates specific resource leaks that need per-type investigation."
+    expected_output: "Distribution with REG, IPv4/IPv6 dominating. Thousands of FIFO = pipe leak; thousands of IPv4 = socket leak."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: lsof_check_config_file_open
+    type: shell
+    tool: lsof
+    query: "lsof /home/btpl-lap-22/live/obs/docker-compose.yml 2>/dev/null"
+    description: "Check if any process has the docker-compose.yml file open."
+    importance: "If a process holds the compose file open during an edit, the edited version may not be read until the handle is released."
+    expected_output: "Empty = no process has the file open. Any process holding it should be identified before editing."
+    how_to_use: "Run on host shell."
+
+  - id: lsof_grafana_dashboard_files
+    type: shell
+    tool: lsof
+    query: "docker exec grafana lsof 2>/dev/null | grep -E '\\.json$' | head -20"
+    description: "List dashboard JSON files currently held open by Grafana."
+    importance: "Confirms Grafana has loaded all provisioned dashboard files. Missing dashboard JSON in the open file list means it failed to provision."
+    expected_output: "All 5 critical dashboard JSON files appearing in Grafana's open file list."
+    how_to_use: "Run from host shell."
+
+  - id: lsof_prometheus_tsdb_files
+    type: shell
+    tool: lsof
+    query: "docker exec prometheus lsof 2>/dev/null | grep -E 'chunks|index|tombstones|wal' | head -20"
+    description: "List Prometheus TSDB data files currently open."
+    importance: "Prometheus TSDB WAL and chunk files must be open for writes. Missing files indicate a corrupted TSDB that needs repair."
+    expected_output: "TSDB component files (chunks, index, tombstones, wal) all held open by the prometheus process."
+    how_to_use: "Run from host shell."
+
+  - id: lsof_port_owner_5432
+    type: shell
+    tool: lsof
+    query: "lsof -i :5432 -n -P 2>/dev/null | head -5"
+    description: "Find which process owns port 5432 on the host."
+    importance: "If a non-Postgres process is bound to 5432, quality-engine will silently connect to the wrong service."
+    expected_output: "Only postgres process lines. Any other process on this port is a conflict."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: lsof_port_owner_6379
+    type: shell
+    tool: lsof
+    query: "lsof -i :6379 -n -P 2>/dev/null | head -5"
+    description: "Find which process owns port 6379 on the host."
+    importance: "If a non-Redis process owns 6379, all baseline cache reads return errors. Identifies port theft immediately."
+    expected_output: "Only redis-server process lines."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: lsof_port_owner_29092
+    type: shell
+    tool: lsof
+    query: "lsof -i :29092 -n -P 2>/dev/null | head -10"
+    description: "Find which process owns the external Kafka listener port 29092."
+    importance: "If the port is not owned by Kafka, quality-engine consumer connects to the wrong process and receives garbage data."
+    expected_output: "Only java (Kafka broker) process lines. Any other process requires immediate investigation."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: lsof_temporal_worker_fds
+    type: shell
+    tool: lsof
+    query: "docker exec quality-engine lsof -p 1 2>/dev/null | grep -cE 'TCP|UDP'"
+    description: "Count network FDs open by quality-engine main process."
+    importance: "Network FD count reflects active connections. Sharp increase without traffic increase indicates connection leak."
+    expected_output: "Stable count matching sum of all connection pool sizes plus overhead. Growing count = network FD leak."
+    how_to_use: "Run from host shell."
+
+  - id: lsof_inotify_watches
+    type: shell
+    tool: lsof
+    query: "lsof 2>/dev/null | grep inotify | wc -l"
+    description: "Count inotify file watch descriptors on the host."
+    importance: "Reaching the inotify watch limit causes file watch failures in Grafana provisioning and Prometheus config reloads."
+    expected_output: "Integer count. Compare against /proc/sys/fs/inotify/max_user_watches (default 8192). Approaching the limit requires tuning."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: lsof_memory_mapped_files
+    type: shell
+    tool: lsof
+    query: "docker exec quality-engine lsof 2>/dev/null | grep -c 'mem'"
+    description: "Count memory-mapped file descriptors in quality-engine."
+    importance: "Memory-mapped model files are efficient but each mapping consumes virtual address space. Too many mappings cause mmap failures."
+    expected_output: "Count matching the number of loaded model files. Unexpectedly high count indicates repeated model loading without unmapping."
+    how_to_use: "Run from host shell."
+
+  - id: lsof_check_docker_sock_access
+    type: shell
+    tool: lsof
+    query: "lsof /var/run/docker.sock 2>/dev/null | grep -v 'dockerd\\|containerd'"
+    description: "Find any non-Docker-daemon process with docker.sock open."
+    importance: "A container or application accessing docker.sock has unrestricted host root access. Any unexpected process here is a critical security incident."
+    expected_output: "Empty output. Only dockerd and containerd should access the socket."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: lsof_fd_count_per_container
+    type: shell
+    tool: lsof
+    query: "for c in quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis; do pid=$(docker inspect --format '{{.State.Pid}}' $c 2>/dev/null); echo -n \"$c: \"; ls /proc/$pid/fd 2>/dev/null | wc -l; done"
+    description: "Count open file descriptors per container process."
+    importance: "Tracks FD growth over time. Running periodically in a loop detects leaks before they cause outages."
+    expected_output: "FD counts per container. quality-engine ~100-200, Kafka ~500-1000, Postgres ~50-100, Redis ~20-50."
+    how_to_use: "Run on host shell."
+
+  - id: lsof_cgroup_fd_limits
+    type: shell
+    tool: lsof
+    query: "for c in quality-engine docker-kafka-1; do pid=$(docker inspect --format '{{.State.Pid}}' $c); echo \"$c:\"; cat /proc/$pid/limits 2>/dev/null | grep -E 'Max open|Max processes'; done"
+    description: "Show per-container FD and process limits from /proc."
+    importance: "FD and process limits set at the container level may be lower than the host ulimit. Containers with low limits fail before the host does."
+    expected_output: "Max open files >= 65536 for quality-engine and Kafka. Values of 1024 require docker-compose ulimits configuration."
+    how_to_use: "Run on host shell."
+
+  - id: lsof_check_logfile_open_handles
+    type: shell
+    tool: lsof
+    query: "docker exec quality-engine lsof 2>/dev/null | grep -E '\\.log$|\\.log\\.' | head -10"
+    description: "List all log files held open by the quality-engine process."
+    importance: "Identifies which log files the app is actively writing to. Unexpected log paths indicate misconfigured log handlers writing outside mounted volumes."
+    expected_output: "Log files under expected paths (e.g. /var/log/app). Any log under /tmp or /app (writable app layer) indicates a volume mount gap."
+    how_to_use: "Run from host shell."
+
+  - id: lsof_model_weight_file_handles
+    type: shell
+    tool: lsof
+    query: "docker exec quality-engine lsof 2>/dev/null | grep -E '\\.safetensors$|\\.pt$|\\.bin$|\\.gguf$' | awk '{print $9}' | sort -u"
+    description: "List model weight files currently held open by quality-engine."
+    importance: "Confirms the correct model files are loaded. Missing expected model file handles indicate the scorer loaded a fallback or default model."
+    expected_output: "One open handle per loaded model file. Missing handles for expected models = scorer is using wrong weights."
+    how_to_use: "Run from host shell."
+
+  - id: lsof_redis_replica_socket
+    type: shell
+    tool: lsof
+    query: "docker exec quality-engine-redis lsof -i -n -P 2>/dev/null | grep -v LISTEN | head -10"
+    description: "List non-listening network connections held by Redis."
+    importance: "Confirms quality-engine connections to Redis are established and shows their state. Unexpected remote IPs could indicate unauthorized Redis replication."
+    expected_output: "ESTAB connections only from quality-engine container IP. Any external IP is a misconfiguration."
+    how_to_use: "Run from host shell."
+
+  - id: lsof_quality_engine_config_files
+    type: shell
+    tool: lsof
+    query: "docker exec quality-engine lsof 2>/dev/null | grep -E '\\.yml$|\\.yaml$|\\.toml$|\\.ini$|\\.json$' | awk '{print $9}' | sort -u | head -20"
+    description: "List all config files currently open by quality-engine."
+    importance: "Confirms which config files were actually loaded at runtime. A missing expected config file means the app is running with defaults."
+    expected_output: "Paths including prometheus.yml equivalent, scorer config, and any TOML/INI service config. Missing files = defaults in use."
+    how_to_use: "Run from host shell."

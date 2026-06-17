@@ -50,3 +50,43 @@ queries:
     importance: "Allows infrastructure dashboards to track system alert dispatch rates and identify outliers."
     expected_output: "Metric graph showing count of alerts."
     how_to_use: "Execute in Prometheus or Grafana."
+
+  - id: pg_multi_model_degradation_window
+    type: postgresql
+    query: "SELECT model, endpoint, avg(composite_score) as window_avg, count(*) as sample_size, min(scored_at) as window_start FROM quality_scores WHERE scored_at > now() - interval '1 hour' AND skipped_reason IS NULL GROUP BY model, endpoint ORDER BY window_avg ASC;"
+    description: "1-hour rolling window average for all models and endpoints, sorted by worst performers."
+    importance: "Single pane of glass for operational degradation triage. Shows which models are closest to alert thresholds right now."
+    expected_output: "Table ranked by window_avg ascending — lowest quality models appear first."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: prom_degradation_ratio
+    type: promql
+    query: "quality_current_window_avg / quality_baseline_score"
+    description: "Ratio of current window average to baseline score per model/endpoint."
+    importance: "The core degradation signal. Ratio <0.85 triggers an alert. Graphing it over time shows how quickly quality recovered after an incident."
+    expected_output: "Ratio values near 1.0 indicate healthy state. Values below 0.85 are alert-worthy."
+    how_to_use: "Execute in Prometheus or Grafana."
+
+  - id: log_alert_suppression
+    type: logql
+    query: '{container_name="quality-engine"} |= "alert suppressed" | json | line_format "model={{.model}} endpoint={{.endpoint}} reason={{.reason}} next_eligible={{.next_eligible_at}}"'
+    description: "Find log lines where an alert was suppressed by the rate-limit lock and when the next alert is eligible."
+    importance: "Suppressed alerts mean real degradation may go unnoticed. Confirms the rate-limit window is appropriate and not masking prolonged incidents."
+    expected_output: "Log lines showing which model/endpoint alerts were silenced and their next eligible firing time."
+    how_to_use: "Query in Grafana Loki Explorer."
+
+  - id: redis_active_suppression_count
+    type: redis
+    query: "EVAL \"return #redis.call('KEYS','alert:limit:*')\" 0"
+    description: "Count of actively rate-limited alert keys currently in Redis."
+    importance: "A high count means many model/endpoint pairs are in a suppression window simultaneously — indicates a systemic outage being masked."
+    expected_output: "Integer count of active suppression keys (e.g., 4 means 4 model/endpoint pairs are suppressed)."
+    how_to_use: "docker exec -it quality-engine-redis redis-cli <query>"
+
+  - id: trace_alert_dispatch_e2e
+    type: traceql
+    query: '{resource.service.name="quality-engine" && name="alert.dispatch"}'
+    description: "Find end-to-end traces for the full alert dispatch path including threshold evaluation and Kafka publish."
+    importance: "Traces the full alert lifecycle — slow dispatch latency here means consumers receive stale degradation signals."
+    expected_output: "Traces showing degradation.check → threshold.evaluate → alert.dispatch → kafka.publish child spans."
+    how_to_use: "Query in Grafana Tempo Explorer."

@@ -1,0 +1,339 @@
+# Queries for Tool: grep
+feature: system_diagnostics_grep
+tool: grep
+description: "Log and file search queries using grep to surface errors, security issues, config values, and operational anomalies across the LLM observability stack."
+
+queries:
+
+  - id: grep_errors_last_hour
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 1h 2>&1 | grep -E 'ERROR|CRITICAL|FATAL' | sort | uniq -c | sort -rn | head -20"
+    description: "Count and rank unique error/critical log lines from quality-engine in the past hour."
+    importance: "Surfaces top error categories without scrolling thousands of lines. High counts of one class pinpoint root cause."
+    expected_output: "Counted list like '42 ERROR scorer timeout'. Zero output means a clean hour."
+    how_to_use: "Run from host shell."
+
+  - id: grep_exceptions_with_context
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 1h 2>&1 | grep -A 5 'Traceback\\|Exception\\|Error:' | head -60"
+    description: "Find Python tracebacks and exceptions in quality-engine logs with 5 lines of context."
+    importance: "Tracebacks contain the full stack trace needed for root cause analysis. Without context lines only the error message is visible."
+    expected_output: "Traceback blocks showing exception type, message, and file/line references."
+    how_to_use: "Run from host shell."
+
+  - id: grep_kafka_connection_errors
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 30m 2>&1 | grep -iE 'kafka|broker|connection refused|LEADER_NOT_AVAILABLE|topic not found|offset out of range'"
+    description: "Filter quality-engine logs for Kafka broker connectivity and topic errors."
+    importance: "Kafka connection errors stall the consumer loop silently. Catching them early prevents DLQ saturation."
+    expected_output: "Empty is ideal. Any 'connection refused' or 'LEADER_NOT_AVAILABLE' requires immediate broker inspection."
+    how_to_use: "Run from host shell."
+
+  - id: grep_oom_kill_in_syslog
+    type: shell
+    tool: grep
+    query: "grep -i 'oom\\|out of memory\\|killed process' /var/log/syslog /var/log/kern.log 2>/dev/null | tail -20"
+    description: "Search kernel logs for OOM kill events affecting any process or container."
+    importance: "OOM kills manifest as sudden container restarts with no in-container error. The kernel log is the only authoritative source."
+    expected_output: "Empty under normal operation. Any hit should trigger memory limit review."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: grep_secret_leaks_in_logs
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 1h 2>&1 | grep -iE 'password|secret|token|api_key|bearer|private_key' | grep -v 'REDACTED\\|\\*\\*\\*'"
+    description: "Scan recent logs for accidentally logged secrets or credentials."
+    importance: "Secrets in logs violate compliance and are captured by Loki. Any hit is a P0 security incident requiring secret rotation."
+    expected_output: "Empty output always. Any result triggers immediate secret rotation."
+    how_to_use: "Run from host shell."
+
+  - id: grep_postgres_errors
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine-postgres --since 1h 2>&1 | grep -iE 'error|fatal|panic|could not|connection reset|deadlock' | tail -30"
+    description: "Find PostgreSQL error messages in the DB container logs."
+    importance: "Postgres FATAL messages indicate configuration errors, auth failures, or schema corruption invisible from the app layer."
+    expected_output: "Empty is expected. 'deadlock detected' or 'could not connect' require schema or connection pool investigation."
+    how_to_use: "Run from host shell."
+
+  - id: grep_redis_errors
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine-redis --since 1h 2>&1 | grep -iE 'error|warn|oom|maxmemory|MISCONF|LOADING'"
+    description: "Filter Redis logs for errors, memory warnings, and config mismatches."
+    importance: "Redis MISCONF errors (persistence disabled mid-run) or maxmemory warnings silently degrade baseline caching without alerting."
+    expected_output: "Empty under normal operation. MISCONF or OOM lines require immediate config correction."
+    how_to_use: "Run from host shell."
+
+  - id: grep_kafka_consumer_rebalance
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 2h 2>&1 | grep -iE 'rebalance|partition assigned|partition revoked|joining group|leaving group'"
+    description: "Find Kafka consumer group rebalance events in quality-engine logs."
+    importance: "Rebalances pause message consumption. Frequent rebalances (>2/hour) indicate unhealthy consumers or session timeout misconfiguration."
+    expected_output: "Occasional rebalance on startup is normal. Repeated rebalances during steady state indicate consumer instability."
+    how_to_use: "Run from host shell."
+
+  - id: grep_scoring_timeouts
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 1h 2>&1 | grep -iE 'timeout|timed out|deadline exceeded' | sort | uniq -c | sort -rn | head -15"
+    description: "Find and count all timeout occurrences in quality-engine logs."
+    importance: "Timeout patterns identify which integration point (scorer, DB, Redis, Kafka) is the bottleneck during degraded performance."
+    expected_output: "Counted timeout messages. Scorer timeouts >10/hour require scorer capacity review."
+    how_to_use: "Run from host shell."
+
+  - id: grep_dlq_routing_events
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 1h 2>&1 | grep -iE 'routing to DLQ|dlq|dead letter|max retries exceeded'"
+    description: "Find all DLQ routing events logged by quality-engine."
+    importance: "Each DLQ event means a span was permanently dropped. High frequency requires upstream message format investigation."
+    expected_output: "Empty under normal operation. Each line represents a lost span that needs manual recovery."
+    how_to_use: "Run from host shell."
+
+  - id: grep_env_vars_in_compose
+    type: shell
+    tool: grep
+    query: "grep -n 'KAFKA_BOOTSTRAP\\|POSTGRES_DSN\\|REDIS_URL\\|TEMPORAL_HOST\\|OTLP_ENDPOINT' /home/btpl-lap-22/live/obs/docker-compose.yml"
+    description: "Find all critical environment variable definitions in docker-compose.yml."
+    importance: "Confirms that all required env vars are defined and not relying on unset shell variables that silently default to empty."
+    expected_output: "Lines showing each var assignment. Any var shown as ${VAR} without a default needs a .env file entry."
+    how_to_use: "Run from project root."
+
+  - id: grep_hardcoded_ips_in_configs
+    type: shell
+    tool: grep
+    query: "grep -rn --include='*.yml' --include='*.yaml' --include='*.py' --include='*.sh' -E '(\\b(?:[0-9]{1,3}\\.){3}[0-9]{1,3}\\b)' /home/btpl-lap-22/live/obs | grep -v '.git\\|127.0.0.1\\|0.0.0.0'"
+    description: "Find hardcoded non-localhost IP addresses in config and source files."
+    importance: "Hardcoded IPs break environment portability and will cause silent failures when the target server changes IP."
+    expected_output: "Empty output. Any hardcoded IP in config files must be replaced with a service name or env var."
+    how_to_use: "Run from project root."
+
+  - id: grep_temporal_worker_errors
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 1h 2>&1 | grep -iE 'temporal|workflow.*error|activity.*failed|workflow.*timeout'"
+    description: "Filter logs for Temporal workflow and activity failures in quality-engine."
+    importance: "Temporal activity failures trigger retries silently — repeated failures exhaust retry budgets and drop scoring jobs entirely."
+    expected_output: "Empty is ideal. 'activity failed' lines with counts help size the failure rate."
+    how_to_use: "Run from host shell."
+
+  - id: grep_deprecation_warnings
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 1h 2>&1 | grep -iE 'deprecated|deprecation warning|will be removed' | sort | uniq -c | sort -rn"
+    description: "Find deprecation warnings in quality-engine runtime logs."
+    importance: "Deprecation warnings indicate future breaking changes. Ignored in dev, they cause surprise failures on library upgrades in prod."
+    expected_output: "Counted deprecation warnings. Any showing a removal version that has already shipped is an active breakage risk."
+    how_to_use: "Run from host shell."
+
+  - id: grep_span_id_in_all_logs
+    type: shell
+    tool: grep
+    query: "SPAN_ID=replace_with_span_id; for c in quality-engine docker-kafka-1 quality-engine-postgres; do echo \"=== $c ===\"; docker logs $c --since 6h 2>&1 | grep -i \"$SPAN_ID\" | tail -5; done"
+    description: "Search all container logs for a specific span_id to trace its full lifecycle."
+    importance: "Correlates a single span across ingestion, scoring, and DB write logs for complete incident reconstruction."
+    expected_output: "Log lines containing the span ID per container, showing its journey through the pipeline."
+    how_to_use: "Replace replace_with_span_id with actual span ID. Run from host shell."
+
+  - id: grep_low_composite_scores_in_logs
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 30m 2>&1 | grep -oE 'composite_score=[0-9.]+' | awk -F= '$2 < 0.3' | head -20"
+    description: "Find log lines where composite_score was logged below 0.3."
+    importance: "Scores below 0.3 represent severe model failures. Catching them in logs provides a fast check before querying PostgreSQL."
+    expected_output: "Lines like 'composite_score=0.21'. More than a handful in 30 minutes signals a systemic scoring failure."
+    how_to_use: "Run from host shell."
+
+  - id: grep_port_in_use_errors
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine quality-engine-postgres quality-engine-redis docker-kafka-1 --since 30m 2>&1 | grep -iE 'address already in use|bind.*failed|port.*conflict'"
+    description: "Search all service logs for port binding conflict errors."
+    importance: "Port conflicts at startup prevent services from binding and cause silent crashes. This catches the error message across all containers."
+    expected_output: "Empty under normal operation. Any bind error confirms a port conflict on the host."
+    how_to_use: "Run from host shell."
+
+  - id: grep_auth_failures_in_postgres
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine-postgres --since 1h 2>&1 | grep -iE 'authentication failed|password authentication|role.*does not exist|permission denied'"
+    description: "Find PostgreSQL authentication and permission failures."
+    importance: "Auth failures from quality-engine to Postgres indicate misconfigured credentials or a rotated secret not yet propagated."
+    expected_output: "Empty. Any auth failure line means quality-engine cannot write scores to the DB."
+    how_to_use: "Run from host shell."
+
+  - id: grep_missing_config_keys
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 1h 2>&1 | grep -iE 'KeyError|missing.*config|required.*not set|environment variable.*not found|config.*not defined'"
+    description: "Find configuration key errors in quality-engine startup or runtime logs."
+    importance: "Missing config keys cause silent defaults or crashes at the feature level, not always at startup, making them hard to catch."
+    expected_output: "Empty output. Any KeyError or missing config message identifies an environment variable gap."
+    how_to_use: "Run from host shell."
+
+  - id: grep_metric_emission_errors
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 1h 2>&1 | grep -iE 'prometheus|metric.*error|counter.*failed|histogram.*error|statsd'"
+    description: "Find metric emission failures in quality-engine logs."
+    importance: "Failed metric emissions cause silent gaps in Prometheus dashboards — alerting rules based on those metrics will fire false positives."
+    expected_output: "Empty. Any metric error means Grafana dashboards are receiving incomplete data."
+    how_to_use: "Run from host shell."
+
+  - id: grep_kafka_offset_commits
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 30m 2>&1 | grep -iE 'commit offset|offset committed|auto.commit|commit failed'"
+    description: "Find Kafka offset commit events and failures in quality-engine logs."
+    importance: "Failed offset commits cause message redelivery after restarts. Frequent redelivery leads to duplicate scoring and inflated score counts."
+    expected_output: "Regular commit offset entries at expected intervals. 'commit failed' lines indicate broker connectivity issues."
+    how_to_use: "Run from host shell."
+
+  - id: grep_disk_full_errors
+    type: shell
+    tool: grep
+    query: "for c in quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis; do docker logs $c --since 1h 2>&1 | grep -iE 'no space left|disk full|ENOSPC|write.*failed' | head -5 | sed \"s/^/[$c] /\"; done"
+    description: "Search all container logs for disk-full errors."
+    importance: "A full disk causes Kafka to stop writing, Postgres to crash, and Redis to fail persistence — all silently from the app perspective."
+    expected_output: "Empty under normal operation. Any ENOSPC line requires immediate disk cleanup."
+    how_to_use: "Run from host shell."
+
+  - id: grep_tracing_export_errors
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 1h 2>&1 | grep -iE 'otlp|tempo|trace.*export|span.*export|Failed to export'"
+    description: "Find OTLP trace export failures from quality-engine to Tempo."
+    importance: "Failed trace exports mean Grafana Tempo has gaps in the trace timeline, breaking incident reconstruction and latency analysis."
+    expected_output: "Empty. 'Failed to export' lines with counts indicate Tempo is unreachable."
+    how_to_use: "Run from host shell."
+
+  - id: grep_embedding_api_errors
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 1h 2>&1 | grep -iE 'embedding.*error|embedding.*timeout|embedding.*failed|coherence.*error'"
+    description: "Find embedding API errors affecting the coherence scorer."
+    importance: "Embedding failures cause coherence score to fall back to 0.5 default, silently skewing composite scores upward."
+    expected_output: "Empty. Any embedding error line should correlate with a spike in prom_embedding_reuse status=generated."
+    how_to_use: "Run from host shell."
+
+  - id: grep_container_oom_exit
+    type: shell
+    tool: grep
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis 2>/dev/null | grep -A2 '\"OOMKilled\"' | grep -v '--'"
+    description: "Check docker inspect output for OOMKilled flag on all core containers."
+    importance: "OOMKilled=true is definitive proof a container was killed by the kernel OOM killer, not an application crash."
+    expected_output: "All OOMKilled values should be false. Any true value requires memory limit increase."
+    how_to_use: "Run from host shell."
+
+  - id: grep_python_import_errors
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 1h 2>&1 | grep -iE 'ImportError|ModuleNotFoundError|cannot import name|No module named'"
+    description: "Find Python import errors in quality-engine logs."
+    importance: "Import errors on startup prevent the worker from starting at all; at runtime they indicate a missing optional dependency failing a code path."
+    expected_output: "Empty. Any ModuleNotFoundError means a dependency is missing from requirements.txt or the venv."
+    how_to_use: "Run from host shell."
+
+  - id: grep_schema_validation_errors
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 1h 2>&1 | grep -iE 'ValidationError|schema.*invalid|pydantic|missing.*field|unexpected.*field'"
+    description: "Find schema validation errors from Pydantic or manual validators in quality-engine logs."
+    importance: "Schema errors on Kafka messages route spans to DLQ. A spike indicates an upstream service changed its message format."
+    expected_output: "Empty. Validation errors with field names identify the exact schema mismatch to fix."
+    how_to_use: "Run from host shell."
+
+  - id: grep_retry_exhaustion
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 1h 2>&1 | grep -iE 'max retries|retry.*exhausted|giving up|retry.*exceeded' | sort | uniq -c | sort -rn"
+    description: "Find retry exhaustion events across all integrations in quality-engine."
+    importance: "Retry exhaustion is the last step before DLQ routing. Counting by message type identifies which downstream is most unreliable."
+    expected_output: "Counted retry exhaustion lines. Any persistent type over 5/hour requires SLA review of that dependency."
+    how_to_use: "Run from host shell."
+
+  - id: grep_config_values_in_running_container
+    type: shell
+    tool: grep
+    query: "docker exec quality-engine env | grep -iE 'kafka|postgres|redis|temporal|otlp|model|scorer|threshold'"
+    description: "Grep environment variables inside the running quality-engine container for critical config values."
+    importance: "Confirms the container received the correct runtime config. Mismatches between .env and docker inspect indicate env var injection failure."
+    expected_output: "KEY=VALUE lines for all expected config variables. Missing lines mean the var was not injected."
+    how_to_use: "Run from host shell."
+
+  - id: grep_grafana_provisioning_errors
+    type: shell
+    tool: grep
+    query: "docker logs grafana --since 1h 2>&1 | grep -iE 'error|failed|provisioning|dashboard.*not found|datasource.*failed'"
+    description: "Find Grafana provisioning errors in the Grafana container logs."
+    importance: "Provisioning errors mean dashboards or datasources were not loaded — quality observability dashboards will appear blank after restart."
+    expected_output: "Empty. 'provisioning' error lines identify which dashboard JSON or datasource YAML failed to load."
+    how_to_use: "Run from host shell."
+
+  - id: grep_prometheus_scrape_errors
+    type: shell
+    tool: grep
+    query: "docker logs prometheus --since 1h 2>&1 | grep -iE 'scrape.*error|connection refused|context deadline|remote.*error'"
+    description: "Find Prometheus scrape errors for any monitored target."
+    importance: "Scrape errors create gaps in all PromQL dashboards and alert rules. A persistent scrape error for quality-engine means no alerting."
+    expected_output: "Empty. 'connection refused' for quality-engine:8000 means the metrics endpoint is down."
+    how_to_use: "Run from host shell."
+
+  - id: grep_duplicate_span_ids
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 1h 2>&1 | grep -oE 'span_id=[a-f0-9-]+' | sort | uniq -d | head -10"
+    description: "Find span IDs that appear more than once in quality-engine logs (redelivered messages)."
+    importance: "Duplicate span IDs indicate Kafka offset commit failures causing redelivery. Duplicates produce duplicate rows in quality_scores."
+    expected_output: "Empty under normal operation. Any duplicate span ID should be correlated with offset commit error lines."
+    how_to_use: "Run from host shell."
+
+  - id: grep_slow_query_warnings
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine-postgres --since 1h 2>&1 | grep -iE 'slow query|duration.*ms|LOG.*duration' | awk '$NF > 100' | head -20"
+    description: "Find slow query log lines from PostgreSQL exceeding 100ms."
+    importance: "Slow queries on quality_scores directly delay span scoring. Queries above 500ms indicate missing indexes or table bloat."
+    expected_output: "LOG duration lines. Any query exceeding 500ms on quality_scores needs EXPLAIN ANALYZE."
+    how_to_use: "Requires log_min_duration_statement=100 set in postgres config. Run from host shell."
+
+  - id: grep_network_unreachable_errors
+    type: shell
+    tool: grep
+    query: "for c in quality-engine docker-kafka-1; do docker logs $c --since 30m 2>&1 | grep -iE 'network.*unreachable|no route to host|connection reset by peer|broken pipe' | head -5 | sed \"s/^/[$c] /\"; done"
+    description: "Search for network connectivity errors across key containers."
+    importance: "Network unreachable errors between containers indicate Docker bridge network issues or iptables rule corruption."
+    expected_output: "Empty under normal operation. Any 'no route to host' line within the Docker network requires docker network inspect."
+    how_to_use: "Run from host shell."
+
+  - id: grep_signal_handlers
+    type: shell
+    tool: grep
+    query: "docker logs quality-engine --since 6h 2>&1 | grep -iE 'SIGTERM|SIGKILL|SIGINT|shutdown|graceful.*stop|stopping worker'"
+    description: "Find signal-driven shutdown events in quality-engine logs."
+    importance: "Unexpected SIGTERM/SIGKILL events indicate external process kills or Docker orchestrator restarts. Graceful shutdown lines confirm in-flight spans were flushed."
+    expected_output: "Shutdown signals only during intentional restarts. Any SIGKILL without a preceding SIGTERM = ungraceful kill."
+    how_to_use: "Run from host shell."
+
+  - id: grep_feature_flag_overrides
+    type: shell
+    tool: grep
+    query: "grep -rn --include='*.py' --include='*.yml' --include='*.env' -iE 'feature_flag|ff_|enable_|disable_|FEATURE_' /home/btpl-lap-22/live/obs | grep -v '.git\\|.pyc'"
+    description: "Find feature flag references across source and config files."
+    importance: "Feature flags left enabled in production configs can activate experimental code paths that bypass quality guardrails."
+    expected_output: "All feature flag references. Any flag set to enabled in a production .env should be reviewed."
+    how_to_use: "Run from project root."
+
+  - id: grep_version_mismatches
+    type: shell
+    tool: grep
+    query: "grep -rn --include='requirements*.txt' --include='pyproject.toml' -E '^[a-zA-Z]' /home/btpl-lap-22/live/obs | grep -v '.git' | awk -F'[=<>!]' '{print $1}' | sort | uniq -d"
+    description: "Find Python package names listed more than once across requirements files."
+    importance: "Duplicate package entries in different requirements files can produce conflicting version constraints that fail silently during pip install."
+    expected_output: "Package names appearing in multiple files. Each duplicate needs a canonical pinned version."
+    how_to_use: "Run from project root."

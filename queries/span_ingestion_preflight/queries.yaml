@@ -66,3 +66,43 @@ queries:
     importance: "Indicates processing throughput. Sudden drops point to broker connection issues or consumer lockups."
     expected_output: "TimeSeries metric graph showing lines indicating spans processed/sec per model."
     how_to_use: "Enter in Prometheus UI (localhost:9090) or Grafana Explore Prometheus panel."
+
+  - id: prom_dlq_depth
+    type: promql
+    query: "sum(kafka_consumer_group_lag) by (topic) {topic='llm.spans.dlq'}"
+    description: "Current consumer lag (unprocessed message count) on the Dead Letter Queue topic."
+    importance: "A growing DLQ lag means retryable failures are accumulating silently. Alert threshold should be >100 messages."
+    expected_output: "Gauge showing current DLQ backlog count. Should normally be 0."
+    how_to_use: "Execute in Prometheus or Grafana."
+
+  - id: prom_skip_rate
+    type: promql
+    query: "sum(increase(quality_spans_skipped_total[5m])) by (reason) / sum(increase(quality_spans_processed_total[5m])) * 100"
+    description: "Percentage of ingested spans skipped per skip reason over 5 minutes."
+    importance: "Skip rate >30% on any single reason suggests misconfigured preflight thresholds that silently discard valid data."
+    expected_output: "Percentage values per skip reason (e.g. completion_tokens_below_minimum: 12.4%)."
+    how_to_use: "Execute in Prometheus or Grafana."
+
+  - id: log_dlq_routes
+    type: logql
+    query: '{container_name="quality-engine"} |= "routing to DLQ" | json | line_format "span={{.span_id}} reason={{.reason}} retries={{.retry_count}}"'
+    description: "Structured log search for spans routed to DLQ with retry count and failure reason."
+    importance: "Identifies which specific spans are being permanently discarded after max retries, enabling targeted investigation."
+    expected_output: "Structured log lines: 'span=abc123 reason=schema_validation_error retries=3'."
+    how_to_use: "Query in Grafana Loki Explorer."
+
+  - id: pg_dlq_failure_breakdown
+    type: postgresql
+    query: "SELECT skipped_reason, count(*) as total, round(count(*)::numeric / sum(count(*)) over() * 100, 2) as pct, max(scored_at) as last_seen FROM quality_scores WHERE skipped_reason IS NOT NULL GROUP BY skipped_reason ORDER BY total DESC;"
+    description: "Full breakdown of preflight skip reasons with percentage share and most recent occurrence."
+    importance: "Pinpoints dominant failure modes. A sudden jump in a new reason indicates a schema change or upstream API breakage."
+    expected_output: "Table: skipped_reason | total | pct | last_seen — ordered by frequency."
+    how_to_use: "docker exec -it quality-engine-postgres psql -U postgres -d quality_engine_db -c \"<query>\""
+
+  - id: trace_consumer_retry
+    type: traceql
+    query: '{resource.service.name="quality-engine" && span.retry_attempt > 1}'
+    description: "Find spans that required more than one processing retry inside the consumer loop."
+    importance: "Repeated retries signal transient failures (DB timeouts, network blips). Elevated counts precede DLQ saturation."
+    expected_output: "Traces with attribute retry_attempt set to 2 or higher, with child error spans visible."
+    how_to_use: "Query in Grafana Tempo Explorer."

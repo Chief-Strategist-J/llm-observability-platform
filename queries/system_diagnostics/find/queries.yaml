@@ -1,0 +1,375 @@
+# Queries for Tool: find
+feature: system_diagnostics_find
+tool: find
+description: "Filesystem search queries for locating stale artifacts, secrets, oversized files, config drift, and forensic evidence across the LLM observability stack."
+
+queries:
+
+  - id: find_stale_lock_files
+    type: shell
+    tool: find
+    query: "find /var/lib/docker/volumes -name '*.lock' -mmin +60 2>/dev/null"
+    description: "Find lock files inside Docker volumes older than 60 minutes."
+    importance: "Stale locks from crashed workers block Postgres WAL archiving and Redis AOF rewrites, causing silent data loss."
+    expected_output: "Empty under normal operation. Any path returned needs immediate investigation."
+    how_to_use: "Run on host shell with sudo if needed."
+
+  - id: find_large_container_logs
+    type: shell
+    tool: find
+    query: "find /var/lib/docker/containers -name '*.log' -size +200M 2>/dev/null | xargs -I{} du -sh {}"
+    description: "Find Docker container JSON log files exceeding 200MB."
+    importance: "Unbounded container logs fill the host disk; when /var runs out all containers die simultaneously."
+    expected_output: "Empty is ideal. Any result should trigger log rotation (--log-opt max-size=100m)."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: find_core_dumps
+    type: shell
+    tool: find
+    query: "find /tmp /var/crash /home /root -name 'core*' -o -name '*.crash' 2>/dev/null | head -10"
+    description: "Search for core dump files produced by quality-engine or Python worker crashes."
+    importance: "Core dumps confirm SIGSEGV/SIGABRT. Their presence explains unexplained container restarts with no in-container error logs."
+    expected_output: "Empty under normal operation. Any core file should be inspected with gdb or python3 -m pdb."
+    how_to_use: "Run on host shell."
+
+  - id: find_env_files
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -name '*.env' -o -name '.env*' -o -name '*.env.local' 2>/dev/null | grep -v '.git'"
+    description: "Locate all environment and secret files in the project tree."
+    importance: "Orphaned or misnamed .env files silently override production config and may be accidentally committed."
+    expected_output: "Only known .env files. Any unexpected path must be audited before deployment."
+    how_to_use: "Run from project root."
+
+  - id: find_recently_modified_configs
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -name '*.yml' -o -name '*.yaml' -o -name '*.toml' -o -name '*.ini' | xargs ls -lt 2>/dev/null | head -20"
+    description: "List all YAML/TOML/INI config files sorted by most recently modified."
+    importance: "Correlates config changes with incident start times without needing git blame."
+    expected_output: "Files sorted by mtime descending. Any file modified around an incident timestamp is a candidate cause."
+    how_to_use: "Run from project root."
+
+  - id: find_suid_files
+    type: shell
+    tool: find
+    query: "find / -perm /4000 -type f 2>/dev/null | grep -v '/proc\\|/sys'"
+    description: "Find all SUID binaries on the host filesystem."
+    importance: "Unexpected SUID files indicate privilege escalation risk. Containers running as root can exploit host SUID binaries."
+    expected_output: "Known binaries like /usr/bin/sudo, /usr/bin/passwd. Any unknown path is a security concern."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: find_world_writable_files
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -perm -o+w -type f 2>/dev/null | grep -v '.git'"
+    description: "Find world-writable files in the project directory."
+    importance: "World-writable config or secret files can be tampered with by any process running on the host, including containers."
+    expected_output: "Empty output is required. Any writable config file is a security misconfiguration."
+    how_to_use: "Run from project root."
+
+  - id: find_model_weight_files
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -name '*.safetensors' -o -name '*.pt' -o -name '*.bin' -o -name '*.gguf' 2>/dev/null | xargs -I{} du -sh {}"
+    description: "Locate all model weight files in the project and show their sizes."
+    importance: "Large weight files accidentally committed or left in build context massively bloat Docker images and slow CI."
+    expected_output: "File paths with sizes. Anything in a non-designated model directory is suspicious."
+    how_to_use: "Run from project root."
+
+  - id: find_docker_socket
+    type: shell
+    tool: find
+    query: "find / -name 'docker.sock' -type s 2>/dev/null"
+    description: "Find all Docker socket files on the host."
+    importance: "A container with access to docker.sock has full root on the host. Verify no quality-engine volume mounts expose it."
+    expected_output: "Only /var/run/docker.sock. Any additional paths indicate unintended socket exposure."
+    how_to_use: "Run on host shell."
+
+  - id: find_broken_symlinks
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -xtype l 2>/dev/null | grep -v '.git'"
+    description: "Find broken symbolic links in the project tree."
+    importance: "Broken symlinks in config or scripts cause silent failures — the process starts but reads a missing config without error."
+    expected_output: "Empty output. Any symlink returned points to a missing target that must be fixed."
+    how_to_use: "Run from project root."
+
+  - id: find_certificates_and_keys
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -name '*.pem' -o -name '*.key' -o -name '*.crt' -o -name '*.p12' 2>/dev/null | grep -v '.git'"
+    description: "Find TLS certificates and private key files in the project."
+    importance: "Certificates accidentally committed expose production TLS keys. Key files in Docker build context get baked into images."
+    expected_output: "Only expected paths (e.g. certs/). Any key in the root or src directory is a risk."
+    how_to_use: "Run from project root."
+
+  - id: find_postgres_data_dir_size
+    type: shell
+    tool: find
+    query: "find $(docker inspect --format '{{range .Mounts}}{{if eq .Destination \"/var/lib/postgresql/data\"}}{{.Source}}{{end}}{{end}}' quality-engine-postgres) -maxdepth 1 -mindepth 1 | xargs du -sh 2>/dev/null | sort -rh | head -10"
+    description: "Find and size the top-level subdirectories of the Postgres data volume on the host."
+    importance: "pg_wal and base directories growing unexpectedly indicate long-running transactions or missing vacuuming."
+    expected_output: "Directory sizes like '2.1G base', '340M pg_wal'. pg_wal exceeding 1GB signals WAL accumulation."
+    how_to_use: "Run on host shell."
+
+  - id: find_kafka_data_dir_size
+    type: shell
+    tool: find
+    query: "docker exec docker-kafka-1 find /var/lib/kafka/data -mindepth 1 -maxdepth 1 -type d | xargs -I{} du -sh {} 2>/dev/null | sort -rh | head -20"
+    description: "List and size Kafka topic partition log directories inside the broker container."
+    importance: "Kafka log retention is time/size-based. Topics consuming too much disk will trigger broker errors and pause consumers."
+    expected_output: "Lines like '1.2G llm.quality.scores-0'. Any topic exceeding retention settings should be inspected."
+    how_to_use: "Run from host shell."
+
+  - id: find_redis_rdb_file
+    type: shell
+    tool: find
+    query: "docker exec quality-engine-redis find /data -name 'dump.rdb' -o -name 'appendonly.aof' 2>/dev/null | xargs ls -lh"
+    description: "Find Redis persistence files and show their sizes and modification times."
+    importance: "A stale dump.rdb (old mtime) means Redis is not persisting — a restart will cause complete baseline cache loss."
+    expected_output: "File listing with size and mtime. dump.rdb mtime should be recent (within retention window)."
+    how_to_use: "Run from host shell."
+
+  - id: find_docker_overlay2_large_layers
+    type: shell
+    tool: find
+    query: "find /var/lib/docker/overlay2 -maxdepth 2 -name 'diff' -type d | xargs du -sh 2>/dev/null | sort -rh | head -10"
+    description: "Find the largest overlay2 diff layers across all Docker images on the host."
+    importance: "Bloated image layers slow pull times and consume disk. Identifies which image has unexpectedly large layers (e.g. model weights baked in)."
+    expected_output: "Lines showing layer size and path. Any layer >2GB warrants inspecting the image build context."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: find_all_dockerfiles
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -name 'Dockerfile*' -o -name '*.Dockerfile' 2>/dev/null | grep -v '.git'"
+    description: "Find all Dockerfile variants in the project."
+    importance: "Multiple Dockerfiles for the same service lead to ambiguous builds. Stale Dockerfiles may be picked up by CI accidentally."
+    expected_output: "List of all Dockerfile paths. Unexpected files in subdirectories need review."
+    how_to_use: "Run from project root."
+
+  - id: find_all_docker_compose_files
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -name 'docker-compose*.yml' -o -name 'docker-compose*.yaml' 2>/dev/null | grep -v '.git'"
+    description: "Find all docker-compose file variants including overrides in the project."
+    importance: "Unintended override files (docker-compose.override.yml) silently change port mappings, volumes, or env vars at runtime."
+    expected_output: "Known compose files only. Any unexpected override file must be audited."
+    how_to_use: "Run from project root."
+
+  - id: find_all_requirements_files
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -name 'requirements*.txt' -o -name 'pyproject.toml' -o -name 'setup.py' 2>/dev/null | grep -v '.git'"
+    description: "Find all Python dependency manifest files in the project."
+    importance: "Multiple requirements files can conflict. Knowing all manifest locations is essential before any dependency upgrade."
+    expected_output: "All requirements.txt, requirements-dev.txt, pyproject.toml paths. Duplicate or shadow files are a risk."
+    how_to_use: "Run from project root."
+
+  - id: find_prometheus_config_files
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -name 'prometheus*.yml' -o -name 'prometheus*.yaml' 2>/dev/null | grep -v '.git'"
+    description: "Find all Prometheus config and rule files in the project."
+    importance: "Prometheus rule files not loaded by the running instance will silently miss alerting on degradation events."
+    expected_output: "All prometheus.yml and alert rule files. Cross-reference with active Prometheus config via its API."
+    how_to_use: "Run from project root."
+
+  - id: find_grafana_provisioning_files
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -path '*/grafana/*' -name '*.json' -o -path '*/provisioning/*' -name '*.yml' 2>/dev/null | grep -v '.git'"
+    description: "Find Grafana dashboard JSON and datasource provisioning YAML files."
+    importance: "A missing or corrupted dashboard JSON means the quality observability dashboards silently disappear after a Grafana restart."
+    expected_output: "All dashboard JSON files and datasource/notifier provisioning YAMLs."
+    how_to_use: "Run from project root."
+
+  - id: find_migration_files
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -path '*/migrations/*' -name '*.sql' -o -path '*/alembic/*' -name '*.py' 2>/dev/null | sort"
+    description: "Find all database migration files in the project."
+    importance: "Ensures all migration files are present and none are missing from the sequence — a gap causes the DB schema to be out of sync."
+    expected_output: "Ordered list of migration files. Any gap in numbering sequence indicates a missing migration."
+    how_to_use: "Run from project root."
+
+  - id: find_files_modified_last_5min
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -mmin -5 -type f 2>/dev/null | grep -v '.git' | grep -v '__pycache__'"
+    description: "Find all files modified in the last 5 minutes in the project directory."
+    importance: "Real-time change detection during an active deployment or incident. Identifies which files are being actively written."
+    expected_output: "List of recently touched files. Unexpected modifications during stable runtime indicate an external process writing to the project."
+    how_to_use: "Run from project root."
+
+  - id: find_hidden_files_in_project
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -name '.*' -not -path '*/.git/*' -type f 2>/dev/null"
+    description: "Find all hidden (dot) files in the project excluding git internals."
+    importance: "Hidden files like .env, .secrets, .npmrc with embedded credentials are easy to miss in code reviews."
+    expected_output: "Known hidden files (.gitignore, .dockerignore). Any unexpected hidden file requires security review."
+    how_to_use: "Run from project root."
+
+  - id: find_shell_scripts
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -name '*.sh' -type f 2>/dev/null | grep -v '.git' | xargs ls -l"
+    description: "Find all shell scripts in the project and show their permissions."
+    importance: "Shell scripts without execute bit fail silently in CI. Scripts with world-write permission are a security risk."
+    expected_output: "Shell script paths with permissions. All scripts should have -rwxr-xr-x; none should be world-writable."
+    how_to_use: "Run from project root."
+
+  - id: find_unexecutable_scripts
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -name '*.sh' ! -perm /u+x 2>/dev/null | grep -v '.git'"
+    description: "Find shell scripts that are missing the executable bit."
+    importance: "A setup or entrypoint script without +x fails at container startup with a cryptic 'permission denied' error rather than a clear message."
+    expected_output: "Empty output. Any script listed here will fail when invoked directly."
+    how_to_use: "Fix with: chmod +x <path>"
+
+  - id: find_large_files_in_project
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -type f -size +50M 2>/dev/null | grep -v '.git' | xargs du -sh"
+    description: "Find files larger than 50MB in the project tree."
+    importance: "Large files accidentally committed (model weights, datasets) bloat the git repo and slow clone times in CI."
+    expected_output: "Empty is ideal for a code repo. Any file >50MB in src/ or scripts/ needs to be moved to object storage."
+    how_to_use: "Run from project root."
+
+  - id: find_python_cache_dirs
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -name '__pycache__' -o -name '*.pyc' -o -name '.pytest_cache' 2>/dev/null | grep -v '.git' | head -20"
+    description: "Find Python bytecode cache directories and files in the project."
+    importance: "Stale .pyc files from a previous Python version can cause import errors or masked bugs after interpreter upgrades."
+    expected_output: "Cache paths. Should not exist in Docker build context (should be in .dockerignore)."
+    how_to_use: "Run from project root. Clean with: find . -name '__pycache__' -exec rm -rf {} +"
+
+  - id: find_test_files
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -name 'test_*.py' -o -name '*_test.py' 2>/dev/null | grep -v '.git' | sort"
+    description: "Find all Python test files in the project."
+    importance: "Confirms test coverage exists alongside feature code. Missing test files for new features are a quality gap."
+    expected_output: "All test_*.py and *_test.py files. Cross-reference with source files to identify untested modules."
+    how_to_use: "Run from project root."
+
+  - id: find_json_config_files
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -name '*.json' -not -path '*/.git/*' -not -path '*/node_modules/*' 2>/dev/null | xargs -I{} sh -c 'python3 -m json.tool {} > /dev/null 2>&1 || echo \"INVALID JSON: {}\"'"
+    description: "Find all JSON files in the project and validate they are well-formed."
+    importance: "Malformed Grafana dashboard JSON or Prometheus rule JSON silently fails to load on next restart without validation."
+    expected_output: "Empty output means all JSON is valid. Any 'INVALID JSON: ...' line requires fixing before deployment."
+    how_to_use: "Run from project root."
+
+  - id: find_not_accessed_30d
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -atime +30 -type f 2>/dev/null | grep -v '.git' | grep -vE '__pycache__|.pyc' | head -20"
+    description: "Find files not accessed in the last 30 days."
+    importance: "Stale scripts, configs, and notebooks that haven't been used in a month may be orphaned and safe to remove, or they may be silently broken."
+    expected_output: "List of old files. Cross-reference with git blame before deleting."
+    how_to_use: "Run from project root."
+
+  - id: find_duplicate_config_names
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -type f -name '*.yml' -o -name '*.yaml' 2>/dev/null | grep -v '.git' | xargs -I{} basename {} | sort | uniq -d"
+    description: "Find duplicate config filenames that exist in multiple directories."
+    importance: "Same-named configs in different directories create ambiguity about which one Docker Compose or the app is loading."
+    expected_output: "Duplicate filenames like 'config.yml'. Each duplicate must be resolved to a canonical path."
+    how_to_use: "Run from project root."
+
+  - id: find_files_owned_by_root_in_project
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -user root -type f 2>/dev/null | grep -v '.git'"
+    description: "Find files in the project owned by root."
+    importance: "Root-owned files in the project directory cannot be modified by the developer user and may have been created by a container running as root."
+    expected_output: "Empty output. Root-owned files in the project directory indicate a container volume mount permission issue."
+    how_to_use: "Run from project root."
+
+  - id: find_kafka_log_segments_old
+    type: shell
+    tool: find
+    query: "docker exec docker-kafka-1 find /var/lib/kafka/data -name '*.log' -mmin +1440 2>/dev/null | head -20"
+    description: "Find Kafka partition log segment files older than 24 hours inside the broker container."
+    importance: "Log segments older than retention period that haven't been cleaned indicate retention policy misconfiguration or a stuck cleaner thread."
+    expected_output: "Old segment files. Cross-reference with Kafka log.retention.hours config."
+    how_to_use: "Run from host shell."
+
+  - id: find_postgres_wal_files
+    type: shell
+    tool: find
+    query: "docker exec quality-engine-postgres find /var/lib/postgresql/data/pg_wal -type f 2>/dev/null | wc -l"
+    description: "Count WAL segment files inside the Postgres container."
+    importance: "WAL file count growing beyond 100 indicates a long-running transaction or missing checkpoint, leading to disk exhaustion."
+    expected_output: "Integer count. Under normal operation should be <32. Values >100 require immediate checkpoint investigation."
+    how_to_use: "Run from host shell."
+
+  - id: find_all_log_files_in_project
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -name '*.log' -not -path '*/.git/*' 2>/dev/null | xargs -I{} du -sh {} | sort -rh"
+    description: "Find all .log files in the project directory sorted by size."
+    importance: "Log files committed to or accumulated in the project tree waste disk and may contain sensitive runtime data."
+    expected_output: "Log files with sizes. Any .log file in the project should be in .gitignore and rotated."
+    how_to_use: "Run from project root."
+
+  - id: find_python_virtual_envs
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -name 'pyvenv.cfg' 2>/dev/null | xargs -I{} dirname {}"
+    description: "Find Python virtual environment directories in the project."
+    importance: "Virtual env directories inside the project tree get accidentally included in Docker build context, massively inflating image sizes."
+    expected_output: "venv paths. These should all be listed in .dockerignore."
+    how_to_use: "Run from project root."
+
+  - id: find_gitignored_large_files
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -size +10M -type f 2>/dev/null | grep -v '.git' | while read f; do git -C /home/btpl-lap-22/live/obs check-ignore -q \"$f\" 2>/dev/null || echo \"NOT IGNORED: $f\"; done"
+    description: "Find files larger than 10MB that are not covered by .gitignore."
+    importance: "Large files not in .gitignore will be committed on the next git add, corrupting the git history with binary blobs."
+    expected_output: "Lines starting with 'NOT IGNORED:' for any large file outside gitignore coverage."
+    how_to_use: "Run from project root."
+
+  - id: find_named_pipe_files
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs /var/lib/docker/volumes -type p 2>/dev/null"
+    description: "Find named pipe (FIFO) files in the project and Docker volumes."
+    importance: "Unexpected named pipes can cause processes to hang waiting for a reader/writer that never comes — a subtle source of deadlocks."
+    expected_output: "Empty output. Any named pipe outside intentional IPC design should be investigated."
+    how_to_use: "Run on host shell."
+
+  - id: find_docker_volume_mounts
+    type: shell
+    tool: find
+    query: "find /var/lib/docker/volumes -maxdepth 3 -name '_data' -type d 2>/dev/null | xargs du -sh | sort -rh | head -15"
+    description: "Show sizes of all Docker named volume data directories on the host."
+    importance: "Large volumes that grow unexpectedly indicate missing retention policies (Kafka), missing VACUUM (Postgres), or cache unbounded growth (Redis)."
+    expected_output: "Volume sizes sorted descending. Any volume growing faster than expected needs retention tuning."
+    how_to_use: "Run on host shell with sudo."
+
+  - id: find_temporary_debug_files
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -name '*.tmp' -o -name '*.bak' -o -name '*.orig' -o -name '*.swp' 2>/dev/null | grep -v '.git'"
+    description: "Find temporary, backup, and editor swap files in the project."
+    importance: "Uncommitted .bak and .orig files from merges or editor crashes can contain sensitive old config values that get accidentally deployed."
+    expected_output: "Empty output ideally. Any .bak or .orig should be deleted or committed intentionally."
+    how_to_use: "Run from project root."
+
+  - id: find_files_in_docker_build_context
+    type: shell
+    tool: find
+    query: "find /home/btpl-lap-22/live/obs -maxdepth 3 -type f 2>/dev/null | grep -v '.git' | while read f; do git -C /home/btpl-lap-22/live/obs check-ignore -q \"$f\" 2>/dev/null || echo \"$f\"; done | wc -l"
+    description: "Count files that would be sent to the Docker build context (not gitignored)."
+    importance: "A large build context (>10k files or >100MB) dramatically slows docker build. Should be minimized with .dockerignore."
+    expected_output: "Integer count. Values above 1000 suggest .dockerignore is missing or incomplete."
+    how_to_use: "Run from project root."

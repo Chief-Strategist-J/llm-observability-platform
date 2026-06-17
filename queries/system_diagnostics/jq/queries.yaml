@@ -1,0 +1,330 @@
+# Queries for Tool: jq
+feature: system_diagnostics_jq
+tool: jq
+description: "jq-based queries for parsing, projecting, filtering, and transforming JSON payloads from Kafka topics, Docker APIs, Prometheus, and config files in the LLM observability stack."
+
+queries:
+
+  - id: jq_kafka_score_payload_projection
+    type: shell
+    tool: jq
+    query: "docker exec docker-kafka-1 kafka-console-consumer --topic llm.quality.scores --bootstrap-server kafka:29092 --from-beginning --max-messages 5 2>/dev/null | jq '{span_id, model, prompt_type, composite_score: .scores.composite, flags: .quality_flags, ts: .scored_at}'"
+    description: "Consume 5 score messages and project only critical fields."
+    importance: "Validates scorer output format before reaching Postgres. Catches schema regressions immediately after a scorer deployment."
+    expected_output: "5 compact objects with span_id, model, composite_score (float 0-1), flags (array), and scored_at timestamp."
+    how_to_use: "Run from host shell."
+
+  - id: jq_kafka_score_missing_fields
+    type: shell
+    tool: jq
+    query: "docker exec docker-kafka-1 kafka-console-consumer --topic llm.quality.scores --bootstrap-server kafka:29092 --from-beginning --max-messages 20 2>/dev/null | jq 'select(.span_id == null or .scores == null or .model == null) | {span_id, model, scores}'"
+    description: "Find score messages with missing required fields."
+    importance: "Missing fields cause Postgres INSERT failures and DLQ routing. Detecting them at the Kafka layer isolates the scorer as the source."
+    expected_output: "Empty output under normal operation. Any result identifies malformed scorer output."
+    how_to_use: "Run from host shell."
+
+  - id: jq_kafka_alert_degradation_ratio
+    type: shell
+    tool: jq
+    query: "docker exec docker-kafka-1 kafka-console-consumer --topic alerts.quality.degradation --bootstrap-server kafka:29092 --from-beginning --max-messages 10 2>/dev/null | jq '{model, endpoint, ratio: (.current_window_avg / .baseline_score), current: .current_window_avg, baseline: .baseline_score, ts: .alerted_at}'  | jq 'select(.ratio < 0.85)'"
+    description: "Consume alert payloads and filter to only those with ratio below 0.85."
+    importance: "Confirms alert payloads contain the degradation ratio and that only legitimate degradations (not noise) are being published."
+    expected_output: "Alert objects where ratio < 0.85. Any alert with ratio > 0.85 indicates a false positive in the alerting logic."
+    how_to_use: "Run from host shell."
+
+  - id: jq_kafka_dlq_failure_reasons
+    type: shell
+    tool: jq
+    query: "docker exec docker-kafka-1 kafka-console-consumer --topic llm.spans.dlq --bootstrap-server kafka:29092 --from-beginning --max-messages 20 2>/dev/null | jq -r '.reason // \"unknown\"' | sort | uniq -c | sort -rn"
+    description: "Aggregate DLQ message failure reasons from the dead letter queue topic."
+    importance: "Ranked failure reasons show which root cause is responsible for the most lost spans, directing remediation effort."
+    expected_output: "Counted reasons like '12 schema_validation_error'. Empty = no DLQ messages."
+    how_to_use: "Run from host shell."
+
+  - id: jq_docker_inspect_env_as_map
+    type: shell
+    tool: jq
+    query: "docker inspect quality-engine | jq '.[0].Config.Env | map(split(\"=\") | {(.[0]): .[1:]|join(\"=\")}) | add'"
+    description: "Convert the quality-engine environment variable array into a JSON key-value map."
+    importance: "Easier to read and grep than the raw array format. Enables programmatic env var validation in scripts."
+    expected_output: "JSON object like {\"KAFKA_BOOTSTRAP\": \"kafka:29092\", \"POSTGRES_DSN\": \"...\"}"
+    how_to_use: "Run from host shell."
+
+  - id: jq_docker_inspect_port_summary
+    type: shell
+    tool: jq
+    query: "docker inspect quality-engine docker-kafka-1 quality-engine-postgres quality-engine-redis grafana prometheus | jq '.[] | {name: .Name, ports: [.NetworkSettings.Ports | to_entries[] | select(.value != null) | \"\\(.key) -> \\(.value[0].HostIp):\\(.value[0].HostPort)\"]}'"
+    description: "Produce a clean port mapping summary for all core services."
+    importance: "Quick check that all expected host ports are bound before running integration tests or load testing."
+    expected_output: "Port forward strings per service like '5432/tcp -> 0.0.0.0:5432'."
+    how_to_use: "Run from host shell."
+
+  - id: jq_prometheus_targets_health
+    type: shell
+    tool: jq
+    query: "curl -s http://localhost:9090/api/v1/targets | jq '.data.activeTargets[] | {job: .labels.job, instance: .labels.instance, health: .health, lastError: .lastError, lastScrape: .lastScrape}'"
+    description: "List all Prometheus scrape targets with their health status and last error."
+    importance: "A target showing health='down' means that service's metrics are missing from all dashboards and alert rules."
+    expected_output: "All targets with health='up' and empty lastError. Any 'down' target requires immediate investigation."
+    how_to_use: "Run from host shell (Prometheus must be accessible on port 9090)."
+
+  - id: jq_prometheus_active_alerts
+    type: shell
+    tool: jq
+    query: "curl -s http://localhost:9090/api/v1/alerts | jq '.data.alerts[] | select(.state==\"firing\") | {alertname: .labels.alertname, severity: .labels.severity, model: .labels.model, value: .annotations.value, since: .activeAt}'"
+    description: "List all currently firing Prometheus alerts."
+    importance: "Real-time view of active production alerts without needing Grafana. Critical during a Grafana outage."
+    expected_output: "Firing alert objects. Empty = no active alerts. Any firing alert requires on-call action."
+    how_to_use: "Run from host shell."
+
+  - id: jq_prometheus_metric_value
+    type: shell
+    tool: jq
+    query: "curl -s 'http://localhost:9090/api/v1/query?query=quality_spans_processed_total' | jq '.data.result[] | {metric: .metric, value: .value[1]}'"
+    description: "Query the current value of quality_spans_processed_total from Prometheus API."
+    importance: "Programmatic metric lookup without Grafana. Value of 0 during expected traffic means quality-engine is not emitting metrics."
+    expected_output: "Metric label objects with current counter values."
+    how_to_use: "Run from host shell."
+
+  - id: jq_prometheus_rule_groups
+    type: shell
+    tool: jq
+    query: "curl -s http://localhost:9090/api/v1/rules | jq '.data.groups[] | {name: .name, rules: [.rules[] | {name: .name, type, health: .health, lastError: .lastError}]}'"
+    description: "List all Prometheus rule groups and the health of each alert rule."
+    importance: "An alert rule with health='err' is not evaluating — its alerts will never fire even during actual degradation."
+    expected_output: "All rules with health='ok'. Any 'err' rule shows the parse error preventing evaluation."
+    how_to_use: "Run from host shell."
+
+  - id: jq_compose_service_images
+    type: shell
+    tool: jq
+    query: "docker compose -f /home/btpl-lap-22/live/obs/docker-compose.yml config --format json 2>/dev/null | jq '.services | to_entries[] | {service: .key, image: .value.image}'"
+    description: "Extract all service names and their image tags from the resolved docker-compose config."
+    importance: "Confirms which image version each service will use on next up. Catches unintended latest tags before deployment."
+    expected_output: "Service/image pairs. Any service using 'latest' tag should be pinned to a specific digest."
+    how_to_use: "Run from project root."
+
+  - id: jq_compose_service_env_vars
+    type: shell
+    tool: jq
+    query: "docker compose -f /home/btpl-lap-22/live/obs/docker-compose.yml config --format json 2>/dev/null | jq '.services.\"quality-engine\".environment'"
+    description: "Extract the full resolved environment variable map for quality-engine from docker-compose."
+    importance: "Shows variables AFTER variable substitution from .env files. Confirms no unresolved ${VAR} strings remain before deployment."
+    expected_output: "Key-value map with all env vars fully resolved. Any ${VAR} still present means the .env file is missing that key."
+    how_to_use: "Run from project root."
+
+  - id: jq_compose_volume_definitions
+    type: shell
+    tool: jq
+    query: "docker compose -f /home/btpl-lap-22/live/obs/docker-compose.yml config --format json 2>/dev/null | jq '.volumes | to_entries[] | {name: .key, driver: .value.driver, external: .value.external}'"
+    description: "List all named volumes with their driver and external flag."
+    importance: "External volumes must pre-exist before docker compose up. Missing external volumes cause silent startup failures."
+    expected_output: "Volume definitions. Any external=true volume must be pre-created with docker volume create."
+    how_to_use: "Run from project root."
+
+  - id: jq_compose_network_definitions
+    type: shell
+    tool: jq
+    query: "docker compose -f /home/btpl-lap-22/live/obs/docker-compose.yml config --format json 2>/dev/null | jq '.networks | to_entries[] | {name: .key, driver: .value.driver, external: .value.external, subnet: .value.ipam.config[0].subnet}'"
+    description: "Show all Docker Compose network definitions with subnet and driver."
+    importance: "Overlapping subnets between compose networks and host routes cause silent packet loss between services."
+    expected_output: "Network definitions with subnets. Verify no subnet overlaps with host network or VPN ranges."
+    how_to_use: "Run from project root."
+
+  - id: jq_docker_events_last_hour
+    type: shell
+    tool: jq
+    query: "docker events --since 1h --until 0s --format '{{json .}}' 2>/dev/null | jq '{time: .time, action: .Action, actor: .Actor.Attributes.name, type: .Type}' | head -30"
+    description: "Stream and parse Docker events from the last hour."
+    importance: "Docker events capture container starts, stops, kills, OOM events, and network changes. Essential for incident timeline reconstruction."
+    expected_output: "Event objects sorted by time. Any 'oom' or unexpected 'kill' action requires immediate investigation."
+    how_to_use: "Run from host shell."
+
+  - id: jq_kafka_span_input_schema
+    type: shell
+    tool: jq
+    query: "docker exec docker-kafka-1 kafka-console-consumer --topic llm.spans.sampled --bootstrap-server kafka:29092 --from-beginning --max-messages 3 2>/dev/null | jq 'keys'"
+    description: "Extract the top-level key schema from sampled span messages entering the pipeline."
+    importance: "Confirms the upstream service is sending all required fields (trace_id, model, endpoint, prompt, response). Missing keys route to DLQ."
+    expected_output: "JSON arrays of key names per message. All messages should have identical key sets."
+    how_to_use: "Run from host shell."
+
+  - id: jq_kafka_score_flag_histogram
+    type: shell
+    tool: jq
+    query: "docker exec docker-kafka-1 kafka-console-consumer --topic llm.quality.scores --bootstrap-server kafka:29092 --from-beginning --max-messages 50 2>/dev/null | jq -r '.quality_flags[]?' | sort | uniq -c | sort -rn"
+    description: "Count occurrences of each quality flag across 50 recent score messages."
+    importance: "Flag frequency histogram from raw Kafka data — independent of Postgres aggregation. Spikes in specific flags identify active model failures."
+    expected_output: "Counted flags like '23 LOW_COHERENCE', '8 HALLUCINATION_RISK'. Sudden spikes require scorer and model investigation."
+    how_to_use: "Run from host shell."
+
+  - id: jq_docker_inspect_changed_files
+    type: shell
+    tool: jq
+    query: "docker diff quality-engine | head -20"
+    description: "List files changed inside the quality-engine container since it started (not a jq query but pairs with docker inspect)."
+    importance: "Changed files inside the container identify runtime writes to unexpected paths — e.g. a scorer writing model cache to /app instead of /data."
+    expected_output: "Lines showing A (added), C (changed), or D (deleted) with paths. Config files in /app being written at runtime are a concern."
+    how_to_use: "Run from host shell."
+
+  - id: jq_grafana_api_datasources
+    type: shell
+    tool: jq
+    query: "curl -s http://admin:admin@localhost:3002/api/datasources | jq '.[] | {name, type, url, isDefault, access}'"
+    description: "List all configured Grafana datasources via the API."
+    importance: "Confirms Prometheus, Loki, and Tempo datasources are configured with correct URLs. Wrong URLs silently return no data."
+    expected_output: "Datasource objects for Prometheus, Loki, and Tempo with correct URLs. isDefault should be set for Prometheus."
+    how_to_use: "Run from host shell (update admin:admin with actual credentials)."
+
+  - id: jq_grafana_api_dashboards
+    type: shell
+    tool: jq
+    query: "curl -s http://admin:admin@localhost:3002/api/search?type=dash-db | jq '.[] | {title: .title, uid: .uid, folderId: .folderId, url: .url}'"
+    description: "List all dashboards loaded in Grafana."
+    importance: "Confirms all 5 critical quality observability dashboards are provisioned after a restart. Missing dashboards = operators are blind."
+    expected_output: "Dashboard list including system metrics, user analytics, model parity, data drift, and guardrail invariants."
+    how_to_use: "Run from host shell (update credentials)."
+
+  - id: jq_kafka_consumer_group_offsets
+    type: shell
+    tool: jq
+    query: "docker exec docker-kafka-1 kafka-consumer-groups.sh --bootstrap-server kafka:29092 --describe --group quality-engine-consumer 2>/dev/null | awk 'NR>1 {print \"{\\\"topic\\\":\\\"\"$1\"\\\",\\\"partition\\\":\\\"\"$2\"\\\",\\\"current\\\":\\\"\"$3\"\\\",\\\"end\\\":\\\"\"$4\"\\\",\\\"lag\\\":\\\"\"$5\"\\\"}\"}' | jq . 2>/dev/null | head -30"
+    description: "Parse consumer group offset output into structured JSON for programmatic processing."
+    importance: "Structured lag data enables scripted alerting on consumer lag without Prometheus. Critical when metrics are unavailable."
+    expected_output: "JSON objects per partition with current offset, end offset, and lag. Any lag > 100 requires investigation."
+    how_to_use: "Run from host shell."
+
+  - id: jq_prometheus_config_scrape_intervals
+    type: shell
+    tool: jq
+    query: "curl -s http://localhost:9090/api/v1/status/config | jq '.data.yaml' | python3 -c \"import sys,yaml,json; print(json.dumps([{'job': j['job_name'], 'interval': j.get('scrape_interval','global')} for j in yaml.safe_load(sys.stdin.read().strip('\\\"').replace('\\\\n','\\n'))['scrape_configs']]))\" 2>/dev/null | jq '.'"
+    description: "Extract scrape job names and intervals from the running Prometheus config."
+    importance: "Confirms quality-engine is being scraped at the expected interval. A 60s interval is too long for latency-sensitive alerting."
+    expected_output: "List of job names with their scrape intervals. quality-engine should scrape at 15s or less."
+    how_to_use: "Run from host shell."
+
+  - id: jq_kafka_topic_metadata
+    type: shell
+    tool: jq
+    query: "docker exec docker-kafka-1 kafka-topics.sh --bootstrap-server kafka:29092 --describe --topic llm.quality.scores 2>/dev/null | awk '{print $0}' | head -5"
+    description: "Describe the llm.quality.scores Kafka topic configuration."
+    importance: "Confirms partition count, replication factor, and retention settings. Wrong retention deletes score history before baseline calculations complete."
+    expected_output: "Topic metadata showing PartitionCount, ReplicationFactor, and config entries."
+    how_to_use: "Run from host shell."
+
+  - id: jq_docker_stats_json
+    type: shell
+    tool: jq
+    query: "docker stats --no-stream --format '{{json .}}' | jq '{name: .Name, cpu: .CPUPerc, mem: .MemUsage, memPct: .MemPerc, netIO: .NetIO, blockIO: .BlockIO}'"
+    description: "Capture a one-shot container stats snapshot in clean JSON."
+    importance: "Structured resource snapshot for scripted health checks. Useful in CI/CD pipelines to fail deployments if resource usage is abnormal."
+    expected_output: "Per-container JSON with CPU%, memory usage/limit, and I/O stats."
+    how_to_use: "Run from host shell."
+
+  - id: jq_quality_engine_metrics_endpoint
+    type: shell
+    tool: jq
+    query: "curl -s http://localhost:8000/metrics | grep -v '^#' | awk '{print \"{\\\"metric\\\":\\\"\"$1\"\\\",\\\"value\\\":\\\"\"$2\"\\\"}\"}' | jq 'select(.metric | contains(\"quality\"))' | head -20"
+    description: "Parse quality-engine Prometheus metrics endpoint and filter quality-specific metrics."
+    importance: "Direct metrics endpoint check independent of Prometheus scraping. Zero quality metrics = scrape target is up but not emitting."
+    expected_output: "JSON objects for quality_spans_processed_total, quality_toxic_flagged_total, quality_baseline_score, etc."
+    how_to_use: "Run from host shell."
+
+  - id: jq_docker_compose_health_conditions
+    type: shell
+    tool: jq
+    query: "docker compose -f /home/btpl-lap-22/live/obs/docker-compose.yml config --format json 2>/dev/null | jq '.services | to_entries[] | {service: .key, depends_on: [.value.depends_on | to_entries[]? | {svc: .key, condition: .value.condition}]}' | jq 'select(.depends_on | length > 0)'"
+    description: "Extract service dependency health conditions from docker-compose config."
+    importance: "service_healthy dependencies fail silently if the depended-on service has no healthcheck. quality-engine startup may skip DB readiness."
+    expected_output: "Services with their dependency conditions. All service_healthy conditions require a healthcheck on the dependency."
+    how_to_use: "Run from project root."
+
+  - id: jq_kafka_span_latency_from_payload
+    type: shell
+    tool: jq
+    query: "docker exec docker-kafka-1 kafka-console-consumer --topic llm.quality.scores --bootstrap-server kafka:29092 --from-beginning --max-messages 20 2>/dev/null | jq '{span_id, processing_ms: ((.scored_at | fromdateiso8601) - (.ingested_at | fromdateiso8601) * 1000 | floor)}' 2>/dev/null | jq 'select(.processing_ms > 500)'"
+    description: "Calculate end-to-end processing latency per span from payload timestamps and filter slow ones."
+    importance: "Identifies spans that took more than 500ms from ingestion to scoring. These are the spans causing pipeline backlog."
+    expected_output: "Span objects where processing exceeds 500ms. Empty = all spans processing within SLA."
+    how_to_use: "Run from host shell (requires ingested_at field in the score payload)."
+
+  - id: jq_grafana_alert_rules
+    type: shell
+    tool: jq
+    query: "curl -s http://admin:admin@localhost:3002/api/v1/provisioning/alert-rules | jq '.[] | {title: .title, condition: .condition, state: .execErrState, noData: .noDataState}'"
+    description: "List all Grafana alert rules with their error and no-data states."
+    importance: "Alert rules with noDataState='OK' silently pass when data is missing — a Prometheus scrape gap looks like good health."
+    expected_output: "Alert rules with noDataState='NoData' or 'Alerting'. Any rule with noDataState='OK' needs reconfiguration."
+    how_to_use: "Run from host shell (update credentials)."
+
+  - id: jq_parse_quality_engine_startup_log
+    type: shell
+    tool: jq
+    query: "docker logs quality-engine 2>&1 | head -50 | grep '{' | jq '{level: .level, msg: .msg, ts: .ts, config: .config}' 2>/dev/null | head -20"
+    description: "Parse structured JSON startup logs from quality-engine."
+    importance: "Startup logs show which config values were loaded and any initialization warnings. Non-JSON lines in startup indicate unhandled exceptions."
+    expected_output: "Structured log objects showing config loading, connection establishment, and worker start messages."
+    how_to_use: "Run from host shell."
+
+  - id: jq_docker_network_inspect
+    type: shell
+    tool: jq
+    query: "docker network inspect $(docker inspect quality-engine --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}') | jq '.[0] | {Name, Driver, Subnet: .IPAM.Config[0].Subnet, Containers: [.Containers | to_entries[] | {name: .value.Name, ip: .value.IPv4Address}]}'"
+    description: "Inspect the Docker network shared by quality-engine and show all connected containers."
+    importance: "Confirms all required services are on the same network and none are missing. A missing container cannot communicate with others."
+    expected_output: "Network object with subnet and all connected container IPs. All core services should appear in the Containers list."
+    how_to_use: "Run from host shell."
+
+  - id: jq_compose_resource_limits_summary
+    type: shell
+    tool: jq
+    query: "docker compose -f /home/btpl-lap-22/live/obs/docker-compose.yml config --format json 2>/dev/null | jq '.services | to_entries[] | {service: .key, mem_limit: .value.mem_limit, cpus: .value.cpus, mem_reservation: .value.mem_reservation}' | jq 'select(.mem_limit != null or .cpus != null)'"
+    description: "Extract resource limits defined in docker-compose for all services."
+    importance: "Services without resource limits can consume all host resources, starving other containers. Confirms limits are set before production deployment."
+    expected_output: "Services with their memory and CPU limits. Any service missing both mem_limit and cpus is uncapped."
+    how_to_use: "Run from project root."
+
+  - id: jq_kafka_sampled_span_model_distribution
+    type: shell
+    tool: jq
+    query: "docker exec docker-kafka-1 kafka-console-consumer --topic llm.spans.sampled --bootstrap-server kafka:29092 --from-beginning --max-messages 50 2>/dev/null | jq -r '.model // \"unknown\"' | sort | uniq -c | sort -rn"
+    description: "Count span distribution by model from the sampled spans topic."
+    importance: "Confirms traffic is flowing for all expected models. A model with zero messages is either down or not generating spans."
+    expected_output: "Model names with message counts. Missing models require upstream service investigation."
+    how_to_use: "Run from host shell."
+
+  - id: jq_prometheus_labels_for_metric
+    type: shell
+    tool: jq
+    query: "curl -s 'http://localhost:9090/api/v1/series?match[]=quality_spans_processed_total' | jq '.data[] | {model: .model, endpoint: .endpoint, prompt_type: .prompt_type}'"
+    description: "List all label combinations present for the quality_spans_processed_total metric."
+    importance: "Confirms every expected model/endpoint combination is producing metric data. Missing labels = that combination has no active spans."
+    expected_output: "Label set objects per active combination. Any expected model missing here has a pipeline gap."
+    how_to_use: "Run from host shell."
+
+  - id: jq_kafka_message_timestamp_drift
+    type: shell
+    tool: jq
+    query: "docker exec docker-kafka-1 kafka-console-consumer --topic llm.quality.scores --bootstrap-server kafka:29092 --from-beginning --max-messages 10 --property print.timestamp=true 2>/dev/null | awk '{print $1}' | jq -R 'split(\":\") | {ts: .[1] | tonumber}' 2>/dev/null | jq -s 'map(.ts) | {min: min, max: max, drift_sec: ((max - min) / 1000 | floor)}'"
+    description: "Calculate timestamp drift (max-min) across 10 consecutive Kafka messages."
+    importance: "Large timestamp drift (>60s) indicates message redelivery, topic compaction, or consumer reading from old offsets after a reset."
+    expected_output: "JSON with min/max timestamps and drift_sec. Values above 60 seconds require offset investigation."
+    how_to_use: "Run from host shell."
+
+  - id: jq_docker_inspect_healthcheck_history
+    type: shell
+    tool: jq
+    query: "docker inspect quality-engine | jq '.[0].State.Health.Log | reverse | .[] | {start: .Start, end: .End, exit: .ExitCode, output: .Output}' | head -10"
+    description: "Show the last healthcheck probe results for quality-engine in reverse chronological order."
+    importance: "Healthcheck history reveals transient failures that already recovered — the current status 'healthy' masks a flapping container."
+    expected_output: "Recent healthcheck attempts with exit codes and output. Any non-zero ExitCode indicates intermittent failures."
+    how_to_use: "Run from host shell."
+
+  - id: jq_filter_spans_by_flag
+    type: shell
+    tool: jq
+    query: "docker exec docker-kafka-1 kafka-console-consumer --topic llm.quality.scores --bootstrap-server kafka:29092 --from-beginning --max-messages 50 2>/dev/null | jq 'select(.quality_flags | index(\"HALLUCINATION_RISK\") != null) | {span_id, model, composite_score: .scores.composite, ts: .scored_at}'"
+    description: "Filter Kafka score messages to only those flagged with HALLUCINATION_RISK."
+    importance: "Live stream of hallucination-flagged spans straight from Kafka, before DB persistence, for real-time safety monitoring."
+    expected_output: "Projected span objects with HALLUCINATION_RISK flag. More than a few per minute indicates active model safety issues."
+    how_to_use: "Run from host shell."
