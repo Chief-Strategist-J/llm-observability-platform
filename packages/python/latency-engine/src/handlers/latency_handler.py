@@ -11,6 +11,9 @@ from ddsketch.pb import ddsketch_pb2
 from ddsketch.pb.proto import DDSketchProto
 import redis
 
+from opentelemetry import trace
+from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+
 logger = logging.getLogger(__name__)
 
 class LatencyHandler:
@@ -117,132 +120,159 @@ class LatencyHandler:
             return False
 
     def handle_spans(self, spans: list[dict]):
-        # Check Redis recovery
-        if self.redis_down_since is not None:
+        tracer = trace.get_tracer("latency-engine")
+        with tracer.start_as_current_span("latency_handler.handle_spans", attributes={"batch.size": len(spans)}) as batch_span:
+            # Check Redis recovery
+            if self.redis_down_since is not None:
+                try:
+                    self.redis.ping()
+                    self.redis_down_since = None
+                    self._replay_buffer()
+                except Exception:
+                    pass
+
+            sketch_updates: dict[str, list[float]] = {}
+            pipe = None
             try:
-                self.redis.ping()
-                self.redis_down_since = None
-                self._replay_buffer()
+                if self.redis_down_since is None:
+                    pipe = self.redis.pipeline()
             except Exception:
                 pass
 
-        sketch_updates: dict[str, list[float]] = {}
-        pipe = None
-        try:
-            if self.redis_down_since is None:
-                pipe = self.redis.pipeline()
-        except Exception:
-            pass
-
-        for span in spans:
-            try:
-                model = span.get("model")
-                if not model:
-                    continue
-                
-                endpoint = span.get("endpoint", "default")
-                span_id = span.get("span_id")
-                finish_reason = span.get("finish_reason")
-                retry_count = span.get("retry_count", 0) or 0
-                completion_tokens = span.get("completion_tokens", 0) or 0
-                
-                latency_ms_ttft = span.get("latency_ms_ttft")
-                latency_ms_total = span.get("latency_ms_total")
-                timestamp_utc_str = span.get("timestamp_utc")
-
-                if latency_ms_total is None:
-                    continue
-
-                # Parse timestamp
+            for span in spans:
                 try:
-                    ts_str = timestamp_utc_str.replace("Z", "+00:00")
-                    dt = datetime.fromisoformat(ts_str)
-                except Exception:
-                    dt = datetime.now(timezone.utc)
-                hour_of_day = dt.astimezone(timezone.utc).hour
-                unix_ts = int(dt.timestamp())
-
-                # F-L-01 & F-L-05: DDSketch updates
-                if latency_ms_ttft is not None:
-                    ttft_key = f"sketch:ttft:{model}:{hour_of_day}"
-                    sketch_updates.setdefault(ttft_key, []).append(float(latency_ms_ttft))
-
-                if retry_count > 0:
-                    retry_key = f"sketch:total:retry:{model}"
-                    sketch_updates.setdefault(retry_key, []).append(float(latency_ms_total))
-                else:
-                    total_key = f"sketch:total:{model}:{endpoint}:{hour_of_day}"
-                    sketch_updates.setdefault(total_key, []).append(float(latency_ms_total))
-
-                # F-L-02: TPOT computation
-                if (latency_ms_ttft is not None and 
-                    completion_tokens > 0 and 
-                    finish_reason != "timeout"):
-                    tpot_ms = (latency_ms_total - latency_ms_ttft) / completion_tokens
-                    tpot_key = f"tpot:latest:{model}"
-                    if pipe:
-                        pipe.lpush(tpot_key, tpot_ms)
-                        pipe.ltrim(tpot_key, 0, 999)
-
-                # F-L-03: SLO error counter update
-                threshold = self.get_slo_threshold(endpoint)
-                minute_bucket = unix_ts // 60
-                
-                slo_total_key = f"slo:total:{model}:{endpoint}:{minute_bucket}"
-                if pipe:
-                    pipe.incr(slo_total_key)
-                    pipe.expire(slo_total_key, 21600)
-                
-                if latency_ms_total > threshold:
-                    slo_err_key = f"slo:errors:{model}:{endpoint}:{minute_bucket}"
-                    if pipe:
-                        pipe.incr(slo_err_key)
-                        pipe.expire(slo_err_key, 21600)
-
-                # F-L-04: Latency attribution tag extraction
-                attributes = span.get("attributes", {}) or {}
-                dns_latency = attributes.get("net.dns.latency_ms")
-                tcp_latency = attributes.get("net.tcp.latency_ms")
-                queue_latency = attributes.get("llm.queue.latency_ms")
-                inference_latency = attributes.get("llm.inference.latency_ms")
-
-                attr_data = {}
-                if dns_latency is not None:
-                    attr_data["dns"] = float(dns_latency)
-                if tcp_latency is not None:
-                    attr_data["tcp"] = float(tcp_latency)
-                if queue_latency is not None:
-                    attr_data["queue"] = float(queue_latency)
-                if inference_latency is not None:
-                    attr_data["inference"] = float(inference_latency)
-
-                if attr_data and span_id:
-                    attr_key = f"attribution:{span_id}"
-                    if pipe:
-                        pipe.hset(attr_key, mapping={k: str(v) for k, v in attr_data.items()})
-                        pipe.expire(attr_key, 300)
+                    model = span.get("model")
+                    if not model:
+                        continue
                     
-                    hour_str = dt.astimezone(timezone.utc).strftime("%Y%m%d%H")
-                    agg_key = f"attr:avg:{model}:{hour_str}"
-                    for attr_name, val in attr_data.items():
+                    endpoint = span.get("endpoint", "default")
+                    span_id = span.get("span_id")
+                    finish_reason = span.get("finish_reason")
+                    retry_count = span.get("retry_count", 0) or 0
+                    completion_tokens = span.get("completion_tokens", 0) or 0
+                    
+                    latency_ms_ttft = span.get("latency_ms_ttft")
+                    latency_ms_total = span.get("latency_ms_total")
+                    timestamp_utc_str = span.get("timestamp_utc")
+
+                    # Extract context
+                    traceparent = span.get("_traceparent")
+                    tracestate = span.get("_tracestate")
+                    parent_ctx = None
+                    if traceparent:
+                        carrier = {"traceparent": traceparent}
+                        if tracestate:
+                            carrier["tracestate"] = tracestate
+                        parent_ctx = TraceContextTextMapPropagator().extract(carrier)
+
+                    # Extract latency attribution tags for OTEL span recording
+                    attributes = span.get("attributes", {}) or {}
+                    dns_latency = attributes.get("net.dns.latency_ms")
+                    tcp_latency = attributes.get("net.tcp.latency_ms")
+                    queue_latency = attributes.get("llm.queue.latency_ms")
+                    inference_latency = attributes.get("llm.inference.latency_ms")
+
+                    with tracer.start_as_current_span(
+                        "latency_handler.process_span",
+                        context=parent_ctx,
+                        attributes={
+                            "span_id": span_id or "unknown",
+                            "model": model or "unknown",
+                            "endpoint": endpoint or "default",
+                            "net.dns.latency_ms": float(dns_latency) if dns_latency is not None else 0.0,
+                            "net.tcp.latency_ms": float(tcp_latency) if tcp_latency is not None else 0.0,
+                            "llm.queue.latency_ms": float(queue_latency) if queue_latency is not None else 0.0,
+                            "llm.inference.latency_ms": float(inference_latency) if inference_latency is not None else 0.0,
+                        }
+                    ) as item_span:
+                        if latency_ms_total is None:
+                            continue
+
+                        # Parse timestamp
+                        try:
+                            ts_str = timestamp_utc_str.replace("Z", "+00:00")
+                            dt = datetime.fromisoformat(ts_str)
+                        except Exception:
+                            dt = datetime.now(timezone.utc)
+                        hour_of_day = dt.astimezone(timezone.utc).hour
+                        unix_ts = int(dt.timestamp())
+
+                        # F-L-01 & F-L-05: DDSketch updates
+                        if latency_ms_ttft is not None:
+                            ttft_key = f"sketch:ttft:{model}:{hour_of_day}"
+                            sketch_updates.setdefault(ttft_key, []).append(float(latency_ms_ttft))
+
+                        if retry_count > 0:
+                            retry_key = f"sketch:total:retry:{model}"
+                            sketch_updates.setdefault(retry_key, []).append(float(latency_ms_total))
+                        else:
+                            total_key = f"sketch:total:{model}:{endpoint}:{hour_of_day}"
+                            sketch_updates.setdefault(total_key, []).append(float(latency_ms_total))
+
+                        # F-L-02: TPOT computation
+                        if (latency_ms_ttft is not None and 
+                            completion_tokens > 0 and 
+                            finish_reason != "timeout"):
+                            tpot_ms = (latency_ms_total - latency_ms_ttft) / completion_tokens
+                            tpot_key = f"tpot:latest:{model}"
+                            if pipe:
+                                pipe.lpush(tpot_key, tpot_ms)
+                                pipe.ltrim(tpot_key, 0, 999)
+
+                        # F-L-03: SLO error counter update
+                        threshold = self.get_slo_threshold(endpoint)
+                        minute_bucket = unix_ts // 60
+                        
+                        slo_total_key = f"slo:total:{model}:{endpoint}:{minute_bucket}"
                         if pipe:
-                            pipe.hincrbyfloat(agg_key, attr_name, val)
-                            pipe.expire(agg_key, 604800)
+                            pipe.incr(slo_total_key)
+                            pipe.expire(slo_total_key, 21600)
+                        
+                        if latency_ms_total > threshold:
+                            slo_err_key = f"slo:errors:{model}:{endpoint}:{minute_bucket}"
+                            if pipe:
+                                pipe.incr(slo_err_key)
+                                pipe.expire(slo_err_key, 21600)
 
-            except Exception as e:
-                logger.error("Error processing span: %s", e)
+                        # F-L-04: Latency attribution tag extraction
+                        attr_data = {}
+                        if dns_latency is not None:
+                            attr_data["dns"] = float(dns_latency)
+                        if tcp_latency is not None:
+                            attr_data["tcp"] = float(tcp_latency)
+                        if queue_latency is not None:
+                            attr_data["queue"] = float(queue_latency)
+                        if inference_latency is not None:
+                            attr_data["inference"] = float(inference_latency)
 
-        # Execute pipeline
-        if pipe:
-            try:
-                pipe.execute()
-            except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
-                logger.warning("Pipeline execution failed (Redis down): %s", e)
-                if self.redis_down_since is None:
-                    self.redis_down_since = datetime.now()
-            except Exception as e:
-                logger.error("Pipeline execution failed: %s", e)
+                        if attr_data and span_id:
+                            attr_key = f"attribution:{span_id}"
+                            if pipe:
+                                pipe.hset(attr_key, mapping={k: str(v) for k, v in attr_data.items()})
+                                pipe.expire(attr_key, 300)
+                            
+                            hour_str = dt.astimezone(timezone.utc).strftime("%Y%m%d%H")
+                            agg_key = f"attr:avg:{model}:{hour_str}"
+                            for attr_name, val in attr_data.items():
+                                if pipe:
+                                    pipe.hincrbyfloat(agg_key, attr_name, val)
+                                    pipe.expire(agg_key, 604800)
 
-        # Update DDSketch metrics
-        for key, values in sketch_updates.items():
-            self._update_sketch_key(key, values)
+                except Exception as e:
+                    logger.error("Error processing span: %s", e)
+
+            # Execute pipeline
+            if pipe:
+                try:
+                    pipe.execute()
+                except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
+                    logger.warning("Pipeline execution failed (Redis down): %s", e)
+                    if self.redis_down_since is None:
+                        self.redis_down_since = datetime.now()
+                except Exception as e:
+                    logger.error("Pipeline execution failed: %s", e)
+
+            # Update DDSketch metrics
+            for key, values in sketch_updates.items():
+                self._update_sketch_key(key, values)
+

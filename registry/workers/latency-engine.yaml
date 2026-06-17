@@ -1,0 +1,11 @@
+workers:
+  - name: latency-engine
+    type: event
+    language: python
+    topics:
+      - llm.spans.raw
+    owner: "@latency-team"
+    stage: 1
+    features:
+      - latency_tracking
+      - slo_monitoring
