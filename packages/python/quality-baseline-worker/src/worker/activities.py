@@ -243,6 +243,48 @@ class QualityBaselineActivities:
             if not scored_at:
                 scored_at = datetime.now(timezone.utc).isoformat()
             
+            # Post-NLI numerical consistency check (RISK-Q-01)
+            quality_flags = list(payload.get("quality_flags", []))
+            response_text = payload.get("response_text")
+            rag_context = payload.get("rag_context")
+            if response_text and rag_context:
+                import re
+                def extract_numbers(text: str) -> list[float]:
+                    cleaned = text.replace(",", "")
+                    matches = re.findall(r'\b\d+(?:\.\d+)?\b', cleaned)
+                    nums = []
+                    for m in matches:
+                        try:
+                            nums.append(float(m))
+                        except ValueError:
+                            pass
+                    return nums
+
+                resp_nums = extract_numbers(response_text)
+                ctx_nums = extract_numbers(rag_context)
+                if resp_nums:
+                    mismatch = False
+                    if not ctx_nums:
+                        mismatch = True
+                    else:
+                        for r in resp_nums:
+                            found_match = False
+                            for c in ctx_nums:
+                                if c == 0.0:
+                                    if r == 0.0:
+                                        found_match = True
+                                        break
+                                else:
+                                    if 0.95 <= (r / c) <= 1.05:
+                                        found_match = True
+                                        break
+                            if not found_match:
+                                mismatch = True
+                                break
+                    if mismatch:
+                        if "NUMERICAL_MISMATCH" not in quality_flags:
+                            quality_flags.append("NUMERICAL_MISMATCH")
+
             event = {
                 "span_id": payload["span_id"],
                 "trace_id": payload["trace_id"],
@@ -256,7 +298,7 @@ class QualityBaselineActivities:
                     "faithfulness": faithfulness,
                     "perplexity": perplexity,
                 },
-                "quality_flags": payload.get("quality_flags", []),
+                "quality_flags": quality_flags,
                 "scored_at": scored_at,
                 "user_id": payload.get("user_id"),
             }
