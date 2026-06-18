@@ -112,5 +112,20 @@ runbooks:
     path: research/latency-engine/2026-06-17-latency-engine-hardening
     description: Verification of logarithmic binning DDSketch accuracy, rolling TPOT updates, Redis memory buffering during outages, and child-span context propagation tracking.
 
+  - id: 20260618-010-slo-burn-worker
+    title: "ADR-010: SLO Burn Rate Evaluation and Multi-Window Alerting Worker"
+    category: decisions
+    status: accepted
+    path: decisions/20260618-010-slo-burn-worker.md
+    package: packages/python/slo-burn-worker
+    branch: feature/slo-burn-worker
+    description: Records the architecture and design decisions for the SLO Burn Rate worker, covering Temporal interval scheduling, multi-window burn rate computation, status-driven alerting, and Redis alert deduplication locks.
+
+  - id: 2026-06-18-slo-burn-worker
+    title: SLO Burn Rate worker Evaluation and Alert Routing Verification
+    category: research
+    path: research/slo-burn-worker/2026-06-18-slo-burn-worker
+    description: Verification of three-window burn-rate math convergence, severity escalation thresholds, Redis TTL lock behavior, and ClickHouse baseline query fallbacks.
+
 
 
