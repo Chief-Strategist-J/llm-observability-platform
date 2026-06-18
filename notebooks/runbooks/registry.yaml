@@ -97,4 +97,20 @@ runbooks:
     path: research/perplexity/2026-06-15-degradation-alerts
     description: Verification of composite renormalization (4-weight system with perplexity), baseline watchdog file observers, and early-warning quality degradation alerts suppression gates.
 
+  - id: 20260617-009-latency-engine-hardening
+    title: "ADR-009: Latency Engine Hardening, Containerization, OTel Tracing, and CI Pipeline"
+    category: decisions
+    status: accepted
+    path: decisions/20260617-009-latency-engine-hardening.md
+    package: packages/python/latency-engine
+    branch: feature/latency-engine-runbooks-decisions
+    description: Records the architecture and design decisions for hardening the latency-engine, covering logarithmic DDSketch mapping, Protobuf-Base64 Redis cache serialization, OTel context propagation, and AsyncAPI validation.
+
+  - id: 2026-06-17-latency-engine-hardening
+    title: Latency Engine Hardening and Metric Accumulation Evaluation
+    category: research
+    path: research/latency-engine/2026-06-17-latency-engine-hardening
+    description: Verification of logarithmic binning DDSketch accuracy, rolling TPOT updates, Redis memory buffering during outages, and child-span context propagation tracking.
+
+
 

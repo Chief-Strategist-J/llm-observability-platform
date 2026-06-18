@@ -1,0 +1,38 @@
+\relax 
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction and Intrinsic Dimension Hypothesis}{1}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Index-Level Derivation of Backpropagation}{1}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Gradient with respect to Matrix $A$}{1}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Gradient with respect to Matrix $B$}{2}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Neuron-Level Activation and Gradient Flow Diagram}{3}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Neuron-level forward path (solid arrows) and backward gradient routing (dashed red arrows).}}{3}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Functional Pipelines: Before State, After State, and Flow Control}{4}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Model and Tokenizer Loader: \texttt  {initialize\_base\_model}}{4}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.1.1}Functional Code Implementation}{4}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.1.2}Parameter States Table}{4}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces State properties and shapes for model initialization.}}{4}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.1.3}Logical Transformation Flow (\texttt  {initialize\_base\_model})}{5}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces System load transformation mapping disk-based weights to RAM tensors.}}{5}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}PEFT Wrapper Layer Adapter: \texttt  {apply\_lora\_adapters}}{6}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.1}Functional Code Implementation}{6}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.2}Parameter States Table}{6}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces State details before and after adapter injection.}}{6}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.3}Logical Transformation Flow (\texttt  {apply\_lora\_adapters})}{7}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Parameter transformation flow mapping adapter logic injection.}}{7}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Tokenization and Label Masking: \texttt  {tokenize\_and\_mask\_labels}}{8}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.1}Functional Code Implementation}{8}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.2}Parameter States Table}{8}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Data structures before and after tokenization.}}{8}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.3}Logical Transformation Flow (\texttt  {tokenize\_and\_mask\_labels})}{9}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Parameter transformation flow mapping string sequences to masked label tokens.}}{9}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Training Execution Loop: \texttt  {execute\_training\_loop}}{10}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.1}Functional Code Implementation}{10}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.2}Parameter States Table}{10}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Parameter states and loss during the training phase.}}{10}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.3}Logical Transformation Flow (\texttt  {execute\_training\_loop})}{11}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Circular flow mapping of the training step execution loop.}}{11}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Zero-Overhead Deployment Merge: \texttt  {merge\_adapters\_for\_deployment}}{12}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.1}Functional Code Implementation}{12}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.2}Parameter States Table}{12}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Parameter representations during adapter merging.}}{12}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.3}Logical Transformation Flow (\texttt  {merge\_adapters\_for\_deployment})}{13}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Consolidation flow of multiple weights paths into a single deployment matrix.}}{13}}
