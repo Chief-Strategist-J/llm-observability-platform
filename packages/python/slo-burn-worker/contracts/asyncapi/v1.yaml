@@ -1,0 +1,40 @@
+asyncapi: 2.6.0
+info:
+  title: SLO Latency Alerts
+  version: 1.0.0
+channels:
+  alerts.latency.slo:
+    publish:
+      message:
+        $ref: '#/components/messages/SloLatencyAlert'
+components:
+  messages:
+    SloLatencyAlert:
+      payload:
+        type: object
+        required: [model, endpoint, severity, burn_rate_fast, burn_rate_medium, burn_rate_slow, p95, p99, baseline_p95, budget_remaining_pct, timestamp]
+        properties:
+          model:
+            type: string
+          endpoint:
+            type: string
+          severity:
+            type: string
+            enum: [page, slack, ticket]
+          burn_rate_fast:
+            type: number
+          burn_rate_medium:
+            type: number
+          burn_rate_slow:
+            type: number
+          p95:
+            type: number
+          p99:
+            type: number
+          baseline_p95:
+            type: number
+          budget_remaining_pct:
+            type: number
+          timestamp:
+            type: string
+            format: date-time

@@ -1,0 +1,21 @@
+ports:
+  - name: temporal_worker
+    type: orchestrator
+    vendor: temporal
+    adapter: src/worker/index.py::Worker
+  - name: redis_slo_reader
+    type: cache
+    vendor: redis
+    adapter: src/infra/adapters/redis/redis_adapter.py::RedisAdapter
+  - name: clickhouse_baseline
+    type: database
+    vendor: clickhouse
+    adapter: src/infra/adapters/clickhouse/clickhouse_adapter.py::ClickHouseAdapter
+  - name: kafka_alert_producer
+    type: messaging
+    vendor: confluent-kafka
+    adapter: src/infra/adapters/kafka/kafka_alert_adapter.py::KafkaAlertAdapter
+  - name: prometheus_metrics
+    type: metrics
+    vendor: prometheus
+    adapter: src/infra/adapters/metrics/prometheus_adapter.py::PrometheusAdapter
