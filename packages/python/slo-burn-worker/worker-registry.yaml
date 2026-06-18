@@ -1,0 +1,14 @@
+workers:
+  - name: slo-burn-worker
+    type: temporal
+    language: python
+    task_queue: slo-burn-tasks
+    owner: "@data-team"
+    stage: 1
+    workflows:
+      - SloBurnWorkflow
+    activities:
+      - fetch_active_pairs
+      - compute_burn_rates
+      - write_burn_rates
+      - handle_alerts

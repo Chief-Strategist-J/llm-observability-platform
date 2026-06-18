@@ -1,0 +1,28 @@
+workflow: slo_burn_computation
+version: 1
+schedule:
+  cron: "* * * * *"
+input:
+  type: object
+  properties: {}
+activities:
+  fetch_active_pairs:
+    timeout_seconds: 60
+    retry:
+      max_attempts: 3
+      backoff_ms: 1000
+  compute_burn_rates:
+    timeout_seconds: 60
+    retry:
+      max_attempts: 3
+      backoff_ms: 1000
+  write_burn_rates:
+    timeout_seconds: 30
+    retry:
+      max_attempts: 5
+      backoff_ms: 500
+  handle_alerts:
+    timeout_seconds: 60
+    retry:
+      max_attempts: 3
+      backoff_ms: 1000

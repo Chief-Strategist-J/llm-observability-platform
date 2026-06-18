@@ -1,0 +1,6 @@
+package:
+  name: slo-burn-worker
+  type: temporal-worker
+  language: python
+  owner: "@data-team"
+  stage: 1
