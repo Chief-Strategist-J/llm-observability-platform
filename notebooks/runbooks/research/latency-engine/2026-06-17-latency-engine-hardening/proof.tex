@@ -101,6 +101,70 @@
   boxed title style={arc=2mm,boxrule=0.6pt,colframe=mathpurple},
 }
 
+%% ── Input / Output step inline boxes (list-safe) ────────────────────────────
+\definecolor{inputgreen}  {RGB}{ 22,120, 60}
+\definecolor{inputlightbg}{RGB}{230,248,237}
+\definecolor{outputindigo}{RGB}{ 55, 48,163}
+\definecolor{outputlightbg}{RGB}{237,236,255}
+
+%% \ioline{color}{bg}{label}{content}
+\newcommand{\inputline}[2]{%
+  \par\noindent\vspace{2pt}%
+  {\small\bfseries\sffamily\color{inputgreen}%
+   \rule[0.5ex]{3pt}{8pt}\hspace{4pt}INPUT\enspace\textbar\enspace#1}%
+  \par\noindent%
+  \setlength{\fboxsep}{4pt}%
+  \colorbox{inputlightbg}{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{\small #2}}%
+  \vspace{2pt}\par%
+}
+\newcommand{\outputline}[2]{%
+  \par\noindent\vspace{2pt}%
+  {\small\bfseries\sffamily\color{outputindigo}%
+   \rule[0.5ex]{3pt}{8pt}\hspace{4pt}OUTPUT\enspace\textbar\enspace#1}%
+  \par\noindent%
+  \setlength{\fboxsep}{4pt}%
+  \colorbox{outputlightbg}{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{\small #2}}%
+  \vspace{2pt}\par%
+}
+
+
+%% ── Input / Output step boxes ────────────────────────────────────────────────
+\definecolor{inputgreen}  {RGB}{ 22,120, 60}
+\definecolor{inputlightbg}{RGB}{230,248,237}
+\definecolor{outputindigo}{RGB}{ 55, 48,163}
+\definecolor{outputlightbg}{RGB}{237,236,255}
+
+\newtcolorbox{inputbox}[1]{%
+  enhanced, breakable,
+  title       = {\small\bfseries\sffamily $->$\ Input: #1},
+  colback     = inputlightbg,
+  colframe    = inputgreen,
+  colbacktitle= inputgreen,
+  coltitle    = white,
+  fonttitle   = \bfseries\small,
+  arc         = 2mm,
+  boxrule     = 0.8pt,
+  top=3pt, bottom=3pt, left=5pt, right=5pt,
+  attach boxed title to top left={yshift=-2mm,xshift=5mm},
+  boxed title style={arc=1.5mm,boxrule=0.5pt,colframe=inputgreen},
+}
+
+\newtcolorbox{outputbox}[1]{%
+  enhanced, breakable,
+  title       = {\small\bfseries\sffamily $\leftarrow$\ Output: #1},
+  colback     = outputlightbg,
+  colframe    = outputindigo,
+  colbacktitle= outputindigo,
+  coltitle    = white,
+  fonttitle   = \bfseries\small,
+  arc         = 2mm,
+  boxrule     = 0.8pt,
+  top=3pt, bottom=3pt, left=5pt, right=5pt,
+  attach boxed title to top left={yshift=-2mm,xshift=5mm},
+  boxed title style={arc=1.5mm,boxrule=0.5pt,colframe=outputindigo},
+}
+
+
 
 %% ── Textbook Algorithm Environment ───────────────────────────────────────────
 \newenvironment{textbookalgo}[2]{%
@@ -2031,23 +2095,23 @@ To automate cache tuning under dynamic production workloads, we introduce a trac
 
 \subsection{Detailed Technology Stack \& Analysis Pipeline}
 The recommendation engine operates via a distributed analysis pipeline that integrates telemetry collection, real-time feature extraction, static code constraint analysis, and discrete-event cache simulation:
-egin{enumerate}[leftmargin=*]
-  \item 	extbf{Telemetry Ingestion Pipeline:} OpenTelemetry (OTel) instrumentation hooks into the application to generate JSON span streams. These are collected by regional OTel Agents and pushed to a centralized 	extbf{Apache Kafka} cluster, partitioned by service namespace to allow horizontal scale-out.
-  \item 	extbf{Real-Time Stream Processing:} An 	extbf{Apache Flink} structured streaming application consumes trace topics from Kafka. Flink runs a sliding-window aggregation (e.g., $10$ minutes) to calculate workload metrics: key frequency distributions, write-to-read ratios, skew factors (using Zipf exponent estimation), and temporal reuse distances.
-  \item 	extbf{AI-Driven Requirement Extraction:} A Python worker parses application repositories using Abstract Syntax Tree (AST) libraries. The parsed AST structure and annotations are analyzed by a local LLM execution node (e.g. Qwen or Llama-3 running on vLLM) to extract data dependency models, consistency limits, and target service latency SLO bounds.
-  \item 	extbf{Simulation \& Multi-Objective Decision Engine:} A compiled 	extbf{Go-based discrete-event simulator} replays the Flink workload features over a sandbox cache state to evaluate hit rate convergence. A Pareto optimization algorithm evaluates candidate caching setups across multiple dimensions: target VRAM, memory limits, and latency targets.
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Telemetry Ingestion Pipeline:} OpenTelemetry (OTel) instrumentation hooks into the application to generate JSON span streams. These are collected by regional OTel Agents and pushed to a centralized \textbf{Apache Kafka} cluster, partitioned by service namespace to allow horizontal scale-out.
+  \item \textbf{Real-Time Stream Processing:} An \textbf{Apache Flink} structured streaming application consumes trace topics from Kafka. Flink runs a sliding-window aggregation (e.g., $10$ minutes) to calculate workload metrics: key frequency distributions, write-to-read ratios, skew factors (using Zipf exponent estimation), and temporal reuse distances.
+  \item \textbf{AI-Driven Requirement Extraction:} A Python worker parses application repositories using Abstract Syntax Tree (AST) libraries. The parsed AST structure and annotations are analyzed by a local LLM execution node (e.g. Qwen or Llama-3 running on vLLM) to extract data dependency models, consistency limits, and target service latency SLO bounds.
+  \item \textbf{Simulation \& Multi-Objective Decision Engine:} A compiled \textbf{Go-based discrete-event simulator} replays the Flink workload features over a sandbox cache state to evaluate hit rate convergence. A Pareto optimization algorithm evaluates candidate caching setups across multiple dimensions: target VRAM, memory limits, and latency targets.
 \end{enumerate}
 
 \clearpage
 \subsection{50. Ingestion and Span Aggregation}
 
 
-oindent
-	extbf{Complexity:} Time: $O(N)$ where $N$ is span count | Space: $O(B)$ memory buffer size
+\noindent
+\textbf{Complexity:} Time: $O(N)$ where $N$ is span count | Space: $O(B)$ memory buffer size
 \smallskip
 
-egin{textbookalgo}{50.1}{IngestSpans(span\_stream, buffer\_size)}
-egin{algorithm}[H]
+\begin{textbookalgo}{50.1}{IngestSpans(span\_stream, buffer\_size)}
+\begin{algorithm}[H]
 $buffer \leftarrow [\,]$\;
 \For{$span \in span\_stream$}{
   \If{$	ext{span.is\_db\_or\_cache\_op}$}{
@@ -2063,36 +2127,23 @@ $buffer \leftarrow [\,]$\;
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Real-time OTel span collectors handling high-throughput database and cache invocation streams.\\
-	extbf{How to use:} Intercept tracing spans at the collector gate, filter for storage operations, and buffer them for downstream analysis.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Streaming trace spans: 	exttt{[\{span\_id: "s1", service: "auth", op: "db\_read", key: "u123"\}]}.
-      \item 	extbf{Outputs:} Buffered span slice of capacity $B$: 	exttt{[\{span\_id: "s1", op: "db\_read", key: "u123"\}]}.
+\noindent
+\textbf{When to use:} Real-time OTel span collectors handling high-throughput database and cache invocation streams.\\
+\textbf{How to use:} Intercept tracing spans at the collector gate, filter for storage operations, and buffer them for downstream analysis.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Streaming trace spans: \texttt{[\{span\_id: "s1", service: "auth", op: "db\_read", key: "u123"\}]}.
+      \item \textbf{Outputs:} Buffered span slice of capacity $B$: \texttt{[\{span\_id: "s1", op: "db\_read", key: "u123"\}]}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Check Database/Cache Operation.} \
-        	extbf{Input JSON:} 	exttt{\{ "span\_id": "s1", "service": "auth", "op": "db\_read", "key": "u123" \}} \
-        	extbf{Output Boolean:} 	exttt{true} (since 	exttt{op} matches database prefix/suffix).
-      \item 	extbf{Step 2: Buffer Appendation.} \
-        	extbf{Input List:} 	exttt{[]} \
-        	extbf{Output List:} 	exttt{[\{ "span\_id": "s1", "service": "auth", "op": "db\_read", "key": "u123" \}]} \
-        	extbf{State Change:} Buffer length increases from $0$ to $1$.
-      \item 	extbf{Step 3: Flush Check.} \
-        	extbf{Input Configuration:} 	exttt{\{ "buffer\_size": 10000, "current\_len": 1 \}} \
-        	extbf{Output Action:} 	exttt{"wait\_for\_next"} (no-op; buffer limit not exceeded).
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How does network failure in the collector impact application request latency?
     \item What filtering rules prevent collector buffer overflows under burst load?
     \item Meta: How do we trace the performance footprint of the trace aggregator itself?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Can we use adaptive sampling to reduce ingestion volume on redundant endpoints?
     \item Does parsing JSON spans in the critical path introduce memory fragmentation?
     \item How do we handle spans arriving out-of-order due to network jitter?
@@ -2104,12 +2155,12 @@ oindent
 \subsection{51. Workload Feature Extraction}
 
 
-oindent
-	extbf{Complexity:} Time: $O(M \log M)$ where $M$ is buffer size | Space: $O(K)$ distinct keys
+\noindent
+\textbf{Complexity:} Time: $O(M \log M)$ where $M$ is buffer size | Space: $O(K)$ distinct keys
 \smallskip
 
-egin{textbookalgo}{51.1}{ExtractAccessPatterns(spans)}
-egin{algorithm}[H]
+\begin{textbookalgo}{51.1}{ExtractAccessPatterns(spans)}
+\begin{algorithm}[H]
 $freqs \leftarrow 	ext{empty\_map}()$; $distances \leftarrow [\,]$\;
 \For{$i, span \in 	ext{enumerate}(spans)$}{
   $freqs[span.key] \leftarrow freqs[span.key] + 1$\;
@@ -2126,41 +2177,23 @@ $mean\_reuse \leftarrow 	ext{average}(distances)$\;
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Preprocessing pipelines analyzing key frequency distributions, temporal skew, and query reuse profiles.\\
-	extbf{How to use:} Run Flink jobs over the span buffer to calculate workload Zipf exponents and temporal reuse distances.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Slice of spans: 	exttt{[\{key: "k1"\}, \{key: "k2"\}, \{key: "k1"\}]}.
-      \item 	extbf{Outputs:} Feature vectors: 	exttt{\{freqs: \{"k1": 2, "k2": 1\}, skew: 1.15, mean\_reuse: 2.0\}}.
+\noindent
+\textbf{When to use:} Preprocessing pipelines analyzing key frequency distributions, temporal skew, and query reuse profiles.\\
+\textbf{How to use:} Run Flink jobs over the span buffer to calculate workload Zipf exponents and temporal reuse distances.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Slice of spans: \texttt{[\{key: "k1"\}, \{key: "k2"\}, \{key: "k1"\}]}.
+      \item \textbf{Outputs:} Feature vectors: \texttt{\{freqs: \{"k1": 2, "k2": 1\}, skew: 1.15, mean\_reuse: 2.0\}}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Process First Span.} \
-        	extbf{Input Stream Span:} 	exttt{\{ "key": "k1" \}} \
-        	extbf{Output Map (Frequencies):} 	exttt{\{ "k1": 1 \}} \
-        	extbf{Output List (Reuse Distances):} 	exttt{[]} (no previous occurrence found).
-      \item 	extbf{Step 2: Process Second Span.} \
-        	extbf{Input Stream Span:} 	exttt{\{ "key": "k2" \}} \
-        	extbf{Output Map (Frequencies):} 	exttt{\{ "k1": 1, "k2": 1 \}} \
-        	extbf{Output List (Reuse Distances):} 	exttt{[]}.
-      \item 	extbf{Step 3: Process Third Span.} \
-        	extbf{Input Stream Span:} 	exttt{\{ "key": "k1" \}} \
-        	extbf{Output Map (Frequencies):} 	exttt{\{ "k1": 2, "k2": 1 \}} \
-        	extbf{Output List (Reuse Distances):} 	exttt{[2]} (since last seen at index $0$, reuse distance is $2 - 0 = 2$).
-      \item 	extbf{Step 4: Skew and Mean Distance Calculation.} \
-        	extbf{Input Feature Map:} 	exttt{\{ "freqs": \{"k1": 2, "k2": 1\}, "distances": [2] \}} \
-        	extbf{Output Metrics JSON:} 	exttt{\{ "skew": 1.15, "mean\_reuse": 2.0 \}} (derived via Zipf exponent and averaging).
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How does workload classification change if we increase the evaluation window size?
     \item What are the mathematical bounds of Zipf estimations on sparse query streams?
     \item Meta: How do we track feature drift metrics across different application deployments?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Can we approximate reuse distance using HyperLogLog structures?
     \item Does write frequency extraction account for batch updates vs point writes?
     \item How do feature extraction jobs impact database server CPU utilization?
@@ -2172,12 +2205,12 @@ oindent
 \subsection{52. AI Code Constraint Parsing}
 
 
-oindent
-	extbf{Complexity:} Time: $O(	ext{AST\_nodes} + 	ext{prompt\_tokens})$ | Space: $O(	ext{AST\_depth})$
+\noindent
+\textbf{Complexity:} Time: $O(	ext{AST\_nodes} + 	ext{prompt\_tokens})$ | Space: $O(	ext{AST\_depth})$
 \smallskip
 
-egin{textbookalgo}{52.1}{ParseCodeConstraints(source\_code)}
-egin{algorithm}[H]
+\begin{textbookalgo}{52.1}{ParseCodeConstraints(source\_code)}
+\begin{algorithm}[H]
 $ast \leftarrow 	ext{build\_ast}(source\_code)$\;
 $data\_types \leftarrow 	ext{extract\_storage\_calls}(ast)$\;
 $prompt \leftarrow 	ext{construct\_analysis\_prompt}(data\_types, ast)$\;
@@ -2188,35 +2221,23 @@ $reqs \leftarrow 	ext{parse\_json\_response}(response)$\;
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Static analysis steps in CI/CD pipelines to map application code requirements before deployment.\\
-	extbf{How to use:} Parse the repository AST to extract query models, then query an AI engine to extract consistency constraints.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Code string: 	exttt{"def get\_user(uid): return db.query(uid)"}.
-      \item 	extbf{Outputs:} Constraints map: 	exttt{\{consistency: "eventual", latency\_slo: 50\}}.
+\noindent
+\textbf{When to use:} Static analysis steps in CI/CD pipelines to map application code requirements before deployment.\\
+\textbf{How to use:} Parse the repository AST to extract query models, then query an AI engine to extract consistency constraints.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Code string: \texttt{"def get\_user(uid): return db.query(uid)"}.
+      \item \textbf{Outputs:} Constraints map: \texttt{\{consistency: "eventual", latency\_slo: 50\}}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Abstract Syntax Tree Parsing.} \
-        	extbf{Input Code String:} 	exttt{"def get\_user(uid): return db.query(uid)"} \
-        	extbf{Output AST Tree JSON:} 	exttt{\{ "type": "FunctionDef", "name": "get\_user", "body": [\{ "type": "Return", "value": \{ "type": "Call", "func": "db.query" \} \}] \}}.
-      \item 	extbf{Step 2: Prompt Formulation.} \
-        	extbf{Input Extraction Map:} 	exttt{\{ "storage\_calls": ["db.query"] \}} \
-        	extbf{Output Text Prompt:} 	exttt{"Analyze code for consistency guarantees and latency targets..."}.
-      \item 	extbf{Step 3: Model Evaluation.} \
-        	extbf{Input Prompt String:} 	exttt{"Analyze code for consistency guarantees and latency targets..."} \
-        	extbf{Output Target JSON:} 	exttt{\{ "consistency": "eventual", "latency\_slo": 50 \}}.
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How do we guarantee AST parser compatibility across multi-language projects?
     \item What is the error-handling fallback if the AI engine produces invalid JSON?
     \item Meta: How do we audit AI requirements parsing for compliance with security policies?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Does the prompt format handle deep inheritance patterns in data models?
     \item Can we extract hard VRAM allocation limits from deployment charts?
     \item How do we minimize the token cost of LLM code analysis?
@@ -2228,12 +2249,12 @@ oindent
 \subsection{53. Match Evaluation Logic}
 
 
-oindent
-	extbf{Complexity:} Time: $O(	ext{catalog\_size} 	imes 	ext{features})$ | Space: $O(	ext{catalog\_size})$
+\noindent
+\textbf{Complexity:} Time: $O(	ext{catalog\_size} 	imes 	ext{features})$ | Space: $O(	ext{catalog\_size})$
 \smallskip
 
-egin{textbookalgo}{53.1}{EvaluateStrategyMatch(strategy, features, reqs)}
-egin{algorithm}[H]
+\begin{textbookalgo}{53.1}{EvaluateStrategyMatch(strategy, features, reqs)}
+\begin{algorithm}[H]
 $score \leftarrow 0.0$\;
 \If{$strategy.	ext{supports\_write\_profile}(features.	ext{write\_ratio})$}{
   $score \leftarrow score + 0.3$\;
@@ -2247,36 +2268,23 @@ $match\_bonus \leftarrow 	ext{neural\_ranker.predict}(strategy.	ext{vector}, fea
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Scoring candidate cache structures (e.g. Write-Back vs. Cache-Aside) against workload features and constraints.\\
-	extbf{How to use:} Execute the ranking logic over the strategy catalog to calculate match scores for each configuration.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Candidate strategy: 	exttt{CacheAside}; Workload: 	exttt{\{write\_ratio: 0.1\}}; Reqs: 	exttt{\{consistency: "eventual"\}}.
-      \item 	extbf{Outputs:} Numerical strategy score: 	exttt{0.85}.
+\noindent
+\textbf{When to use:} Scoring candidate cache structures (e.g. Write-Back vs. Cache-Aside) against workload features and constraints.\\
+\textbf{How to use:} Execute the ranking logic over the strategy catalog to calculate match scores for each configuration.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Candidate strategy: \texttt{CacheAside}; Workload: \texttt{\{write\_ratio: 0.1\}}; Reqs: \texttt{\{consistency: "eventual"\}}.
+      \item \textbf{Outputs:} Numerical strategy score: \texttt{0.85}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Write Profile Matching.} \
-        	extbf{Input Profile Config:} 	exttt{\{ "write\_ratio": 0.1 \}} \
-        	extbf{Output Score Component:} 	exttt{+0.3} (since read-heavy strategy supports 	exttt{write\_ratio < 0.2}).
-      \item 	extbf{Step 2: Consistency Level Check.} \
-        	extbf{Input Consistency JSON:} 	exttt{\{ "consistency\_level": "eventual" \}} \
-        	extbf{Output Score Component:} 	exttt{+0.4} (since eventual consistency constraint is fully met).
-      \item 	extbf{Step 3: Neural Vector Matching.} \
-        	extbf{Input Embeddings Schema:} 	exttt{\{ "strategy\_vector": [0.15, 0.90], "features\_vector": [0.12, 0.88] \}} \
-        	extbf{Output Similarity Float:} 	exttt{+0.15} (cosine similarity ranking bonus). \
-        	extbf{Final Aggregated Score:} 	exttt{0.85}.
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How do we normalize scores across different hardware architectures?
     \item What is the relative weight of consistency satisfaction vs write profile matching?
     \item Meta: How do we track the precision-recall curves of our neural ranking model?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Can the scoring model adapt to changes in network topology configurations?
     \item How do we represent hybrid caching strategies in the strategy vector space?
     \item Does the ranking model require GPU hardware for execution on the control plane?
@@ -2288,12 +2296,12 @@ oindent
 \subsection{54. Multi-Objective Decision Engine}
 
 
-oindent
-	extbf{Complexity:} Time: $O(P \log P)$ where $P$ is candidates count | Space: $O(P)$
+\noindent
+\textbf{Complexity:} Time: $O(P \log P)$ where $P$ is candidates count | Space: $O(P)$
 \smallskip
 
-egin{textbookalgo}{54.1}{SelectOptimalStrategy(candidates, targets)}
-egin{algorithm}[H]
+\begin{textbookalgo}{54.1}{SelectOptimalStrategy(candidates, targets)}
+\begin{algorithm}[H]
 $pareto\_front \leftarrow 	ext{calculate\_pareto\_front}(candidates)$\;
 $best\_strategy \leftarrow 	ext{null}$; $best\_distance \leftarrow \infty$\;
 \For{$strat \in pareto\_front$}{
@@ -2308,41 +2316,23 @@ $best\_strategy \leftarrow 	ext{null}$; $best\_distance \leftarrow \infty$\;
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Decision loops resolving tradeoffs between conflicting metrics (e.g., hit rate, latency, and memory cost).\\
-	extbf{How to use:} Calculate the Pareto frontier of strategies, then select the candidate closest to target metrics.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Strategy list with metrics; Target vector: 	exttt{\{hit\_rate: 0.9, latency\_ms: 5.0\}}.
-      \item 	extbf{Outputs:} Selected optimal strategy: 	exttt{CacheAside} with parameters.
+\noindent
+\textbf{When to use:} Decision loops resolving tradeoffs between conflicting metrics (e.g., hit rate, latency, and memory cost).\\
+\textbf{How to use:} Calculate the Pareto frontier of strategies, then select the candidate closest to target metrics.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Strategy list with metrics; Target vector: \texttt{\{hit\_rate: 0.9, latency\_ms: 5.0\}}.
+      \item \textbf{Outputs:} Selected optimal strategy: \texttt{CacheAside} with parameters.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Pareto Frontier Construction.} \
-        	extbf{Input Candidates Table:} \
-        egin{tabular}{lll}
-          	extbf{Strategy} & 	extbf{VRAM (MB)} & 	extbf{Latency (ms)} \
-          A (CacheAside) & 512 & 4.5 \
-          B (WriteThrough) & 1024 & 3.0 \
-          C (Dominated) & 1024 & 6.0
-        \end{tabular} \
-        	extbf{Output Front List:} 	exttt{[ "CacheAside", "WriteThrough" ]} (C is pruned).
-      \item 	extbf{Step 2: Target Space Distance Estimation.} \
-        	extbf{Input Target Matrix:} 	exttt{\{ "latency\_ms": 5.0, "hit\_rate": 0.90 \}} \
-        	extbf{Output Distance Map:} 	exttt{\{ "CacheAside": 0.05, "WriteThrough": 0.15 \}}.
-      \item 	extbf{Step 3: Candidate Selection.} \
-        	extbf{Input Distances:} 	exttt{\{ "CacheAside": 0.05, "WriteThrough": 0.15 \}} \
-        	extbf{Output Selected Config:} 	exttt{\{ "strategy": "CacheAside", "resolved\_distance": 0.05 \}}.
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How do we define target thresholds for latency under highly variable loads?
     \item What weight does memory consumption carry when VRAM is near capacity?
     \item Meta: How do we visualize Pareto front optimization logs to verify decision paths?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Does Pareto optimization scale if the strategy catalog contains hybrid configurations?
     \item Can we inject user preference vectors dynamically during evaluation?
     \item What happens if the Pareto front contains zero valid candidates?
@@ -2354,12 +2344,12 @@ oindent
 \subsection{55. Trace Cache Simulator}
 
 
-oindent
-	extbf{Complexity:} Time: $O(N)$ where $N$ is trace count | Space: $O(	ext{capacity})$
+\noindent
+\textbf{Complexity:} Time: $O(N)$ where $N$ is trace count | Space: $O(	ext{capacity})$
 \smallskip
 
-egin{textbookalgo}{55.1}{SimulateCacheExecution(traces, strategy, params)}
-egin{algorithm}[H]
+\begin{textbookalgo}{55.1}{SimulateCacheExecution(traces, strategy, params)}
+\begin{algorithm}[H]
 $cache \leftarrow 	ext{initialize\_cache}(strategy, params)$\;
 $hits \leftarrow 0$; $total \leftarrow 0$\;
 \For{$trace \in traces$}{
@@ -2377,42 +2367,23 @@ $hits \leftarrow 0$; $total \leftarrow 0$\;
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Replaying production trace logs in a sandbox environment to verify cache hit rates and memory allocation.\\
-	extbf{How to use:} Initialize a simulator instance, iterate through trace records, check hit status, and output the hit ratio.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Trace stream: 	exttt{["k1", "k2", "k1"]}; Cache strategy: 	exttt{LRU} with capacity $1$.
-      \item 	extbf{Outputs:} Simulated hit rate: 	exttt{0.333}.
+\noindent
+\textbf{When to use:} Replaying production trace logs in a sandbox environment to verify cache hit rates and memory allocation.\\
+\textbf{How to use:} Initialize a simulator instance, iterate through trace records, check hit status, and output the hit ratio.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Trace stream: \texttt{["k1", "k2", "k1"]}; Cache strategy: \texttt{LRU} with capacity $1$.
+      \item \textbf{Outputs:} Simulated hit rate: \texttt{0.333}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: First Trace Transaction.} \
-        	extbf{Input Key/Value:} 	exttt{"k1"} \
-        	extbf{Input State Map:} 	exttt{\{\}} (capacity $1$ LRU cache) \
-        	extbf{Output State Map:} 	exttt{\{ "k1": "val1" \}} \
-        	extbf{Output Result:} 	exttt{"MISS"}.
-      \item 	extbf{Step 2: Second Trace Transaction.} \
-        	extbf{Input Key/Value:} 	exttt{"k2"} \
-        	extbf{Input State Map:} 	exttt{\{ "k1": "val1" \}} \
-        	extbf{Output State Map:} 	exttt{\{ "k2": "val2" \}} (	exttt{"k1"} evicted) \
-        	extbf{Output Result:} 	exttt{"MISS"}.
-      \item 	extbf{Step 3: Third Trace Transaction.} \
-        	extbf{Input Key/Value:} 	exttt{"k1"} \
-        	extbf{Input State Map:} 	exttt{\{ "k2": "val2" \}} \
-        	extbf{Output State Map:} 	exttt{\{ "k1": "val1" \}} (	exttt{"k2"} evicted) \
-        	extbf{Output Result:} 	exttt{"MISS"}. \
-        	extbf{Final Performance Stats JSON:} 	exttt{\{ "total\_traces": 3, "hits": 0, "hit\_rate": 0.0 \}}.
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How closely does simulated hit rate match actual production hit rates?
     \item What is the impact of transaction concurrency on simulation accuracy?
     \item Meta: How do we capture simulator execution times inside span observability?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Does the simulator handle key updates and complex invalidation calls?
     \item How do we model different memory eviction strategies in the simulation?
     \item Can we accelerate simulation loops using vectorization or parallel threads?
@@ -2424,12 +2395,12 @@ oindent
 \subsection{56. Safety Guard Validation}
 
 
-oindent
-	extbf{Complexity:} Time: $O(	ext{guards\_count})$ | Space: $O(1)$
+\noindent
+\textbf{Complexity:} Time: $O(	ext{guards\_count})$ | Space: $O(1)$
 \smallskip
 
-egin{textbookalgo}{56.1}{VerifySafetyGuards(strategy, params, limits)}
-egin{algorithm}[H]
+\begin{textbookalgo}{56.1}{VerifySafetyGuards(strategy, params, limits)}
+\begin{algorithm}[H]
 \If{$params.	ext{memory\_size} > limits.	ext{max\_memory}$}{
   \Return $	ext{false}$ (Exceeds Memory Limit)\;
 }
@@ -2444,33 +2415,23 @@ oindent
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Automated verification steps blocking invalid, insecure, or out-of-memory caching configurations from deployment.\\
-	extbf{How to use:} Intercept recommendations prior to config synthesis, evaluating them against strict memory, TTL, and consistency parameters.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Candidate params: 	exttt{\{memory\_size: 2048\}}; Limits: 	exttt{\{max\_memory: 1024\}}.
-      \item 	extbf{Outputs:} Validation boolean status: 	exttt{false}.
+\noindent
+\textbf{When to use:} Automated verification steps blocking invalid, insecure, or out-of-memory caching configurations from deployment.\\
+\textbf{How to use:} Intercept recommendations prior to config synthesis, evaluating them against strict memory, TTL, and consistency parameters.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Candidate params: \texttt{\{memory\_size: 2048\}}; Limits: \texttt{\{max\_memory: 1024\}}.
+      \item \textbf{Outputs:} Validation boolean status: \texttt{false}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Memory Constraint Verification.} \
-        	extbf{Input Memory Configuration:} 	exttt{\{ "memory\_size": 2048 \}} \
-        	extbf{Input Safety Bounds JSON:} 	exttt{\{ "max\_memory": 1024 \}} \
-        	extbf{Output Validation Boolean:} 	exttt{false} (exceeds maximum allowed memory allocation limit).
-      \item 	extbf{Step 2: Exception Raising and Halting.} \
-        	extbf{Input Failed Constraints List:} 	exttt{[ "memory\_size" ]} \
-        	extbf{Output Error Struct:} 	exttt{\{ "status": "REJECTED", "reason": "Exceeds Memory Limit" \}}.
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How do we update limits dynamically if server resources scale out?
     \item What fallback strategy is applied when validation fails?
     \item Meta: How do we trace trace spans representing safety validation failures?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Does the safety checker account for CPU processing limits during validation?
     \item Can we bypass validation checks during hot-patch emergencies?
     \item How do we test the safety check boundaries in staging environments?
@@ -2482,12 +2443,12 @@ oindent
 \subsection{57. Config and Template Generation}
 
 
-oindent
-	extbf{Complexity:} Time: $O(	ext{template\_size})$ | Space: $O(	ext{template\_size})$
+\noindent
+\textbf{Complexity:} Time: $O(	ext{template\_size})$ | Space: $O(	ext{template\_size})$
 \smallskip
 
-egin{textbookalgo}{57.1}{CompileDeploymentConfig(strategy, params)}
-egin{algorithm}[H]
+\begin{textbookalgo}{57.1}{CompileDeploymentConfig(strategy, params)}
+\begin{algorithm}[H]
 $template \leftarrow 	ext{read\_base\_config\_template}(strategy)$\;
 $config \leftarrow 	ext{replace\_placeholder}(template, 	ext{"SIZE"}, params.	ext{memory\_size})$\;
 $config \leftarrow 	ext{replace\_placeholder}(config, 	ext{"TTL"}, params.	ext{ttl})$\;
@@ -2497,37 +2458,23 @@ $config \leftarrow 	ext{replace\_placeholder}(config, 	ext{"EVICTION"}, strategy
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Synthesizing production-ready Kubernetes ConfigMaps, Redis configurations, or application properties files.\\
-	extbf{How to use:} Load the base configuration template for the selected strategy, inject resolved parameters, and export the file.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Caching Strategy: 	exttt{CacheAside}; Params: 	exttt{\{memory\_size: 512, ttl: 300\}}.
-      \item 	extbf{Outputs:} Formatted Config String: 	exttt{"maxmemory 512mb\nttl 300"}.
+\noindent
+\textbf{When to use:} Synthesizing production-ready Kubernetes ConfigMaps, Redis configurations, or application properties files.\\
+\textbf{How to use:} Load the base configuration template for the selected strategy, inject resolved parameters, and export the file.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Caching Strategy: \texttt{CacheAside}; Params: \texttt{\{memory\_size: 512, ttl: 300\}}.
+      \item \textbf{Outputs:} Formatted Config String: \texttt{"maxmemory 512mb{\textbackslash}nttl 300"}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Ingest Template and Inject Size.} \
-        	extbf{Input Raw Configuration Template:} 	exttt{"maxmemory SIZE\nttl TTL"} \
-        	extbf{Input Sizing Parameter:} 	exttt{\{ "memory\_size": 512 \}} \
-        	extbf{Output Intermediate Config:} 	exttt{"maxmemory 512\nttl TTL"}.
-      \item 	extbf{Step 2: Inject TTL Parameter.} \
-        	extbf{Input Intermediate Config:} 	exttt{"maxmemory 512\nttl TTL"} \
-        	extbf{Input Expiration Parameter:} 	exttt{\{ "ttl": 300 \}} \
-        	extbf{Output Final Config String:} 	exttt{"maxmemory 512\nttl 300"}.
-      \item 	extbf{Step 3: Config Compilation.} \
-        	extbf{Input Config String:} 	exttt{"maxmemory 512\nttl 300"} \
-        	extbf{Output Target Properties File:} 	exttt{redis.conf} containing parameters.
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How do we ensure syntactic correctness of generated files (e.g. YAML parsing)?
     \item What mechanism pushes generated configs to application instances without downtime?
     \item Meta: How do we track trace IDs of config changes in audit logs?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Does config template compilation support secret management integrations?
     \item How do we rollback configuration state if the generated config causes boot failures?
     \item Can we generate custom client library wrapper code alongside configs?
@@ -2539,12 +2486,12 @@ oindent
 \subsection{58. Workload Drift Detection}
 
 
-oindent
-	extbf{Complexity:} Time: $O(N)$ where $N$ is telemetry window size | Space: $O(N)$
+\noindent
+\textbf{Complexity:} Time: $O(N)$ where $N$ is telemetry window size | Space: $O(N)$
 \smallskip
 
-egin{textbookalgo}{58.1}{MonitorCacheDrift(real\_metrics, sim\_metrics, threshold)}
-egin{algorithm}[H]
+\begin{textbookalgo}{58.1}{MonitorCacheDrift(real\_metrics, sim\_metrics, threshold)}
+\begin{algorithm}[H]
 $drift \leftarrow 	ext{calculate\_wasserstein\_distance}(real\_metrics, sim\_metrics)$\;
 \If{$drift > threshold$}{
   $	ext{trigger\_reoptimization\_alarm}()$\;
@@ -2555,36 +2502,23 @@ $drift \leftarrow 	ext{calculate\_wasserstein\_distance}(real\_metrics, sim\_met
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Monitoring production environments to detect when actual hit rates or latencies diverge from simulation assumptions.\\
-	extbf{How to use:} Continuously compare live telemetry metrics to simulator baselines; trigger alerts if statistical distance exceeds limits.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Real hit rates: 	exttt{[0.75, 0.76]}; Simulated: 	exttt{[0.85, 0.86]}; Threshold: 	exttt{0.05}.
-      \item 	extbf{Outputs:} Drift status flag: 	exttt{true}.
+\noindent
+\textbf{When to use:} Monitoring production environments to detect when actual hit rates or latencies diverge from simulation assumptions.\\
+\textbf{How to use:} Continuously compare live telemetry metrics to simulator baselines; trigger alerts if statistical distance exceeds limits.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Real hit rates: \texttt{[0.75, 0.76]}; Simulated: \texttt{[0.85, 0.86]}; Threshold: \texttt{0.05}.
+      \item \textbf{Outputs:} Drift status flag: \texttt{true}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Wasserstein Distance Metric Calculation.} \
-        	extbf{Input Real Telemetry Vector:} 	exttt{[ 0.75, 0.76 ]} \
-        	extbf{Input Simulation Baseline Vector:} 	exttt{[ 0.85, 0.86 ]} \
-        	extbf{Output Statistical Distance Float:} 	exttt{0.10}.
-      \item 	extbf{Step 2: Threshold Comparison Check.} \
-        	extbf{Input Drift Threshold JSON:} 	exttt{\{ "drift": 0.10, "threshold": 0.05 \}} \
-        	extbf{Output Evaluation Boolean:} 	exttt{true} (drift exceeds the acceptable bounds threshold).
-      \item 	extbf{Step 3: Dispatch Alarm Action.} \
-        	extbf{Input Alarm Configuration:} 	exttt{\{ "alarm\_endpoint": "/alerts/drift" \}} \
-        	extbf{Output Alarm Payload JSON:} 	exttt{\{ "status": "ALARM\_TRIGGERED", "metric": "WassersteinDistance", "value": 0.10 \}}.
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item What metric (hit rate, latency, or throughput) is the most reliable indicator of drift?
     \item How do we filter out transient network glitches from actual workload changes?
     \item Meta: How do we trace drift warning events to their originating traffic changes?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Can we adjust Wasserstein thresholds dynamically based on business calendar schedules?
     \item Does drift monitoring introduce compute bottlenecks on logging agents?
     \item How do we handle false alarms caused by temporary backend server lag?
@@ -2596,12 +2530,12 @@ oindent
 \subsection{59. AI Scoring Model Retraining}
 
 
-oindent
-	extbf{Complexity:} Time: $O(	ext{epochs} 	imes 	ext{samples})$ | Space: $O(	ext{weights} + 	ext{samples})$
+\noindent
+\textbf{Complexity:} Time: $O(	ext{epochs} 	imes 	ext{samples})$ | Space: $O(	ext{weights} + 	ext{samples})$
 \smallskip
 
-egin{textbookalgo}{59.1}{RetrainRecommendationModel(feedback\_logs, model)}
-egin{algorithm}[H]
+\begin{textbookalgo}{59.1}{RetrainRecommendationModel(feedback\_logs, model)}
+\begin{algorithm}[H]
 $dataset \leftarrow 	ext{build\_training\_set}(feedback\_logs)$\;
 \For{$epoch \in 1 \dots 	ext{max\_epochs}$}{
   \For{$batch \in 	ext{get\_batches}(dataset)$}{
@@ -2615,35 +2549,23 @@ $dataset \leftarrow 	ext{build\_training\_set}(feedback\_logs)$\;
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Background loops refining matching and neural ranking parameters based on actual production outcomes.\\
-	extbf{How to use:} Extract feedback records containing predicted vs. actual latency gains, construct training batches, and retrain scoring weights.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Feedback parameters: 	exttt{[\{features: [0.1, 0.2], label: 0.85\}]}; PyTorch Model weights.
-      \item 	extbf{Outputs:} Updated Model Weights.
+\noindent
+\textbf{When to use:} Background loops refining matching and neural ranking parameters based on actual production outcomes.\\
+\textbf{How to use:} Extract feedback records containing predicted vs. actual latency gains, construct training batches, and retrain scoring weights.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Feedback parameters: \texttt{[\{features: [0.1, 0.2], label: 0.85\}]}; PyTorch Model weights.
+      \item \textbf{Outputs:} Updated Model Weights.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Forward Propagation Evaluation.} \
-        	extbf{Input Feature Vector:} 	exttt{\{ "features": [0.1, 0.2] \}} \
-        	extbf{Output Predicted Score:} 	exttt{0.78}.
-      \item 	extbf{Step 2: Loss Computation.} \
-        	extbf{Input Target Label JSON:} 	exttt{\{ "label": 0.85 \}} \
-        	extbf{Output Mean Squared Error Float:} 	exttt{0.0049} (calculated via $(0.85 - 0.78)^2$).
-      \item 	extbf{Step 3: Weight Parameter Optimization.} \
-        	extbf{Input Gradients Matrix:} 	exttt{\{ "dW": [-0.014, 0.025] \}} \
-        	extbf{Output Updated PyTorch Weights Model:} Serialized tensor weights payload updated to reduce model drift.
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How do we prevent model overfitting on small clusters with limited request variety?
     \item What validation threshold is required before retraining updates are deployed?
     \item Meta: How do we verify tracing continuity when updating model weights?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Can we automate model retraining using serverless GPU containers?
     \item How does label noise in telemetry logs impact model convergence?
     \item What features are the most significant drivers of weight updates?
@@ -2655,12 +2577,12 @@ oindent
 \subsection{60. Safe Rollback Controller}
 
 
-oindent
-	extbf{Complexity:} Time: $O(	ext{rollback\_time})$ | Space: $O(1)$
+\noindent
+\textbf{Complexity:} Time: $O(	ext{rollback\_time})$ | Space: $O(1)$
 \smallskip
 
-egin{textbookalgo}{60.1}{AutoRollbackMechanism(current\_deployment, failure\_metrics)}
-egin{algorithm}[H]
+\begin{textbookalgo}{60.1}{AutoRollbackMechanism(current\_deployment, failure\_metrics)}
+\begin{algorithm}[H]
 $healthy \leftarrow 	ext{evaluate\_health}(failure\_metrics)$\;
 \If{$
 eg healthy$}{
@@ -2674,35 +2596,23 @@ eg healthy$}{
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Automated canary deployments and configuration updates to prevent user-facing system degradation.\\
-	extbf{How to use:} Monitor real-time error rates, latency spikes, or pod crashes; execute GitOps config rollbacks if thresholds are breached.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Deployment Metadata; Health metrics: 	exttt{\{error\_rate: 0.15, latency\_ms: 1200\}}.
-      \item 	extbf{Outputs:} Rollback action status flag: 	exttt{true}.
+\noindent
+\textbf{When to use:} Automated canary deployments and configuration updates to prevent user-facing system degradation.\\
+\textbf{How to use:} Monitor real-time error rates, latency spikes, or pod crashes; execute GitOps config rollbacks if thresholds are breached.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Deployment Metadata; Health metrics: \texttt{\{error\_rate: 0.15, latency\_ms: 1200\}}.
+      \item \textbf{Outputs:} Rollback action status flag: \texttt{true}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Health Metric Check.} \
-        	extbf{Input Health Indicators JSON:} 	exttt{\{ "error\_rate": 0.15, "latency\_ms": 1200 \}} \
-        	extbf{Output Health State Boolean:} 	exttt{false} (since the threshold limits are violated).
-      \item 	extbf{Step 2: Rollback Target Discovery.} \
-        	extbf{Input GitOps History List:} 	exttt{[ \{ "version": 5, "commit": "a1b2c3d" \}, \{ "version": 4, "commit": "f9e8d7c" \} ]} \
-        	extbf{Output Selected Config commit:} 	exttt{"f9e8d7c"} (last known stable version).
-      \item 	extbf{Step 3: GitOps Rollback Application.} \
-        	extbf{Input Deploy Pipeline JSON:} 	exttt{\{ "action": "rollback", "target\_commit": "f9e8d7c" \}} \
-        	extbf{Output Status JSON:} 	exttt{\{ "status": "ROLLBACK\_SUCCESS", "active\_version": 4 \}}.
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item What health metrics (error rate, memory use, CPU) are critical trigger boundaries?
     \item How do we prevent rollback loops if the historical configuration is also broken?
     \item Meta: How does context propagation link canary spans across rollback processes?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Can rollback procedures be executed at the container level without restarting physical host VMs?
     \item What alert routing is used to notify engineering teams of rollback events?
     \item How do we verify rollback safety bounds in staging environment dry runs?
@@ -2714,12 +2624,12 @@ oindent
 \subsection{61. Warm-Start Cache Initialization}
 
 
-oindent
-	extbf{Complexity:} Time: $O(K)$ where $K$ is warm keys count | Space: $O(K)$
+\noindent
+\textbf{Complexity:} Time: $O(K)$ where $K$ is warm keys count | Space: $O(K)$
 \smallskip
 
-egin{textbookalgo}{61.1}{InitializeSimulatedCacheState(traces, cache)}
-egin{algorithm}[H]
+\begin{textbookalgo}{61.1}{InitializeSimulatedCacheState(traces, cache)}
+\begin{algorithm}[H]
 $warm\_keys \leftarrow 	ext{identify\_most\_frequent\_keys}(traces, 	ext{limit}=1000)$\;
 \For{$key \in warm\_keys$}{
   $val \leftarrow 	ext{fetch\_initial\_value}(key)$\;
@@ -2730,41 +2640,23 @@ $warm\_keys \leftarrow 	ext{identify\_most\_frequent\_keys}(traces, 	ext{limit}=
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Cache simulator starts where cold-start latency predictions would bias overall evaluation benchmarks.\\
-	extbf{How to use:} Run a frequency extraction over historical trace files, retrieve current values, and populate the simulator before starting testing.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Trace records: 	exttt{["k1", "k1", "k2"]}; Cache instance.
-      \item 	extbf{Outputs:} Populated warm cache state.
+\noindent
+\textbf{When to use:} Cache simulator starts where cold-start latency predictions would bias overall evaluation benchmarks.\\
+\textbf{How to use:} Run a frequency extraction over historical trace files, retrieve current values, and populate the simulator before starting testing.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Trace records: \texttt{["k1", "k1", "k2"]}; Cache instance.
+      \item \textbf{Outputs:} Populated warm cache state.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Hot Key Identification.} \
-        	extbf{Input Traces Array:} 	exttt{[ "k1", "k1", "k2" ]} \
-        	extbf{Output Sorted Frequency Table:} \
-        egin{tabular}{ll}
-          	extbf{Key} & 	extbf{Count} \
-          k1 & 2 \
-          k2 & 1
-        \end{tabular} \
-        	extbf{Output Seed Candidate List:} 	exttt{[ "k1" ]} (filtered by threshold parameter).
-      \item 	extbf{Step 2: Value Hydration Query.} \
-        	extbf{Input Hot Key String:} 	exttt{"k1"} \
-        	extbf{Output Database Value String:} 	exttt{"v1"} (fetched from persistent database storage).
-      \item 	extbf{Step 3: Cache Population Write.} \
-        	extbf{Input Cache State Map:} 	exttt{\{\}} \
-        	extbf{Output Hydrated Cache State:} 	exttt{\{ "k1": "v1" \}} (sandbox cache state successfully warm-started).
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item What size threshold yields stable warm state metrics?
     \item How do we prevent initial fetches from flooding the primary database?
     \item Meta: How do we log initialization latency in comparison to trace replay cycles?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Can we use a bloom filter to identify warm keys dynamically?
     \item Does warm-starting mock dynamic key transitions correctly?
     \item What is the memory footprint of loading warm-start datasets?
@@ -2776,12 +2668,12 @@ oindent
 \subsection{62. Data Storage Tier Classification}
 
 
-oindent
-	extbf{Complexity:} Time: $O(N)$ where $N$ is telemetry records count | Space: $O(	ext{tiers})$
+\noindent
+\textbf{Complexity:} Time: $O(N)$ where $N$ is telemetry records count | Space: $O(	ext{tiers})$
 \smallskip
 
-egin{textbookalgo}{62.1}{ClassifyDataAccessTiers(traces, latency\_budgets)}
-egin{algorithm}[H]
+\begin{textbookalgo}{62.1}{ClassifyDataAccessTiers(traces, latency\_budgets)}
+\begin{algorithm}[H]
 \For{$record \in traces$}{
   $cost \leftarrow 	ext{evaluate\_access\_frequency}(record.key)$\;
   \If{$cost > latency\_budgets.	ext{hot\_threshold}$}{
@@ -2799,33 +2691,23 @@ oindent
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Assigning cache records to tiered storage hierarchies (RAM, SSD, Object Storage) dynamically based on access levels.\\
-	extbf{How to use:} Scan active trace frequencies and classify storage targets depending on user-defined latency budgets.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Trace records: 	exttt{\{key: "user:123"\}}; Budgets: 	exttt{\{hot\_threshold: 100, warm\_threshold: 10\}}.
-      \item 	extbf{Outputs:} Tier Assignment Map.
+\noindent
+\textbf{When to use:} Assigning cache records to tiered storage hierarchies (RAM, SSD, Object Storage) dynamically based on access levels.\\
+\textbf{How to use:} Scan active trace frequencies and classify storage targets depending on user-defined latency budgets.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Trace records: \texttt{\{key: "user:123"\}}; Budgets: \texttt{\{hot\_threshold: 100, warm\_threshold: 10\}}.
+      \item \textbf{Outputs:} Tier Assignment Map.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Check Hot Threshold Boundary.} \
-        	extbf{Input Metric Data:} 	exttt{\{ "key": "user:123", "frequency": 120 \}} \
-        	extbf{Input Threshold Configuration:} 	exttt{\{ "hot\_threshold": 100, "warm\_threshold": 10 \}} \
-        	extbf{Output Comparison Boolean:} 	exttt{true} (since 	exttt{120 > 100}).
-      \item 	extbf{Step 2: Storage Tier Allocation.} \
-        	extbf{Input Key/Value Mapping:} 	exttt{\{ "user:123": "COLD\_S3" \}} \
-        	extbf{Output Key/Value Mapping:} 	exttt{\{ "user:123": "HOT\_RAM" \}} (tier updated in the routing matrix).
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How does classification change if tier storage pricing changes?
     \item What threshold prevents page thrashing between adjacent SSD and RAM tiers?
     \item Meta: How do we visualize tiered allocation stats on cluster dashboards?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Can we execute classification asynchronously to prevent blocking write paths?
     \item How does tiered migration behave when replica database lag is high?
     \item What compression ratio is expected when offloading to warm tiers?
@@ -2837,12 +2719,12 @@ oindent
 \subsection{63. Namespace Transaction Key Overlap}
 
 
-oindent
-	extbf{Complexity:} Time: $O(V + E)$ where $V$ represents keys | Space: $O(V)$
+\noindent
+\textbf{Complexity:} Time: $O(V + E)$ where $V$ represents keys | Space: $O(V)$
 \smallskip
 
-egin{textbookalgo}{63.1}{ResolveKeyOverlapMetrics(transactions)}
-egin{algorithm}[H]
+\begin{textbookalgo}{63.1}{ResolveKeyOverlapMetrics(transactions)}
+\begin{algorithm}[H]
 $overlap\_graph \leftarrow 	ext{initialize\_graph}()$\;
 \For{$tx \in transactions$}{
   \For{$key \in tx.	ext{accessed\_keys}$}{
@@ -2860,35 +2742,23 @@ e neighbor$}{
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Calculating the transaction conflict rate in multi-tenant caching environments with shared namespaces.\\
-	extbf{How to use:} Construct a key access graph from transaction trace parameters; compute key cluster coefficients to evaluate lock risk.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Inbound transactions list: 	exttt{[\{accessed\_keys: ["k1", "k2"]\}]}.
-      \item 	extbf{Outputs:} Numerical clustering coefficient: 	exttt{1.0}.
+\noindent
+\textbf{When to use:} Calculating the transaction conflict rate in multi-tenant caching environments with shared namespaces.\\
+\textbf{How to use:} Construct a key access graph from transaction trace parameters; compute key cluster coefficients to evaluate lock risk.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Inbound transactions list: \texttt{[\{accessed\_keys: ["k1", "k2"]\}]}.
+      \item \textbf{Outputs:} Numerical clustering coefficient: \texttt{1.0}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Node Registration.} \
-        	extbf{Input Transaction List:} 	exttt{[ \{ "tx\_id": "t1", "accessed\_keys": ["k1", "k2"] \} ]} \
-        	extbf{Output Graph Adjacency List:} 	exttt{\{ "k1": [], "k2": [] \}} (vertices registered).
-      \item 	extbf{Step 2: Edge Generation.} \
-        	extbf{Input Graph Adjacency List:} 	exttt{\{ "k1": [], "k2": [] \}} \
-        	extbf{Output Graph Adjacency List:} 	exttt{\{ "k1": ["k2"], "k2": ["k1"] \}} (bidirectional edge added).
-      \item 	extbf{Step 3: Graph Clustering Computation.} \
-        	extbf{Input Graph Adjacency List:} 	exttt{\{ "k1": ["k2"], "k2": ["k1"] \}} \
-        	extbf{Output Clustering Coefficient float:} 	exttt{1.0} (indicating absolute key-co-access tightness).
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How does transaction concurrency scale under high clustering coefficients?
     \item What lock granularity resolves overlap with minimum overhead?
     \item Meta: How do we represent key clustering coefficients in OTel spans?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Can we apply namespace sharding dynamically to split overlapping nodes?
     \item Does transaction rolling restart behavior clear graph lock state?
     \item What is the calculation latency of clustering coefficients over big graphs?
@@ -2900,12 +2770,12 @@ oindent
 \subsection{64. Trace Generation for Stress Testing}
 
 
-oindent
-	extbf{Complexity:} Time: $O(S)$ where $S$ is steps count | Space: $O(D)$ dimensions
+\noindent
+\textbf{Complexity:} Time: $O(S)$ where $S$ is steps count | Space: $O(D)$ dimensions
 \smallskip
 
-egin{textbookalgo}{64.1}{GenerateSyntheticTraces(seed\_traces, steps)}
-egin{algorithm}[H]
+\begin{textbookalgo}{64.1}{GenerateSyntheticTraces(seed\_traces, steps)}
+\begin{algorithm}[H]
 $model \leftarrow 	ext{train\_generative\_markov}(seed\_traces)$\;
 $synthetic \leftarrow [\,]$\;
 $current\_state \leftarrow 	ext{random\_choice}(seed\_traces)$\;
@@ -2919,35 +2789,23 @@ $current\_state \leftarrow 	ext{random\_choice}(seed\_traces)$\;
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Generating synthetic workload traffic streams simulating high-concurrency bursts to benchmark caching algorithms.\\
-	extbf{How to use:} Fit a Markov chain or generative model over seed production trace logs, then run transition steps to generate outputs.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Seed production traces; Step generation count: 	exttt{2}.
-      \item 	extbf{Outputs:} Synthetic traces list: 	exttt{["k1", "k2"]}.
+\noindent
+\textbf{When to use:} Generating synthetic workload traffic streams simulating high-concurrency bursts to benchmark caching algorithms.\\
+\textbf{How to use:} Fit a Markov chain or generative model over seed production trace logs, then run transition steps to generate outputs.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Seed production traces; Step generation count: \texttt{2}.
+      \item \textbf{Outputs:} Synthetic traces list: \texttt{["k1", "k2"]}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Seed State Selection.} \
-        	extbf{Input Model States List:} 	exttt{[ "k1", "k2", "k3" ]} \
-        	extbf{Output Initial Seed State:} 	exttt{"k1"}.
-      \item 	extbf{Step 2: Transition Probabilities Query.} \
-        	extbf{Input Markov Matrix Row (k1):} 	exttt{\{ "k2": 0.8, "k3": 0.2 \}} \
-        	extbf{Output Next State String:} 	exttt{"k2"} (chosen via weighted random selection).
-      \item 	extbf{Step 3: Sequence Accumulation.} \
-        	extbf{Input Current Trace Array:} 	exttt{[ "k1" ]} \
-        	extbf{Output Final Trace Array:} 	exttt{[ "k1", "k2" ]} (appended sequence output returned).
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How closely do synthetic distributions match peak production traffic metrics?
     \item What parameters control the burstiness of synthetic generators?
     \item Meta: How do we track trace IDs of synthetic workloads vs real ones?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Does synthetic trace generation support user parameter injection?
     \item Can we simulate malicious query scans using generative Markov chains?
     \item How do we validate generated trace authenticity automatically?
@@ -2959,12 +2817,12 @@ oindent
 \subsection{65. Telemetry Leakage Verification}
 
 
-oindent
-	extbf{Complexity:} Time: $O(P)$ where $P$ is profile data size | Space: $O(P)$
+\noindent
+\textbf{Complexity:} Time: $O(P)$ where $P$ is profile data size | Space: $O(P)$
 \smallskip
 
-egin{textbookalgo}{65.1}{EvaluateCacheSecurityRisk(traces, security\_rules)}
-egin{algorithm}[H]
+\begin{textbookalgo}{65.1}{EvaluateCacheSecurityRisk(traces, security\_rules)}
+\begin{algorithm}[H]
 $risk\_detected \leftarrow 	ext{false}$\;
 \For{$trace \in traces$}{
   \If{$	ext{contains\_pii}(trace.payload) \lor 	ext{violates\_rules}(trace.key, security\_rules)$}{
@@ -2977,36 +2835,23 @@ $risk\_detected \leftarrow 	ext{false}$\;
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Audit steps monitoring telemetry caches to prevent caching of PII, encrypted tokens, or unauthorized query responses.\\
-	extbf{How to use:} Scan active request payloads against security regex and rules; trigger exceptions if validation fails.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Trace payloads: 	exttt{\{payload: "user password=123"\}}; Security Rules.
-      \item 	extbf{Outputs:} Security risk boolean flag: 	exttt{true}.
+\noindent
+\textbf{When to use:} Audit steps monitoring telemetry caches to prevent caching of PII, encrypted tokens, or unauthorized query responses.\\
+\textbf{How to use:} Scan active request payloads against security regex and rules; trigger exceptions if validation fails.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Trace payloads: \texttt{\{payload: "user password=123"\}}; Security Rules.
+      \item \textbf{Outputs:} Security risk boolean flag: \texttt{true}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Security Pattern Scanning.} \
-        	extbf{Input Raw Telemetry Payload:} 	exttt{\{ "payload": "user password=123" \}} \
-        	extbf{Input Rules Registry List:} 	exttt{[ "password=", "secret\_key=" ]} \
-        	extbf{Output Regex Match Results:} 	exttt{true} (contains restricted sequence).
-      \item 	extbf{Step 2: Risk Flag State Mutating.} \
-        	extbf{Input Current Flag State:} 	exttt{\{ "risk\_detected": false \}} \
-        	extbf{Output Current Flag State:} 	exttt{\{ "risk\_detected": true \}}.
-      \item 	extbf{Step 3: Dispatch Incident Alert.} \
-        	extbf{Input Alert Target Endpoint:} 	exttt{"/alerts/security"} \
-        	extbf{Output Event Alert JSON:} 	exttt{\{ "incident": "PII\_LEAK", "key": "password", "status": "ALARM\_SENT" \}}.
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item What matches classify data as PII under current privacy guidelines?
     \item How does checking payloads for safety parameters impact ingestion speed?
     \item Meta: How do we isolate trace context when security breaches occur?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Can we use local classification network models to identify semantic security risks?
     \item How do we handle decryption of trace fields during safety auditing?
     \item Does security audit execution scale linearly with log file size?
@@ -3018,12 +2863,12 @@ oindent
 \subsection{66. Workload-Adaptive Dynamic TTL}
 
 
-oindent
-	extbf{Complexity:} Time: $O(1)$ | Space: $O(1)$
+\noindent
+\textbf{Complexity:} Time: $O(1)$ | Space: $O(1)$
 \smallskip
 
-egin{textbookalgo}{66.1}{CalculateDynamicTTL(db\_load, base\_ttl)}
-egin{algorithm}[H]
+\begin{textbookalgo}{66.1}{CalculateDynamicTTL(db\_load, base\_ttl)}
+\begin{algorithm}[H]
 $load\_ratio \leftarrow db\_load.	ext{current\_cpu} / db\_load.	ext{target\_cpu}$\;
 \If{$load\_ratio > 1.2$}{
   $ttl \leftarrow base\_ttl 	imes (1.0 + 	ext{min}(load\_ratio - 1.2, 2.0))$\;
@@ -3039,35 +2884,23 @@ $load\_ratio \leftarrow db\_load.	ext{current\_cpu} / db\_load.	ext{target\_cpu}
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Dynamically adjusting cache expiration limits to shield databases under heavy CPU saturation.\\
-	extbf{How to use:} Monitor database CPU load periodically; scale up TTL values when load is high, and decrease TTL when low.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Database load stats: 	exttt{\{current\_cpu: 90, target\_cpu: 50\}}; Base TTL: 	exttt{300}.
-      \item 	extbf{Outputs:} Adjusted TTL value: 	exttt{780}.
+\noindent
+\textbf{When to use:} Dynamically adjusting cache expiration limits to shield databases under heavy CPU saturation.\\
+\textbf{How to use:} Monitor database CPU load periodically; scale up TTL values when load is high, and decrease TTL when low.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Database load stats: \texttt{\{current\_cpu: 90, target\_cpu: 50\}}; Base TTL: \texttt{300}.
+      \item \textbf{Outputs:} Adjusted TTL value: \texttt{780}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Load Ratio Calculation.} \
-        	extbf{Input Database Metrics JSON:} 	exttt{\{ "current\_cpu": 90, "target\_cpu": 50 \}} \
-        	extbf{Output Ratio Float:} 	exttt{1.8} (calculated via $90 / 50$).
-      \item 	extbf{Step 2: Condition Branching Evaluation.} \
-        	extbf{Input Load Scaling Rule:} 	exttt{\{ "trigger\_threshold": 1.2 \}} \
-        	extbf{Output Boolean Evaluation:} 	exttt{true} (since 	exttt{1.8 > 1.2}).
-      \item 	extbf{Step 3: TTL Adaptation Resolution.} \
-        	extbf{Input Base TTL Config:} 	exttt{\{ "base\_ttl": 300 \}} \
-        	extbf{Output Scaled TTL Value:} 	exttt{780} (computed as $300 	imes (1.0 + \min(1.8 - 1.2, 2.0)) = 780$).
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item What load thresholds should trigger TTL modifications?
     \item How do we handle synchronization of TTL changes across client caches?
     \item Meta: How do we track TTL updates in observability dashboards?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Does dynamic TTL scaling trigger memory exhaustion on cache nodes?
     \item How does dynamic TTL behave when replica database lag is high?
     \item Can we restrict TTL adjustments to specific hot key namespaces?
@@ -3079,12 +2912,12 @@ oindent
 \subsection{67. Sequence-Based Cache Prefetching}
 
 
-oindent
-	extbf{Complexity:} Time: $O(S)$ where $S$ is predicted steps | Space: $O(	ext{prefetch\_queue})$
+\noindent
+\textbf{Complexity:} Time: $O(S)$ where $S$ is predicted steps | Space: $O(	ext{prefetch\_queue})$
 \smallskip
 
-egin{textbookalgo}{67.1}{ScheduleAsyncPrefetching(last\_key, Markov\_model)}
-egin{algorithm}[H]
+\begin{textbookalgo}{67.1}{ScheduleAsyncPrefetching(last\_key, Markov\_model)}
+\begin{algorithm}[H]
 $predictions \leftarrow Markov\_model.	ext{predict\_next\_sequence}(last\_key, 	ext{length}=3)$\;
 \For{$key \in predictions$}{
   \If{$
@@ -3097,35 +2930,23 @@ eg 	ext{cache.contains}(key)$}{
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Pre-loading keys into memory during sequential data transitions (e.g. document page browsing, pipeline steps).\\
-	extbf{How to use:} Predict the next keys in the chain using a transition model, and trigger asynchronous fetching.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Trigger key: 	exttt{"page:1"}; Transition Model.
-      \item 	extbf{Outputs:} Status flag indicator.
+\noindent
+\textbf{When to use:} Pre-loading keys into memory during sequential data transitions (e.g. document page browsing, pipeline steps).\\
+\textbf{How to use:} Predict the next keys in the chain using a transition model, and trigger asynchronous fetching.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Trigger key: \texttt{"page:1"}; Transition Model.
+      \item \textbf{Outputs:} Status flag indicator.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Chain Sequence Prediction Query.} \
-        	extbf{Input Trigger Key String:} 	exttt{"page:1"} \
-        	extbf{Output Predicted Keys Array:} 	exttt{[ "page:2", "page:3" ]} (Markov model output predictions).
-      \item 	extbf{Step 2: Cache Key Presence Verification.} \
-        	extbf{Input Key Lookup Map:} 	exttt{\{ "page:2": false \}} (absent) \
-        	extbf{Output Async Job Payload:} 	exttt{\{ "task": "fetch", "key": "page:2" \}}.
-      \item 	extbf{Step 3: Cache Key Presence Verification.} \
-        	extbf{Input Key Lookup Map:} 	exttt{\{ "page:3": false \}} (absent) \
-        	extbf{Output Async Job Payload:} 	exttt{\{ "task": "fetch", "key": "page:3" \}}.
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How do we restrict prefetching to prevent database connection saturation?
     \item What accuracy is required to make prefetching cost-effective?
     \item Meta: How do we trace prefetched keys that are never accessed?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Does prefetching cause cache thrashing if prediction accuracy drops?
     \item Can we use user profiles to personalize prediction models?
     \item What is the impact of network latency on prefetch completion?
@@ -3137,12 +2958,12 @@ oindent
 \subsection{68. Dynamic KV-Cache Quantization}
 
 
-oindent
-	extbf{Complexity:} Time: $O(	ext{tensor\_elements})$ | Space: $O(	ext{bits})$
+\noindent
+\textbf{Complexity:} Time: $O(	ext{tensor\_elements})$ | Space: $O(	ext{bits})$
 \smallskip
 
-egin{textbookalgo}{68.1}{QuantizeTensorsDynamically(kv\_tensor, net\_load)}
-egin{algorithm}[H]
+\begin{textbookalgo}{68.1}{QuantizeTensorsDynamically(kv\_tensor, net\_load)}
+\begin{algorithm}[H]
 \If{$net\_load > 0.85$}{
   $bits \leftarrow 4$\;
 }
@@ -3158,35 +2979,23 @@ $quantized\_tensor \leftarrow 	ext{execute\_scale\_quantize}(kv\_tensor, bits)$\
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Distributed LLM serving networks where network bandwidth bottlenecks demand variable compression scaling.\\
-	extbf{How to use:} Check bandwidth saturation levels; compress tensors to lower bitwidths during congestion peaks.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} KV tensor vector; Network congestion score: 	exttt{0.90}.
-      \item 	extbf{Outputs:} Quantized tensor and bitwidth details: 	exttt{\{bits: 4\}}.
+\noindent
+\textbf{When to use:} Distributed LLM serving networks where network bandwidth bottlenecks demand variable compression scaling.\\
+\textbf{How to use:} Check bandwidth saturation levels; compress tensors to lower bitwidths during congestion peaks.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} KV tensor vector; Network congestion score: \texttt{0.90}.
+      \item \textbf{Outputs:} Quantized tensor and bitwidth details: \texttt{\{bits: 4\}}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Check Bandwidth Saturation.} \
-        	extbf{Input Network Congestion metrics:} 	exttt{\{ "bandwidth\_util": 0.90 \}} \
-        	extbf{Output Quantization Boolean:} 	exttt{true} (utilization exceeds the threshold limit $0.85$).
-      \item 	extbf{Step 2: Quantization Resolution Selection.} \
-        	extbf{Input Quantization Map:} 	exttt{\{ "high\_util": 4, "medium\_util": 8, "low\_util": 16 \}} \
-        	extbf{Output Resolution Integer:} 	exttt{4} (bits target configured).
-      \item 	extbf{Step 3: Tensor Matrix Quantization.} \
-        	extbf{Input Vector Tensor Float16:} 	exttt{[ 0.125, -0.625, 0.937 ]} \
-        	extbf{Output Quantized Tensor Int4:} 	exttt{[ 2, -10, 15 ]} (returned alongside scale factors).
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How does changing bitwidth at runtime impact model validation?
     \item What scale parameters prevent accuracy collapse during 4-bit quantization?
     \item Meta: How do we monitor quantization state changes in spans?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Does dequantization latency negate the network transit time savings?
     \item Can we compress Key and Value matrices using different bitwidths?
     \item How do we manage cache key versions under mixed-quantization profiles?
@@ -3198,12 +3007,12 @@ oindent
 \subsection{69. Distributed Lock Coordinator}
 
 
-oindent
-	extbf{Complexity:} Time: $O(	ext{nodes} 	imes 	ext{lock\_retry})$ | Space: $O(1)$
+\noindent
+\textbf{Complexity:} Time: $O(	ext{nodes} 	imes 	ext{lock\_retry})$ | Space: $O(1)$
 \smallskip
 
-egin{textbookalgo}{69.1}{CoordinateDistributedLocks(key, node\_list)}
-egin{algorithm}[H]
+\begin{textbookalgo}{69.1}{CoordinateDistributedLocks(key, node\_list)}
+\begin{algorithm}[H]
 $votes \leftarrow 0$; $lease\_id \leftarrow 	ext{generate\_lease\_uuid}()$\;
 \For{$node \in node\_list$}{
   \If{$node.	ext{acquire\_lock\_lease}(key, lease\_id, 	ext{timeout}=50)$}{
@@ -3221,35 +3030,23 @@ $votes \leftarrow 0$; $lease\_id \leftarrow 	ext{generate\_lease\_uuid}()$\;
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Safeguarding distributed cache updates from concurrency conflicts in master-less environments.\\
-	extbf{How to use:} Execute the lease voting algorithm across nodes; grant the update lock only if a consensus majority is established.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Locking key: 	exttt{"metrics:lock"}; Cache cluster node list (3 nodes).
-      \item 	extbf{Outputs:} Lock lease token or null.
+\noindent
+\textbf{When to use:} Safeguarding distributed cache updates from concurrency conflicts in master-less environments.\\
+\textbf{How to use:} Execute the lease voting algorithm across nodes; grant the update lock only if a consensus majority is established.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Locking key: \texttt{"metrics:lock"}; Cache cluster node list (3 nodes).
+      \item \textbf{Outputs:} Lock lease token or null.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Lease Poll Campaign.} \
-        	extbf{Input Lock Target JSON:} 	exttt{\{ "key": "metrics:lock", "lease\_id": "uuid-789" \}} \
-        	extbf{Output Node Response Map:} 	exttt{\{ "node1": true, "node2": true, "node3": false \}}.
-      \item 	extbf{Step 2: Quorum Calculation check.} \
-        	extbf{Input Cluster Config JSON:} 	exttt{\{ "total\_nodes": 3 \}} \
-        	extbf{Output Quorum Size Threshold:} 	exttt{2} (calculated as $\lfloor 3 / 2 floor + 1 = 2$).
-      \item 	extbf{Step 3: Voting Validation.} \
-        	extbf{Input Votes Metric JSON:} 	exttt{\{ "votes\_cast": 2, "quorum": 2 \}} \
-        	extbf{Output Lease Status JSON:} 	exttt{\{ "lock\_granted": true, "active\_lease\_id": "uuid-789" \}}.
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How do we handle clock drift between voting nodes?
     \item What lease timeout protects locks if the coordinator node fails?
     \item Meta: How do we track lock consensus times in OTel tracing spans?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Can we use optimistic locking to reduce voting network traffic?
     \item How does node membership scaling impact lease acquisition speed?
     \item Does network partition splitting trigger duplicate lock conditions?
@@ -3261,12 +3058,12 @@ oindent
 \subsection{70. Linearizable Cache Consistency Check}
 
 
-oindent
-	extbf{Complexity:} Time: $O(N \log N)$ where $N$ is execution trace records | Space: $O(N)$
+\noindent
+\textbf{Complexity:} Time: $O(N \log N)$ where $N$ is execution trace records | Space: $O(N)$
 \smallskip
 
-egin{textbookalgo}{70.1}{VerifyLinearizability(execution\_trace)}
-egin{algorithm}[H]
+\begin{textbookalgo}{70.1}{VerifyLinearizability(execution\_trace)}
+\begin{algorithm}[H]
 $sorted\_trace \leftarrow 	ext{sort\_by\_real\_time}(execution\_trace)$\;
 $active\_state \leftarrow 	ext{initialize\_state\_tracker}()$\;
 \For{$op \in sorted\_trace$}{
@@ -3281,36 +3078,23 @@ eg 	ext{is\_valid\_transition}(active\_state, op)$}{
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Verification phases ensuring read-after-write data consistency limits are never violated across distributed nodes.\\
-	extbf{How to use:} Sort transactional trace entries by real-world timestamps; run state transition checks to identify stale reads.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Telemetry list: 	exttt{[\{op: "write", val: 5\}, \{op: "read", val: 4\}]}.
-      \item 	extbf{Outputs:} Consistency validation result flag.
+\noindent
+\textbf{When to use:} Verification phases ensuring read-after-write data consistency limits are never violated across distributed nodes.\\
+\textbf{How to use:} Sort transactional trace entries by real-world timestamps; run state transition checks to identify stale reads.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Telemetry list: \texttt{[\{op: "write", val: 5\}, \{op: "read", val: 4\}]}.
+      \item \textbf{Outputs:} Consistency validation result flag.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Sequence Chronological Sorting.} \
-        	extbf{Input Execution History Array:} 	exttt{[ \{"op": "read", "time": 102, "val": 4\}, \{"op": "write", "time": 100, "val": 5\} ]} \
-        	extbf{Output Sorted Execution History Array:} 	exttt{[ \{"op": "write", "time": 100, "val": 5\}, \{"op": "read", "time": 102, "val": 4\} ]}.
-      \item 	extbf{Step 2: State Transition Evaluation.} \
-        	extbf{Input Tracker State JSON:} 	exttt{\{ "committed\_val": 5 \}} \
-        	extbf{Input Operations Payload:} 	exttt{\{ "op": "read", "val": 4 \}} \
-        	extbf{Output Validity Boolean:} 	exttt{false} (read value $4$ does not match expected committed value $5$).
-      \item 	extbf{Step 3: Verification Result Return.} \
-        	extbf{Input Validity Boolean:} 	exttt{false} \
-        	extbf{Output Linearizability Status Boolean:} 	exttt{false} (flagging consistency violation).
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item What accuracy is required of synchronized clocks to make verification reliable?
     \item How do we handle concurrent operations with overlapping timestamps?
     \item Meta: How do we isolate trace context when consistency failures occur?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Does verification latency scale linearly with request volume?
     \item Can we run linearizability checking on a sampled trace subset?
     \item What state rollback steps are triggered if consistency fails?
@@ -3322,12 +3106,12 @@ oindent
 \subsection{71. Telemetry Dashboard Configuration Synthesis}
 
 
-oindent
-	extbf{Complexity:} Time: $O(	ext{widgets})$ | Space: $O(	ext{config\_bytes})$
+\noindent
+\textbf{Complexity:} Time: $O(	ext{widgets})$ | Space: $O(	ext{config\_bytes})$
 \smallskip
 
-egin{textbookalgo}{71.1}{SynthesizeGrafanaDashboards(cache\_type, metrics)}
-egin{algorithm}[H]
+\begin{textbookalgo}{71.1}{SynthesizeGrafanaDashboards(cache\_type, metrics)}
+\begin{algorithm}[H]
 $dashboard\_json \leftarrow 	ext{load\_base\_dashboard\_template}()$\;
 \For{$metric \in metrics$}{
   $panel \leftarrow 	ext{compile\_widget\_panel}(cache\_type, metric)$\;
@@ -3338,35 +3122,23 @@ $dashboard\_json \leftarrow 	ext{load\_base\_dashboard\_template}()$\;
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Synthesizing Grafana dashboards dynamically to monitor metrics for newly deployed caching nodes.\\
-	extbf{How to use:} Load a dashboard template, compile custom panel JSON maps, and push configuration updates to Grafana.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Cache type: 	exttt{"Redis"}; Target metrics list: 	exttt{["hit\_rate"]}.
-      \item 	extbf{Outputs:} Grafana Dashboard JSON string.
+\noindent
+\textbf{When to use:} Synthesizing Grafana dashboards dynamically to monitor metrics for newly deployed caching nodes.\\
+\textbf{How to use:} Load a dashboard template, compile custom panel JSON maps, and push configuration updates to Grafana.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Cache type: \texttt{"Redis"}; Target metrics list: \texttt{["hit\_rate"]}.
+      \item \textbf{Outputs:} Grafana Dashboard JSON string.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Grafana Panel Widget Construction.} \
-        	extbf{Input Metrics Metadata JSON:} 	exttt{\{ "metric\_name": "hit\_rate", "cache\_type": "Redis" \}} \
-        	extbf{Output Widget Panel JSON:} 	exttt{\{ "title": "Redis Cache Hit Rate Ratio", "type": "timeseries", "targets": [\{ "expr": "redis\_hit\_rate" \}] \}}.
-      \item 	extbf{Step 2: Dashboard JSON Aggregation.} \
-        	extbf{Input Panel Widget JSON:} 	exttt{\{ "title": "Redis Cache Hit Rate Ratio", ... \}} \
-        	extbf{Output Aggregate Dashboard JSON Structure:} Template containing the new panel registered in the panels array list.
-      \item 	extbf{Step 3: Configuration Return.} \
-        	extbf{Input Dashboard JSON Structure:} JSON schema mapping dashboard metrics. \
-        	extbf{Output JSON String:} Serialized Grafana config ready for HTTP POST deployment API.
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How do we check target dashboard syntax correctness automatically?
     \item What routing paths push compiled dashboards to user portals?
     \item Meta: How do we track dashboard update transactions in telemetry spans?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Can we customize panel types dynamically depending on user roles?
     \item Does dashboard regeneration support multitenant workspace splits?
     \item What is the API latency footprint of updating Grafana configurations?
@@ -3378,12 +3150,12 @@ oindent
 \subsection{72. Stale-Read Risk Estimation}
 
 
-oindent
-	extbf{Complexity:} Time: $O(N)$ where $N$ is update trace count | Space: $O(K)$ distinct keys
+\noindent
+\textbf{Complexity:} Time: $O(N)$ where $N$ is update trace count | Space: $O(K)$ distinct keys
 \smallskip
 
-egin{textbookalgo}{72.1}{EstimateStaleReadRisk(traces, replica\_lag)}
-egin{algorithm}[H]
+\begin{textbookalgo}{72.1}{EstimateStaleReadRisk(traces, replica\_lag)}
+\begin{algorithm}[H]
 $stale\_events \leftarrow 0$; $total\_reads \leftarrow 0$\;
 \For{$trace \in traces$}{
   \If{$trace.op == 	ext{"read"}$}{
@@ -3400,35 +3172,23 @@ e 	ext{null} \land (trace.time - last\_write.time) < replica\_lag$}{
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Evaluating eventually consistent caching configurations (e.g. Write-Back) to estimate user stale-read risks.\\
-	extbf{How to use:} Analyze read-after-write intervals in trace logs compared to replication lag profiles; flag configuration risk if ratio exceeds target limit.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Telemetry trace list; Replication latency target: 	exttt{100	ext{ ms}}.
-      \item 	extbf{Outputs:} Calculated stale-read ratio score: 	exttt{0.05}.
+\noindent
+\textbf{When to use:} Evaluating eventually consistent caching configurations (e.g. Write-Back) to estimate user stale-read risks.\\
+\textbf{How to use:} Analyze read-after-write intervals in trace logs compared to replication lag profiles; flag configuration risk if ratio exceeds target limit.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Telemetry trace list; Replication latency target: \texttt{100	ext{ ms}}.
+      \item \textbf{Outputs:} Calculated stale-read ratio score: \texttt{0.05}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Key Update Matching.} \
-        	extbf{Input Target Key Trace JSON:} 	exttt{\{ "key": "k1", "op": "read", "time": 150 \}} \
-        	extbf{Output Last Write Timestamp Map:} 	exttt{\{ "k1": \{ "time": 100 \} \}}.
-      \item 	extbf{Step 2: Read-After-Write Interval Comparison.} \
-        	extbf{Input Replication Lag Metric:} 	exttt{\{ "replica\_lag\_limit": 100 \}} \
-        	extbf{Output Check Boolean:} 	exttt{true} (since read time interval $150 - 100 = 50	ext{ ms} < 100	ext{ ms}$).
-      \item 	extbf{Step 3: Stale Read Score Computation.} \
-        	extbf{Input Counter Metrics:} 	exttt{\{ "stale\_events": 1, "total\_reads": 1 \}} \
-        	extbf{Output Score Float:} 	exttt{1.0} (derived as $1 / 1$).
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item What ratio of stale reads is acceptable before user experience degrades?
     \item How does replica database scale out impact average replication lag?
     \item Meta: How do we trace stale-read occurrences in client observability?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Can we use local near cache invalidations to reduce stale read events?
     \item Does network jitter between nodes impact the accuracy of timestamp comparison?
     \item What is the impact of transaction rollbacks on stale-read measurements?
@@ -3440,12 +3200,12 @@ oindent
 \subsection{73. Optimal Cache Sizing Resolution}
 
 
-oindent
-	extbf{Complexity:} Time: $O(\log(	ext{max\_size}) 	imes N)$ where $N$ is trace length | Space: $O(	ext{capacity})$
+\noindent
+\textbf{Complexity:} Time: $O(\log(	ext{max\_size}) 	imes N)$ where $N$ is trace length | Space: $O(	ext{capacity})$
 \smallskip
 
-egin{textbookalgo}{73.1}{ResolveOptimalCacheSize(traces, target\_hit\_rate)}
-egin{algorithm}[H]
+\begin{textbookalgo}{73.1}{ResolveOptimalCacheSize(traces, target\_hit\_rate)}
+\begin{algorithm}[H]
 $low \leftarrow 1.0$; $high \leftarrow 	ext{max\_ram\_bytes}$\;
 $opt\_size \leftarrow high$\;
 \While{$low \le high$}{
@@ -3464,35 +3224,23 @@ $opt\_size \leftarrow high$\;
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Capacity planning to identify the optimal cache RAM size that satisfies hit rate SLO targets.\\
-	extbf{How to use:} Run a binary search over size parameters, executing cache simulations at each midpoint to find the minimum capacity satisfying the target.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Telemetry traces; Target hit rate limit: 	exttt{0.80}.
-      \item 	extbf{Outputs:} Resolved capacity limit (RAM bytes): 	exttt{536870912} (512MB).
+\noindent
+\textbf{When to use:} Capacity planning to identify the optimal cache RAM size that satisfies hit rate SLO targets.\\
+\textbf{How to use:} Run a binary search over size parameters, executing cache simulations at each midpoint to find the minimum capacity satisfying the target.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Telemetry traces; Target hit rate limit: \texttt{0.80}.
+      \item \textbf{Outputs:} Resolved capacity limit (RAM bytes): \texttt{536870912} (512MB).
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Binary Search Parameter Initialization.} \
-        	extbf{Input Search Range Limits JSON:} 	exttt{\{ "low": 1.0, "high": 1073741824 \}} \
-        	extbf{Output Calculated Midpoint (Bytes):} 	exttt{536870912} (512MB).
-      \item 	extbf{Step 2: Sandbox Simulation Execution.} \
-        	extbf{Input Simulator Parameters:} 	exttt{\{ "capacity\_bytes": 536870912 \}} \
-        	extbf{Output Simulation Result JSON:} 	exttt{\{ "simulated\_hit\_rate": 0.85 \}} (which meets target SLO $\ge 0.80$).
-      \item 	extbf{Step 3: Search Boundaries Shifting.} \
-        	extbf{Input Boundary Shifting Configuration:} 	exttt{\{ "opt\_size": 536870912, "high": 536870911 \}} \
-        	extbf{Output Terminated Sizing Resolution Value:} 	exttt{536870912} (bytes optimal capacity threshold value).
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How does changing the eviction strategy impact the optimal size search boundary?
     \item What is the overhead of executing multiple simulation runs in production?
     \item Meta: How do we track sizing calculations in cluster orchestration logs?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Can we approximate optimal sizing using mathematical miss ratio curves (MRCs)?
     \item Does workload traffic burstiness skew optimal size estimations?
     \item How do we allocate memory buffer margins for metadata structures?
@@ -3504,12 +3252,12 @@ oindent
 \subsection{74. Cache Replication Factor Optimization}
 
 
-oindent
-	extbf{Complexity:} Time: $O(	ext{max\_replicas})$ | Space: $O(1)$
+\noindent
+\textbf{Complexity:} Time: $O(	ext{max\_replicas})$ | Space: $O(1)$
 \smallskip
 
-egin{textbookalgo}{74.1}{CalculateOptimalReplication(read\_throughput, max\_node\_io)}
-egin{algorithm}[H]
+\begin{textbookalgo}{74.1}{CalculateOptimalReplication(read\_throughput, max\_node\_io)}
+\begin{algorithm}[H]
 $min\_replicas \leftarrow 	ext{ceil}(read\_throughput / max\_node\_io)$\;
 $opt\_replicas \leftarrow min\_replicas$\;
 \While{$	ext{EvaluateNetworkHopLatency}(opt\_replicas) > 2.0 	ext{ ms}$}{
@@ -3523,35 +3271,23 @@ $opt\_replicas \leftarrow min\_replicas$\;
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Configuring distributed cache clusters (e.g. Redis replicas) to balance throughput scaling against replication network latency.\\
-	extbf{How to use:} Divide expected read load by node throughput capacity; increase replica count until average network hop latency bounds are satisfied.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Throughput target: 	exttt{50000 ops/sec}; Node IO capacity: 	exttt{20000 ops/sec}.
-      \item 	extbf{Outputs:} Recommended replica count: 	exttt{3}.
+\noindent
+\textbf{When to use:} Configuring distributed cache clusters (e.g. Redis replicas) to balance throughput scaling against replication network latency.\\
+\textbf{How to use:} Divide expected read load by node throughput capacity; increase replica count until average network hop latency bounds are satisfied.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Throughput target: \texttt{50000 ops/sec}; Node IO capacity: \texttt{20000 ops/sec}.
+      \item \textbf{Outputs:} Recommended replica count: \texttt{3}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Node Throughput Requirement Resolution.} \
-        	extbf{Input Load Telemetry JSON:} 	exttt{\{ "read\_throughput": 50000, "max\_node\_io": 20000 \}} \
-        	extbf{Output Baseline Repl Count:} 	exttt{3} (derived via $\lceil 50000 / 20000 ceil$).
-      \item 	extbf{Step 2: Network Topology Latency Check.} \
-        	extbf{Input Latency Simulation Parameter:} 	exttt{\{ "replicas": 3 \}} \
-        	extbf{Output Topology Latency Float:} 	exttt{1.8} (milliseconds estimated hop latency).
-      \item 	extbf{Step 3: Convergence Branch Evaluation.} \
-        	extbf{Input Latency SLA Limits JSON:} 	exttt{\{ "simulated\_latency": 1.8, "limit": 2.0 \}} \
-        	extbf{Output Replicas Count Recommendation:} 	exttt{3} (loop terminates since $1.8	ext{ ms} \le 2.0	ext{ ms}$).
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How does write overhead scale when replication factors increase?
     \item What network switches bottleneck replication traffic in high-load clusters?
     \item Meta: How do we correlate replica sync offsets in tracing traces?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Does multi-datacenter replication require localized replica scaling?
     \item How do we manage failover loops if half of the replicas experience connection failures?
     \item Can we use client-side consistent hashing to reduce replica synchronization traffic?
@@ -3563,12 +3299,12 @@ oindent
 \subsection{75. Regression-Based TTL Optimization}
 
 
-oindent
-	extbf{Complexity:} Time: $O(	ext{history\_points})$ | Space: $O(	ext{history\_points})$
+\noindent
+\textbf{Complexity:} Time: $O(	ext{history\_points})$ | Space: $O(	ext{history\_points})$
 \smallskip
 
-egin{textbookalgo}{75.1}{OptimizeDynamicTTLRegression(db\_latencies, base\_ttl)}
-egin{algorithm}[H]
+\begin{textbookalgo}{75.1}{OptimizeDynamicTTLRegression(db\_latencies, base\_ttl)}
+\begin{algorithm}[H]
 $X \leftarrow db\_latencies.	ext{cpu\_points}$; $Y \leftarrow db\_latencies.	ext{ms\_points}$\;
 $slope, intercept \leftarrow 	ext{linear\_regression}(X, Y)$\;
 $predicted\_load \leftarrow 	ext{forecast\_next\_window\_load}()$\;
@@ -3583,44 +3319,23 @@ $latency\_estimate \leftarrow slope 	imes predicted\_load + intercept$\;
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Fine-grained database protection loops adjusting TTLs based on predictive latency regression models.\\
-	extbf{How to use:} Train a linear regression model over CPU and latency telemetry metrics; scale up TTL multipliers if estimated latency exceeds limits.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Database load arrays; Base TTL: 	exttt{300}.
-      \item 	extbf{Outputs:} Dynamically scaled TTL limit: 	exttt{750}.
+\noindent
+\textbf{When to use:} Fine-grained database protection loops adjusting TTLs based on predictive latency regression models.\\
+\textbf{How to use:} Train a linear regression model over CPU and latency telemetry metrics; scale up TTL multipliers if estimated latency exceeds limits.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Database load arrays; Base TTL: \texttt{300}.
+      \item \textbf{Outputs:} Dynamically scaled TTL limit: \texttt{750}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Fit Regression Coefficients.} \
-        	extbf{Input Datapoint History Table:} \
-        egin{tabular}{ll}
-          	extbf{CPU Utilization (\%)} & 	extbf{DB Latency (ms)} \
-          10 & 100 \
-          20 & 180 \
-          30 & 270
-        \end{tabular} \
-        	extbf{Output Model Parameters JSON:} 	exttt{\{ "slope": 8.5, "intercept": 15.0 \}}.
-      \item 	extbf{Step 2: CPU Load Forecasting.} \
-        	extbf{Input Time Series Forecast parameters:} 	exttt{\{ "historical\_load": [40, 50, 55] \}} \
-        	extbf{Output Forecasted CPU Float:} 	exttt{60.0} (percentage expected in next interval).
-      \item 	extbf{Step 3: Future Latency Estimation.} \
-        	extbf{Input Regression Predict Equation:} $8.5 	imes 60.0 + 15.0$ \
-        	extbf{Output Estimated Latency float:} 	exttt{525.0} (ms).
-      \item 	extbf{Step 4: Expiration Scaling Decision.} \
-        	extbf{Input Boundary Configuration JSON:} 	exttt{\{ "estimated\_latency": 525.0, "threshold": 500.0, "base\_ttl": 300 \}} \
-        	extbf{Output Computed TTL Output:} 	exttt{750} (since $525 > 500$, TTL scaled by $2.5$ multiplier).
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How do we handle non-linear latency spikes in the regression model?
     \item What is the impact of training window sizes on model responsiveness?
     \item Meta: How do we audit regression parameters in our monitoring systems?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Can we substitute regression with deep learning models running on scheduling nodes?
     \item How does model drift affect dynamic TTL scaling precision?
     \item What is the CPU cost of retraining the regression model in real-time?
@@ -3632,12 +3347,12 @@ oindent
 \subsection{76. Predictive Cache Warm-Up Scheduling}
 
 
-oindent
-	extbf{Complexity:} Time: $O(	ext{schedule\_events})$ | Space: $O(	ext{keys\_per\_event})$
+\noindent
+\textbf{Complexity:} Time: $O(	ext{schedule\_events})$ | Space: $O(	ext{keys\_per\_event})$
 \smallskip
 
-egin{textbookalgo}{76.1}{ScheduleCacheWarmUp(traffic\_forecast, cache)}
-egin{algorithm}[H]
+\begin{textbookalgo}{76.1}{ScheduleCacheWarmUp(traffic\_forecast, cache)}
+\begin{algorithm}[H]
 $next\_peak \leftarrow 	ext{find\_next\_traffic\_spike}(traffic\_forecast)$\;
 \If{$(next\_peak.time - 	ext{current\_time()}) \le 1800$}{
   $target\_keys \leftarrow 	ext{retrieve\_spike\_keys}(next\_peak.label)$\;
@@ -3650,35 +3365,23 @@ $next\_peak \leftarrow 	ext{find\_next\_traffic\_spike}(traffic\_forecast)$\;
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Warming cache environments before anticipated scheduled traffic spikes (e.g. batch jobs, marketing promotions).\\
-	extbf{How to use:} Scan forecasted traffic spikes; trigger background prefetching for predicted keys 30 minutes before the spike event starts.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Traffic forecast model schedule; Cache node context.
-      \item 	extbf{Outputs:} Status flag.
+\noindent
+\textbf{When to use:} Warming cache environments before anticipated scheduled traffic spikes (e.g. batch jobs, marketing promotions).\\
+\textbf{How to use:} Scan forecasted traffic spikes; trigger background prefetching for predicted keys 30 minutes before the spike event starts.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Traffic forecast model schedule; Cache node context.
+      \item \textbf{Outputs:} Status flag.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Traffic Spike Localization.} \
-        	extbf{Input Traffic Forecast Schedule List:} 	exttt{[ \{"time": "18:00", "label": "PROMO\_PEAK"\} ]} \
-        	extbf{Output Target Spike Struct:} 	exttt{\{ "time": "18:00", "label": "PROMO\_PEAK" \}}.
-      \item 	extbf{Step 2: Horizon Delta Check.} \
-        	extbf{Input Schedule Horizon Params:} 	exttt{\{ "target\_time": 18000, "current\_time": 16500 \}} \
-        	extbf{Output Comparison Boolean:} 	exttt{true} (time interval $25	ext{ min} \le 30	ext{ min}$ threshold).
-      \item 	extbf{Step 3: Background Prefetch Dispatching.} \
-        	extbf{Input Predicted Target Keys Array:} 	exttt{[ "promo\_banner", "hot\_item" ]} \
-        	extbf{Output Triggered Async Jobs Queue:} 	exttt{[ \{"job": "prefetch", "key": "promo\_banner"\}, \{"job": "prefetch", "key": "hot\_item"\} ]}.
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item What forecast window size minimizes unnecessary data prefetching overhead?
     \item How do we categorize peak traffic spike labels to fetch correct keys?
     \item Meta: How do we record prefetch accuracy inside observability logs?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Can prefetching traffic trigger database connection pool exhaustion?
     \item How do we manage key eviction if the peak event is delayed?
     \item What is the impact of prewarm failures on average request latency?
@@ -3690,12 +3393,12 @@ oindent
 \subsection{77. Partition Key Optimization}
 
 
-oindent
-	extbf{Complexity:} Time: $O(V 	imes E)$ where $V$ represents nodes | Space: $O(V + E)$
+\noindent
+\textbf{Complexity:} Time: $O(V 	imes E)$ where $V$ represents nodes | Space: $O(V + E)$
 \smallskip
 
-egin{textbookalgo}{77.1}{DeterminePartitioningKeys(traces, clusters)}
-egin{algorithm}[H]
+\begin{textbookalgo}{77.1}{DeterminePartitioningKeys(traces, clusters)}
+\begin{algorithm}[H]
 $key\_graph \leftarrow 	ext{build\_coaccess\_graph}(traces)$\;
 $partitions \leftarrow 	ext{apply\_metis\_graph\_partitioning}(key\_graph, clusters)$\;
 $key\_mapping \leftarrow 	ext{generate\_hash\_mappings}(partitions)$\;
@@ -3704,41 +3407,23 @@ $key\_mapping \leftarrow 	ext{generate\_hash\_mappings}(partitions)$\;
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Distributing keys across cache cluster partitions to minimize cross-shard query latency in transactional workloads.\\
-	extbf{How to use:} Construct a graph of keys accessed together in spans; partition the graph to group co-accessed keys on identical shards.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Telemetry traces; Shard cluster count: 	exttt{2}.
-      \item 	extbf{Outputs:} Key mapping matrix: 	exttt{\{"k1": 0, "k2": 0, "k3": 1\}}.
+\noindent
+\textbf{When to use:} Distributing keys across cache cluster partitions to minimize cross-shard query latency in transactional workloads.\\
+\textbf{How to use:} Construct a graph of keys accessed together in spans; partition the graph to group co-accessed keys on identical shards.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Telemetry traces; Shard cluster count: \texttt{2}.
+      \item \textbf{Outputs:} Key mapping matrix: \texttt{\{"k1": 0, "k2": 0, "k3": 1\}}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Co-access Edge Weight Computation.} \
-        	extbf{Input Raw Co-access History Array:} 	exttt{[ \{"tx\_id": 101, "keys": ["k1", "k2"]\} ]} \
-        	extbf{Output Weighted Edge List JSON:} 	exttt{\{ "edge": ["k1", "k2"], "weight": 0.9 \}}.
-      \item 	extbf{Step 2: Graph Partitioning Execution.} \
-        	extbf{Input Nodes Graph Matrix:} 	exttt{\{ "vertices": ["k1", "k2", "k3"], "edges": [\{"v1": "k1", "v2": "k2", "w": 0.9\}] \}} \
-        	extbf{Output Partition Group Collections:} 	exttt{\{ "group0": ["k1", "k2"], "group1": ["k3"] \}} (Metis graph solver output partition).
-      \item 	extbf{Step 3: Shard Hash Mapping Generation.} \
-        	extbf{Input Partition Group Collections:} 	exttt{\{ "group0": ["k1", "k2"], "group1": ["k3"] \}} \
-        	extbf{Output Route Map Table:} \
-        egin{tabular}{ll}
-          	extbf{Key Name} & 	extbf{Cluster Shard ID} \
-          k1 & 0 \
-          k2 & 0 \
-          k3 & 1
-        \end{tabular}
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How do we manage partition rebalancing when new keys are added?
     \item What is the runtime latency of metis graph partitioning over millions of nodes?
     \item Meta: How do we track cross-shard hop counts in OTel trace diagrams?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Does partition key optimization reduce Redis pipeline latency?
     \item Can we execute partition updates dynamically without downtime?
     \item How does key clustering behave under highly skewed query patterns?
@@ -3750,12 +3435,12 @@ oindent
 \subsection{78. Eviction Penalty Evaluation}
 
 
-oindent
-	extbf{Complexity:} Time: $O(1)$ | Space: $O(1)$
+\noindent
+\textbf{Complexity:} Time: $O(1)$ | Space: $O(1)$
 \smallskip
 
-egin{textbookalgo}{78.1}{EvaluateEvictionCost(key, size, write\_cost, fetch\_time)}
-egin{algorithm}[H]
+\begin{textbookalgo}{78.1}{EvaluateEvictionCost(key, size, write\_cost, fetch\_time)}
+\begin{algorithm}[H]
 $network\_cost \leftarrow size / 	ext{available\_bandwidth}$\;
 $recompute\_cost \leftarrow fetch\_time + write\_cost$\;
 $total\_penalty \leftarrow recompute\_cost + network\_cost$\;
@@ -3764,36 +3449,23 @@ $total\_penalty \leftarrow recompute\_cost + network\_cost$\;
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Cost-aware cache replacement policies calculating the absolute penalty of evicting key candidates from RAM.\\
-	extbf{How to use:} Compute network transit and database fetch/write latency penalties; feed values to eviction logic to keep high-penalty items.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Candidate size: 	exttt{1048576} bytes (1MB); Write cost: 	exttt{5	ext{ ms}}; Fetch latency: 	exttt{20	ext{ ms}}.
-      \item 	extbf{Outputs:} Eviction penalty value (ms): 	exttt{33.0}.
+\noindent
+\textbf{When to use:} Cost-aware cache replacement policies calculating the absolute penalty of evicting key candidates from RAM.\\
+\textbf{How to use:} Compute network transit and database fetch/write latency penalties; feed values to eviction logic to keep high-penalty items.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Candidate size: \texttt{1048576} bytes (1MB); Write cost: \texttt{5	ext{ ms}}; Fetch latency: \texttt{20	ext{ ms}}.
+      \item \textbf{Outputs:} Eviction penalty value (ms): \texttt{33.0}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Transit Penalty Calculation.} \
-        	extbf{Input Key Metadata JSON:} 	exttt{\{ "key": "k1", "size\_bytes": 1048576 \}} \
-        	extbf{Input Shard Bandwidth Metric:} 	exttt{\{ "bandwidth\_bytes\_sec": 134217728 \}} \
-        	extbf{Output Network Cost Float:} 	exttt{8.0} (ms).
-      \item 	extbf{Step 2: Recomputation Cost Formulation.} \
-        	extbf{Input Telemetry Performance Logs:} 	exttt{\{ "fetch\_time\_ms": 20.0, "write\_cost\_ms": 5.0 \}} \
-        	extbf{Output DB Recompute Penalty float:} 	exttt{25.0} (ms).
-      \item 	extbf{Step 3: Total Penalty Aggregation.} \
-        	extbf{Input Cost Components Float:} 	exttt{\{ "network\_cost": 8.0, "recompute\_cost": 25.0 \}} \
-        	extbf{Output Total Cost Penalty Metric Float:} 	exttt{33.0} (ms value returned to replacement solver).
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How do we measure available bandwidth in real-time without introducing lag?
     \item What happens to eviction cost calculation if database performance degrades?
     \item Meta: How do we log eviction cost metrics in tracing spans?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Can eviction cost calculations be cached locally to prevent recalculation overhead?
     \item Does cost-aware eviction improve hit ratios on highly heterogeneous datasets?
     \item How do we handle keys with variable size parameters?
@@ -3805,12 +3477,12 @@ oindent
 \subsection{79. Linear Programming Budget Solver}
 
 
-oindent
-	extbf{Complexity:} Time: $O(M 	imes L)$ where $M$ constraints, $L$ variables | Space: $O(M 	imes L)$
+\noindent
+\textbf{Complexity:} Time: $O(M 	imes L)$ where $M$ constraints, $L$ variables | Space: $O(M 	imes L)$
 \smallskip
 
-egin{textbookalgo}{79.1}{SolveMultiObjectiveTradeoffs(candidates, memory\_limit, cost\_limit)}
-egin{algorithm}[H]
+\begin{textbookalgo}{79.1}{SolveMultiObjectiveTradeoffs(candidates, memory\_limit, cost\_limit)}
+\begin{algorithm}[H]
 $A \leftarrow 	ext{build\_constraint\_matrix}(candidates, memory\_limit, cost\_limit)$\;
 $c \leftarrow 	ext{build\_objective\_vector}(candidates, 	ext{"maximize\_hit\_rate"})$\;
 $solution \leftarrow 	ext{simplex\_solve}(A, c)$\;
@@ -3819,40 +3491,23 @@ $solution \leftarrow 	ext{simplex\_solve}(A, c)$\;
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Resolving global resource allocation problems to maximize hit rates while respecting memory and budget constraints.\\
-	extbf{How to use:} Map candidate cache properties into a linear matrix; run a Simplex solver to find the optimal memory quota distribution.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Candidate models; Memory limits: 	exttt{1024}; Cost boundaries.
-      \item 	extbf{Outputs:} Allocation vector values.
+\noindent
+\textbf{When to use:} Resolving global resource allocation problems to maximize hit rates while respecting memory and budget constraints.\\
+\textbf{How to use:} Map candidate cache properties into a linear matrix; run a Simplex solver to find the optimal memory quota distribution.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Candidate models; Memory limits: \texttt{1024}; Cost boundaries.
+      \item \textbf{Outputs:} Allocation vector values.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Matrix Coefficients Construction.} \
-        	extbf{Input Allocation Constraints JSON:} 	exttt{\{ "memory\_limit": 1024, "cost\_limit": 50.0 \}} \
-        	extbf{Output Linear Program Matrix A:} \
-        egin{tabular}{lll}
-          	extbf{Variable} & 	extbf{Mem Coefficient} & 	extbf{Cost Coefficient} \
-          $x_1$ (CacheAside) & 1.0 & 0.05 \
-          $x_2$ (NearCache) & 1.0 & 0.08
-        \end{tabular}
-      \item 	extbf{Step 2: Objective Maximization Solving.} \
-        	extbf{Input Target Profit Coefficients:} 	exttt{\{ "CacheAside": 0.85, "NearCache": 0.92 \}} \
-        	extbf{Output Solver Optimization Trace:} Matrix pivots completed to maximize $0.85 x_1 + 0.92 x_2$ subject to $A x \le B$.
-      \item 	extbf{Step 3: Budget Vector Return.} \
-        	extbf{Input Solved Linear Vector:} 	exttt{[ 512.0, 512.0 ]} \
-        	extbf{Output Resource Allocation Struct:} 	exttt{\{ "CacheAside\_MB": 512, "NearCache\_MB": 512 \}}.
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item What is the execution latency of Simplex solvers under large candidate counts?
     \item How do we represent non-linear constraints in the budget matrix?
     \item Meta: How do we record optimization errors in container orchestration logs?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Can we dynamically update budget parameters at runtime?
     \item How does Simplex solver failure impact overall recommendation updates?
     \item Does the solver support integer-programming constraints (e.g. all-or-nothing allocation)?
@@ -3864,12 +3519,12 @@ oindent
 \subsection{80. Cache Timing-Attack Detector}
 
 
-oindent
-	extbf{Complexity:} Time: $O(N \log N)$ where $N$ is latency samples | Space: $O(N)$
+\noindent
+\textbf{Complexity:} Time: $O(N \log N)$ where $N$ is latency samples | Space: $O(N)$
 \smallskip
 
-egin{textbookalgo}{80.1}{DetectSideChannelLeakage(read\_latencies)}
-egin{algorithm}[H]
+\begin{textbookalgo}{80.1}{DetectSideChannelLeakage(read\_latencies)}
+\begin{algorithm}[H]
 $sorted\_latencies \leftarrow 	ext{sort}(read\_latencies)$\;
 $variance \leftarrow 	ext{calculate\_variance}(sorted\_latencies)$\;
 $threshold \leftarrow 2.0 	imes 	ext{average}(sorted\_latencies)$\;
@@ -3881,35 +3536,23 @@ $threshold \leftarrow 2.0 	imes 	ext{average}(sorted\_latencies)$\;
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Monitoring query latency variations to detect side-channel vulnerabilities (uncovering secret parameters via timing variations).\\
-	extbf{How to use:} Sort and calculate the variance of query read latencies; trigger alarms if statistical variations exceed target safety bounds.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Telemetry latency samples list: 	exttt{[1.2, 12.5, 1.3, 13.0]}.
-      \item 	extbf{Outputs:} Leakage alert boolean status: 	exttt{true}.
+\noindent
+\textbf{When to use:} Monitoring query latency variations to detect side-channel vulnerabilities (uncovering secret parameters via timing variations).\\
+\textbf{How to use:} Sort and calculate the variance of query read latencies; trigger alarms if statistical variations exceed target safety bounds.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Telemetry latency samples list: \texttt{[1.2, 12.5, 1.3, 13.0]}.
+      \item \textbf{Outputs:} Leakage alert boolean status: \texttt{true}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Latency Variance Estimation.} \
-        	extbf{Input Latency Datapoints list:} 	exttt{[ 1.2, 12.5, 1.3, 13.0 ]} \
-        	extbf{Output Metric Variance Float:} 	exttt{33.5} (Average calculated: 	exttt{7.0}).
-      \item 	extbf{Step 2: Boundary Check Comparison.} \
-        	extbf{Input Variance Threshold JSON:} 	exttt{\{ "variance": 33.5, "threshold": 14.0 \}} \
-        	extbf{Output Comparison Boolean:} 	exttt{true} (since 	exttt{33.5 > 14.0}).
-      \item 	extbf{Step 3: Alert Propagation Dispatching.} \
-        	extbf{Input Alert Endpoint configuration:} 	exttt{"/alerts/leakage"} \
-        	extbf{Output Alert Payload JSON:} 	exttt{\{ "alert": "TIMING\_LEAKAGE\_DETECTED", "variance": 33.5, "status": "ALARM\_SENT" \}}.
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item What latency variance indicates a malicious timing probe vs. network noise?
     \item How do we mitigate timing differences without introducing artificial latency?
     \item Meta: How do we trace timing-attack warnings in logging frameworks?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Does timing-attack detection scale to multi-tenant clusters?
     \item Can we use jitter injection to mask cache access times?
     \item What is the compute overhead of real-time latency variance calculation?
@@ -3921,12 +3564,12 @@ oindent
 \subsection{81. Elastic Resource Resizer}
 
 
-oindent
-	extbf{Complexity:} Time: $O(1)$ | Space: $O(1)$
+\noindent
+\textbf{Complexity:} Time: $O(1)$ | Space: $O(1)$
 \smallskip
 
-egin{textbookalgo}{81.1}{AllocateElasticResourceQuotas(target\_hit\_rate, current\_hit\_rate)}
-egin{algorithm}[H]
+\begin{textbookalgo}{81.1}{AllocateElasticResourceQuotas(target\_hit\_rate, current\_hit\_rate)}
+\begin{algorithm}[H]
 $margin \leftarrow target\_hit\_rate - current\_hit\_rate$\;
 \If{$margin > 0.05$}{
   $	ext{increase\_kubernetes\_memory\_limit}(	ext{"512Mi"})$\;
@@ -3941,35 +3584,23 @@ $margin \leftarrow target\_hit\_rate - current\_hit\_rate$\;
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Autoscaling Kubernetes cache pods and internal memory limits based on live hit rate margins.\\
-	extbf{How to use:} Compare target hit rates to live performance metrics; scale memory allocations up/down accordingly.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Target hit rate: 	exttt{0.90}; Current hit rate: 	exttt{0.82}.
-      \item 	extbf{Outputs:} Resizing action result code: 	exttt{"success"}.
+\noindent
+\textbf{When to use:} Autoscaling Kubernetes cache pods and internal memory limits based on live hit rate margins.\\
+\textbf{How to use:} Compare target hit rates to live performance metrics; scale memory allocations up/down accordingly.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Target hit rate: \texttt{0.90}; Current hit rate: \texttt{0.82}.
+      \item \textbf{Outputs:} Resizing action result code: \texttt{"success"}.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Metric Margin Resolution.} \
-        	extbf{Input Target hit rate metrics:} 	exttt{\{ "target\_hit\_rate": 0.90, "current\_hit\_rate": 0.82 \}} \
-        	extbf{Output Deviation Margin Float:} 	exttt{0.08} (derived via $0.90 - 0.82$).
-      \item 	extbf{Step 2: Condition Boundary Assessment.} \
-        	extbf{Input Threshold Bounds Configuration:} 	exttt{\{ "upscale\_limit": 0.05, "downscale\_limit": -0.10 \}} \
-        	extbf{Output Condition Trigger Boolean:} 	exttt{true} (since margin $0.08 > 0.05$).
-      \item 	extbf{Step 3: Orchestrate Container Resizing.} \
-        	extbf{Input Container Configuration JSON:} 	exttt{\{ "pod\_name": "cache-node-0", "current\_mem": "1024Mi" \}} \
-        	extbf{Output Patch Command Payload:} 	exttt{\{ "spec": \{"resources": \{"limits": \{"memory": "1536Mi"\}\}\} \}} (patched to Kubernetes API server).
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How do we prevent memory limit scaling from triggering pod restarts?
     \item What is the cool-down period between adjacent scaling operations?
     \item Meta: How do we correlate container resizing operations in trace logs?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Does elastic resizing conflict with Kubernetes horizontal autoscaling policies?
     \item Can we restrict container memory adjustments to off-peak traffic hours?
     \item How does dynamic resizing behave under database outage events?
@@ -3981,12 +3612,12 @@ oindent
 \subsection{82. Master Telemetry Cache Orchestrator}
 
 
-oindent
-	extbf{Complexity:} Time: $O(N + C \log C)$ where $N$ is span count and $C$ is catalog size | Space: $O(	ext{capacity} + C)$
+\noindent
+\textbf{Complexity:} Time: $O(N + C \log C)$ where $N$ is span count and $C$ is catalog size | Space: $O(	ext{capacity} + C)$
 \smallskip
 
-egin{textbookalgo}{82.1}{ExecuteTraceCachingPipeline(span\_stream, code\_context, limits, targets, latency\_budgets)}
-egin{algorithm}[H]
+\begin{textbookalgo}{82.1}{ExecuteTraceCachingPipeline(span\_stream, code\_context, limits, targets, latency\_budgets)}
+\begin{algorithm}[H]
 $spans \leftarrow 	ext{IngestSpans}(span\_stream, 	ext{buffer\_size}=10000)$ \hfill (Algorithm 50.1)\;
 $features, skew, mean\_reuse \leftarrow 	ext{ExtractAccessPatterns}(spans)$ \hfill (Algorithm 51.1)\;
 $reqs \leftarrow 	ext{ParseCodeConstraints}(code\_context)$ \hfill (Algorithm 52.1)\;
@@ -4014,53 +3645,34 @@ $	ext{AllocateElasticResourceQuotas}(targets.	ext{hit\_rate}, hit\_rate)$ \hfill
 \end{textbookalgo}
 
 
-oindent
-	extbf{When to use:} Running the master control plane scheduler that orchestrates feature extraction, cache selection, safety checking, and closed-loop reinforcement retraining.\\
-	extbf{How to use:} Trigger the orchestration loop periodically (e.g. daily) or dynamically when a Flink workload drift alarm is fired.
-egin{itemize}[leftmargin=*]
-  \item[] 	extbf{Detailed Pipeline Execution Flow:}
-  egin{enumerate}
-    \item 	extbf{Inbound Telemetry Ingress:} Telemetry collector endpoints stream OTel spans into partitioned Apache Kafka topics (Algorithm 50.1).
-    \item 	extbf{Stream Metric Processing:} Apache Flink runs a sliding analysis window to extract access patterns, Zipf skew, and reuse distances (Algorithm 51.1).
-    \item 	extbf{AI Constraints Extraction:} Local LLM nodes parse code AST metadata to discover data mutations, memory targets, and consistency bounds (Algorithm 52.1).
-    \item 	extbf{Strategy Evaluation \& Search:} The optimization engine evaluates candidates in the catalog against extracted constraints and workloads (Algorithm 53.1 \& 54.1).
-    \item 	extbf{Validation \& Sizing Analysis:} The Go-based discrete simulator verifies hit rates (Algorithm 55.1) while binary search resolves optimal capacity sizing bounds (Algorithm 73.1).
-    \item 	extbf{Safety Verification:} Configuration boundaries are verified against strict runtime limits to block invalid options (Algorithm 56.1).
-    \item 	extbf{Canary Deployment:} Config files are generated (Algorithm 57.1) and pushed to Kubernetes pods via GitOps pipelines.
-    \item 	extbf{Drift Monitoring \& Retraining:} Telemetry metrics compare real hit rates to simulation bounds (Algorithm 58.1). Feedback loops retrain AI weights in PyTorch (Algorithm 59.1), while safety monitors execute GitOps rollbacks under canary failures (Algorithm 60.1) and dynamically adjust CPU/RAM quotas (Algorithm 81.1).
+\noindent
+\textbf{When to use:} Running the master control plane scheduler that orchestrates feature extraction, cache selection, safety checking, and closed-loop reinforcement retraining.\\
+\textbf{How to use:} Trigger the orchestration loop periodically (e.g. daily) or dynamically when a Flink workload drift alarm is fired.
+\begin{itemize}[leftmargin=*]
+  \item[] \textbf{Detailed Pipeline Execution Flow:}
+  \begin{enumerate}
+    \item \textbf{Inbound Telemetry Ingress:} Telemetry collector endpoints stream OTel spans into partitioned Apache Kafka topics (Algorithm 50.1).
+    \item \textbf{Stream Metric Processing:} Apache Flink runs a sliding analysis window to extract access patterns, Zipf skew, and reuse distances (Algorithm 51.1).
+    \item \textbf{AI Constraints Extraction:} Local LLM nodes parse code AST metadata to discover data mutations, memory targets, and consistency bounds (Algorithm 52.1).
+    \item \textbf{Strategy Evaluation \& Search:} The optimization engine evaluates candidates in the catalog against extracted constraints and workloads (Algorithm 53.1 \& 54.1).
+    \item \textbf{Validation \& Sizing Analysis:} The Go-based discrete simulator verifies hit rates (Algorithm 55.1) while binary search resolves optimal capacity sizing bounds (Algorithm 73.1).
+    \item \textbf{Safety Verification:} Configuration boundaries are verified against strict runtime limits to block invalid options (Algorithm 56.1).
+    \item \textbf{Canary Deployment:} Config files are generated (Algorithm 57.1) and pushed to Kubernetes pods via GitOps pipelines.
+    \item \textbf{Drift Monitoring \& Retraining:} Telemetry metrics compare real hit rates to simulation bounds (Algorithm 58.1). Feedback loops retrain AI weights in PyTorch (Algorithm 59.1), while safety monitors execute GitOps rollbacks under canary failures (Algorithm 60.1) and dynamically adjust CPU/RAM quotas (Algorithm 81.1).
   \end{enumerate}
-  \item[] 	extbf{Data Passing:}
-    egin{itemize}
-      \item 	extbf{Inputs:} Raw telemetry streams; Source code file mappings; System bounds.
-      \item 	extbf{Outputs:} Status deployment execution signals.
+  \item[] \textbf{Data Passing:}
+    \begin{itemize}
+      \item \textbf{Inputs:} Raw telemetry streams; Source code file mappings; System bounds.
+      \item \textbf{Outputs:} Status deployment execution signals.
     \end{itemize}
-  \item[] 	extbf{Dry Run Trace:}
-    egin{enumerate}[leftmargin=*]
-      \item 	extbf{Step 1: Telemetry Features Ingestion.} \
-        	extbf{Input Spans Buffer JSON:} 	exttt{\{ "buffer\_capacity": 10000, "span\_count": 10000 \}} \
-        	extbf{Output Metric Vector JSON:} 	exttt{\{ "skew": 1.2, "mean\_reuse": 4.5 \}} (extracted access patterns).
-      \item 	extbf{Step 2: Code Model Constraint Resolution.} \
-        	extbf{Input Repositories Path Map:} 	exttt{\{ "src\_dir": "app/models" \}} \
-        	extbf{Output Constraint Settings JSON:} 	exttt{\{ "consistency": "eventual", "latency\_slo": 50 \}}.
-      \item 	extbf{Step 3: Optimal Policy Search.} \
-        	extbf{Input Optimization Parameters:} 	exttt{\{ "target\_hit\_rate": 0.80, "target\_latency": 5.0 \}} \
-        	extbf{Output Selected Policy Strategy Struct:} 	exttt{\{ "strategy": "CacheAside", "resolved\_capacity\_bytes": 536870912 \}}.
-      \item 	extbf{Step 4: Safety Compliance Assessment.} \
-        	extbf{Input Configuration proposal:} 	exttt{\{ "memory\_size": 512, "strategy": "CacheAside" \}} \
-        	extbf{Input Cluster Constraint settings:} 	exttt{\{ "max\_memory": 1024 \}} \
-        	extbf{Output Compliance Boolean:} 	exttt{true} (proposed sizing fits within safety limits).
-      \item 	extbf{Step 5: Rollout Deployment Generation.} \
-        	extbf{Input Target Template Config:} 	exttt{"maxmemory SIZE\nttl TTL"} \
-        	extbf{Output Target Kubernetes Deployment Payload:} 	exttt{\{ "apiVersion": "v1", "kind": "ConfigMap", "data": \{"redis.conf": "maxmemory 512mb\nttl 300"\} \}} (pushed to GitOps repository).
-    \end{enumerate}
-  \item[] 	extbf{Critical \& Meta Questions:}
-  egin{enumerate}
+  \item[] \textbf{Critical \& Meta Questions:}
+  \begin{enumerate}
     \item How do we isolate orchestration failures to prevent interfering with active user traffic?
     \item What parameters determine the optimal frequency of running the orchestrator loop?
     \item Meta: How do we trace the execution spans of the orchestrator across distributed services?
   \end{enumerate}
-  \item[] 	extbf{Second-Order Questions:}
-  egin{enumerate}
+  \item[] \textbf{Second-Order Questions:}
+  \begin{enumerate}
     \item Can we run multiple concurrent orchestrators for partitioned database regions?
     \item How do we coordinate rolling restarts across microservices when the cache strategy changes?
     \item Does the master orchestrator support fallback to static cached policies under failure states?
