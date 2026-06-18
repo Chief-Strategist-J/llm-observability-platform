@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import socket
 from contextlib import contextmanager
-from typing import Generator, Any
+from typing import Generator
 
 from opentelemetry import trace
 from opentelemetry.trace import SpanContext, TraceFlags, Span

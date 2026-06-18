@@ -1,6 +1,3 @@
-from shared.tracing.tracer import init_tracer
-init_tracer()
-
 import asyncio
 import logging
 from datetime import timedelta
@@ -21,8 +18,11 @@ from infra.adapters.clickhouse.clickhouse_adapter import ClickHouseAdapter
 from infra.adapters.redis.redis_adapter import RedisAdapter
 from infra.adapters.kafka.kafka_alert_adapter import KafkaAlertAdapter
 from infra.adapters.metrics.prometheus_adapter import PrometheusAdapter
-
 from temporalio.contrib.opentelemetry import TracingInterceptor
+
+from shared.tracing.tracer import init_tracer
+
+init_tracer()
 
 logger = logging.getLogger(__name__)
 
