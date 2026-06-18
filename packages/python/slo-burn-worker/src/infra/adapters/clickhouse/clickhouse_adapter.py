@@ -1,5 +1,5 @@
 import logging
-import clickhouse_connect  # type: ignore[import-untyped]
+import clickhouse_connect
 from shared.ports.clickhouse_port import ClickHousePort
 from shared.tracing.tracer import trace_span
 

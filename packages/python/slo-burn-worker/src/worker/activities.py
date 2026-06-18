@@ -1,6 +1,6 @@
 import logging
 import os
-import yaml  # type: ignore[import-untyped]
+import yaml
 from datetime import datetime, timezone
 from typing import List, Tuple, Dict
 from temporalio import activity
