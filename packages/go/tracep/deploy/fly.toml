@@ -1,0 +1,29 @@
+app = "tracep-go"
+primary_region = "bos"
+
+[build]
+  dockerfile = "build/Dockerfile"
+
+[env]
+  DB_PATH = "/app/data/traces.db"
+  TRACE_TOKEN = ""
+
+# To persist the SQLite database for free on Fly.io, you can create a volume:
+# fly volumes create tracep_data --size 1
+# [[mounts]]
+#   source = "tracep_data"
+#   destination = "/app/data"
+
+[[services]]
+  internal_port = 4318
+  protocol = "tcp"
+  [[services.ports]]
+    port = 4318
+    handlers = ["http"]
+
+[[services]]
+  internal_port = 4319
+  protocol = "tcp"
+  [[services.ports]]
+    port = 4319
+    handlers = ["http"]

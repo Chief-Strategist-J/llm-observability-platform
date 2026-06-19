@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: tracep-go
+    env: docker
+    dockerfilePath: build/Dockerfile
+    dockerContext: .
+    plan: free # Note: Free plan on Render does not support persistent disks. To persist data, upgrade to a Starter plan and uncomment the disk section.
+    envVars:
+      - key: DB_PATH
+        value: /app/data/traces.db
+      - key: TRACE_TOKEN
+        value: "" # Provide a secure token here or generate one
+#    disk:
+#      name: tracep-data
+#      mountPath: /app/data
+#      sizeGB: 1
