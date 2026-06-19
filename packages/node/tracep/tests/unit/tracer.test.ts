@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 
 // ---------------------------------------------------------------------------
 // Mock @opentelemetry/exporter-trace-otlp-http
@@ -55,7 +56,7 @@ function makeMockSpan() {
 
 const mockStartSpan = vi.fn().mockImplementation(() => makeMockSpan());
 
-vi.mock('@opentelemetry/sdk-node', () => ({
+vi.mock('@opentelemetry/sdk-trace-node', () => ({
   NodeTracerProvider: vi.fn().mockImplementation(() => ({
     register: mockRegister,
     forceFlush: mockForceFlush,
@@ -63,7 +64,9 @@ vi.mock('@opentelemetry/sdk-node', () => ({
     getTracer: vi.fn().mockImplementation(() => ({
       startSpan: mockStartSpan,
     })),
+    addSpanProcessor: vi.fn(),
   })),
+  BatchSpanProcessor: vi.fn(),
 }));
 
 // ---------------------------------------------------------------------------
@@ -291,12 +294,9 @@ describe('Tracer', () => {
     });
 
     it('constructs the exporter with the correct Authorization header', () => {
-      const { OTLPTraceExporter } = vi.mocked(
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('@opentelemetry/exporter-trace-otlp-http'),
-      );
+      const mockedExporter = vi.mocked(OTLPTraceExporter);
       // The constructor was called during new Tracer(...)
-      expect(OTLPTraceExporter).toHaveBeenCalledWith(
+      expect(mockedExporter).toHaveBeenCalledWith(
         expect.objectContaining({
           url: `${ENDPOINT}/v1/traces`,
           headers: expect.objectContaining({
@@ -332,22 +332,16 @@ describe('Tracer', () => {
 
   describe('OTLPTraceExporter configuration', () => {
     it('appends /v1/traces to the endpoint URL', () => {
-      const { OTLPTraceExporter } = vi.mocked(
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('@opentelemetry/exporter-trace-otlp-http'),
-      );
-      expect(OTLPTraceExporter).toHaveBeenCalledWith(
+      const mockedExporter = vi.mocked(OTLPTraceExporter);
+      expect(mockedExporter).toHaveBeenCalledWith(
         expect.objectContaining({ url: 'http://localhost:4318/v1/traces' }),
       );
     });
 
     it('strips trailing slash from endpoint before appending /v1/traces', () => {
       new Tracer('http://collector:4318/', API_KEY, SERVICE);
-      const { OTLPTraceExporter } = vi.mocked(
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('@opentelemetry/exporter-trace-otlp-http'),
-      );
-      const lastCall = OTLPTraceExporter.mock.calls.at(-1)!;
+      const mockedExporter = vi.mocked(OTLPTraceExporter);
+      const lastCall = mockedExporter.mock.calls.at(-1)!;
       expect(lastCall[0].url).toBe('http://collector:4318/v1/traces');
     });
   });

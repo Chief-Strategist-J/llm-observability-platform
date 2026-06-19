@@ -65,3 +65,8 @@ java {
         languageVersion.set(JavaLanguageVersion.of(17))
     }
 }
+
+tasks.register<JavaExec>("runIntegration") {
+    mainClass.set("io.tracep.KotlinIntegrationKt")
+    classpath = sourceSets["main"].runtimeClasspath
+}

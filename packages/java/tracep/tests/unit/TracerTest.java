@@ -148,7 +148,7 @@ class TracerTest {
 
     @Test
     @DisplayName("trace() with an unknown tid is silently ignored (no exception)")
-    void testTraceWithUnknownTidIsIgnored() {
+    void testTraceWithUnknownTidIsIgnored() throws InterruptedException {
         assertDoesNotThrow(() ->
                 tracer.trace("deadbeefdeadbeefdeadbeefdeadbeef",
                         "Ghost", "nowhere", "step", "should be dropped"));

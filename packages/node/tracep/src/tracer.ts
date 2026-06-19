@@ -19,8 +19,7 @@ import {
   type Tracer as OtelTracer,
   type Context,
 } from '@opentelemetry/api';
-import { NodeTracerProvider } from '@opentelemetry/sdk-node';
-import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
+import { NodeTracerProvider, BatchSpanProcessor } from '@opentelemetry/sdk-trace-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { Resource } from '@opentelemetry/resources';
 import { SEMRESATTRS_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
@@ -64,7 +63,7 @@ export class Tracer {
    * @param service   Value of the service.name OTel resource attribute
    */
   constructor(
-    private readonly endpoint: string,
+    endpoint: string,
     apiKey: string,
     service: string,
   ) {
@@ -81,19 +80,20 @@ export class Tracer {
       resource: new Resource({
         [SEMRESATTRS_SERVICE_NAME]: service,
       }),
-      spanProcessors: [
-        new BatchSpanProcessor(exporter, {
-          // Buffer up to 50 spans before forcing an export
-          maxExportBatchSize: 50,
-          // Flush at most once per second
-          scheduledDelayMillis: 1_000,
-          // Allow up to 512 spans to queue before dropping
-          maxQueueSize: 512,
-          // Retry budget per export attempt
-          exportTimeoutMillis: 10_000,
-        }),
-      ],
     });
+
+    this.provider.addSpanProcessor(
+      new BatchSpanProcessor(exporter, {
+        // Buffer up to 50 spans before forcing an export
+        maxExportBatchSize: 50,
+        // Flush at most once per second
+        scheduledDelayMillis: 1_000,
+        // Allow up to 512 spans to queue before dropping
+        maxQueueSize: 512,
+        // Retry budget per export attempt
+        exportTimeoutMillis: 10_000,
+      })
+    );
 
     this.provider.register();
 
