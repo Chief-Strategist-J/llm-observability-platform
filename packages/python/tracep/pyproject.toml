@@ -1,0 +1,28 @@
+[build-system]
+requires      = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name        = "tracep"
+version     = "0.1.0"
+description = "Fire-and-forget OpenTelemetry tracer SDK"
+readme      = "README.md"
+requires-python = ">=3.9"
+license     = { text = "MIT" }
+
+dependencies = [
+    "opentelemetry-sdk>=1.24.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-timeout>=2.3",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"

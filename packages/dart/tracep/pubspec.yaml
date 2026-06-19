@@ -1,0 +1,16 @@
+name: tracep
+description: A fire-and-forget OpenTelemetry tracing SDK for Dart.
+version: 0.1.0
+repository: https://github.com/Chief-Strategist-J/llm-observability-platform
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  opentelemetry: ^0.18.0
+  synchronized: ^3.1.0
+
+dev_dependencies:
+  test: ^1.24.0
+  mockito: ^5.4.0
+  build_runner: ^2.4.0

@@ -1,0 +1,13 @@
+feature: tracer
+description: Wraps standard OpenTelemetry SDK to provide a simple, language-agnostic API for tracing execution flows.
+criticality: high
+networking:
+  protocol: OTLP/HTTP JSON
+  default_port: 4318
+dependencies:
+  - go.opentelemetry.io/otel
+  - go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
+architecture_decisions:
+  - Wrap standard OTel tracers to allow fire-and-forget logging.
+  - Keep active trace span hierarchies in memory mapped by trace ID.
+  - Flush batched telemetry synchronously upon trace termination.
