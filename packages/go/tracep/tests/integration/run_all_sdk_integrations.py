@@ -177,6 +177,71 @@ func main() {
             print(f"Go Integration: FAILED (Trace data: {trace_data})")
             results["go"] = "FAIL"
 
+        # ==========================================
+        # 4. Dart SDK Integration
+        # ==========================================
+        print("\n=== Testing Dart SDK ===")
+        dart_dir = "/home/btpl-lap-22/live/obs/packages/dart/tracep"
+        dart_tid = run_cmd("dart run test/dart_integration.dart", cwd=dart_dir).stdout.strip()
+        print(f"Dart Trace ID: {dart_tid}")
+        
+        # Verify trace in SQLite/Query API
+        time.sleep(1.5)
+        trace_data = query_trace(dart_tid)
+        if trace_data and trace_data.get("name") == "dart-live-test":
+            print("Dart Integration: SUCCESS")
+            results["dart"] = "PASS"
+        else:
+            print(f"Dart Integration: FAILED (Trace data: {trace_data})")
+            results["dart"] = "FAIL"
+
+        # ==========================================
+        # 5. Java SDK Integration
+        # ==========================================
+        print("\n=== Testing Java SDK ===")
+        java_dir = "/home/btpl-lap-22/live/obs/packages/java/tracep"
+        java_tid = run_cmd("java -cp target/tracep-sdk-0.1.0-all.jar io.tracep.JavaIntegration", cwd=java_dir).stdout.strip()
+        print(f"Java Trace ID: {java_tid}")
+        
+        # Verify trace in SQLite/Query API
+        time.sleep(1.5)
+        trace_data = query_trace(java_tid)
+        if trace_data and trace_data.get("name") == "java-live-test":
+            print("Java Integration: SUCCESS")
+            results["java"] = "PASS"
+        else:
+            print(f"Java Integration: FAILED (Trace data: {trace_data})")
+            results["java"] = "FAIL"
+
+        # ==========================================
+        # 6. Kotlin SDK Integration
+        # ==========================================
+        print("\n=== Testing Kotlin SDK ===")
+        kotlin_dir = "/home/btpl-lap-22/live/obs/packages/kotlin/tracep"
+        kotlin_tid = run_cmd(
+            f"docker run --rm --network host -v {kotlin_dir}:/app -w /app gradle:8-jdk17 gradle runIntegration -q",
+            cwd=kotlin_dir
+        ).stdout.strip()
+        # Find W3C trace-id format (32 hex characters)
+        kotlin_tid_lines = kotlin_tid.splitlines()
+        kotlin_tid = ""
+        for line in reversed(kotlin_tid_lines):
+            line_strip = line.strip()
+            if len(line_strip) == 32 and all(c in "0123456789abcdef" for c in line_strip):
+                kotlin_tid = line_strip
+                break
+        print(f"Kotlin Trace ID: {kotlin_tid}")
+        
+        # Verify trace in SQLite/Query API
+        time.sleep(1.5)
+        trace_data = query_trace(kotlin_tid)
+        if trace_data and trace_data.get("name") == "kotlin-live-test":
+            print("Kotlin Integration: SUCCESS")
+            results["kotlin"] = "PASS"
+        else:
+            print(f"Kotlin Integration: FAILED (Trace data: {trace_data})")
+            results["kotlin"] = "FAIL"
+
     finally:
         print("\n=== Cleaning up traceserver container ===")
         subprocess.run("docker rm -f traceserver-integration-test 2>/dev/null", shell=True)

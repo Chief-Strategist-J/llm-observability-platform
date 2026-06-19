@@ -338,6 +338,11 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 
+				parentSpanID := span.ParentSpanID
+				if parentSpanID == "0000000000000000" {
+					parentSpanID = ""
+				}
+
 				// Insert/replace span
 				_, err = tx.Exec(`
 					INSERT INTO spans (sid, tid, parent_sid, class, function, status, start_time, end_time, attrs)
@@ -350,7 +355,7 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 						start_time=excluded.start_time,
 						end_time=excluded.end_time,
 						attrs=excluded.attrs
-				`, span.SpanID, span.TraceID, nilOrString(span.ParentSpanID), class, function, status, startTime, endTime, string(attrsJSON))
+				`, span.SpanID, span.TraceID, nilOrString(parentSpanID), class, function, status, startTime, endTime, string(attrsJSON))
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
@@ -409,7 +414,7 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 						    status = ?,
 						    name = CASE WHEN ? = '' THEN ? ELSE name END
 						WHERE tid = ?
-					`, newStart, newEnd, errVal(status), getTraceStatus(status), span.ParentSpanID, span.Name, span.TraceID)
+					`, newStart, newEnd, errVal(status), getTraceStatus(status), parentSpanID, span.Name, span.TraceID)
 				}
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)

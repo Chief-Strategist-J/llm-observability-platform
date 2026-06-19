@@ -15,14 +15,13 @@ use opentelemetry::{
     global,
     trace::{
         Span, SpanKind, Status, TraceContextExt, Tracer as OtelTracer,
-        TracerProvider as OtelTracerProvider,
     },
     Context, KeyValue,
 };
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{
     runtime,
-    trace::{BatchConfig, Config, TracerProvider},
+    trace::{BatchConfig, Config},
 };
 use tokio::runtime::Runtime;
 
@@ -44,10 +43,7 @@ struct TraceEntry {
 /// [`Tracer::trace`] / [`Tracer::end`] from any thread.  All spans are
 /// exported via OTLP/HTTP JSON to `<endpoint>/v1/traces`.
 pub struct Tracer {
-    /// The underlying OTel [`TracerProvider`]; kept alive so the exporter
-    /// is not dropped prematurely.
-    provider: TracerProvider,
-    /// OTel tracer obtained from `provider`.
+    /// OTel tracer.
     otel_tracer: opentelemetry_sdk::trace::Tracer,
     /// All in-flight traces, keyed by trace-id hex string.
     traces: Arc<Mutex<HashMap<String, TraceEntry>>>,
@@ -90,9 +86,8 @@ impl Tracer {
             .with_max_export_batch_size(50)
             .with_scheduled_delay(Duration::from_secs(1));
 
-        // Build the TracerProvider inside the Tokio runtime so the async
-        // exporter background task is properly registered.
-        let provider: TracerProvider = rt.block_on(async {
+        // Build the TracerProvider and install it inside the Tokio runtime.
+        let otel_tracer = rt.block_on(async {
             opentelemetry_otlp::new_pipeline()
                 .tracing()
                 .with_exporter(exporter)
@@ -108,14 +103,14 @@ impl Tracer {
                 .install_batch(runtime::Tokio)
         })?;
 
-        let otel_tracer = provider.tracer("tracep");
+        // Retrieve the provider (which is an Option).
+        let provider = otel_tracer.provider().ok_or("OTel tracer has no provider")?;
 
         // Register as the global provider so `global::tracer()` works if
         // callers mix APIs; not strictly required for our SDK but good practice.
-        global::set_tracer_provider(provider.clone());
+        global::set_tracer_provider(provider);
 
         Ok(Self {
-            provider,
             otel_tracer,
             traces: Arc::new(Mutex::new(HashMap::new())),
             rt,
@@ -128,7 +123,7 @@ impl Tracer {
     ///
     /// Returns the trace-id as a lower-case hex string (32 characters).
     pub fn start(&self, name: &str) -> String {
-        let mut span = self
+        let span = self
             .otel_tracer
             .span_builder(name.to_string())
             .with_kind(SpanKind::Internal)
@@ -191,13 +186,13 @@ impl Tracer {
         let parent_cx: Context = if let Some(parent_key) = parent {
             if let Some(parent_span) = entry.child_spans.get(parent_key) {
                 // Attach the parent span's context so the child is linked.
-                Context::current_with_span(parent_span.span_context().clone())
+                Context::current().with_remote_span_context(parent_span.span_context().clone())
             } else {
                 // Fall back to root span context.
-                Context::current_with_span(entry.root_span.span_context().clone())
+                Context::current().with_remote_span_context(entry.root_span.span_context().clone())
             }
         } else {
-            Context::current_with_span(entry.root_span.span_context().clone())
+            Context::current().with_remote_span_context(entry.root_span.span_context().clone())
         };
 
         // Find or create the child span for this class+function pair.
@@ -264,23 +259,25 @@ impl Tracer {
         entry.root_span.end();
 
         // Force-flush so the batch processor ships queued spans immediately.
-        let provider = self.provider.clone();
-        self.rt.spawn(async move {
-            // Retry loop: 3 attempts with exponential back-off.
-            let mut delay = Duration::from_millis(100);
-            for attempt in 0..3u32 {
-                match provider.force_flush() {
-                    results if results.iter().all(|r| r.is_ok()) => break,
-                    _ => {
-                        if attempt < 2 {
-                            tokio::time::sleep(delay).await;
-                            delay *= 2;
+        let provider_opt = self.otel_tracer.provider();
+        if let Some(provider) = provider_opt {
+            self.rt.spawn(async move {
+                // Retry loop: 3 attempts with exponential back-off.
+                let mut delay = Duration::from_millis(100);
+                for attempt in 0..3u32 {
+                    match provider.force_flush() {
+                        results if results.iter().all(|r| r.is_ok()) => break,
+                        _ => {
+                            if attempt < 2 {
+                                tokio::time::sleep(delay).await;
+                                delay *= 2;
+                            }
+                            // 3rd failure → drop silently
                         }
-                        // 3rd failure → drop silently
                     }
                 }
-            }
-        });
+            });
+        }
     }
 
     // ── close ────────────────────────────────────────────────────────────────
@@ -290,14 +287,15 @@ impl Tracer {
     /// Flushes remaining spans and shuts down the OTel provider.  Call once
     /// at application exit.
     pub fn close(&self) {
-        let provider = self.provider.clone();
-        // Block until flush completes (within 5 s timeout).
-        self.rt.block_on(async move {
-            let _ = tokio::time::timeout(Duration::from_secs(5), async {
-                let _ = provider.force_flush();
-            })
-            .await;
-        });
+        if let Some(provider) = self.otel_tracer.provider() {
+            // Block until flush completes (within 5 s timeout).
+            self.rt.block_on(async move {
+                let _ = tokio::time::timeout(Duration::from_secs(5), async {
+                    let _ = provider.force_flush();
+                })
+                .await;
+            });
+        }
         global::shutdown_tracer_provider();
     }
 }
