@@ -754,3 +754,31 @@ An end-user can install and run this package individually by following these ste
 | **Reliable Reporter** | `report()` / `report_async()` | `infra/adapters/kafka/reliable_adapter.py` |
 
 
+## Go Tracep SDK & Server
+
+The Go components are located in the [packages/go/tracep](file:///home/btpl-lap-22/live/llm-observability-platform/packages/go/tracep) directory.
+
+### Go Server API Endpoints
+
+The Go Tracep Server automatically multiplexes all operations on a single port in containerized environments like Render (using the `PORT` environment variable) or runs multi-port setups (Ingest on port `4318`, Query on port `4319` by default).
+
+#### Telemetry Ingest API
+* **`POST /v1/traces`**: Accepts standard OpenTelemetry (OTLP) trace data in JSON or Protobuf formats.
+
+#### Query & Diagnostics APIs
+* **`GET /health`**: Verifies database connection and health.
+* **`GET /traces`**: Lists all recorded traces.
+* **`GET /traces/:tid`**: Returns a tree-like sequence of spans/events for a specific trace ID.
+* **`GET /spans/:sid`**: Retrieves details of a specific span.
+* **`GET /classes`**: Lists all tracked class/namespace attributes.
+* **`GET /functions`**: Lists all tracked function/method attributes.
+
+### Live Testing Deployment URL
+
+* **URL**: [https://tracep-go.onrender.com](https://tracep-go.onrender.com)
+* **Cost**: **$0 (100% Free)**. This testing deployment is hosted on Render's Free tier and will not cost you anything.
+* **Retention Policy**: To keep the database clean, all data older than **48 hours (2 days)** is automatically deleted by a background cleanup loop.
+* *Note: As a free service, the instance will automatically spin down (sleep) after 15 minutes of inactivity. The first request after sleep will take around 30-50 seconds to boot up.*
+
+
+
