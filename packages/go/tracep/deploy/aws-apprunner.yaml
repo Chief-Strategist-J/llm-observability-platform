@@ -1,0 +1,11 @@
+version: 1.0
+runtime: custom
+imageRepository:
+  imageIdentifier: "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/tracep-go:latest"
+  imageRepositoryType: ECR
+  imageConfiguration:
+    # AWS App Runner exposes a single port. Typically, you will expose port 4319 (Query API).
+    port: 4319
+    runtimeEnvironmentVariables:
+      DB_PATH: "/app/data/traces.db"
+      TRACE_TOKEN: ""

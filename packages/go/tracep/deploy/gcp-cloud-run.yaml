@@ -1,0 +1,23 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: tracep-go
+  namespace: 'default'
+spec:
+  template:
+    spec:
+      containers:
+        - image: gcr.io/PROJECT_ID/tracep-go:latest
+          ports:
+            # Note: GCP Cloud Run currently only exposes a single ingress port per service.
+            # Usually, you will expose port 4319 (Query API) or run a sidecar proxy if you need both.
+            - containerPort: 4319
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: 1000m
+          env:
+            - name: DB_PATH
+              value: /app/data/traces.db
+            - name: TRACE_TOKEN
+              value: ""

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2023-05-01",
+      "name": "tracep-go",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "configuration": {
+          "ingress": {
+            "external": true,
+            "targetPort": 4319,
+            "transport": "auto"
+          }
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "tracep-go",
+              "image": "mcr.microsoft.com/azuredocs/aci-helloworld:latest",
+              "env": [
+                {
+                  "name": "DB_PATH",
+                  "value": "/app/data/traces.db"
+                },
+                {
+                  "name": "TRACE_TOKEN",
+                  "value": ""
+                }
+              ],
+              "resources": {
+                "cpu": 0.5,
+                "memory": "1.0Gi"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
