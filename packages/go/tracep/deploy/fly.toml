@@ -1,5 +1,5 @@
 app = "tracep-go"
-primary_region = "bos"
+primary_region = "bom"
 
 [build]
   dockerfile = "build/Dockerfile"

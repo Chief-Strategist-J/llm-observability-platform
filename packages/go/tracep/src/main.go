@@ -147,19 +147,48 @@ func main() {
 		srv.startCleanupTask(time.Duration(retentionHours) * time.Hour)
 	}
 
-	// Ingest port — configurable via INGEST_PORT (default 4318)
+	portEnv := os.Getenv("PORT")
 	ingestPort := os.Getenv("INGEST_PORT")
-	if ingestPort == "" {
-		ingestPort = "4318"
+	queryPort := os.Getenv("QUERY_PORT")
+
+	if portEnv != "" {
+		if ingestPort == "" {
+			ingestPort = portEnv
+		}
+		if queryPort == "" {
+			queryPort = portEnv
+		}
+	} else {
+		if ingestPort == "" {
+			ingestPort = "4318"
+		}
+		if queryPort == "" {
+			queryPort = "4319"
+		}
 	}
+
+	if ingestPort == queryPort {
+		// Single-port mode: multiplex both Ingest and Query APIs on the same port
+		mergedMux := http.NewServeMux()
+		mergedMux.HandleFunc("/v1/traces", srv.handleIngest)
+		mergedMux.HandleFunc("/health", srv.handleHealth)
+		mergedMux.HandleFunc("/traces", srv.handleTraces)
+		mergedMux.HandleFunc("/traces/", srv.handleSingleTraceRoute)
+		mergedMux.HandleFunc("/spans/", srv.handleSingleSpanRoute)
+		mergedMux.HandleFunc("/classes", srv.handleClasses)
+		mergedMux.HandleFunc("/functions", srv.handleFunctions)
+
+		log.Printf("Starting Unified API (Ingest + Query) on :%s...", ingestPort)
+		if err := http.ListenAndServe(":"+ingestPort, mergedMux); err != nil {
+			log.Fatalf("API server error: %v", err)
+		}
+		return
+	}
+
+	// Multi-port mode (original behavior)
 	ingestMux := http.NewServeMux()
 	ingestMux.HandleFunc("/v1/traces", srv.handleIngest)
 
-	// Query API port — configurable via QUERY_PORT (default 4319)
-	queryPort := os.Getenv("QUERY_PORT")
-	if queryPort == "" {
-		queryPort = "4319"
-	}
 	queryMux := http.NewServeMux()
 	queryMux.HandleFunc("/health", srv.handleHealth)
 	queryMux.HandleFunc("/traces", srv.handleTraces)
