@@ -762,23 +762,69 @@ The Go components are located in the [packages/go/tracep](file:///home/btpl-lap-
 
 The Go Tracep Server automatically multiplexes all operations on a single port in containerized environments like Render (using the `PORT` environment variable) or runs multi-port setups (Ingest on port `4318`, Query on port `4319` by default).
 
-#### Telemetry Ingest API
-* **`POST /v1/traces`**: Accepts standard OpenTelemetry (OTLP) trace data in JSON or Protobuf formats.
-
-#### Query & Diagnostics APIs
-* **`GET /health`**: Verifies database connection and health.
-* **`GET /traces`**: Lists all recorded traces.
-* **`GET /traces/:tid`**: Returns a tree-like sequence of spans/events for a specific trace ID.
-* **`GET /spans/:sid`**: Retrieves details of a specific span.
-* **`GET /classes`**: Lists all tracked class/namespace attributes.
-* **`GET /functions`**: Lists all tracked function/method attributes.
-
-### Live Testing Deployment URL
-
-* **URL**: [https://tracep-go.onrender.com](https://tracep-go.onrender.com)
+### Live Testing URL
+* **Base URL**: [https://tracep-go.onrender.com](https://tracep-go.onrender.com)
 * **Cost**: **$0 (100% Free)**. This testing deployment is hosted on Render's Free tier and will not cost you anything.
-* **Retention Policy**: To keep the database clean, all data older than **48 hours (2 days)** is automatically deleted by a background cleanup loop.
-* *Note: As a free service, the instance will automatically spin down (sleep) after 15 minutes of inactivity. The first request after sleep will take around 30-50 seconds to boot up.*
+* **Retention Policy**: All data older than **48 hours (2 days)** is automatically deleted by a background cleanup loop.
+* *Note: The instance will spin down (sleep) after 15 minutes of inactivity. The first request after sleep will take around 30-50 seconds to boot up.*
+
+### API Testing Curl Commands
+
+#### 1. Health Check
+```bash
+curl -i https://tracep-go.onrender.com/health
+```
+
+#### 2. Telemetry Ingest (OTLP JSON Payload)
+```bash
+curl -i -X POST https://tracep-go.onrender.com/v1/traces \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resourceSpans": [
+      {
+        "scopeSpans": [
+          {
+            "spans": [
+              {
+                "traceId": "4f6df6e5f689072a4f6df6e5f689072a",
+                "spanId": "4f6df6e5f689072a",
+                "name": "test-span",
+                "startTimeUnixNano": "1687169400000000000",
+                "endTimeUnixNano": "1687169400500000000"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }'
+```
+
+#### 3. List Traces
+```bash
+curl -i https://tracep-go.onrender.com/traces
+```
+
+#### 4. Fetch Single Trace details (Trace ID: `4f6df6e5f689072a4f6df6e5f689072a`)
+```bash
+curl -i https://tracep-go.onrender.com/traces/4f6df6e5f689072a4f6df6e5f689072a
+```
+
+#### 5. Fetch Single Span details (Span ID: `4f6df6e5f689072a`)
+```bash
+curl -i https://tracep-go.onrender.com/spans/4f6df6e5f689072a
+```
+
+#### 6. List Namespaces/Classes
+```bash
+curl -i https://tracep-go.onrender.com/classes
+```
+
+#### 7. List Functions
+```bash
+curl -i https://tracep-go.onrender.com/functions
+```
+
 
 
 
