@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"log"
@@ -12,6 +13,8 @@ import (
 	"strings"
 	"sync"
 
+	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	"google.golang.org/protobuf/proto"
 	_ "modernc.org/sqlite"
 )
 
@@ -277,9 +280,19 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var payload OtlpPayload
-	if err := json.Unmarshal(body, &payload); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	contentType := r.Header.Get("Content-Type")
+	if contentType == "application/x-protobuf" {
+		var req coltracepb.ExportTraceServiceRequest
+		if err := proto.Unmarshal(body, &req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		payload = convertProtoToOtlpPayload(&req)
+	} else {
+		if err := json.Unmarshal(body, &payload); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
 
 	tx, err := s.db.Begin()
@@ -393,9 +406,10 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 						SET start_time = ?, end_time = ?,
 						    span_count = span_count + 1,
 						    error_count = error_count + ?,
-						    status = ?
+						    status = ?,
+						    name = CASE WHEN ? = '' THEN ? ELSE name END
 						WHERE tid = ?
-					`, newStart, newEnd, errVal(status), getTraceStatus(status), span.TraceID)
+					`, newStart, newEnd, errVal(status), getTraceStatus(status), span.ParentSpanID, span.Name, span.TraceID)
 				}
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -780,4 +794,90 @@ func (s *Server) handleFunctions(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(funcs)
+}
+
+func convertProtoToOtlpPayload(req *coltracepb.ExportTraceServiceRequest) OtlpPayload {
+	var payload OtlpPayload
+	for _, rs := range req.ResourceSpans {
+		var resourceSpans ResourceSpans
+		if rs.Resource != nil {
+			var resource Resource
+			for _, attr := range rs.Resource.Attributes {
+				valHolder := ValueHolder{}
+				if attr.Value != nil {
+					if attr.Value.GetStringValue() != "" {
+						valHolder.StringValue = attr.Value.GetStringValue()
+					} else if attr.Value.GetIntValue() != 0 {
+						valHolder.IntValue = strconv.FormatInt(attr.Value.GetIntValue(), 10)
+					}
+				}
+				resource.Attributes = append(resource.Attributes, KeyValue{
+					Key:   attr.Key,
+					Value: valHolder,
+				})
+			}
+			resourceSpans.Resource = &resource
+		}
+
+		for _, ss := range rs.ScopeSpans {
+			var scopeSpans ScopeSpans
+			for _, span := range ss.Spans {
+				var otlpSpan OtlpSpan
+				otlpSpan.TraceID = hex.EncodeToString(span.TraceId)
+				otlpSpan.SpanID = hex.EncodeToString(span.SpanId)
+				if len(span.ParentSpanId) > 0 {
+					otlpSpan.ParentSpanID = hex.EncodeToString(span.ParentSpanId)
+				}
+				otlpSpan.Name = span.Name
+				otlpSpan.StartTimeUnixNano = strconv.FormatUint(span.StartTimeUnixNano, 10)
+				otlpSpan.EndTimeUnixNano = strconv.FormatUint(span.EndTimeUnixNano, 10)
+
+				for _, attr := range span.Attributes {
+					valHolder := ValueHolder{}
+					if attr.Value != nil {
+						valHolder.StringValue = attr.Value.GetStringValue()
+						if valHolder.StringValue == "" && attr.Value.GetIntValue() != 0 {
+							valHolder.IntValue = strconv.FormatInt(attr.Value.GetIntValue(), 10)
+						}
+					}
+					otlpSpan.Attributes = append(otlpSpan.Attributes, KeyValue{
+						Key:   attr.Key,
+						Value: valHolder,
+					})
+				}
+
+				for _, event := range span.Events {
+					var otlpEvent OtlpEvent
+					otlpEvent.TimeUnixNano = strconv.FormatUint(event.TimeUnixNano, 10)
+					otlpEvent.Name = event.Name
+					for _, attr := range event.Attributes {
+						valHolder := ValueHolder{}
+						if attr.Value != nil {
+							valHolder.StringValue = attr.Value.GetStringValue()
+							if valHolder.StringValue == "" && attr.Value.GetIntValue() != 0 {
+								valHolder.IntValue = strconv.FormatInt(attr.Value.GetIntValue(), 10)
+							}
+						}
+						otlpEvent.Attributes = append(otlpEvent.Attributes, KeyValue{
+							Key:   attr.Key,
+							Value: valHolder,
+						})
+					}
+					otlpSpan.Events = append(otlpSpan.Events, otlpEvent)
+				}
+
+				if span.Status != nil {
+					var otlpStatus OtlpStatus
+					otlpStatus.Code = int(span.Status.Code)
+					otlpStatus.Message = span.Status.Message
+					otlpSpan.Status = &otlpStatus
+				}
+
+				scopeSpans.Spans = append(scopeSpans.Spans, otlpSpan)
+			}
+			resourceSpans.ScopeSpans = append(resourceSpans.ScopeSpans, scopeSpans)
+		}
+		payload.ResourceSpans = append(payload.ResourceSpans, resourceSpans)
+	}
+	return payload
 }
