@@ -1,0 +1,23 @@
+[package]
+name = "tracep"
+version = "0.1.0"
+edition = "2021"
+description = "Fire-and-forget OTel-wrapping tracer SDK"
+license = "MIT"
+
+[lib]
+name = "tracep"
+path = "src/lib.rs"
+
+[dependencies]
+opentelemetry = { version = "0.21", features = ["trace"] }
+opentelemetry-otlp = { version = "0.14", features = ["http-proto", "reqwest-client"] }
+opentelemetry_sdk = { version = "0.21", features = ["rt-tokio"] }
+tokio = { version = "1", features = ["full"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+
+[[test]]
+name = "tracer_test"
+path = "tests/unit/tracer_test.rs"
