@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	"google.golang.org/protobuf/proto"
@@ -135,6 +136,17 @@ func main() {
 		token: os.Getenv("TRACE_TOKEN"),
 	}
 
+	retentionHoursStr := os.Getenv("RETENTION_HOURS")
+	retentionHours := 48 // Default to 48 hours (2 days)
+	if retentionHoursStr != "" {
+		if val, err := strconv.Atoi(retentionHoursStr); err == nil {
+			retentionHours = val
+		}
+	}
+	if retentionHours > 0 {
+		srv.startCleanupTask(time.Duration(retentionHours) * time.Hour)
+	}
+
 	// Ingest port — configurable via INGEST_PORT (default 4318)
 	ingestPort := os.Getenv("INGEST_PORT")
 	if ingestPort == "" {
@@ -245,6 +257,57 @@ func runMigrations(db *sql.DB) {
 		log.Fatalf("failed to apply migrations: %v", err)
 	}
 	log.Println("Migrations applied successfully.")
+}
+
+func (s *Server) startCleanupTask(retention time.Duration) {
+	// Run cleanup check every 15 minutes
+	ticker := time.NewTicker(15 * time.Minute)
+	go func() {
+		for range ticker.C {
+			cutoff := time.Now().Add(-retention).UnixNano()
+			log.Printf("[Retention] Running cleanup for data older than %v...", retention)
+
+			tx, err := s.db.Begin()
+			if err != nil {
+				log.Printf("[Retention] Failed to start transaction: %v", err)
+				continue
+			}
+
+			// Delete steps associated with expired traces
+			_, err = tx.Exec("DELETE FROM steps WHERE tid IN (SELECT tid FROM traces WHERE start_time < ?)", cutoff)
+			if err != nil {
+				tx.Rollback()
+				log.Printf("[Retention] Failed to delete steps: %v", err)
+				continue
+			}
+
+			// Delete spans associated with expired traces
+			_, err = tx.Exec("DELETE FROM spans WHERE tid IN (SELECT tid FROM traces WHERE start_time < ?)", cutoff)
+			if err != nil {
+				tx.Rollback()
+				log.Printf("[Retention] Failed to delete spans: %v", err)
+				continue
+			}
+
+			// Delete expired traces themselves
+			res, err := tx.Exec("DELETE FROM traces WHERE start_time < ?", cutoff)
+			if err != nil {
+				tx.Rollback()
+				log.Printf("[Retention] Failed to delete traces: %v", err)
+				continue
+			}
+
+			if err := tx.Commit(); err != nil {
+				log.Printf("[Retention] Failed to commit cleanup: %v", err)
+				continue
+			}
+
+			rowsAffected, _ := res.RowsAffected()
+			if rowsAffected > 0 {
+				log.Printf("[Retention] Cleanup successful. Removed %d expired traces.", rowsAffected)
+			}
+		}
+	}()
 }
 
 func (s *Server) authenticate(w http.ResponseWriter, r *http.Request) bool {
