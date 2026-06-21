@@ -1,0 +1,11 @@
+workers:
+  - name: forecast-worker
+    type: temporal
+    language: python
+    task_queue: forecast-worker-queue
+    owner: "@data-team"
+    stage: 1
+    workflows:
+      - ForecastBaselineUpdate
+    activities:
+      - fetch_cost_series

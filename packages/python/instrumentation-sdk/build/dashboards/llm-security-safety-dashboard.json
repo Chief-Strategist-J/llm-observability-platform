@@ -1,10 +1,10 @@
 {
   "uid": "llm-security-safety-dashboard",
   "title": "LLM Security & Safety Dashboard",
-  "tags": ["llm", "security", "pii", "injection", "toxicity", "observability"],
+  "tags": ["llm", "security", "pii", "injection", "observability"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "refresh": "30s",
   "time": {
     "from": "now-6h",
@@ -13,7 +13,7 @@
   "panels": [
     {
       "id": 1,
-      "title": "PII Detection Rate",
+      "title": "PII Detection Rate (per 5m)",
       "type": "timeseries",
       "gridPos": { "h": 10, "w": 12, "x": 0, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
@@ -49,7 +49,7 @@
     },
     {
       "id": 2,
-      "title": "Prompt Injection Attempts Rate",
+      "title": "Prompt Injection Attempts Rate (per 5m)",
       "type": "timeseries",
       "gridPos": { "h": 10, "w": 12, "x": 12, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
@@ -85,9 +85,9 @@
     },
     {
       "id": 3,
-      "title": "Total Security Violations (PII + Injections)",
+      "title": "Total PII Detections",
       "type": "stat",
-      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 10 },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 10 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
@@ -104,25 +104,89 @@
         "overrides": []
       },
       "options": {
-        "reduceOptions": {
-          "calcs": ["lastNotNull"]
-        },
+        "reduceOptions": { "calcs": ["lastNotNull"] },
         "colorMode": "background",
         "graphMode": "area"
       },
       "targets": [
         {
-          "expr": "sum(llm_pii_detected_total) + sum(llm_injection_attempts_total) + sum(llm_toxicity_detected_total)",
-          "legendFormat": "Total Violations",
+          "expr": "sum(llm_pii_detected_total)",
+          "legendFormat": "PII Detected",
           "refId": "A"
         }
       ]
     },
     {
       "id": 4,
-      "title": "Security Violations Over Time (PII + Injections)",
+      "title": "Total Injection Attempts",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 10 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 5 },
+              { "color": "red", "value": 20 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "expr": "sum(llm_injection_attempts_total)",
+          "legendFormat": "Injection Attempts",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Total Security Violations (PII + Injections)",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 10 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "red", "value": 50 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "expr": "sum(llm_pii_detected_total) + sum(llm_injection_attempts_total)",
+          "legendFormat": "Total Violations",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Security Events Over Time (PII + Injections)",
       "type": "timeseries",
-      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 10 },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 16 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
@@ -146,117 +210,43 @@
           "expr": "sum(increase(llm_injection_attempts_total[5m])) by (service_name)",
           "legendFormat": "Injection — {{service_name}}",
           "refId": "B"
-        },
-        {
-          "expr": "sum(increase(llm_toxicity_detected_total[5m])) by (service_name)",
-          "legendFormat": "Toxicity — {{service_name}}",
-          "refId": "C"
         }
       ]
     },
     {
-      "id": 5,
-      "title": "Toxicity Detection Rate",
-      "type": "timeseries",
-      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 16 },
+      "id": 7,
+      "title": "Security Events by Service",
+      "type": "piechart",
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 26 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 20,
-            "gradientMode": "scheme",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "showPoints": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "orange", "value": 1 },
-              { "color": "red", "value": 5 }
-            ]
-          }
-        },
-        "overrides": []
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "pieType": "donut",
+        "legend": { "displayMode": "table", "placement": "right" }
       },
       "targets": [
         {
-          "expr": "sum(rate(llm_toxicity_detected_total[5m])) by (service_name)",
+          "expr": "sum(llm_pii_detected_total + llm_injection_attempts_total) by (service_name)",
           "legendFormat": "{{service_name}}",
           "refId": "A"
         }
       ]
     },
     {
-      "id": 6,
-      "title": "Toxicity Score P95 (per service)",
-      "type": "timeseries",
-      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 16 },
+      "id": 8,
+      "title": "Security Events by Model",
+      "type": "piechart",
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 26 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1,
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "opacity",
-            "lineWidth": 2,
-            "pointSize": 4,
-            "showPoints": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 0.5 },
-              { "color": "red", "value": 0.8 }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.95, sum(rate(llm_toxicity_score_bucket[5m])) by (le, service_name))",
-          "legendFormat": "P95 — {{service_name}}",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 7,
-      "title": "Total Toxicity Detections",
-      "type": "stat",
-      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 26 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "orange", "value": 5 },
-              { "color": "red", "value": 20 }
-            ]
-          }
-        },
-        "overrides": []
-      },
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"] },
-        "colorMode": "background",
-        "graphMode": "area"
+        "pieType": "donut",
+        "legend": { "displayMode": "table", "placement": "right" }
       },
       "targets": [
         {
-          "expr": "sum(llm_toxicity_detected_total)",
-          "legendFormat": "Toxicity Detections",
+          "expr": "sum(llm_pii_detected_total + llm_injection_attempts_total) by (model)",
+          "legendFormat": "{{model}}",
           "refId": "A"
         }
       ]

@@ -45,3 +45,7 @@ addopts = [
 markers = [
     "performance: marks tests as load/performance tests (deselect with '-m not performance')",
 ]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+

@@ -11,6 +11,7 @@ This directory serves as the centralized Model Registry index for the LLM Observ
 | [nli-deberta-v3-base](file:///home/btpl-lap-22/live/obs/models/cross-encoder/nli-deberta-v3-base/model.yaml) | sequence-classification | PyTorch | FP32 | ~370 MB | Used in NLI worker microservice for RAG grounding and faithfulness checks. |
 | [toxic-bert](file:///home/btpl-lap-22/live/obs/models/unitary/toxic-bert/model.yaml) | sequence-classification | ONNX | FP32 | ~410 MB | Used in toxicity scorer microservice for classification. |
 | [gpt2](file:///home/btpl-lap-22/live/obs/models/gpt2/model.yaml) | causal-lm | ONNX | FP32 | ~498 MB | Used in perplexity microservice for fallback scoring. |
+| [timesfm-1.0-200m](file:///home/btpl-lap-22/live/llm-observability-platform/models/google/timesfm-1.0-200m/model.yaml) | time-series-forecasting | PyTorch | FP32 | ~1.2 GB | Used in forecast worker for proactive metric forecasting and anomaly detection. |
 
 ---
 

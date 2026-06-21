@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 import os
 from opentelemetry import trace
-from src.features.metrics.index import record_span_metrics, init_metrics_pipeline, get_current_prices_ref, reload_prices
+from src.features.metrics.index import record_span_metrics, init_metrics_pipeline, get_current_prices_ref, reload_prices, record_forecast_metrics
 
 
 class ModelPriceResponse(BaseModel):
@@ -16,6 +16,15 @@ class ModelPriceResponse(BaseModel):
 
 class ModelPricesListResponse(BaseModel):
     prices: List[ModelPriceResponse]
+
+
+class RecordForecastRequest(BaseModel):
+    mean: int
+    p10: int
+    p90: int
+    model: str = "unknown"
+    provider: str = "unknown"
+    service_name: str = "unknown"
 
 
 router = APIRouter(prefix="/metrics", tags=["Metrics"])
@@ -80,10 +89,12 @@ def init_metrics(request: MetricsInitRequest = MetricsInitRequest()):
 @router.get("/health", response_model=MetricsStatusResponse)
 def metrics_health():
     _set_span_attributes()
+    from prometheus_client import generate_latest
     from src.features.metrics.index import _initialized
+    metrics_data = generate_latest().decode('utf-8')
     return MetricsStatusResponse(
         initialized=_initialized,
-        message="Metrics pipeline is active" if _initialized else "Metrics pipeline not initialized"
+        message=metrics_data,
     )
 
 
@@ -143,6 +154,25 @@ def reload_model_prices():
         return MetricsStatusResponse(
             initialized=_initialized,
             message="Model prices reloaded successfully",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/forecast", response_model=MetricsStatusResponse)
+def record_forecast(request: RecordForecastRequest):
+    _set_span_attributes()
+    try:
+        labels = {
+            "model": request.model,
+            "provider": request.provider,
+            "service_name": request.service_name,
+        }
+        record_forecast_metrics(request.mean, request.p10, request.p90, labels)
+        from src.features.metrics.index import _initialized
+        return MetricsStatusResponse(
+            initialized=_initialized,
+            message="Forecast metrics recorded successfully",
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
