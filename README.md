@@ -3,6 +3,7 @@
 This guide covers the technical architecture and end-user usage for the Python-based observability components.
 
 ## Table of Contents
+- [🆕 What's New (v1.13.0)](#-whats-new-v1130)
 - [1. System Architecture](#1-system-architecture)
   - [High-Level Data Flow](#high-level-data-flow)
   - [Technical Sequence](#technical-sequence)
@@ -17,12 +18,119 @@ This guide covers the technical architecture and end-user usage for the Python-b
   - [PII & Injection Scan (Aho-Corasick Redaction)](#pii--injection-scan-aho-corasick-redaction)
   - [Deterministic Sampling Gate (Modulo 100)](#deterministic-sampling-gate-modulo-100)
   - [MiniLM Embedding (Concurrent & Sampled)](#minilm-embedding-concurrent--sampled)
-  - [Prometheus Metrics & Grafana Dashboard](#prometheus-metrics--grafana-dashboard)
+  - [Prometheus Metrics & Grafana Dashboards](#prometheus-metrics--grafana-dashboards)
   - [Updating Config Files (Model Prices, PII Patterns, Infra)](#updating-config-files-model-prices-pii-patterns-infra)
   - [Docker Deployment](#docker-deployment)
   - [Observability Launcher CLI (llm-observe)](#observability-launcher-cli-llm-observe)
   - [Temporal EWMA Worker & Cost Anomaly Detection (Standalone)](#temporal-ewma-worker--cost-anomaly-detection-standalone)
 - [3. Implementation Call Chain](#3-implementation-call-chain)
+
+---
+
+## 🆕 What's New (v1.13.0)
+
+### Two New Docker Images — Grafana Forecast Observability
+
+This release ships two updated images and a completely new forecast intelligence pipeline:
+
+| Image | Docker Hub | What's Inside |
+|-------|-----------|---------------|
+| `chiefj/instrumentation-sdk-api:latest` | [→ Hub](https://hub.docker.com/r/chiefj/instrumentation-sdk-api) | FastAPI + **Prometheus + Grafana + Tempo** all-in-one. Now includes 11 auto-provisioned dashboards and the `/v1/metrics/forecast` endpoint. |
+| `chiefj/forecast-worker:latest` | [→ Hub](https://hub.docker.com/r/chiefj/forecast-worker) | New — **Google TimesFM 2.5-200m** cron worker. Runs every 5 minutes, forecasts LLM costs 24 hours ahead (mean / p10 / p90), pushes results to the SDK API. |
+
+```bash
+docker pull chiefj/instrumentation-sdk-api:latest
+docker pull chiefj/forecast-worker:latest
+```
+
+### What Changed
+
+- **`PrometheusMetricsAdapter`** — switched forecast gauges from push-based (`create_gauge`) to **observable callback-based** (`create_observable_gauge`). Forecast values now persist on every Prometheus scrape cycle instead of expiring after one collection.
+- **`POST /v1/metrics/forecast`** — new REST endpoint to push `mean / p10 / p90` forecast values (in micro-USD) directly from any source.
+- **11 Grafana dashboards** — all auto-provisioned in the `LLM Observability` folder. Queries now use correct OTel Prometheus metric name conventions (`_usd_micro` suffix on gauges).
+- **`forecast-worker` package** — new Temporal-based cron worker using Google TimesFM for proactive cost forecasting (see [`packages/python/forecast-worker/README.md`](packages/python/forecast-worker/README.md)).
+
+### How the Two Images Connect
+
+```
+┌──────────────────────────┐     POST /v1/metrics/forecast     ┌──────────────────────────────┐
+│  chiefj/forecast-worker  │ ──────────────────────────────►  │ chiefj/instrumentation-sdk-api│
+│                          │                                   │                              │
+│  TimesFM inference every │                                   │  OTel Observable Gauge       │
+│  5 minutes on ClickHouse │                                   │  → Prometheus :9464          │
+│  168h cost history       │                                   │  → Grafana dashboards        │
+└──────────────────────────┘                                   └──────────────────────────────┘
+```
+
+### Grafana Dashboards — What You Can See
+
+Open Grafana at **http://localhost:3000** → **Dashboards → LLM Observability**
+
+| Dashboard | Panels | Key Metrics Shown |
+|-----------|--------|-------------------|
+| **LLM Cost Forecast** ⭐ | 7 | Mean/p10/p90 confidence band, uncertainty width (p90−p10), actual vs forecast overlay, per-model bar gauge, stat snapshots |
+| **LLM Cost** | 4 | Cumulative cost over time, cost by model (donut), cost by service (bar gauge), forecast panel |
+| **LLM Latency & TTFT** | 6 | p50/p95/p99 total latency, p50/p95/p99 time-to-first-token, avg latency by model |
+| **LLM Security & Safety** | 8 | PII detection rate, injection attempt rate, total violations stat, violations over time, breakdown by service & model |
+| **LLM Guardrails** | 4 | Invariant breach tracking (INV-Q-01 to INV-Q-07), human review SLO %, review decisions pie chart |
+| **LLM Error & Retry** | 4 | Error rate by status, retry distribution, finish reason breakdown, retry count trend |
+| **LLM Model Parity & A/B** | 3 | Cost per request by model, token efficiency ratio, latency parity comparison |
+| **LLM Quality Engine** | 3 | Quality score distribution, evaluation throughput, score trend over time |
+| **LLM Data Drift** | 3 | Token distribution drift, cost baseline deviation, latency drift |
+| **LLM System Performance** | 3 | HTTP server active requests, request duration P95, memory/CPU usage |
+| **LLM User Analytics** | 3 | Spans per service, unique model usage, request volume trend |
+
+### Prometheus Metrics Reference (all live)
+
+| Metric | Type | Labels | Description |
+|--------|------|--------|-------------|
+| `llm_tokens_total` | Counter | `model, provider, service_name, token_type` | Total tokens consumed (prompt / completion) |
+| `llm_cost_usd_micro_total` | Counter | `model, provider, service_name` | Accumulated cost in micro-USD |
+| `llm_latency_ms_total` | Histogram | `model, provider, service_name` | End-to-end call latency (ms) |
+| `llm_latency_ms_ttft` | Histogram | `model, provider, service_name` | Time to first token (ms) |
+| `llm_finish_reason_total` | Counter | `model, provider, service_name, finish_reason` | Finish reason distribution |
+| `llm_spans_total` | Counter | `model, provider, service_name, status` | Total LLM spans recorded |
+| `llm_pii_detected_total` | Counter | `model, provider, service_name` | PII detections count |
+| `llm_injection_attempts_total` | Counter | `model, provider, service_name` | Prompt injection attempts count |
+| `llm_forecast_cost_mean_usd_micro` | Gauge | `model, provider, service_name` | TimesFM forecast mean cost (micro-USD) |
+| `llm_forecast_cost_p10_usd_micro` | Gauge | `model, provider, service_name` | Forecast p10 optimistic bound |
+| `llm_forecast_cost_p90_usd_micro` | Gauge | `model, provider, service_name` | Forecast p90 pessimistic bound |
+
+> Convert micro-USD to USD: divide by `1,000,000`  
+> Example PromQL: `sum(llm_forecast_cost_mean_usd_micro) by (model) / 1000000`
+
+### Quick Start — Both Images Together
+
+```bash
+# 1. Start the observability stack (API + Prometheus + Grafana + Tempo)
+docker run -d \
+  --name observability-stack \
+  -p 8000:8000 \
+  -p 3000:3000 \
+  -p 9090:9090 \
+  -p 4317:4317 \
+  chiefj/instrumentation-sdk-api:latest
+
+# 2. Start the forecast worker (connects to observability-stack)
+docker run -d \
+  --name forecast-worker \
+  -e CLICKHOUSE_HOST=your-clickhouse-host \
+  -e CLICKHOUSE_PASSWORD=your-password \
+  -e INSTRUMENTATION_SDK_URL=http://observability-stack:8000 \
+  -e TEMPORAL_HOST=your-temporal:7233 \
+  -v ~/.cache/huggingface:/root/.cache/huggingface \
+  --link observability-stack \
+  chiefj/forecast-worker:latest
+
+# 3. Push a forecast manually (no worker needed for testing)
+curl -X POST http://localhost:8000/v1/metrics/forecast \
+  -H "Content-Type: application/json" \
+  -d '{"mean": 9200, "p10": 3800, "p90": 17500, "model": "gpt-4o", "provider": "openai", "service_name": "my-app"}'
+
+# 4. Open Grafana → http://localhost:3000 → Dashboards → LLM Observability
+```
+
+---
 
 ## 1. System Architecture
 
@@ -357,34 +465,75 @@ curl -X POST http://localhost:8000/v1/embeddings/embed \
   -d '{"text": "your text here"}'
 ```
 
-### Prometheus Metrics & Grafana Dashboard
+### Prometheus Metrics & Grafana Dashboards
 
-The SDK integrates a Prometheus metrics collection pipeline to track operational metrics for LLM calls (latency, TTFT, token usage, cost, and security violations).
+The SDK integrates a full Prometheus + Grafana pipeline. **11 dashboards** are auto-provisioned in the `LLM Observability` folder when you run the container.
 
-#### Configuration & Initialization
+#### Metrics API Endpoints
 
-Initialize the Prometheus metrics scraping endpoint:
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/v1/metrics/init` | POST | Initialize Prometheus scraping on port 9464 |
+| `/v1/metrics/health` | GET | Health check + raw Prometheus output |
+| `/v1/metrics/record` | POST | Record a single LLM span (tokens, cost, latency) |
+| `/v1/metrics/record-batch` | POST | Record multiple spans in one call |
+| `/v1/metrics/forecast` | POST | Push TimesFM forecast values (mean/p10/p90) |
+| `/v1/metrics/prices` | GET | Get current model prices |
+| `/v1/metrics/prices/reload` | POST | Hot-reload model prices |
+
+#### Record a Span
 
 ```bash
-curl -X POST http://localhost:8000/v1/metrics/init \
+curl -X POST http://localhost:8000/v1/metrics/record \
   -H "Content-Type: application/json" \
-  -d '{"port": 9464}'
+  -d '{
+    "model": "gpt-4o",
+    "provider": "openai",
+    "service_name": "my-app",
+    "prompt_tokens": 1500,
+    "completion_tokens": 400,
+    "latency_ms_total": 1800,
+    "latency_ms_ttft": 320,
+    "finish_reason": "stop",
+    "status": "success",
+    "cost_usd_micro": 7200,
+    "pii_detected": false,
+    "injection_attempt": false
+  }'
 ```
 
-#### Metrics Endpoints
+#### Push a Forecast
 
-- **Initialize Pipeline**: `POST /v1/metrics/init`
-- **Health Check**: `GET /v1/metrics/health`
-- **Record Single Span Metrics**: `POST /v1/metrics/record`
-- **Record Batch Spans Metrics**: `POST /v1/metrics/record-batch`
+```bash
+curl -X POST http://localhost:8000/v1/metrics/forecast \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mean": 9200,
+    "p10": 3800,
+    "p90": 17500,
+    "model": "gpt-4o",
+    "provider": "openai",
+    "service_name": "my-app"
+  }'
+```
 
-#### Grafana Dashboard
+#### Grafana Dashboards (11 total)
 
-The dashboard is built-in and automatically provisioned on port `3000` (or `3002` in standalone mode). It includes:
-- **LLM Latency & TTFT**: Histogram distribution of request latency and time-to-first-token.
-- **Token Usage**: Track prompt and completion tokens.
-- **Cost Analysis**: Live cost calculation in micro-USD.
-- **Security Scans**: Record rates of PII exposure and prompt injections.
+Open **http://localhost:3000** → **Dashboards → LLM Observability**:
+
+| Dashboard | What You'll See |
+|-----------|----------------|
+| ⭐ **LLM Cost Forecast** | Mean/p10/p90 confidence band, uncertainty width, actual vs forecast overlay |
+| **LLM Cost** | Cumulative cost over time, cost by model & service |
+| **LLM Latency & TTFT** | p50/p95/p99 latency and time-to-first-token by model |
+| **LLM Security & Safety** | PII detection rate, injection attempts, violations by service |
+| **LLM Guardrails** | Invariant breach tracking, human review SLO % |
+| **LLM Error & Retry** | Error rates, finish reasons, retry distribution |
+| **LLM Model Parity & A/B** | Cost per request, token efficiency, latency comparison |
+| **LLM Quality Engine** | Quality score distribution and evaluation throughput |
+| **LLM Data Drift** | Token distribution and cost baseline deviation |
+| **LLM System Performance** | HTTP server metrics, CPU/memory usage |
+| **LLM User Analytics** | Spans per service, request volume trend |
 
 ### Updating Config Files (Model Prices, PII Patterns, Infra)
 
@@ -468,14 +617,18 @@ Two Docker Compose configurations are available under `deploy/docker/` depending
    KAFKA_BOOTSTRAP_SERVERS="my-kafka:9092" docker compose -f deploy/docker/docker-compose.prod.yaml up -d
    ```
 
-### Docker Deployments (v1.12.0)
+### Docker Deployments (v1.13.0)
 
-We publish several official Docker images to the `chiefj` namespace on Docker Hub:
-* **All-in-One Image (`chiefj/instrumentation-sdk-api`)**: Contains Java, Kafka, PostgreSQL, and pgvector. When started, it automatically initializes database users, databases, runs migrations, and provisions Kafka topics. No external setup required.
-* **Standalone Image (`chiefj/instrumentation-sdk-api-nokafka`)**: A lightweight container without the embedded databases and message queues. You supply your own external endpoints.
-* **Toxicity Scorer Worker (`chiefj/toxicity-worker`)**: Standalone ONNX runtime microservice for multi-label toxicity checks.
-* **Quality Scorer Engine (`chiefj/quality-engine`)**: Standalone microservice evaluating span metrics, schema alignment, and rule-based thresholds.
-* **Alert Engine (`chiefj/alert-engine`)**: Kafka-consumer worker routing budget warnings and cost anomaly updates.
+We publish official Docker images to the `chiefj` namespace on Docker Hub:
+
+| Image | Tag | Description |
+|-------|-----|-------------|
+| [`chiefj/instrumentation-sdk-api`](https://hub.docker.com/r/chiefj/instrumentation-sdk-api) | `latest` | **All-in-One Observability Stack** — FastAPI + Prometheus + Grafana + Tempo + 11 dashboards auto-provisioned |
+| [`chiefj/forecast-worker`](https://hub.docker.com/r/chiefj/forecast-worker) | `latest` | **🆕 TimesFM Forecast Worker** — Google TimesFM 2.5-200m cron worker, pushes mean/p10/p90 forecast to SDK API |
+| `chiefj/instrumentation-sdk-api-nokafka` | `stable` | Lightweight standalone without embedded databases |
+| `chiefj/toxicity-worker` | `stable` | ONNX toxicity scorer microservice |
+| `chiefj/quality-engine` | `stable` | Span quality evaluation + Temporal orchestrator |
+| `chiefj/alert-engine` | `stable` | Kafka consumer alert dispatcher (Slack / PagerDuty) |
 
 Each engine contains a `deploy_docker.sh` utility under its `scripts/` directory to build, validate, push, and automatically clean up the local image caches.
 
