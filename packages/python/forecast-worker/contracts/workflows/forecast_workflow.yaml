@@ -1,0 +1,21 @@
+workflow: forecast_baseline_update
+version: 1
+schedule:
+  cron: "5 * * * *"
+input:
+  type: object
+  properties:
+    lookback_hours:
+      type: integer
+      minimum: 1
+      default: 168
+    min_history_hours:
+      type: integer
+      minimum: 1
+      default: 48
+activities:
+  fetch_cost_series:
+    timeout_seconds: 60
+    retry:
+      max_attempts: 3
+      backoff_ms: 1000

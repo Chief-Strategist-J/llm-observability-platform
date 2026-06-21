@@ -1,0 +1,1 @@
+# shared.errors package

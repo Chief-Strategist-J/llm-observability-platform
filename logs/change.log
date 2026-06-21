@@ -1099,3 +1099,43 @@
         ├── worker -> Implement quality_score_workflow with 7 activities and parallelized scoring tasks in Temporal
         ├── quality-engine -> Add FastAPI handlers for human review queue retrieval and update submissions
         └── testing -> Write unit, workflow, and load tests to cover human review and workflow activities
+
+[2026-06-21T10:26:00+05:30] Initialize forecast-worker package structure, model registry, and worker registries
+└── File: models/google/timesfm-1.0-200m/model.yaml, models/README.md, registry/workers/forecast-worker.yaml, packages/python/forecast-worker/worker-registry.yaml, packages/python/forecast-worker/contracts/workflows/forecast_workflow.yaml, packages/python/forecast-worker/.package-meta.yaml, packages/python/forecast-worker/pyproject.toml, packages/python/forecast-worker/README.md
+    ├── Choice: Establish compliance framework and metadata declarations for the new TimesFM forecast-worker following strict policy rules.
+    └── Changes:
+        ├── models -> Declare google/timesfm-1.0-200m in the Model Registry index and create metadata yaml
+        ├── registry -> Create registry/workers/forecast-worker.yaml and package-level worker-registry.yaml
+        ├── contract -> Define Temporal workflow contract under contracts/workflows/forecast_workflow.yaml
+        └── structure -> Set up pyproject.toml, .package-meta.yaml, and package directories for the new worker
+
+[2026-06-21T10:40:00+05:30] Implement Activity F-FM-01 ClickHouse interfaces, ForecastService logic, and 100% covered unit tests
+└── File: packages/python/forecast-worker/src/shared/ports/clickhouse_port.py, packages/python/forecast-worker/src/infra/adapters/clickhouse/clickhouse_adapter.py, packages/python/forecast-worker/src/features/forecast/service.py, packages/python/forecast-worker/src/shared/errors/base.py, packages/python/forecast-worker/src/shared/contracts/validator.py, packages/python/forecast-worker/tests/unit/test_build_dense_series.py, packages/python/forecast-worker/tests/unit/test_contract.py
+    ├── Choice: Adhere strictly to the Single Responsibility Principle (SRP) by separating the data query execution layer (ports/adapters) from pure business series processing logic.
+    └── Changes:
+        ├── clickhouse-port -> Define ClickHousePort protocol for retrieving raw cost metrics
+        ├── clickhouse-adapter -> Implement ClickHouseAdapter to query the cost_by_dimension table
+        ├── forecast-service -> Implement ForecastService.build_dense_series with hourly padding, filtering, and metric logging
+        └── unit-tests -> Add 100% covered tests for ForecastService and contract validation passing on dev virtualenv
+
+[2026-06-21T10:43:00+05:30] Create database migrations for forecasts schema and add synthetic data verification
+└── File: packages/python/forecast-worker/database/migrations/0001_init.sql, packages/python/forecast-worker/database/migrations/0001_init.rollback.sql, packages/python/forecast-worker/database/schema.lock
+    ├── Choice: Establish standard database schema and migrations for storing Time Series forecasts, and verify execution using synthetic data.
+    └── Changes:
+        ├── migrations -> Create forecasts table migration with UNIQUE constraint and schema.lock tracker
+        └── synthetic-test -> Create scratch verification script to run dense series parsing and assertions
+
+[2026-06-21T10:55:00+05:30] Execute actual TimesFM 2.5 model inference, update README, and add Docker configs
+└── File: packages/python/forecast-worker/pyproject.toml, packages/python/forecast-worker/build/Dockerfile, packages/python/forecast-worker/README.md, scratch/test_real_timesfm.py
+    ├── Choice: Wire actual google/timesfm-2.5-200m-pytorch model inference, configure CPU-optimized Docker environment, and expand documentation.
+    └── Changes:
+        ├── dependencies -> Add timesfm and torch to pyproject.toml package requirements
+        ├── docker -> Create build/Dockerfile configured with lightweight CPU PyTorch builds
+        ├── readme -> Write comprehensive architecture, setup, testing, and migration guidelines in README.md
+        └── timesfm-inference -> Implement and execute test_real_timesfm.py scratch script to download weights and verify real forecast inference
+
+[2026-06-21T10:58:00+05:30] Copy generated trend chart to package outcome folder
+└── File: packages/python/forecast-worker/outcome/forecast_graph.jpg
+    ├── Choice: Place the generated cost forecast graph inside the newly created package outcome directory.
+    └── Changes:
+        └── outcome-image -> Create outcome/ folder in package directory and copy generated dashboard jpg there

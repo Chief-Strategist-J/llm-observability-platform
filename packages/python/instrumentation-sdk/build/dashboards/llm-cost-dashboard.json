@@ -101,6 +101,44 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "id": 4,
+      "title": "LLM Cost Forecast (USD)",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum(llm_forecast_cost_mean_usd_micro) by (service_name, model) / 1000000",
+          "legendFormat": "Mean - {{service_name}} / {{model}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(llm_forecast_cost_p10_usd_micro) by (service_name, model) / 1000000",
+          "legendFormat": "p10 - {{service_name}} / {{model}}",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(llm_forecast_cost_p90_usd_micro) by (service_name, model) / 1000000",
+          "legendFormat": "p90 - {{service_name}} / {{model}}",
+          "refId": "C"
+        }
+      ]
     }
   ]
 }

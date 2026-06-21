@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from opentelemetry import metrics
 from src.features.metrics.registry import SAFETY_METRICS_REGISTRY, MetricType
 
@@ -55,6 +55,38 @@ class PrometheusMetricsAdapter:
             description="Total LLM spans recorded",
         )
 
+        # Observable (callback-based) gauges so that the last value is
+        # continuously reported on every Prometheus scrape, not just once.
+        self._forecast_mean_value: Optional[float] = None
+        self._forecast_mean_labels: Dict[str, str] = {}
+
+        self._forecast_p10_value: Optional[float] = None
+        self._forecast_p10_labels: Dict[str, str] = {}
+
+        self._forecast_p90_value: Optional[float] = None
+        self._forecast_p90_labels: Dict[str, str] = {}
+
+        self._forecast_cost_mean = meter.create_observable_gauge(
+            "llm_forecast_cost_mean",
+            callbacks=[self._observe_forecast_mean],
+            unit="usd_micro",
+            description="Forecasted mean cost in micro-USD",
+        )
+
+        self._forecast_cost_p10 = meter.create_observable_gauge(
+            "llm_forecast_cost_p10",
+            callbacks=[self._observe_forecast_p10],
+            unit="usd_micro",
+            description="Forecasted p10 cost in micro-USD",
+        )
+
+        self._forecast_cost_p90 = meter.create_observable_gauge(
+            "llm_forecast_cost_p90",
+            callbacks=[self._observe_forecast_p90],
+            unit="usd_micro",
+            description="Forecasted p90 cost in micro-USD",
+        )
+
         self._registry_metrics: Dict[str, Any] = {}
         for evaluator in SAFETY_METRICS_REGISTRY:
             m = evaluator.metric
@@ -66,6 +98,26 @@ class PrometheusMetricsAdapter:
                 self._registry_metrics[m.name] = meter.create_histogram(
                     m.name, unit=m.unit, description=m.description
                 )
+
+    # ---------------------------------------------------------------------------
+    # Observable gauge callbacks – called by the OTel SDK on every collection
+    # ---------------------------------------------------------------------------
+
+    def _observe_forecast_mean(self, options):
+        if self._forecast_mean_value is not None:
+            yield metrics.Observation(self._forecast_mean_value, self._forecast_mean_labels)
+
+    def _observe_forecast_p10(self, options):
+        if self._forecast_p10_value is not None:
+            yield metrics.Observation(self._forecast_p10_value, self._forecast_p10_labels)
+
+    def _observe_forecast_p90(self, options):
+        if self._forecast_p90_value is not None:
+            yield metrics.Observation(self._forecast_p90_value, self._forecast_p90_labels)
+
+    # ---------------------------------------------------------------------------
+    # Public recording methods
+    # ---------------------------------------------------------------------------
 
     def record_tokens(self, amount: int, labels: Dict[str, str]) -> None:
         self._token_counter.add(amount, labels)
@@ -90,6 +142,18 @@ class PrometheusMetricsAdapter:
 
     def record_span(self, labels: Dict[str, str]) -> None:
         self._span_counter.add(1, labels)
+
+    def record_forecast_mean(self, amount: int, labels: Dict[str, str]) -> None:
+        self._forecast_mean_value = float(amount)
+        self._forecast_mean_labels = labels
+
+    def record_forecast_p10(self, amount: int, labels: Dict[str, str]) -> None:
+        self._forecast_p10_value = float(amount)
+        self._forecast_p10_labels = labels
+
+    def record_forecast_p90(self, amount: int, labels: Dict[str, str]) -> None:
+        self._forecast_p90_value = float(amount)
+        self._forecast_p90_labels = labels
 
     def record_metric(self, name: str, value: Any, labels: Dict[str, str]) -> None:
         instrument = self._registry_metrics.get(name)
