@@ -178,3 +178,83 @@ Test runner: junit5 with jacoco, minimum 80% coverage.
 Replay tests: WorkflowReplayer.replayWorkflowExecutionFromResource with history files.
 OTEL: opentelemetry-java-instrumentation with temporal-opentelemetry interceptor.
 Migrations: flyway or liquibase, SQL files only.
+===
+Temporal Worker
+
+temporal-worker/
+├── workflows/
+│   └── {workflow-name}/
+│       ├── index
+│       ├── workflow
+│       ├── signals/
+│       ├── queries/
+│       ├── types
+│       └── tests/
+│           ├── unit/
+│           └── replay/
+│
+├── activities/
+│   └── {activity-name}/
+│       ├── index
+│       ├── activity
+│       ├── types
+│       └── tests/
+│           ├── unit/
+│           └── integration/
+│
+├── realtime/
+│   ├── sse/
+│   │   ├── index                        ← public surface only, no logic
+│   │   ├── client                       ← connect, disconnect, send Last-Event-ID
+│   │   ├── reconnect                    ← reconnect loop, delegates to retry only
+│   │   ├── last-event-id                ← read, store, inject into reconnect header
+│   │   ├── types
+│   │   └── tests/
+│   │       ├── unit/
+│   │       │   ├── client.test
+│   │       │   ├── reconnect.test
+│   │       │   └── last-event-id.test
+│   │       └── integration/
+│   │           └── sse-flow.test        ← connect → activity completes → event pushed → disconnect
+│   │
+│   ├── connection/
+│   │   ├── index                        ← public surface only, no logic
+│   │   ├── manager                      ← owns full connect/disconnect lifecycle
+│   │   ├── state                        ← connected | connecting | reconnecting | closed
+│   │   ├── types
+│   │   └── tests/
+│   │       ├── unit/
+│   │       │   ├── manager.test
+│   │       │   └── state.test
+│   │       └── integration/
+│   │           └── lifecycle.test       ← connect → activity retry → reconnect → closed
+│   │
+│   ├── retry/
+│   │   ├── index                        ← public surface only, no logic
+│   │   ├── backoff                      ← exponential + jitter, returns delay value only
+│   │   ├── policy                       ← max attempts, max delay, reset on success
+│   │   ├── types
+│   │   └── tests/
+│   │       ├── unit/
+│   │       │   ├── backoff.test
+│   │       │   └── policy.test
+│   │       └── integration/
+│   │           └── retry-exhaust.test   ← exhaust all attempts → final error emitted
+│   │
+│   └── index                            ← re-exports feature indexes only, no logic
+│
+├── scripts/
+│   ├── health-check.sh                  ← verifies Temporal server connection and namespace
+│   └── trace-check.sh                   ← confirms spans flowing to collector
+│
+└── index                                ← worker public surface only
+
+====
+Strict Rules — Temporal Worker
+
+realtime/ is called from activities/ only — calling from workflows/ is a hard violation, breaks determinism
+Workflow ID and run ID are injected into realtime/sse/client at activity execution time — never read from global state
+sse-flow.test must assert workflow ID and run ID are present on every event pushed — missing either fails the test
+replay/ tests must pass before any realtime/ change is merged — realtime must never affect workflow replay
+Activity attempt number is carried as a span attribute into every SSE event — tested in client.test
+connection/manager is the only file that calls sse/client — activities never call client directly

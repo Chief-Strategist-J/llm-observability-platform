@@ -43,3 +43,76 @@ An event worker subscribes to one or more topics or subjects and reacts to incom
 ├── .env.example
 └── .package-meta.yaml
 
+
+Event Worker
+
+event-worker/
+├── handlers/
+│   └── {handler-name}/
+│       ├── index
+│       ├── handler
+│       ├── types
+│       └── tests/
+│           ├── unit/
+│           │   └── handler.test
+│           └── integration/
+│               └── handler-flow.test
+│
+├── realtime/
+│   ├── websocket/
+│   │   ├── index                        ← public surface only, no logic
+│   │   ├── client                       ← connect, disconnect, send, close
+│   │   ├── reconnect                    ← reconnect loop, delegates to retry only
+│   │   ├── heartbeat                    ← ping/pong, close on missed pong
+│   │   ├── types
+│   │   └── tests/
+│   │       ├── unit/
+│   │       │   ├── client.test
+│   │       │   ├── reconnect.test
+│   │       │   └── heartbeat.test
+│   │       └── integration/
+│   │           ├── ws-flow.test         ← connect → message received → ack sent → disconnect
+│   │           └── heartbeat-miss.test  ← missed pong → connection closed → reconnect triggered
+│   │
+│   ├── connection/
+│   │   ├── index                        ← public surface only, no logic
+│   │   ├── manager                      ← owns full connect/disconnect lifecycle
+│   │   ├── state                        ← connected | connecting | reconnecting | closed
+│   │   ├── types
+│   │   └── tests/
+│   │       ├── unit/
+│   │       │   ├── manager.test
+│   │       │   └── state.test
+│   │       └── integration/
+│   │           └── lifecycle.test       ← connect → heartbeat miss → reconnect → closed
+│   │
+│   ├── retry/
+│   │   ├── index                        ← public surface only, no logic
+│   │   ├── backoff                      ← exponential + jitter, returns delay value only
+│   │   ├── policy                       ← max attempts, max delay, reset on success
+│   │   ├── types
+│   │   └── tests/
+│   │       ├── unit/
+│   │       │   ├── backoff.test
+│   │       │   └── policy.test
+│   │       └── integration/
+│   │           └── retry-exhaust.test   ← exhaust all attempts → final error emitted
+│   │
+│   └── index                            ← re-exports feature indexes only, no logic
+│
+├── scripts/
+│   ├── health-check.sh                  ← verifies broker connection and consumer group registration
+│   └── trace-check.sh                   ← confirms spans flowing to collector
+│
+└── index                                ← worker public surface only
+
+
+Strict Rules — Event Worker
+
+realtime/ is called from handlers/ only — after message is processed, ack sent, before handler returns
+websocket/ is the only transport — SSE forbidden, long-poll forbidden
+websocket/heartbeat closes the connection on missed pong — it never silently continues
+heartbeat.test must assert connection closes within configured pong timeout — not just that close was called
+ws-flow.test must assert ack is sent before realtime/ publish — order is enforced in test
+connection/manager is the only file that calls websocket/client — handlers never call client directly
+W3C traceparent is extracted from message attributes in handlers/ — injected into realtime/ as span context, never read from global state

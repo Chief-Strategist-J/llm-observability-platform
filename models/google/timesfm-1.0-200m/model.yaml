@@ -1,0 +1,26 @@
+id: "timesfm-1.0-200m"
+version: "1.0.0"
+task: "time-series-forecasting"
+framework: "pytorch"
+precision: "fp32"
+size_bytes: 1200000000
+parameters: 200000000
+sha256: "cf45c71bcf123ad8018547c2ecf2907ca570013bd3f36037247b5f3f3ab07a4ef"
+max_sequence_length: 512
+license: "apache-2.0"
+
+source:
+  registry: "huggingface"
+  url: "https://huggingface.co/google/timesfm-1.0-200m"
+
+deployment:
+  memory_limit_bytes: 1610612736
+  hardware_platforms:
+    - "cpu"
+  volume_mounts:
+    host_path: "~/.cache/huggingface"
+    container_path: "/root/.cache/huggingface"
+
+metadata:
+  owner: "@data-team"
+  description: "TimesFM (Time Series Forecasting Model) by Google, used for proactive hourly metric forecasting and SLO/budget breach detection."

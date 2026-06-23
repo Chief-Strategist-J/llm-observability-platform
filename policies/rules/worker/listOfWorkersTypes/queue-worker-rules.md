@@ -97,3 +97,74 @@ SDK: Spring Batch or custom queue consumer.
 Job processor: ItemProcessor implementation in jobs/{name}/processor.
 Worker config: Queue and thread pool configuration in worker/config.
 OTEL: opentelemetry-java-instrumentation agent handles auto-instrumentation.
+===
+Queue Worker
+
+queue-worker/
+├── processors/
+│   └── {processor-name}/
+│       ├── index
+│       ├── processor
+│       ├── types
+│       └── tests/
+│           ├── unit/
+│           │   └── processor.test
+│           └── integration/
+│               └── processor-flow.test
+│
+├── realtime/
+│   ├── sse/
+│   │   ├── index                        ← public surface only, no logic
+│   │   ├── client                       ← connect, disconnect, send Last-Event-ID
+│   │   ├── reconnect                    ← reconnect loop, delegates to retry only
+│   │   ├── last-event-id                ← read, store, inject into reconnect header
+│   │   ├── types
+│   │   └── tests/
+│   │       ├── unit/
+│   │       │   ├── client.test
+│   │       │   ├── reconnect.test
+│   │       │   └── last-event-id.test
+│   │       └── integration/
+│   │           └── sse-flow.test        ← connect → job dequeued → status pushed → disconnect
+│   │
+│   ├── connection/
+│   │   ├── index                        ← public surface only, no logic
+│   │   ├── manager                      ← owns full connect/disconnect lifecycle
+│   │   ├── state                        ← connected | connecting | reconnecting | closed
+│   │   ├── types
+│   │   └── tests/
+│   │       ├── unit/
+│   │       │   ├── manager.test
+│   │       │   └── state.test
+│   │       └── integration/
+│   │           └── lifecycle.test       ← connect → job processed → disconnect
+│   │
+│   ├── retry/
+│   │   ├── index                        ← public surface only, no logic
+│   │   ├── backoff                      ← exponential + jitter, returns delay value only
+│   │   ├── policy                       ← max attempts, max delay, reset on success
+│   │   ├── types
+│   │   └── tests/
+│   │       ├── unit/
+│   │       │   ├── backoff.test
+│   │       │   └── policy.test
+│   │       └── integration/
+│   │           └── retry-exhaust.test   ← exhaust all attempts → final error emitted
+│   │
+│   └── index                            ← re-exports feature indexes only, no logic
+│
+├── scripts/
+│   ├── health-check.sh                  ← verifies broker connection and queue accessibility
+│   └── trace-check.sh                   ← confirms spans flowing to collector
+│
+└── index                                ← worker public surface only
+
+Strict Rules — Queue Worker
+
+realtime/ is called from processors/ only — after job completes or fails, never mid-execution
+Root span is created when job is dequeued — before processor is called, carried into realtime/
+sse/ is the only transport — no WebSocket, no long-poll ever added to queue worker
+processor-flow.test must assert realtime/sse/client is called on both job success and job failure — both paths tested
+last-event-id must be stored durably enough to survive a processor restart — tested in last-event-id.test
+connection/manager is the only file that calls sse/client — processors never call client directly
+
