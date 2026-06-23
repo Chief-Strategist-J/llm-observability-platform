@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: latency-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: latency_baseline_db
+    ports:
+      - "5441:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d latency_baseline_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8
+    container_name: latency-clickhouse
+    ports:
+      - "9020:9000"
+      - "8140:8123"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8123/ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: latency-redis
+    ports:
+      - "6400:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  temporal:
+    image: temporalio/auto-setup:1.22.4
+    container_name: latency-temporal
+    ports:
+      - "7250:7233"
+      - "8100:8080"
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=postgres
+      - POSTGRES_SEEDS=postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "timeout", "5", "bash", "-c", "</dev/tcp/temporal/7233"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  latency-worker:
+    build:
+      context: ../..
+      dockerfile: build/Dockerfile
+    container_name: latency-baseline-worker
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+    ports:
+      - "8083:8003"
+    environment:
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_USERNAME=default
+      - CLICKHOUSE_PASSWORD=
+      - CLICKHOUSE_DATABASE=default
+      - REDIS_URL=redis://redis:6379/0
+      - TEMPORAL_HOST=temporal:7233
+      - TEMPORAL_NAMESPACE=default
+      - TEMPORAL_TASK_QUEUE=latency-baseline-tasks
+      - KAFKA_BOOTSTRAP_SERVERS=localhost:9099
+      - HEALTH_PORT=8003
+
+volumes:
+  postgres_data:
+  clickhouse_data:
+  redis_data:

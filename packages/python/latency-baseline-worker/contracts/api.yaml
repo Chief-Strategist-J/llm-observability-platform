@@ -1,0 +1,19 @@
+openapi: 3.0.3
+info:
+  title: Latency Baseline Worker API
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: Health and configuration details
+  /trigger/checkpoint:
+    post:
+      summary: Trigger the hourly latency checkpoint workflow on-demand
+      responses:
+        '200':
+          description: Checkpoint workflow triggered successfully
+        '500':
+          description: Internal server error triggering workflow

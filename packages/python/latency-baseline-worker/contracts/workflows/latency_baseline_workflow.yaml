@@ -1,0 +1,10 @@
+workflow: LatencyBaselineWorkflow
+version: 1
+schedule:
+  cron: "5 * * * *"
+activities:
+  hourly_checkpoint:
+    timeout_seconds: 120
+    retry:
+      max_attempts: 3
+      backoff_ms: 1000
