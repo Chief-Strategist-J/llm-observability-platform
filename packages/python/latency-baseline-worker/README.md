@@ -84,3 +84,48 @@ To execute the complete unit test suite locally:
 ```bash
 ./scripts/test.sh
 ```
+
+## Realtime SSE Client Usage
+
+The worker includes a dedicated realtime Server-Sent Events (SSE) subsystem to push structured status updates during Activity execution to any configured SSE Gateway (preserving `Last-Event-ID` across connection drops).
+
+### Guidelines
+* **Rule:** Always call `realtime/` from **Activities only**; calling from Workflows breaks Temporal determinism.
+* **Rule:** Inject the active Workflow ID, Run ID, and Activity attempt number into the SSE client at execution time (never read from global state).
+
+### Basic Integration Example
+Within a Temporal activity:
+
+```python
+from temporalio import activity
+from realtime import ConnectionManager, SSEEvent, RetryConfig, RetryPolicy
+
+@activity.defn
+async def hourly_checkpoint(info) -> int:
+    act_info = activity.info()
+    
+    # 1. Initialize Connection Manager
+    config = RetryConfig(max_attempts=3, initial_delay=1.0)
+    manager = ConnectionManager(policy=RetryPolicy(config))
+    
+    # 2. Establish Connection
+    gateway_url = "http://localhost:8000/events"
+    await manager.connect(gateway_url)
+    
+    # 3. Construct and Push Event
+    event = SSEEvent(
+        event_type="checkpoint_started",
+        data={"model": "gpt-4", "hour": 14},
+        workflow_id=act_info.workflow_id,
+        run_id=act_info.workflow_run_id,
+        attempt=act_info.attempt
+    )
+    
+    manager.send_event(gateway_url, event)
+    
+    # 4. Clean disconnect
+    manager.disconnect()
+    
+    return 1
+```
+
