@@ -1,0 +1,11 @@
+workers:
+  - name: latency-baseline-worker
+    type: temporal
+    language: python
+    task_queue: latency-baseline-tasks
+    owner: "@latency-team"
+    stage: 1
+    workflows:
+      - LatencyBaselineWorkflow
+    activities:
+      - hourly_checkpoint
