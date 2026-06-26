@@ -2,7 +2,7 @@
 
 * **Status**: Accepted
 * **Date**: 2026-06-26
-* **Deciders**: Jaydeep, Antigravity
+* **Deciders**: Jaydeep
 
 ## Context and Problem Statement
 How can upstream systems and observability dashboards query calculated percentiles, SLO burn rates, and historical baselines from latency-engine securely and performantly?
@@ -12,6 +12,47 @@ How can upstream systems and observability dashboards query calculated percentil
 * **D2**: Telemetry query processing must not block worker's CPU-bound Kafka polling loop.
 * **D3**: API responses must strictly conform to the OpenAPI v1 contract specs.
 * **D4**: ClickHouse connection outages must not prevent HTTP server startup.
+
+## Business Decision Tree (Ingestion & Processing Flow)
+The latency engine evaluates every consumed span against the following processing paths to ensure correct stats aggregation:
+
+```
+                          [Raw Span Event Consumed]
+                                      │
+                                      ▼
+               [Validate Span: Has model & latency_ms_total?]
+                               /             \
+                       (No)   /               \   (Yes)
+                             ▼                 ▼
+                     [Skip Span]       [Parse UTC Timestamp]
+                                               │
+           ┌───────────────────────────────────┼──────────────────────────────────┐
+           │                                   │                                  │
+           ▼                                   ▼                                  ▼
+[latency_ms_ttft exists?]             [Is retry_count > 0?]             [SLO threshold check]
+      /         \                           /         \                       /         \
+(No) /           \ (Yes)             (Yes) /           \ (No)           (Yes)/           \(No)
+    ▼             ▼                       ▼             ▼                   ▼             ▼
+[Skip]     [Update TTFT Sketch]     [Update Retry]  [Update Total]     [Incr Errors    [Incr Total
+           (sketch:ttft:{m}:{h})     (sketch:retry)  (sketch:total)     & Total]        Only]
+                  │                                                         │               │
+                  ▼                                                         ▼               ▼
+           [TPOT Eligible?]                                                 └───────┬───────┘
+         (TTFT & Tokens > 0,                                                        │
+          Reason != timeout)                                                        │
+              /         \                                                           ▼
+      (No)   /           \ (Yes)                                           [Attribution tags?]
+            ▼             ▼                                                    /          \
+         [Skip]     [Calc TPOT]                                         (Yes) /            \ (No)
+                    (tpot:latest)                                            ▼              ▼
+                                                                     [Store Hash    [Skip]
+                                                                      & Agg Avg]
+```
+
+### Why this is Critical & Important:
+* **Tail Latency Accuracy (p95/p99)**: Capturing tail latencies in LLM interactions is vital because typical average (p50) values hide severe bottlenecks. Using DDSketches allows the system to aggregate raw logs into memory-efficient, mathematically accurate percentiles dynamically.
+* **Non-Blocking Query Separation**: If HTTP query requests block the consumer worker's CPU-bound Kafka poller, offsets will lag, creating database backpressure and telemetry delay. Running the query API on a background thread preserves consumer throughput under heavy traffic spikes.
+* **SLO Error Budgeting**: Accurate tracking of SLO burn rates (over 1h, 6h, and 3-day windows) triggers leading indicators of platform degradation. The query API surfaces these budgets securely via service-to-service JWT to allow automatic remediation before client SLA breaches occur.
 
 ## Options Considered
 * **Option A**: FastAPI app running on a background thread within the consumer process.
