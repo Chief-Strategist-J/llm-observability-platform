@@ -67,6 +67,49 @@ This worker consumes raw LLM span payloads from the `llm.spans.raw` Kafka topic,
    | `HEALTH_PORT` | HTTP port for the `/health` endpoint | `8002` |
    | `SKIP_CONSOLE_EXPORTER` | Skip writing OpenTelemetry traces to stdout | `false` |
    | `SKIP_OTLP_EXPORTER` | Skip exporting traces to an OTLP collector | `true` |
+   | `JWT_SECRET` | Secret key for verifying incoming HS256 service JWTs | — |
+
+### 🌐 REST Query API Endpoints
+
+The service exposes HTTP query endpoints on port `8002` (configurable via `HEALTH_PORT`). Except for `/health`, all endpoints require service-to-service JWT authentication in the `Authorization: Bearer <token>` header, signed with `JWT_SECRET`.
+
+#### 1. Query Latency Percentiles
+Retrieve the `p50`, `p95`, and `p99` latency values computed from the DDSketch in Redis.
+* **Path**: `GET /v1/latency/percentiles`
+* **Query Parameters**:
+  * `model` (required, e.g. `gpt-4`)
+  * `hour_of_day` (required, integer `0-23`)
+  * `quantiles` (optional, comma-separated floats, default: `0.50,0.95,0.99`)
+* **Example curl**:
+  ```bash
+  curl -H "Authorization: Bearer <JWT_TOKEN>" \
+    "http://localhost:8002/v1/latency/percentiles?model=gpt-4&hour_of_day=14"
+  ```
+
+#### 2. Query SLO Burn Rates
+Retrieve the 1-hour, 6-hour, and 3-day budget burn rates along with the remaining error budget percentage.
+* **Path**: `GET /v1/latency/slo`
+* **Query Parameters**:
+  * `model` (required)
+  * `endpoint` (required)
+* **Example curl**:
+  ```bash
+  curl -H "Authorization: Bearer <JWT_TOKEN>" \
+    "http://localhost:8002/v1/latency/slo?model=gpt-4&endpoint=/v1/chat/completions"
+  ```
+
+#### 3. Query Historical Baseline
+Retrieve daily `p99` TTFT and total latency over the past N days from ClickHouse.
+* **Path**: `GET /v1/latency/baseline`
+* **Query Parameters**:
+  * `model` (required)
+  * `hour_of_day` (required, `0-23`)
+  * `days` (optional, integer `1-90`, default: `7`)
+* **Example curl**:
+  ```bash
+  curl -H "Authorization: Bearer <JWT_TOKEN>" \
+    "http://localhost:8002/v1/latency/baseline?model=gpt-4&hour_of_day=14&days=7"
+  ```
 
 ---
 
