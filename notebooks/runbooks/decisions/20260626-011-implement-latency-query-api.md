@@ -137,6 +137,22 @@ Optimize memory consumption while maintaining high percentile resolution:
 * **Sketch Storage**: Rather than storing raw timestamps (which grow linearly with traffic), we persist compressed logarithmic sketches in Redis.
 * **Low Relative Error**: Restricts percentiles error bounds to 1% (`relative_accuracy=0.01`), ensuring that tail latency metrics (p95/p99) remain highly accurate with constant-size cache keys.
 
+## Relationship & Synergy: Using DDSketches and SLOs Together
+In latency observability, DDSketches and SLO trackers are complementary mechanisms. We use both together to create a complete detection and diagnostics workflow:
+
+1. **SLOs act as the Leading Indicator (Alerting Boundary)**:
+   * **Role**: SLO tracking answers the question: *"Are our clients currently experiencing acceptable service performance?"*
+   * **Mechanism**: By comparing incoming spans against a threshold, the SLO tracker computes rolling error budgets. If a spike in latency consumes the budget, it triggers alerts (e.g. high 1-hour burn-rate).
+   
+2. **DDSketches act as the Diagnostic Tool (Bottleneck Identification)**:
+   * **Role**: DDSketches answer the question: *"What does the actual latency distribution look like, and how bad is the degradation?"*
+   * **Mechanism**: When an SLO alert fires, operators query the DDSketch endpoint (`/v1/latency/percentiles`). The DDSketch percentiles (p50, p95, p99) help diagnose whether the issue is caused by a subset of extremely slow tail-end requests (high p99, flat p50) or a systemic slowdown affecting all requests (both p50 and p99 elevated).
+
+3. **Combined Operational Workflow**:
+   * **Detection**: High SLO burn rate alerts operations of a degradation.
+   * **Diagnosis**: Operators check `/v1/latency/percentiles` to identify the tail latency magnitude (p95/p99 spikes).
+   * **Historical Correlation**: Operators query `/v1/latency/baseline` to compare the current DDSketch percentile profiles against historical ClickHouse baseline metrics to confirm if the regression is a novel event or a recurring daily pattern.
+
 ## Failure Modes Created
 
 ### FM-1: Port conflicts on port 8002
