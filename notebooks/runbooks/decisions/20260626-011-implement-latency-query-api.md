@@ -54,6 +54,25 @@ The latency engine evaluates every consumed span against the following processin
 * **Non-Blocking Query Separation**: If HTTP query requests block the consumer worker's CPU-bound Kafka poller, offsets will lag, creating database backpressure and telemetry delay. Running the query API on a background thread preserves consumer throughput under heavy traffic spikes.
 * **SLO Error Budgeting**: Accurate tracking of SLO burn rates (over 1h, 6h, and 3-day windows) triggers leading indicators of platform degradation. The query API surfaces these budgets securely via service-to-service JWT to allow automatic remediation before client SLA breaches occur.
 
+### Good Latency Metrics Selection
+The table below specifies what makes a metric "good" and its critical utility in observability:
+
+| Metric Name | What makes it a Good Metric | Why it is Good / Value | Example Target |
+| :--- | :--- | :--- | :--- |
+| **Tail Latency (p95/p99)** | Measures the performance of worst-case requests. | Captures degradation seen by heavy users; averages (p50) hide tail spikes. | `p99_total_ms` <= 1500ms |
+| **SLO Burn Rate** | A leading indicator showing the rate of error budget consumption. | Alerts operations of a degradation early before the monthly SLA is violated. | `burn_rate_1h` > 14.4x |
+| **Time to First Token (TTFT)** | Measures responsiveness in streaming completions. | Directly affects user perceived latency in interactive applications. | `p95_ttft_ms` <= 300ms |
+| **Throughput Per Output Token (TPOT)** | Measures LLM execution efficiency independent of completion size. | Decouples document size from processing speed to evaluate true LLM performance. | `tpot_ms` = (total - ttft) / tokens |
+
+### Critical Telemetry & Architectural Tradeoffs
+The table below details the design tradeoffs evaluated during the implementation:
+
+| Tradeoff Dimension | Option A (Chosen: Threaded Async Engine) | Option B (Alternative: Isolated Process) | Tradeoff Rationale |
+| :--- | :--- | :--- | :--- |
+| **Query Latency vs. CPU Contention** | Low query latency due to shared-memory cache retrieval. May cause minor CPU context-switch overhead under high request throughput. | Zero CPU impact on the ingestion worker. Higher deployment costs and slight I/O network latency. | Threaded model was chosen to prioritize low infrastructure footprint and local cache reads. |
+| **High Accuracy vs. Storage Size** | DDSketch relative accuracy set to 1% (`relative_accuracy=0.01`). | Raw transaction telemetry storage in ClickHouse/S3. | Storing raw spans is cost-prohibitive. DDSketches capture precise tail percentiles with a constant, small memory footprint. |
+| **Immediate Consistency vs. Resource Overhead** | Pipeline batch writes (`pipe.execute()`) reduce network overhead. | Eventual consistency in metric queries (1-minute latency lag). | We compromise minor query consistency to avoid overwhelming Redis with single-key writes. |
+
 ## Options Considered
 * **Option A**: FastAPI app running on a background thread within the consumer process.
 * **Option B**: Independent query service deployment.
