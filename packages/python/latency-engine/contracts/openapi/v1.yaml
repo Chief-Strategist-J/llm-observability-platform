@@ -1,0 +1,289 @@
+openapi: "3.1.0"
+info:
+  title: Latency Engine Query API
+  version: "1.0.0"
+  description: >
+    Internal service-to-service API for querying latency percentiles,
+    SLO burn rates, and historical baselines. All endpoints require
+    a service-to-service JWT in the Authorization header.
+
+servers:
+  - url: /v1
+    description: Production
+
+security:
+  - ServiceJWT: []
+
+components:
+  securitySchemes:
+    ServiceJWT:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        HS256-signed JWT with claims: sub (service name), iat, exp.
+        Secret provided via JWT_SECRET environment variable.
+
+  schemas:
+    PercentilesResponse:
+      type: object
+      required: [p50, p95, p99, sample_count]
+      properties:
+        p50:
+          type: number
+          format: double
+          description: 50th percentile latency in milliseconds
+          example: 620.3
+        p95:
+          type: number
+          format: double
+          description: 95th percentile latency in milliseconds
+          example: 1840.7
+        p99:
+          type: number
+          format: double
+          description: 99th percentile latency in milliseconds
+          example: 2910.4
+        sample_count:
+          type: integer
+          description: Number of observations in the DDSketch
+          example: 4821
+
+    SLOResponse:
+      type: object
+      required: [burn_fast, burn_medium, burn_slow, budget_remaining_pct, slo_threshold_ms]
+      properties:
+        burn_fast:
+          type: number
+          format: double
+          description: 1-hour burn rate (×14.4 budget consumption per hour for a 30-day window)
+          example: 1.2
+        burn_medium:
+          type: number
+          format: double
+          description: 6-hour burn rate
+          example: 0.8
+        burn_slow:
+          type: number
+          format: double
+          description: 3-day burn rate
+          example: 0.3
+        budget_remaining_pct:
+          type: number
+          format: double
+          description: Percentage of the monthly error budget still remaining (0–100)
+          example: 67.4
+        slo_threshold_ms:
+          type: number
+          format: double
+          description: The SLO latency threshold in milliseconds for this endpoint
+          example: 3000.0
+
+    BaselinePoint:
+      type: object
+      required: [date, p99_ttft_ms, p99_total_ms]
+      properties:
+        date:
+          type: string
+          format: date
+          description: "ISO-8601 date of the checkpoint (YYYY-MM-DD)"
+          example: "2025-01-14"
+        p99_ttft_ms:
+          type: number
+          format: double
+          description: p99 time-to-first-token latency in milliseconds for that date/hour
+          example: 1180.2
+        p99_total_ms:
+          type: number
+          format: double
+          description: p99 total latency in milliseconds for that date/hour
+          example: 2640.1
+
+    ErrorResponse:
+      type: object
+      required: [error, detail]
+      properties:
+        error:
+          type: string
+          example: "INVALID_PARAM"
+        detail:
+          type: string
+          example: "quantiles must be comma-separated floats between 0 and 1"
+
+paths:
+  /latency/percentiles:
+    get:
+      operationId: getLatencyPercentiles
+      summary: Query DDSketch percentiles from Redis
+      description: >
+        Returns latency percentiles for a given model and hour-of-day bucket
+        from the DDSketch stored in Redis (key pattern: sketch:total:{model}:*:{hour_of_day}).
+        Quantiles default to p50, p95, p99 if not provided.
+      parameters:
+        - name: model
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: The LLM model identifier (e.g. gpt-4o)
+          example: "gpt-4o"
+        - name: hour_of_day
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 23
+          description: UTC hour-of-day bucket (0–23) to read the sketch for
+          example: 14
+        - name: quantiles
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "0.50,0.95,0.99"
+          description: >
+            Comma-separated quantile floats (0–1 exclusive of 0 and 1).
+            Defaults to 0.50,0.95,0.99.
+          example: "0.50,0.95,0.99"
+      responses:
+        "200":
+          description: Percentile values computed from DDSketch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PercentilesResponse"
+        "400":
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No sketch found for the given model and hour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /latency/slo:
+    get:
+      operationId: getLatencySLO
+      summary: Query SLO burn rates from Redis
+      description: >
+        Returns multi-window burn rates and error budget remaining for a given
+        model+endpoint pair. Reads slo:total and slo:errors keys from Redis,
+        computes 1-hour, 6-hour, and 3-day burn rates.
+      parameters:
+        - name: model
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: The LLM model identifier
+          example: "gpt-4o"
+        - name: endpoint
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: The endpoint path (e.g. /summarize)
+          example: "/summarize"
+      responses:
+        "200":
+          description: Burn rate and error budget data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SLOResponse"
+        "400":
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No SLO data found for the given model and endpoint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /latency/baseline:
+    get:
+      operationId: getLatencyBaseline
+      summary: Query historical baseline from ClickHouse
+      description: >
+        Returns per-day p99 TTFT and p99 total latency for a given model and
+        hour-of-day bucket over the past N days. Source is the latency_checkpoints
+        table in ClickHouse.
+      parameters:
+        - name: model
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: The LLM model identifier
+          example: "gpt-4o"
+        - name: hour_of_day
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 23
+          description: UTC hour-of-day bucket (0–23)
+          example: 14
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 90
+            default: 7
+          description: Number of past days to return (1–90, default 7)
+          example: 7
+      responses:
+        "200":
+          description: Ordered list of daily baseline checkpoints (most recent first)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BaselinePoint"
+        "400":
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No baseline data found for the given model and hour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"

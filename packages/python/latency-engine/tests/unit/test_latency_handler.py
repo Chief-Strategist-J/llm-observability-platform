@@ -1,13 +1,8 @@
 from __future__ import annotations
 import pytest
-from unittest.mock import MagicMock
-from datetime import datetime, timezone
-import json
-import base64
+from datetime import datetime
 import redis
 
-from ddsketch import DDSketch
-from ddsketch.pb import ddsketch_pb2
 from handlers.latency_handler import LatencyHandler
 
 class MockRedis:

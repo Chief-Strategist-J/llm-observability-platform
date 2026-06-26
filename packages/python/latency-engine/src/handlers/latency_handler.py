@@ -1,7 +1,5 @@
 from __future__ import annotations
 import os
-import re
-import json
 import base64
 import logging
 from datetime import datetime, timezone
@@ -121,7 +119,7 @@ class LatencyHandler:
 
     def handle_spans(self, spans: list[dict]):
         tracer = trace.get_tracer("latency-engine")
-        with tracer.start_as_current_span("latency_handler.handle_spans", attributes={"batch.size": len(spans)}) as batch_span:
+        with tracer.start_as_current_span("latency_handler.handle_spans", attributes={"batch.size": len(spans)}):
             # Check Redis recovery
             if self.redis_down_since is not None:
                 try:
@@ -184,7 +182,7 @@ class LatencyHandler:
                             "llm.queue.latency_ms": float(queue_latency) if queue_latency is not None else 0.0,
                             "llm.inference.latency_ms": float(inference_latency) if inference_latency is not None else 0.0,
                         }
-                    ) as item_span:
+                    ):
                         if latency_ms_total is None:
                             continue
 

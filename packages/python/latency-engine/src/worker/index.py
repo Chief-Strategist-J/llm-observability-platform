@@ -5,8 +5,7 @@ import os
 import signal
 import json
 import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from typing import Any
+import uvicorn
 import redis
 from confluent_kafka import Consumer, KafkaError
 
@@ -14,7 +13,6 @@ from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor, ConsoleSpanExporter
 from opentelemetry.sdk.resources import Resource
-from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
 from config import load_config
 from handlers.latency_handler import LatencyHandler
@@ -44,32 +42,20 @@ def _init_tracing() -> None:
                 pass
     trace.set_tracer_provider(provider)
 
-class _HealthHandler(BaseHTTPRequestHandler):
-    def do_GET(self) -> None:
-        if self.path == "/health":
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(b'{"status":"ok"}')
-        else:
-            self.send_response(404)
-            self.end_headers()
-
-    def log_message(self, format: str, *args: Any) -> None:
-        pass
-
-def _start_health_server(port: int = 8002) -> None:
-    server = HTTPServer(("0.0.0.0", port), _HealthHandler)
-    threading.Thread(target=server.serve_forever, daemon=True).start()
-    logger.info("Health server started on port %s", port)
+def _start_api_server(port: int = 8002) -> None:
+    from api.rest.v1.app import app
+    def run_uvicorn():
+        uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
+    threading.Thread(target=run_uvicorn, daemon=True).start()
+    logger.info("FastAPI web/health server started on port %s", port)
 
 async def run() -> None:
     _init_tracing()
     cfg = load_config()
     
-    # Start health server
+    # Start health and query API server
     health_port = int(os.getenv("HEALTH_PORT", "8002"))
-    _start_health_server(health_port)
+    _start_api_server(health_port)
     
     # Initialize redis and handler
     redis_client = redis.from_url(cfg.redis_url)
