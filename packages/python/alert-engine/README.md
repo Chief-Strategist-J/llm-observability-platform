@@ -28,6 +28,8 @@ Make sure the following topics are created on your Kafka broker before starting 
 * **`alerts.budget`**: Receives budget threshold event payloads.
 * **`alerts.cost.anomaly`**: Receives cost anomaly event payloads.
 * **`llm.toxicity.flagged`**: Receives flagged toxicity event payloads.
+* **`alerts.latency.slo`**: Receives latency SLO breach event payloads.
+
 
 *Default Consumer Group:* `alert-engine-group`
 
@@ -73,14 +75,23 @@ Upon consuming events, the engine performs the following actions:
 │   ├── run.sh
 │   └── test.sh
 ├── src/
+│   ├── features/
+│   │   └── latency_slo/
+│   │       ├── contex.ymal
+│   │       ├── index.py
+│   │       ├── service.py
+│   │       └── types.py
 │   ├── handlers/
 │   │   ├── alerts_budget/
 │   │   │   └── handler.py
 │   │   ├── alerts_cost_anomaly/
 │   │   │   └── handler.py
+│   │   ├── alerts_latency_slo/
+│   │   │   └── handler.py
 │   │   └── alerts_toxicity/
 │   │       └── handler.py
 │   ├── infra/
+
 
 │   │   └── adapters/
 │   │       ├── metrics/

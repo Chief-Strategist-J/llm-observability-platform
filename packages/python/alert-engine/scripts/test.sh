@@ -1,3 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-.venv/bin/pytest
+export PYTHONPATH=src
+if [ -d ".venv" ]; then
+  .venv/bin/pytest "$@"
+else
+  python3 -m pytest "$@"
+fi
