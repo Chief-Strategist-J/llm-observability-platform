@@ -11,6 +11,7 @@ def build_registry(
     cost_anomaly_handler: Callable,
     toxicity_handler: Callable,
     degradation_handler: Callable,
+    latency_slo_handler: Callable,
 ) -> dict[str, EventHandlerDefinition]:
     return {
         "alerts.budget": EventHandlerDefinition(
@@ -29,5 +30,10 @@ def build_registry(
             topic="alerts.quality.degradation",
             handler=degradation_handler,
         ),
+        "alerts.latency.slo": EventHandlerDefinition(
+            topic="alerts.latency.slo",
+            handler=latency_slo_handler,
+        ),
     }
+
 

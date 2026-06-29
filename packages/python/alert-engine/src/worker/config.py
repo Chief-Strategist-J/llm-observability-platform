@@ -34,7 +34,8 @@ def load_config(env: dict[str, str] | None = None) -> WorkerConfig:
 
     postgres_dsn = f"postgresql://{postgres_user}:{postgres_password}@{postgres_host}:{postgres_port}/{postgres_db}"
 
-    topics_raw = source.get("KAFKA_TOPICS", "alerts.budget,alerts.cost.anomaly,llm.toxicity.flagged,alerts.quality.degradation")
+    topics_raw = source.get("KAFKA_TOPICS", "alerts.budget,alerts.cost.anomaly,llm.toxicity.flagged,alerts.quality.degradation,alerts.latency.slo")
+
 
     kafka_topics = [t.strip() for t in topics_raw.split(",") if t.strip()]
 
