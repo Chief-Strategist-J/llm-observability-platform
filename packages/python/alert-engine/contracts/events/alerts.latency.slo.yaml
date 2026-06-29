@@ -1,0 +1,52 @@
+asyncapi: 2.6.0
+info:
+  title: Latency SLO Alert Event
+  version: "1"
+  description: Latency SLO breach events consumed by alert-engine
+channels:
+  alerts.latency.slo:
+    subscribe:
+      operationId: consumeLatencySLO
+      message:
+        name: LatencySLOEvent
+        contentType: application/json
+        headers:
+          type: object
+          properties:
+            traceparent:
+              type: string
+              description: W3C Trace Context traceparent header
+            tracestate:
+              type: string
+              description: W3C Trace Context tracestate header
+        payload:
+          type: object
+          required:
+            - model
+            - endpoint
+            - severity
+          properties:
+            model:
+              type: string
+            endpoint:
+              type: string
+            severity:
+              type: string
+              enum: [page, slack, ticket]
+            burn_rate:
+              type: number
+            p95_current:
+              type: number
+            p95_baseline:
+              type: number
+            p99_current:
+              type: number
+            p99_baseline:
+              type: number
+            budget_remaining:
+              type: number
+            timestamp:
+              type: string
+              format: date-time
+consumer_group: alert-engine-group
+version: 1

@@ -23,6 +23,8 @@ from handlers.alerts_budget.handler import BudgetAlertHandler
 from handlers.alerts_cost_anomaly.handler import CostAnomalyAlertHandler
 from handlers.alerts_toxicity.handler import ToxicityAlertHandler
 from handlers.alerts_quality_degradation.handler import QualityDegradationAlertHandler
+from handlers.alerts_latency_slo.handler import LatencySloAlertHandler
+
 
 
 logger = logging.getLogger(__name__)
@@ -105,12 +107,22 @@ def main() -> None:
         slack_port=slack_adapter
     )
 
+    latency_slo_handler = LatencySloAlertHandler(
+        db_port=postgres_adapter,
+        redis_port=redis_adapter,
+        slack_port=slack_adapter,
+        pagerduty_port=pagerduty_adapter,
+        metrics_port=metrics_adapter
+    )
+
     handlers_registry = build_registry(
         budget_handler=budget_handler.handle,
         cost_anomaly_handler=cost_anomaly_handler.handle,
         toxicity_handler=toxicity_handler.handle,
-        degradation_handler=degradation_handler.handle
+        degradation_handler=degradation_handler.handle,
+        latency_slo_handler=latency_slo_handler.handle
     )
+
 
 
     consumer = Consumer({
