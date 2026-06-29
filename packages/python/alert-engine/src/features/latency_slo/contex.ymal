@@ -1,0 +1,20 @@
+feature: latency_slo_routing
+description: >
+  Routes latency SLO breach alerts to appropriate notification channels
+  (PagerDuty, Slack, or Database log) depending on the alert severity.
+business_logic:
+  - Consumes alerts.latency.slo topic.
+  - severity='page': Suppresses duplicate pages for the same (model, endpoint) within 15 minutes using Redis. Triggers high-priority PagerDuty incident if not suppressed.
+  - severity='slack': Sends detailed SLO breach alert containing burn rate trends to #llm-latency-alerts channel.
+  - severity='ticket': Inserts alert records into the PostgreSQL alert_history database table.
+dependencies:
+  - Redis (for deduplication / rate-limiting)
+  - PagerDuty API / Client
+  - Slack Client / Webhook
+  - PostgreSQL Database (for historical audit logs)
+criticality: High
+networking:
+  - Outbound Slack Webhook calls
+  - Outbound PagerDuty Events API v2 calls
+  - Inbound Redis queries for rate-limiting
+  - Inbound PostgreSQL connections for inserts
