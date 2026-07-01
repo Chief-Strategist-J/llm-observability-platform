@@ -24,6 +24,7 @@ from handlers.alerts_cost_anomaly.handler import CostAnomalyAlertHandler
 from handlers.alerts_toxicity.handler import ToxicityAlertHandler
 from handlers.alerts_quality_degradation.handler import QualityDegradationAlertHandler
 from handlers.alerts_latency_slo.handler import LatencySloAlertHandler
+from handlers.alerts_latency_ttft_regression.handler import LatencyTtftRegressionAlertHandler
 
 
 
@@ -115,12 +116,20 @@ def main() -> None:
         metrics_port=metrics_adapter
     )
 
+    latency_ttft_regression_handler = LatencyTtftRegressionAlertHandler(
+        db_port=postgres_adapter,
+        redis_port=redis_adapter,
+        slack_port=slack_adapter,
+        metrics_port=metrics_adapter
+    )
+
     handlers_registry = build_registry(
         budget_handler=budget_handler.handle,
         cost_anomaly_handler=cost_anomaly_handler.handle,
         toxicity_handler=toxicity_handler.handle,
         degradation_handler=degradation_handler.handle,
-        latency_slo_handler=latency_slo_handler.handle
+        latency_slo_handler=latency_slo_handler.handle,
+        latency_ttft_regression_handler=latency_ttft_regression_handler.handle
     )
 
 

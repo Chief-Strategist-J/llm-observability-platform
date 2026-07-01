@@ -34,3 +34,14 @@ features:
     depends_on_features: []
     depends_on_packages: []
 
+  - name: latency_ttft_regression
+    status: active
+    contract: contracts/events/alerts.latency.ttft_regression.yaml
+    contract_version: v1
+    owner: "@infra-alerts-team"
+    added: 2026-07-01
+    flags: []
+    migrations: []
+    depends_on_features: []
+    depends_on_packages: []
+

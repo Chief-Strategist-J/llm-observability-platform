@@ -29,6 +29,7 @@ Make sure the following topics are created on your Kafka broker before starting 
 * **`alerts.cost.anomaly`**: Receives cost anomaly event payloads.
 * **`llm.toxicity.flagged`**: Receives flagged toxicity event payloads.
 * **`alerts.latency.slo`**: Receives latency SLO breach event payloads.
+* **`alerts.latency.ttft_regression`**: Receives TTFT P99 latency regression alerts.
 
 
 *Default Consumer Group:* `alert-engine-group`
@@ -185,6 +186,25 @@ The following decision trees detail the routing and suppression rules for budget
                         ├── 2. Emit Prometheus latency metrics (critical severity)
                         ├── 3. Send PagerDuty incident alert
                         └── 4. Send Slack alert with drill-down (top contributor cluster)
+```
+
+### 3. TTFT Regression Alerts Routing (`alerts.latency.ttft_regression` topic)
+
+```
+[alerts.latency.ttft_regression Event Consumed]
+└── Rate Limit Check (Redis: rate_limit:latency_ttft_regression:{model}:{hour_of_day})
+    │
+    │   ► RATIONALE: Suppresses repeat TTFT regression alerts within a
+    │     6-hour (21600s) window per model and hour of day.
+    │
+    ├── Key Exists (Suppressed)
+    │   └── Skip processing
+    │
+    └── Key Acquired (Proceed)
+        ├── 1. Parse Delivery Latency (timestamp vs now)
+        ├── 2. Write to PostgreSQL (alert_history table)
+        ├── 3. Emit Prometheus latency metrics
+        └── 4. Send Slack alert message to #llm-latency-alerts channel
 ```
 
 ---

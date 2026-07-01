@@ -1,0 +1,42 @@
+asyncapi: 2.6.0
+info:
+  title: TTFT Regression Alert Event
+  version: "1"
+  description: TTFT regression events consumed by alert-engine
+channels:
+  alerts.latency.ttft_regression:
+    subscribe:
+      operationId: consumeTTFTRegression
+      message:
+        name: TTFTRegressionEvent
+        contentType: application/json
+        headers:
+          type: object
+          properties:
+            traceparent:
+              type: string
+              description: W3C Trace Context traceparent header
+            tracestate:
+              type: string
+              description: W3C Trace Context tracestate header
+        payload:
+          type: object
+          required:
+            - model
+            - current
+            - baseline
+            - hour_of_day
+          properties:
+            model:
+              type: string
+            current:
+              type: number
+            baseline:
+              type: number
+            hour_of_day:
+              type: integer
+            timestamp:
+              type: string
+              format: date-time
+consumer_group: alert-engine-group
+version: 1
