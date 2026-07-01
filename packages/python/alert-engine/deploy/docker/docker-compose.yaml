@@ -7,7 +7,7 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
       KAFKA_CONSUMER_GROUP: alert-engine-group
-      KAFKA_TOPICS: alerts.budget,alerts.cost.anomaly
+      KAFKA_TOPICS: alerts.budget,alerts.cost.anomaly,llm.toxicity.flagged,alerts.quality.degradation,alerts.latency.slo,alerts.latency.ttft_regression
       REDIS_URL: redis://redis:6379/0
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
