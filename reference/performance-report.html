@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LLM Observability SDK Performance Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background: radial-gradient(circle at top right, #1e1b4b 0%, #0f172a 100%);
+      color: #f8fafc;
+      font-family: 'Outfit', sans-serif;
+      margin: 0;
+      padding: 2.5rem;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 1.5rem;
+    }
+    .title h1 {
+      margin: 0;
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #38bdf8, #818cf8, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .title p {
+      margin: 0.5rem 0 0;
+      color: #94a3b8;
+      font-size: 1.1rem;
+    }
+    .meta-badge {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(10px);
+      padding: 0.75rem 1.25rem;
+      border-radius: 9999px;
+      font-size: 0.9rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+    }
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+    .card {
+      background: rgba(30, 41, 59, 0.6);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+    .card-title {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+    .card-value {
+      font-size: 1.85rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    .card-value.green { color: #34d399; text-shadow: 0 0 10px rgba(52, 211, 153, 0.2); }
+    .card-value.blue { color: #60a5fa; text-shadow: 0 0 10px rgba(96, 165, 250, 0.2); }
+    .card-value.purple { color: #a78bfa; text-shadow: 0 0 10px rgba(167, 139, 250, 0.2); }
+    .card-value.pink { color: #f472b6; text-shadow: 0 0 10px rgba(244, 114, 182, 0.2); }
+    .card-subtitle {
+      font-size: 0.8rem;
+      color: #cbd5e1;
+      margin-top: 0.5rem;
+      line-height: 1.4;
+    }
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+    .chart-container {
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 1rem;
+      padding: 1.75rem;
+    }
+    .chart-header {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      color: #f1f5f9;
+    }
+    .table-container {
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 1rem;
+      padding: 1.75rem;
+      margin-bottom: 2.5rem;
+    }
+    .table-header {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      color: #f1f5f9;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 1rem 1.25rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.95rem;
+    }
+    th {
+      color: #94a3b8;
+      font-weight: 600;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title">
+        <h1>LLM Observability SDK</h1>
+        <p>Performance & Resource Benchmark Report</p>
+      </div>
+      <div class="meta-badge">
+        Generated: <span id="timestamp"></span>
+      </div>
+    </div>
+    
+    <div class="grid-4">
+      <div class="card">
+        <div class="card-title">In-Memory Ingestion</div>
+        <div class="card-value green" id="in-memory-val">--</div>
+        <div class="card-subtitle" id="in-memory-sub">--</div>
+      </div>
+      <div class="card">
+        <div class="card-title">WAL Fallback Ingestion</div>
+        <div class="card-value blue" id="wal-fallback-val">--</div>
+        <div class="card-subtitle" id="wal-fallback-sub">--</div>
+      </div>
+      <div class="card">
+        <div class="card-title">WAL Replay Recovery</div>
+        <div class="card-value purple" id="wal-replay-val">--</div>
+        <div class="card-subtitle" id="wal-replay-sub">--</div>
+      </div>
+      <div class="card">
+        <div class="card-title">OTel SDK Baseline</div>
+        <div class="card-value pink" id="otel-val">--</div>
+        <div class="card-subtitle" id="otel-sub">--</div>
+      </div>
+    </div>
+    
+    <div class="charts-grid">
+      <div class="chart-container">
+        <div class="chart-header">Throughput Comparison (spans/second)</div>
+        <div style="height: 320px; position: relative;">
+          <canvas id="throughputChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-container">
+        <div class="chart-header">Tail Latency Profile (ms)</div>
+        <div style="height: 320px; position: relative;">
+          <canvas id="latencyChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <div class="table-header">Test Execution Summary</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th>Throughput (spans/sec)</th>
+            <th>p50 Latency</th>
+            <th>p95 Latency</th>
+            <th>p99 Latency</th>
+            <th>CPU Time</th>
+            <th>Net Memory Delta</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>In-Memory Ingestion (Kafka Online)</td>
+            <td id="table-in-memory-tp">--</td>
+            <td id="table-in-memory-p50">--</td>
+            <td id="table-in-memory-p95">--</td>
+            <td id="table-in-memory-p99">--</td>
+            <td id="table-in-memory-cpu">--</td>
+            <td id="table-in-memory-mem">--</td>
+          </tr>
+          <tr>
+            <td>WAL Fallback Ingestion (Kafka Offline)</td>
+            <td id="table-wal-fallback-tp">--</td>
+            <td id="table-wal-fallback-p50">--</td>
+            <td id="table-wal-fallback-p95">--</td>
+            <td id="table-wal-fallback-p99">--</td>
+            <td id="table-wal-fallback-cpu">--</td>
+            <td id="table-wal-fallback-mem">--</td>
+          </tr>
+          <tr>
+            <td>WAL Replay Recovery (Re-established)</td>
+            <td id="table-wal-replay-tp">--</td>
+            <td id="table-wal-replay-p50">N/A</td>
+            <td id="table-wal-replay-p95">N/A</td>
+            <td id="table-wal-replay-p99">N/A</td>
+            <td id="table-wal-replay-cpu">--</td>
+            <td id="table-wal-replay-mem">--</td>
+          </tr>
+          <tr>
+            <td>OpenTelemetry SDK (Baseline)</td>
+            <td id="table-otel-tp">--</td>
+            <td id="table-otel-p50">--</td>
+            <td id="table-otel-p95">--</td>
+            <td id="table-otel-p99">--</td>
+            <td id="table-otel-cpu">--</td>
+            <td id="table-otel-mem">--</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <script>
+    const data = {"timestamp": "2026-05-23 08:04:31 UTC", "in_memory": {"throughput": 69052.67790708487, "duration": 0.07240848800574895, "spans": 5000, "p50": 0.004646499291993678, "p95": 0.013323849998414539, "p99": 0.1570521734538488, "cpu_time": 0.07222100000000076, "max_rss": 2.5078125}, "wal_fallback": {"throughput": 4093.478715988388, "duration": 1.2214549889977206, "spans": 5000, "p50": 0.00568150426261127, "p95": 0.009488144496572204, "p99": 0.020883245742879968, "cpu_time": 0.9812790000000007, "max_rss": 2.06640625}, "wal_replay": {"throughput": 20764809.13861616, "duration": 0.00024079200375126675, "spans": 5000, "p50": 0.0, "p95": 0.0, "p99": 0.0, "cpu_time": 0.0067269999999997054, "max_rss": 0.0}, "otel_comparison": {"throughput": 5094.3713078788505, "duration": 0.9814753770042444, "spans": 5000, "p50": 0.13062799916951917, "p95": 0.261463801143691, "p99": 1.9159044485422785, "cpu_time": 0.7675370000000008, "max_rss": 6.98046875}};
+    document.getElementById('timestamp').innerText = data.timestamp;
+    
+    function populateMetrics(key, valId, subId, tpId, p50Id, p95Id, p99Id, cpuId, memId) {
+      const metric = data[key];
+      if (!metric) return;
+      document.getElementById(valId).innerText = metric.throughput.toLocaleString(undefined, {maximumFractionDigits: 2}) + ' spans/s';
+      let subText = metric.spans + ' spans in ' + metric.duration.toFixed(4) + 's';
+      if (metric.p95 !== undefined && metric.p95 > 0) {
+        subText += '<br>p95: ' + metric.p95.toFixed(2) + 'ms';
+      }
+      document.getElementById(subId).innerHTML = subText;
+      document.getElementById(tpId).innerText = metric.throughput.toLocaleString(undefined, {maximumFractionDigits: 2});
+      if (p50Id && metric.p50 !== undefined) document.getElementById(p50Id).innerText = metric.p50.toFixed(2) + ' ms';
+      if (p95Id && metric.p95 !== undefined) document.getElementById(p95Id).innerText = metric.p95.toFixed(2) + ' ms';
+      if (p99Id && metric.p99 !== undefined) document.getElementById(p99Id).innerText = metric.p99.toFixed(2) + ' ms';
+      if (cpuId && metric.cpu_time !== undefined) document.getElementById(cpuId).innerText = metric.cpu_time.toFixed(4) + ' s';
+      if (memId && metric.max_rss !== undefined) document.getElementById(memId).innerText = metric.max_rss.toFixed(2) + ' MB';
+    }
+    
+    populateMetrics('in_memory', 'in-memory-val', 'in-memory-sub', 'table-in-memory-tp', 'table-in-memory-p50', 'table-in-memory-p95', 'table-in-memory-p99', 'table-in-memory-cpu', 'table-in-memory-mem');
+    populateMetrics('wal_fallback', 'wal-fallback-val', 'wal-fallback-sub', 'table-wal-fallback-tp', 'table-wal-fallback-p50', 'table-wal-fallback-p95', 'table-wal-fallback-p99', 'table-wal-fallback-cpu', 'table-wal-fallback-mem');
+    populateMetrics('wal_replay', 'wal-replay-val', 'wal-replay-sub', 'table-wal-replay-tp', null, null, null, 'table-wal-replay-cpu', 'table-wal-replay-mem');
+    populateMetrics('otel_comparison', 'otel-val', 'otel-sub', 'table-otel-tp', 'table-otel-p50', 'table-otel-p95', 'table-otel-p99', 'table-otel-cpu', 'table-otel-mem');
+    
+    const tpCtx = document.getElementById('throughputChart').getContext('2d');
+    new Chart(tpCtx, {
+      type: 'bar',
+      data: {
+        labels: ['In-Memory Ingestion', 'WAL Fallback Ingestion', 'WAL Replay Recovery', 'OTel Baseline'],
+        datasets: [{
+          data: [
+            data.in_memory ? data.in_memory.throughput : 0,
+            data.wal_fallback ? data.wal_fallback.throughput : 0,
+            data.wal_replay ? data.wal_replay.throughput : 0,
+            data.otel_comparison ? data.otel_comparison.throughput : 0
+          ],
+          backgroundColor: [
+            'rgba(52, 211, 153, 0.45)',
+            'rgba(96, 165, 250, 0.45)',
+            'rgba(167, 139, 250, 0.45)',
+            'rgba(244, 114, 182, 0.45)'
+          ],
+          borderColor: [
+            'rgb(52, 211, 153)',
+            'rgb(96, 165, 250)',
+            'rgb(167, 139, 250)',
+            'rgb(244, 114, 182)'
+          ],
+          borderWidth: 1.5,
+          borderRadius: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            type: 'logarithmic',
+            min: 1,
+            grid: { color: 'rgba(255, 255, 255, 0.08)' },
+            ticks: { color: '#94a3b8' }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: '#94a3b8' }
+          }
+        },
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+
+    const latCtx = document.getElementById('latencyChart').getContext('2d');
+    new Chart(latCtx, {
+      type: 'bar',
+      data: {
+        labels: ['p50 Latency', 'p95 Latency', 'p99 Latency'],
+        datasets: [
+          {
+            label: 'In-Memory',
+            data: [
+              data.in_memory ? data.in_memory.p50 : 0,
+              data.in_memory ? data.in_memory.p95 : 0,
+              data.in_memory ? data.in_memory.p99 : 0
+            ],
+            backgroundColor: 'rgba(52, 211, 153, 0.55)',
+            borderColor: 'rgb(52, 211, 153)',
+            borderWidth: 1.5,
+            borderRadius: 6
+          },
+          {
+            label: 'WAL Fallback',
+            data: [
+              data.wal_fallback ? data.wal_fallback.p50 : 0,
+              data.wal_fallback ? data.wal_fallback.p95 : 0,
+              data.wal_fallback ? data.wal_fallback.p99 : 0
+            ],
+            backgroundColor: 'rgba(96, 165, 250, 0.55)',
+            borderColor: 'rgb(96, 165, 250)',
+            borderWidth: 1.5,
+            borderRadius: 6
+          },
+          {
+            label: 'OTel SDK',
+            data: [
+              data.otel_comparison ? data.otel_comparison.p50 : 0,
+              data.otel_comparison ? data.otel_comparison.p95 : 0,
+              data.otel_comparison ? data.otel_comparison.p99 : 0
+            ],
+            backgroundColor: 'rgba(244, 114, 182, 0.55)',
+            borderColor: 'rgb(244, 114, 182)',
+            borderWidth: 1.5,
+            borderRadius: 6
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.08)' },
+            ticks: { color: '#94a3b8' }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: '#94a3b8' }
+          }
+        },
+        plugins: {
+          legend: {
+            labels: { color: '#f8fafc' }
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
