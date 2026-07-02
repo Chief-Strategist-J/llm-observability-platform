@@ -137,22 +137,29 @@ class SloBurnActivities:
 
             severity = SloService.determine_severity(fast, medium, slow)
             if severity is None:
-                return
+                # If severity drops to None, we check if an open incident exists in Redis.
+                # If so, publish a Kafka message with severity 'None' (meaning resolution).
+                has_open_incident = self.redis.get_open_incident(model, endpoint)
+                if not has_open_incident:
+                    return
+                severity = "None"
 
             # F-L-09 Dedup Rate Limit TTLs
             dedup_ttls = {
                 "page": 900,
                 "slack": 3600,
-                "ticket": 86400
+                "ticket": 86400,
+                "None": 0
             }
             ttl = dedup_ttls.get(severity, 900)
 
-            # Try to acquire rate-limit lock in Redis
-            acquired = self.redis.check_and_set_dedup_lock(model, endpoint, severity, ttl)
-            if not acquired:
-                logger.info("Alert suppressed for model=%s endpoint=%s severity=%s (dedup hit)", model, endpoint, severity)
-                self.metrics.record_alert_deduped(model, endpoint, severity)
-                return
+            # Try to acquire rate-limit lock in Redis (skip for None/resolution)
+            if severity != "None":
+                acquired = self.redis.check_and_set_dedup_lock(model, endpoint, severity, ttl)
+                if not acquired:
+                    logger.info("Alert suppressed for model=%s endpoint=%s severity=%s (dedup hit)", model, endpoint, severity)
+                    self.metrics.record_alert_deduped(model, endpoint, severity)
+                    return
 
             # Fetch percentiles from DDSketch for current hour of day
             dt = datetime.fromtimestamp(unix_ts, tz=timezone.utc)
@@ -206,4 +213,6 @@ class SloBurnActivities:
                 payload=alert_payload
             )
 
-            self.metrics.record_alert_sent(model, endpoint, severity)
+            if severity != "None":
+                self.metrics.record_alert_sent(model, endpoint, severity)
+

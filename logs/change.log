@@ -1139,3 +1139,16 @@
     ├── Choice: Place the generated cost forecast graph inside the newly created package outcome directory.
     └── Changes:
         └── outcome-image -> Create outcome/ folder in package directory and copy generated dashboard jpg there
+
+[2026-07-02T17:19:00+05:30] Implement F-L-16 Alert resolution (auto-resolve)
+└── File: packages/python/slo-burn-worker/src/shared/ports/redis_port.py, packages/python/slo-burn-worker/src/infra/adapters/redis/redis_adapter.py, packages/python/alert-engine/src/shared/ports/redis_port.py, packages/python/alert-engine/src/infra/adapters/redis/redis_adapter.py, packages/python/alert-engine/src/shared/ports/pagerduty_port.py, packages/python/alert-engine/src/infra/adapters/pagerduty/pagerduty_adapter.py, packages/python/alert-engine/src/features/latency_slo/service.py, packages/python/slo-burn-worker/src/worker/activities.py, packages/python/slo-burn-worker/tests/unit/test_activities.py, packages/python/alert-engine/tests/unit/test_latency_slo_handler.py
+    ├── Choice: Automatically resolve PagerDuty incidents when severity drops to None, tracking incident IDs in Redis using incident:pd:{model}:{endpoint} with 86400s TTL.
+    └── Changes:
+        ├── redis-ports -> Declare get/set/delete open incident methods in both slo-burn-worker and alert-engine RedisPort protocols
+        ├── redis-adapters -> Implement redis tracking methods under incident:pd:{model}:{endpoint} key namespace
+        ├── pagerduty-ports -> Update trigger_incident to return incident ID and declare resolve_incident in PagerDutyPort
+        ├── pagerduty-adapters -> Implement resolve_incident event_action: resolve payload call and return dedup_key from trigger_incident
+        ├── alert-routing -> Check and resolve PagerDuty incidents and notify Slack "#llm-latency-alerts" on severity dropping to None in LatencySloService
+        ├── worker-activities -> Check open incidents in Redis and publish severity "None" to Kafka when severity is None in SloBurnActivities
+        └── test-suites -> Add unit tests to cover auto-resolution flow and tracking in both workers
+

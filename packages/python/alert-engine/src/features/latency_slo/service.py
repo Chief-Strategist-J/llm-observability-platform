@@ -84,15 +84,30 @@ class LatencySloService:
                 }
                 
                 with tracer.start_as_current_span("latency_slo_service.notify_pagerduty"):
-                    self.pagerduty_port.trigger_incident(
+                    incident_id = self.pagerduty_port.trigger_incident(
                         summary=title,
                         severity="critical",
                         source="alert-engine",
                         custom_details=custom_details
                     )
-                logger.info("PagerDuty alert triggered: %s", title)
+                    if incident_id:
+                        self.redis_port.set_open_incident(model, endpoint, incident_id, 86400)
+                logger.info("PagerDuty alert triggered: %s, tracked incident_id: %s", title, incident_id)
+
+            elif severity is None or severity == "None" or severity == "":
+                # F-L-16 Alert resolution (auto-resolve)
+                with tracer.start_as_current_span("latency_slo_service.auto_resolve"):
+                    incident_id = self.redis_port.get_open_incident(model, endpoint)
+                    if incident_id:
+                        self.pagerduty_port.resolve_incident(incident_id)
+                        self.redis_port.delete_open_incident(model, endpoint)
+                        
+                        slack_msg = f"{model}/{endpoint} SLO burn rate normalized. Incident auto-resolved."
+                        self.slack_port.send_channel_message("#llm-latency-alerts", slack_msg)
+                        logger.info("PagerDuty incident %s resolved automatically for model=%s endpoint=%s", incident_id, model, endpoint)
 
             elif severity == "slack":
+
                 slack_msg = (
                     f"🚨 *Latency SLO Breach* 🚨\n"
                     f"*Model:* `{model}`\n"

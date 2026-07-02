@@ -29,10 +29,20 @@ class MockRedisPort:
     def __init__(self, allowed: bool = True) -> None:
         self.allowed = allowed
         self.calls: list[dict] = []
+        self.open_incidents: dict[str, str] = {}
 
     def acquire_rate_limit(self, key: str, ttl_seconds: int) -> bool:
         self.calls.append({"key": key, "ttl": ttl_seconds})
         return self.allowed
+
+    def get_open_incident(self, model: str, endpoint: str) -> str | None:
+        return self.open_incidents.get(f"{model}:{endpoint}")
+
+    def set_open_incident(self, model: str, endpoint: str, incident_id: str, ttl: int) -> None:
+        self.open_incidents[f"{model}:{endpoint}"] = incident_id
+
+    def delete_open_incident(self, model: str, endpoint: str) -> None:
+        self.open_incidents.pop(f"{model}:{endpoint}", None)
 
 class MockSlackPort:
     def __init__(self) -> None:
@@ -47,6 +57,7 @@ class MockSlackPort:
 class MockPagerDutyPort:
     def __init__(self) -> None:
         self.incidents: list[dict] = []
+        self.resolved_incidents: list[str] = []
 
     def trigger_incident(
         self,
@@ -54,13 +65,17 @@ class MockPagerDutyPort:
         severity: str,
         source: str,
         custom_details: dict | None = None
-    ) -> None:
+    ) -> str | None:
         self.incidents.append({
             "summary": summary,
             "severity": severity,
             "source": source,
             "custom_details": custom_details
         })
+        return f"mock-pd-incident-{summary}"
+
+    def resolve_incident(self, dedup_key: str) -> None:
+        self.resolved_incidents.append(dedup_key)
 
 class MockMetricsPort:
     def __init__(self) -> None:
@@ -72,6 +87,7 @@ class MockMetricsPort:
             "severity": severity,
             "latency_ms": latency_ms
         })
+
 
 def test_latency_slo_alert_page_success() -> None:
     db = MockDbPort()
@@ -210,3 +226,43 @@ def test_latency_slo_alert_ticket() -> None:
     assert db.inserted[0]["event_type"] == "ticket"
     assert len(slack.channel_calls) == 0
     assert len(pd.incidents) == 0
+
+def test_latency_slo_alert_resolve() -> None:
+    db = MockDbPort()
+    redis = MockRedisPort(allowed=True)
+    slack = MockSlackPort()
+    pd = MockPagerDutyPort()
+    metrics = MockMetricsPort()
+
+    handler = LatencySloAlertHandler(
+        db_port=db,
+        redis_port=redis,
+        slack_port=slack,
+        pagerduty_port=pd,
+        metrics_port=metrics
+    )
+
+    # Pre-populate an open incident in MockRedisPort
+    redis.open_incidents["gpt-4:/v1/chat"] = "mock-incident-id"
+
+    # Send resolution payload
+    payload = {
+        "model": "gpt-4",
+        "endpoint": "/v1/chat",
+        "severity": "None",
+    }
+
+    handler.handle(payload)
+
+    # Should resolve the incident
+    assert len(pd.resolved_incidents) == 1
+    assert pd.resolved_incidents[0] == "mock-incident-id"
+
+    # Should clear Redis tracking key
+    assert redis.open_incidents.get("gpt-4:/v1/chat") is None
+
+    # Should post resolution message to Slack
+    assert len(slack.channel_calls) == 1
+    assert slack.channel_calls[0]["channel"] == "#llm-latency-alerts"
+    assert "gpt-4//v1/chat SLO burn rate normalized. Incident auto-resolved." in slack.channel_calls[0]["text"]
+
