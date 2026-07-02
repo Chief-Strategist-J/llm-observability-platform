@@ -84,6 +84,7 @@ async def test_write_burn_rates():
 @pytest.mark.asyncio
 async def test_handle_alerts_no_severity():
     redis = MagicMock()
+    redis.get_open_incident.return_value = None
     clickhouse = MagicMock()
     kafka = MagicMock()
     metrics = MagicMock()
@@ -100,7 +101,47 @@ async def test_handle_alerts_no_severity():
     # All burn rates low -> no alert severity
     rates = {"fast": 0.1, "medium": 0.1, "slow": 0.1}
     await activities.handle_alerts("gpt-4o", "/v1/chat/completions", rates, 1700000000)
+    redis.get_open_incident.assert_called_once_with("gpt-4o", "/v1/chat/completions")
     redis.check_and_set_dedup_lock.assert_not_called()
+
+@pytest.mark.asyncio
+async def test_handle_alerts_resolution_emitted():
+    redis = MagicMock()
+    redis.get_open_incident.return_value = "pd-12345"
+    redis.get_ddsketch_percentiles.return_value = (180.0, 250.0)
+    
+    # get_slo_buckets for 43200 total buckets
+    def mock_get_slo_buckets(model, endpoint, buckets):
+        n = len(buckets)
+        return ([0] * n, [10] * n)
+    redis.get_slo_buckets.side_effect = mock_get_slo_buckets
+
+    clickhouse = MagicMock()
+    clickhouse.get_baseline_p95_7d.return_value = 175.0
+    
+    kafka = MagicMock()
+    metrics = MagicMock()
+
+    activities = SloBurnActivities(
+        redis=redis,
+        clickhouse=clickhouse,
+        kafka=kafka,
+        metrics=metrics,
+        slo_compliance_config_path="nonexistent.yaml",
+        default_slo_compliance=0.95
+    )
+
+    # All burn rates low -> no alert severity -> severity drops to None -> resolve check triggers since open incident exists
+    rates = {"fast": 0.1, "medium": 0.1, "slow": 0.1}
+    await activities.handle_alerts("gpt-4o", "/v1/chat/completions", rates, 1700000000)
+    
+    redis.get_open_incident.assert_called_once_with("gpt-4o", "/v1/chat/completions")
+    redis.check_and_set_dedup_lock.assert_not_called()
+    kafka.publish_alert.assert_called_once()
+    # Check that published payload has severity='None'
+    called_args = kafka.publish_alert.call_args[1]
+    assert called_args["payload"]["severity"] == "None"
+
 
 @pytest.mark.asyncio
 async def test_handle_alerts_page_lock_failed():

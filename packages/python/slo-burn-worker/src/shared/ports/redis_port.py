@@ -41,3 +41,16 @@ class RedisPort(Protocol):
         Returns (p95, p99) falling back to (0.0, 0.0) if missing or error.
         """
         ...
+
+    def get_open_incident(self, model: str, endpoint: str) -> str | None:
+        """Gets the tracked PagerDuty incident ID for (model, endpoint) from Redis."""
+        ...
+
+    def set_open_incident(self, model: str, endpoint: str, incident_id: str, ttl: int) -> None:
+        """Sets the tracked PagerDuty incident ID for (model, endpoint) in Redis with TTL."""
+        ...
+
+    def delete_open_incident(self, model: str, endpoint: str) -> None:
+        """Deletes the tracked PagerDuty incident ID for (model, endpoint) from Redis."""
+        ...
+

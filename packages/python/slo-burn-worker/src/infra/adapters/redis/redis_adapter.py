@@ -128,3 +128,22 @@ class RedisAdapter(RedisPort):
             except Exception as e:
                 logger.warning("Failed to deserialize DDSketch for key %s: %s", key, e)
                 return 0.0, 0.0
+
+    def get_open_incident(self, model: str, endpoint: str) -> str | None:
+        with trace_span("redis:get_open_incident", attributes={"db.system": "redis"}):
+            key = f"incident:pd:{model}:{endpoint}"
+            val = self.client.get(key)
+            if val is None:
+                return None
+            return val.decode("utf-8") if isinstance(val, bytes) else str(val)
+
+    def set_open_incident(self, model: str, endpoint: str, incident_id: str, ttl: int) -> None:
+        with trace_span("redis:set_open_incident", attributes={"db.system": "redis"}):
+            key = f"incident:pd:{model}:{endpoint}"
+            self.client.setex(key, ttl, incident_id)
+
+    def delete_open_incident(self, model: str, endpoint: str) -> None:
+        with trace_span("redis:delete_open_incident", attributes={"db.system": "redis"}):
+            key = f"incident:pd:{model}:{endpoint}"
+            self.client.delete(key)
+
