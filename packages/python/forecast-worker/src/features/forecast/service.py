@@ -137,3 +137,54 @@ class ForecastService:
             "p90": p90_val,
             "timestamp": forecast_time.isoformat()
         }, "clickhouse"
+
+    @classmethod
+    def calculate_breach_risk(
+        cls,
+        service: str,
+        model: str,
+        p90_val: float,
+        repo: ForecastRepository
+    ) -> dict:
+        budget_limit = repo.get_budget_limit_for_service_model(service, model)
+        p90_usd = p90_val / 1_000_000.0
+        breach_predicted = False
+        if budget_limit is not None:
+            breach_predicted = p90_usd > budget_limit
+        return {
+            "budget_limit": budget_limit,
+            "predicted_cost_p90_usd": p90_usd,
+            "breach_predicted": breach_predicted
+        }
+
+    @classmethod
+    def get_forecasts_summary(cls, repo: ForecastRepository) -> List[dict]:
+        all_forecasts = repo.get_all_forecasts()
+        budgets = repo.get_budget_limits()
+        
+        budget_map = {}
+        for u_id, m, max_budget in budgets:
+            budget_map[(u_id, m)] = max_budget
+            
+        summary_list = []
+        for service, model, f_time, mean, p10, p90 in all_forecasts:
+            f_time_str = f_time.isoformat() if isinstance(f_time, datetime) else str(f_time)
+            limit = budget_map.get((service, model))
+            
+            p90_usd = p90 / 1_000_000.0
+            breach_predicted = False
+            if limit is not None:
+                breach_predicted = p90_usd > limit
+                
+            summary_list.append({
+                "service": service,
+                "model": model,
+                "forecast_time": f_time_str,
+                "mean": mean,
+                "p10": p10,
+                "p90": p90,
+                "budget_limit": limit,
+                "breach_predicted": breach_predicted
+            })
+        return summary_list
+

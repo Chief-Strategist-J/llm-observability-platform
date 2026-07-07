@@ -175,40 +175,23 @@ async def get_cost_breach_risk(
 ) -> dict:
     repo = ForecastRepository(redis_port, clickhouse_port, postgres_port)
     try:
-        forecast_res = await get_cost_forecast(
-            service=service,
-            model=model,
-            request=request,
-            user=user,
-            redis_port=redis_port,
-            clickhouse_port=clickhouse_port,
-            postgres_port=postgres_port,
-            timesfm_port=timesfm_port
-        )
-    except HTTPException as e:
-        raise e
+        forecast_res, source = ForecastService.get_forecast(service, model, "cost", repo, timesfm_port)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"ClickHouse fallback failed: {str(e)}")
 
     p90_val = forecast_res["p90"]
-    forecast_time = forecast_res["forecast_time"]
+    forecast_time = forecast_res["timestamp"]
     
-    budgets = repo.get_budget_limits()
-    matched_budget = None
-    for u_id, m, max_budget in budgets:
-        if u_id == service and m == model:
-            matched_budget = max_budget
-            break
-            
-    p90_usd = p90_val / 1_000_000.0
-    breach_predicted = False
-    if matched_budget is not None:
-        breach_predicted = p90_usd > matched_budget
-
+    risk_info = ForecastService.calculate_breach_risk(service, model, p90_val, repo)
+    
     return {
         "service": service,
         "model": model,
-        "budget_limit": matched_budget,
-        "predicted_cost_p90_usd": p90_usd,
-        "breach_predicted": breach_predicted,
+        "budget_limit": risk_info["budget_limit"],
+        "predicted_cost_p90_usd": risk_info["predicted_cost_p90_usd"],
+        "breach_predicted": risk_info["breach_predicted"],
         "forecast_time": forecast_time
     }
 
@@ -219,34 +202,7 @@ async def get_forecasts_summary(
     postgres_port: PostgresPort = Depends(get_postgres)
 ) -> dict:
     repo = ForecastRepository(None, None, postgres_port)
-    all_forecasts = repo.get_all_forecasts()
-    budgets = repo.get_budget_limits()
-    
-    budget_map = {}
-    for u_id, m, max_budget in budgets:
-        budget_map[(u_id, m)] = max_budget
-        
-    summary_list = []
-    for service, model, f_time, mean, p10, p90 in all_forecasts:
-        f_time_str = f_time.isoformat() if isinstance(f_time, datetime) else str(f_time)
-        limit = budget_map.get((service, model))
-        
-        p90_usd = p90 / 1_000_000.0
-        breach_predicted = False
-        if limit is not None:
-            breach_predicted = p90_usd > limit
-            
-        summary_list.append({
-            "service": service,
-            "model": model,
-            "forecast_time": f_time_str,
-            "mean": mean,
-            "p10": p10,
-            "p90": p90,
-            "budget_limit": limit,
-            "breach_predicted": breach_predicted
-        })
-        
+    summary_list = ForecastService.get_forecasts_summary(repo)
     return {
         "forecasts": summary_list
     }

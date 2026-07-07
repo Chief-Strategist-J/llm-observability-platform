@@ -1,3 +1,38 @@
+[2026-07-07T12:18:00+05:30] Refactor REST handlers to route business logic to service and IO to repository, create dev/test Dockerfiles, and add docker-compose configurations
+└── File: packages/python/forecast-worker/src/api/rest/v1/handlers/forecasts.py, packages/python/forecast-worker/src/features/forecast/repository.py, packages/python/forecast-worker/src/features/forecast/service.py, packages/python/forecast-worker/build/Dockerfile.dev, packages/python/forecast-worker/build/Dockerfile.test, packages/python/forecast-worker/deploy/docker/docker-compose.dev.yaml, packages/python/forecast-worker/deploy/docker/docker-compose.test.yaml, packages/python/forecast-worker/deploy/docker/docker-compose.prod.yaml, packages/python/forecast-worker/README.md
+    ├── Choice: Ensure strict SOLID/SRP compliance by relocating business checks, mappings, and computations from REST API handlers into the feature/forecast/service.py and repository.py layers. Introduce dev and test Docker structures to simplify isolated deployment and execution.
+    └── Architecture & Design:
+        ┌──────────────────────────────────────────────────────────┐
+        │                 Client Request (REST API)                 │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │ (thin routing / HTTP auth)
+                                     ▼
+        ┌──────────────────────────────────────────────────────────┐
+        │             REST Handler (FastAPI dependency)            │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │ (instantiates Repository, Service)
+                                     ▼
+        ┌──────────────────────────────────────────────────────────┐
+        │            ForecastService (Pure Business Logic)         │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │ (calculates breach risk/summaries)
+                                     ▼
+        ┌──────────────────────────────────────────────────────────┐
+        │        ForecastRepository (Port Routing & Storage)       │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │ (abstracts raw SQL/Redis calls)
+                                     ▼
+        ┌──────────────────────────────────────────────────────────┐
+        │         Ports (Postgres / Redis / ClickHouse Ports)       │
+        └──────────────────────────────────────────────────────────┘
+    └── Changes:
+        ├── handlers -> Refactor `get_cost_breach_risk` and `get_forecasts_summary` to route business logic entirely through `ForecastService` and repository.
+        ├── repository -> Add `get_budget_limit_for_service_model` and `write_forecast` helper methods to abstract direct DB queries.
+        ├── service -> Implement `calculate_breach_risk` and `get_forecasts_summary` methods.
+        ├── Dockerfiles -> Create `build/Dockerfile.dev` (editable dependency build) and `build/Dockerfile.test` (pytest runner environment).
+        ├── docker-compose -> Implement dev, test, and prod compose files under `deploy/docker/` to boot isolated stack environments.
+        └── testing -> Run and verify the unit test suite locally.
+
 [2026-07-07T11:40:00+05:30] Restructure forecast-worker API and feature folder for strict compliance
 └── File: packages/python/forecast-worker/contracts/openapi/v1.yaml, packages/python/forecast-worker/src/api/rest/v1/router.py, packages/python/forecast-worker/src/api/rest/v1/handlers/forecasts.py, packages/python/forecast-worker/src/api/rest/v1/app.py, packages/python/forecast-worker/src/features/forecast/index.py, packages/python/forecast-worker/src/features/forecast/contex.ymal, packages/python/forecast-worker/src/features/forecast/service.py, packages/python/forecast-worker/src/features/forecast/repository.py, packages/python/forecast-worker/src/features/forecast/types.py
     ├── Choice: Restructure REST API layer to decouple routing and endpoint handler logic. Organize forecast feature folder structure to encapsulate business rules, dependencies context, repositories, and local types.

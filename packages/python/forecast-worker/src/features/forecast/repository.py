@@ -74,5 +74,30 @@ class ForecastRepository:
     def get_budget_limits(self) -> List[Tuple[str, str, float]]:
         return self.postgres_port.get_budget_limits()
 
+    def get_budget_limit_for_service_model(self, service: str, model: str) -> Optional[float]:
+        try:
+            budgets = self.get_budget_limits()
+            for u_id, m, max_budget in budgets:
+                if u_id == service and m == model:
+                    return max_budget
+        except Exception:
+            pass
+        return None
+
     def get_all_forecasts(self) -> List[Tuple[str, str, datetime, float, float, float]]:
         return self.postgres_port.get_all_forecasts()
+
+    def write_forecast(
+        self,
+        service: str,
+        model: str,
+        forecast_time: datetime,
+        mean: float,
+        p10: float,
+        p90: float
+    ) -> None:
+        if self.postgres_port:
+            self.postgres_port.write_forecast(service, model, forecast_time, mean, p10, p90)
+        if self.redis_port:
+            self.cache_in_redis(service, model, forecast_time, mean, p10, p90)
+
