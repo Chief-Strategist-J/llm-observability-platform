@@ -1,0 +1,8 @@
+context: "LLM Observability Forecast Feature"
+description: "Handles time-series forecasting for cost and latency models, computing budget breach risks and forecast summaries."
+dependencies:
+  clickhouse: "Clickhouse is used to fetch raw cost/latency series data."
+  redis: "Redis is used for low-latency caching of computed forecast results."
+  postgres: "Postgres stores long-term forecasts and defines budget limits."
+  timesfm: "TimesFM is a foundational model used for forecasting time series."
+networking_criticality: "High. Clickhouse and Redis are on critical paths for sub-second API lookups."

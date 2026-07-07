@@ -44,3 +44,16 @@ class PostgresAdapter(PostgresPort):
         except Exception:
             # Table might not exist or empty in certain test environments
             return []
+
+    def get_all_forecasts(self) -> List[Tuple[str, str, datetime, float, float, float]]:
+        query = """
+        SELECT service, model, forecast_time, forecast_mean, forecast_p10, forecast_p90 FROM forecasts
+        """
+        try:
+            with psycopg.connect(self.dsn) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query)
+                    rows = cur.fetchall()
+                    return [(str(row[0]), str(row[1]), row[2], float(row[3]), float(row[4]), float(row[5])) for row in rows]
+        except Exception:
+            return []

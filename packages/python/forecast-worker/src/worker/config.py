@@ -18,6 +18,7 @@ class WorkerConfig:
     instrumentation_sdk_url: str
     timesfm_repo_id: str
     timesfm_backend: str
+    internal_jwt_secret: str
 
 def _int_val(raw: str, key: str) -> int:
     try:
@@ -53,4 +54,5 @@ def load_config(env: dict[str, str] | None = None) -> WorkerConfig:
         instrumentation_sdk_url=source.get("INSTRUMENTATION_SDK_URL", "http://localhost:8000"),
         timesfm_repo_id=source.get("TIMESFM_REPO_ID", "google/timesfm-1.0-200m"),
         timesfm_backend=source.get("TIMESFM_BACKEND", "cpu"),
+        internal_jwt_secret=source.get("INTERNAL_JWT_SECRET", "super-secret-key"),
     )

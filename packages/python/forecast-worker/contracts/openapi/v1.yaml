@@ -1,0 +1,252 @@
+openapi: 3.0.3
+info:
+  title: Temporal Forecast Worker API
+  version: 1.0.0
+  description: API for LLM cost and latency forecasts, breach-risk analysis, and workflow triggering.
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Get the health status and configurations of the forecast worker.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  temporal_host:
+                    type: string
+                  temporal_namespace:
+                    type: string
+                  temporal_task_queue:
+                    type: string
+                  redis_url:
+                    type: string
+                  kafka_bootstrap_servers:
+                    type: string
+        '500':
+          description: Internal server error
+
+  /trigger:
+    post:
+      summary: Trigger forecast baseline update workflow
+      description: Manually trigger the baseline update workflow in Temporal.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lookback_hours:
+                  type: integer
+                  minimum: 1
+                  default: 168
+                min_history_hours:
+                  type: integer
+                  minimum: 1
+                  default: 48
+      responses:
+        '200':
+          description: Workflow triggered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  workflow_id:
+                    type: string
+                  run_id:
+                    type: string
+        '500':
+          description: Internal server error
+
+  /forecasts/cost/{service}/{model}:
+    get:
+      summary: Get cost forecast
+      description: Get the cost forecast for a specific service and model pair.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: model
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                  model:
+                    type: string
+                  mean:
+                    type: number
+                  p10:
+                    type: number
+                  p90:
+                    type: number
+                  forecast_time:
+                    type: string
+                  source:
+                    type: string
+        '401':
+          description: Unauthorized
+        '404':
+          description: Data not found
+        '500':
+          description: Internal server error
+
+  /forecasts/latency/{service}/{model}:
+    get:
+      summary: Get latency forecast
+      description: Get the latency forecast for a specific service and model pair.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: model
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                  model:
+                    type: string
+                  mean:
+                    type: number
+                  p10:
+                    type: number
+                  p90:
+                    type: number
+                  forecast_time:
+                    type: string
+                  source:
+                    type: string
+        '401':
+          description: Unauthorized
+        '404':
+          description: Data not found
+        '500':
+          description: Internal server error
+
+  /forecasts/cost/{service}/{model}/breach-risk:
+    get:
+      summary: Get cost breach risk
+      description: Get breach risk analysis based on projected cost forecast p90 and budget limits.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: model
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                  model:
+                    type: string
+                  budget_limit:
+                    type: number
+                    nullable: true
+                  predicted_cost_p90_usd:
+                    type: number
+                  breach_predicted:
+                    type: boolean
+                  forecast_time:
+                    type: string
+        '401':
+          description: Unauthorized
+        '404':
+          description: Data not found
+        '500':
+          description: Internal server error
+
+  /forecasts/summary:
+    get:
+      summary: Get forecasts summary
+      description: Retrieve summary of all forecasts and budget breach status from database.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  forecasts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        service:
+                          type: string
+                        model:
+                          type: string
+                        forecast_time:
+                          type: string
+                        mean:
+                          type: number
+                        p10:
+                          type: number
+                        p90:
+                          type: number
+                        budget_limit:
+                          type: number
+                          nullable: true
+                        breach_predicted:
+                          type: boolean
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

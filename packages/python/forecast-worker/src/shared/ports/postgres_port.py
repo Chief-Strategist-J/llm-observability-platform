@@ -21,3 +21,9 @@ class PostgresPort(Protocol):
         Fetch budget configs (user_id/service, model, max_budget) from the database.
         """
         ...
+
+    def get_all_forecasts(self) -> List[Tuple[str, str, datetime, float, float, float]]:
+        """
+        Fetch all forecast entries from the forecasts table.
+        """
+        ...
