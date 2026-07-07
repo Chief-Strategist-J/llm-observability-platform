@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: forecast-postgres-dev
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: llm_observability
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: forecast-redis-dev
+    ports:
+      - "6379:6379"
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8-alpine
+    container_name: forecast-clickhouse-dev
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      CLICKHOUSE_DB: llm_observability
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ""
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  forecast-worker:
+    build:
+      context: ../../
+      dockerfile: build/Dockerfile.dev
+    container_name: forecast-worker-dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../../src:/app/src
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=llm_observability
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+      - CLICKHOUSE_DATABASE=llm_observability
+      - REDIS_URL=redis://redis:6379/0
+      - TEMPORAL_HOST=temporal:7233
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - INSTRUMENTATION_SDK_URL=http://sdk:8000
+      - TIMESFM_REPO_ID=google/timesfm-1.0-200m
+      - TIMESFM_BACKEND=cpu
+      - INTERNAL_JWT_SECRET=super-secret-key
+    depends_on:
+      - postgres
+      - redis
+      - clickhouse
+
+volumes:
+  pgdata_dev:

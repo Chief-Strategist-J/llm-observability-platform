@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  forecast-worker:
+    build:
+      context: ../../
+      dockerfile: build/Dockerfile
+    container_name: forecast-worker-prod
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_HOST=postgres.prod.internal
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=llm_observability
+      - CLICKHOUSE_HOST=clickhouse.prod.internal
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+      - CLICKHOUSE_DATABASE=llm_observability
+      - REDIS_URL=redis://redis.prod.internal:6379/0
+      - TEMPORAL_HOST=temporal.prod.internal:7233
+      - KAFKA_BOOTSTRAP_SERVERS=kafka.prod.internal:9092
+      - INSTRUMENTATION_SDK_URL=http://sdk.prod.internal:8000
+      - TIMESFM_REPO_ID=google/timesfm-1.0-200m
+      - TIMESFM_BACKEND=cpu
+      - INTERNAL_JWT_SECRET=super-secret-key
+    restart: always

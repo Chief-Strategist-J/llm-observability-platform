@@ -375,20 +375,46 @@ Or with coverage:
 
 > Minimum coverage threshold: **80%** (currently **94%** package-wide).
 
-### Environment Variables
+---
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `CLICKHOUSE_HOST` | ✅ | — | ClickHouse hostname |
-| `CLICKHOUSE_PORT` | ❌ | `8123` | ClickHouse HTTP port |
-| `CLICKHOUSE_DATABASE` | ❌ | `llm_observability` | Database name |
-| `CLICKHOUSE_USER` | ❌ | `default` | ClickHouse user |
-| `CLICKHOUSE_PASSWORD` | ✅ | — | ClickHouse password |
-| `INSTRUMENTATION_SDK_URL` | ✅ | — | Base URL of the SDK API (e.g. `http://observability-stack:8000`) |
-| `TEMPORAL_HOST` | ✅ | — | Temporal server address (e.g. `temporal:7233`) |
-| `TEMPORAL_NAMESPACE` | ❌ | `default` | Temporal namespace |
-| `FORECAST_CRON_SCHEDULE` | ❌ | `5 * * * *` | Cron expression for forecast cadence |
-| `MIN_HISTORY_HOURS` | ❌ | `48` | Minimum hours of history required to run forecast |
+## 11. Docker Deployment Configurations
+
+We provide Docker files and compose configurations for development, testing, and production.
+
+### Dockerfiles (under `build/`)
+
+- **`Dockerfile.dev`**: Installs packages with dev options (`.[dev]`), mounts code directories, and allows real-time code reloading.
+- **`Dockerfile.test`**: A dedicated containerised testing environment pre-installed with all dev dependencies and configured to run `pytest` directly.
+
+### Compose Deployments (under `deploy/docker/`)
+
+- **`docker-compose.dev.yaml`**: Launches PostgreSQL, Redis, ClickHouse, and the forecast-worker in development mode with active volume mounts.
+- **`docker-compose.test.yaml`**: Launches PostgreSQL, Redis, ClickHouse, and a test-runner container to execute the test suite in isolation.
+- **`docker-compose.prod.yaml`**: Standard configuration designed for production containing the production-built `forecast-worker`.
+
+To run development:
+```bash
+docker compose -f deploy/docker/docker-compose.dev.yaml up --build
+```
+
+To run test suite:
+```bash
+docker compose -f deploy/docker/docker-compose.test.yaml up --build --abort-on-container-exit
+```
+
+---
+
+## 12. REST API Endpoints & SRP Compliance
+
+The HTTP REST API (running on port `8000`) is built with FastAPI. All endpoints comply strictly with the **Single Responsibility Principle (SRP)**. Business logic, mathematical conversions, and query formatting reside in the feature-service layer (`ForecastService`), while database and storage routing reside in `ForecastRepository`—keeping REST handlers thin and focus-bound.
+
+### Endpoints:
+1. **`GET /health`** - Basic system check.
+2. **`POST /trigger`** - Manual workflow trigger.
+3. **`GET /forecasts/cost/{service}/{model}`** - Expected cost forecast.
+4. **`GET /forecasts/latency/{service}/{model}`** - Expected latency forecast.
+5. **`GET /forecasts/cost/{service}/{model}/breach-risk`** - Checks if predicted cost exceeds budget limit.
+6. **`GET /forecasts/summary`** - Full summary of all forecasts and budget status.
 
 ---
 
@@ -398,9 +424,6 @@ Or with coverage:
 |-------|-----|------|-------------|
 | `chiefj/instrumentation-sdk-api` | `latest` | ~2.1 GB | FastAPI + Prometheus + Grafana + Tempo all-in-one observability stack |
 | `chiefj/forecast-worker` | `latest` | ~3.5 GB | TimesFM CPU inference worker + Temporal integration |
+| `chiefj/forecast-worker` | `dev` | — | Dev-enabled image including dev dependencies and source mounts |
+| `chiefj/forecast-worker` | `test` | — | Isolated test-runner image with pytest installed |
 
-```bash
-# Pull and run the full stack
-docker pull chiefj/instrumentation-sdk-api:latest
-docker pull chiefj/forecast-worker:latest
-```
