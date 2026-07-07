@@ -10,3 +10,12 @@ class ClickHousePort(Protocol):
         Fetch raw cost series aggregated by service, model, and hour bucket from ClickHouse.
         """
         ...
+
+    def fetch_latency_series_raw(
+        self, lookback_hours: int
+    ) -> List[Tuple[str, str, datetime, float]]:
+        """
+        Fetch raw latency series aggregated by service, model, and hour bucket from ClickHouse.
+        """
+        ...
+
