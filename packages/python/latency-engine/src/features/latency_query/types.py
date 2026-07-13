@@ -29,3 +29,13 @@ class BaselinePoint:
     date: date
     p99_ttft_ms: float
     p99_total_ms: float
+
+
+@dataclass(frozen=True)
+class AttributionResult:
+    """Output of the latency attribution query."""
+    dns: float
+    tcp: float
+    queue: float
+    inference: float
+

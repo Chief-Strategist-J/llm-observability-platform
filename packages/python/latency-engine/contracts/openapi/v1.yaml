@@ -110,6 +110,31 @@ components:
           type: string
           example: "quantiles must be comma-separated floats between 0 and 1"
 
+    AttributionResponse:
+      type: object
+      required: [dns, tcp, queue, inference]
+      properties:
+        dns:
+          type: number
+          format: double
+          description: Average DNS resolution latency in milliseconds
+          example: 15.5
+        tcp:
+          type: number
+          format: double
+          description: Average TCP connection latency in milliseconds
+          example: 25.0
+        queue:
+          type: number
+          format: double
+          description: Average queue latency in milliseconds
+          example: 100.0
+        inference:
+          type: number
+          format: double
+          description: Average inference latency in milliseconds
+          example: 800.0
+
 paths:
   /latency/percentiles:
     get:
@@ -283,6 +308,57 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: No baseline data found for the given model and hour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /latency/attribution:
+    get:
+      operationId: getLatencyAttribution
+      summary: Query latency attribution averages from Redis
+      description: >
+        Returns average latency attribution segments (dns, tcp, queue, inference)
+        for a given model and hour string from Redis.
+      parameters:
+        - name: model
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: The LLM model identifier
+          example: "gpt-4o"
+        - name: hour
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 10
+            maxLength: 10
+          description: UTC hour identifier in YYYYMMDDHH format
+          example: "2026061708"
+      responses:
+        "200":
+          description: Latency attribution segment averages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttributionResponse"
+        "400":
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No attribution data found for the given model and hour
           content:
             application/json:
               schema:

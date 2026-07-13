@@ -74,6 +74,17 @@ class MockRedis:
             raise redis.exceptions.ConnectionError("Redis down")
         return []
 
+class MockMetrics:
+    def __init__(self) -> None:
+        self.processed = []
+        self.dropped = []
+
+    def record_span_processed(self, model: str, endpoint: str, retry_count: int) -> None:
+        self.processed.append((model, endpoint, retry_count))
+
+    def record_sketch_dropped(self, key: str, count: int) -> None:
+        self.dropped.append((key, count))
+
 @pytest.fixture
 def mock_redis() -> MockRedis:
     return MockRedis()
@@ -92,7 +103,8 @@ endpoints:
 # F-L-01, F-L-05: DDSketch updates & Retry separation
 # ==============================================================================
 def test_ddsketch_updates(mock_redis, temp_slo_config):
-    handler = LatencyHandler(mock_redis, temp_slo_config)
+    mock_metrics = MockMetrics()
+    handler = LatencyHandler(mock_redis, temp_slo_config, metrics=mock_metrics)
     
     spans = [
         # 1. Normal streaming span (no retry)
@@ -143,12 +155,31 @@ def test_ddsketch_updates(mock_redis, temp_slo_config):
     # gpt-4 non-retry total latency for span-1 (1200) and span-2 (800) -> count = 2
     assert total_sketch.count == 2
 
+    # Verify All attempts sketch
+    all_attempts_key = "sketch:total:gpt-4:8"
+    assert all_attempts_key in mock_redis.data
+    all_attempts_sketch = handler._deserialize_sketch(mock_redis.data[all_attempts_key].decode('utf-8'))
+    assert all_attempts_sketch.count == 3
+
+    # Verify First attempts only sketch
+    no_retry_key = "sketch:total:no_retry:gpt-4:8"
+    assert no_retry_key in mock_redis.data
+    no_retry_sketch = handler._deserialize_sketch(mock_redis.data[no_retry_key].decode('utf-8'))
+    assert no_retry_sketch.count == 2
+
     # Verify Retry sketch
     retry_key = "sketch:total:retry:gpt-4"
     assert retry_key in mock_redis.data
     retry_sketch = handler._deserialize_sketch(mock_redis.data[retry_key].decode('utf-8'))
     # gpt-4 retry total latency for span-3 (2500) -> count = 1
     assert retry_sketch.count == 1
+
+    # Verify MetricsPort calls
+    assert len(mock_metrics.processed) == 3
+    assert mock_metrics.processed[0] == ("gpt-4", "/v1/chat/completions", 0)
+    assert mock_metrics.processed[1] == ("gpt-4", "/v1/chat/completions", 0)
+    assert mock_metrics.processed[2] == ("gpt-4", "/v1/chat/completions", 1)
+
 
 
 # ==============================================================================

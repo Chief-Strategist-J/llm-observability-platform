@@ -19,3 +19,8 @@ class BaselineNotFoundError(LatencyQueryError):
 
 class InvalidQuantileError(LatencyQueryError):
     """Raised when a requested quantile is out of the valid range (0, 1)."""
+
+
+class AttributionNotFoundError(LatencyQueryError):
+    """Raised when no attribution data exists for the requested model/hour."""
+

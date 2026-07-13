@@ -1,5 +1,11 @@
 # Latency Engine OpenAPI Contract Changelog
 
+## v1.1.0 — 2026-07-13
+
+### Added
+- `GET /v1/latency/attribution` — Average latency attribution segment read from Redis
+- `AttributionResponse` schema
+
 ## v1.0.0 — 2026-06-25
 
 ### Added

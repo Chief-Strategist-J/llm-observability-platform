@@ -11,6 +11,7 @@ from shared.errors.latency_query_errors import (
     InvalidQuantileError,
     SketchNotFoundError,
     SLODataNotFoundError,
+    AttributionNotFoundError,
 )
 from shared.tracing.tracer import api_span
 
@@ -170,3 +171,35 @@ def get_baseline(
                 status_code=404,
                 detail={"error": "NOT_FOUND", "detail": str(exc)},
             ) from exc
+
+
+@router.get(
+    "/latency/attribution",
+    dependencies=[Depends(verify_jwt_token)],
+    responses={
+        400: {"description": "Invalid query parameters"},
+        401: {"description": "Missing or invalid JWT"},
+        404: {"description": "No attribution data found"},
+    },
+)
+def get_attribution(
+    model: str = Query(..., min_length=1),
+    hour: str = Query(..., min_length=10, max_length=10),
+    service: LatencyQueryService = Depends(get_query_service),
+) -> Any:
+    """Average latency attribution segment read from Redis."""
+    with api_span("api.get_latency_attribution", {"model": model, "hour": hour}):
+        try:
+            res = service.get_attribution(model, hour)
+            return {
+                "dns": res.dns,
+                "tcp": res.tcp,
+                "queue": res.queue,
+                "inference": res.inference,
+            }
+        except AttributionNotFoundError as exc:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "NOT_FOUND", "detail": str(exc)},
+            ) from exc
+

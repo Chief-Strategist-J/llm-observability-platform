@@ -7,15 +7,15 @@ from ddsketch import DDSketch
 from ddsketch.pb import ddsketch_pb2
 from ddsketch.pb.proto import DDSketchProto
 
-from shared.ports.latency_redis_port import LatencyRedisPort
-from shared.ports.latency_clickhouse_port import LatencyClickHousePort
+from features.latency_query.repository import LatencyQueryRepository
 from shared.errors.latency_query_errors import (
     BaselineNotFoundError,
     InvalidQuantileError,
     SketchNotFoundError,
     SLODataNotFoundError,
+    AttributionNotFoundError,
 )
-from features.latency_query.types import BaselinePoint, PercentilesResult, SLOResult
+from features.latency_query.types import BaselinePoint, PercentilesResult, SLOResult, AttributionResult
 
 logger = logging.getLogger(__name__)
 
@@ -50,18 +50,16 @@ def _compute_burn_rate(total: int, errors: int) -> float:
 class LatencyQueryService:
     """
     Pure business logic for latency query operations.
-    Zero IO — all data access through injected port interfaces.
+    Zero IO — all data access through injected repository.
     No HTTP, no framework imports.
     """
 
     def __init__(
         self,
-        redis: LatencyRedisPort,
-        clickhouse: LatencyClickHousePort,
+        repository: LatencyQueryRepository,
         slo_thresholds: dict[str, float],
     ) -> None:
-        self._redis = redis
-        self._clickhouse = clickhouse
+        self._repository = repository
         self._slo_thresholds = slo_thresholds
 
     # ------------------------------------------------------------------
@@ -89,7 +87,7 @@ class LatencyQueryService:
                     f"Quantile {q} is out of range; must be in (0, 1)"
                 )
 
-        b64 = self._redis.get_sketch_b64(model, hour_of_day)
+        b64 = self._repository.get_sketch_b64(model, hour_of_day)
         if b64 is None:
             raise SketchNotFoundError(
                 f"No sketch found for model={model!r} hour_of_day={hour_of_day}"
@@ -140,14 +138,14 @@ class LatencyQueryService:
         Raises:
             SLODataNotFoundError: if no SLO data exists for model+endpoint
         """
-        total_fast, errors_fast = self._redis.get_slo_counts(
+        total_fast, errors_fast = self._repository.get_slo_counts(
             model, endpoint, _WINDOW_FAST_MIN
         )
-        total_medium, errors_medium = self._redis.get_slo_counts(
+        total_medium, errors_medium = self._repository.get_slo_counts(
             model, endpoint, _WINDOW_MEDIUM_MIN
         )
         # 3-day window capped at max 6 hours due to Redis TTL
-        total_slow, errors_slow = self._redis.get_slo_counts(
+        total_slow, errors_slow = self._repository.get_slo_counts(
             model, endpoint, _WINDOW_MEDIUM_MIN  # 6h best-effort
         )
 
@@ -200,7 +198,7 @@ class LatencyQueryService:
         if days < 1 or days > 90:
             raise ValueError("days must be between 1 and 90")
 
-        rows = self._clickhouse.get_baseline(model, hour_of_day, days)
+        rows = self._repository.get_baseline(model, hour_of_day, days)
         if not rows:
             raise BaselineNotFoundError(
                 f"No baseline data for model={model!r} hour={hour_of_day} days={days}"
@@ -214,3 +212,32 @@ class LatencyQueryService:
             )
             for row in rows
         ]
+
+    # ------------------------------------------------------------------
+    # Use-case: attribution
+    # ------------------------------------------------------------------
+
+    def get_attribution(
+        self,
+        model: str,
+        hour: str,
+    ) -> AttributionResult:
+        """
+        Fetches the average latency attribution values from Redis.
+
+        Raises:
+            AttributionNotFoundError: if no attribution data exists
+        """
+        data = self._repository.get_attribution(model, hour)
+        if data is None:
+            raise AttributionNotFoundError(
+                f"No attribution data found for model={model!r} hour={hour}"
+            )
+
+        return AttributionResult(
+            dns=round(data.get("dns", 0.0), 1),
+            tcp=round(data.get("tcp", 0.0), 1),
+            queue=round(data.get("queue", 0.0), 1),
+            inference=round(data.get("inference", 0.0), 1),
+        )
+

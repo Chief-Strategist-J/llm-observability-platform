@@ -1,0 +1,11 @@
+features:
+  - name: latency_attribution
+    status: active
+    contract: contracts/openapi/v1.yaml
+    contract_version: v1
+    owner: "@infra-platform-team"
+    added: 2026-07-13
+    flags: []
+    migrations: []
+    depends_on_features: []
+    depends_on_packages: []

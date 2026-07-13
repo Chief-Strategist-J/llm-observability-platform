@@ -147,3 +147,40 @@ class LatencyRedisAdapter:
                         pass
 
             return total_requests, total_errors
+
+    def get_attribution_avg(self, model: str, hour: str) -> dict[str, float] | None:
+        """
+        Reads the attribution hash for the given model and hour string from Redis.
+        Returns a dictionary of float segment averages, or None if the key does not exist.
+        """
+        with api_span(
+            "redis_adapter.get_attribution_avg",
+            {"db.system": "redis", "model": model, "hour": hour},
+        ):
+            key = f"attr:avg:{model}:{hour}"
+            try:
+                if not self._redis.exists(key):
+                    return None
+                raw_hash = self._redis.hgetall(key)
+            except redis.RedisError as exc:
+                logger.error("Redis HGETALL failed for key %s: %s", key, exc)
+                raise
+
+            if not raw_hash:
+                return None
+
+            result = {}
+            for field in (b"dns", b"tcp", b"queue", b"inference"):
+                val = raw_hash.get(field)
+                if val is None:
+                    val = raw_hash.get(field.decode('utf-8'))
+                
+                if val is not None:
+                    try:
+                        result[field.decode('utf-8')] = float(val)
+                    except (ValueError, TypeError):
+                        result[field.decode('utf-8')] = 0.0
+                else:
+                    result[field.decode('utf-8')] = 0.0
+            return result
+

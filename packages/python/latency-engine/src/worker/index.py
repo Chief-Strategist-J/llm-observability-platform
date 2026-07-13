@@ -58,8 +58,10 @@ async def run() -> None:
     _start_api_server(health_port)
     
     # Initialize redis and handler
+    from infra.adapters.metrics.prometheus_adapter import PrometheusMetricsAdapter
+    metrics_adapter = PrometheusMetricsAdapter()
     redis_client = redis.from_url(cfg.redis_url)
-    handler = LatencyHandler(redis_client, cfg.slo_config_path)
+    handler = LatencyHandler(redis_client, cfg.slo_config_path, metrics=metrics_adapter)
 
     consumer = Consumer({
         "bootstrap.servers": cfg.kafka_bootstrap_servers,

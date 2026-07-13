@@ -239,3 +239,46 @@ def test_get_baseline_not_found(client, mock_service):
     )
     assert resp.status_code == 404
     assert resp.json()["detail"]["error"] == "NOT_FOUND"
+
+
+# ==============================================================================
+# Attribution Endpoint (/v1/latency/attribution)
+# ==============================================================================
+def test_get_attribution_success(client, mock_service):
+    from features.latency_query.types import AttributionResult
+
+    mock_service.get_attribution.return_value = AttributionResult(
+        dns=15.5, tcp=25.0, queue=100.0, inference=800.0
+    )
+
+    token = generate_test_jwt()
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = client.get(
+        "/v1/latency/attribution?model=gpt-4&hour=2026061708",
+        headers=headers,
+    )
+
+    assert resp.status_code == 200
+    assert resp.json() == {
+        "dns": 15.5,
+        "tcp": 25.0,
+        "queue": 100.0,
+        "inference": 800.0,
+    }
+    mock_service.get_attribution.assert_called_once_with("gpt-4", "2026061708")
+
+
+def test_get_attribution_not_found(client, mock_service):
+    from shared.errors.latency_query_errors import AttributionNotFoundError
+
+    mock_service.get_attribution.side_effect = AttributionNotFoundError("Attribution not found")
+
+    token = generate_test_jwt()
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = client.get(
+        "/v1/latency/attribution?model=gpt-4&hour=2026061708",
+        headers=headers,
+    )
+    assert resp.status_code == 404
+    assert resp.json()["detail"]["error"] == "NOT_FOUND"
+

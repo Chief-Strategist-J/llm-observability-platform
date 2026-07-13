@@ -1218,3 +1218,33 @@
         ├── worker-activities -> Check open incidents in Redis and publish severity "None" to Kafka when severity is None in SloBurnActivities
         └── test-suites -> Add unit tests to cover auto-resolution flow and tracking in both workers
 
+[2026-07-13T22:15:00+05:30] feat(latency-engine): implement Phase 4 of the latency layer including latency attribution, Prometheus metrics port, and retry vs non-retry P99 separation
+└── File: packages/python/latency-engine/contracts/openapi/v1.yaml, packages/python/latency-engine/contracts/openapi/changelog.md, packages/python/latency-engine/src/shared/ports/metrics_port.py, packages/python/latency-engine/src/infra/adapters/metrics/prometheus_adapter.py, packages/python/latency-engine/src/handlers/latency_handler.py, packages/python/latency-engine/src/features/latency_query/repository.py, packages/python/latency-engine/src/features/latency_query/service.py, packages/python/latency-engine/src/features/latency_query/types.py, packages/python/latency-engine/src/shared/errors/latency_query_errors.py, packages/python/latency-engine/src/api/rest/v1/handlers/latency.py, packages/python/latency-engine/src/api/rest/v1/app.py, packages/python/latency-engine/src/worker/index.py, packages/python/latency-engine/feature-registry.yaml, packages/python/latency-engine/tests/unit/test_latency_handler.py, packages/python/latency-engine/tests/unit/test_api/test_latency_api.py, packages/python/latency-engine/tests/unit/test_service.py
+    ├── Choice: Use Hexagonal architecture (Ports & Adapters) to separate core calculation rules, service orchestration, ports, adapters, and REST API layers with zero-comment code styling.
+    │   ┌──────────────────────────────────────────────────────────┐
+    │   │                  Raw Ingested LLM Span                   │
+    │   └────────────────────────────┬─────────────────────────────┘
+    │                                │ (process span in handler)
+    │                                ▼
+    │                 ┌─────────────────────────────┐
+    │                 │   Is retry_count == 0?      │
+    │                 └──────────────┬──────────────┘
+    │                       (Yes)   / \   (No)
+    │                              /   \
+    │                             ▼     ▼
+    │      [Record First Attempt Only]  [Record All Attempts Only]
+    │      (sketch:total:no_retry:...)   (sketch:total:...)
+    │                             \     /
+    │                              ▼   ▼
+    │                 ┌─────────────────────────────┐
+    │                 │   Prometheus MetricsPort    │
+    │                 └─────────────────────────────┘
+    └── Changes:
+        ├── openapi -> Update OpenAPI spec and changelog to specify /latency/attribution endpoint and AttributionResponse
+        ├── ports -> Create MetricsPort and add get_attribution_avg method signature to LatencyRedisPort
+        ├── adapters -> Implement PrometheusMetricsAdapter and implement get_attribution_avg in LatencyRedisAdapter
+        ├── handler -> Add retry vs non-retry separation logic and route metric records via MetricsPort in LatencyHandler
+        ├── repository -> Create LatencyQueryRepository to decouple LatencyQueryService from direct ports
+        ├── service -> Update LatencyQueryService to use repository and implement get_attribution use case logic
+        ├── api -> Route GET /v1/latency/attribution endpoint to query service and wire LatencyQueryRepository in app startup
+        └── testing -> Write and update unit tests for API, handler and service layer to assert correct key formatting and metrics calls

@@ -23,3 +23,11 @@ class LatencyRedisPort(Protocol):
         over the last `window_minutes` minutes of SLO buckets.
         """
         ...
+
+    def get_attribution_avg(self, model: str, hour: str) -> dict[str, float] | None:
+        """
+        Reads the attribution hash for the given model and hour string from Redis.
+        Returns a dictionary of float segment averages, or None if the key does not exist.
+        """
+        ...
+

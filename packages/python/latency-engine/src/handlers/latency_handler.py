@@ -12,15 +12,18 @@ import redis
 from opentelemetry import trace
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
+from shared.ports.metrics_port import MetricsPort
+
 logger = logging.getLogger(__name__)
 
 class LatencyHandler:
-    def __init__(self, redis_client: redis.Redis, slo_config_path: str):
+    def __init__(self, redis_client: redis.Redis, slo_config_path: str, metrics: MetricsPort | None = None):
         self.redis = redis_client
         self.slo_config_path = slo_config_path
         self.slo_config = self._load_slo_config()
         self.redis_buffer: dict[str, list[float]] = {}
         self.redis_down_since: datetime | None = None
+        self.metrics = metrics
 
     def _load_slo_config(self) -> dict:
         try:
@@ -92,11 +95,17 @@ class LatencyHandler:
                 for k in list(self.redis_buffer.keys()):
                     vals = self.redis_buffer[k]
                     if len(vals) <= to_drop - dropped_count:
-                        dropped_count += len(vals)
+                        dropped_len = len(vals)
+                        dropped_count += dropped_len
                         del self.redis_buffer[k]
+                        if self.metrics:
+                            self.metrics.record_sketch_dropped(k, dropped_len)
                     else:
-                        self.redis_buffer[k] = vals[to_drop - dropped_count:]
+                        to_drop_for_k = to_drop - dropped_count
+                        self.redis_buffer[k] = vals[to_drop_for_k:]
                         dropped_count = to_drop
+                        if self.metrics:
+                            self.metrics.record_sketch_dropped(k, to_drop_for_k)
                         break
                 logger.error("latency_sketch_dropped_total count=%s", dropped_count)
 
@@ -195,15 +204,27 @@ class LatencyHandler:
                         hour_of_day = dt.astimezone(timezone.utc).hour
                         unix_ts = int(dt.timestamp())
 
+                        # Record processed span metric using MetricsPort
+                        if self.metrics:
+                            self.metrics.record_span_processed(model, endpoint, retry_count)
+
                         # F-L-01 & F-L-05: DDSketch updates
                         if latency_ms_ttft is not None:
                             ttft_key = f"sketch:ttft:{model}:{hour_of_day}"
                             sketch_updates.setdefault(ttft_key, []).append(float(latency_ms_ttft))
 
+                        # Record all attempts in sketch:total:{model}:{hour_of_day}
+                        all_attempts_key = f"sketch:total:{model}:{hour_of_day}"
+                        sketch_updates.setdefault(all_attempts_key, []).append(float(latency_ms_total))
+
                         if retry_count > 0:
                             retry_key = f"sketch:total:retry:{model}"
                             sketch_updates.setdefault(retry_key, []).append(float(latency_ms_total))
                         else:
+                            # Record first attempts only (retry_count == 0)
+                            no_retry_key = f"sketch:total:no_retry:{model}:{hour_of_day}"
+                            sketch_updates.setdefault(no_retry_key, []).append(float(latency_ms_total))
+
                             total_key = f"sketch:total:{model}:{endpoint}:{hour_of_day}"
                             sketch_updates.setdefault(total_key, []).append(float(latency_ms_total))
 
@@ -273,4 +294,5 @@ class LatencyHandler:
             # Update DDSketch metrics
             for key, values in sketch_updates.items():
                 self._update_sketch_key(key, values)
+
 

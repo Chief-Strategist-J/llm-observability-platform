@@ -1,0 +1,6 @@
+context: "LLM Observability Latency Query Feature"
+description: "Serves real-time latency percentiles, SLO burn rates, and historical baseline calculations from ClickHouse and Redis."
+dependencies:
+  clickhouse: "ClickHouse stores historical latency checkpoints for baseline analysis."
+  redis: "Redis caches the real-time DDSketch representations, SLO error counters, and attribution hashes."
+networking_criticality: "High. Critical for API lookup paths."

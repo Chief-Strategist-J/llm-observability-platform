@@ -48,9 +48,14 @@ def create_app() -> FastAPI:
         database=cfg.clickhouse_database,
     )
     
-    query_service = LatencyQueryService(
+    from features.latency_query.repository import LatencyQueryRepository
+    repository = LatencyQueryRepository(
         redis=redis_adapter,
         clickhouse=clickhouse_adapter,
+    )
+    
+    query_service = LatencyQueryService(
+        repository=repository,
         slo_thresholds=slo_thresholds,
     )
 
