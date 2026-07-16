@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: obs-config
+  namespace: llm-observability
+data:
+  DEPLOYMENT_ENV: "production"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka-service:29092"
+  CLICKHOUSE_HOST: "clickhouse-service"
+  CLICKHOUSE_PORT: "8123"
+  CLICKHOUSE_DATABASE: "default"
+  CLICKHOUSE_USER: "default"
+  REDIS_URL: "redis://redis-service:6379/0"
+  POSTGRES_HOST: "postgres-service"
+  POSTGRES_DB: "llm_observability"
+  TEMPORAL_HOST: "temporal-service:7233"
+  TEMPORAL_NAMESPACE: "default"
+  TEMPORAL_TASK_QUEUE: "latency-baseline-tasks"
+  HEALTH_PORT: "8003"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: obs-secrets
+  namespace: llm-observability
+type: Opaque
+data:
+  # Base64 encoded 'password'
+  POSTGRES_PASSWORD: "cGFzc3dvcmQ="
+  # Base64 encoded connection string
+  POSTGRES_URL: "cG9zdGdyZXNxbDovL3Bvc3RncmVzOnBhc3N3b3JkQHBvc3RncmVzLXNlcnZpY2U6NTQzMi9sbG1fb2JzZXJ2YWJpbGl0eQ=="

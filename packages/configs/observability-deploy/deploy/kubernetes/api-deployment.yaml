@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+  namespace: llm-observability
+  labels:
+    app: instrumentation-api
+    tier: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: instrumentation-api
+  template:
+    metadata:
+      labels:
+        app: instrumentation-api
+        tier: api
+    spec:
+      containers:
+        - name: api
+          image: chiefj/instrumentation-sdk-api:latest
+          ports:
+            - name: http
+              containerPort: 8000
+            - name: grafana
+              containerPort: 3000
+            - name: otlp
+              containerPort: 4317
+            - name: prometheus
+              containerPort: 9090
+            - name: metrics
+              containerPort: 9464
+          envFrom:
+            - configMapRef:
+                name: obs-config
+          env:
+            - name: POSTGRES_URL
+              valueFrom:
+                secretKeyRef:
+                  name: obs-secrets
+                  key: POSTGRES_URL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+  namespace: llm-observability
+spec:
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+    - name: grafana
+      port: 3000
+      targetPort: 3000
+    - name: otlp
+      port: 4317
+      targetPort: 4317
+    - name: prometheus
+      port: 9090
+      targetPort: 9090
+    - name: metrics
+      port: 9464
+      targetPort: 9464
+  selector:
+    app: instrumentation-api
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-ingress
+  namespace: llm-observability
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: api.llm-observability.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-service
+                port:
+                  number: 8000
+    - host: grafana.llm-observability.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-service
+                port:
+                  number: 3000

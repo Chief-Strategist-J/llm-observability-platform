@@ -1,0 +1,212 @@
+# 1. Forecast Worker
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forecast-worker-deployment
+  namespace: llm-observability
+  labels:
+    app: forecast-worker
+    tier: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: forecast-worker
+  template:
+    metadata:
+      labels:
+        app: forecast-worker
+        tier: worker
+    spec:
+      containers:
+        - name: forecast-worker
+          image: chiefj/forecast-worker:latest
+          envFrom:
+            - configMapRef:
+                name: obs-config
+          env:
+            - name: INSTRUMENTATION_SDK_URL
+              value: "http://api-service:8000"
+---
+# 2. Toxicity Worker
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: toxicity-worker-deployment
+  namespace: llm-observability
+  labels:
+    app: toxicity-worker
+    tier: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: toxicity-worker
+  template:
+    metadata:
+      labels:
+        app: toxicity-worker
+        tier: worker
+    spec:
+      containers:
+        - name: toxicity-worker
+          image: chiefj/toxicity-worker:stable
+          ports:
+            - containerPort: 8008
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: toxicity-worker-service
+  namespace: llm-observability
+spec:
+  ports:
+    - port: 8008
+      targetPort: 8008
+  selector:
+    app: toxicity-worker
+---
+# 3. Quality Engine
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quality-engine-deployment
+  namespace: llm-observability
+  labels:
+    app: quality-engine
+    tier: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: quality-engine
+  template:
+    metadata:
+      labels:
+        app: quality-engine
+        tier: worker
+    spec:
+      containers:
+        - name: quality-engine
+          image: chiefj/quality-engine:stable
+          envFrom:
+            - configMapRef:
+                name: obs-config
+---
+# 4. Alert Engine
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alert-engine-deployment
+  namespace: llm-observability
+  labels:
+    app: alert-engine
+    tier: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alert-engine
+  template:
+    metadata:
+      labels:
+        app: alert-engine
+        tier: worker
+    spec:
+      containers:
+        - name: alert-engine
+          image: chiefj/alert-engine:stable
+          envFrom:
+            - configMapRef:
+                name: obs-config
+          env:
+            - name: POSTGRES_URL
+              valueFrom:
+                secretKeyRef:
+                  name: obs-secrets
+                  key: POSTGRES_URL
+---
+# 5. Temporal EWMA Worker
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal-ewma-worker-deployment
+  namespace: llm-observability
+  labels:
+    app: temporal-ewma-worker
+    tier: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: temporal-ewma-worker
+  template:
+    metadata:
+      labels:
+        app: temporal-ewma-worker
+        tier: worker
+    spec:
+      containers:
+        - name: temporal-ewma-worker
+          image: chiefj/temporal-ewma-worker:latest
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: obs-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal-ewma-worker-service
+  namespace: llm-observability
+spec:
+  ports:
+    - port: 8000
+      targetPort: 8000
+  selector:
+    app: temporal-ewma-worker
+---
+# 6. Latency Baseline Worker
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: latency-baseline-worker-deployment
+  namespace: llm-observability
+  labels:
+    app: latency-baseline-worker
+    tier: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: latency-baseline-worker
+  template:
+    metadata:
+      labels:
+        app: latency-baseline-worker
+        tier: worker
+    spec:
+      containers:
+        - name: latency-baseline-worker
+          image: chiefj/latency-baseline-worker:latest
+          ports:
+            - containerPort: 8003
+          envFrom:
+            - configMapRef:
+                name: obs-config
+          env:
+            - name: HEALTH_PORT
+              value: "8003"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: latency-baseline-worker-service
+  namespace: llm-observability
+spec:
+  ports:
+    - port: 8003
+      targetPort: 8003
+  selector:
+    app: latency-baseline-worker

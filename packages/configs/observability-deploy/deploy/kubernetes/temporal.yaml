@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal-deployment
+  namespace: llm-observability
+  labels:
+    app: temporal
+    role: workflow-engine
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: temporal
+  template:
+    metadata:
+      labels:
+        app: temporal
+        role: workflow-engine
+    spec:
+      containers:
+        - name: temporal
+          image: temporalio/auto-setup:1.22.4
+          ports:
+            - containerPort: 7233
+            - containerPort: 8080
+          env:
+            - name: DB
+              value: postgresql
+            - name: DB_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: obs-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_SEEDS
+              value: postgres-service
+            - name: DYNAMIC_CONFIG_FILE_PATH
+              value: config/dynamicconfig/development-sql.yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal-service
+  namespace: llm-observability
+spec:
+  ports:
+    - name: grpc
+      port: 7233
+      targetPort: 7233
+    - name: web
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: temporal

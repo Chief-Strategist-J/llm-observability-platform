@@ -1,0 +1,100 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: llm-observability
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: llm-observability
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-database-ingress
+  namespace: llm-observability
+spec:
+  podSelector:
+    matchExpressions:
+      - key: role
+        operator: In
+        values: ["database", "broker", "workflow-engine"]
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: tier
+                operator: In
+                values: ["api", "worker"]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-ingress
+  namespace: llm-observability
+spec:
+  podSelector:
+    matchLabels:
+      app: instrumentation-api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow external ingress (e.g., ingress-nginx)
+    - from: []
+      ports:
+        - protocol: TCP
+          port: 8000
+        - protocol: TCP
+          port: 3000
+        - protocol: TCP
+          port: 4317
+  egress:
+    # Allow to reach databases and external networks (if scraping is public)
+    - to: []
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-worker-egress
+  namespace: llm-observability
+spec:
+  podSelector:
+    matchLabels:
+      tier: worker
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchExpressions:
+              - key: role
+                operator: In
+                values: ["database", "broker", "workflow-engine"]
+        - podSelector:
+            matchLabels:
+              app: instrumentation-api

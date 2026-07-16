@@ -1,0 +1,130 @@
+---
+- name: Deploy LLM Observability Platform Stack
+  hosts: obs_nodes
+  become: true
+  vars:
+    project_dir: "/opt/llm-observability"
+
+  tasks:
+    - name: 1. Update apt package cache and install prerequisites
+      apt:
+        update_cache: yes
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - ufw
+        state: present
+
+    - name: 2. Configure Firewall (Strict Network Isolation Rules)
+      block:
+        - name: Allow SSH traffic
+          ufw:
+            rule: allow
+            port: '22'
+            proto: tcp
+
+        - name: Allow FastAPI API Ingest traffic
+          ufw:
+            rule: allow
+            port: '8000'
+            proto: tcp
+
+        - name: Allow Grafana Dashboard traffic
+          ufw:
+            rule: allow
+            port: '3000'
+            proto: tcp
+
+        - name: Allow Prometheus scraping traffic
+          ufw:
+            rule: allow
+            port: '9090'
+            proto: tcp
+
+        - name: Block external access to stateful datastores and queues
+          ufw:
+            rule: deny
+            port: "{{ item }}"
+            proto: tcp
+          loop:
+            - '5432'  # PostgreSQL
+            - '6379'  # Redis
+            - '8123'  # ClickHouse HTTP
+            - '9000'  # ClickHouse Native
+            - '9092'  # Kafka External Broker
+            - '2181'  # ZooKeeper
+            - '7233'  # Temporal gRPC
+
+        - name: Enable UFW firewall
+          ufw:
+            state: enabled
+            policy: deny
+
+    - name: 3. Install Docker Engine
+      block:
+        - name: Add Docker official GPG key
+          apt_key:
+            url: https://download.docker.com/linux/ubuntu/gpg
+            state: present
+
+        - name: Add Docker repository
+          apt_repository:
+            repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+            state: present
+
+        - name: Install Docker CE & Compose plugin
+          apt:
+            name:
+              - docker-ce
+              - docker-ce-cli
+              - containerd.io
+              - docker-compose-plugin
+            state: present
+            update_cache: yes
+
+        - name: Ensure Docker service is running
+          service:
+            name: docker
+            state: started
+            enabled: yes
+
+    - name: 4. Copy Observability stack configs
+      block:
+        - name: Create destination project directory
+          file:
+            path: "{{ project_dir }}/deploy/docker"
+            state: directory
+            mode: '0755'
+
+        - name: Copy docker-compose.yaml file to target
+          copy:
+            src: ../docker/docker-compose.yaml
+            dest: "{{ project_dir }}/deploy/docker/docker-compose.yaml"
+            mode: '0644'
+
+    - name: 5. Start the Observability stack via Docker Compose
+      command:
+        cmd: docker compose up -d
+        chdir: "{{ project_dir }}/deploy/docker"
+      register: compose_output
+
+    - name: Print docker-compose startup logs
+      debug:
+        var: compose_output.stdout
+
+    - name: 6. Verify stack API health check
+      uri:
+        url: "http://localhost:8000/v1/metrics/health"
+        method: GET
+        status_code: 200
+      register: health_check
+      until: health_check.status == 200
+      retries: 6
+      delay: 5
+
+    - name: Report health check success
+      debug:
+        msg: "LLM Observability stack is healthy and running!"

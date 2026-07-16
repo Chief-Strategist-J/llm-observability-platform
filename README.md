@@ -617,6 +617,30 @@ Two Docker Compose configurations are available under `deploy/docker/` depending
    KAFKA_BOOTSTRAP_SERVERS="my-kafka:9092" docker compose -f deploy/docker/docker-compose.prod.yaml up -d
    ```
 
+#### Multi-Environment Deployment Suite (All 13 Services)
+
+For deploying the entire LLM Observability Platform stack (including ZooKeeper, Kafka, pgvector Postgres, Clickhouse, Redis, Temporal, and all 7 worker/scorer microservices), we provide a unified deployment package:
+
+* **Location**: [`packages/configs/observability-deploy/`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/)
+* **Configuration Formats**: Docker Compose, Kubernetes manifests, cloud Terraform setups (AWS, GCP, Azure), and Ansible playbooks.
+* **Launch Command**:
+  ```bash
+  ./packages/configs/observability-deploy/scripts/deploy.sh
+  ```
+
+##### Hardware Resource Requirements
+
+Running the full suite of 13 services concurrently requires a baseline level of system resources due to the integration of stateful databases (ClickHouse, Postgres, Redis), Kafka, Temporal, and model inference workers (Google TimesFM).
+
+1. **Local Development (Docker Compose)**:
+   - **RAM**: 12 GB memory minimum allocated to Docker (16 GB recommended).
+   - **CPU**: 4 vCPUs minimum (6 vCPUs recommended).
+   - **Storage**: 30 GB free disk space (SSD recommended).
+
+2. **Production / Cloud Deployments (EKS/GKE/AKS & Terraform)**:
+   - **Kubernetes Nodes**: Minimum of 3 worker nodes (AWS: `t3.large`/`t3.xlarge`, GCP: `e2-standard-4`, Azure: `Standard_D4s_v5`).
+   - **Cloud-Managed Databases**: PostgreSQL (`db.t3.medium` on AWS / Flexible Server on Azure), Redis (`cache.t3.medium` on AWS / Azure Cache on Azure), and AWS MSK / GCP Managed Kafka.
+
 ### Docker Deployments (v1.13.0)
 
 We publish official Docker images to the `chiefj` namespace on Docker Hub:

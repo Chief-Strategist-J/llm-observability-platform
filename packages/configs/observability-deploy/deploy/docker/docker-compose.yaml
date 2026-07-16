@@ -1,0 +1,302 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: obs-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    restart: always
+    networks:
+      - obs-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: obs-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    restart: always
+    networks:
+      - obs-network
+
+  postgres:
+    image: ankane/pgvector:v0.5.0
+    container_name: obs-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: llm_observability
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d llm_observability"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - obs-network
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8
+    container_name: obs-clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8123/ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - obs-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: obs-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - obs-network
+
+  temporal:
+    image: temporalio/auto-setup:1.22.4
+    container_name: obs-temporal
+    ports:
+      - "7233:7233"
+      - "8080:8080"
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=password
+      - POSTGRES_SEEDS=postgres
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "timeout", "5", "bash", "-c", "</dev/tcp/temporal/7233"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - obs-network
+
+  instrumentation-api:
+    image: chiefj/instrumentation-sdk-api:latest
+    build:
+      context: ../../../../python/instrumentation-sdk
+      dockerfile: build/Dockerfile
+    container_name: obs-instrumentation-api
+    ports:
+      - "8000:8000"
+      - "3000:3000"
+      - "4317:4317"
+      - "9090:9090"
+      - "9464:9464"
+    environment:
+      - DEPLOYMENT_ENV=production
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - POSTGRES_URL=postgresql://postgres:password@postgres:5432/llm_observability
+      - CLICKHOUSE_HOST=clickhouse
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - kafka
+      - postgres
+      - clickhouse
+      - redis
+    restart: always
+    networks:
+      - obs-network
+
+  forecast-worker:
+    image: chiefj/forecast-worker:latest
+    build:
+      context: ../../../../python/forecast-worker
+      dockerfile: build/Dockerfile
+    container_name: obs-forecast-worker
+    environment:
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_DATABASE=llm_observability
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+      - INSTRUMENTATION_SDK_URL=http://instrumentation-api:8000
+      - TEMPORAL_HOST=temporal:7233
+    depends_on:
+      temporal:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    restart: always
+    networks:
+      - obs-network
+
+  toxicity-worker:
+    image: chiefj/toxicity-worker:stable
+    build:
+      context: ../../../../python/toxicity
+      dockerfile: build/Dockerfile
+    container_name: obs-toxicity-worker
+    ports:
+      - "8008:8008"
+    restart: always
+    networks:
+      - obs-network
+
+  quality-engine:
+    image: chiefj/quality-engine:stable
+    build:
+      context: ../../../../python/quality-engine
+      dockerfile: build/Dockerfile
+    container_name: obs-quality-engine
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - POSTGRES_HOST=postgres
+      - TEMPORAL_HOST=temporal:7233
+    depends_on:
+      temporal:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    restart: always
+    networks:
+      - obs-network
+
+  alert-engine:
+    image: chiefj/alert-engine:stable
+    build:
+      context: ../../../../python/alert-engine
+      dockerfile: build/Dockerfile
+    container_name: obs-alert-engine
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - POSTGRES_URL=postgresql://postgres:password@postgres:5432/llm_observability
+    depends_on:
+      - kafka
+      - postgres
+    restart: always
+    networks:
+      - obs-network
+
+  temporal-ewma-worker:
+    build:
+      context: ../../../../python/temporal-ewma-worker
+      dockerfile: build/Dockerfile
+    container_name: obs-temporal-ewma-worker
+    ports:
+      - "8011:8000"
+    environment:
+      - TEMPORAL_HOST=temporal:7233
+      - CLICKHOUSE_HOST=clickhouse
+      - REDIS_URL=redis://redis:6379/0
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    depends_on:
+      temporal:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    networks:
+      - obs-network
+
+  latency-baseline-worker:
+    image: chiefj/latency-baseline-worker:latest
+    build:
+      context: ../../../../python/latency-baseline-worker
+      dockerfile: build/Dockerfile
+    container_name: obs-latency-baseline-worker
+    ports:
+      - "8012:8003"
+    environment:
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_USERNAME=default
+      - CLICKHOUSE_PASSWORD=
+      - CLICKHOUSE_DATABASE=default
+      - REDIS_URL=redis://redis:6379/0
+      - TEMPORAL_HOST=temporal:7233
+      - TEMPORAL_NAMESPACE=default
+      - TEMPORAL_TASK_QUEUE=latency-baseline-tasks
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - HEALTH_PORT=8003
+    depends_on:
+      temporal:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    networks:
+      - obs-network
+
+  init-kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: obs-init-kafka
+    depends_on:
+      - kafka
+    command: >
+      bash -c "
+      cub kafka-ready -b kafka:29092 1 30 &&
+      kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --topic llm.spans.raw.unvalidated --partitions 3 --replication-factor 1 &&
+      kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --topic llm.spans.raw --partitions 3 --replication-factor 1 &&
+      kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --topic llm.spans.raw.dlq --partitions 1 --replication-factor 1 &&
+      kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --topic llm.spans.sampled --partitions 3 --replication-factor 1 &&
+      kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --topic llm.instrumentation.events --partitions 1 --replication-factor 1 &&
+      kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --topic alerts.latency.ttft_regression --partitions 1 --replication-factor 1
+      "
+    restart: "no"
+    networks:
+      - obs-network
+
+  temporal-setup:
+    image: temporalio/admin-tools:1.22.4
+    container_name: obs-temporal-setup
+    depends_on:
+      temporal:
+        condition: service_healthy
+    command: >
+      bash -c "
+      temporal --address temporal:7233 operator namespace create default || true
+      "
+    restart: "no"
+    networks:
+      - obs-network
+
+networks:
+  obs-network:
+    name: obs-network
+    driver: bridge
+
+volumes:
+  postgres_data:
+  clickhouse_data:
+  redis_data:

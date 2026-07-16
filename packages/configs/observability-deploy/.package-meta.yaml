@@ -1,0 +1,16 @@
+name: observability-deploy
+version: "1.0.0"
+language: python
+stage: 1
+owner: Chief-Strategist-J
+description: Unified Docker, Kubernetes, and Terraform deployment package for LLM Observability Platform
+ports:
+  api: 8000
+  grafana: 3000
+  tempo: 4317
+  prometheus: 9090
+  clickhouse: 8123
+  kafka: 9092
+  redis: 6379
+  postgres: 5432
+  temporal: 7233
