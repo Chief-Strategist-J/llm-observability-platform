@@ -63,6 +63,8 @@ deploy_docker() {
     echo -e "\n${YELLOW}Starting local Docker Compose stack...${NC}"
     docker compose -f "$DOCKER_COMPOSE_FILE" up -d
     echo -e "${GREEN}Docker Compose stack started!${NC}"
+    echo -e "${YELLOW}Setting up automated daily local backups (cron job)...${NC}"
+    "$SCRIPT_DIR/setup-cron.sh"
     echo -e "${BLUE}You can access:${NC}"
     echo -e " - FastAPI Telemetry: http://localhost:8000"
     echo -e " - Grafana Observability Dashboards: http://localhost:3000 (admin/admin)"
@@ -98,6 +100,12 @@ deploy_k8s() {
 
     echo -e "${BLUE}Step 7: Deploying Evaluation and Scorers Workers...${NC}"
     kubectl apply -f "$K8S_DIR/workers-deployment.yaml"
+
+    echo -e "${BLUE}Step 8: Provisioning Automated Migrations Job...${NC}"
+    kubectl apply -f "$K8S_DIR/migrations-job.yaml"
+
+    echo -e "${BLUE}Step 9: Provisioning Automated Backup CronJob...${NC}"
+    kubectl apply -f "$K8S_DIR/backup-cronjob.yaml"
 
     echo -e "${GREEN}Kubernetes resources deployed!${NC}"
     echo -e "${YELLOW}Run 'kubectl get pods -n llm-observability' to track startup status.${NC}"

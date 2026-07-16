@@ -1,0 +1,31 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: obs-migrations-job
+  namespace: llm-observability
+spec:
+  template:
+    spec:
+      containers:
+        - name: migration-runner
+          image: python:3.12-slim
+          envFrom:
+            - configMapRef:
+                name: obs-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: obs-secrets
+                  key: POSTGRES_PASSWORD
+          command:
+            - /bin/sh
+            - -c
+            - |
+              apt-get update && apt-get install -y postgresql-client curl git &&
+              git clone https://github.com/Chief-Strategist-J/llm-observability-platform.git /app &&
+              cd /app &&
+              chmod +x packages/configs/observability-deploy/scripts/run-migrations.sh &&
+              ./packages/configs/observability-deploy/scripts/run-migrations.sh
+      restartPolicy: OnFailure
+  backoffLimit: 4

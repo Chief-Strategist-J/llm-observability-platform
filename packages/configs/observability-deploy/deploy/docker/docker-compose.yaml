@@ -25,6 +25,11 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: always
     networks:
       - obs-network
@@ -126,10 +131,16 @@ services:
       - CLICKHOUSE_HOST=clickhouse
       - REDIS_URL=redis://redis:6379/0
     depends_on:
-      - kafka
-      - postgres
-      - clickhouse
-      - redis
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      init-db-migrations:
+        condition: service_completed_successfully
     restart: always
     networks:
       - obs-network
@@ -153,6 +164,8 @@ services:
         condition: service_healthy
       clickhouse:
         condition: service_healthy
+      init-db-migrations:
+        condition: service_completed_successfully
     restart: always
     networks:
       - obs-network
@@ -184,6 +197,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      init-db-migrations:
+        condition: service_completed_successfully
     restart: always
     networks:
       - obs-network
@@ -198,8 +213,12 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - POSTGRES_URL=postgresql://postgres:password@postgres:5432/llm_observability
     depends_on:
-      - kafka
-      - postgres
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      init-db-migrations:
+        condition: service_completed_successfully
     restart: always
     networks:
       - obs-network
@@ -223,6 +242,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      init-db-migrations:
+        condition: service_completed_successfully
     restart: always
     networks:
       - obs-network
@@ -254,6 +275,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      init-db-migrations:
+        condition: service_completed_successfully
     restart: always
     networks:
       - obs-network
@@ -288,6 +311,31 @@ services:
       temporal --address temporal:7233 operator namespace create default || true
       "
     restart: "no"
+    networks:
+      - obs-network
+
+  init-db-migrations:
+    image: python:3.12-slim
+    container_name: obs-init-db-migrations
+    volumes:
+      - ../../../../:/app
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=llm_observability
+      - CLICKHOUSE_HOST=clickhouse
+    command: >
+      bash -c "
+      apt-get update && apt-get install -y postgresql-client curl &&
+      chmod +x /app/packages/configs/observability-deploy/scripts/run-migrations.sh &&
+      /app/packages/configs/observability-deploy/scripts/run-migrations.sh
+      "
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
     networks:
       - obs-network
 
