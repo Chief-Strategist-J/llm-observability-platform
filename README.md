@@ -101,15 +101,12 @@ To trigger backups manually at any time:
 
 ## ⚖️ Benefits & Tradeoffs of the Self-Hosted Stack
 
-### ✅ Benefits
-- **Full Data Sovereignty**: Running self-hosted Postgres, ClickHouse, Redis, and Kafka guarantees that no sensitive prompt telemetry or PII ever leaves your security perimeter.
-- **Extreme Cost Efficiency**: Eliminates variable SaaS pricing structures for high-throughput LLM logging applications.
-- **Hardened Security**: Pre-configured NetworkPolicies (Kubernetes) and UFW rules (Ansible) guarantee zero-trust boundary limits by default.
-- **Automated Lifecycle Ops**: Database migrations and backup schemas are natively scheduled and initialized on launch.
-- **Robust Execution**: Temporal handles fault-tolerant retries for baseline calculations and scoring.
+| ✅ Benefits (Why Self-Host) | ⚠️ Tradeoffs & Considerations |
+| :--- | :--- |
+| **Full Data Sovereignty**: Ingested prompts, vectors, and PII data remain completely within your secure network boundaries. | **Operational Overhead**: Active monitoring is required to maintain health for ZooKeeper, Kafka, and ClickHouse clusters. |
+| **High Cost Savings**: Zero pricing scaling constraints relative to commercial SaaS logging solutions. | **Resource Footprint**: Demands a minimum of 12 GB RAM locally to run python models and database engines concurrently. |
+| **Strict Network Isolation**: Out-of-the-box Kubernetes NetworkPolicies and Ansible UFW firewalls secure stateful databases. | **Maintenance Responsibility**: DevOps teams own data lifecycle storage, backups management, and platform updates. |
+| **Automated Lifecycle Ops**: Schema migrations and daily backup schedules are natively handled on startup. | **Cluster Complexity**: A 13-service microservices footprint requires robust container staging and network coordination. |
+| **Resilient Workflow Engines**: Temporal orchestrates scorer logic and EWMA calculations with built-in retry-on-failure. | |
 
-### ⚠️ Tradeoffs
-- **Operational Management**: Orchestrating a 13-service platform requires active infrastructure monitoring (e.g. keeping ZooKeeper, Kafka, and ClickHouse clusters healthy).
-- **Resource Footprint**: The integrated stack demands at least 12 GB RAM locally to boot and run heavy background scoring/timeseries containers concurrently.
-- **Maintenance Overhead**: Administering data persistence, storage backups, upgrades, and volume mapping rests entirely on internal DevOps teams.
 
