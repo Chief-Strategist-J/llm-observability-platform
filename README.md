@@ -48,40 +48,21 @@ Choose **Option 2** from the interactive menu. Once started, you can access the 
 
 All deployment resources are organized inside the package [`packages/configs/observability-deploy/deploy/`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/deploy/):
 
-### 🛡️ 1. Kubernetes Manifests (kubectl)
-Located under [`deploy/kubernetes/`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/deploy/kubernetes/):
-- **🔒 Strict Isolation**: Enforces [network-policies.yaml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/deploy/kubernetes/network-policies.yaml) denying public access to private datastores.
-- **🔄 Automated Schema Migrations**: Runs [migrations-job.yaml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/deploy/kubernetes/migrations-job.yaml) on start to initialize PostgreSQL and ClickHouse.
-- **💾 Automated Backups**: Runs [backup-cronjob.yaml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/deploy/kubernetes/backup-cronjob.yaml) daily.
-
-> [!NOTE]
-> Run the orchestrator tool to deploy directly to your active Kube context:
-> ```bash
-> ./packages/configs/observability-deploy/scripts/deploy.sh # Option 4
-> ```
-
-### ☁️ 2. Cloud Infrastructure Provisioning (Terraform)
-Located under [`deploy/terraform/`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/deploy/terraform/):
-- **AWS**: Provisions custom VPC, EKS Cluster, RDS PostgreSQL, MSK Kafka, and ElastiCache Redis.
-- **GCP**: Provisions VPC subnets, GKE Cluster, Cloud SQL Postgres, and MemoryStore Redis.
-- **Azure**: Provisions secure VNet, AKS Cluster, PostgreSQL Flexible Server, and Azure Cache for Redis.
-
-> [!IMPORTANT]
-> Run the orchestrator tool to provision cloud resources:
-> ```bash
-> ./packages/configs/observability-deploy/scripts/deploy.sh # Options 5, 6, or 7
-> ```
-
-### ⚙️ 3. Remote Node Configuration (Ansible)
-Located under [`deploy/ansible/`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/deploy/ansible/):
-- Installs Docker Engine and Compose on target VMs.
-- **Firewall Isolation Rules**: Automatically configures local UFW firewalls blocking public access to database ports (`5432`, `8123`, `6379`, `9092`, `7233`).
+| Target Environment | Tool / Engine | Path / Directory | Core Configurations / Files | Features & Security |
+| :--- | :--- | :--- | :--- | :--- |
+| **Local Development** | Docker Compose | `deploy/docker/` | [docker-compose.yaml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/deploy/docker/docker-compose.yaml) | Full 13-service stack startup orchestration, automated migrations, automated daily backups. |
+| **Kubernetes (EKS/GKE/AKS)** | kubectl | `deploy/kubernetes/` | [network-policies.yaml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/deploy/kubernetes/network-policies.yaml)<br>[migrations-job.yaml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/deploy/kubernetes/migrations-job.yaml)<br>[backup-cronjob.yaml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/deploy/kubernetes/backup-cronjob.yaml) | Strict NetworkPolicies, automated Postgres & ClickHouse startup migrations, daily CronJob backups. |
+| **AWS Cloud** | Terraform | `deploy/terraform/aws/` | [main.tf](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/deploy/terraform/aws/main.tf)<br>[variables.tf](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/deploy/terraform/aws/variables.tf) | Custom VPC, EKS Cluster nodes, private RDS PostgreSQL instance, MSK Kafka broker, and ElastiCache. |
+| **GCP Cloud** | Terraform | `deploy/terraform/gcp/` | [main.tf](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/deploy/terraform/gcp/main.tf)<br>[variables.tf](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/deploy/terraform/gcp/variables.tf) | Isolated subnets, GKE Cluster pool, Cloud SQL PostgreSQL, and MemoryStore Redis. |
+| **Azure Cloud** | Terraform | `deploy/terraform/azure/` | [main.tf](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/deploy/terraform/azure/main.tf)<br>[variables.tf](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/deploy/terraform/azure/variables.tf) | Private VNet, AKS Cluster pool, Azure Database PostgreSQL (Flexible), and Azure Cache Redis. |
+| **Bare Metal / VMs** | Ansible | `deploy/ansible/` | [hosts.ini](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/deploy/ansible/hosts.ini)<br>[playbook.yaml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/observability-deploy/deploy/ansible/playbook.yaml) | Node configuration, auto-installs Docker & Compose, configures UFW firewall rules denying public DB access. |
 
 > [!TIP]
-> Run the orchestrator to configure remote nodes:
+> Run the main orchestrator script to automatically trigger these configurations:
 > ```bash
-> ./packages/configs/observability-deploy/scripts/deploy.sh # Option 8
+> ./packages/configs/observability-deploy/scripts/deploy.sh
 > ```
+
 
 ---
 
