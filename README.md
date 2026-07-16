@@ -96,3 +96,20 @@ To trigger backups manually at any time:
 
 > [!WARNING]
 > Daily automated backups are registered automatically in the user's host crontab when starting the Docker Compose local stack.
+
+---
+
+## ⚖️ Benefits & Tradeoffs of the Self-Hosted Stack
+
+### ✅ Benefits
+- **Full Data Sovereignty**: Running self-hosted Postgres, ClickHouse, Redis, and Kafka guarantees that no sensitive prompt telemetry or PII ever leaves your security perimeter.
+- **Extreme Cost Efficiency**: Eliminates variable SaaS pricing structures for high-throughput LLM logging applications.
+- **Hardened Security**: Pre-configured NetworkPolicies (Kubernetes) and UFW rules (Ansible) guarantee zero-trust boundary limits by default.
+- **Automated Lifecycle Ops**: Database migrations and backup schemas are natively scheduled and initialized on launch.
+- **Robust Execution**: Temporal handles fault-tolerant retries for baseline calculations and scoring.
+
+### ⚠️ Tradeoffs
+- **Operational Management**: Orchestrating a 13-service platform requires active infrastructure monitoring (e.g. keeping ZooKeeper, Kafka, and ClickHouse clusters healthy).
+- **Resource Footprint**: The integrated stack demands at least 12 GB RAM locally to boot and run heavy background scoring/timeseries containers concurrently.
+- **Maintenance Overhead**: Administering data persistence, storage backups, upgrades, and volume mapping rests entirely on internal DevOps teams.
+
