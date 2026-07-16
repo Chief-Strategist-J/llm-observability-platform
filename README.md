@@ -37,10 +37,10 @@ Deploy the entire 13-service stack locally with a single script that automatical
 
 Choose **Option 2** from the interactive menu. Once started, you can access the system consoles:
 
-- 📥 **FastAPI Ingest API**: [http://localhost:8000](http://localhost:8000)
-- 📊 **Grafana Dashboards**: [http://localhost:3000](http://localhost:3000) (Credentials: `admin` / `admin`)
-- 📈 **Prometheus UI**: [http://localhost:9090](http://localhost:9090)
-- ⏱️ **Temporal Web Console**: [http://localhost:8080](http://localhost:8080)
+- 📥 **FastAPI Ingest API**: Port `8000`
+- 📊 **Grafana Dashboards**: Port `3000` (Default credentials: `admin` / `admin`)
+- 📈 **Prometheus UI**: Port `9090`
+- ⏱️ **Temporal Web Console**: Port `8080`
 
 ---
 
