@@ -11,13 +11,18 @@ services:
     networks:
       - obs-network
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
   kafka:
     image: confluentinc/cp-kafka:7.4.0
     container_name: obs-kafka
     depends_on:
       - zookeeper
     ports:
-      - "9092:9092"
+      - "127.0.0.1:9092:9092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -34,11 +39,16 @@ services:
     networks:
       - obs-network
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
   postgres:
     image: ankane/pgvector:v0.5.0
     container_name: obs-postgres
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
@@ -54,12 +64,17 @@ services:
     networks:
       - obs-network
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
   clickhouse:
     image: clickhouse/clickhouse-server:23.8
     container_name: obs-clickhouse
     ports:
-      - "8123:8123"
-      - "9000:9000"
+      - "127.0.0.1:8123:8123"
+      - "127.0.0.1:9000:9000"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
     healthcheck:
@@ -71,11 +86,16 @@ services:
     networks:
       - obs-network
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
   redis:
     image: redis:7-alpine
     container_name: obs-redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -87,11 +107,16 @@ services:
     networks:
       - obs-network
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
   temporal:
     image: temporalio/auto-setup:1.22.4
     container_name: obs-temporal
     ports:
-      - "7233:7233"
+      - "127.0.0.1:7233:7233"
       - "8080:8080"
     environment:
       - DB=postgresql
@@ -112,6 +137,11 @@ services:
     networks:
       - obs-network
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
   instrumentation-api:
     image: chiefj/instrumentation-sdk-api:latest
     build:
@@ -145,6 +175,11 @@ services:
     networks:
       - obs-network
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
   forecast-worker:
     image: chiefj/forecast-worker:latest
     build:
@@ -170,6 +205,11 @@ services:
     networks:
       - obs-network
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
   toxicity-worker:
     image: chiefj/toxicity-worker:stable
     build:
@@ -182,6 +222,11 @@ services:
     networks:
       - obs-network
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
   quality-engine:
     image: chiefj/quality-engine:stable
     build:
@@ -203,6 +248,11 @@ services:
     networks:
       - obs-network
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
   alert-engine:
     image: chiefj/alert-engine:stable
     build:
@@ -223,6 +273,11 @@ services:
     networks:
       - obs-network
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
   temporal-ewma-worker:
     build:
       context: ../../../../python/temporal-ewma-worker
@@ -248,6 +303,11 @@ services:
     networks:
       - obs-network
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
   latency-baseline-worker:
     image: chiefj/latency-baseline-worker:latest
     build:
@@ -281,6 +341,11 @@ services:
     networks:
       - obs-network
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
   init-kafka:
     image: confluentinc/cp-kafka:7.4.0
     container_name: obs-init-kafka
@@ -300,6 +365,11 @@ services:
     networks:
       - obs-network
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
   temporal-setup:
     image: temporalio/admin-tools:1.22.4
     container_name: obs-temporal-setup
@@ -314,6 +384,11 @@ services:
     networks:
       - obs-network
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
   init-db-migrations:
     image: python:3.12-slim
     container_name: obs-init-db-migrations
@@ -339,6 +414,11 @@ services:
     networks:
       - obs-network
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 networks:
   obs-network:
     name: obs-network

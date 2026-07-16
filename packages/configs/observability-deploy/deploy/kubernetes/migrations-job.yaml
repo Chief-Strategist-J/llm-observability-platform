@@ -22,10 +22,20 @@ spec:
             - /bin/sh
             - -c
             - |
-              apt-get update && apt-get install -y postgresql-client curl git &&
-              git clone https://github.com/Chief-Strategist-J/llm-observability-platform.git /app &&
-              cd /app &&
-              chmod +x packages/configs/observability-deploy/scripts/run-migrations.sh &&
-              ./packages/configs/observability-deploy/scripts/run-migrations.sh
+              apt-get update && apt-get install -y postgresql-client curl &&
+              chmod +x /scripts/run-migrations.sh &&
+              /scripts/run-migrations.sh
+          volumeMounts:
+            - name: script-vol
+              mountPath: /scripts
+            - name: sql-vol
+              mountPath: /migrations
+      volumes:
+        - name: script-vol
+          configMap:
+            name: obs-migration-scripts
+        - name: sql-vol
+          configMap:
+            name: obs-migration-sql
       restartPolicy: OnFailure
   backoffLimit: 4

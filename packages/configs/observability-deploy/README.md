@@ -65,7 +65,10 @@ packages/configs/observability-deploy/
 │   │   ├── databases.yaml      # DB Deployments & PVCs
 │   │   ├── temporal.yaml       # Temporal setup
 │   │   ├── api-deployment.yaml # FastAPI Ingress, Service, Deployment
-│   │   └── workers-deployment.yaml # Microservices and worker workloads
+│   │   ├── workers-deployment.yaml # Microservices and worker workloads
+│   │   ├── migrations-job.yaml # Automated database schema migrations
+│   │   ├── backup-cronjob.yaml # Automated daily backup scheduler
+│   │   └── backup-pvc.yaml     # Backup persistent storage definition
 │   └── terraform/
 │       ├── aws/                # AWS EKS, RDS, MSK, ElastiCache
 │       │   ├── main.tf
@@ -83,7 +86,10 @@ packages/configs/observability-deploy/
 │           ├── hosts.ini
 │           └── playbook.yaml
 └── scripts/
-    └── deploy.sh              # Single Deployment Orchestrator CLI
+    ├── deploy.sh              # Single Deployment Orchestrator CLI
+    ├── backup.sh              # Automated database backup script
+    ├── run-migrations.sh      # Unified schema migrations runner
+    └── setup-cron.sh          # Local cron backup scheduler setup
 ```
 
 ---

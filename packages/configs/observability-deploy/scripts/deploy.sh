@@ -87,6 +87,28 @@ deploy_k8s() {
     kubectl apply -f "$K8S_DIR/network-policies.yaml"
 
     echo -e "${BLUE}Step 3: Creating ConfigMaps and Secrets...${NC}"
+    # Delete existing script/SQL configmaps to avoid conflict
+    kubectl delete configmap obs-migration-scripts -n llm-observability || true
+    kubectl delete configmap obs-migration-sql -n llm-observability || true
+    kubectl delete configmap obs-backup-scripts -n llm-observability || true
+
+    # Dynamically build ConfigMaps from repository local files
+    kubectl create configmap obs-migration-scripts -n llm-observability --from-file=run-migrations.sh="$SCRIPT_DIR/run-migrations.sh"
+    kubectl create configmap obs-backup-scripts -n llm-observability --from-file=backup.sh="$SCRIPT_DIR/backup.sh"
+    kubectl create configmap obs-migration-sql -n llm-observability \
+      --from-file=postgres-sdk-0001.sql="$PKG_DIR/../../python/instrumentation-sdk/database/migrations/postgres/0001_init.sql" \
+      --from-file=clickhouse-sdk-0001.sql="$PKG_DIR/../../python/instrumentation-sdk/database/migrations/clickhouse/0001_init.sql" \
+      --from-file=postgres-quality-0001.sql="$PKG_DIR/../../python/quality-engine/database/migrations/0001_init.sql" \
+      --from-file=postgres-quality-0002.sql="$PKG_DIR/../../python/quality-engine/database/migrations/0002_add_review_status.sql" \
+      --from-file=postgres-forecast-0001.sql="$PKG_DIR/../../python/forecast-worker/database/migrations/0001_init.sql" \
+      --from-file=postgres-kafka-0001.sql="$PKG_DIR/../../python/kafka-messaging-internal/database/migrations/0001_init.sql" \
+      --from-file=postgres-queue-0001.sql="$PKG_DIR/../../python/queue-embedding-worker/database/migrations/0001_init.sql" \
+      --from-file=postgres-alert-0001.sql="$PKG_DIR/../../python/alert-engine/database/migrations/0001_init.sql" \
+      --from-file=postgres-budget-0001.sql="$PKG_DIR/../../python/budget-provisioner/database/migrations/0001_init.sql" \
+      --from-file=postgres-ewma-0001.sql="$PKG_DIR/../../python/temporal-ewma-worker/database/migrations/0001_init.sql" \
+      --from-file=postgres-latency-0001.sql="$PKG_DIR/../../python/latency-baseline-worker/database/migrations/0001_init.sql" \
+      --from-file=postgres-tracep-0001.sql="$PKG_DIR/../../go/tracep/database/migrations/0001_init.sql"
+
     kubectl apply -f "$K8S_DIR/configmap.yaml"
 
     echo -e "${BLUE}Step 4: Provisioning Databases & Messaging Brokers...${NC}"
@@ -104,7 +126,10 @@ deploy_k8s() {
     echo -e "${BLUE}Step 8: Provisioning Automated Migrations Job...${NC}"
     kubectl apply -f "$K8S_DIR/migrations-job.yaml"
 
-    echo -e "${BLUE}Step 9: Provisioning Automated Backup CronJob...${NC}"
+    echo -e "${BLUE}Step 9: Provisioning Automated Backup PVC...${NC}"
+    kubectl apply -f "$K8S_DIR/backup-pvc.yaml"
+
+    echo -e "${BLUE}Step 10: Provisioning Automated Backup CronJob...${NC}"
     kubectl apply -f "$K8S_DIR/backup-cronjob.yaml"
 
     echo -e "${GREEN}Kubernetes resources deployed!${NC}"

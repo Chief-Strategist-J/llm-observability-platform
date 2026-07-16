@@ -22,13 +22,25 @@ spec:
                     secretKeyRef:
                       name: obs-secrets
                       key: POSTGRES_PASSWORD
+                - name: BACKUP_DIR
+                  value: /backups
               command:
                 - /bin/sh
                 - -c
                 - |
-                  apt-get update && apt-get install -y postgresql-client curl git &&
-                  git clone https://github.com/Chief-Strategist-J/llm-observability-platform.git /app &&
-                  cd /app &&
-                  chmod +x packages/configs/observability-deploy/scripts/backup.sh &&
-                  ./packages/configs/observability-deploy/scripts/backup.sh
+                  apt-get update && apt-get install -y postgresql-client curl redis-tools &&
+                  chmod +x /scripts/backup.sh &&
+                  /scripts/backup.sh
+              volumeMounts:
+                - name: script-vol
+                  mountPath: /scripts
+                - name: backup-vol
+                  mountPath: /backups
+          volumes:
+            - name: script-vol
+              configMap:
+                name: obs-backup-scripts
+            - name: backup-vol
+              persistentVolumeClaim:
+                claimName: obs-backup-pvc
           restartPolicy: OnFailure
