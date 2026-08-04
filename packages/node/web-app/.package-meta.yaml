@@ -1,0 +1,8 @@
+name: web-app
+version: "0.1.0"
+language: node
+stage: 1
+owner: Chief-Strategist-J
+description: Next.js 15 App Router interface for LLM Observability Platform
+ports:
+  http: 6006

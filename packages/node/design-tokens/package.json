@@ -1,0 +1,22 @@
+{
+  "name": "@observability/design-tokens",
+  "version": "1.0.0",
+  "description": "Design tokens for the LLM Observability Platform",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./variables.css": "./dist/variables.css",
+    "./dist/variables.css": "./dist/variables.css"
+  },
+  "scripts": {
+    "build": "node build.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

@@ -1,0 +1,6 @@
+name: realtime-sdk
+version: "1.0.0"
+language: node
+stage: 1
+owner: Chief-Strategist-J
+description: Shared real-time streaming SDK for WebSocket/SSE fan-out

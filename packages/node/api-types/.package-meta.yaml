@@ -1,0 +1,6 @@
+name: api-types
+version: "1.0.0"
+language: node
+stage: 1
+owner: Chief-Strategist-J
+description: Shared API interfaces for LLM Observability Platform

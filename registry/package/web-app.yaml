@@ -1,0 +1,13 @@
+packages:
+  - name: web-app
+    language: node
+    version: 0.1.0
+    description: "Next.js 15 App Router interface for LLM Observability Platform"
+    owner: "@Chief-Strategist-J"
+    stage: 1
+    dependencies:
+      - next
+      - react
+      - react-dom
+      - tailwindcss
+      - storybook
