@@ -1261,3 +1261,10 @@
         ├── service -> Update LatencyQueryService to use repository and implement get_attribution use case logic
         ├── api -> Route GET /v1/latency/attribution endpoint to query service and wire LatencyQueryRepository in app startup
         └── testing -> Write and update unit tests for API, handler and service layer to assert correct key formatting and metrics calls
+
+[2026-08-04T09:45:00+05:30] Create frontend rules and tech stack policy
+└── File: policies/rules/frontend.md, logs/change.log
+    ├── Choice: Establish standard frontend development guidelines, architectural schema, data flow, and tech stack in a dedicated policy document.
+    └── Changes:
+        ├── policy -> Create policies/rules/frontend.md documenting Next.js App Router, TanStack Query, tRPC/OpenAPI, Storybook components, uPlot/visx charting, and client/server cache hydration.
+        └── logs -> Update change.log to record the decision.
