@@ -1,0 +1,8 @@
+packages:
+  - name: realtime-sdk
+    language: node
+    version: 1.0.0
+    description: "SSE and WebSocket real-time subscription SDK wrapper"
+    owner: "@Chief-Strategist-J"
+    stage: 1
+    dependencies: []

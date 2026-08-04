@@ -1,0 +1,6 @@
+name: design-tokens
+version: "1.0.0"
+language: node
+stage: 1
+owner: Chief-Strategist-J
+description: Shared design tokens for LLM Observability Platform

@@ -1,0 +1,8 @@
+packages:
+  - name: design-tokens
+    language: node
+    version: 1.0.0
+    description: "Shared design tokens for LLM Observability Platform"
+    owner: "@Chief-Strategist-J"
+    stage: 1
+    dependencies: []

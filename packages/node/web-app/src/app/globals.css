@@ -1,0 +1,54 @@
+@import "tailwindcss";
+@import "@observability/design-tokens/dist/variables.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant high-contrast (&:where(.high-contrast, .high-contrast *));
+
+@layer base {
+  /* Font — Inter loaded from Google Fonts in layout.tsx */
+  :root {
+    font-family: "Inter", sans-serif;
+  }
+
+  /* Animation keyframes for toast/dialog transitions */
+  @keyframes slide-in {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes hide {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+}
+
+@utility animate-slide-in {
+  animation: slide-in var(--motion-duration-normal, 300ms) var(--motion-easing-out, ease-out);
+}
+
+@utility animate-hide {
+  animation: hide var(--motion-duration-fast, 150ms) var(--motion-easing-default, ease);
+}
+
+@utility animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

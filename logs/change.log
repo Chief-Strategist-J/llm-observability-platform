@@ -1268,3 +1268,17 @@
     └── Changes:
         ├── policy -> Create policies/rules/frontend.md documenting Next.js App Router, TanStack Query, tRPC/OpenAPI, Storybook components, uPlot/visx charting, and client/server cache hydration.
         └── logs -> Update change.log to record the decision.
+
+[2026-08-04T10:20:00+05:30] Implement Layer 1 Frontend Component Library (F-01 through F-14)
+└── File: packages/node/design-tokens/*, packages/node/api-types/*, packages/node/realtime-sdk/*, packages/node/web-app/*, registry/package/*
+    ├── Choice: Scaffold isolated sub-packages packages/node/design-tokens, api-types, realtime-sdk, and web-app (Next.js 15, Storybook 8, Tailwind v4). Implement 14 modular components and primitives with full Storybook story coverage (Default, Loading, Empty, Error, Dense/Compact) satisfying all contract, a11y, and type checking requirements.
+    └── Changes:
+        ├── design-tokens -> Define tokens.json for colors, spacing, radius, typography, motion, and severity bands. Create build compiler to emit dist/variables.css and JS exports.
+        ├── sub-packages -> Implement api-types and realtime-sdk packages with strict interfaces and event client wrappers.
+        ├── app-scaffold -> Scaffold packages/node/web-app with Next.js 15, Storybook 8, Radix UI, TanStack Table/Virtual, uPlot, and React Hook Form. Register all packages in registry/package/.
+        ├── primitives -> Implement Button, Input, Select, Dialog, Tooltip, Tabs, DropdownMenu, Popover, Toast, Icon, and NotificationProvider with useNotify hook.
+        ├── data-display -> Implement SeverityBadge, MetricCard, DataTable (virtualized 10k rows), TimeSeriesChart (uPlot zero-remount live append with tab buffering), and PercentileBandChart (P50/P95/P99 ribbons).
+        ├── forms -> Implement TextField, NumberField (with unit suffix), and ThresholdSlider.
+        ├── states -> Implement SkeletonState, EmptyState, and ErrorState triad.
+        ├── theme -> Implement ThemeProvider and useTheme hook supporting light, dark, and high-contrast modes via CSS variables.
+        └── storybook -> Build Storybook static bundle with zero errors and full story coverage.
