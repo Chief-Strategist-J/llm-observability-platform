@@ -1,7 +1,7 @@
 {
   "name": "@observability/api-types",
   "version": "1.0.0",
-  "description": "Shared TypeScript interfaces for the LLM Observability Platform",
+  "description": "Shared TypeScript interfaces and Zod schemas for the LLM Observability Platform",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -13,6 +13,9 @@
   },
   "scripts": {
     "build": "tsc"
+  },
+  "dependencies": {
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "typescript": "^5.4.0"

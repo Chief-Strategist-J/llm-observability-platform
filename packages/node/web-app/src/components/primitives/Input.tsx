@@ -1,12 +1,8 @@
 import React from 'react';
 import { cn } from '../../lib/cn';
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
+export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
-/**
- * F-02: Input primitive.
- * Themed against design tokens. Supports all native input attributes.
- */
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type = 'text', ...props }, ref) => {
     return (

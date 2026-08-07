@@ -3,7 +3,7 @@ import { useForm, FormProvider } from 'react-hook-form';
 import { TextField } from './TextField';
 import { Button } from '../primitives/Button';
 
-function TextFieldDemo({ defaultValues = { modelName: 'gpt-4o' } }: { defaultValues?: any }) {
+function TextFieldDemo({ defaultValues = { modelName: 'gpt-4o' } }: { defaultValues?: Record<string, string> }) {
   const methods = useForm({ defaultValues });
 
   return (

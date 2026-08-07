@@ -14,10 +14,6 @@ import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 import { cn } from '../../../lib/cn';
 import { formatCostUsdMicro, formatLatencyMs, formatTokens } from '../../../lib/formatters';
 
-/**
- * Pre-built column formatters.
- * Centralized here so no component re-derives formatting (DRY rule 7).
- */
 export const columnFormatters = {
   cost_usd_micro: (value: number) => formatCostUsdMicro(value).compact,
   latency_ms: (value: number) => formatLatencyMs(value),
@@ -25,22 +21,14 @@ export const columnFormatters = {
 } as const;
 
 interface DataTableProps<TData> {
-  readonly columns: ColumnDef<TData, any>[];
+  readonly columns: ColumnDef<TData, unknown>[];
   readonly data: readonly TData[];
   readonly height?: number;
   readonly className?: string;
-  /** Estimated row height in pixels for the virtualizer. */
   readonly estimateRowHeight?: number;
 }
 
-/**
- * F-07: DataTable primitive.
- * - Virtualized (TanStack Table + TanStack Virtual).
- * - Sortable columns with visual sort indicators.
- * - Column-level formatters for cost_usd_micro, latency_ms, token counts.
- * - Renders correctly at 0, 1, and 10,000 rows (TEST-FE1-05).
- */
-export function DataTable<TData = any>({
+export function DataTable<TData = Record<string, unknown>>({
   columns,
   data,
   height = 400,
@@ -72,7 +60,6 @@ export function DataTable<TData = any>({
     <div className={cn('overflow-hidden rounded-[var(--radius-lg)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--card-foreground))]', className)}>
       <div ref={parentRef} className="relative overflow-auto" style={{ height: `${height}px` }}>
         <table className="w-full border-collapse text-left">
-          {/* Sticky header */}
           <thead className="sticky top-0 z-10 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted)/.9)] text-xs font-semibold uppercase text-[hsl(var(--muted-foreground))] backdrop-blur-sm">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
@@ -102,7 +89,6 @@ export function DataTable<TData = any>({
             ))}
           </thead>
 
-          {/* Virtualized body */}
           <tbody className="text-sm font-medium" style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
               const row = rows[virtualRow.index];
