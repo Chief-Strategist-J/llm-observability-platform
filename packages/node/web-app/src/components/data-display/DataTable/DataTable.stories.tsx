@@ -5,10 +5,9 @@ import { DataTable, columnFormatters } from './DataTable';
 import { SeverityBadge } from '../SeverityBadge/SeverityBadge';
 import { FIXTURE_SPANS } from '../../../lib/fixtures';
 import { SkeletonState } from '../../states/SkeletonState';
-import { EmptyState } from '../../states/EmptyState';
 import { ErrorState } from '../../states/ErrorState';
 
-const spanColumns: ColumnDef<any, any>[] = [
+const spanColumns: ColumnDef<Span, unknown>[] = [
   { accessorKey: 'name', header: 'Span Name' },
   { accessorKey: 'model', header: 'Model' },
   {
@@ -52,7 +51,6 @@ const spanColumns: ColumnDef<any, any>[] = [
   },
 ];
 
-// Generate 10,000 rows for the Dense test (TEST-FE1-05)
 function generateLargeDataset(count: number): Span[] {
   return Array.from({ length: count }, (_, i) => ({
     trace_id: `trace-${i.toString().padStart(5, '0')}`,
@@ -61,7 +59,7 @@ function generateLargeDataset(count: number): Span[] {
     start_time_ms: 1722700000000 + i * 100,
     end_time_ms: 1722700000000 + i * 100 + 100 + Math.floor(Math.random() * 500),
     latency_ms: 50 + Math.floor(Math.random() * 550),
-    status: Math.random() > 0.05 ? 'success' as const : 'error' as const,
+    status: Math.random() > 0.05 ? ('success' as const) : ('error' as const),
     cost_usd_micro: 100 + Math.floor(Math.random() * 5000),
     model: ['gpt-4o', 'gpt-4o-mini', 'claude-3-opus', 'claude-3-sonnet'][i % 4],
     quality_score: 0.5 + Math.random() * 0.5,
@@ -70,20 +68,25 @@ function generateLargeDataset(count: number): Span[] {
   }));
 }
 
+type TableProps = {
+  columns: ColumnDef<Span, unknown>[];
+  data: readonly Span[];
+  height?: number;
+};
+
 const meta = {
   title: 'Data Display/DataTable',
-  component: DataTable,
+  component: DataTable as unknown as React.ComponentType<TableProps>,
   tags: ['data'],
   args: {
-    columns: spanColumns as any,
-    data: FIXTURE_SPANS as any,
+    columns: spanColumns,
+    data: FIXTURE_SPANS,
   },
-} satisfies Meta<typeof DataTable>;
+} satisfies Meta<React.ComponentType<TableProps>>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Default: realistic fixture data, typical case. */
 export const Default: Story = {
   args: {
     columns: spanColumns,
@@ -92,7 +95,6 @@ export const Default: Story = {
   },
 };
 
-/** Loading: SkeletonState composed in, not a bare spinner. */
 export const Loading: Story = {
   render: () => (
     <div className="rounded-[var(--radius-lg)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
@@ -101,14 +103,12 @@ export const Loading: Story = {
   ),
 };
 
-/** Empty: EmptyState composed in, with a clear explanation. */
 export const Empty: Story = {
   render: () => (
-    <DataTable columns={spanColumns} data={[]} height={300} />
+    <DataTable columns={spanColumns as unknown as ColumnDef<Record<string, unknown>, unknown>[]} data={[]} height={300} />
   ),
 };
 
-/** Error: ErrorState composed in, with a retry affordance. */
 export const Error: Story = {
   render: () => (
     <ErrorState
@@ -118,7 +118,6 @@ export const Error: Story = {
   ),
 };
 
-/** Dense/Compact: 10,000 rows to verify virtualization (TEST-FE1-05). */
 export const DenseCompact: Story = {
   args: {
     columns: spanColumns,
@@ -127,7 +126,6 @@ export const DenseCompact: Story = {
   },
 };
 
-/** Single row — edge case (TEST-FE1-05). */
 export const SingleRow: Story = {
   args: {
     columns: spanColumns,

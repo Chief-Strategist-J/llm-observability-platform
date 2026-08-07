@@ -1,7 +1,12 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  transpilePackages: [
+    '@observability/core',
+    '@observability/design-tokens',
+    '@observability/api-types',
+    '@observability/realtime-sdk',
+  ],
 };
 
 export default nextConfig;
