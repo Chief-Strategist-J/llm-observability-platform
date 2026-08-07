@@ -9,11 +9,15 @@ export function createApplicationStore(extraReducers: Record<string, any> = {}) 
     featureRegistry.getAll().map(([name, mod]) => [name, mod.reducer]),
   );
 
+  const reducers: Record<string, any> = {
+    ...registeredReducers,
+    ...extraReducers,
+  };
+
   const store = configureStore({
-    reducer: {
-      ...registeredReducers,
-      ...extraReducers,
-    },
+    reducer: Object.keys(reducers).length > 0 
+      ? reducers 
+      : { _app: (state = {}) => state },
     middleware: (getDefault) => getDefault({ serializableCheck: false }).concat(sagaMiddleware),
   });
 
