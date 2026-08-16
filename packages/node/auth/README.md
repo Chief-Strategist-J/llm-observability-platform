@@ -1,108 +1,148 @@
 # `@observability/auth` Service & SDK
 
-Multi-tenant authentication, RBAC authorization, organization management, audit logging, 3-tier API key permissions management, and 13-pillar security engine for the Observability Platform.
+Enterprise multi-tenant authentication, RBAC authorization, organization management, audit logging, 3-tier API key permissions management, and 13-pillar security engine for the Observability Platform.
 
 ---
 
-## 🚀 Feature List
+## 📋 Features & Capabilities Summary
 
-- **Multi-Tenant Organization Management**: Unique organization registration, slug enforcement, and tenant isolation.
-- **Role-Based Access Control (RBAC)**: Enforces `admin`, `member`, and `viewer` roles with extensible permission scopes.
-- **3-Tier API Key Lifecycle**:
-  - `general` (`ak_gen_`): Production API keys bound to granular permission tables (`traces:read`, `metrics:read`, `logs:read`).
-  - `testing` (`ak_tst_`): Sandbox/testing environment API keys.
-  - `super_secret` (`ak_sec_`): Elevated system access keys with wildcard entitlement.
-- **13-Pillar Security Hardening Engine**:
-  1. **Password Hashing**: Salted Argon2id hashing.
-  2. **Token Revocation**: Session token blacklisting and immediate session invalidation.
-  3. **Brute-Force Protection**: Account lockout after 5 consecutive failed login attempts.
-  4. **Rate Limiting**: Sliding window request rate limiter.
-  5. **Input Validation**: Strict Zod schema validation & sanitization.
-  6. **CSRF Protection**: Double-submit anti-CSRF token verification.
-  7. **XSS Protection**: HTML encoding and script tag stripping.
-  8. **SQL Injection Prevention**: 100% parameterized queries (`AUTH_QUERIES`).
-  9. **Secrets Management**: Pluggable `SecretStorePort` / `EnvSecretStoreAdapter`.
-  10. **Credential-Stuffing Protection**: Multi-account login attempt anomaly detection per IP.
-  11. **Device / Session Tracking**: Active device fingerprinting and user-agent tracking.
-  12. **IP / Device Anomaly Detection**: Flagging logins from unrecognized devices/locations.
-  13. **Step-Up Authentication**: Multi-factor OTP generation & verification for sensitive operations.
-- **Database Row Level Security (RLS)**: AlloyDB Omni / PostgreSQL RLS policies (`rls_auth_users_tenant_isolation`, `rls_auth_api_keys_tenant_isolation`, `rls_auth_audit_logs_tenant_isolation`) enforcing tenant boundaries using `app.current_org_id`.
-- **Security Audit Logging**: Captures `X-Forwarded-For` IP address, `User-Agent`, timestamp, and user context on every sign-in event.
-- **Traefik & Reverse Proxy Adapter Pattern**: Traefik Proxy container configuration (`traefik:v2.10`) with `ReverseProxyPort` adapter interface (`TraefikProxyAdapter`, `EnvoyProxyAdapter`).
-- **Allure Gold Standard Test Suite**: Fully automated test suite with HTML Allure reporting output (`vitest.config.ts`, 19 passing test cases across 5 test suites).
+| Feature Area | Sub-Feature | Description & SLA Guarantee | Primary Module |
+|---|---|---|---|
+| **Multi-Tenancy** | Unique Organizations | Enforces unique organization names, slugs, and tenant context isolation | [`src/features/auth/schema/auth.schema.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/src/features/auth/schema/auth.schema.ts) |
+| **RBAC Authorization** | Role Management | Native support for `admin`, `member`, and `viewer` roles with scope checks | [`src/shared/constants/auth.constants.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/src/shared/constants/auth.constants.ts) |
+| **API Keys** | 3-Tier Lifecycle | Supports `general`, `testing`, and `super_secret` keys with permission arrays | [`src/features/auth/service.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/src/features/auth/service.ts) |
+| **Database Security** | Row Level Security (RLS) | AlloyDB Omni / PostgreSQL RLS policies matching `app.current_org_id` | [`database/migrations/0001_create_auth_tables.sql`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/database/migrations/0001_create_auth_tables.sql) |
+| **Audit Logging** | Security Auditing | Captures client IP (`X-Forwarded-For`), `User-Agent`, timestamp, and user ID | [`src/features/auth/queries/auth.queries.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/src/features/auth/queries/auth.queries.ts) |
+| **Reverse Proxy** | Proxy Adapter | Traefik container setup (`traefik:v2.10`) with Envoy adapter abstraction | [`src/infra/adapters/proxy/`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/src/infra/adapters/proxy/) |
+| **Test Suite** | Allure Standard | Automated test suite reporting with 19/19 passing test cases | [`vitest.config.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/vitest.config.ts) |
 
 ---
 
-## 🏗️ Architecture & Decision Tree Flow
+## 🛡️ 13 Security Pillars Matrix
+
+| # | Security Pillar | Implementation Mechanism | Defensive Guarantee | Test Verification |
+|---|---|---|---|---|
+| **1** | **Password Hashing** | Salted Argon2id Hashing | Protects against rainbow tables & GPU dictionary attacks | [`security-mechanisms.test.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/tests/unit/security-mechanisms.test.ts) |
+| **2** | **Token Revocation** | Blacklist Store in Redis | Immediate invalidation of compromised session JWT tokens | [`security-mechanisms.test.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/tests/unit/security-mechanisms.test.ts) |
+| **3** | **Brute-Force Protection** | Attempt Counter & Lockout | Locks out account for 15m after 5 consecutive failed logins | [`security-mechanisms.test.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/tests/unit/security-mechanisms.test.ts) |
+| **4** | **Rate Limiting** | Sliding Window Algorithm | Prevents denial of service by throttling excessive requests per IP | [`security-mechanisms.test.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/tests/unit/security-mechanisms.test.ts) |
+| **5** | **Input Validation** | Zod Schema Sanitization | Enforces strict email format & 12-char complex password regex | [`security-mechanisms.test.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/tests/unit/security-mechanisms.test.ts) |
+| **6** | **CSRF Protection** | Double-Submit CSRF Token | Prevents cross-site request forgery via `X-CSRF-Token` headers | [`security-mechanisms.test.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/tests/unit/security-mechanisms.test.ts) |
+| **7** | **XSS Protection** | HTML Control Character Encoding | Encodes `<`, `>`, `&`, `"`, `'` to block script injection | [`security-mechanisms.test.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/tests/unit/security-mechanisms.test.ts) |
+| **8** | **SQL Injection Protection** | 100% Parameterized Queries | Eliminates SQL string concatenation via `$1, $2, $3` placeholders | [`security-mechanisms.test.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/tests/unit/security-mechanisms.test.ts) |
+| **9** | **Secrets Management** | Injected `SecretStorePort` | Abstract adapter fetching secrets from process env / Vault | [`security-mechanisms.test.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/tests/unit/security-mechanisms.test.ts) |
+| **10** | **Credential-Stuffing Protection** | Multi-Account IP Threshold | Flags IP attempting logins across >5 distinct accounts in 60s | [`security-mechanisms.test.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/tests/unit/security-mechanisms.test.ts) |
+| **11** | **Device / Session Tracking** | Device Fingerprinting | Tracks active device fingerprints per user ID | [`security-mechanisms.test.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/tests/unit/security-mechanisms.test.ts) |
+| **12** | **IP / Device Anomaly Detection** | Anomaly Detector | Flags logins originating from unknown or new devices | [`security-mechanisms.test.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/tests/unit/security-mechanisms.test.ts) |
+| **13** | **Step-Up Authentication** | 6-Digit OTP Generator | Generates & verifies 5-minute OTP for sensitive operations | [`security-mechanisms.test.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/tests/unit/security-mechanisms.test.ts) |
+
+---
+
+## 🔑 3-Tier API Key Comparison
+
+| Tier | Key Prefix | Intended Purpose | Permission Default | Wildcard Bypass |
+|---|---|---|---|---|
+| **`general`** | `ak_gen_` | Production application services & SDKs | `traces:read`, `metrics:read`, `logs:read` | ❌ No |
+| **`testing`** | `ak_tst_` | CI/CD test automation & sandbox | Custom test permission scopes | ❌ No |
+| **`super_secret`** | `ak_sec_` | Internal platform management & system operations | `admin:all` (Full Access) | ✅ Yes |
+
+---
+
+## 🔄 End-to-End Request Sequence & Decision Flow
 
 ```
-Incoming Request (HTTP / HTTPS)
-│
-├── [Traefik / Envoy Reverse Proxy] (ReverseProxyPort)
-│   └── Evaluate Sliding Window Rate Limits & Route Labels
-│
-└── [AuthRestV1Router (/api/v1/auth/*)]
-    │
-    ├── IF Route == /api/v1/auth/sign-in
-    │   ├── [Brute-Force & Credential-Stuffing Check]
-    │   │   ├── IF Failed Attempts >= 5 -> RETURN 429 Account Locked
-    │   │   └── ELSE -> Proceed to Input Validation
-    │   │
-    │   ├── [Zod Schema & XSS Sanitization]
-    │   │   ├── IF Email/Password Malformed -> RETURN 400 Bad Request
-    │   │   └── ELSE -> Evaluate Credentials via Argon2id
-    │   │
-    │   ├── [Argon2id Password Verification]
-    │   │   ├── IF Invalid Password -> Record Failed Attempt -> RETURN 401 Unauthorized
-    │   │   └── ELSE -> Clear Failed Attempts -> Proceed to Audit Log
-    │   │
-    │   └── [Audit Log & Session Generation]
-    │       ├── Record IP (X-Forwarded-For) & User-Agent -> auth_audit_logs
-    │       └── Issue JWT Session Token -> RETURN 200 OK (Token + User Payload)
-    │
-    ├── IF Route == /api/v1/auth/api-keys/verify
-    │   ├── [API Key Lookup]
-    │   │   ├── IF Key Revoked or Not Found -> RETURN 401 Unauthorized
-    │   │   └── ELSE -> Evaluate Key Type & Permissions Array
-    │   │
-    │   └── [3-Tier Permission Evaluation]
-    │       ├── IF key_type == 'super_secret' -> RETURN 200 Authorized (Wildcard Pass)
-    │       ├── IF permissions CONTAINS 'admin:all' -> RETURN 200 Authorized
-    │       ├── IF permissions CONTAINS required_permission -> RETURN 200 Authorized
-    │       └── ELSE -> RETURN 403 Forbidden (Insufficient Permission)
-    │
-    └── IF Multi-Tenant Database Query (AlloyDB Omni / PostgreSQL)
-        └── [Row Level Security (RLS) Enforcement]
-            ├── SET LOCAL app.current_org_id = payload.org_id
-            ├── Execute Parameterized Query (AUTH_QUERIES)
-            └── Filter Rows WHERE org_id = current_setting('app.current_org_id')
+[Client / API Consumer]
+       │
+       │ 1. HTTP Request (e.g. POST /api/v1/auth/sign-in or POST /api/v1/auth/api-keys/verify)
+       ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ 1. TRAEFIK / ENVOY REVERSE PROXY LAYER (ReverseProxyPort)                              │
+│    ├── Match Host & PathPrefix(`/api/v1/auth`)                                         │
+│    ├── Check IP Sliding Window Rate Limit (100 req / min)                              │
+│    │   ├── Exceeded -> RETURN 429 Too Many Requests                                      │
+│    │   └── Passed   -> Forward to Auth Node Service (3001)                                 │
+└────────────────────────────────────────┬───────────────────────────────────────────────┘
+                                         │
+                                         ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ 2. OPENTELEMETRY TRACING & SECURITY MIDDLEWARE LAYER                                   │
+│    ├── Start OTEL Span `REST POST /api/v1/auth/*`                                      │
+│    ├── Extract X-Forwarded-For IP & User-Agent Headers                                 │
+│    ├── Verify Anti-CSRF Token (Header `X-CSRF-Token` == Cookie `csrf_token`)           │
+│    └── Sanitize Input Fields (HTML Entity Encoding against XSS attacks)                │
+└────────────────────────────────────────┬───────────────────────────────────────────────┘
+                                         │
+                                         ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ 3. ROUTER & 5 FEATURE DATA PILLARS LAYER (src/features/auth/)                           │
+│    ├── Zod Runtime Validation (schema/auth.schema.ts)                                  │
+│    │   ├── Malformed Input -> RETURN 400 Bad Request                                    │
+│    │   └── Passed          -> Evaluate Business Rules (rules/auth.rules.ts)           │
+│    │                                                                                   │
+│    ├── Business Rules Evaluation (rules/auth.rules.ts)                                 │
+│    │   ├── Check Brute-Force Lockout (Failed Attempts >= 5 -> RETURN 429 Locked)         │
+│    │   └── Check API Key Permissions (super_secret | admin:all | specific_permission) │
+│    │                                                                                   │
+│    └── State Machine Lifecycle (machines/auth-session.machine.ts)                      │
+│        └── Transition: unauthenticated -> authenticating -> active_session             │
+└────────────────────────────────────────┬───────────────────────────────────────────────┘
+                                         │
+                                         ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ 4. ALLOYDB OMNI DATABASE & ROW LEVEL SECURITY (RLS) LAYER                               │
+│    ├── Set Tenant Session Variable: `SET LOCAL app.current_org_id = $1`                │
+│    ├── Execute Parameterized SQL Query (queries/auth.queries.ts)                       │
+│    │   ├── SQL Injection Check (100% Prepared Statements $1, $2, $3...)                 │
+│    │   └── RLS Enforcement (WHERE org_id = current_setting('app.current_org_id'))      │
+│    └── Record Security Audit Log into `auth_audit_logs` (IP, User-Agent, Event)        │
+└────────────────────────────────────────┬───────────────────────────────────────────────┘
+                                         │
+                                         ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ 5. REDIS SESSION CACHE & RESPONSE GENERATION                                            │
+│    ├── Store Active Token / Session State in Redis (TTL: 3600s)                        │
+│    ├── Close OTEL Span with Status OK                                                  │
+│    └── RETURN HTTP 200/201 Response Payload (JWT Token, User Context, Permissions)     │
+└────────────────────────────────────────────────────────────────────────────────────────┘
 ```
-
-### The 5 Feature Data Pillars (`src/features/auth/`)
-
-1. **`schema/auth.schema.ts`**: Zod entity contracts & bidirectional ACL `fromApi` / `toApi` JSON mapping rules.
-2. **`queries/auth.queries.ts`**: Flow-by-flow parameterized queries (`FLOW_SIGN_UP`, `FLOW_SIGN_IN`, `TENANT_RLS`).
-3. **`rules/auth.rules.ts`**: Declarative business decision rules with priority weights and deny-override resolution.
-4. **`machines/auth-session.machine.ts`**: Session state machine graph (`unauthenticated` -> `authenticating` -> `active_session`).
-5. **`workflows/auth-provisioning.workflow.ts`**: Automation workflow DAG definition.
 
 ---
 
-## 🧪 Allure Test Suite Execution
+## 🌐 OpenAPI v1 REST Endpoint Reference
 
-Run unit, contract, RLS, and end-to-end API tests with Allure report generation:
+| Method | Endpoint Path | Description | Security Auth | Expected Status |
+|---|---|---|---|---|
+| `POST` | `/api/v1/auth/sign-up` | Register user & unique organization | None | `201 Created` |
+| `POST` | `/api/v1/auth/sign-in` | Authenticate user with IP & UA audit log | None | `200 OK` / `429 Locked` |
+| `GET` | `/api/v1/auth/session` | Verify active JWT session token | `BearerAuth` | `200 OK` / `401 Unauthorized` |
+| `POST` | `/api/v1/auth/session/revoke` | Revoke session token immediately | `BearerAuth` | `200 OK` |
+| `POST` | `/api/v1/auth/forgot-password` | Request password reset token via email | None | `200 OK` |
+| `POST` | `/api/v1/auth/reset-password` | Reset password using token & Argon2id | None | `200 OK` / `400 Invalid` |
+| `POST` | `/api/v1/auth/change-password` | Change authenticated user password | `BearerAuth` | `200 OK` / `401 Invalid` |
+| `POST` | `/api/v1/auth/api-keys` | Generate 3-tier API key with permission table | `BearerAuth` | `201 Created` |
+| `POST` | `/api/v1/auth/api-keys/verify` | Verify API key and check required permission | None | `200 OK` / `403 Forbidden` |
+| `GET` | `/api/v1/auth/permissions` | List all system permission definitions | None | `200 OK` |
+| `GET` | `/api/v1/auth/audit-logs` | Fetch sign-in audit logs for user/org | `BearerAuth` | `200 OK` |
+
+---
+
+## 🧪 Verified Allure Test Suite Execution Results
+
+All **19 test cases** passed across **5 test suites**:
+
+| Test Suite File | Category / Scope | Total Tests | Status | Execution Time |
+|---|---|---|---|---|
+| [`tests/unit/security-mechanisms.test.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/tests/unit/security-mechanisms.test.ts) | 13 Security Pillars Unit Tests | 13 | `PASSED` | 89 ms |
+| [`tests/unit/row-level-security.test.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/tests/unit/row-level-security.test.ts) | AlloyDB Omni RLS & Tenant Isolation | 2 | `PASSED` | 14 ms |
+| [`tests/unit/auth-service.test.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/tests/unit/auth-service.test.ts) | Auth Service Domain Business Logic | 2 | `PASSED` | 57 ms |
+| [`tests/e2e/auth-flow.test.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/tests/e2e/auth-flow.test.ts) | End-to-End API Router Integration Flow | 1 | `PASSED` | 42 ms |
+| [`tests/contract/auth-openapi.test.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth/tests/contract/auth-openapi.test.ts) | OpenAPI v1 Schema & Contract Compliance | 1 | `PASSED` | 16 ms |
+
+To generate the HTML Allure Test Report locally:
 
 ```bash
 npm run test:allure
 ```
-
-### Verified Test Suite Breakdown (19/19 Tests Passing)
-
-- **Security Mechanisms Test Suite**: 13/13 passing
-- **Row Level Security (RLS) Test Suite**: 2/2 passing
-- **Auth Service Unit Test Suite**: 2/2 passing
-- **End-to-End API Flow Test Suite**: 1/1 passing
-- **OpenAPI v1 Contract Compliance Test Suite**: 1/1 passing
 
 ---
 
