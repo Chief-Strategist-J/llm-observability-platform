@@ -4,6 +4,7 @@ import React from 'react';
 import { useSelector } from 'react-redux';
 import { User, Mail, Shield, Building2, CheckCircle2 } from 'lucide-react';
 import { ThemeSwitcher } from '../../../components/ui/ThemeSwitcher';
+import { TiltCard } from '../../../components/ui/TiltCard';
 
 export default function UserProfilePage() {
   const authUser = useSelector((state: any) => state?.auth?.user);
@@ -33,8 +34,8 @@ export default function UserProfilePage() {
 
       {/* Grid details */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* User Identity Card */}
-        <div className="rounded-[var(--radius-lg)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 space-y-4 shadow-sm text-left">
+        {/* User Identity 3D Tilt Card */}
+        <TiltCard className="p-6 space-y-4 text-left">
           <h3 className="text-sm font-bold text-[hsl(var(--foreground))] uppercase tracking-wider flex items-center gap-2 border-b border-[hsl(var(--border))] pb-3">
             <User size={16} className="text-purple-400" />
             Account Overview & Entitlements
@@ -78,7 +79,7 @@ export default function UserProfilePage() {
               <span className="text-emerald-400 font-bold">Active & Verified</span>
             </div>
           </div>
-        </div>
+        </TiltCard>
 
         {/* Theme Settings Component */}
         <ThemeSwitcher />

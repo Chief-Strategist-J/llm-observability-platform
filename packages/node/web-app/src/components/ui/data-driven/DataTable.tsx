@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import { transformList } from "../../../core/data-driven/list-transform";
 import type { ListOp } from "../../../core/data-driven/transform.types";
 import { Input } from "../../primitives/Input";
+import { SkeletonTable } from "../Skeleton";
 
 export interface ColumnConfig<T = any> {
   key: string;
@@ -18,6 +19,7 @@ export function DataTable<T extends Record<string, any>>({
   title,
   extraOps = [],
   actions,
+  loading = false,
 }: {
   columns: ColumnConfig<T>[];
   rows: T[];
@@ -25,6 +27,7 @@ export function DataTable<T extends Record<string, any>>({
   title?: string;
   extraOps?: ListOp[];
   actions?: (row: T) => React.ReactNode;
+  loading?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [sortField, setSortField] = useState<string | null>(null);
@@ -49,6 +52,15 @@ export function DataTable<T extends Record<string, any>>({
       setSortDir("asc");
     }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-4 rounded-[var(--radius-xl)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-md">
+        {title && <h3 className="text-lg font-bold tracking-tight text-[hsl(var(--foreground))]">{title}</h3>}
+        <SkeletonTable rows={4} cols={columns.length} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 rounded-[var(--radius-xl)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-md text-[hsl(var(--card-foreground))]">
