@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --config vitest.config.ts",
     "test:allure": "vitest run --config vitest.config.ts --reporter=html",
-    "test:curl": "./scripts/test-curl-endpoints.sh"
+    "test:curl": "./tests/e2e/test-curl-endpoints.sh"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
