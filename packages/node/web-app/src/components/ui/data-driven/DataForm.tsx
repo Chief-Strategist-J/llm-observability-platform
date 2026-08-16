@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Button } from "../../primitives/Button";
 import { Input } from "../../primitives/Input";
+import { SearchableDropdown } from "../SearchableDropdown";
 
 export interface FieldConfig {
   key: string;
@@ -81,20 +82,12 @@ export function DataForm<T extends Record<string, any>>({
               onChange={(e) => handleChange(field.key, e.target.value)}
             />
           ) : field.kind === "select" ? (
-            <select
-              id={field.key}
-              required={field.required}
+            <SearchableDropdown
+              items={(field.options || []).map((o, idx) => ({ id: o.value || idx, label: o.label, value: o.value }))}
               value={values[field.key] || ""}
-              onChange={(e) => handleChange(field.key, e.target.value)}
-              className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-2.5 text-sm text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-purple-500/50 cursor-pointer font-medium"
-            >
-              <option value="">Select {field.label}...</option>
-              {field.options?.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => handleChange(field.key, val)}
+              placeholder={`Select ${field.label}...`}
+            />
           ) : field.kind === "checkbox-group" ? (
             <div className="grid grid-cols-2 gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted)/.2)] p-3">
               {field.options?.map((opt) => {
