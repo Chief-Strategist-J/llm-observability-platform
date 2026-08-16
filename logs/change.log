@@ -1,3 +1,25 @@
+[2026-08-16T11:58:00+05:30] Redesign Architecture Diagram in @observability/auth README as ASCII Decision Tree
+└── File: packages/node/auth/README.md
+    ├── Choice: Replace standard block diagram with an explicit ASCII Decision Tree & Process Flow Chart detailing IF/ELSE evaluation branches for Traefik reverse proxy rate limits, sign-in credential evaluation, 3-tier API key permission matching, and AlloyDB Omni Row Level Security (RLS) enforcement.
+    └── Architecture & Design:
+        ┌──────────────────────────────────────────────────────────┐
+        │        ASCII Decision Tree Architecture Flow Chart      │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │
+        ┌────────────────────────────┼─────────────────────────────┐
+        ▼                            ▼                             ▼
+  ┌───────────┐               ┌────────────┐               ┌──────────────┐
+  │ Traefik / │               │ Sign-In &  │               │ 3-Tier API   │
+  │ Envoy     │               │ Argon2id   │               │ Keys & RLS   │
+  │ Proxy     │               │ IF/ELSE    │               │ IF/ELSE      │
+  └─────┬─────┘               └─────┬──────┘               └──────┬───────┘
+        │                            │                            │
+        ▼                            ▼                            ▼
+  (Rate Limit,                (Brute-Force,                (super_secret, 
+   Route Labels)               XSS, Audit Log)              org_id RLS)
+    └── Changes:
+        └── diagram -> Redesign README.md architecture diagram using explicit ASCII decision tree branches.
+
 [2026-08-16T11:55:00+05:30] Create comprehensive README.md for @observability/auth package
 └── File: packages/node/auth/README.md
     ├── Choice: Document feature list, package architecture ASCII diagram, 5 Feature Data Pillars, Row Level Security (RLS), Traefik & Reverse Proxy Adapter Pattern, Allure Gold Standard test suite results (19/19 passing), and next planned commits/roadmap.

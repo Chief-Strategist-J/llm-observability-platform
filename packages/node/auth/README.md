@@ -33,33 +33,49 @@ Multi-tenant authentication, RBAC authorization, organization management, audit 
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture & Decision Tree Flow
 
 ```
-                               ┌──────────────────────────────────────────┐
-                               │           Traefik Proxy (80/8080)        │
-                               └────────────────────┬─────────────────────┘
-                                                    │ (ReverseProxyPort)
-                                                    ▼
-                               ┌──────────────────────────────────────────┐
-                               │     AuthRestV1Router (/api/v1/auth)      │
-                               └────────────────────┬─────────────────────┘
-                                                    │
-                               ┌────────────────────┴─────────────────────┐
-                               │             AuthService Engine           │
-                               │    (SecurityEngine, Zod, Argon2id, JWT)  │
-                               └────────────────────┬─────────────────────┘
-                                                    │
-          ┌─────────────────────────────────────────┼─────────────────────────────────────────┐
-          ▼                                         ▼                                         ▼
-┌───────────────────┐                     ┌───────────────────┐                     ┌───────────────────┐
-│  5 Data Pillars   │                     │  AlloyDB Omni RLS │                     │  Redis Store      │
-│ schema/           │                     │ (ENABLE RLS ON    │                     │ (Session Cache,   │
-│ queries/          │                     │  auth_users,      │                     │  Revocation,      │
-│ rules/            │                     │  auth_api_keys,   │                     │  Rate Limiting)   │
-│ machines/         │                     │  auth_audit_logs) │                     └───────────────────┘
-│ workflows/        │                     └───────────────────┘
-└───────────────────┘
+Incoming Request (HTTP / HTTPS)
+│
+├── [Traefik / Envoy Reverse Proxy] (ReverseProxyPort)
+│   └── Evaluate Sliding Window Rate Limits & Route Labels
+│
+└── [AuthRestV1Router (/api/v1/auth/*)]
+    │
+    ├── IF Route == /api/v1/auth/sign-in
+    │   ├── [Brute-Force & Credential-Stuffing Check]
+    │   │   ├── IF Failed Attempts >= 5 -> RETURN 429 Account Locked
+    │   │   └── ELSE -> Proceed to Input Validation
+    │   │
+    │   ├── [Zod Schema & XSS Sanitization]
+    │   │   ├── IF Email/Password Malformed -> RETURN 400 Bad Request
+    │   │   └── ELSE -> Evaluate Credentials via Argon2id
+    │   │
+    │   ├── [Argon2id Password Verification]
+    │   │   ├── IF Invalid Password -> Record Failed Attempt -> RETURN 401 Unauthorized
+    │   │   └── ELSE -> Clear Failed Attempts -> Proceed to Audit Log
+    │   │
+    │   └── [Audit Log & Session Generation]
+    │       ├── Record IP (X-Forwarded-For) & User-Agent -> auth_audit_logs
+    │       └── Issue JWT Session Token -> RETURN 200 OK (Token + User Payload)
+    │
+    ├── IF Route == /api/v1/auth/api-keys/verify
+    │   ├── [API Key Lookup]
+    │   │   ├── IF Key Revoked or Not Found -> RETURN 401 Unauthorized
+    │   │   └── ELSE -> Evaluate Key Type & Permissions Array
+    │   │
+    │   └── [3-Tier Permission Evaluation]
+    │       ├── IF key_type == 'super_secret' -> RETURN 200 Authorized (Wildcard Pass)
+    │       ├── IF permissions CONTAINS 'admin:all' -> RETURN 200 Authorized
+    │       ├── IF permissions CONTAINS required_permission -> RETURN 200 Authorized
+    │       └── ELSE -> RETURN 403 Forbidden (Insufficient Permission)
+    │
+    └── IF Multi-Tenant Database Query (AlloyDB Omni / PostgreSQL)
+        └── [Row Level Security (RLS) Enforcement]
+            ├── SET LOCAL app.current_org_id = payload.org_id
+            ├── Execute Parameterized Query (AUTH_QUERIES)
+            └── Filter Rows WHERE org_id = current_setting('app.current_org_id')
 ```
 
 ### The 5 Feature Data Pillars (`src/features/auth/`)
