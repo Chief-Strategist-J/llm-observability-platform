@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { authApiClient } from '../../../lib/auth-client';
@@ -10,10 +10,15 @@ export default function SignInPage() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') ?? '/';
 
-  const [email, setEmail] = useState('admin@acme.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.cookie = 'authjs.session-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie = 'mock_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,11 +35,7 @@ export default function SignInPage() {
       if (err?.code === "USER_BLOCKED" || err?.message?.includes("blocked")) {
         setErrorMsg("Access Denied: Your user account has been blocked by your organization administrator.");
       } else {
-        // Fallback demo sign in
-        document.cookie = 'authjs.session-token=mock-token; path=/';
-        document.cookie = 'mock_role=owner; path=/';
-        router.push(callbackUrl);
-        router.refresh();
+        setErrorMsg(err?.message || "Invalid credentials. Please enter valid email and password.");
       }
     } finally {
       setLoading(false);
@@ -70,6 +71,7 @@ export default function SignInPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              placeholder="user@organization.com"
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all"
             />
           </div>
@@ -84,6 +86,7 @@ export default function SignInPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              placeholder="••••••••••••"
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all"
             />
           </div>
@@ -93,7 +96,7 @@ export default function SignInPage() {
             disabled={loading}
             className="w-full rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-cyan-500/20 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50 transition-all"
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? 'Authenticating...' : 'Sign in'}
           </button>
         </form>
 

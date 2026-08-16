@@ -1,15 +1,17 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { canAccessRoute } from './server/auth/rbac';
-import type { OrgRole } from '@observability/api-types';
+
+const PUBLIC_ROUTES = [
+  '/auth/sign-in',
+  '/auth/sign-up',
+  '/auth/callback',
+];
 
 function isPublicPath(pathname: string): boolean {
-  return (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api/auth') ||
-    pathname.includes('.') ||
-    pathname === '/favicon.ico'
-  );
+  if (pathname.startsWith('/_next') || pathname.startsWith('/api') || pathname.includes('.') || pathname === '/favicon.ico') {
+    return true;
+  }
+  return PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
 }
 
 function getSessionToken(req: NextRequest): string | undefined {
@@ -20,15 +22,6 @@ function getSessionToken(req: NextRequest): string | undefined {
   );
 }
 
-function getUnauthorizedRedirect(req: NextRequest, pathname: string, sessionCookie?: string) {
-  if (!sessionCookie) {
-    const signInUrl = new URL('/auth/sign-in', req.url);
-    signInUrl.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(signInUrl);
-  }
-  return NextResponse.redirect(new URL('/', req.url));
-}
-
 export function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
@@ -36,12 +29,11 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const sessionCookie = getSessionToken(req);
-  const mockRole: OrgRole = (req.cookies.get('mock_role')?.value as OrgRole) || 'owner';
-  const isAllowed = canAccessRoute(sessionCookie ? mockRole : null, pathname);
-
-  if (!isAllowed) {
-    return getUnauthorizedRedirect(req, pathname, sessionCookie);
+  const sessionToken = getSessionToken(req);
+  if (!sessionToken) {
+    const signInUrl = new URL('/auth/sign-in', req.url);
+    signInUrl.searchParams.set('callbackUrl', pathname);
+    return NextResponse.redirect(signInUrl);
   }
 
   return NextResponse.next();
