@@ -18,6 +18,13 @@ const TIME_RANGE_OPTIONS = [
   { id: '7d', label: 'Last 7 days', icon: <Clock className="h-3.5 w-3.5" />, value: '7d' },
 ];
 
+const REFRESH_RATE_OPTIONS = [
+  { id: 'off', label: 'Auto-Refresh: Off', value: 'off' },
+  { id: '5s', label: 'Every 5 seconds', value: '5s' },
+  { id: '10s', label: 'Every 10 seconds', value: '10s' },
+  { id: '30s', label: 'Every 30 seconds', value: '30s' },
+];
+
 export function HeaderBar() {
   const [environment, setEnvironment] = useState('prod-us-east');
   const [timeRange, setTimeRange] = useState('1h');
@@ -62,25 +69,23 @@ export function HeaderBar() {
           />
         </div>
 
-        {/* Auto Refresh */}
-        <div className="hidden md:flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-[hsl(var(--card))] border border-[hsl(var(--input))] shadow-xs">
+        {/* Auto Refresh Dropdown */}
+        <div className="hidden md:flex items-center gap-2">
           <button
             onClick={handleRefreshClick}
-            className="p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-transform cursor-pointer"
+            className="p-2 rounded-xl border border-[hsl(var(--input))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-transform cursor-pointer shadow-xs"
             title="Refresh now"
           >
-            <RefreshCw size={13} className={isRefreshing ? 'animate-spin text-purple-400' : ''} />
+            <RefreshCw size={14} className={isRefreshing ? 'animate-spin text-purple-400' : ''} />
           </button>
-          <select
-            value={refreshRate}
-            onChange={(e) => setRefreshRate(e.target.value)}
-            className="bg-transparent text-[hsl(var(--foreground))] outline-none cursor-pointer text-xs font-semibold"
-          >
-            <option value="off">Off</option>
-            <option value="5s">Every 5s</option>
-            <option value="10s">Every 10s</option>
-            <option value="30s">Every 30s</option>
-          </select>
+          <div className="w-44">
+            <SearchableDropdown
+              items={REFRESH_RATE_OPTIONS}
+              value={refreshRate}
+              onChange={setRefreshRate}
+              placeholder="Refresh rate..."
+            />
+          </div>
         </div>
       </div>
     </header>

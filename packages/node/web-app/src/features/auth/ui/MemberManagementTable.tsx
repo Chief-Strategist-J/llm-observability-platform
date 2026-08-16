@@ -6,6 +6,7 @@ import { UserPlus, Shield, UserX, Ban, CheckCircle2, Crown, Sparkles, Edit, X, S
 import { authActions } from '../auth.slice';
 import { authApiClient } from '../../../lib/auth-client';
 import { Button } from '../../../components/primitives/Button';
+import { SearchableDropdown, type DropdownItem } from '../../../components/ui/SearchableDropdown';
 
 export interface Member {
   readonly id: string;
@@ -22,6 +23,13 @@ interface MemberManagementTableProps {
   readonly onDeleteMember?: (userId: string) => void;
   readonly onUpdateRole?: (userId: string, role: string) => void;
 }
+
+const ROLE_DROPDOWN_ITEMS: DropdownItem[] = [
+  { id: 'owner', label: 'Owner', description: 'Full System Rights', icon: <Crown className="h-3.5 w-3.5" />, value: 'owner' },
+  { id: 'admin', label: 'Admin', description: 'Manage Members & API Keys', icon: <Shield className="h-3.5 w-3.5" />, value: 'admin' },
+  { id: 'member', label: 'Member', description: 'Standard Operations', icon: <Sparkles className="h-3.5 w-3.5" />, value: 'member' },
+  { id: 'viewer', label: 'Viewer', description: 'Read Only Access', value: 'viewer' },
+];
 
 function getCookieToken(): string | undefined {
   if (typeof document === 'undefined') return undefined;
@@ -198,15 +206,12 @@ export function MemberManagementTable({
               required
               className="rounded-xl border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3.5 py-2 text-xs font-medium text-[hsl(var(--foreground))] outline-none focus:border-purple-500"
             />
-            <select
+            <SearchableDropdown
+              items={ROLE_DROPDOWN_ITEMS}
               value={newRole}
-              onChange={(e) => setNewRole(e.target.value)}
-              className="rounded-xl border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3.5 py-2 text-xs font-medium text-[hsl(var(--foreground))] outline-none focus:border-purple-500 cursor-pointer"
-            >
-              <option value="admin">Admin (Full Control)</option>
-              <option value="member">Member (Standard Access)</option>
-              <option value="viewer">Viewer (Read Only)</option>
-            </select>
+              onChange={setNewRole}
+              placeholder="Select role..."
+            />
           </div>
           <div className="flex justify-end gap-2 pt-1">
             <Button
@@ -287,16 +292,12 @@ export function MemberManagementTable({
                 <label className="text-xs font-semibold uppercase text-[hsl(var(--muted-foreground))] flex items-center gap-1.5">
                   <Shield size={13} /> Assigned RBAC Role
                 </label>
-                <select
+                <SearchableDropdown
+                  items={ROLE_DROPDOWN_ITEMS}
                   value={editRole}
-                  onChange={(e) => setEditRole(e.target.value as any)}
-                  className="w-full rounded-xl border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-4 py-2.5 text-xs font-bold text-[hsl(var(--foreground))] outline-none focus:border-purple-500 cursor-pointer"
-                >
-                  <option value="owner">Owner (Full System Rights)</option>
-                  <option value="admin">Admin (Manage Members & API Keys)</option>
-                  <option value="member">Member (Standard Operations)</option>
-                  <option value="viewer">Viewer (Read Only Access)</option>
-                </select>
+                  onChange={(val) => setEditRole(val as any)}
+                  placeholder="Select RBAC role..."
+                />
               </div>
 
               <div className="flex items-center justify-between pt-3 border-t border-[hsl(var(--border))]">
@@ -344,7 +345,7 @@ export function MemberManagementTable({
               <tr>
                 <th className="p-3.5 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Member Info (Tap to View/Edit)</th>
                 <th className="p-3.5 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">RBAC Role</th>
-                <th className="p-3.5 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Quick Change Role</th>
+                <th className="p-3.5 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))] min-w-[170px]">Quick Change Role</th>
                 <th className="p-3.5 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Status</th>
                 <th className="p-3.5 text-right font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Actions</th>
               </tr>
@@ -367,16 +368,12 @@ export function MemberManagementTable({
                     {renderRoleBadge(member.role)}
                   </td>
                   <td className="p-3.5" onClick={(e) => e.stopPropagation()}>
-                    <select
+                    <SearchableDropdown
+                      items={ROLE_DROPDOWN_ITEMS}
                       value={member.role}
-                      onChange={(e) => (onUpdateRole || defaultRoleUpdateHandler)(member.id, e.target.value)}
-                      className="rounded-xl border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 py-1.5 text-xs font-semibold text-[hsl(var(--foreground))] outline-none cursor-pointer hover:border-[hsl(var(--ring))]"
-                    >
-                      <option value="admin">Admin</option>
-                      <option value="member">Member</option>
-                      <option value="viewer">Viewer</option>
-                      <option value="owner">Owner</option>
-                    </select>
+                      onChange={(val) => (onUpdateRole || defaultRoleUpdateHandler)(member.id, val)}
+                      placeholder="Role..."
+                    />
                   </td>
                   <td className="p-3.5">
                     {member.blocked ? (
