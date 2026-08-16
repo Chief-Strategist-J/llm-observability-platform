@@ -5,7 +5,9 @@ import { AUTH_ENDPOINTS } from '../../src/shared/constants/endpoints';
 
 describe('Auth OpenAPI Contract Compliance', () => {
   it('should verify contracts/openapi/v1.yaml exists and matches declared endpoints and schemas', () => {
-    const contractPath = path.join(process.cwd(), 'packages/node/auth/contracts/openapi/v1.yaml');
+    const contractPath = fs.existsSync(path.join(process.cwd(), 'contracts/openapi/v1.yaml'))
+      ? path.join(process.cwd(), 'contracts/openapi/v1.yaml')
+      : path.join(process.cwd(), 'packages/node/auth/contracts/openapi/v1.yaml');
     expect(fs.existsSync(contractPath)).toBe(true);
 
     const content = fs.readFileSync(contractPath, 'utf8');

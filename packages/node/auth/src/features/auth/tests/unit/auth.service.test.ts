@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { AuthService } from '../../service';
 import { AlloyDBOmniAuthAdapter } from '../../../../infra/adapters/alloydb-omni-auth.adapter';
 import { AUTH_CONSTANTS } from '../../../../shared/constants/auth.constants';
@@ -19,3 +20,10 @@ export async function runAuthServiceUnitTest(): Promise<boolean> {
 
   return true;
 }
+
+describe('AuthService Feature Unit Test', () => {
+  it('should run auth service unit test successfully', async () => {
+    const ok = await runAuthServiceUnitTest();
+    expect(ok).toBe(true);
+  });
+});

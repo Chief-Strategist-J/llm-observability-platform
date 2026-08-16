@@ -4,9 +4,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    reporters: ['default', 'html'],
-    outputFile: {
-      html: './allure-results/index.html',
-    },
+    reporters: ['default'],
+    include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
+    exclude: ['node_modules', 'dist', 'tests/performance/scenarios/**'],
   },
 });

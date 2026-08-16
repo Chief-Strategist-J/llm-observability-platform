@@ -195,33 +195,46 @@ Every service/package declares its contract, database schema migrations, contain
     │   │   ├── .gitkeep
     │   │   ├── v1/
     │   │   │   ├── .gitkeep
-    │   │   │   ├── router               ← Mounts routes, zero business logic
-    │   │   │   └── handlers/            ← One handler file per resource
-    │   │   │       └── .gitkeep
-    │   │   └── v2/                      ← Only when v2 contract exists
-    │   │
-    │   ├── graphql/                     ← Only when GraphQL is chosen
-    │   │   ├── .gitkeep
-    │   │   ├── v1/
-    │   │   │   ├── .gitkeep
-    │   │   │   ├── schema               ← Loads SDL from contracts/
-    │   │   │   ├── resolvers/           ← One file per type
-    │   │   │   └── dataloaders/         ← One per relation, required
-    │   │   └── v2/
-    │   │
-    │   ├── grpc/                        ← Only when gRPC is chosen
-    │   │   ├── .gitkeep
-    │   │   └── v1/
-    │   │       ├── .gitkeep
-    │   │       ├── server
-    │   │       └── handlers/
-    │   │
-    │   └── events/                      ← Only when async events exist
+    │   │   │   ├── router               �    ├── features/                        ← All business logic & data-driven declarations
+    │   ├── .gitkeep
+    │   └── {feature-name}/
     │       ├── .gitkeep
-    │       ├── consumers/               ← One file per event type
-    │       └── publishers/              ← One file per event type
-    │
-    ├── features/                        ← All business logic & data-driven declarations
+    │       ├── index                    ← Only public surface of this feature
+    │       ├── ports/                   ← Hexagonal Ports (Inbound & Outbound interfaces & implementations)
+    │       │   ├── .gitkeep
+    │       │   ├── inbound/
+    │       │   │   ├── .gitkeep
+    │       │   │   └── implementations/
+    │       │   │       └── .gitkeep
+    │       │   └── outbound/
+    │       │       ├── .gitkeep
+    │       │       └── implementations/
+    │       │           └── .gitkeep
+    │       ├── adapters/                ← Hexagonal Adapters (Inbound & Outbound drivers & implementations)
+    │       │   ├── .gitkeep
+    │       │   ├── inbound/
+    │       │   │   ├── .gitkeep
+    │       │   │   └── implementations/
+    │       │   │       └── .gitkeep
+    │       │   └── outbound/
+    │       │       ├── .gitkeep
+    │       │       └── implementations/
+    │       │           └── .gitkeep
+    │       ├── schema                   ← Entity schema contract (fields, validate, fromApi, toApi)
+    │       ├── queries/                 ← MANDATORY: Flow-by-Flow Database Queries
+    │       │   ├── .gitkeep
+    │       │   └── {feature}.queries.[ext|sql] ← Named, flow-by-flow parameterized queries
+    │       ├── rules                    ← Business rules AS DATA (priority, category, async conditions)
+    │       ├── machines                 ← State machine definitions AS DATA (State DAG / DSL)
+    │       ├── workflows                ← Step automation DAG definitions AS DATA
+    │       ├── service                  ← Feature business logic (no HTTP, no raw IO)
+    │       ├── repository               ← DB access via queries/ and port interface only
+    │       ├── types                    ← Feature-local domain types
+    │       └── tests/
+    │           ├── .gitkeep
+    │           ├── unit/                ← Feature unit tests
+    │           ├── integration/         ← Feature integration tests
+    │           └── contract/            ← Feature contract validation tests← All business logic & data-driven declarations
     │   ├── .gitkeep
     │   └── {feature-name}/
     │       ├── .gitkeep
