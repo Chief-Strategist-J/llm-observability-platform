@@ -1340,3 +1340,10 @@
         ├── dockerization -> Add Dockerfile, Dockerfile.dev, docker-compose.yml, .dockerignore, and deploy/k8s/ to package tree.
         ├── testing-tree -> Expand package test hierarchy with unit/, integration/, contract/, performance/ (scenarios & thresholds.json SLA rules), and e2e/.
         └── data-driven-core -> Add language-agnostic guidelines for writing engine logic once and declaring features as data (EntitySchema, rules as data, state machines, step DAGs).
+
+[2026-08-16T10:18:00+05:30] Add Order of Development, DB Migration Order, and Senior/Architect Database Architecture policy
+└── File: policies/rules/folderStructure/api-structure.md, policies/rules/database/sharding-replication-architecture.md
+    ├── Choice: Establish strict 7-step Order of Development sequence in api-structure.md and create policies/rules/database/sharding-replication-architecture.md covering Tier 1 (ACID, MVCC, Isolation, Locks, Indexes, Query Plans, Partitioning, CAP), Tier 2 (Quorum, Consensus/Raft, 2PC, Saga, CDC), and Tier 3 (WAL, LSM Trees, SSTables, Compaction, Columnar ClickHouse storage engines).
+    └── Changes:
+        ├── development-order -> Add strict 7-step feature development pipeline and 5-PR column rename / expand-contract sequence to api-structure.md.
+        └── database-architecture -> Create sharding-replication-architecture.md detailing Tier 1 fundamentals, Tier 2 distributed systems depth, and Tier 3 storage engine internals.

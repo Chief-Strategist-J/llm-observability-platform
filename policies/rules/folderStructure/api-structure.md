@@ -261,6 +261,39 @@ Every service/package declares its contract, containerization, and test suite pr
 
 ---
 
+### Order of Development & Change Management
+
+To prevent contract drift, schema locking, and coupling violations, all development follows a strict 7-step sequence:
+
+```
+[1. API Contract] ──► [2. DB Migration] ──► [3. Port Interface] ──► [4. Data-Driven Schema] ──► [5. Service Logic] ──► [6. API Handler] ──► [7. Test Suite]
+```
+
+1. **Step 1 — API Contract Definition (`contracts/`)**: Define or update `openapi/v1.yaml`, `graphql/`, or `proto/` in a contract-only PR. Generate client SDKs via `generate.sh`.
+2. **Step 2 — Database Schema Migration (`database/migrations/`)**: If data storage is affected, create a numbered migration file (`NNNN_description.sql`) and matching rollback file (`NNNN_description.rollback.sql`). See [database/migration.md](file:///home/btpl-lap-22/live/llm-observability-platform/policies/rules/database/migration.md).
+3. **Step 3 — Shared Infrastructure Port Interface (`shared/ports/`)**: Declare or update abstract infrastructure interface ports (e.g. `database.interface`, `cache.interface`).
+4. **Step 4 — Data-Driven Entity & Rule Declaration (`src/features/{feature}/`)**: Declare entity schemas (`schema/`), transformation mappers (`fromApi`/`toApi`), and declarative rules (`rules/`).
+5. **Step 5 — Core Domain Service Implementation (`src/features/{feature}/service`)**: Implement business logic using pure domain models and injected repository ports (no direct HTTP/IO).
+6. **Step 6 — API Router & Handler Mounting (`src/api/rest/v1/`)**: Connect contract stubs to domain service methods via resource handlers (`auth.handler.ts`).
+7. **Step 7 — Comprehensive Test Suite Verification (`tests/`)**: Validate with unit tests, containerized integration tests, contract compliance tests, and K6/Locust performance load tests.
+
+---
+
+### Order of Database & Schema Migration Changes
+
+All database modifications must comply with zero-downtime Expand and Contract migration rules:
+
+1. **Never Touch Database Manually**: Every schema change is a versioned SQL file with a mandatory rollback counterpart.
+2. **Column Rename (5-PR Sequence)**:
+   - PR 1: Add new column.
+   - PR 2: Dual-write to both old and new columns in application layer.
+   - PR 3: Backfill old data into new column via async worker.
+   - PR 4: Switch application reads to new column.
+   - PR 5: Drop old column via migration with rollback file.
+3. **Database Architecture & Replication**: All multi-region replication, horizontal sharding keys, WAL archiving, and storage engine choices must strictly align with [database/sharding-replication-architecture.md](file:///home/btpl-lap-22/live/llm-observability-platform/policies/rules/database/sharding-replication-architecture.md).
+
+---
+
 ### Contract Rules — REST
 
 - Every published version is immutable. No breaking changes to an existing version.
