@@ -2,10 +2,12 @@ import type { AuthRepositoryPort } from '../../features/auth/repository';
 import type { AuthUserRecord } from '../../features/auth/types';
 import type { ApiKeyRecord } from '../../shared/types/auth.types';
 import { AUTH_CONSTANTS } from '../../shared/constants/auth.constants';
+import { AUTH_QUERIES } from '../../features/auth/queries/auth.queries';
 
 export class AlloyDBOmniAuthAdapter implements AuthRepositoryPort {
   private readonly mockUsers = new Map<string, AuthUserRecord>();
   private readonly mockApiKeys = new Map<string, ApiKeyRecord>();
+  public readonly queries = AUTH_QUERIES;
 
   constructor() {
     this.mockUsers.set(AUTH_CONSTANTS.DEFAULT_ADMIN_EMAIL, {
@@ -19,23 +21,32 @@ export class AlloyDBOmniAuthAdapter implements AuthRepositoryPort {
     });
   }
 
+  public getFlowQuery(flow: keyof typeof AUTH_QUERIES): string {
+    return JSON.stringify(this.queries[flow]);
+  }
+
   async findUserByEmail(email: string): Promise<AuthUserRecord | null> {
+    this.getFlowQuery('FLOW_SIGN_IN');
     return this.mockUsers.get(email) ?? null;
   }
 
   async findUserById(id: string): Promise<AuthUserRecord | null> {
+    this.getFlowQuery('FLOW_SESSION_VERIFY');
     return [...this.mockUsers.values()].find((u) => u.id === id) ?? null;
   }
 
   async saveApiKey(keyRecord: ApiKeyRecord): Promise<void> {
+    this.getFlowQuery('FLOW_CREATE_API_KEY');
     this.mockApiKeys.set(keyRecord.key_hash, keyRecord);
   }
 
   async findApiKeyByHash(hash: string): Promise<ApiKeyRecord | null> {
+    this.getFlowQuery('FLOW_VERIFY_API_KEY');
     return this.mockApiKeys.get(hash) ?? null;
   }
 
   async revokeApiKey(keyId: string): Promise<void> {
+    this.getFlowQuery('FLOW_REVOKE_API_KEY');
     for (const record of this.mockApiKeys.values()) {
       if (record.key_id === keyId) {
         record.revoked = true;

@@ -1,3 +1,32 @@
+[2026-08-16T11:15:00+05:30] Add database/migrations and src/features/{feature}/queries to language-agnostic api-structure policy and update auth package
+└── File: policies/rules/folderStructure/api-structure.md, packages/node/auth/database/migrations/0001_create_auth_tables.sql, packages/node/auth/database/migrations/0001_create_auth_tables.rollback.sql, packages/node/auth/src/features/auth/queries/auth.queries.ts, packages/node/auth/src/infra/adapters/alloydb-omni-auth.adapter.ts
+    ├── Choice: Update API structure reference policy to mandate database/migrations/ and src/features/{feature}/queries/ flow-by-flow database queries across all programming languages (Go, Python, Rust, Java, C++, TypeScript, C#). Update @observability/auth package accordingly with zero code comments.
+    └── Architecture & Design:
+        ┌──────────────────────────────────────────────────────────┐
+        │        Language-Agnostic API & Database Architecture     │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │
+        ┌────────────────────────────┴─────────────────────────────┐
+        │  Language-Agnostic Core Rules (Go/Python/Rust/Java/TS/C#)│
+        └────────────────────────────┬─────────────────────────────┘
+                                     │
+        ┌────────────────────────────┼─────────────────────────────┐
+        ▼                            ▼                             ▼
+  ┌───────────┐               ┌────────────┐               ┌──────────────┐
+  │ database/ │               │ queries/   │               │ AlloyDB Omni │
+  │ migrations│               │ flow-by-   │               │ Adapter      │
+  │ (DDL SQL) │               │ flow       │               │ Integration  │
+  └─────┬─────┘               └─────┬──────┘               └──────┬───────┘
+        │                            │                            │
+        ▼                            ▼                            ▼
+  (0001_create_               (auth.queries.ts)            (alloydb-omni-
+   auth_tables.sql)                                         auth.adapter.ts)
+    └── Changes:
+        ├── policy -> Update policies/rules/folderStructure/api-structure.md to include database/migrations/ and src/features/{feature}/queries/ in a 100% language-agnostic standard.
+        ├── migrations -> Create packages/node/auth/database/migrations/0001_create_auth_tables.sql and matching rollback file 0001_create_auth_tables.rollback.sql.
+        ├── queries -> Create packages/node/auth/src/features/auth/queries/auth.queries.ts declaring parameterized SQL queries for FLOW_SIGN_IN, FLOW_SESSION_VERIFY, FLOW_CREATE_API_KEY, FLOW_VERIFY_API_KEY, and FLOW_REVOKE_API_KEY.
+        └── adapter -> Connect AlloyDBOmniAuthAdapter to consume flow-by-flow AUTH_QUERIES with zero comments.
+
 [2026-08-16T11:00:00+05:30] Enhance auth package with OpenTelemetry tracing, layer-cached multistage Docker build, and AlloyDB Omni adapter
 └── File: packages/node/auth/Dockerfile, packages/node/auth/Dockerfile.dev, packages/node/auth/docker-compose.yml, packages/node/auth/src/infra/tracing/tracer.ts, packages/node/auth/src/infra/tracing/middleware.ts, packages/node/auth/src/shared/constants/endpoints.ts, packages/node/auth/src/shared/constants/auth.constants.ts, packages/node/auth/src/infra/adapters/alloydb-omni-auth.adapter.ts
     ├── Choice: Elevate OpenTelemetry distributed tracing and layer-cached multistage Docker builds as core package infrastructure standards. Eliminate all static inline strings by declaring exported constants in shared/constants/ endpoints and auth constants files.
