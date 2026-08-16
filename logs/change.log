@@ -1361,3 +1361,11 @@
     └── Changes:
         ├── caching-policy -> Create caching.md covering Cache-Aside/Write-Through/Write-Behind patterns, Redis key hierarchy, Single-flight mutex locks & XFetch algorithm.
         └── normalization-policy -> Create data-normalization.md covering 1NF-3NF/BCNF standards, performance denormalization criteria, and background drift reconciler job rules.
+
+[2026-08-16T10:24:00+05:30] Enhance data-normalization.md with strict anti-pattern bans and Denormalization RFC rules
+└── File: policies/rules/database/data-normalization.md
+    ├── Choice: Expand data-normalization.md policy with 6 non-negotiable rules (no relational JSONB, mandatory FK constraints, VARCHAR+CHECK enums, mandatory identity & TIMESTAMPTZ columns, no comma-separated arrays, explicit ON DELETE behavior), Denormalization RFC benchmarks (p95 > 100ms on 4+ table joins), zero application dual-writes, and 0.001% data drift SLA.
+    └── Changes:
+        ├── strict-anti-patterns -> Ban relational JSONB, unconstrained foreign keys, native DB enums, and comma-separated lists.
+        ├── denormalization-rfc -> Require Denormalization RFC with EXPLAIN ANALYZE proof and 100:1 read-to-write ratio justification.
+        └── drift-sla -> Enforce 0.001% data drift SLA and zero application dual-write rule.
