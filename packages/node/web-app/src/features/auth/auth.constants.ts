@@ -2,7 +2,7 @@ export const AUTH_DEFAULT_FIXTURES = {
   NAME: "Jaydeep",
   ORG_NAME: "Scaibu",
   EMAIL: "jaydeep@gmail.com",
-  PASSWORD: "password12345",
+  PASSWORD: "Password12345!",
 } as const;
 
 export const AUTH_ROUTES = {

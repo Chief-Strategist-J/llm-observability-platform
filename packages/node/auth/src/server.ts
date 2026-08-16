@@ -9,28 +9,30 @@ import { AuthInboundAdapterImplementation } from './features/auth/adapters/inbou
 import { AuthOutboundAdapterImplementation } from './features/auth/adapters/outbound/implementations/auth-outbound.adapter.implementation';
 import { AUTH_CONSTANTS } from './shared/constants/auth.constants';
 
-const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : AUTH_CONSTANTS.DEFAULT_PORT;
 
-// 1. Initialize Hexagonal Outbound Adapter & Port
 const repositoryAdapter = (process.env.DATABASE_URL || process.env.USE_REAL_DB === 'true')
   ? new RealPostgresAuthAdapter()
   : new AlloyDBOmniAuthAdapter();
 export const outboundAdapter = new AuthOutboundAdapterImplementation(repositoryAdapter);
 export const outboundPort = new AuthOutboundPortImplementation(outboundAdapter);
 
-// 2. Initialize Domain Service with Outbound Port
 export const service = new AuthService(outboundPort);
 
-// 3. Initialize Hexagonal Inbound Port & Adapter
 export const inboundPort = new AuthInboundPortImplementation(service);
 export const inboundAdapter = new AuthInboundAdapterImplementation(inboundPort);
 
-// 4. Initialize API REST Router
 export const router = new AuthRestV1Router(service);
 
-const server = http.createServer(async (req, res) => {
+const server = http.createServer((req, res) => {
   const method = req.method ?? 'GET';
   const url = req.url ?? '/';
+
+  if (method === 'OPTIONS') {
+    res.writeHead(204, AUTH_CONSTANTS.SECURITY_CONFIG.CORS_HEADERS);
+    res.end();
+    return;
+  }
 
   let bodyData = '';
   req.on('data', (chunk) => {
@@ -57,7 +59,10 @@ const server = http.createServer(async (req, res) => {
     }
 
     const { statusCode, payload } = await router.route(method, url, parsedBody, headersRecord);
-    res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+    res.writeHead(statusCode, {
+      'Content-Type': AUTH_CONSTANTS.HEADERS.CONTENT_TYPE_JSON,
+      ...AUTH_CONSTANTS.SECURITY_CONFIG.CORS_HEADERS,
+    });
     res.end(JSON.stringify(payload, null, 2));
   });
 });

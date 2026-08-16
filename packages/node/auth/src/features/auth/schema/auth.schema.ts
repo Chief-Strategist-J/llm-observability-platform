@@ -15,8 +15,8 @@ export const ApiKeyTypeSchema = z.enum([
 
 export const PasswordValidationSchema = z
   .string()
-  .min(AUTH_CONSTANTS.PASSWORD_MIN_LENGTH)
-  .regex(AUTH_CONSTANTS.PASSWORD_REGEX);
+  .min(AUTH_CONSTANTS.SECURITY_CONFIG.PASSWORD_MIN_LENGTH)
+  .regex(new RegExp(AUTH_CONSTANTS.SECURITY_CONFIG.PASSWORD_PATTERN));
 
 export const CreateOrganizationInputSchema = z.object({
   name: z.string().min(2),
