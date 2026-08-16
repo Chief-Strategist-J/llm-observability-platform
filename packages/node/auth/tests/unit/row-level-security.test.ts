@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { AUTH_QUERIES } from '../../src/features/auth/queries/auth.queries';
-import { AlloyDBOmniAuthAdapter } from '../../src/infra/adapters/alloydb-omni-auth.adapter';
+import { AlloyDBOmniAuthAdapter } from '../../src/infra/adapters/postgres/alloydb-omni-auth.adapter';
 import { AUTH_CONSTANTS } from '../../src/shared/constants/auth.constants';
 
 describe('AlloyDB Omni Row Level Security (RLS) & Tenant Isolation Tests', () => {

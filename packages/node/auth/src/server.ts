@@ -1,7 +1,7 @@
 import * as http from 'http';
 import { AuthService } from './features/auth/service';
 import { AuthRestV1Router } from './api/rest/v1/router';
-import { AlloyDBOmniAuthAdapter } from './infra/adapters/alloydb-omni-auth.adapter';
+import { AlloyDBOmniAuthAdapter } from './infra/adapters/postgres/alloydb-omni-auth.adapter';
 import { AUTH_CONSTANTS } from './shared/constants/auth.constants';
 
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;

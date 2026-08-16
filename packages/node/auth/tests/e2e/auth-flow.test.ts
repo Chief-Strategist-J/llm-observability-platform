@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { AuthService } from '../../src/features/auth/service';
 import { AuthRestV1Router } from '../../src/api/rest/v1/router';
-import { AlloyDBOmniAuthAdapter } from '../../src/infra/adapters/alloydb-omni-auth.adapter';
+import { AlloyDBOmniAuthAdapter } from '../../src/infra/adapters/postgres/alloydb-omni-auth.adapter';
 import { AUTH_CONSTANTS } from '../../src/shared/constants/auth.constants';
 import { AUTH_ENDPOINTS, HTTP_METHODS } from '../../src/shared/constants/endpoints';
 

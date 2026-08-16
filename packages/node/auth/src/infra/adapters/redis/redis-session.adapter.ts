@@ -1,4 +1,4 @@
-import type { AuthTokenPayload } from '../../shared/types/auth.types';
+import type { AuthTokenPayload } from '../../../shared/types/auth.types';
 
 export class RedisSessionAdapter {
   private readonly sessionStore = new Map<string, string>();

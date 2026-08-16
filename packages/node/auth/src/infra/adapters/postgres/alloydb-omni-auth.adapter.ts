@@ -1,8 +1,8 @@
-import type { AuthRepositoryPort } from '../../features/auth/repository';
-import type { AuthUserRecord, AuditLogRecord } from '../../features/auth/types';
-import type { ApiKeyRecord } from '../../shared/types/auth.types';
-import { AUTH_CONSTANTS } from '../../shared/constants/auth.constants';
-import { AUTH_QUERIES } from '../../features/auth/queries/auth.queries';
+import type { AuthRepositoryPort } from '../../../features/auth/repository';
+import type { AuthUserRecord, AuditLogRecord } from '../../../features/auth/types';
+import type { ApiKeyRecord } from '../../../shared/types/auth.types';
+import { AUTH_CONSTANTS } from '../../../shared/constants/auth.constants';
+import { AUTH_QUERIES } from '../../../features/auth/queries/auth.queries';
 
 export class AlloyDBOmniAuthAdapter implements AuthRepositoryPort {
   private readonly mockUsers = new Map<string, AuthUserRecord>();

@@ -1,4 +1,4 @@
-import { AlloyDBOmniAuthAdapter } from '../../src/infra/adapters/alloydb-omni-auth.adapter';
+import { AlloyDBOmniAuthAdapter } from '../../src/infra/adapters/postgres/alloydb-omni-auth.adapter';
 import { AUTH_CONSTANTS } from '../../src/shared/constants/auth.constants';
 
 describe('AlloyDB Omni Auth Repository (Integration Tests)', () => {

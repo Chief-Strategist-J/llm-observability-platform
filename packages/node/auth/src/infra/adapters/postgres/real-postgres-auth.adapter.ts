@@ -1,9 +1,9 @@
 import { Pool } from 'pg';
-import type { AuthRepositoryPort } from '../../features/auth/repository';
-import type { AuthUserRecord, AuditLogRecord } from '../../features/auth/types';
-import type { ApiKeyRecord } from '../../shared/types/auth.types';
-import { AUTH_QUERIES } from '../../features/auth/queries/auth.queries';
-import { AUTH_CONSTANTS } from '../../shared/constants/auth.constants';
+import type { AuthRepositoryPort } from '../../../features/auth/repository';
+import type { AuthUserRecord, AuditLogRecord } from '../../../features/auth/types';
+import type { ApiKeyRecord } from '../../../shared/types/auth.types';
+import { AUTH_QUERIES } from '../../../features/auth/queries/auth.queries';
+import { AUTH_CONSTANTS } from '../../../shared/constants/auth.constants';
 
 export class RealPostgresAuthAdapter implements AuthRepositoryPort {
   private readonly pool: Pool;

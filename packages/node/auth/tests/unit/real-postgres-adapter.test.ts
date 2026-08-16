@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { RealPostgresAuthAdapter } from '../../src/infra/adapters/real-postgres-auth.adapter';
+import { RealPostgresAuthAdapter } from '../../src/infra/adapters/postgres/real-postgres-auth.adapter';
 
 describe('RealPostgresAuthAdapter Unit & Connection Tests', () => {
   it('should initialize PostgreSQL / AlloyDB Omni connection pool with configured environment properties', async () => {

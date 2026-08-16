@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { AuthService } from '../../service';
-import { AlloyDBOmniAuthAdapter } from '../../../../infra/adapters/alloydb-omni-auth.adapter';
+import { AlloyDBOmniAuthAdapter } from '../../../../infra/adapters/postgres/alloydb-omni-auth.adapter';
 import { AUTH_CONSTANTS } from '../../../../shared/constants/auth.constants';
 
 export async function runAuthServiceUnitTest(): Promise<boolean> {
