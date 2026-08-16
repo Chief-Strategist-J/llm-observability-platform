@@ -1,3 +1,27 @@
+[2026-08-16T11:50:00+05:30] Update OpenAPI Contract and E2E Auth Flow Test Suites
+└── File: packages/node/auth/tests/contract/auth-openapi.test.ts, packages/node/auth/tests/e2e/auth-flow.test.ts
+    ├── Choice: Update OpenAPI contract compliance test suite (auth-openapi.test.ts) to validate all declared endpoints (sign-up, sign-in, session, forgot/reset/change password, 3-tier API keys, permissions, audit logs, and X-CSRF-Token headers) and update E2E auth flow test suite (auth-flow.test.ts) covering complete API routing lifecycle.
+    └── Architecture & Design:
+        ┌──────────────────────────────────────────────────────────┐
+        │      Contract Compliance & E2E Test Suite Architecture   │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │
+        ┌────────────────────────────┼─────────────────────────────┐
+        ▼                            ▼                             ▼
+  ┌───────────┐               ┌────────────┐               ┌──────────────┐
+  │ OpenAPI   │               │ End-to-End │               │ Vitest &     │
+  │ Contract  │               │ API Flow   │               │ Allure       │
+  │ Compliance│               │ Suite      │               │ Verification │
+  └─────┬─────┘               └─────┬──────┘               └──────┬───────┘
+        │                            │                            │
+        ▼                            ▼                            ▼
+  (auth-openapi.              (auth-flow.                  (19/19 Tests   
+   test.ts)                    test.ts)                     Passing 100%)
+    └── Changes:
+        ├── contract -> Update tests/contract/auth-openapi.test.ts to validate v1.yaml content against AUTH_ENDPOINTS constants and Zod request schemas.
+        ├── e2e -> Update tests/e2e/auth-flow.test.ts with full multi-tenant sign-up, sign-in audit logging, session verification, forgot/reset password, permissions, and 3-tier API key verification.
+        └── result -> Empirically verified 19 out of 19 test cases passing across all 5 test suites.
+
 [2026-08-16T11:45:00+05:30] Implement AlloyDB Omni Row Level Security (RLS) policies and Allure Gold Standard test suite in @observability/auth
 └── File: packages/node/auth/database/migrations/0001_create_auth_tables.sql, packages/node/auth/tests/unit/row-level-security.test.ts, packages/node/auth/vitest.config.ts, packages/node/auth/package.json
     ├── Choice: Enforce multi-tenant Row Level Security (RLS) policies across all auth tables using app.current_org_id tenant settings. Add Allure Gold Standard test configuration and verify 100% test passing state (18/18 tests passed) across 13 security mechanisms, RLS tenant isolation, unit tests, and E2E API flow.
