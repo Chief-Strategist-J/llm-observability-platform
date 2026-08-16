@@ -2,7 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { authActions } from '../../features/auth/auth.slice';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../primitives/DropdownMenu';
 import { User, Settings, LogOut, ShieldAlert } from 'lucide-react';
 
@@ -19,10 +20,13 @@ export function UserMenu({ user: propUser, impersonating = false }: UserMenuProp
   const name = propUser?.name ?? authUser?.name ?? 'Admin User';
   const email = propUser?.email ?? authUser?.email ?? 'admin@observability.io';
 
+  const dispatch = useDispatch();
+
   function handleSignOut() {
-    document.cookie = 'authjs.session-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    window.location.href = '/auth/sign-in';
+    dispatch(authActions.signOutSubmitted());
+    if (typeof window !== 'undefined') {
+      window.location.href = '/auth/sign-in';
+    }
   }
 
   return (
