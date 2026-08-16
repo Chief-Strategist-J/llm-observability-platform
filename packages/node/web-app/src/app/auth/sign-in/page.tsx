@@ -1,42 +1,34 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { SignInForm } from '../../../components/auth/SignInForm';
-import { authApiClient } from '../../../lib/auth-client';
+import { authActions, type AuthState } from '../../../features/auth/auth.slice';
 
 export default function SignInPage() {
+  const dispatch = useDispatch();
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') ?? '/';
 
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const { status, error } = useSelector((state: any) => (state.auth || {}) as AuthState);
 
   useEffect(() => {
+    dispatch(authActions.resetAuthStatus());
     document.cookie = 'authjs.session-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     document.cookie = 'mock_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-  }, []);
+  }, [dispatch]);
 
-  const handleSubmit = async (payload: { email: string; password?: string }) => {
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const res = await authApiClient.signIn(payload as any);
-      document.cookie = `authjs.session-token=${res.token}; path=/`;
-      document.cookie = `mock_role=${res.user.role || "owner"}; path=/`;
+  useEffect(() => {
+    if (status === 'success') {
       router.push(callbackUrl);
       router.refresh();
-    } catch (err: any) {
-      if (err?.code === "USER_BLOCKED" || err?.message?.includes("blocked")) {
-        setErrorMsg("Access Denied: Your user account has been blocked by your organization administrator.");
-      } else {
-        setErrorMsg(err?.message || "Invalid credentials. Please enter valid email and password.");
-      }
-    } finally {
-      setLoading(false);
     }
+  }, [status, router, callbackUrl]);
+
+  const handleSubmit = (payload: { email: string; password?: string }) => {
+    dispatch(authActions.signInSubmitted(payload as any));
   };
 
   return (
@@ -44,8 +36,8 @@ export default function SignInPage() {
       <SignInForm
         initialEmail="jaydeep@gmail.com"
         initialPassword="password12345"
-        loading={loading}
-        errorMsg={errorMsg}
+        loading={status === 'loading'}
+        errorMsg={error}
         onSubmit={handleSubmit}
       />
     </div>

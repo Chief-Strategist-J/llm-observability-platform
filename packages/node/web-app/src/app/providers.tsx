@@ -11,6 +11,7 @@ import { NotificationProvider } from '../components/primitives/NotificationProvi
 import { FeatureFlagProvider } from '../lib/feature-flags';
 import { trpc } from '../lib/trpc-client';
 import { createQueryClient } from '../lib/query-client';
+import '../features/auth';
 
 function getBaseUrl(): string {
   if (typeof window !== 'undefined') return '';

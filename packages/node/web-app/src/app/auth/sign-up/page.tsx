@@ -1,26 +1,29 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
 import { SignUpForm } from '../../../components/auth/SignUpForm';
-import { authApiClient } from '../../../lib/auth-client';
+import { authActions, type AuthState } from '../../../features/auth/auth.slice';
 
 export default function SignUpPage() {
+  const dispatch = useDispatch();
   const router = useRouter();
-  const [loading, setLoading] = React.useState(false);
-  const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
-  const handleSubmit = async (payload: { name: string; organization_name: string; email: string; password?: string }) => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      await authApiClient.signUp(payload as any);
+  const { status, error } = useSelector((state: any) => (state.auth || {}) as AuthState);
+
+  useEffect(() => {
+    dispatch(authActions.resetAuthStatus());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (status === 'success') {
       router.push('/auth/sign-in');
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Sign up failed. Please try again.');
-    } finally {
-      setLoading(false);
     }
+  }, [status, router]);
+
+  const handleSubmit = (payload: { name: string; organization_name: string; email: string; password?: string }) => {
+    dispatch(authActions.signUpSubmitted(payload as any));
   };
 
   return (
@@ -30,8 +33,8 @@ export default function SignUpPage() {
         initialOrgName="Scaibu"
         initialEmail="jaydeep@gmail.com"
         initialPassword="password12345"
-        loading={loading}
-        errorMsg={errorMsg}
+        loading={status === 'loading'}
+        errorMsg={error}
         onSubmit={handleSubmit}
       />
     </div>
