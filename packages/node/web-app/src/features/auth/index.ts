@@ -6,3 +6,6 @@ featureRegistry.register("auth", { reducer: authReducer, saga: authSaga });
 
 export * from "./auth.slice";
 export * from "./auth.saga";
+export * from "./ui/SignUpForm";
+export * from "./ui/SignInForm";
+export * from "./ui/RegisterOrgForm";

@@ -1,0 +1,76 @@
+.shared-card {
+  width: 100%;
+  border-radius: var(--radius-xl);
+  border: 1px solid hsl(var(--border));
+  background-color: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  padding: 1.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.shared-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.shared-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+
+.shared-table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid hsl(var(--border));
+}
+
+.shared-table {
+  width: 100%;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.shared-table th {
+  background-color: hsl(var(--muted) / 0.4);
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.shared-table td {
+  padding: 0.75rem 1rem;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  color: hsl(var(--foreground));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.shared-badge-success {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  background-color: rgba(6, 78, 59, 0.6);
+  color: #34d399;
+  border: 1px solid #065f46;
+}
+
+.shared-badge-danger {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  background-color: hsl(var(--destructive) / 0.2);
+  color: hsl(var(--destructive));
+  border: 1px solid hsl(var(--destructive) / 0.4);
+}

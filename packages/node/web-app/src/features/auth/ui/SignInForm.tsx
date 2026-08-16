@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
-import { Button } from "../primitives/Button";
-import { Input } from "../primitives/Input";
+import { Button } from "../../../components/primitives/Button";
+import { Input } from "../../../components/primitives/Input";
 
 export interface SignInFormProps {
   initialEmail?: string;

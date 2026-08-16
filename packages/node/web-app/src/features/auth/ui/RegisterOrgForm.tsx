@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Button } from "../primitives/Button";
-import { Input } from "../primitives/Input";
+import { Button } from "../../../components/primitives/Button";
+import { Input } from "../../../components/primitives/Input";
 
 export interface RegisterOrgFormProps {
   initialOrgName?: string;

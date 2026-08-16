@@ -3,8 +3,7 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { SignInForm } from '../../../components/auth/SignInForm';
-import { authActions, type AuthState } from '../../../features/auth/auth.slice';
+import { SignInForm, authActions, type AuthState } from '../../../features/auth';
 
 export default function SignInPage() {
   const dispatch = useDispatch();
