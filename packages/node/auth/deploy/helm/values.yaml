@@ -1,0 +1,29 @@
+replicaCount: 2
+
+image:
+  repository: observability/auth
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 3001
+
+alloydbOmni:
+  host: "alloydb-omni.observability.svc.cluster.local"
+  port: 5432
+  database: "observability_auth"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80

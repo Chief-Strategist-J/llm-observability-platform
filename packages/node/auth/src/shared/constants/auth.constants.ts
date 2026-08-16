@@ -1,0 +1,17 @@
+export const AUTH_CONSTANTS = {
+  SERVICE_NAME: 'auth-service',
+  SERVICE_VERSION: '1.0.0',
+  DEFAULT_ADMIN_EMAIL: 'admin@observability.io',
+  DEFAULT_ADMIN_ID: 'usr-admin-001',
+  DEFAULT_ADMIN_NAME: 'Observability Admin',
+  DEFAULT_ADMIN_ROLE: 'admin',
+  DEFAULT_ORG_ID: 'org-default-001',
+  DEFAULT_ORG_NAME: 'Acme Observability',
+  DEFAULT_ADMIN_PASSWORD_HASH: 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f',
+  HEADER_AUTHORIZATION: 'authorization',
+  HEADER_AUTHORIZATION_CAMEL: 'Authorization',
+  BEARER_PREFIX: 'Bearer ',
+  API_KEY_PREFIX: 'ak_',
+  SPAN_DB_SYSTEM: 'db.system',
+  SPAN_DB_SYSTEM_VAL: 'alloydb_omni',
+} as const;

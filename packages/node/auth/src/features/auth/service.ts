@@ -4,6 +4,7 @@ import type { ApiKeyRecord, AuthTokenPayload } from '../../shared/types/auth.typ
 import { InvalidCredentialsError, ApiKeyRevokedError } from '../../shared/errors/auth.errors';
 import { verifyPassword, hashApiKey } from '../../shared/utils/argon2.util';
 import { createToken, verifyToken } from '../../shared/utils/jwt.util';
+import { AUTH_CONSTANTS } from '../../shared/constants/auth.constants';
 
 export class AuthService {
   constructor(private readonly repo: AuthRepositoryPort) {}
@@ -34,16 +35,16 @@ export class AuthService {
   }
 
   async generateApiKey(input: CreateApiKeyInput): Promise<{ rawKey: string; keyRecord: ApiKeyRecord }> {
-    const keyId = `key_${Math.random().toString(36).substring(2, 9)}`;
+    const keyId = `${AUTH_CONSTANTS.API_KEY_PREFIX}${Math.random().toString(36).substring(2, 9)}`;
     const secret = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    const rawKey = `sk_live_${input.org_id}_${secret}`;
+    const rawKey = `${AUTH_CONSTANTS.API_KEY_PREFIX}${input.org_id}_${secret}`;
     const keyHash = await hashApiKey(rawKey);
 
     const keyRecord: ApiKeyRecord = {
       key_id: keyId,
       org_id: input.org_id,
       key_hash: keyHash,
-      prefix: `sk_live_${input.org_id}`,
+      prefix: `${AUTH_CONSTANTS.API_KEY_PREFIX}${input.org_id}`,
       name: input.name,
       created_at_ms: Date.now(),
       revoked: false,

@@ -1,0 +1,11 @@
+FROM node:20-alpine
+WORKDIR /app
+ENV NODE_ENV=development
+
+COPY package*.json tsconfig*.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm install
+
+COPY . .
+EXPOSE 3001
+CMD ["npm", "run", "dev"]

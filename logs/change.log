@@ -1,3 +1,28 @@
+[2026-08-16T11:00:00+05:30] Enhance auth package with OpenTelemetry tracing, layer-cached multistage Docker build, and AlloyDB Omni adapter
+└── File: packages/node/auth/Dockerfile, packages/node/auth/Dockerfile.dev, packages/node/auth/docker-compose.yml, packages/node/auth/src/infra/tracing/tracer.ts, packages/node/auth/src/infra/tracing/middleware.ts, packages/node/auth/src/shared/constants/endpoints.ts, packages/node/auth/src/shared/constants/auth.constants.ts, packages/node/auth/src/infra/adapters/alloydb-omni-auth.adapter.ts
+    ├── Choice: Elevate OpenTelemetry distributed tracing and layer-cached multistage Docker builds as core package infrastructure standards. Eliminate all static inline strings by declaring exported constants in shared/constants/ endpoints and auth constants files.
+    └── Architecture & Design:
+        ┌──────────────────────────────────────────────────────────┐
+        │            @observability/auth Infrastructure            │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │
+        ┌────────────────────────────┼─────────────────────────────┐
+        ▼                            ▼                             ▼
+  ┌───────────┐               ┌────────────┐               ┌──────────────┐
+  │ OTel Span │               │ MultiStage │               │ AlloyDB Omni │
+  │ Tracing   │               │ Docker     │               │ Primary Repo │
+  └─────┬─────┘               └─────┬──────┘               └──────┬───────┘
+        │                            │                            │
+        ▼                            ▼                            ▼
+  (tracer.ts,                 (deps, builder,              (alloydb-omni-
+   middleware.ts)              runner cache)                auth.adapter.ts)
+    └── Changes:
+        ├── tracing -> Implement OpenTelemetry tracer initialization (tracer.ts) and HTTP tracing middleware (middleware.ts), and wrap REST routes with tracing spans.
+        ├── docker -> Create 3-stage Dockerfile with BuildKit npm cache mounts (--mount=type=cache,target=/root/.npm) isolating package.json installs from application source code copies, creating fast layer caches.
+        ├── constants -> Create src/shared/constants/endpoints.ts and src/shared/constants/auth.constants.ts eliminating all hardcoded static strings across router, services, adapters, and handlers.
+        ├── database -> Implement AlloyDBOmniAuthAdapter (src/infra/adapters/alloydb-omni-auth.adapter.ts) as the primary relational auth repository for AlloyDB Omni engine.
+        └── tests -> Add comprehensive test suite tree (tests/unit/, tests/integration/, tests/contract/, tests/performance/, tests/e2e/) with .gitkeep files in every directory and zero code comments.
+
 [2026-08-16T10:50:00+05:30] Track and version database performance queries reference library
 └── File: policies/rules/database/queries/performance-queries-0.md, policies/rules/database/queries/performance-queries-1.md, policies/rules/database/queries/performance-queries-2.md, policies/rules/database/queries/performance-queries-3.md, policies/rules/database/queries/performance-queries-4.md, policies/rules/database/queries/performance-queries-5.md, policies/rules/database/queries/performance-queries-6.md, policies/rules/database/queries/performance-queries-7.md, policies/rules/database/queries/performance-queries-8.md
     ├── Choice: Track the complete 9-file database performance query reference library under policies/rules/database/queries/ to serve as the underlying reference base for database query writing policy enforcement.
