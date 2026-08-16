@@ -4,6 +4,7 @@ import { authSaga } from "./auth.saga";
 
 featureRegistry.register("auth", { reducer: authReducer, saga: authSaga });
 
+export * from "./auth.constants";
 export * from "./auth.slice";
 export * from "./auth.saga";
 export * from "./ui/SignUpForm";

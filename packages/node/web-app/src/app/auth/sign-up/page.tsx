@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
-import { SignUpForm, authActions, type AuthState } from '../../../features/auth';
+import { SignUpForm, authActions, type AuthState, AUTH_DEFAULT_FIXTURES, AUTH_ROUTES } from '../../../features/auth';
 
 export default function SignUpPage() {
   const dispatch = useDispatch();
@@ -17,7 +17,7 @@ export default function SignUpPage() {
 
   useEffect(() => {
     if (status === 'success') {
-      router.push('/auth/sign-in');
+      router.push(AUTH_ROUTES.SIGN_IN);
     }
   }, [status, router]);
 
@@ -28,10 +28,10 @@ export default function SignUpPage() {
   return (
     <div className="auth-container">
       <SignUpForm
-        initialName="Jaydeep"
-        initialOrgName="Scaibu"
-        initialEmail="jaydeep@gmail.com"
-        initialPassword="password12345"
+        initialName={AUTH_DEFAULT_FIXTURES.NAME}
+        initialOrgName={AUTH_DEFAULT_FIXTURES.ORG_NAME}
+        initialEmail={AUTH_DEFAULT_FIXTURES.EMAIL}
+        initialPassword={AUTH_DEFAULT_FIXTURES.PASSWORD}
         loading={status === 'loading'}
         errorMsg={error}
         onSubmit={handleSubmit}
