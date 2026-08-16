@@ -19,33 +19,27 @@ const server = http.createServer(async (req, res) => {
   });
 
   req.on('end', async () => {
-    try {
-      let parsedBody: unknown = undefined;
-      if (bodyData) {
-        try {
-          parsedBody = JSON.parse(bodyData);
-        } catch {
-          parsedBody = bodyData;
-        }
+    let parsedBody: unknown = undefined;
+    if (bodyData) {
+      try {
+        parsedBody = JSON.parse(bodyData);
+      } catch {
+        parsedBody = bodyData;
       }
-
-      const headersRecord: Record<string, string> = {};
-      for (const [key, val] of Object.entries(req.headers)) {
-        if (typeof val === 'string') {
-          headersRecord[key.toLowerCase()] = val;
-        } else if (Array.isArray(val) && val.length > 0 && val[0]) {
-          headersRecord[key.toLowerCase()] = val[0];
-        }
-      }
-
-      const result = await router.route(method, url, parsedBody, headersRecord);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(result, null, 2));
-    } catch (err: any) {
-      const statusCode = err.message?.includes('Invalid credentials') ? 401 : 400;
-      res.writeHead(statusCode, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: err.message ?? 'Internal Server Error' }, null, 2));
     }
+
+    const headersRecord: Record<string, string> = {};
+    for (const [key, val] of Object.entries(req.headers)) {
+      if (typeof val === 'string') {
+        headersRecord[key.toLowerCase()] = val;
+      } else if (Array.isArray(val) && val.length > 0 && val[0]) {
+        headersRecord[key.toLowerCase()] = val[0];
+      }
+    }
+
+    const { statusCode, payload } = await router.route(method, url, parsedBody, headersRecord);
+    res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(payload, null, 2));
   });
 });
 

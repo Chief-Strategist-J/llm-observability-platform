@@ -6,46 +6,63 @@ import { handleCreateApiKey, handleVerifyApiKey, handleListPermissions } from '.
 import { withSpan } from '../../../infra/tracing/tracer';
 import { AUTH_ENDPOINTS, HTTP_METHODS } from '../../../shared/constants/endpoints';
 import { AUTH_CONSTANTS } from '../../../shared/constants/auth.constants';
+import { createSuccessResponse, createErrorResponse, type StandardApiResponse } from '../../../shared/errors/error-handler';
 
 export class AuthRestV1Router {
   constructor(private readonly service: AuthService) {}
 
-  async route(method: string, path: string, body?: unknown, headers?: Record<string, string>): Promise<unknown> {
+  async route(method: string, path: string, body?: unknown, headers?: Record<string, string>): Promise<{ statusCode: number; payload: StandardApiResponse<unknown> }> {
     return withSpan(`REST ${method} ${path}`, async (span) => {
       span.setAttribute('http.method', method);
       span.setAttribute('http.target', path);
 
-      if (method === HTTP_METHODS.POST && path === AUTH_ENDPOINTS.SIGN_UP) {
-        return handleSignUp(this.service, body);
+      try {
+        let resultData: unknown = undefined;
+
+        if (method === HTTP_METHODS.POST && path === AUTH_ENDPOINTS.SIGN_UP) {
+          resultData = await handleSignUp(this.service, body);
+          return { statusCode: 201, payload: createSuccessResponse(resultData, 'User and organization successfully registered') };
+        }
+        if (method === HTTP_METHODS.POST && path === AUTH_ENDPOINTS.SIGN_IN) {
+          resultData = await handleSignIn(this.service, body, headers);
+          return { statusCode: 200, payload: createSuccessResponse(resultData, 'User signed in successfully') };
+        }
+        if (method === HTTP_METHODS.GET && path === AUTH_ENDPOINTS.SESSION) {
+          const authHeader = headers?.[AUTH_CONSTANTS.HEADER_AUTHORIZATION] ?? headers?.[AUTH_CONSTANTS.HEADER_AUTHORIZATION_CAMEL];
+          resultData = await handleVerifySession(this.service, authHeader);
+          return { statusCode: 200, payload: createSuccessResponse(resultData, 'Session token verified') };
+        }
+        if (method === HTTP_METHODS.POST && path === AUTH_ENDPOINTS.FORGOT_PASSWORD) {
+          resultData = await handleForgotPassword(this.service, body);
+          return { statusCode: 200, payload: createSuccessResponse(resultData, 'Password reset request processed') };
+        }
+        if (method === HTTP_METHODS.POST && path === AUTH_ENDPOINTS.RESET_PASSWORD) {
+          resultData = await handleResetPassword(this.service, body);
+          return { statusCode: 200, payload: createSuccessResponse(resultData, 'Password successfully reset') };
+        }
+        if (method === HTTP_METHODS.POST && path === AUTH_ENDPOINTS.CHANGE_PASSWORD) {
+          const authHeader = headers?.[AUTH_CONSTANTS.HEADER_AUTHORIZATION] ?? headers?.[AUTH_CONSTANTS.HEADER_AUTHORIZATION_CAMEL];
+          const payload = await handleVerifySession(this.service, authHeader);
+          resultData = await handleChangePassword(this.service, payload.sub, body);
+          return { statusCode: 200, payload: createSuccessResponse(resultData, 'Password successfully changed') };
+        }
+        if (method === HTTP_METHODS.POST && path === AUTH_ENDPOINTS.API_KEYS) {
+          resultData = await handleCreateApiKey(this.service, body);
+          return { statusCode: 201, payload: createSuccessResponse(resultData, 'API key successfully created') };
+        }
+        if (method === HTTP_METHODS.POST && path === AUTH_ENDPOINTS.API_KEYS_VERIFY) {
+          resultData = await handleVerifyApiKey(this.service, body);
+          return { statusCode: 200, payload: createSuccessResponse(resultData, 'API key verified') };
+        }
+        if (method === HTTP_METHODS.GET && path === AUTH_ENDPOINTS.PERMISSIONS) {
+          resultData = await handleListPermissions(this.service);
+          return { statusCode: 200, payload: createSuccessResponse(resultData, 'System permissions retrieved') };
+        }
+
+        throw new Error(`Route not found: ${method} ${path}`);
+      } catch (err: unknown) {
+        return createErrorResponse(err);
       }
-      if (method === HTTP_METHODS.POST && path === AUTH_ENDPOINTS.SIGN_IN) {
-        return handleSignIn(this.service, body, headers);
-      }
-      if (method === HTTP_METHODS.GET && path === AUTH_ENDPOINTS.SESSION) {
-        const authHeader = headers?.[AUTH_CONSTANTS.HEADER_AUTHORIZATION] ?? headers?.[AUTH_CONSTANTS.HEADER_AUTHORIZATION_CAMEL];
-        return handleVerifySession(this.service, authHeader);
-      }
-      if (method === HTTP_METHODS.POST && path === AUTH_ENDPOINTS.FORGOT_PASSWORD) {
-        return handleForgotPassword(this.service, body);
-      }
-      if (method === HTTP_METHODS.POST && path === AUTH_ENDPOINTS.RESET_PASSWORD) {
-        return handleResetPassword(this.service, body);
-      }
-      if (method === HTTP_METHODS.POST && path === AUTH_ENDPOINTS.CHANGE_PASSWORD) {
-        const authHeader = headers?.[AUTH_CONSTANTS.HEADER_AUTHORIZATION] ?? headers?.[AUTH_CONSTANTS.HEADER_AUTHORIZATION_CAMEL];
-        const payload = await handleVerifySession(this.service, authHeader);
-        return handleChangePassword(this.service, payload.sub, body);
-      }
-      if (method === HTTP_METHODS.POST && path === AUTH_ENDPOINTS.API_KEYS) {
-        return handleCreateApiKey(this.service, body);
-      }
-      if (method === HTTP_METHODS.POST && path === AUTH_ENDPOINTS.API_KEYS_VERIFY) {
-        return handleVerifyApiKey(this.service, body);
-      }
-      if (method === HTTP_METHODS.GET && path === AUTH_ENDPOINTS.PERMISSIONS) {
-        return handleListPermissions(this.service);
-      }
-      throw new Error(`Route not found: ${method} ${path}`);
     });
   }
 }

@@ -2,7 +2,7 @@ import type { AuthRepositoryPort } from './repository';
 import type { SignUpInput, SignInInput, ForgotPasswordInput, ResetPasswordInput, ChangePasswordInput, CreateApiKeyInput, VerifyApiKeyInput, AuthUserRecord } from './types';
 import type { ApiKeyRecord, AuthTokenPayload } from '../../shared/types/auth.types';
 import { SignUpInputSchema, SignInInputSchema, ResetPasswordInputSchema, ChangePasswordInputSchema, CreateApiKeyInputSchema, VerifyApiKeyInputSchema } from './schema/auth.schema';
-import { InvalidCredentialsError, ApiKeyRevokedError } from '../../shared/errors/auth.errors';
+import { InvalidCredentialsError, ApiKeyRevokedError, UserAlreadyExistsError, OrgAlreadyExistsError, InsufficientPermissionError, ValidationError } from '../../shared/errors/auth.errors';
 import { hashPassword, verifyPassword, hashApiKey } from '../../shared/utils/argon2.util';
 import { createToken, verifyToken } from '../../shared/utils/jwt.util';
 import { AUTH_CONSTANTS } from '../../shared/constants/auth.constants';
@@ -15,7 +15,7 @@ export class AuthService {
 
     const existingUser = await this.repo.findUserByEmail(validated.email);
     if (existingUser) {
-      throw new Error(`Email address already registered: ${validated.email}`);
+      throw new UserAlreadyExistsError(validated.email);
     }
 
     const passwordHash = await hashPassword(validated.password);
@@ -32,7 +32,14 @@ export class AuthService {
       role: validated.role ?? AUTH_CONSTANTS.ROLE_ADMIN,
     };
 
-    await this.repo.createOrganizationAndUser(userRecord);
+    try {
+      await this.repo.createOrganizationAndUser(userRecord);
+    } catch (err: any) {
+      if (err.message?.includes('Organization name already exists')) {
+        throw new OrgAlreadyExistsError(validated.organization_name);
+      }
+      throw err;
+    }
 
     const token = createToken(userRecord.id, userRecord.email, {
       org_id: userRecord.org_id,
@@ -101,7 +108,7 @@ export class AuthService {
 
     const record = await this.repo.findPasswordResetToken(tokenHash);
     if (!record || record.used || record.expiresAtMs < Date.now()) {
-      throw new Error('Invalid or expired password reset token');
+      throw new ValidationError('Invalid or expired password reset token');
     }
 
     const newHash = await hashPassword(validated.new_password);
@@ -173,7 +180,7 @@ export class AuthService {
       authorized = isSuperSecret || hasAdminAll || hasSpecific;
 
       if (!authorized) {
-        throw new Error(`Insufficient permission: key lacks ${validated.required_permission}`);
+        throw new InsufficientPermissionError(validated.required_permission);
       }
     }
 

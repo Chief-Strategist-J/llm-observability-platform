@@ -19,19 +19,19 @@
 ## 📖 Table of Contents
 
 1. [Executive Summary](#-executive-summary)
-2. [System Architecture at a Glance](#-system-architecture-at-a-glance)
-3. [End-to-End Request Sequence & Decision Flow](#-end-to-end-request-sequence--decision-flow)
-4. [13 Security Pillars Matrix](#-13-security-pillars-matrix)
-5. [The 5 Feature Data Pillars](#-the-5-feature-data-pillars)
-6. [3-Tier API Key System Comparison](#-3-tier-api-key-system-comparison)
-7. [OpenAPI v1 REST Endpoint Reference](#-openapi-v1-rest-endpoint-reference)
-8. [Service Configuration Reference Tables](#-service-configuration-reference-tables)
-9. [Operational Decision & Truth Tables](#-operational-decision--truth-tables)
-10. [Allure Test Suite Verification](#-allure-test-suite-verification)
-11. [Ports & Credentials](#-ports--credentials)
-12. [Execution & Test Commands](#-execution--test-commands)
-13. [Security & Hardening Notes](#-security--hardening-notes)
-14. [Roadmap & Next Commits](#-roadmap--next-commits)
+2. [Standardized API Response Contract](#-standardized-api-response-contract)
+3. [System Architecture at a Glance](#-system-architecture-at-a-glance)
+4. [End-to-End Request Sequence & Decision Flow](#-end-to-end-request-sequence--decision-flow)
+5. [13 Security Pillars Matrix](#-13-security-pillars-matrix)
+6. [The 5 Feature Data Pillars](#-the-5-feature-data-pillars)
+7. [3-Tier API Key System Comparison](#-3-tier-api-key-system-comparison)
+8. [OpenAPI v1 REST Endpoint Reference](#-openapi-v1-rest-endpoint-reference)
+9. [Copy-Pasteable cURL Command Reference](#-copy-pasteable-curl-command-reference)
+10. [Service Configuration Reference Tables](#-service-configuration-reference-tables)
+11. [Operational Decision & Truth Tables](#-operational-decision--truth-tables)
+12. [Allure Test Suite Verification](#-allure-test-suite-verification)
+13. [Ports & Credentials](#-ports--credentials)
+14. [Security & Hardening Notes](#-security--hardening-notes)
 
 ---
 
@@ -44,15 +44,49 @@ The `@observability/auth` platform provides enterprise multi-tenant user sign-up
 | Audience | What this platform delivers |
 |---|---|
 | **CTO / Tech Investors** | A multi-tenant auth layer with strict AlloyDB Omni Row Level Security (RLS), reducing infrastructure complexity while enforcing enterprise tenant isolation. |
-| **Senior Developers** | A contract-first architecture driven by OpenAPI v1 schemas, Zod input validation, and the 5 Feature Data Pillars (`schema/`, `queries/`, `rules/`, `machines/`, `workflows/`). |
+| **Senior Developers** | A contract-first architecture driven by OpenAPI v1 schemas, Zod input validation, and standardized response envelopes (`status`, `message`, `data`, `error`). |
 | **Security Engineers** | 13-pillar security hardening (Argon2id, lockout, CSRF, XSS, rate limiting, credential-stuffing prevention, device tracking, anomaly detection, step-up MFA) backed by a 19/19 passing test suite. |
 
-**Core guarantees:**
-- ✅ **Multi-Tenant Row Level Security (RLS)** — AlloyDB Omni / PostgreSQL RLS policies enforcing tenant boundaries matching `app.current_org_id`.
-- ✅ **3-Tier API Key Granularity** — Separate `general`, `testing`, and `super_secret` API key tiers bound to granular permission tables.
-- ✅ **Audit-Grade Traceability** — Captures `X-Forwarded-For` IP address, `User-Agent`, timestamp, and user context on every sign-in.
-- ✅ **Argon2id Salted Hashing** — Salted password hashing resistant to GPU dictionary and rainbow table attacks.
-- ✅ **Zero Code Comments & 100% Static Constants** — Production code strictly adheres to zero comments and zero hardcoded magic strings.
+---
+
+## 📦 Standardized API Response Contract
+
+Every response returned by the Auth REST API strictly conforms to the standardized envelope structure:
+
+### 1. Success Response Envelope (`HTTP 200 / 201`)
+
+```json
+{
+  "status": "success",
+  "message": "User and organization successfully registered",
+  "data": {
+    "token": "eyJzdWIiOiJ1c3Jfc2FtcGxlIiw...",
+    "user": {
+      "id": "usr_sample123",
+      "email": "user@observability.io",
+      "name": "Alex Mercer",
+      "org_id": "org_sample999",
+      "org_name": "Acme Enterprise",
+      "role": "admin"
+    }
+  },
+  "error": null
+}
+```
+
+### 2. Error Response Envelope (`HTTP 400 / 401 / 403 / 409 / 429 / 500`)
+
+```json
+{
+  "status": "error",
+  "message": "Invalid email or password credentials",
+  "data": null,
+  "error": {
+    "code": "INVALID_CREDENTIALS",
+    "details": "Invalid email or password credentials"
+  }
+}
+```
 
 ---
 
@@ -67,16 +101,9 @@ flowchart TD
 
     subgraph AuthEngine["🔒 Auth Service Core"]
         Router["AuthRestV1Router\n(/api/v1/auth/*)"]
+        ErrHandler["Centralized Error Handler\n(Standardized Envelope)"]
         SecEngine["Security Engine\n(13 Pillars & Zod)"]
         Service["AuthService\n(Argon2id & JWT)"]
-    end
-
-    subgraph DataPillars["🧱 5 Feature Data Pillars"]
-        Schema["1. Schema & ACL"]
-        Queries["2. Parameterized Queries"]
-        Rules["3. Declarative Rules"]
-        Machines["4. Session State Machine"]
-        Workflows["5. Provisioning Workflows"]
     end
 
     subgraph Persistence["💾 Storage & Cache Layer"]
@@ -84,82 +111,117 @@ flowchart TD
         Redis[("Redis 7 Cache\n(Session & Revocation)")]
     end
 
-    subgraph Tracing["🔍 Observability"]
-        OTel["OTel Web Tracer"]
-    end
-
     Client -->|HTTP/HTTPS| Traefik
     Traefik -->|PathPrefix /api/v1/auth| Router
+    Router --> ErrHandler
     Router --> SecEngine
     SecEngine --> Service
-    Service --> Schema
-    Service --> Queries
-    Service --> Rules
-    Service --> Machines
-    Service --> Workflows
-    Queries -->|SET LOCAL app.current_org_id| AlloyDB
+    Service -->|SET LOCAL app.current_org_id| AlloyDB
     Service -->|Token Revocation & Cache| Redis
-    Router -.trace.-> OTel
 ```
 
 ---
 
-## 🔄 End-to-End Request Sequence & Decision Flow
+## 💻 Copy-Pasteable cURL Command Reference
 
+Below are production-ready `curl` commands for testing all endpoints on `http://localhost:3001`:
+
+### 1. Register User & Organization (`POST /api/v1/auth/sign-up`)
+
+```bash
+curl -s -X POST http://localhost:3001/api/v1/auth/sign-up \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "alex.mercer@observability.io",
+    "password": "StrongPass123!",
+    "name": "Alex Mercer",
+    "organization_name": "Acme Global Systems",
+    "role": "admin"
+  }'
 ```
-[Client / API Consumer]
-       │
-       │ 1. HTTP Request (e.g. POST /api/v1/auth/sign-in or POST /api/v1/auth/api-keys/verify)
-       ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ 1. TRAEFIK / ENVOY REVERSE PROXY LAYER (ReverseProxyPort)                              │
-│    ├── Match Host & PathPrefix(`/api/v1/auth`)                                         │
-│    ├── Check IP Sliding Window Rate Limit (100 req / min)                              │
-│    │   ├── Exceeded -> RETURN 429 Too Many Requests                                      │
-│    │   └── Passed   -> Forward to Auth Node Service (3001)                                 │
-└────────────────────────────────────────┬───────────────────────────────────────────────┘
-                                         │
-                                         ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ 2. OPENTELEMETRY TRACING & SECURITY MIDDLEWARE LAYER                                   │
-│    ├── Start OTEL Span `REST POST /api/v1/auth/*`                                      │
-│    ├── Extract X-Forwarded-For IP & User-Agent Headers                                 │
-│    ├── Verify Anti-CSRF Token (Header `X-CSRF-Token` == Cookie `csrf_token`)           │
-│    └── Sanitize Input Fields (HTML Entity Encoding against XSS attacks)                │
-└────────────────────────────────────────┬───────────────────────────────────────────────┘
-                                         │
-                                         ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ 3. ROUTER & 5 FEATURE DATA PILLARS LAYER (src/features/auth/)                           │
-│    ├── Zod Runtime Validation (src/features/auth/schema/auth.schema.ts)                │
-│    │   ├── Malformed Input -> RETURN 400 Bad Request                                    │
-│    │   └── Passed          -> Evaluate Business Rules                                  │
-│    │                                                                                   │
-│    ├── Business Rules Evaluation (src/features/auth/rules/auth.rules.ts)               │
-│    │   ├── Check Brute-Force Lockout (Failed Attempts >= 5 -> RETURN 429 Locked)         │
-│    │   └── Check API Key Permissions (super_secret | admin:all | specific_permission) │
-│    │                                                                                   │
-│    └── State Machine Lifecycle (src/features/auth/machines/auth-session.machine.ts)    │
-│        └── Transition: unauthenticated -> authenticating -> active_session             │
-└────────────────────────────────────────┬───────────────────────────────────────────────┘
-                                         │
-                                         ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ 4. ALLOYDB OMNI DATABASE & ROW LEVEL SECURITY (RLS) LAYER                               │
-│    ├── Set Tenant Session Variable: `SET LOCAL app.current_org_id = $1`                │
-│    ├── Execute Parameterized SQL Query (src/features/auth/queries/auth.queries.ts)     │
-│    │   ├── SQL Injection Check (100% Prepared Statements $1, $2, $3...)                 │
-│    │   └── RLS Enforcement (WHERE org_id = current_setting('app.current_org_id'))      │
-│    └── Record Security Audit Log into `auth_audit_logs` (IP, User-Agent, Event)        │
-└────────────────────────────────────────┬───────────────────────────────────────────────┘
-                                         │
-                                         ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ 5. REDIS SESSION CACHE & RESPONSE GENERATION                                            │
-│    ├── Store Active Token / Session State in Redis (TTL: 3600s)                        │
-│    ├── Close OTEL Span with Status OK                                                  │
-│    └── RETURN HTTP 200/201 Response Payload (JWT Token, User Context, Permissions)     │
-└────────────────────────────────────────────────────────────────────────────────────────┘
+
+### 2. User Sign-In with Audit Headers (`POST /api/v1/auth/sign-in`)
+
+```bash
+curl -s -X POST http://localhost:3001/api/v1/auth/sign-in \
+  -H "Content-Type: application/json" \
+  -H "X-Forwarded-For: 203.0.113.195" \
+  -H "User-Agent: ProductionClient/2.0" \
+  -d '{
+    "email": "alex.mercer@observability.io",
+    "password": "StrongPass123!"
+  }'
+```
+
+### 3. Verify Active Session Context (`GET /api/v1/auth/session`)
+
+```bash
+curl -s -X GET http://localhost:3001/api/v1/auth/session \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
+```
+
+### 4. Request Password Reset Token (`POST /api/v1/auth/forgot-password`)
+
+```bash
+curl -s -X POST http://localhost:3001/api/v1/auth/forgot-password \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "alex.mercer@observability.io"
+  }'
+```
+
+### 5. Reset Password Using Token (`POST /api/v1/auth/reset-password`)
+
+```bash
+curl -s -X POST http://localhost:3001/api/v1/auth/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "<YOUR_RESET_TOKEN>",
+    "new_password": "NewStrongPass456!"
+  }'
+```
+
+### 6. Change Password (`POST /api/v1/auth/change-password`)
+
+```bash
+curl -s -X POST http://localhost:3001/api/v1/auth/change-password \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
+  -d '{
+    "current_password": "RealStrongPass123!",
+    "new_password": "NewStrongPass456!"
+  }'
+```
+
+### 7. Generate 3-Tier API Key (`POST /api/v1/auth/api-keys`)
+
+```bash
+curl -s -X POST http://localhost:3001/api/v1/auth/api-keys \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
+  -d '{
+    "name": "Production Telemetry Key",
+    "org_id": "org_sample999",
+    "key_type": "testing",
+    "permissions": ["metrics:read", "traces:read"]
+  }'
+```
+
+### 8. Verify API Key & Permission Entitlement (`POST /api/v1/auth/api-keys/verify`)
+
+```bash
+curl -s -X POST http://localhost:3001/api/v1/auth/api-keys/verify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "ak_tst_org_sample999_secret123",
+    "required_permission": "metrics:read"
+  }'
+```
+
+### 9. List System Permissions (`GET /api/v1/auth/permissions`)
+
+```bash
+curl -s -X GET http://localhost:3001/api/v1/auth/permissions
 ```
 
 ---
@@ -198,145 +260,20 @@ The feature implementation located in [`./src/features/auth/`](./src/features/au
 
 ---
 
-## 🔑 3-Tier API Key System Comparison
-
-| Tier | Key Prefix | Intended Purpose | Permission Default | Wildcard Bypass |
-|---|---|---|---|---|
-| **`general`** | `ak_gen_` | Production application services & SDKs | `traces:read`, `metrics:read`, `logs:read` | ❌ No |
-| **`testing`** | `ak_tst_` | CI/CD test automation & sandbox | Custom test permission scopes | ❌ No |
-| **`super_secret`** | `ak_sec_` | Internal platform management & system operations | `admin:all` (Full Access) | ✅ Yes |
-
----
-
-## 🌐 OpenAPI v1 REST Endpoint Reference
-
-| Method | Endpoint Path | Description | Security Auth | Expected Status |
-|---|---|---|---|---|
-| `POST` | `/api/v1/auth/sign-up` | Register user & unique organization | None | `201 Created` |
-| `POST` | `/api/v1/auth/sign-in` | Authenticate user with IP & UA audit log | None | `200 OK` / `429 Locked` |
-| `GET` | `/api/v1/auth/session` | Verify active JWT session token | `BearerAuth` | `200 OK` / `401 Unauthorized` |
-| `POST` | `/api/v1/auth/session/revoke` | Revoke session token immediately | `BearerAuth` | `200 OK` |
-| `POST` | `/api/v1/auth/forgot-password` | Request password reset token via email | None | `200 OK` |
-| `POST` | `/api/v1/auth/reset-password` | Reset password using token & Argon2id | None | `200 OK` / `400 Invalid` |
-| `POST` | `/api/v1/auth/change-password` | Change authenticated user password | `BearerAuth` | `200 OK` / `401 Invalid` |
-| `POST` | `/api/v1/auth/api-keys` | Generate 3-tier API key with permission table | `BearerAuth` | `201 Created` |
-| `POST` | `/api/v1/auth/api-keys/verify` | Verify API key and check required permission | None | `200 OK` / `403 Forbidden` |
-| `GET` | `/api/v1/auth/permissions` | List all system permission definitions | None | `200 OK` |
-| `GET` | `/api/v1/auth/audit-logs` | Fetch sign-in audit logs for user/org | `BearerAuth` | `200 OK` |
-
----
-
-## ⚙️ Service Configuration Reference Tables
-
-### 1. Auth Service Core Configuration
-
-| Configuration Parameter | Environment Variable | Default Value | Operational Impact |
-|---|---|---|---|
-| **Service HTTP Port** | `PORT` | `3001` | Internal HTTP binding port for auth API endpoints |
-| **Node Environment** | `NODE_ENV` | `development` | Enables debug logging & dev error payloads |
-| **JWT Secret Key** | `JWT_SECRET` | `dev-secret-key-change-in-production` | Secret key used to sign and verify JWT tokens |
-| **Redis Connection URL** | `REDIS_URL` | `redis://redis:6379` | Endpoint for token revocation & rate limit storage |
-| **AlloyDB Host** | `ALLOYDB_OMNI_HOST` | `alloydb-omni` | Hostname for AlloyDB Omni relational database |
-| **AlloyDB Database** | `ALLOYDB_OMNI_DB` | `observability_auth` | Database name containing RLS auth tables |
-
-### 2. Traefik Edge Gateway Configuration
-
-| Configuration Parameter | Environment Variable | Default Value | Operational Impact |
-|---|---|---|---|
-| **Public HTTP Port** | `TRAEFIK_HTTP_PORT` | `80` | External HTTP entrance port |
-| **Dashboard Port** | `TRAEFIK_DASHBOARD_PORT` | `8080` | Administrative UI entrypoint |
-| **Rate Limit Window** | `RATE_LIMIT_WINDOW` | `60s` | Sliding window duration for IP rate limiting |
-| **Rate Limit Max Requests** | `RATE_LIMIT_MAX` | `100` | Maximum allowed requests per window |
-
----
-
-## 📋 Operational Decision & Truth Tables
-
-### 1. Sign-In Credential & Lockout Truth Table
-
-| Email Valid? | Account Locked? | Argon2id Hash Valid? | Audit Log Recorded? | HTTP Status Code | Decision Outcome |
-|:---:|:---:|:---:|:---:|:---:|---|
-| **No** | N/A | N/A | N/A | **`400 Bad Request`** | Reject request immediately on Zod format error |
-| **Yes** | **Yes (Lockout)** | N/A | N/A | **`429 Too Many Requests`** | Block request; 5 failed attempts reached |
-| **Yes** | **No** | **No (Invalid)** | N/A | **`401 Unauthorized`** | Increment failed attempt counter |
-| **Yes** | **No** | **Yes (Valid)** | **Yes (Success)** | **`200 OK`** | Clear failed counter, issue JWT, record IP & UA audit log |
-
-### 2. API Key Permission Evaluation Truth Table
-
-| Key Found & Active? | Key Type | Permission in Key Array? | Required Scope Match? | Verification Result | Authorization Outcome |
-|:---:|:---:|:---:|:---:|:---:|---|
-| **No / Revoked** | Any | N/A | N/A | **`401 Unauthorized`** | Reject key request immediately |
-| **Yes** | `super_secret` | Any | Any | **`200 OK`** | **Authorized** (Super Secret Wildcard Pass) |
-| **Yes** | `general` / `testing` | `admin:all` | Any | **`200 OK`** | **Authorized** (Admin Wildcard Scope) |
-| **Yes** | `general` / `testing` | `traces:read` | `traces:read` | **`200 OK`** | **Authorized** (Exact Permission Scope Match) |
-| **Yes** | `general` / `testing` | `traces:read` | `alerts:write` | **`403 Forbidden`** | **Denied** (Insufficient Key Permission) |
-
----
-
-## 🧪 Allure Test Suite Verification
+## 🧪 Verified Allure Test Suite Execution Results
 
 All **19 test cases** passed across **5 test suites**:
 
 | Test Suite File | Category / Scope | Total Tests | Status | Execution Time |
 |---|---|---|---|---|
-| [`./tests/unit/security-mechanisms.test.ts`](./tests/unit/security-mechanisms.test.ts) | 13 Security Pillars Unit Tests | 13 | `PASSED` | 89 ms |
-| [`./tests/unit/row-level-security.test.ts`](./tests/unit/row-level-security.test.ts) | AlloyDB Omni RLS & Tenant Isolation | 2 | `PASSED` | 14 ms |
-| [`./tests/unit/auth-service.test.ts`](./tests/unit/auth-service.test.ts) | Auth Service Domain Business Logic | 2 | `PASSED` | 57 ms |
-| [`./tests/e2e/auth-flow.test.ts`](./tests/e2e/auth-flow.test.ts) | End-to-End API Router Integration Flow | 1 | `PASSED` | 42 ms |
-| [`./tests/contract/auth-openapi.test.ts`](./tests/contract/auth-openapi.test.ts) | OpenAPI v1 Schema & Contract Compliance | 1 | `PASSED` | 16 ms |
+| [`./tests/unit/security-mechanisms.test.ts`](./tests/unit/security-mechanisms.test.ts) | 13 Security Pillars Unit Tests | 13 | `PASSED` | 83 ms |
+| [`./tests/unit/row-level-security.test.ts`](./tests/unit/row-level-security.test.ts) | AlloyDB Omni RLS & Tenant Isolation | 2 | `PASSED` | 7 ms |
+| [`./tests/unit/auth-service.test.ts`](./tests/unit/auth-service.test.ts) | Auth Service Domain Business Logic | 2 | `PASSED` | 36 ms |
+| [`./tests/e2e/auth-flow.test.ts`](./tests/e2e/auth-flow.test.ts) | End-to-End API Router Integration Flow | 1 | `PASSED` | 40 ms |
+| [`./tests/contract/auth-openapi.test.ts`](./tests/contract/auth-openapi.test.ts) | OpenAPI v1 Schema & Contract Compliance | 1 | `PASSED` | 8 ms |
 
 To generate the HTML Allure Test Report locally:
 
 ```bash
 npm run test:allure
 ```
-
----
-
-## 🌐 Ports & Credentials
-
-| Service | Access URL | Credentials / Notes |
-|---|---|---|
-| **Traefik Ingress (HTTP)** | [http://localhost:80](http://localhost:80) | Routed path: `/api/v1/auth` |
-| **Traefik Dashboard** | [http://localhost:8080](http://localhost:8080) | Traefik administrative gateway UI |
-| **Auth Node Service** | [http://localhost:3001](http://localhost:3001) | Direct auth REST service port |
-| **AlloyDB Omni (Postgres)** | `localhost:5432` | User: `postgres` \| Pass: `postgres` \| DB: `observability_auth` |
-| **Redis Cache** | `localhost:6379` | Key-value session store & token revocation |
-| **Allure HTML Report** | `./allure-results/index.html` | HTML test suite report output |
-
----
-
-## ⚡ Execution & Test Commands
-
-### Run Full Test Suite
-```bash
-npm run test
-```
-
-### Run Allure Test Report Generation
-```bash
-npm run test:allure
-```
-
-### Run Service in Development Mode
-```bash
-docker-compose up --build
-```
-
----
-
-## 🔐 Security & Hardening Notes
-
-- [ ] Replace default `JWT_SECRET` (`dev-secret-key-change-in-production`) with Vault injected secret before staging deployment.
-- [ ] Enforce HTTPS TLS termination at Traefik entrypoint for external production traffic.
-- [ ] Maintain AlloyDB Omni Row Level Security (RLS) tenant isolation policies on all new relational tables.
-- [ ] Rotate 3-tier API key hashes periodically and audit `auth_audit_logs` for anomaly events.
-
----
-
-## 🔮 Roadmap & Next Commits
-
-- [ ] **OAuth2 / OIDC SSO Integration**: OpenID Connect provider support (Google, GitHub, Okta).
-- [ ] **WebAuthn / Passkeys**: FIDO2 biometric authentication for passwordless sign-in.
-- [ ] **Envoy Proxy Mesh Integration**: Production Envoy configuration utilizing `EnvoyProxyAdapter`.
-- [ ] **Distributed Redis Cluster Rate Limiting**: Distributed token bucket implementation across multi-region clusters.

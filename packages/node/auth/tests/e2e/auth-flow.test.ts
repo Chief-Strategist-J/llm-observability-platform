@@ -14,58 +14,74 @@ describe('Auth End-to-End API Flow Test Suite', () => {
     router = new AuthRestV1Router(service);
   });
 
-  it('should execute end-to-end flow: sign-up, sign-in audit logging, session verification, forgot/reset password, permissions listing, and 3-tier API key verification', async () => {
-    const signUpResult = (await router.route(HTTP_METHODS.POST, AUTH_ENDPOINTS.SIGN_UP, {
+  it('should execute end-to-end flow with standardized response envelope (status, message, data, error)', async () => {
+    const signUpRes = await router.route(HTTP_METHODS.POST, AUTH_ENDPOINTS.SIGN_UP, {
       email: 'e2euser@observability.io',
       password: 'StrongPass123!',
       name: 'E2E User',
       organization_name: 'E2E Enterprise',
       role: AUTH_CONSTANTS.ROLE_ADMIN,
-    })) as { token: string; user: { email: string; org_name: string } };
+    });
 
-    expect(signUpResult.token).toBeDefined();
-    expect(signUpResult.user.email).toBe('e2euser@observability.io');
+    expect(signUpRes.statusCode).toBe(201);
+    expect(signUpRes.payload.status).toBe('success');
+    const signUpData = signUpRes.payload.data as { token: string; user: { email: string } };
+    expect(signUpData.token).toBeDefined();
+    expect(signUpData.user.email).toBe('e2euser@observability.io');
 
-    const signInResult = (await router.route(HTTP_METHODS.POST, AUTH_ENDPOINTS.SIGN_IN, {
+    const signInRes = await router.route(HTTP_METHODS.POST, AUTH_ENDPOINTS.SIGN_IN, {
       email: 'e2euser@observability.io',
       password: 'StrongPass123!',
     }, {
       'x-forwarded-for': '192.168.1.100',
       'user-agent': 'E2E-Agent/1.0',
-    })) as { token: string };
+    });
 
-    expect(signInResult.token).toBeDefined();
+    expect(signInRes.statusCode).toBe(200);
+    expect(signInRes.payload.status).toBe('success');
+    const signInData = signInRes.payload.data as { token: string };
+    expect(signInData.token).toBeDefined();
 
-    const sessionResult = (await router.route(HTTP_METHODS.GET, AUTH_ENDPOINTS.SESSION, undefined, {
-      authorization: `${AUTH_CONSTANTS.BEARER_PREFIX}${signInResult.token}`,
-    })) as { sub: string; email: string };
+    const sessionRes = await router.route(HTTP_METHODS.GET, AUTH_ENDPOINTS.SESSION, undefined, {
+      authorization: `${AUTH_CONSTANTS.BEARER_PREFIX}${signInData.token}`,
+    });
 
-    expect(sessionResult.email).toBe('e2euser@observability.io');
+    expect(sessionRes.statusCode).toBe(200);
+    const sessionData = sessionRes.payload.data as { email: string };
+    expect(sessionData.email).toBe('e2euser@observability.io');
 
-    const forgotResult = (await router.route(HTTP_METHODS.POST, AUTH_ENDPOINTS.FORGOT_PASSWORD, {
+    const forgotRes = await router.route(HTTP_METHODS.POST, AUTH_ENDPOINTS.FORGOT_PASSWORD, {
       email: 'e2euser@observability.io',
-    })) as { resetToken: string };
+    });
 
-    expect(forgotResult.resetToken).toBeDefined();
+    expect(forgotRes.statusCode).toBe(200);
+    const forgotData = forgotRes.payload.data as { resetToken: string };
+    expect(forgotData.resetToken).toBeDefined();
 
-    const permsResult = (await router.route(HTTP_METHODS.GET, AUTH_ENDPOINTS.PERMISSIONS)) as { permissions: string[] };
-    expect(permsResult.permissions).toContain(AUTH_CONSTANTS.PERMISSION_ADMIN_ALL);
+    const permsRes = await router.route(HTTP_METHODS.GET, AUTH_ENDPOINTS.PERMISSIONS);
+    expect(permsRes.statusCode).toBe(200);
+    const permsData = permsRes.payload.data as { permissions: string[] };
+    expect(permsData.permissions).toContain(AUTH_CONSTANTS.PERMISSION_ADMIN_ALL);
 
-    const keyResult = (await router.route(HTTP_METHODS.POST, AUTH_ENDPOINTS.API_KEYS, {
+    const keyRes = await router.route(HTTP_METHODS.POST, AUTH_ENDPOINTS.API_KEYS, {
       name: 'Testing Key',
       org_id: AUTH_CONSTANTS.DEFAULT_ORG_ID,
       key_type: AUTH_CONSTANTS.KEY_TYPE_TESTING,
       permissions: [AUTH_CONSTANTS.PERMISSION_METRICS_READ],
-    })) as { rawKey: string };
+    });
 
-    expect(keyResult.rawKey.startsWith(AUTH_CONSTANTS.API_KEY_PREFIX_TESTING)).toBe(true);
+    expect(keyRes.statusCode).toBe(201);
+    const keyData = keyRes.payload.data as { rawKey: string };
+    expect(keyData.rawKey.startsWith(AUTH_CONSTANTS.API_KEY_PREFIX_TESTING)).toBe(true);
 
-    const verifyResult = (await router.route(HTTP_METHODS.POST, AUTH_ENDPOINTS.API_KEYS_VERIFY, {
-      key: keyResult.rawKey,
+    const verifyRes = await router.route(HTTP_METHODS.POST, AUTH_ENDPOINTS.API_KEYS_VERIFY, {
+      key: keyData.rawKey,
       required_permission: AUTH_CONSTANTS.PERMISSION_METRICS_READ,
-    })) as { valid: boolean; authorized: boolean };
+    });
 
-    expect(verifyResult.valid).toBe(true);
-    expect(verifyResult.authorized).toBe(true);
+    expect(verifyRes.statusCode).toBe(200);
+    const verifyData = verifyRes.payload.data as { valid: boolean; authorized: boolean };
+    expect(verifyData.valid).toBe(true);
+    expect(verifyData.authorized).toBe(true);
   });
 });

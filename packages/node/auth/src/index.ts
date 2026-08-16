@@ -1,4 +1,5 @@
 export * from './shared/errors/auth.errors';
+export * from './shared/errors/error-handler';
 export * from './shared/utils/argon2.util';
 export * from './shared/utils/jwt.util';
 export * from './shared/utils/security.util';
@@ -7,6 +8,7 @@ export * from './shared/constants/endpoints';
 export * from './features/auth/index';
 export * from './infra/adapters/alloydb-omni-auth.adapter';
 export * from './infra/adapters/postgres-auth.adapter';
+export * from './infra/adapters/real-postgres-auth.adapter';
 export * from './infra/adapters/redis-session.adapter';
 export * from './infra/adapters/proxy/proxy.interface';
 export * from './infra/adapters/proxy/traefik.adapter';

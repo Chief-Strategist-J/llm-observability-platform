@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
+    "@types/pg": "^8.21.0",
+    "pg": "^8.23.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {

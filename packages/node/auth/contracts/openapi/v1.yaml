@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Observability Auth Service API
-  description: Multi-tenant authentication, RBAC authorization, organization management, audit logging, 3-tier API key permissions, and 13-pillar security hardening contract (Argon2id password hashing, token revocation, brute-force & credential-stuffing protection, sliding window rate limiting, Zod input validation, double-submit CSRF, XSS sanitization, SQL injection prevention via parameterized queries, secrets management, device session tracking, IP/device anomaly detection, and OTP step-up authentication).
+  description: Multi-tenant authentication, RBAC authorization, organization management, audit logging, 3-tier API key permissions, and 13-pillar security hardening contract with standardized API response envelopes (status, message, data, error).
   version: 1.0.0
 paths:
   /api/v1/auth/sign-up:
@@ -22,25 +22,26 @@ paths:
       responses:
         '201':
           description: User and organization successfully created
-          headers:
-            X-RateLimit-Limit:
-              schema:
-                type: integer
-            X-RateLimit-Remaining:
-              schema:
-                type: integer
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthSessionResponse'
+                $ref: '#/components/schemas/StandardApiResponse'
         '400':
           description: Validation failure or non-unique organization name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
         '409':
           description: User email or organization name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
 
   /api/v1/auth/sign-in:
     post:
-      summary: User sign in with IP and client audit logging metadata and brute-force protection
+      summary: User sign in with IP and client audit logging metadata
       parameters:
         - in: header
           name: X-Forwarded-For
@@ -66,21 +67,22 @@ paths:
       responses:
         '200':
           description: Successful authentication with audit log recorded
-          headers:
-            X-RateLimit-Limit:
-              schema:
-                type: integer
-            X-RateLimit-Remaining:
-              schema:
-                type: integer
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthSessionResponse'
+                $ref: '#/components/schemas/StandardApiResponse'
         '401':
           description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
         '429':
-          description: Account locked due to brute-force or rate-limit threshold exceeded
+          description: Account locked due to brute-force threshold exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
 
   /api/v1/auth/session:
     get:
@@ -93,67 +95,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthTokenPayload'
+                $ref: '#/components/schemas/StandardApiResponse'
         '401':
           description: Unauthorized or token expired
-
-  /api/v1/auth/session/revoke:
-    post:
-      summary: Revoke session token immediately
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [token]
-              properties:
-                token:
-                  type: string
-      responses:
-        '200':
-          description: Token revoked successfully
-
-  /api/v1/auth/sessions/devices:
-    get:
-      summary: List active tracked device sessions for user
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          description: Device sessions list
-
-  /api/v1/auth/step-up/generate:
-    post:
-      summary: Generate step-up authentication OTP for elevated operation
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          description: OTP generated and dispatched
-
-  /api/v1/auth/step-up/verify:
-    post:
-      summary: Verify step-up authentication OTP
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [otp]
-              properties:
-                otp:
-                  type: string
-                  minLength: 6
-                  maxLength: 6
-      responses:
-        '200':
-          description: Step-up authentication verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
 
   /api/v1/auth/forgot-password:
     post:
@@ -172,10 +120,14 @@ paths:
       responses:
         '200':
           description: Password reset request accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
 
   /api/v1/auth/reset-password:
     post:
-      summary: Reset user password using token with Argon2id hashing
+      summary: Reset user password using token
       requestBody:
         required: true
         content:
@@ -185,8 +137,16 @@ paths:
       responses:
         '200':
           description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
         '400':
           description: Invalid token or password complexity validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
 
   /api/v1/auth/change-password:
     post:
@@ -202,12 +162,20 @@ paths:
       responses:
         '200':
           description: Password successfully changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
         '401':
           description: Unauthorized or current password incorrect
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
 
   /api/v1/auth/api-keys:
     post:
-      summary: Generate 3-tier API key (general, testing, super_secret) bound to specific permission table
+      summary: Generate 3-tier API key bound to specific permission table
       security:
         - BearerAuth: []
       requestBody:
@@ -222,7 +190,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CreateApiKeyResponse'
+                $ref: '#/components/schemas/StandardApiResponse'
 
   /api/v1/auth/api-keys/verify:
     post:
@@ -239,11 +207,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VerifyApiKeyResponse'
+                $ref: '#/components/schemas/StandardApiResponse'
         '401':
           description: API key invalid or revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
         '403':
           description: Insufficient permission for requested API operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
 
   /api/v1/auth/permissions:
     get:
@@ -251,15 +227,10 @@ paths:
       responses:
         '200':
           description: Available system permissions table
-
-  /api/v1/auth/security/anomalies:
-    get:
-      summary: List IP and device login anomaly security records
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          description: Anomaly detection audit records
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
 
   /api/v1/auth/audit-logs:
     get:
@@ -269,6 +240,10 @@ paths:
       responses:
         '200':
           description: Audit log records
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
 
 components:
   securitySchemes:
@@ -278,6 +253,45 @@ components:
       bearerFormat: JWT
 
   schemas:
+    StandardApiResponse:
+      type: object
+      required: [status, message, data, error]
+      properties:
+        status:
+          type: string
+          enum: [success, error]
+        message:
+          type: string
+        data:
+          type: object
+          nullable: true
+        error:
+          $ref: '#/components/schemas/ErrorDetail'
+          nullable: true
+
+    StandardApiErrorResponse:
+      type: object
+      required: [status, message, data, error]
+      properties:
+        status:
+          type: string
+          enum: [error]
+        message:
+          type: string
+        data:
+          type: null
+        error:
+          $ref: '#/components/schemas/ErrorDetail'
+
+    ErrorDetail:
+      type: object
+      required: [code, details]
+      properties:
+        code:
+          type: string
+        details:
+          type: string
+
     SignUpRequest:
       type: object
       required: [email, password, name, organization_name]
@@ -350,21 +364,6 @@ components:
           items:
             type: string
 
-    CreateApiKeyResponse:
-      type: object
-      required: [raw_key, key_id, key_type, permissions]
-      properties:
-        raw_key:
-          type: string
-        key_id:
-          type: string
-        key_type:
-          type: string
-        permissions:
-          type: array
-          items:
-            type: string
-
     VerifyApiKeyRequest:
       type: object
       required: [key]
@@ -373,71 +372,3 @@ components:
           type: string
         required_permission:
           type: string
-
-    VerifyApiKeyResponse:
-      type: object
-      required: [valid, key_id, org_id, key_type, permissions, authorized]
-      properties:
-        valid:
-          type: boolean
-        key_id:
-          type: string
-        org_id:
-          type: string
-        key_type:
-          type: string
-        permissions:
-          type: array
-          items:
-            type: string
-        authorized:
-          type: boolean
-
-    AuthSessionResponse:
-      type: object
-      required: [token, user]
-      properties:
-        token:
-          type: string
-        user:
-          $ref: '#/components/schemas/AuthUser'
-
-    AuthUser:
-      type: object
-      required: [id, email, name, org_id, org_name, role]
-      properties:
-        id:
-          type: string
-        email:
-          type: string
-          format: email
-        name:
-          type: string
-        org_id:
-          type: string
-        org_name:
-          type: string
-        role:
-          type: string
-
-    AuthTokenPayload:
-      type: object
-      required: [sub, email, org, iat, exp]
-      properties:
-        sub:
-          type: string
-        email:
-          type: string
-        org:
-          type: object
-          properties:
-            org_id:
-              type: string
-            org_name:
-              type: string
-            role:
-              type: string
-        iat:
-          type: integer
-        exp:
-          type: integer

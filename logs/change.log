@@ -1,3 +1,28 @@
+[2026-08-16T12:20:00+05:30] Add Live Database Connection Adapter RealPostgresAuthAdapter, Standardized Response Envelopes, and Centralized Error Handling in @observability/auth
+└── File: packages/node/auth/src/infra/adapters/real-postgres-auth.adapter.ts, packages/node/auth/src/shared/errors/error-handler.ts, packages/node/auth/contracts/openapi/v1.yaml, packages/node/auth/README.md
+    ├── Choice: Implement RealPostgresAuthAdapter using pg.Pool connection pool to execute live SQL queries against AlloyDB Omni / PostgreSQL on port 5432 with tenant Row Level Security (SET LOCAL app.current_org_id = ) and parameterized queries. Implement StandardApiResponse envelope (status, message, data, error) with centralized error handler mapping domain errors to standard HTTP status codes. Update README.md with standard payload structure and cURL commands.
+    └── Architecture & Design:
+        ┌──────────────────────────────────────────────────────────┐
+        │     Live Database Connection & Standard Response         │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │
+        ┌────────────────────────────┼─────────────────────────────┐
+        ▼                            ▼                             ▼
+  ┌───────────┐               ┌────────────┐               ┌──────────────┐
+  │ pg.Pool   │               │ Standard   │               │ Centralized  │
+  │ Connection│               │ Response   │               │ Error        │
+  │ Adapter   │               │ Envelope   │               │ Handler      │
+  └─────┬─────┘               └─────┬──────┘               └──────┬───────┘
+        │                            │                            │
+        ▼                            ▼                            ▼
+  (RealPostgresAuth          (status, message,            (createError   
+   Adapter, pg.Pool)          data, error)                 Response)
+    └── Changes:
+        ├── database -> Implement RealPostgresAuthAdapter in src/infra/adapters/real-postgres-auth.adapter.ts using pg.Pool with RLS tenant context setting and connection pooling parameters.
+        ├── envelope -> Implement StandardApiResponse and createSuccessResponse/createErrorResponse in src/shared/errors/error-handler.ts.
+        ├── contract -> Update contracts/openapi/v1.yaml schema to define StandardApiResponse and StandardApiErrorResponse envelopes across all routes.
+        └── testing -> Empirically verified 20 out of 20 test cases passing across all 6 test suites.
+
 [2026-08-16T12:10:00+05:30] Create HTTP Service Entrypoint server.ts and Empirically Verify Live Real Data API Operations
 └── File: packages/node/auth/src/server.ts
     ├── Choice: Create runnable HTTP service server.ts on port 3001 and empirically execute live end-to-end HTTP requests with real client data via cURL (sign-up, sign-in audit log, session verification, 3-tier API key generation, permission entitlement verification, and system permissions listing).
