@@ -86,7 +86,7 @@ export function SignInForm({
       </form>
 
       <div className="auth-footer">
-        Need a new organization?{" "}
+        <span>Need a new organization?</span>
         <Link href="/auth/sign-up" className="auth-footer-link">
           Register Organization
         </Link>

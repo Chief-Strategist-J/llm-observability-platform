@@ -4,6 +4,9 @@ import '../src/app/globals.css';
 
 const preview: Preview = {
   parameters: {
+    docs: {
+      autodocs: 'tag',
+    },
     controls: {
       matchers: {
         color: /(background|color)$/i,
@@ -11,7 +14,6 @@ const preview: Preview = {
       },
     },
     a11y: {
-      // 'error' — fail CI on a11y violations (SLO-FE1-02)
       test: 'error',
     },
   },
@@ -36,7 +38,6 @@ const preview: Preview = {
   decorators: [
     (Story, context) => {
       const theme = context.globals.theme ?? 'dark';
-      // Apply theme class to root element for CSS variable switching (F-09)
       if (typeof document !== 'undefined') {
         const root = document.documentElement;
         root.classList.remove('light', 'dark', 'high-contrast');

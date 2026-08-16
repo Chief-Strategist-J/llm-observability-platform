@@ -145,7 +145,7 @@ export function SignUpForm({
       </form>
 
       <div className="auth-footer">
-        Already have an organization?{" "}
+        <span>Already have an organization?</span>
         <Link href="/auth/sign-in" className="auth-footer-link">
           Sign In
         </Link>

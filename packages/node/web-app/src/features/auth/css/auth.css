@@ -1,37 +1,33 @@
 .auth-container {
   display: flex;
   min-height: 100vh;
+  width: 100%;
   align-items: center;
   justify-content: center;
   background-color: hsl(var(--background));
-  padding: 0.75rem;
+  padding: 1rem;
   color: hsl(var(--foreground));
 }
 
 @media (min-width: 640px) {
   .auth-container {
-    padding: 1.5rem;
+    padding: 2rem;
   }
 }
 
 .auth-card {
   width: 100%;
-  max-width: 28rem;
-  border-radius: var(--radius-xl);
-  border: 1px solid hsl(var(--border));
-  background-color: hsl(var(--card));
-  padding: 1rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  max-width: 26rem;
+  border-radius: var(--radius-xl, 1rem);
+  border: 1px solid hsl(var(--border) / 0.8);
+  background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.95) 100%);
+  padding: 1.5rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
   text-align: left;
+  box-sizing: border-box;
 }
 
 @media (min-width: 640px) {
-  .auth-card {
-    padding: 1.5rem;
-  }
-}
-
-@media (min-width: 768px) {
   .auth-card {
     padding: 2rem;
   }
@@ -39,46 +35,49 @@
 
 .auth-header {
   text-align: left;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .auth-title {
-  font-size: 1.25rem;
+  font-size: 1.375rem;
   font-weight: 700;
-  letter-spacing: -0.025em;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
   color: hsl(var(--foreground));
   text-align: left;
+  word-break: keep-all;
 }
 
 @media (min-width: 640px) {
   .auth-title {
-    font-size: 1.5rem;
+    font-size: 1.625rem;
   }
 }
 
 .auth-subtitle {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
   color: hsl(var(--muted-foreground));
   text-align: left;
-  margin-top: 0.25rem;
+  margin-top: 0.375rem;
 }
 
 .auth-error-alert {
   border-radius: var(--radius-md);
-  border: 1px solid hsl(var(--destructive) / 0.4);
+  border: 1px solid hsl(var(--destructive) / 0.5);
   background-color: hsl(var(--destructive) / 0.15);
-  padding: 0.75rem;
-  font-size: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
   color: hsl(var(--destructive));
   font-weight: 500;
   text-align: left;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.125rem;
   text-align: left;
 }
 
@@ -90,8 +89,9 @@
 }
 
 .auth-label {
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: hsl(var(--muted-foreground));
   text-align: left;
@@ -100,6 +100,8 @@
 .auth-password-wrapper {
   position: relative;
   width: 100%;
+  display: flex;
+  align-items: center;
 }
 
 .auth-password-toggle {
@@ -111,7 +113,12 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 0.25rem;
+  padding: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: color 150ms ease;
 }
 
 .auth-password-toggle:hover {
@@ -126,7 +133,7 @@
 .auth-strength-label {
   display: flex;
   justify-content: space-between;
-  font-size: 0.625rem;
+  font-size: 0.6875rem;
   color: hsl(var(--muted-foreground));
   font-weight: 500;
 }
@@ -134,7 +141,7 @@
 .auth-strength-track {
   height: 0.25rem;
   width: 100%;
-  background-color: hsl(var(--muted) / 0.3);
+  background-color: hsl(var(--muted) / 0.4);
   border-radius: 9999px;
   overflow: hidden;
   margin-top: 0.25rem;
@@ -147,20 +154,29 @@
 
 .auth-submit-btn {
   width: 100%;
+  min-h: 44px;
   margin-top: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
 }
 
 .auth-footer {
   text-align: left;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
   color: hsl(var(--muted-foreground));
-  padding-top: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid hsl(var(--border) / 0.4);
+  margin-top: 0.5rem;
 }
 
 .auth-footer-link {
   color: hsl(var(--primary));
   font-weight: 600;
   text-decoration: none;
+  white-space: nowrap;
+  display: inline-block;
+  margin-left: 0.25rem;
 }
 
 .auth-footer-link:hover {
