@@ -1308,3 +1308,10 @@
     └── Changes:
         ├── data-table -> Add TableToolbar (quick search, entry count badge) and TableFooter (row range summary, virtual scroll active state).
         └── storybook -> Add SearchableEnterprise story demonstrating filter search and row click selection.
+
+[2026-08-16T09:42:00+05:30] Enforce UX Gold-Standard Reference rules for DataTable alignment, tabular figures, and status pill badges
+└── File: packages/node/web-app/src/components/data-display/DataTable/DataTable.tsx, packages/node/web-app/src/components/data-display/DataTable/DataTable.stories.tsx
+    ├── Choice: Enforce strict compliance with policies/UX-gold-standard-reference.md: apply tabular-nums for numeric stack alignment, left-align status badges with status dot indicators (Rule 1.2 & Rule 35), and right-align quality metrics.
+    └── Changes:
+        ├── data-table -> Add tabular-nums to right-aligned cells in DataTable.tsx.
+        └── storybook -> Update spanColumns in DataTable.stories.tsx with status pill dot indicators and UX Gold Standard alignment metadata.

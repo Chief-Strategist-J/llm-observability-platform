@@ -46,7 +46,7 @@ function getHeaderAlignmentClass(align: ColumnAlignment): string {
 }
 
 function getCellAlignmentClass(align: ColumnAlignment): string {
-  if (align === 'right') return 'text-right';
+  if (align === 'right') return 'text-right tabular-nums';
   if (align === 'center') return 'text-center';
   return 'text-left';
 }

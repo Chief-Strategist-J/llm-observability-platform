@@ -6,6 +6,7 @@ import { SeverityBadge } from '../SeverityBadge/SeverityBadge';
 import { FIXTURE_SPANS } from '../../../lib/fixtures';
 import { SkeletonState } from '../../states/SkeletonState';
 import { ErrorState } from '../../states/ErrorState';
+import { cn } from '../../../lib/cn';
 
 const spanColumns: ColumnDef<Span, unknown>[] = [
   { accessorKey: 'name', header: 'Span Name', size: 180, meta: { align: 'left' } },
@@ -38,11 +39,20 @@ const spanColumns: ColumnDef<Span, unknown>[] = [
     accessorKey: 'status',
     header: 'Status',
     size: 120,
-    meta: { align: 'center' },
+    meta: { align: 'left' },
     cell: ({ getValue }) => {
       const status = getValue() as string;
+      const isSuccess = status === 'success';
       return (
-        <span className={status === 'success' ? 'font-semibold text-[hsl(var(--severity-good))]' : 'font-semibold text-[hsl(var(--severity-bad))]'}>
+        <span
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase border',
+            isSuccess
+              ? 'border-[hsl(var(--severity-good)/.3)] bg-[hsl(var(--severity-good)/.12)] text-[hsl(var(--severity-good))]'
+              : 'border-[hsl(var(--severity-bad)/.3)] bg-[hsl(var(--severity-bad)/.12)] text-[hsl(var(--severity-bad))]'
+          )}
+        >
+          <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', isSuccess ? 'bg-[hsl(var(--severity-good))]' : 'bg-[hsl(var(--severity-bad))]')} />
           {status}
         </span>
       );
@@ -52,7 +62,7 @@ const spanColumns: ColumnDef<Span, unknown>[] = [
     accessorKey: 'quality_score',
     header: 'Quality',
     size: 120,
-    meta: { align: 'center' },
+    meta: { align: 'right' },
     cell: ({ getValue }) => {
       const v = getValue();
       if (v === null || v === undefined) return '—';
