@@ -1,3 +1,25 @@
+[2026-08-16T12:00:00+05:30] Enhance @observability/auth README with Rich Markdown Tables and End-to-End Sequence Diagram
+└── File: packages/node/auth/README.md
+    ├── Choice: Upgrade README.md to enterprise gold standard with 5 comprehensive markdown tables (Features Summary, 13 Security Pillars Matrix, 3-Tier API Key Comparison, OpenAPI REST Reference, Verified Allure Test Results) and a complete step-by-step End-to-End Sequence & Decision Flow Diagram.
+    └── Architecture & Design:
+        ┌──────────────────────────────────────────────────────────┐
+        │        Gold Standard README Architecture & Tables       │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │
+        ┌────────────────────────────┼─────────────────────────────┐
+        ▼                            ▼                             ▼
+  ┌───────────┐               ┌────────────┐               ┌──────────────┐
+  │ 5 Markdown│               │ End-to-End │               │ 13 Security  │
+  │ Tables    │               │ Sequence   │               │ Pillars      │
+  │ Summary   │               │ Flow Chart │               │ Matrix       │
+  └─────┬─────┘               └─────┬──────┘               └──────┬───────┘
+        │                            │                            │
+        ▼                            ▼                            ▼
+  (Features, API,             (Traefik, Router,            (Argon2id, CSRF,
+   API Keys, Allure)           Pillars, RLS, Redis)         RLS, BruteForce)
+    └── Changes:
+        └── readme -> Upgrade README.md with 5 rich markdown tables and 5-stage end-to-end sequence diagram.
+
 [2026-08-16T11:58:00+05:30] Redesign Architecture Diagram in @observability/auth README as ASCII Decision Tree
 └── File: packages/node/auth/README.md
     ├── Choice: Replace standard block diagram with an explicit ASCII Decision Tree & Process Flow Chart detailing IF/ELSE evaluation branches for Traefik reverse proxy rate limits, sign-in credential evaluation, 3-tier API key permission matching, and AlloyDB Omni Row Level Security (RLS) enforcement.
