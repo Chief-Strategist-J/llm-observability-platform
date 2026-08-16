@@ -3,6 +3,7 @@
 import React from 'react';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from './Sidebar';
+import { HeaderBar } from './HeaderBar';
 
 export function AppShell({ children }: { readonly children: React.ReactNode }) {
   const pathname = usePathname();
@@ -15,7 +16,10 @@ export function AppShell({ children }: { readonly children: React.ReactNode }) {
   return (
     <div className="flex w-full min-h-screen">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto p-6">{children}</main>
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <HeaderBar />
+        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+      </div>
     </div>
   );
 }
