@@ -12,12 +12,12 @@ import {
   Clock,
   Award,
   MessageSquareCode,
-  Activity,
-  ShieldCheck,
   Sliders,
+  ShieldCheck,
   FileCode,
   Lock,
   Flag,
+  Activity,
 } from 'lucide-react';
 
 interface NavItem {
@@ -52,6 +52,10 @@ const NAV_GROUPS: readonly { title: string; items: readonly NavItem[] }[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+
+  if (pathname.startsWith('/auth')) {
+    return null;
+  }
 
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--card-foreground))]">

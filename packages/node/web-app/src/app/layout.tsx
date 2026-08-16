@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
-import { Sidebar } from '../components/shell/Sidebar';
+import { AppShell } from '../components/shell/AppShell';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -32,12 +32,7 @@ export default function RootLayout({
     <html lang="en" className={`dark ${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="flex min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--foreground))] font-sans antialiased">
         <Providers>
-          <div className="flex w-full min-h-screen">
-            <Sidebar />
-            <main className="flex-1 overflow-y-auto p-6">
-              {children}
-            </main>
-          </div>
+          <AppShell>{children}</AppShell>
         </Providers>
       </body>
     </html>
