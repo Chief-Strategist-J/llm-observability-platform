@@ -289,9 +289,9 @@ export default function ApiKeysPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--background))] p-6 md:p-10 text-[hsl(var(--foreground))] space-y-8 max-w-7xl mx-auto text-left">
+    <div className="space-y-6 w-full text-left max-w-7xl mx-auto">
       {/* Header Banner */}
-      <div className="flex items-center justify-between border-b border-[hsl(var(--border))] pb-6">
+      <div className="flex items-center justify-between border-b border-[hsl(var(--border))] pb-4">
         <div>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] bg-[hsl(var(--primary)/.15)] text-[hsl(var(--primary))]">

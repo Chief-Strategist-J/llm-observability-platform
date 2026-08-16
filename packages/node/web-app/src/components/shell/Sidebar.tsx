@@ -78,7 +78,7 @@ export function Sidebar() {
           <div className="p-1 rounded-md bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm">
             <Activity size={18} />
           </div>
-          <span className="font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-200 bg-clip-text text-transparent text-sm">
+          <span className="font-bold tracking-tight text-sm text-[hsl(var(--foreground))]">
             Observability Platform
           </span>
         </div>

@@ -246,12 +246,12 @@ export default function OrganizationsAdminPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--background))] p-6 md:p-10 text-[hsl(var(--foreground))] space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-[hsl(var(--foreground))]">
+    <div className="space-y-6 w-full text-left max-w-7xl mx-auto">
+      <div className="border-b border-[hsl(var(--border))] pb-4">
+        <h1 className="text-2xl font-bold tracking-tight text-[hsl(var(--foreground))]">
           Organization & User Administration
         </h1>
-        <p className="text-[hsl(var(--muted-foreground))] text-sm mt-1">
+        <p className="text-[hsl(var(--muted-foreground))] text-xs mt-0.5">
           Manage multi-tenant organizations, granular user permissions, user blocking, soft deletion retention, and audit logs.
         </p>
       </div>

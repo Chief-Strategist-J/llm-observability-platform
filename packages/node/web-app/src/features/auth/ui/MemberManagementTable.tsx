@@ -94,7 +94,7 @@ export function MemberManagementTable({
         );
       case 'member':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold uppercase text-[10px] bg-emerald-950/80 text-emerald-300 border border-emerald-700 shadow-sm">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold uppercase text-[10px] dark:bg-emerald-950/80 bg-emerald-100 dark:text-emerald-300 text-emerald-900 border border-emerald-500/50 shadow-sm">
             <Sparkles size={10} />
             Member
           </span>
@@ -139,7 +139,7 @@ export function MemberManagementTable({
           className="rounded-[var(--radius-lg)] border-2 border-purple-500/40 bg-[hsl(var(--card))] p-4 space-y-3 text-left shadow-xl animate-in fade-in duration-200"
         >
           <h3 className="text-xs font-bold text-[hsl(var(--foreground))] uppercase tracking-wider flex items-center gap-2">
-            <UserPlus size={14} className="text-purple-400" />
+            <UserPlus size={14} className="text-purple-500 dark:text-purple-400" />
             New Member Invitation
           </h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -233,7 +233,7 @@ export function MemberManagementTable({
                         Blocked
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-emerald-400 font-bold text-xs">
+                      <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
                         <CheckCircle2 size={12} />
                         Active
                       </span>

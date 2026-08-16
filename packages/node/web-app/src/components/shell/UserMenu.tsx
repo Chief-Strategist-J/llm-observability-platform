@@ -32,8 +32,8 @@ export function UserMenu({ user: propUser, impersonating = false }: UserMenuProp
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex w-full items-center gap-3 rounded-[var(--radius-md)] p-2 text-left transition-colors hover:bg-[hsl(var(--muted)/.5)]">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-xs font-semibold text-[hsl(var(--primary-foreground))]">
+        <button className="flex w-full items-center gap-3 rounded-[var(--radius-md)] p-2 text-left transition-colors hover:bg-[hsl(var(--muted)/.5)] cursor-pointer">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-purple-600 to-cyan-500 text-xs font-bold text-white shadow-sm">
             {name.charAt(0).toUpperCase()}
           </div>
           <div className="flex flex-1 flex-col overflow-hidden">
@@ -54,6 +54,12 @@ export function UserMenu({ user: propUser, impersonating = false }: UserMenuProp
           </div>
         )}
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/settings/profile" className="flex w-full items-center gap-2 font-semibold text-purple-300">
+            <User size={14} />
+            My Profile & Details
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/settings/api-keys" className="flex w-full items-center gap-2">
             <Key size={14} />
