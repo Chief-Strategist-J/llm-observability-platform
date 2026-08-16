@@ -1354,3 +1354,10 @@
     └── Changes:
         ├── caching-mechanics -> Add Cache-Aside/Write-Through/Write-Behind rules, Redis key naming schema, and cache stampede mitigations.
         └── data-normalization -> Define 1NF-3NF relational standards, performance denormalization criteria, and background drift reconciler job rules.
+
+[2026-08-16T10:22:00+05:30] Split caching and data normalization into dedicated policy files
+└── File: policies/rules/database/caching.md, policies/rules/database/data-normalization.md, policies/rules/database/sharding-replication-architecture.md
+    ├── Choice: Separate caching architecture mechanics and relational data normalization into two dedicated, independent policy files in policies/rules/database/.
+    └── Changes:
+        ├── caching-policy -> Create caching.md covering Cache-Aside/Write-Through/Write-Behind patterns, Redis key hierarchy, Single-flight mutex locks & XFetch algorithm.
+        └── normalization-policy -> Create data-normalization.md covering 1NF-3NF/BCNF standards, performance denormalization criteria, and background drift reconciler job rules.
