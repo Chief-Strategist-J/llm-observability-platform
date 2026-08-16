@@ -1295,3 +1295,9 @@
         ├── error-boundary -> Integrate Sentry trace_id logging in error.tsx.
         └── filter-state -> Implement useFilterState custom hook bridging URL search parameters with FilterState schema.
 
+[2026-08-16T09:30:00+05:30] Enhance DataTable UI-UX with column alignment metadata and odd-even zebra striping
+└── File: packages/node/web-app/src/components/data-display/DataTable/DataTable.tsx, packages/node/web-app/src/components/data-display/DataTable/DataTable.stories.tsx
+    ├── Choice: Apply flex layout with column width matching across th and td elements to fix header/body alignment in virtualized tables. Add odd/even zebra striping background styling and column alignment metadata support.
+    └── Changes:
+        ├── data-table -> Add flex row styling, column width matching, and odd-even zebra background classes (bg-[hsl(var(--muted)/.2)]) in DataTable.tsx.
+        └── storybook -> Update DataTable.stories.tsx with explicit column sizes, alignment meta, and type assertions across stories.

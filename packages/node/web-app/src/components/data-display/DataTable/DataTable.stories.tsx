@@ -8,21 +8,27 @@ import { SkeletonState } from '../../states/SkeletonState';
 import { ErrorState } from '../../states/ErrorState';
 
 const spanColumns: ColumnDef<Span, unknown>[] = [
-  { accessorKey: 'name', header: 'Span Name' },
-  { accessorKey: 'model', header: 'Model' },
+  { accessorKey: 'name', header: 'Span Name', size: 180, meta: { align: 'left' } },
+  { accessorKey: 'model', header: 'Model', size: 160, meta: { align: 'left' } },
   {
     accessorKey: 'latency_ms',
     header: 'Latency',
+    size: 110,
+    meta: { align: 'right' },
     cell: ({ getValue }) => columnFormatters.latency_ms(getValue() as number),
   },
   {
     accessorKey: 'cost_usd_micro',
     header: 'Cost',
+    size: 110,
+    meta: { align: 'right' },
     cell: ({ getValue }) => columnFormatters.cost_usd_micro(getValue() as number),
   },
   {
     accessorKey: 'tokens_input',
     header: 'Input Tokens',
+    size: 140,
+    meta: { align: 'right' },
     cell: ({ getValue }) => {
       const v = getValue();
       return v !== null && v !== undefined ? columnFormatters.tokens(v as number) : '—';
@@ -31,10 +37,12 @@ const spanColumns: ColumnDef<Span, unknown>[] = [
   {
     accessorKey: 'status',
     header: 'Status',
+    size: 120,
+    meta: { align: 'center' },
     cell: ({ getValue }) => {
       const status = getValue() as string;
       return (
-        <span className={status === 'success' ? 'text-[hsl(var(--severity-good))]' : 'text-[hsl(var(--severity-bad))]'}>
+        <span className={status === 'success' ? 'font-semibold text-[hsl(var(--severity-good))]' : 'font-semibold text-[hsl(var(--severity-bad))]'}>
           {status}
         </span>
       );
@@ -43,6 +51,8 @@ const spanColumns: ColumnDef<Span, unknown>[] = [
   {
     accessorKey: 'quality_score',
     header: 'Quality',
+    size: 120,
+    meta: { align: 'center' },
     cell: ({ getValue }) => {
       const v = getValue();
       if (v === null || v === undefined) return '—';
@@ -61,7 +71,7 @@ function generateLargeDataset(count: number): Span[] {
     latency_ms: 50 + Math.floor(Math.random() * 550),
     status: Math.random() > 0.05 ? ('success' as const) : ('error' as const),
     cost_usd_micro: 100 + Math.floor(Math.random() * 5000),
-    model: ['gpt-4o', 'gpt-4o-mini', 'claude-3-opus', 'claude-3-sonnet'][i % 4],
+    model: ['gpt-4o', 'gpt-4o-mini', 'claude-3-opus', 'claude-3-sonnet'][i % 4] ?? 'gpt-4o',
     quality_score: 0.5 + Math.random() * 0.5,
     tokens_input: 200 + Math.floor(Math.random() * 4000),
     tokens_output: 50 + Math.floor(Math.random() * 1500),
@@ -129,7 +139,7 @@ export const DenseCompact: Story = {
 export const SingleRow: Story = {
   args: {
     columns: spanColumns,
-    data: [FIXTURE_SPANS[0]],
+    data: [FIXTURE_SPANS[0] as Span],
     height: 200,
   },
 };
