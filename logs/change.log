@@ -1301,3 +1301,10 @@
     └── Changes:
         ├── data-table -> Add flex row styling, column width matching, and odd-even zebra background classes (bg-[hsl(var(--muted)/.2)]) in DataTable.tsx.
         └── storybook -> Update DataTable.stories.tsx with explicit column sizes, alignment meta, and type assertions across stories.
+
+[2026-08-16T09:35:00+05:30] Implement Enterprise DataTable UX with toolbar search, count badge, grid dividers, and interactive row selection
+└── File: packages/node/web-app/src/components/data-display/DataTable/DataTable.tsx, packages/node/web-app/src/components/data-display/DataTable/DataTable.stories.tsx
+    ├── Choice: Upgrade DataTable component with enterprise features including client-side filtering, total count badges, grid cell separators, interactive row selection, and dedicated TableToolbar/TableFooter subcomponents.
+    └── Changes:
+        ├── data-table -> Add TableToolbar (quick search, entry count badge) and TableFooter (row range summary, virtual scroll active state).
+        └── storybook -> Add SearchableEnterprise story demonstrating filter search and row click selection.

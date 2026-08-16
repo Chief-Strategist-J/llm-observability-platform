@@ -105,6 +105,22 @@ export const Default: Story = {
   },
 };
 
+export const SearchableEnterprise: Story = {
+  render: () => (
+    <DataTable
+      columns={spanColumns as unknown as ColumnDef<Record<string, unknown>, unknown>[]}
+      data={FIXTURE_SPANS as unknown as Record<string, unknown>[]}
+      height={350}
+      title="Trace Spans Explorer"
+      searchable
+      searchPlaceholder="Filter spans by model, name, or status..."
+      onRowClick={(row) => {
+        alert(`Selected span: ${String(row.name)} (${String(row.span_id)})`);
+      }}
+    />
+  ),
+};
+
 export const Loading: Story = {
   render: () => (
     <div className="rounded-[var(--radius-lg)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
