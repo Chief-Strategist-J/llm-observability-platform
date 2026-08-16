@@ -8,7 +8,21 @@
 1. **Language-Agnostic Principle**: This architecture specification is strictly **language-agnostic**. The folder hierarchy, contract isolation, database migration rules, and data-driven engine boundaries apply identically regardless of whether the service is implemented in Go, Python, Rust, Java, C++, Node.js/TypeScript, or C#.
 2. **.gitkeep Requirement**: When generating or scaffolding folder structures, include a `.gitkeep` file in every folder to preserve directory hierarchy across Git commits.
 3. **Contract-First Constraint**: No implementation source code inside `src/` is written until the API contract file is merged. Contract type is chosen once per feature — never generate unused contract formats.
+   - **Contract Merge Pre-Condition**: Under no circumstances may any implementation file in `src/` (handlers, services, repositories, schemas) be created, scaffolded, or merged until the corresponding contract specification file (`contracts/openapi/`, `contracts/graphql/`, `contracts/proto/`, `contracts/asyncapi/`) is merged in a dedicated contract-only PR.
+   - **Single Contract Selection**: Each feature endpoint or flow selects exactly ONE primary contract format (REST OpenAPI, GraphQL SDL, gRPC Proto, or AsyncAPI + JSON Schema). Speculative generation of unused contract formats (e.g. generating `.proto` or `.graphql` when building a REST API) is strictly prohibited.
+   - **Automated Client & Stub Generation**: Hand-writing request/response types or server interface stubs is forbidden. The build toolchain or code generator (`generate.sh` / protoc / openapi-generator) MUST automatically generate server interfaces, request validation types, and client SDKs from the authoritative contract specification.
+   - **Immutability & Deprecation Lifecycle**: Merged contract versions (`v1.yaml`, `v1.graphql`) are strictly immutable. Any breaking modification requires a new version (`v2.yaml`) running in parallel with deprecation headers (`Deprecation`, `Sunset`) for a minimum sunset window of 6 months.
+
 4. **Data-Driven Logic Rule**: Write core engine logic ONCE (adapters, pipeline decorators, rules evaluator, workflow runner). New domain features are created by declaring schemas, transform rules, flow-by-flow queries, and state machine definitions as data — not by duplicating boilerplate logic.
+   - **Single Engine Implementation**: Infrastructure engine mechanics — including database CRUD adapters, anti-corruption mapping layers (`fromApi`/`toApi`), list transformations (search, filter, sort, pagination), resilience pipeline decorators (`withRetry`, `withCache`, `withCircuitBreaker`, `withTracing`), rules evaluation engines, and DAG workflow runners — are implemented exactly ONCE inside `shared/data-driven/`, `shared/rules-engine/`, and `shared/workflow-engine/`.
+   - **Declarative Feature Artifacts**: Features are created purely as declarative DATA artifacts inside `src/features/{feature-name}/`:
+     - **Entity Schemas (`schema/`)**: Runtime field definitions, data types, validation constraints, and field transformation mappers (`fromApi`/`toApi`).
+     - **Flow-by-Flow Queries (`queries/`)**: Parameterized database statements declared by execution flow (`{feature}.queries.[ext|sql]`) for clear tracing.
+     - **Rules as Data (`rules/`)**: Business rule sets with priority weights, decision categories, deny-override conflict resolution, and async live-data checkers.
+     - **State Machines as Data (`machines/`)**: State transition graphs, guards, and event-driven action definitions.
+     - **Workflows as Data (`workflows/`)**: Step DAG automation specifications executed by the generic DAG runner.
+   - **Anti-Corruption Layer (ACL)**: All external API/DB payload mapping is handled declaratively via JSON mapping operations (`rename`, `pick`, `omit`, `coerce`, `default`) rather than imperative mapping code per entity.
+
 
 ---
 
