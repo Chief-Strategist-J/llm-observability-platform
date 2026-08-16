@@ -1,12 +1,18 @@
 openapi: 3.0.3
 info:
   title: Observability Auth Service API
-  description: Multi-tenant authentication, RBAC authorization, organization management, audit logging, and 3-tier API key (general, testing, super_secret) permissions lifecycle contract.
+  description: Multi-tenant authentication, RBAC authorization, organization management, audit logging, 3-tier API key permissions, and 13-pillar security hardening contract (Argon2id password hashing, token revocation, brute-force & credential-stuffing protection, sliding window rate limiting, Zod input validation, double-submit CSRF, XSS sanitization, SQL injection prevention via parameterized queries, secrets management, device session tracking, IP/device anomaly detection, and OTP step-up authentication).
   version: 1.0.0
 paths:
   /api/v1/auth/sign-up:
     post:
       summary: Register new user and unique organization
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: false
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -16,6 +22,13 @@ paths:
       responses:
         '201':
           description: User and organization successfully created
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
           content:
             application/json:
               schema:
@@ -27,7 +40,7 @@ paths:
 
   /api/v1/auth/sign-in:
     post:
-      summary: User sign in with IP and client audit logging metadata
+      summary: User sign in with IP and client audit logging metadata and brute-force protection
       parameters:
         - in: header
           name: X-Forwarded-For
@@ -36,6 +49,11 @@ paths:
             type: string
         - in: header
           name: User-Agent
+          required: false
+          schema:
+            type: string
+        - in: header
+          name: X-CSRF-Token
           required: false
           schema:
             type: string
@@ -48,12 +66,21 @@ paths:
       responses:
         '200':
           description: Successful authentication with audit log recorded
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthSessionResponse'
         '401':
           description: Invalid credentials
+        '429':
+          description: Account locked due to brute-force or rate-limit threshold exceeded
 
   /api/v1/auth/session:
     get:
@@ -69,6 +96,64 @@ paths:
                 $ref: '#/components/schemas/AuthTokenPayload'
         '401':
           description: Unauthorized or token expired
+
+  /api/v1/auth/session/revoke:
+    post:
+      summary: Revoke session token immediately
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Token revoked successfully
+
+  /api/v1/auth/sessions/devices:
+    get:
+      summary: List active tracked device sessions for user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Device sessions list
+
+  /api/v1/auth/step-up/generate:
+    post:
+      summary: Generate step-up authentication OTP for elevated operation
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: OTP generated and dispatched
+
+  /api/v1/auth/step-up/verify:
+    post:
+      summary: Verify step-up authentication OTP
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [otp]
+              properties:
+                otp:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+      responses:
+        '200':
+          description: Step-up authentication verified
 
   /api/v1/auth/forgot-password:
     post:
@@ -90,7 +175,7 @@ paths:
 
   /api/v1/auth/reset-password:
     post:
-      summary: Reset user password using token
+      summary: Reset user password using token with Argon2id hashing
       requestBody:
         required: true
         content:
@@ -166,6 +251,15 @@ paths:
       responses:
         '200':
           description: Available system permissions table
+
+  /api/v1/auth/security/anomalies:
+    get:
+      summary: List IP and device login anomaly security records
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Anomaly detection audit records
 
   /api/v1/auth/audit-logs:
     get:
