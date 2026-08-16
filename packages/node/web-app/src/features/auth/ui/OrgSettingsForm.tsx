@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Building2, ShieldCheck, Trash2 } from 'lucide-react';
 import { authApiClient } from '../../../lib/auth-client';
+import { Button } from '../../../components/primitives/Button';
 
 interface OrgSettingsFormProps {
   readonly orgName?: string;
@@ -119,12 +120,13 @@ export function OrgSettingsForm({
           </div>
 
           <div className="flex justify-end pt-2">
-            <button
+            <Button
+              variant="gradient"
+              size="sm"
               type="submit"
-              className="rounded-[var(--radius-md)] bg-[hsl(var(--primary))] px-4 py-2 text-xs font-semibold text-[hsl(var(--primary-foreground))] transition-opacity hover:opacity-90 cursor-pointer"
             >
               Save Organization Changes
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -138,13 +140,13 @@ export function OrgSettingsForm({
           Soft-deletes this organization and revokes access for all team members with 30-day backup retention.
         </p>
         <div>
-          <button
-            type="button"
+          <Button
+            variant="destructive"
+            size="sm"
             onClick={onDelete || defaultDeleteHandler}
-            className="rounded-[var(--radius-md)] bg-[hsl(var(--destructive))] px-4 py-2 text-xs font-semibold text-[hsl(var(--destructive-foreground))] transition-opacity hover:opacity-90 cursor-pointer"
           >
             Delete Organization
-          </button>
+          </Button>
         </div>
       </div>
     </div>

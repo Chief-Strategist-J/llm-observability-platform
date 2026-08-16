@@ -109,11 +109,11 @@ export function MemberManagementTable({
   };
 
   return (
-    <div className="space-y-6 max-w-4xl text-left">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 w-full text-left">
+      <div className="flex items-center justify-between pb-2 border-b border-[hsl(var(--border))]">
         <div>
-          <h2 className="text-base font-bold text-[hsl(var(--foreground))]">Active Organization Members</h2>
-          <p className="text-xs text-[hsl(var(--muted-foreground))]">Manage team seats, RBAC permissions, role transitions, and access blocks.</p>
+          <h2 className="text-sm font-bold text-[hsl(var(--foreground))]">Active Organization Members</h2>
+          <p className="text-[11px] text-[hsl(var(--muted-foreground))]">Manage team seats, RBAC permissions, role transitions, and access blocks.</p>
         </div>
         <Button
           variant="gradient"
@@ -136,7 +136,7 @@ export function MemberManagementTable({
             setNewName('');
             setShowInviteForm(false);
           }}
-          className="rounded-[var(--radius-lg)] border-2 border-purple-500/40 bg-[hsl(var(--card))] p-5 space-y-4 text-left shadow-xl animate-in fade-in duration-200"
+          className="rounded-[var(--radius-lg)] border-2 border-purple-500/40 bg-[hsl(var(--card))] p-4 space-y-3 text-left shadow-xl animate-in fade-in duration-200"
         >
           <h3 className="text-xs font-bold text-[hsl(var(--foreground))] uppercase tracking-wider flex items-center gap-2">
             <UserPlus size={14} className="text-purple-400" />
@@ -169,7 +169,7 @@ export function MemberManagementTable({
               <option value="viewer">Viewer (Read Only)</option>
             </select>
           </div>
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 pt-1">
             <Button
               variant="outline"
               size="sm"
@@ -188,33 +188,33 @@ export function MemberManagementTable({
         </form>
       )}
 
-      <div className="rounded-[var(--radius-lg)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-hidden shadow-lg">
+      <div className="rounded-[var(--radius-lg)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-hidden shadow-md">
         {members.length === 0 ? (
-          <div className="p-8 text-center text-xs text-[hsl(var(--muted-foreground))]">
+          <div className="p-6 text-center text-xs text-[hsl(var(--muted-foreground))]">
             No team members found. Click &quot;Invite Team Member&quot; to add team members to this organization.
           </div>
         ) : (
           <table className="w-full text-left text-xs">
             <thead className="bg-[hsl(var(--muted)/.5)] border-b border-[hsl(var(--border))]">
               <tr>
-                <th className="p-3.5 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Member Info</th>
-                <th className="p-3.5 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">RBAC Role</th>
-                <th className="p-3.5 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Change Role</th>
-                <th className="p-3.5 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Status</th>
-                <th className="p-3.5 text-right font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Actions</th>
+                <th className="p-3 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Member Info</th>
+                <th className="p-3 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">RBAC Role</th>
+                <th className="p-3 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Change Role</th>
+                <th className="p-3 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Status</th>
+                <th className="p-3 text-right font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[hsl(var(--border))]">
               {members.map((member) => (
                 <tr key={member.id} className="hover:bg-[hsl(var(--muted)/.3)] transition-colors">
-                  <td className="p-3.5">
+                  <td className="p-3">
                     <div className="font-bold text-xs text-[hsl(var(--foreground))]">{member.name}</div>
                     <div className="text-[10px] text-[hsl(var(--muted-foreground))] font-mono">{member.email}</div>
                   </td>
-                  <td className="p-3.5">
+                  <td className="p-3">
                     {renderRoleBadge(member.role)}
                   </td>
-                  <td className="p-3.5">
+                  <td className="p-3">
                     <select
                       value={member.role}
                       onChange={(e) => (onUpdateRole || defaultRoleUpdateHandler)(member.id, e.target.value)}
@@ -226,7 +226,7 @@ export function MemberManagementTable({
                       <option value="owner">Owner</option>
                     </select>
                   </td>
-                  <td className="p-3.5">
+                  <td className="p-3">
                     {member.blocked ? (
                       <span className="inline-flex items-center gap-1 text-[hsl(var(--destructive))] font-bold text-xs">
                         <Ban size={12} />
@@ -239,24 +239,26 @@ export function MemberManagementTable({
                       </span>
                     )}
                   </td>
-                  <td className="p-3.5 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        type="button"
+                  <td className="p-3 text-right">
+                    <div className="flex justify-end gap-1.5">
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => (onBlockMember || defaultBlockHandler)(member.id)}
-                        className="rounded p-1.5 text-[hsl(var(--muted-foreground))] hover:bg-amber-950/40 hover:text-amber-300 transition-colors"
                         title="Block Access"
                       >
-                        <Ban size={15} />
-                      </button>
-                      <button
-                        type="button"
+                        <Ban size={14} className="mr-1" />
+                        Block
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
                         onClick={() => (onDeleteMember || defaultDeleteHandler)(member.id)}
-                        className="rounded p-1.5 text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive)/.15)] transition-colors"
                         title="Soft Delete Member"
                       >
-                        <UserX size={15} />
-                      </button>
+                        <UserX size={14} className="mr-1" />
+                        Remove
+                      </Button>
                     </div>
                   </td>
                 </tr>

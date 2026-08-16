@@ -118,7 +118,7 @@ export function DataForm<T extends Record<string, any>>({
       ))}
 
       <div className="pt-2">
-        <Button type="submit" className="w-full" disabled={loading}>
+        <Button type="submit" variant="gradient" className="w-full font-bold" disabled={loading}>
           {loading ? "Processing..." : submitLabel}
         </Button>
       </div>
