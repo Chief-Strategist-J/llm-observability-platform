@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useSelector } from 'react-redux';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../primitives/DropdownMenu';
 import { User, Settings, LogOut, ShieldAlert } from 'lucide-react';
 
@@ -13,13 +14,14 @@ interface UserMenuProps {
   readonly impersonating?: boolean;
 }
 
-export function UserMenu({ user, impersonating = false }: UserMenuProps) {
-  const name = user?.name ?? 'Admin User';
-  const email = user?.email ?? 'admin@acme.com';
+export function UserMenu({ user: propUser, impersonating = false }: UserMenuProps) {
+  const authUser = useSelector((state: any) => state?.auth?.user);
+  const name = propUser?.name ?? authUser?.name ?? 'Admin User';
+  const email = propUser?.email ?? authUser?.email ?? 'admin@observability.io';
 
   function handleSignOut() {
     document.cookie = 'authjs.session-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    document.cookie = 'mock_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     window.location.href = '/auth/sign-in';
   }
 

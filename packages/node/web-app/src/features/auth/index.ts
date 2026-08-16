@@ -10,3 +10,5 @@ export * from "./auth.saga";
 export * from "./ui/SignUpForm";
 export * from "./ui/SignInForm";
 export * from "./ui/RegisterOrgForm";
+export * from "./ui/OrgSettingsForm";
+export * from "./ui/MemberManagementTable";

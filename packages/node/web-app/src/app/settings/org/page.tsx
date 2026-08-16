@@ -1,9 +1,14 @@
+'use client';
+
 import React from 'react';
-import { EmptyState } from '../../../components/states/EmptyState';
+import { useSelector } from 'react-redux';
+import { OrgSettingsForm } from '../../../features/auth';
 
 export default function OrgSettingsPage() {
+  const authUser = useSelector((state: any) => state?.auth?.user);
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 text-left">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Organization Settings</h1>
         <p className="text-sm text-[hsl(var(--muted-foreground))]">
@@ -11,9 +16,9 @@ export default function OrgSettingsPage() {
         </p>
       </div>
 
-      <EmptyState
-        title="Organization Settings"
-        description="API keys and webhook notification channels will be configured here."
+      <OrgSettingsForm
+        orgName={authUser?.org_name ?? 'Scaibu Corp'}
+        orgSlug={(authUser?.org_name ?? 'scaibu-corp').toLowerCase().replace(/\s+/g, '-')}
       />
     </div>
   );
