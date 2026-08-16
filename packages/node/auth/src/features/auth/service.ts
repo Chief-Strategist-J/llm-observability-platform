@@ -375,6 +375,11 @@ export class AuthService {
   async generateApiKey(input: CreateApiKeyInput): Promise<{ rawKey: string; keyRecord: ApiKeyRecord }> {
     const validated = CreateApiKeyInputSchema.parse(input);
 
+    const org = await this.repo.getOrganizationById(validated.org_id);
+    if (!org) {
+      throw new ValidationError(`Invalid organization ID '${validated.org_id}': Target organization does not exist in the system.`);
+    }
+
     let prefix: string = AUTH_CONSTANTS.API_KEY_PREFIX_GENERAL;
     if (validated.key_type === AUTH_CONSTANTS.KEY_TYPE_SUPER_SECRET) {
       prefix = AUTH_CONSTANTS.API_KEY_PREFIX_SUPER_SECRET;

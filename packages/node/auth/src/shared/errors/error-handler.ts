@@ -69,6 +69,10 @@ export function createErrorResponse(err: unknown): { statusCode: number; payload
     const authErr = new AuthError(rawMessage, 'INSUFFICIENT_PERMISSION', 403);
     return createErrorResponse(authErr);
   }
+  if (rawMessage.includes('foreign key constraint') || rawMessage.includes('auth_api_keys_org_id_fkey')) {
+    const authErr = new ValidationError('Invalid organization ID: The target organization does not exist or has been deleted.');
+    return createErrorResponse(authErr);
+  }
 
   return {
     statusCode: 500,
