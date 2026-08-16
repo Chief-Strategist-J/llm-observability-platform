@@ -62,7 +62,7 @@ export function OrgSettingsForm({
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 w-full">
       {status && (
         <div className="rounded-[var(--radius-md)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3 text-xs text-[hsl(var(--foreground))] shadow">
           {status}
