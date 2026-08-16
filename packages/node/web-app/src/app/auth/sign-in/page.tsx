@@ -32,7 +32,7 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[hsl(var(--background))] p-4 text-[hsl(var(--foreground))]">
+    <div className="auth-container">
       <SignInForm
         initialEmail="jaydeep@gmail.com"
         initialPassword="password12345"

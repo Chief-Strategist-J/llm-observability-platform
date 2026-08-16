@@ -55,3 +55,19 @@ export const ErrorState: Story = {
     errorMsg: "Organization name 'Scaibu' already exists in registry.",
   },
 };
+
+export const MobileView: Story = {
+  parameters: {
+    viewport: {
+      defaultViewport: "mobile1",
+    },
+  },
+  args: {
+    initialName: "Jaydeep",
+    initialOrgName: "Scaibu",
+    initialEmail: "jaydeep@gmail.com",
+    initialPassword: "password12345",
+    loading: false,
+    errorMsg: null,
+  },
+};

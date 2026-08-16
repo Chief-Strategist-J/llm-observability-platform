@@ -27,7 +27,7 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[hsl(var(--background))] p-4 text-[hsl(var(--foreground))]">
+    <div className="auth-container">
       <SignUpForm
         initialName="Jaydeep"
         initialOrgName="Scaibu"

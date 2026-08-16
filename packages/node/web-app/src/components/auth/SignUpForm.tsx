@@ -41,31 +41,23 @@ export function SignUpForm({
   const strength = getPasswordStrength(password);
 
   return (
-    <div className="w-full max-w-md rounded-[var(--radius-xl)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-8 shadow-lg space-y-6 text-left">
-      <div className="text-left space-y-1.5 mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-[hsl(var(--foreground))] text-left">
-          Register Organization
-        </h1>
-        <p className="text-xs text-[hsl(var(--muted-foreground))] text-left">
-          Create your multi-tenant organization workspace
-        </p>
+    <div className="auth-card">
+      <div className="auth-header">
+        <h1 className="auth-title">Register Organization</h1>
+        <p className="auth-subtitle">Create your multi-tenant organization workspace</p>
       </div>
 
-      {errorMsg && (
-        <div className="rounded-[var(--radius-md)] border border-[hsl(var(--destructive)/.4)] bg-[hsl(var(--destructive)/.15)] p-3.5 text-xs text-[hsl(var(--destructive))] font-medium text-left">
-          {errorMsg}
-        </div>
-      )}
+      {errorMsg && <div className="auth-error-alert">{errorMsg}</div>}
 
       <form
         onSubmit={(e) => {
           e.preventDefault();
           onSubmit({ name, organization_name: orgName, email, password });
         }}
-        className="space-y-4 text-left"
+        className="auth-form"
       >
-        <div className="flex flex-col gap-1.5 text-left">
-          <label htmlFor="name" className="text-xs font-semibold uppercase text-[hsl(var(--muted-foreground))] text-left">
+        <div className="auth-field">
+          <label htmlFor="name" className="auth-label">
             Full Name
           </label>
           <Input
@@ -78,8 +70,8 @@ export function SignUpForm({
           />
         </div>
 
-        <div className="flex flex-col gap-1.5 text-left">
-          <label htmlFor="orgName" className="text-xs font-semibold uppercase text-[hsl(var(--muted-foreground))] text-left">
+        <div className="auth-field">
+          <label htmlFor="orgName" className="auth-label">
             Organization Name
           </label>
           <Input
@@ -92,8 +84,8 @@ export function SignUpForm({
           />
         </div>
 
-        <div className="flex flex-col gap-1.5 text-left">
-          <label htmlFor="email" className="text-xs font-semibold uppercase text-[hsl(var(--muted-foreground))] text-left">
+        <div className="auth-field">
+          <label htmlFor="email" className="auth-label">
             Email Address
           </label>
           <Input
@@ -106,11 +98,11 @@ export function SignUpForm({
           />
         </div>
 
-        <div className="flex flex-col gap-1.5 text-left">
-          <label htmlFor="password" className="text-xs font-semibold uppercase text-[hsl(var(--muted-foreground))] text-left">
+        <div className="auth-field">
+          <label htmlFor="password" className="auth-label">
             Password (Min 12 chars)
           </label>
-          <div className="relative">
+          <div className="auth-password-wrapper">
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
@@ -125,20 +117,20 @@ export function SignUpForm({
               type="button"
               aria-label={showPassword ? "Hide password" : "Show password"}
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors cursor-pointer"
+              className="auth-password-toggle"
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
 
           {password && (
-            <div className="space-y-1 pt-1 text-left">
-              <div className="flex justify-between items-center text-[10px] text-[hsl(var(--muted-foreground))] font-medium">
+            <div className="auth-strength-meter">
+              <div className="auth-strength-label">
                 <span>Strength: {strength.label}</span>
               </div>
-              <div className="h-1 w-full bg-[hsl(var(--muted)/.3)] rounded-full overflow-hidden flex">
+              <div className="auth-strength-track">
                 <div
-                  className={`h-full transition-all duration-300 ${strength.color} ${
+                  className={`auth-strength-bar ${strength.color} ${
                     strength.score === 1 ? "w-1/3" : strength.score === 2 ? "w-2/3" : "w-full"
                   }`}
                 />
@@ -147,14 +139,14 @@ export function SignUpForm({
           )}
         </div>
 
-        <Button type="submit" className="w-full mt-4" disabled={loading}>
+        <Button type="submit" className="auth-submit-btn" disabled={loading}>
           {loading ? "Creating Organization..." : "Register Organization"}
         </Button>
       </form>
 
-      <div className="text-left text-xs text-[hsl(var(--muted-foreground))] pt-2">
+      <div className="auth-footer">
         Already have an organization?{" "}
-        <Link href="/auth/sign-in" className="text-[hsl(var(--primary))] hover:underline font-semibold">
+        <Link href="/auth/sign-in" className="auth-footer-link">
           Sign In
         </Link>
       </div>

@@ -24,31 +24,23 @@ export function RegisterOrgForm({
   const [slug, setSlug] = useState(initialSlug);
 
   return (
-    <div className="w-full max-w-md rounded-[var(--radius-xl)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-8 shadow-lg space-y-6 text-left">
-      <div className="text-left space-y-1.5 mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-[hsl(var(--foreground))] text-left">
-          Step 1: Register Organization
-        </h1>
-        <p className="text-xs text-[hsl(var(--muted-foreground))] text-left">
-          Create a new multi-tenant organization workspace
-        </p>
+    <div className="auth-card">
+      <div className="auth-header">
+        <h1 className="auth-title">Step 1: Register Organization</h1>
+        <p className="auth-subtitle">Create a new multi-tenant organization workspace</p>
       </div>
 
-      {errorMsg && (
-        <div className="rounded-[var(--radius-md)] border border-[hsl(var(--destructive)/.4)] bg-[hsl(var(--destructive)/.15)] p-3.5 text-xs text-[hsl(var(--destructive))] font-medium text-left">
-          {errorMsg}
-        </div>
-      )}
+      {errorMsg && <div className="auth-error-alert">{errorMsg}</div>}
 
       <form
         onSubmit={(e) => {
           e.preventDefault();
           onSubmit({ name: orgName, slug });
         }}
-        className="space-y-4 text-left"
+        className="auth-form"
       >
-        <div className="flex flex-col gap-1.5 text-left">
-          <label htmlFor="orgName" className="text-xs font-semibold uppercase text-[hsl(var(--muted-foreground))] text-left">
+        <div className="auth-field">
+          <label htmlFor="orgName" className="auth-label">
             Organization Name
           </label>
           <Input
@@ -61,8 +53,8 @@ export function RegisterOrgForm({
           />
         </div>
 
-        <div className="flex flex-col gap-1.5 text-left">
-          <label htmlFor="slug" className="text-xs font-semibold uppercase text-[hsl(var(--muted-foreground))] text-left">
+        <div className="auth-field">
+          <label htmlFor="slug" className="auth-label">
             Workspace Slug (Optional)
           </label>
           <Input
@@ -74,14 +66,14 @@ export function RegisterOrgForm({
           />
         </div>
 
-        <Button type="submit" className="w-full mt-4" disabled={loading}>
+        <Button type="submit" className="auth-submit-btn" disabled={loading}>
           {loading ? "Registering Organization..." : "Register Organization & Proceed"}
         </Button>
       </form>
 
-      <div className="text-left text-xs text-[hsl(var(--muted-foreground))] pt-2">
+      <div className="auth-footer">
         Already registered?{" "}
-        <Link href="/auth/sign-in" className="text-[hsl(var(--primary))] hover:underline font-semibold">
+        <Link href="/auth/sign-in" className="auth-footer-link">
           Sign In
         </Link>
       </div>

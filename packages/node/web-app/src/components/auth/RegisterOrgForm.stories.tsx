@@ -49,3 +49,17 @@ export const ErrorState: Story = {
     errorMsg: "Organization name 'Scaibu' is already registered.",
   },
 };
+
+export const MobileView: Story = {
+  parameters: {
+    viewport: {
+      defaultViewport: "mobile1",
+    },
+  },
+  args: {
+    initialOrgName: "Scaibu",
+    initialSlug: "scaibu",
+    loading: false,
+    errorMsg: null,
+  },
+};

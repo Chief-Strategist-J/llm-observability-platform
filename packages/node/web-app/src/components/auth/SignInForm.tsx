@@ -26,31 +26,23 @@ export function SignInForm({
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <div className="w-full max-w-md rounded-[var(--radius-xl)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-8 shadow-lg space-y-6 text-left">
-      <div className="text-left space-y-1.5 mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-[hsl(var(--foreground))] text-left">
-          Sign In
-        </h1>
-        <p className="text-xs text-[hsl(var(--muted-foreground))] text-left">
-          Sign in to access your multi-tenant observability workspace
-        </p>
+    <div className="auth-card">
+      <div className="auth-header">
+        <h1 className="auth-title">Sign In</h1>
+        <p className="auth-subtitle">Sign in to access your multi-tenant observability workspace</p>
       </div>
 
-      {errorMsg && (
-        <div className="rounded-[var(--radius-md)] border border-[hsl(var(--destructive)/.4)] bg-[hsl(var(--destructive)/.15)] p-3.5 text-xs text-[hsl(var(--destructive))] font-medium text-left">
-          {errorMsg}
-        </div>
-      )}
+      {errorMsg && <div className="auth-error-alert">{errorMsg}</div>}
 
       <form
         onSubmit={(e) => {
           e.preventDefault();
           onSubmit({ email, password });
         }}
-        className="space-y-4 text-left"
+        className="auth-form"
       >
-        <div className="flex flex-col gap-1.5 text-left">
-          <label htmlFor="email" className="text-xs font-semibold uppercase text-[hsl(var(--muted-foreground))] text-left">
+        <div className="auth-field">
+          <label htmlFor="email" className="auth-label">
             Email Address
           </label>
           <Input
@@ -63,11 +55,11 @@ export function SignInForm({
           />
         </div>
 
-        <div className="flex flex-col gap-1.5 text-left">
-          <label htmlFor="password" className="text-xs font-semibold uppercase text-[hsl(var(--muted-foreground))] text-left">
+        <div className="auth-field">
+          <label htmlFor="password" className="auth-label">
             Password
           </label>
-          <div className="relative">
+          <div className="auth-password-wrapper">
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
@@ -81,21 +73,21 @@ export function SignInForm({
               type="button"
               aria-label={showPassword ? "Hide password" : "Show password"}
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors cursor-pointer"
+              className="auth-password-toggle"
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
         </div>
 
-        <Button type="submit" className="w-full mt-4" disabled={loading}>
+        <Button type="submit" className="auth-submit-btn" disabled={loading}>
           {loading ? "Authenticating..." : "Sign In to Workspace"}
         </Button>
       </form>
 
-      <div className="text-left text-xs text-[hsl(var(--muted-foreground))] pt-2">
+      <div className="auth-footer">
         Need a new organization?{" "}
-        <Link href="/auth/sign-up" className="text-[hsl(var(--primary))] hover:underline font-semibold">
+        <Link href="/auth/sign-up" className="auth-footer-link">
           Register Organization
         </Link>
       </div>

@@ -18,15 +18,11 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 } as const;
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: 'px-3 py-1.5 text-xs',
-  md: 'px-4 py-2 text-sm',
-  lg: 'px-5 py-2.5 text-base',
+  sm: 'px-3 py-1.5 min-h-[36px] text-xs',
+  md: 'px-4 py-2.5 min-h-[44px] text-sm',
+  lg: 'px-6 py-3 min-h-[48px] text-base',
 } as const;
 
-/**
- * F-02: Button primitive.
- * Themed against design tokens. Never restyled ad hoc per feature.
- */
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'default', size = 'md', type = 'button', ...props }, ref) => {
     return (

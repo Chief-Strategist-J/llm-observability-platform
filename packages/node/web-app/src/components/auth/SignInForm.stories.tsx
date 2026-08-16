@@ -49,3 +49,17 @@ export const UserBlockedError: Story = {
     errorMsg: "Access Denied: Your user account has been blocked by your organization administrator.",
   },
 };
+
+export const MobileView: Story = {
+  parameters: {
+    viewport: {
+      defaultViewport: "mobile1",
+    },
+  },
+  args: {
+    initialEmail: "jaydeep@gmail.com",
+    initialPassword: "password12345",
+    loading: false,
+    errorMsg: null,
+  },
+};
