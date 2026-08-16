@@ -18,7 +18,7 @@ export function HeaderBar() {
     <header className="h-14 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 flex items-center justify-between text-xs text-[hsl(var(--foreground))] shrink-0 shadow-sm">
       {/* Left: Environment & Live Status */}
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full dark:bg-emerald-950/80 bg-emerald-100/90 dark:text-emerald-300 text-emerald-900 border border-emerald-500/50 font-bold text-[11px] shrink-0">
+        <div className="flex items-center gap-2 px-3 py-1 rounded-full dark:bg-emerald-950/80 bg-emerald-100/90 dark:text-emerald-300 text-emerald-900 border border-emerald-500/50 font-bold text-[11px] shrink-0">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -26,7 +26,7 @@ export function HeaderBar() {
           <span>Live Ingestion Engine</span>
         </div>
 
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-md)] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))]">
+        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] shadow-xs">
           <Layers size={13} className="text-purple-400" />
           <select
             value={environment}
@@ -43,7 +43,7 @@ export function HeaderBar() {
       {/* Right: Time Range, Refresh & Controls */}
       <div className="flex items-center gap-3">
         {/* Time Range Selector */}
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-md)] bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[hsl(var(--foreground))] font-medium">
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[hsl(var(--foreground))] font-medium shadow-xs">
           <Clock size={13} className="text-[hsl(var(--primary))]" />
           <select
             value={timeRange}
@@ -59,7 +59,7 @@ export function HeaderBar() {
         </div>
 
         {/* Auto Refresh Dropdown */}
-        <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-md)] bg-[hsl(var(--background))] border border-[hsl(var(--border))]">
+        <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[hsl(var(--background))] border border-[hsl(var(--border))] shadow-xs">
           <button
             onClick={handleRefreshClick}
             className="p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-transform cursor-pointer"

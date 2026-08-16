@@ -20,9 +20,9 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 } as const;
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: 'px-3 py-1.5 min-h-[36px] text-xs',
-  md: 'px-4 py-2.5 min-h-[44px] text-sm',
-  lg: 'px-6 py-3 min-h-[48px] text-base',
+  sm: 'px-3.5 py-1.5 min-h-[36px] text-xs',
+  md: 'px-5 py-2.5 min-h-[44px] text-sm',
+  lg: 'px-7 py-3 min-h-[48px] text-base',
 } as const;
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -32,7 +32,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         type={type}
         className={cn(
-          'inline-flex cursor-pointer items-center justify-center rounded-[var(--radius-md)] font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] disabled:pointer-events-none disabled:opacity-50',
+          'inline-flex cursor-pointer items-center justify-center rounded-full font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] disabled:pointer-events-none disabled:opacity-50',
           VARIANT_CLASSES[variant],
           SIZE_CLASSES[size],
           className

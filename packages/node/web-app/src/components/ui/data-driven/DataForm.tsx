@@ -67,7 +67,7 @@ export function DataForm<T extends Record<string, any>>({
       <h3 className="text-lg font-bold tracking-tight text-[hsl(var(--foreground))]">{schema.name}</h3>
 
       {schema.fields.map((field) => (
-        <div key={field.key} className="flex flex-col space-y-1.5">
+        <div key={field.key} className="flex flex-col space-y-1.5 text-left">
           <label htmlFor={field.key} className="text-xs font-semibold uppercase text-[hsl(var(--muted-foreground))]">
             {field.label} {field.required && <span className="text-[hsl(var(--destructive))]">*</span>}
           </label>
@@ -86,7 +86,7 @@ export function DataForm<T extends Record<string, any>>({
               required={field.required}
               value={values[field.key] || ""}
               onChange={(e) => handleChange(field.key, e.target.value)}
-              className="w-full rounded-[var(--radius-md)] border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3.5 py-2 text-sm text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
+              className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-2.5 text-sm text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-purple-500/50 cursor-pointer font-medium"
             >
               <option value="">Select {field.label}...</option>
               {field.options?.map((opt) => (
@@ -96,7 +96,7 @@ export function DataForm<T extends Record<string, any>>({
               ))}
             </select>
           ) : field.kind === "checkbox-group" ? (
-            <div className="grid grid-cols-2 gap-2 rounded-[var(--radius-md)] border border-[hsl(var(--border))] bg-[hsl(var(--muted)/.2)] p-3">
+            <div className="grid grid-cols-2 gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted)/.2)] p-3">
               {field.options?.map((opt) => {
                 const currentArr: string[] = values[field.key] || [];
                 const isChecked = currentArr.includes(opt.value);
@@ -106,7 +106,7 @@ export function DataForm<T extends Record<string, any>>({
                       type="checkbox"
                       checked={isChecked}
                       onChange={(e) => handleCheckboxGroup(field.key, opt.value, e.target.checked)}
-                      className="rounded border-[hsl(var(--border))] text-[hsl(var(--primary))]"
+                      className="rounded border-[hsl(var(--border))] text-purple-600 focus:ring-purple-500"
                     />
                     <span>{opt.label}</span>
                   </label>
