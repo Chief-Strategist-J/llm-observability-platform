@@ -41,6 +41,8 @@ describe('Hexagonal Ports & Adapters Architecture Unit Tests', () => {
     const signInResult = await inboundPort.signIn({
       email: AUTH_CONSTANTS.DEFAULT_ADMIN_EMAIL,
       password: 'password123',
+      ip_address: '127.0.0.1',
+      user_agent: 'VitestHexagonal/1.0',
     });
 
     const session = await inboundPort.validateSession(signInResult.token);
