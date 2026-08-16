@@ -1,7 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { UserPlus, Shield, UserX, Ban, CheckCircle2 } from 'lucide-react';
+import { authActions } from '../auth.slice';
+import { authApiClient } from '../../../lib/auth-client';
 
 export interface Member {
   readonly id: string;
@@ -18,16 +21,47 @@ interface MemberManagementTableProps {
   readonly onDeleteMember?: (userId: string) => void;
 }
 
+function getCookieToken(): string | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const match = document.cookie.match(new RegExp('(?:^|; )authjs\\.session-token=([^;]*)'));
+  return match && match[1] ? decodeURIComponent(match[1]) : undefined;
+}
+
 export function MemberManagementTable({
   members = [],
   onInviteMember,
   onBlockMember,
   onDeleteMember,
 }: MemberManagementTableProps) {
+  const dispatch = useDispatch();
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState('member');
+
+  const defaultInviteHandler = (data: { email: string; name: string; role: string }) => {
+    dispatch(authActions.inviteUserSubmitted(data));
+  };
+
+  const defaultBlockHandler = async (userId: string) => {
+    const token = getCookieToken();
+    try {
+      await authApiClient.blockUser(userId, token);
+      dispatch(authActions.fetchMembersSubmitted());
+    } catch (err) {
+      console.error('Failed to block user:', err);
+    }
+  };
+
+  const defaultDeleteHandler = async (userId: string) => {
+    const token = getCookieToken();
+    try {
+      await authApiClient.deleteUser(userId, token);
+      dispatch(authActions.fetchMembersSubmitted());
+    } catch (err) {
+      console.error('Failed to delete user:', err);
+    }
+  };
 
   return (
     <div className="space-y-6 max-w-4xl text-left">
@@ -50,7 +84,8 @@ export function MemberManagementTable({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            onInviteMember?.({ email: newEmail, name: newName, role: newRole });
+            const inviteFn = onInviteMember || defaultInviteHandler;
+            inviteFn({ email: newEmail, name: newName, role: newRole });
             setNewEmail('');
             setNewName('');
             setShowInviteForm(false);
@@ -148,15 +183,17 @@ export function MemberManagementTable({
                     <div className="flex justify-end gap-2">
                       <button
                         type="button"
-                        onClick={() => onBlockMember?.(member.id)}
+                        onClick={() => (onBlockMember || defaultBlockHandler)(member.id)}
                         className="rounded p-1 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
+                        title="Block Member"
                       >
                         <Ban size={14} />
                       </button>
                       <button
                         type="button"
-                        onClick={() => onDeleteMember?.(member.id)}
+                        onClick={() => (onDeleteMember || defaultDeleteHandler)(member.id)}
                         className="rounded p-1 text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive)/.1)]"
+                        title="Soft Delete Member"
                       >
                         <UserX size={14} />
                       </button>

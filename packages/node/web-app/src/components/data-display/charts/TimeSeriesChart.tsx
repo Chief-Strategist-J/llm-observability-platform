@@ -55,8 +55,8 @@ export const TimeSeriesChart = forwardRef<TimeSeriesChartRef, TimeSeriesChartPro
         xSeries.push(point.timestamp);
         for (let i = 0; i < point.values.length; i++) {
           const ySeries = newData[i + 1] as number[];
-          if (ySeries !== undefined) {
-            ySeries.push(point.values[i]);
+          if (point.values[i] !== undefined) {
+            ySeries.push(point.values[i]!);
           }
         }
       }
@@ -91,8 +91,8 @@ export const TimeSeriesChart = forwardRef<TimeSeriesChartRef, TimeSeriesChartPro
         xSeries.push(timestamp);
         for (let i = 0; i < values.length; i++) {
           const ySeries = newData[i + 1] as number[];
-          if (ySeries !== undefined) {
-            ySeries.push(values[i]);
+          if (values[i] !== undefined) {
+            ySeries.push(values[i]!);
           }
         }
         plotRef.current.setData(newData, false);

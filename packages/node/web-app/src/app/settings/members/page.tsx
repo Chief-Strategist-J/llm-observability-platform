@@ -1,14 +1,28 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { MemberManagementTable, type Member } from '../../../features/auth';
+import { authActions } from '../../../features/auth/auth.slice';
 
 export default function MembersSettingsPage() {
   const dispatch = useDispatch();
+  const members = useSelector((state: any) => state?.auth?.members || []);
   const authUser = useSelector((state: any) => state?.auth?.user);
 
-  const currentMembers: readonly Member[] = authUser
+  useEffect(() => {
+    dispatch(authActions.fetchMembersSubmitted());
+  }, [dispatch]);
+
+  const displayMembers: readonly Member[] = members.length > 0
+    ? members.map((m: any) => ({
+        id: m.id,
+        name: m.name,
+        email: m.email,
+        role: m.role || 'member',
+        blocked: m.blocked || false,
+      }))
+    : authUser
     ? [
         {
           id: authUser.id || 'usr-current',
@@ -29,7 +43,7 @@ export default function MembersSettingsPage() {
         </p>
       </div>
 
-      <MemberManagementTable members={currentMembers} />
+      <MemberManagementTable members={displayMembers} />
     </div>
   );
 }

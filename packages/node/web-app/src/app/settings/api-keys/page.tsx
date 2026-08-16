@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { DataForm, type SchemaConfig } from "../../../components/ui/data-driven/DataForm";
 import { DataTable, type ColumnConfig } from "../../../components/ui/data-driven/DataTable";
+import { Button } from "../../../components/primitives/Button";
+import { authApiClient } from "../../../lib/auth-client";
 
 export default function ApiKeysPage() {
   const [keys, setKeys] = useState<Array<{
@@ -12,11 +14,30 @@ export default function ApiKeysPage() {
     name: string;
     permissions: string[];
     rawKey?: string;
+    revoked?: boolean;
   }>>([]);
 
   const [verificationResult, setVerificationResult] = useState<any | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  function getCookieToken(): string | undefined {
+    if (typeof document === "undefined") return undefined;
+    const match = document.cookie.match(new RegExp("(?:^|; )authjs\\.session-token=([^;]*)"));
+    return match && match[1] ? decodeURIComponent(match[1]) : undefined;
+  }
+
+  const loadData = useCallback(async () => {
+    const token = getCookieToken();
+    try {
+      const fetchedKeys = await authApiClient.listApiKeys(token);
+      if (Array.isArray(fetchedKeys)) setKeys(fetchedKeys);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const createKeySchema: SchemaConfig = {
     name: "Generate 3-Tier API Key",
@@ -65,38 +86,61 @@ export default function ApiKeysPage() {
 
   const handleCreateKey = async (values: any) => {
     setLoading(true);
+    const token = getCookieToken();
     try {
-      const rawKey = `ak_${values.key_type || "gen"}_${values.org_id}_${Math.random().toString(36).substring(2, 10)}`;
-      const newKey = {
-        key_id: `key_${Date.now().toString(36)}`,
+      const res = await authApiClient.createApiKey({
+        name: values.name,
+        org_id: values.org_id,
+        key_type: values.key_type || "general",
+        permissions: values.permissions || [],
+      }, token);
+
+      const createdItem = {
+        key_id: res.keyRecord?.key_id || `key_${Date.now().toString(36)}`,
         org_id: values.org_id,
         key_type: values.key_type || "general",
         name: values.name,
         permissions: values.permissions || [],
-        rawKey,
+        rawKey: res.rawKey,
+        revoked: false,
       };
-      setKeys((prev) => [newKey, ...prev]);
-      setStatusMessage(`API Key "${values.name}" generated! Raw Key: ${rawKey}`);
+
+      setKeys((prev) => [createdItem, ...prev]);
+      setStatusMessage(`API Key "${values.name}" generated! Raw Key: ${res.rawKey}`);
+    } catch (err: any) {
+      setStatusMessage(`Failed to generate API Key: ${err.message}`);
     } finally {
       setLoading(false);
+      loadData();
     }
   };
 
   const handleVerifyKey = async (values: { key: string; required_permission?: string }) => {
     setLoading(true);
     try {
-      const foundKey = keys.find((k) => k.rawKey === values.key || values.key.includes(k.org_id));
-      const hasPerm = !values.required_permission || (foundKey && foundKey.permissions.includes(values.required_permission));
-
+      const result = await authApiClient.verifyApiKey(values.key, values.required_permission);
       setVerificationResult({
-        valid: !!foundKey || values.key.startsWith("ak_"),
-        authorized: hasPerm,
+        valid: result.valid,
+        authorized: result.authorized,
         requiredPermission: values.required_permission || "None",
-        keyInfo: foundKey || { key_type: "general", permissions: ["traces:write"] },
+        record: result.record,
       });
       setStatusMessage("API key verification completed.");
+    } catch (err: any) {
+      setStatusMessage(`Key verification failed: ${err.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRevokeKey = async (keyId: string) => {
+    const token = getCookieToken();
+    try {
+      await authApiClient.revokeApiKey(keyId, token);
+      setKeys((prev) => prev.map((k) => (k.key_id === keyId ? { ...k, revoked: true } : k)));
+      setStatusMessage(`API key ${keyId} revoked.`);
+    } catch (err: any) {
+      setStatusMessage(`Failed to revoke API key: ${err.message}`);
     }
   };
 
@@ -110,7 +154,7 @@ export default function ApiKeysPage() {
       label: "Permissions",
       render: (r) => (
         <div className="flex flex-wrap gap-1">
-          {r.permissions.map((p) => (
+          {(r.permissions || []).map((p) => (
             <span key={p} className="px-1.5 py-0.5 text-[10px] rounded bg-[hsl(var(--muted)/.3)] text-[hsl(var(--foreground))] border border-[hsl(var(--border))] font-mono">
               {p}
             </span>
@@ -120,14 +164,16 @@ export default function ApiKeysPage() {
     },
     {
       key: "rawKey",
-      label: "Raw Key",
+      label: "Raw Key / Status",
       render: (r) =>
-        r.rawKey ? (
+        r.revoked ? (
+          <span className="text-[hsl(var(--destructive))] text-xs font-semibold">Revoked</span>
+        ) : r.rawKey ? (
           <code className="text-xs text-amber-400 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800 font-mono">
             {r.rawKey}
           </code>
         ) : (
-          <span className="text-[hsl(var(--muted-foreground))] text-xs">Hidden</span>
+          <span className="text-emerald-400 text-xs font-semibold">Active</span>
         ),
     },
   ];
@@ -139,13 +185,14 @@ export default function ApiKeysPage() {
           API Key Management
         </h1>
         <p className="text-[hsl(var(--muted-foreground))] text-sm mt-1">
-          Generate 3-tier API keys bound to specific organization permission tables and verify entitlements.
+          Generate 3-tier API keys bound to specific organization permission tables, verify entitlements, and revoke access.
         </p>
       </div>
 
       {statusMessage && (
-        <div className="rounded-[var(--radius-md)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-4 text-sm text-[hsl(var(--foreground))] shadow">
-          {statusMessage}
+        <div className="rounded-[var(--radius-md)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-4 text-sm text-[hsl(var(--foreground))] shadow flex items-center justify-between">
+          <span>{statusMessage}</span>
+          <button onClick={() => setStatusMessage(null)} className="text-xs text-[hsl(var(--muted-foreground))] hover:underline">Dismiss</button>
         </div>
       )}
 
@@ -189,6 +236,17 @@ export default function ApiKeysPage() {
         columns={keyColumns}
         rows={keys}
         searchFields={["name", "key_id", "org_id", "key_type"]}
+        actions={(r) => (
+          !r.revoked && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => handleRevokeKey(r.key_id)}
+            >
+              Revoke Key
+            </Button>
+          )
+        )}
       />
     </div>
   );

@@ -7,7 +7,7 @@ import { AUTH_MESSAGES, AUTH_EVENTS, AUTH_ROLES } from "./auth.constants";
 function getCookieToken(): string | undefined {
   if (typeof document === "undefined") return undefined;
   const match = document.cookie.match(new RegExp("(?:^|; )authjs\\.session-token=([^;]*)"));
-  return match ? decodeURIComponent(match[1]) : undefined;
+  return match && match[1] ? decodeURIComponent(match[1]) : undefined;
 }
 
 function setAuthCookies(token: string, role?: string) {

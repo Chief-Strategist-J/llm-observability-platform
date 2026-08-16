@@ -121,7 +121,7 @@ export function withCircuitBreaker<T>(port: CrudPort<T>, options: DecoratorOptio
 }
 
 export function withTracing<T>(port: CrudPort<T>, name: string): CrudPort<T> {
-  async function trace<R>(op: string, fn: () => Promise<R>): Promise<R> {
+  async function trace<R>(_op: string, fn: () => Promise<R>): Promise<R> {
     try {
       return await fn();
     } catch (err) {

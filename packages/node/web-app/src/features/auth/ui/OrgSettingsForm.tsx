@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Building2, ShieldCheck, CreditCard, Trash2 } from 'lucide-react';
+import { useSelector } from 'react-redux';
+import { Building2, ShieldCheck, Trash2 } from 'lucide-react';
+import { authApiClient } from '../../../lib/auth-client';
 
 interface OrgSettingsFormProps {
   readonly orgName?: string;
@@ -12,6 +14,12 @@ interface OrgSettingsFormProps {
   readonly onDelete?: () => void;
 }
 
+function getCookieToken(): string | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const match = document.cookie.match(new RegExp('(?:^|; )authjs\\.session-token=([^;]*)'));
+  return match && match[1] ? decodeURIComponent(match[1]) : undefined;
+}
+
 export function OrgSettingsForm({
   orgName = 'Scaibu Corp',
   orgSlug = 'scaibu-corp',
@@ -20,11 +28,46 @@ export function OrgSettingsForm({
   onSave,
   onDelete,
 }: OrgSettingsFormProps) {
+  const authUser = useSelector((state: any) => state?.auth?.user);
   const [name, setName] = useState(orgName);
   const [slug, setSlug] = useState(orgSlug);
+  const [status, setStatus] = useState<string | null>(null);
+
+  const defaultSaveHandler = async (data: { name: string; slug: string }) => {
+    const token = getCookieToken();
+    const orgId = authUser?.org_id;
+    if (!orgId) {
+      setStatus('No active organization ID found');
+      return;
+    }
+    try {
+      await authApiClient.updateOrganization(orgId, data, token);
+      setStatus('Organization details updated successfully.');
+    } catch (err: any) {
+      setStatus(`Failed to update organization: ${err.message}`);
+    }
+  };
+
+  const defaultDeleteHandler = async () => {
+    const token = getCookieToken();
+    const orgId = authUser?.org_id;
+    if (!orgId) return;
+    try {
+      await authApiClient.deleteOrganization(orgId, token);
+      setStatus('Organization soft-deleted (30-day backup retention active).');
+    } catch (err: any) {
+      setStatus(`Failed to delete organization: ${err.message}`);
+    }
+  };
 
   return (
     <div className="space-y-6 max-w-4xl">
+      {status && (
+        <div className="rounded-[var(--radius-md)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3 text-xs text-[hsl(var(--foreground))] shadow">
+          {status}
+        </div>
+      )}
+
       <div className="rounded-[var(--radius-lg)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 space-y-6">
         <div className="flex items-center justify-between border-b border-[hsl(var(--border))] pb-4">
           <div className="flex items-center gap-3">
@@ -50,7 +93,7 @@ export function OrgSettingsForm({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            onSave?.({ name, slug });
+            (onSave || defaultSaveHandler)({ name, slug });
           }}
           className="space-y-4 text-left"
         >
@@ -78,7 +121,7 @@ export function OrgSettingsForm({
           <div className="flex justify-end pt-2">
             <button
               type="submit"
-              className="rounded-[var(--radius-md)] bg-[hsl(var(--primary))] px-4 py-2 text-xs font-semibold text-[hsl(var(--primary-foreground))] transition-opacity hover:opacity-90"
+              className="rounded-[var(--radius-md)] bg-[hsl(var(--primary))] px-4 py-2 text-xs font-semibold text-[hsl(var(--primary-foreground))] transition-opacity hover:opacity-90 cursor-pointer"
             >
               Save Organization Changes
             </button>
@@ -97,8 +140,8 @@ export function OrgSettingsForm({
         <div>
           <button
             type="button"
-            onClick={onDelete}
-            className="rounded-[var(--radius-md)] bg-[hsl(var(--destructive))] px-4 py-2 text-xs font-semibold text-[hsl(var(--destructive-foreground))] transition-opacity hover:opacity-90"
+            onClick={onDelete || defaultDeleteHandler}
+            className="rounded-[var(--radius-md)] bg-[hsl(var(--destructive))] px-4 py-2 text-xs font-semibold text-[hsl(var(--destructive-foreground))] transition-opacity hover:opacity-90 cursor-pointer"
           >
             Delete Organization
           </button>
