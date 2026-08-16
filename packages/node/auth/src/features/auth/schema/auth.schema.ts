@@ -14,56 +14,62 @@ export const ApiKeyTypeSchema = z.enum([
 ]);
 
 export const PasswordValidationSchema = z
-  .string()
-  .min(AUTH_CONSTANTS.SECURITY_CONFIG.PASSWORD_MIN_LENGTH)
-  .regex(new RegExp(AUTH_CONSTANTS.SECURITY_CONFIG.PASSWORD_PATTERN));
+  .string({ invalid_type_error: 'Password must be a string' })
+  .min(
+    AUTH_CONSTANTS.SECURITY_CONFIG.PASSWORD_MIN_LENGTH,
+    `Password must be at least ${AUTH_CONSTANTS.SECURITY_CONFIG.PASSWORD_MIN_LENGTH} characters long`
+  )
+  .regex(
+    new RegExp(AUTH_CONSTANTS.SECURITY_CONFIG.PASSWORD_PATTERN),
+    'Password must contain at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character (!@#$%^&*)'
+  );
 
 export const CreateOrganizationInputSchema = z.object({
-  name: z.string().min(2),
+  name: z.string().min(2, 'Organization name must be at least 2 characters long'),
   slug: z.string().optional(),
 });
 
 export const CreateUserInputSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email('Please enter a valid email address'),
   password: PasswordValidationSchema,
-  name: z.string().min(2),
-  org_id: z.string().min(1),
+  name: z.string().min(2, 'Full name must be at least 2 characters long'),
+  org_id: z.string().min(1, 'Target organization ID is required'),
   role: UserRoleSchema.default(AUTH_CONSTANTS.ROLE_MEMBER),
   permissions: z.array(z.string()).default([]),
 });
 
 export const SignUpInputSchema = z.object({
-  email: z.string().email().max(255),
+  email: z.string().email('Please enter a valid email address').max(255),
   password: PasswordValidationSchema,
-  name: z.string().min(2),
-  organization_name: z.string().min(2),
+  name: z.string().min(2, 'Full name must be at least 2 characters long'),
+  organization_name: z.string().min(2, 'Organization name must be at least 2 characters long'),
   role: UserRoleSchema.default(AUTH_CONSTANTS.ROLE_ADMIN),
 });
 
 export const SignInInputSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
+  email: z.string().email('Please enter a valid email address'),
+  password: z.string().min(1, 'Password is required'),
   ip_address: z.string().default('127.0.0.1'),
   user_agent: z.string().default('unknown'),
 });
 
 export const ForgotPasswordInputSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email('Please enter a valid email address'),
 });
 
 export const ResetPasswordInputSchema = z.object({
-  token: z.string().min(1),
+  token: z.string().min(1, 'Reset token is required'),
   new_password: PasswordValidationSchema,
 });
 
 export const ChangePasswordInputSchema = z.object({
-  current_password: z.string().min(1),
+  current_password: z.string().min(1, 'Current password is required'),
   new_password: PasswordValidationSchema,
 });
 
 export const CreateApiKeyInputSchema = z.object({
-  org_id: z.string().min(1),
-  name: z.string().min(1),
+  org_id: z.string().min(1, 'Organization ID is required'),
+  name: z.string().min(1, 'Key name is required'),
   key_type: ApiKeyTypeSchema.default(AUTH_CONSTANTS.KEY_TYPE_GENERAL),
   permissions: z.array(z.string()).default([
     AUTH_CONSTANTS.PERMISSION_TRACES_READ,
@@ -73,7 +79,7 @@ export const CreateApiKeyInputSchema = z.object({
 });
 
 export const VerifyApiKeyInputSchema = z.object({
-  key: z.string().min(1),
+  key: z.string().min(1, 'API key string is required'),
   required_permission: z.string().optional(),
 });
 
