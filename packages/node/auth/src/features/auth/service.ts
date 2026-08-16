@@ -1,14 +1,103 @@
 import type { AuthRepositoryPort } from './repository';
-import type { SignUpInput, SignInInput, ForgotPasswordInput, ResetPasswordInput, ChangePasswordInput, CreateApiKeyInput, VerifyApiKeyInput, AuthUserRecord, AuditLogRecord } from './types';
+import type {
+  SignUpInput,
+  SignInInput,
+  ForgotPasswordInput,
+  ResetPasswordInput,
+  ChangePasswordInput,
+  CreateApiKeyInput,
+  VerifyApiKeyInput,
+  CreateOrganizationInput,
+  CreateUserInput,
+  AuthUserRecord,
+  AuditLogRecord,
+} from './types';
 import type { ApiKeyRecord, AuthTokenPayload } from '../../shared/types/auth.types';
-import { SignUpInputSchema, SignInInputSchema, ResetPasswordInputSchema, ChangePasswordInputSchema, CreateApiKeyInputSchema, VerifyApiKeyInputSchema } from './schema/auth.schema';
-import { InvalidCredentialsError, ApiKeyRevokedError, UserAlreadyExistsError, OrgAlreadyExistsError, InsufficientPermissionError, ValidationError } from '../../shared/errors/auth.errors';
+import {
+  SignUpInputSchema,
+  SignInInputSchema,
+  ResetPasswordInputSchema,
+  ChangePasswordInputSchema,
+  CreateApiKeyInputSchema,
+  VerifyApiKeyInputSchema,
+  CreateOrganizationInputSchema,
+  CreateUserInputSchema,
+} from './schema/auth.schema';
+import {
+  InvalidCredentialsError,
+  UserBlockedError,
+  ApiKeyRevokedError,
+  UserAlreadyExistsError,
+  OrgAlreadyExistsError,
+  InsufficientPermissionError,
+  ValidationError,
+} from '../../shared/errors/auth.errors';
 import { hashPassword, verifyPassword, hashApiKey } from '../../shared/utils/argon2.util';
 import { createToken, verifyToken } from '../../shared/utils/jwt.util';
 import { AUTH_CONSTANTS } from '../../shared/constants/auth.constants';
 
 export class AuthService {
   constructor(private readonly repo: AuthRepositoryPort) {}
+
+  async createOrganization(input: CreateOrganizationInput): Promise<{ id: string; name: string; slug: string }> {
+    const validated = CreateOrganizationInputSchema.parse(input);
+    const orgId = `org_${Math.random().toString(36).substring(2, 9)}`;
+    const slug = validated.slug ?? validated.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+    try {
+      await this.repo.createOrganization({ id: orgId, name: validated.name, slug });
+    } catch (err: any) {
+      if (err.message?.includes('Organization name already exists')) {
+        throw new OrgAlreadyExistsError(validated.name);
+      }
+      throw err;
+    }
+
+    return { id: orgId, name: validated.name, slug };
+  }
+
+  async deleteOrganization(orgId: string): Promise<void> {
+    await this.repo.deleteOrganization(orgId);
+  }
+
+  async createUser(input: CreateUserInput): Promise<AuthUserRecord> {
+    const validated = CreateUserInputSchema.parse(input);
+
+    const existingUser = await this.repo.findUserByEmail(validated.email);
+    if (existingUser) {
+      throw new UserAlreadyExistsError(validated.email);
+    }
+
+    const passwordHash = await hashPassword(validated.password);
+    const userId = `usr_${Math.random().toString(36).substring(2, 9)}`;
+
+    const userRecord: AuthUserRecord = {
+      id: userId,
+      email: validated.email,
+      password_hash: passwordHash,
+      name: validated.name,
+      org_id: validated.org_id,
+      org_name: '',
+      role: validated.role ?? AUTH_CONSTANTS.ROLE_MEMBER,
+      blocked: false,
+      user_permissions: validated.permissions ?? [],
+    };
+
+    await this.repo.createUser(userRecord);
+    return userRecord;
+  }
+
+  async blockUser(userId: string): Promise<void> {
+    await this.repo.blockUser(userId);
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    await this.repo.deleteUser(userId);
+  }
+
+  async purgeExpiredSoftDeletes(): Promise<number> {
+    return this.repo.purgeExpiredSoftDeletes();
+  }
 
   async signUp(input: SignUpInput): Promise<{ token: string; payload: AuthTokenPayload; user: AuthUserRecord }> {
     const validated = SignUpInputSchema.parse(input);
@@ -30,6 +119,8 @@ export class AuthService {
       org_id: orgId,
       org_name: validated.organization_name,
       role: validated.role ?? AUTH_CONSTANTS.ROLE_ADMIN,
+      blocked: false,
+      user_permissions: [AUTH_CONSTANTS.PERMISSION_ADMIN_ALL],
     };
 
     try {
@@ -57,6 +148,10 @@ export class AuthService {
     const user = await this.repo.findUserByEmail(validated.email);
     if (!user) {
       throw new InvalidCredentialsError();
+    }
+
+    if (user.blocked) {
+      throw new UserBlockedError();
     }
 
     const isValid = await verifyPassword(validated.password, user.password_hash);

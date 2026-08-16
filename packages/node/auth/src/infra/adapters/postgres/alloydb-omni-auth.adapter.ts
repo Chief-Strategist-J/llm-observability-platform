@@ -5,13 +5,20 @@ import { AUTH_CONSTANTS } from '../../../shared/constants/auth.constants';
 import { AUTH_QUERIES } from '../../../features/auth/queries/auth.queries';
 
 export class AlloyDBOmniAuthAdapter implements AuthRepositoryPort {
-  private readonly mockUsers = new Map<string, AuthUserRecord>();
-  private readonly mockApiKeys = new Map<string, ApiKeyRecord>();
-  private readonly mockAuditLogs = new Map<string, AuditLogRecord>();
-  private readonly mockResets = new Map<string, { tokenHash: string; userId: string; expiresAtMs: number; used: boolean }>();
+  private readonly mockOrgs = new Map<string, { id: string; name: string; slug: string; deleted_at?: number }>();
+  private readonly mockUsers = new Map<string, AuthUserRecord & { deleted_at?: number }>();
+  private readonly mockApiKeys = new Map<string, ApiKeyRecord & { deleted_at?: number }>();
+  private readonly mockAuditLogs = new Map<string, AuditLogRecord & { deleted_at?: number }>();
+  private readonly mockResets = new Map<string, { tokenHash: string; userId: string; expiresAtMs: number; used: boolean; deleted_at?: number }>();
   public readonly queries = AUTH_QUERIES;
 
   constructor() {
+    this.mockOrgs.set(AUTH_CONSTANTS.DEFAULT_ORG_ID, {
+      id: AUTH_CONSTANTS.DEFAULT_ORG_ID,
+      name: AUTH_CONSTANTS.DEFAULT_ORG_NAME,
+      slug: 'acme-observability',
+    });
+
     this.mockUsers.set(AUTH_CONSTANTS.DEFAULT_ADMIN_EMAIL, {
       id: AUTH_CONSTANTS.DEFAULT_ADMIN_ID,
       email: AUTH_CONSTANTS.DEFAULT_ADMIN_EMAIL,
@@ -20,6 +27,8 @@ export class AlloyDBOmniAuthAdapter implements AuthRepositoryPort {
       org_id: AUTH_CONSTANTS.DEFAULT_ORG_ID,
       org_name: AUTH_CONSTANTS.DEFAULT_ORG_NAME,
       role: AUTH_CONSTANTS.ROLE_ADMIN,
+      blocked: false,
+      user_permissions: [AUTH_CONSTANTS.PERMISSION_ADMIN_ALL],
     });
   }
 
@@ -27,23 +36,111 @@ export class AlloyDBOmniAuthAdapter implements AuthRepositoryPort {
     return JSON.stringify(this.queries[flow]);
   }
 
+  async createOrganization(org: { id: string; name: string; slug: string }): Promise<void> {
+    this.getFlowQuery('FLOW_CREATE_ORGANIZATION');
+    const existing = [...this.mockOrgs.values()].find((o) => !o.deleted_at && o.name.toLowerCase() === org.name.toLowerCase());
+    if (existing) {
+      throw new Error(`Organization name already exists: ${org.name}`);
+    }
+    this.mockOrgs.set(org.id, { ...org });
+  }
+
+  async deleteOrganization(orgId: string): Promise<void> {
+    this.getFlowQuery('FLOW_DELETE_ORGANIZATION');
+    const now = Date.now();
+    const org = this.mockOrgs.get(orgId);
+    if (org) org.deleted_at = now;
+
+    for (const user of this.mockUsers.values()) {
+      if (user.org_id === orgId) user.deleted_at = now;
+    }
+    for (const key of this.mockApiKeys.values()) {
+      if (key.org_id === orgId) key.deleted_at = now;
+    }
+    for (const log of this.mockAuditLogs.values()) {
+      if (log.org_id === orgId) log.deleted_at = now;
+    }
+  }
+
+  async createUser(userRecord: AuthUserRecord): Promise<void> {
+    this.getFlowQuery('FLOW_CREATE_USER');
+    const existing = [...this.mockUsers.values()].find((u) => !u.deleted_at && u.email === userRecord.email);
+    if (existing) {
+      throw new Error(`User with email ${userRecord.email} already exists`);
+    }
+    this.mockUsers.set(userRecord.email, { ...userRecord });
+  }
+
+  async blockUser(userId: string): Promise<void> {
+    this.getFlowQuery('FLOW_BLOCK_USER');
+    for (const user of this.mockUsers.values()) {
+      if (user.id === userId && !user.deleted_at) {
+        user.blocked = true;
+      }
+    }
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    this.getFlowQuery('FLOW_DELETE_USER');
+    const now = Date.now();
+    for (const user of this.mockUsers.values()) {
+      if (user.id === userId) {
+        user.deleted_at = now;
+      }
+    }
+  }
+
+  async purgeExpiredSoftDeletes(): Promise<number> {
+    this.getFlowQuery('FLOW_RETENTION_PURGE');
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    let purged = 0;
+
+    for (const [id, org] of this.mockOrgs.entries()) {
+      if (org.deleted_at && org.deleted_at < cutoff) {
+        this.mockOrgs.delete(id);
+        purged++;
+      }
+    }
+    for (const [email, user] of this.mockUsers.entries()) {
+      if (user.deleted_at && user.deleted_at < cutoff) {
+        this.mockUsers.delete(email);
+        purged++;
+      }
+    }
+    for (const [key, keyRecord] of this.mockApiKeys.entries()) {
+      if (keyRecord.deleted_at && keyRecord.deleted_at < cutoff) {
+        this.mockApiKeys.delete(key);
+        purged++;
+      }
+    }
+    return purged;
+  }
+
   async findUserByEmail(email: string): Promise<AuthUserRecord | null> {
     this.getFlowQuery('FLOW_SIGN_IN');
-    return this.mockUsers.get(email) ?? null;
+    const user = this.mockUsers.get(email);
+    if (!user || user.deleted_at) return null;
+    return user;
   }
 
   async findUserById(id: string): Promise<AuthUserRecord | null> {
     this.getFlowQuery('FLOW_SESSION_VERIFY');
-    return [...this.mockUsers.values()].find((u) => u.id === id) ?? null;
+    const user = [...this.mockUsers.values()].find((u) => u.id === id && !u.deleted_at);
+    return user ?? null;
   }
 
   async createOrganizationAndUser(userRecord: AuthUserRecord): Promise<void> {
     this.getFlowQuery('FLOW_SIGN_UP');
-    const existingOrg = [...this.mockUsers.values()].find((u) => u.org_name.toLowerCase() === userRecord.org_name.toLowerCase());
+    const existingOrg = [...this.mockOrgs.values()].find((o) => !o.deleted_at && o.name.toLowerCase() === userRecord.org_name.toLowerCase());
     if (existingOrg) {
       throw new Error(`Organization name already exists: ${userRecord.org_name}`);
     }
-    this.mockUsers.set(userRecord.email, userRecord);
+    this.mockOrgs.set(userRecord.org_id, {
+      id: userRecord.org_id,
+      name: userRecord.org_name,
+      slug: userRecord.org_name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    });
+    this.mockUsers.set(userRecord.email, { ...userRecord });
   }
 
   async recordAuditLog(logRecord: AuditLogRecord): Promise<void> {
@@ -58,13 +155,15 @@ export class AlloyDBOmniAuthAdapter implements AuthRepositoryPort {
 
   async findPasswordResetToken(tokenHash: string): Promise<{ tokenHash: string; userId: string; expiresAtMs: number; used: boolean } | null> {
     this.getFlowQuery('FLOW_FORGOT_PASSWORD');
-    return this.mockResets.get(tokenHash) ?? null;
+    const reset = this.mockResets.get(tokenHash);
+    if (!reset || reset.deleted_at) return null;
+    return reset;
   }
 
   async updateUserPassword(userId: string, newPasswordHash: string): Promise<void> {
     this.getFlowQuery('FLOW_RESET_PASSWORD');
     for (const user of this.mockUsers.values()) {
-      if (user.id === userId) {
+      if (user.id === userId && !user.deleted_at) {
         user.password_hash = newPasswordHash;
       }
     }
@@ -73,7 +172,7 @@ export class AlloyDBOmniAuthAdapter implements AuthRepositoryPort {
   async markPasswordResetTokenUsed(tokenHash: string): Promise<void> {
     this.getFlowQuery('FLOW_RESET_PASSWORD');
     const reset = this.mockResets.get(tokenHash);
-    if (reset) {
+    if (reset && !reset.deleted_at) {
       reset.used = true;
     }
   }
@@ -85,13 +184,15 @@ export class AlloyDBOmniAuthAdapter implements AuthRepositoryPort {
 
   async findApiKeyByHash(hash: string): Promise<ApiKeyRecord | null> {
     this.getFlowQuery('FLOW_VERIFY_API_KEY');
-    return this.mockApiKeys.get(hash) ?? null;
+    const key = this.mockApiKeys.get(hash);
+    if (!key || key.deleted_at) return null;
+    return key;
   }
 
   async revokeApiKey(keyId: string): Promise<void> {
     this.getFlowQuery('FLOW_REVOKE_API_KEY');
     for (const record of this.mockApiKeys.values()) {
-      if (record.key_id === keyId) {
+      if (record.key_id === keyId && !record.deleted_at) {
         record.revoked = true;
       }
     }
@@ -99,6 +200,6 @@ export class AlloyDBOmniAuthAdapter implements AuthRepositoryPort {
 
   async fetchUserAuditLogs(userId: string): Promise<AuditLogRecord[]> {
     this.getFlowQuery('FLOW_AUDIT_LOGS');
-    return [...this.mockAuditLogs.values()].filter((log) => log.user_id === userId);
+    return [...this.mockAuditLogs.values()].filter((log) => log.user_id === userId && !log.deleted_at);
   }
 }

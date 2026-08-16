@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Observability Auth Service API
-  description: Multi-tenant authentication, RBAC authorization, organization management, audit logging, 3-tier API key permissions, and 13-pillar security hardening contract with standardized API response envelopes (status, message, data, error).
+  description: Multi-tenant authentication, RBAC authorization, organization management, audit logging, 3-tier API key permissions, user blocking/soft-deletion, and 13-pillar security hardening contract with standardized API response envelopes (status, message, data, error).
   version: 1.0.0
 paths:
   /api/v1/auth/sign-up:
@@ -72,7 +72,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/StandardApiResponse'
         '401':
-          description: Invalid credentials
+          description: Invalid credentials or user blocked
           content:
             application/json:
               schema:
@@ -98,6 +98,131 @@ paths:
                 $ref: '#/components/schemas/StandardApiResponse'
         '401':
           description: Unauthorized or token expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
+
+  /api/v1/auth/organizations:
+    post:
+      summary: Create a new multi-tenant organization
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrganizationRequest'
+      responses:
+        '201':
+          description: Organization created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
+        '409':
+          description: Organization name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
+
+  /api/v1/auth/organizations/{id}:
+    delete:
+      summary: Soft delete organization and cascade delete all related user details, API keys, and logs with timestamp. Retained for 30 days before permanent deletion.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Organization and related entity details soft-deleted with timestamp recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
+        '404':
+          description: Organization not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
+
+  /api/v1/auth/users:
+    post:
+      summary: Create new user belonging to a specific organization with specific permissions
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created in target organization with specific permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
+        '400':
+          description: Validation error or invalid org_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
+
+  /api/v1/auth/users/{id}/block:
+    post:
+      summary: Block user access and record blocking timestamp
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User blocked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
+
+  /api/v1/auth/users/{id}:
+    delete:
+      summary: Soft delete user record with timestamp (30-day backup retention)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User soft-deleted with timestamp recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
+        '404':
+          description: User not found
           content:
             application/json:
               schema:
@@ -141,12 +266,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StandardApiResponse'
-        '400':
-          description: Invalid token or password complexity validation failed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StandardApiErrorResponse'
 
   /api/v1/auth/change-password:
     post:
@@ -166,12 +285,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StandardApiResponse'
-        '401':
-          description: Unauthorized or current password incorrect
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StandardApiErrorResponse'
 
   /api/v1/auth/api-keys:
     post:
@@ -208,18 +321,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StandardApiResponse'
-        '401':
-          description: API key invalid or revoked
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StandardApiErrorResponse'
-        '403':
-          description: Insufficient permission for requested API operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StandardApiErrorResponse'
 
   /api/v1/auth/permissions:
     get:
@@ -292,6 +393,38 @@ components:
         details:
           type: string
 
+    CreateOrganizationRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 2
+        slug:
+          type: string
+
+    CreateUserRequest:
+      type: object
+      required: [email, password, name, org_id, role, permissions]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 12
+        name:
+          type: string
+        org_id:
+          type: string
+        role:
+          type: string
+          enum: [admin, member, viewer]
+        permissions:
+          type: array
+          items:
+            type: string
+
     SignUpRequest:
       type: object
       required: [email, password, name, organization_name]
@@ -303,7 +436,6 @@ components:
         password:
           type: string
           minLength: 12
-          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*]).{12,}$'
         name:
           type: string
           minLength: 2
@@ -334,7 +466,6 @@ components:
         new_password:
           type: string
           minLength: 12
-          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*]).{12,}$'
 
     ChangePasswordRequest:
       type: object
@@ -345,7 +476,6 @@ components:
         new_password:
           type: string
           minLength: 12
-          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*]).{12,}$'
 
     CreateApiKeyRequest:
       type: object

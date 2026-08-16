@@ -2,17 +2,44 @@ export const AUTH_QUERIES = {
   TENANT_RLS: {
     SET_LOCAL_TENANT_CONTEXT: `SELECT set_config('app.current_org_id', $1, true)`,
   },
+  FLOW_CREATE_ORGANIZATION: {
+    CHECK_ORG_NAME: `SELECT id FROM auth_organizations WHERE name = $1 AND deleted_at IS NULL LIMIT 1`,
+    INSERT_ORG: `INSERT INTO auth_organizations (id, name, slug) VALUES ($1, $2, $3)`,
+  },
+  FLOW_DELETE_ORGANIZATION: {
+    SOFT_DELETE_ORG: `UPDATE auth_organizations SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND deleted_at IS NULL`,
+    CASCADE_SOFT_DELETE_USERS: `UPDATE auth_users SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE org_id = $1 AND deleted_at IS NULL`,
+    CASCADE_SOFT_DELETE_KEYS: `UPDATE auth_api_keys SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE org_id = $1 AND deleted_at IS NULL`,
+    CASCADE_SOFT_DELETE_LOGS: `UPDATE auth_audit_logs SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE org_id = $1 AND deleted_at IS NULL`,
+  },
+  FLOW_CREATE_USER: {
+    FIND_ORG_BY_ID: `SELECT id, name FROM auth_organizations WHERE id = $1 AND deleted_at IS NULL LIMIT 1`,
+    INSERT_USER: `INSERT INTO auth_users (id, email, password_hash, name, org_id, org_name, role, user_permissions) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+  },
+  FLOW_BLOCK_USER: {
+    BLOCK_USER: `UPDATE auth_users SET blocked = TRUE, blocked_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND deleted_at IS NULL`,
+  },
+  FLOW_DELETE_USER: {
+    SOFT_DELETE_USER: `UPDATE auth_users SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND deleted_at IS NULL`,
+  },
+  FLOW_RETENTION_PURGE: {
+    PURGE_ORGS: `DELETE FROM auth_organizations WHERE deleted_at < NOW() - INTERVAL '30 days'`,
+    PURGE_USERS: `DELETE FROM auth_users WHERE deleted_at < NOW() - INTERVAL '30 days'`,
+    PURGE_KEYS: `DELETE FROM auth_api_keys WHERE deleted_at < NOW() - INTERVAL '30 days'`,
+    PURGE_LOGS: `DELETE FROM auth_audit_logs WHERE deleted_at < NOW() - INTERVAL '30 days'`,
+    PURGE_RESETS: `DELETE FROM auth_password_resets WHERE deleted_at < NOW() - INTERVAL '30 days'`,
+  },
   FLOW_SIGN_UP: {
     CHECK_ORG_EXISTS: `SELECT id FROM auth_organizations WHERE (name = $1 OR slug = $2) AND deleted_at IS NULL LIMIT 1`,
     INSERT_ORG: `INSERT INTO auth_organizations (id, name, slug) VALUES ($1, $2, $3)`,
-    INSERT_USER: `INSERT INTO auth_users (id, email, password_hash, name, org_id, org_name, role) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    INSERT_USER: `INSERT INTO auth_users (id, email, password_hash, name, org_id, org_name, role, user_permissions) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
   },
   FLOW_SIGN_IN: {
-    FIND_USER_BY_EMAIL: `SELECT id, email, password_hash, name, org_id, org_name, role FROM auth_users WHERE email = $1 AND deleted_at IS NULL LIMIT 1`,
+    FIND_USER_BY_EMAIL: `SELECT id, email, password_hash, name, org_id, org_name, role, blocked, user_permissions FROM auth_users WHERE email = $1 AND deleted_at IS NULL LIMIT 1`,
     RECORD_AUDIT_LOG: `INSERT INTO auth_audit_logs (id, user_id, org_id, event_type, ip_address, user_agent, timestamp_ms) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
   },
   FLOW_SESSION_VERIFY: {
-    FIND_USER_BY_ID: `SELECT id, email, password_hash, name, org_id, org_name, role FROM auth_users WHERE id = $1 AND deleted_at IS NULL LIMIT 1`,
+    FIND_USER_BY_ID: `SELECT id, email, password_hash, name, org_id, org_name, role, blocked, user_permissions FROM auth_users WHERE id = $1 AND deleted_at IS NULL LIMIT 1`,
   },
   FLOW_FORGOT_PASSWORD: {
     INSERT_RESET_TOKEN: `INSERT INTO auth_password_resets (token_hash, user_id, expires_at_ms, used) VALUES ($1, $2, $3, $4)`,

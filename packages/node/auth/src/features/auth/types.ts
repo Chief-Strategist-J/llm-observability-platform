@@ -9,8 +9,12 @@ import {
   ChangePasswordInputSchema,
   CreateApiKeyInputSchema,
   VerifyApiKeyInputSchema,
+  CreateOrganizationInputSchema,
+  CreateUserInputSchema,
 } from './schema/auth.schema';
 
+export type CreateOrganizationInput = z.input<typeof CreateOrganizationInputSchema>;
+export type CreateUserInput = z.input<typeof CreateUserInputSchema>;
 export type SignUpInput = z.input<typeof SignUpInputSchema>;
 export type SignInInput = z.input<typeof SignInInputSchema>;
 export type AuthUserRecord = z.infer<typeof AuthUserEntitySchema>;

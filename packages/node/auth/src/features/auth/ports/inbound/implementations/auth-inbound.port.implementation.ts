@@ -1,10 +1,42 @@
 import type { IAuthInboundPort } from '../auth-inbound.port';
 import type { AuthService } from '../../../service';
-import type { SignUpInput, SignInInput, ForgotPasswordInput, ResetPasswordInput, ChangePasswordInput, CreateApiKeyInput, VerifyApiKeyInput, AuthUserRecord } from '../../../types';
+import type {
+  SignUpInput,
+  SignInInput,
+  ForgotPasswordInput,
+  ResetPasswordInput,
+  ChangePasswordInput,
+  CreateApiKeyInput,
+  VerifyApiKeyInput,
+  CreateOrganizationInput,
+  CreateUserInput,
+  AuthUserRecord,
+  AuditLogRecord,
+} from '../../../types';
 import type { ApiKeyRecord, AuthTokenPayload } from '../../../../../shared/types/auth.types';
 
 export class AuthInboundPortImplementation implements IAuthInboundPort {
   constructor(private readonly service: AuthService) {}
+
+  createOrganization(input: CreateOrganizationInput): Promise<{ id: string; name: string; slug: string }> {
+    return this.service.createOrganization(input);
+  }
+
+  deleteOrganization(orgId: string): Promise<void> {
+    return this.service.deleteOrganization(orgId);
+  }
+
+  createUser(input: CreateUserInput): Promise<AuthUserRecord> {
+    return this.service.createUser(input);
+  }
+
+  blockUser(userId: string): Promise<void> {
+    return this.service.blockUser(userId);
+  }
+
+  deleteUser(userId: string): Promise<void> {
+    return this.service.deleteUser(userId);
+  }
 
   signUp(input: SignUpInput): Promise<{ token: string; payload: AuthTokenPayload; user: AuthUserRecord }> {
     return this.service.signUp(input);
@@ -36,6 +68,10 @@ export class AuthInboundPortImplementation implements IAuthInboundPort {
 
   verifyApiKey(input: VerifyApiKeyInput): Promise<{ valid: boolean; record: ApiKeyRecord; authorized: boolean }> {
     return this.service.verifyApiKey(input);
+  }
+
+  fetchUserAuditLogs(userId: string): Promise<AuditLogRecord[]> {
+    return this.service.fetchUserAuditLogs(userId);
   }
 
   getSystemPermissions(): string[] {

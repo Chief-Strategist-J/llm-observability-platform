@@ -2,6 +2,12 @@ import type { AuthUserRecord, AuditLogRecord } from '../../types';
 import type { ApiKeyRecord } from '../../../../shared/types/auth.types';
 
 export interface IAuthOutboundPort {
+  createOrganization(org: { id: string; name: string; slug: string }): Promise<void>;
+  deleteOrganization(orgId: string): Promise<void>;
+  createUser(userRecord: AuthUserRecord): Promise<void>;
+  blockUser(userId: string): Promise<void>;
+  deleteUser(userId: string): Promise<void>;
+  purgeExpiredSoftDeletes(): Promise<number>;
   findUserByEmail(email: string): Promise<AuthUserRecord | null>;
   findUserById(id: string): Promise<AuthUserRecord | null>;
   createOrganizationAndUser(userRecord: AuthUserRecord): Promise<void>;
@@ -15,4 +21,5 @@ export interface IAuthOutboundPort {
   saveApiKey(keyRecord: ApiKeyRecord): Promise<void>;
   findApiKeyByHash(hash: string): Promise<ApiKeyRecord | null>;
   revokeApiKey(keyId: string): Promise<void>;
+  fetchUserAuditLogs(userId: string): Promise<AuditLogRecord[]>;
 }

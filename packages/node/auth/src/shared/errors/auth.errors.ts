@@ -16,6 +16,12 @@ export class InvalidCredentialsError extends AuthError {
   }
 }
 
+export class UserBlockedError extends AuthError {
+  constructor() {
+    super('User account is blocked. Contact administrator.', 'USER_BLOCKED', 401);
+  }
+}
+
 export class TokenExpiredError extends AuthError {
   constructor() {
     super('Authentication token has expired', 'TOKEN_EXPIRED', 401);

@@ -1,5 +1,14 @@
 import type { AuthService } from '../../../features/auth/service';
-import { handleSignUp, handleSignIn, handleFetchAuditLogs } from './handlers/auth.handler';
+import {
+  handleSignUp,
+  handleSignIn,
+  handleFetchAuditLogs,
+  handleCreateOrganization,
+  handleDeleteOrganization,
+  handleCreateUser,
+  handleBlockUser,
+  handleDeleteUser,
+} from './handlers/auth.handler';
 import { handleVerifySession } from './handlers/session.handler';
 import { handleForgotPassword, handleResetPassword, handleChangePassword } from './handlers/password.handler';
 import { handleCreateApiKey, handleVerifyApiKey, handleListPermissions } from './handlers/api-key.handler';
@@ -18,6 +27,34 @@ export class AuthRestV1Router {
 
       try {
         let resultData: unknown = undefined;
+
+        if (method === HTTP_METHODS.POST && path === AUTH_ENDPOINTS.ORGANIZATIONS) {
+          resultData = await handleCreateOrganization(this.service, body);
+          return { statusCode: 201, payload: createSuccessResponse(resultData, 'Organization created successfully') };
+        }
+
+        if (method === HTTP_METHODS.DELETE && path.startsWith(`${AUTH_ENDPOINTS.ORGANIZATIONS}/`)) {
+          const orgId = path.substring(`${AUTH_ENDPOINTS.ORGANIZATIONS}/`.length);
+          resultData = await handleDeleteOrganization(this.service, orgId);
+          return { statusCode: 200, payload: createSuccessResponse(resultData, 'Organization soft-deleted with 30-day backup retention') };
+        }
+
+        if (method === HTTP_METHODS.POST && path === AUTH_ENDPOINTS.USERS) {
+          resultData = await handleCreateUser(this.service, body);
+          return { statusCode: 201, payload: createSuccessResponse(resultData, 'User created in target organization with specific permissions') };
+        }
+
+        if (method === HTTP_METHODS.POST && path.startsWith(`${AUTH_ENDPOINTS.USERS}/`) && path.endsWith('/block')) {
+          const userId = path.substring(`${AUTH_ENDPOINTS.USERS}/`.length, path.length - '/block'.length);
+          resultData = await handleBlockUser(this.service, userId);
+          return { statusCode: 200, payload: createSuccessResponse(resultData, 'User blocked successfully') };
+        }
+
+        if (method === HTTP_METHODS.DELETE && path.startsWith(`${AUTH_ENDPOINTS.USERS}/`)) {
+          const userId = path.substring(`${AUTH_ENDPOINTS.USERS}/`.length);
+          resultData = await handleDeleteUser(this.service, userId);
+          return { statusCode: 200, payload: createSuccessResponse(resultData, 'User soft-deleted with 30-day backup retention') };
+        }
 
         if (method === HTTP_METHODS.POST && path === AUTH_ENDPOINTS.SIGN_UP) {
           resultData = await handleSignUp(this.service, body);

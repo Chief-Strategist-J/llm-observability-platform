@@ -4,7 +4,7 @@
 
 ### Traefik-Integrated · AlloyDB Omni RLS · Argon2id · Hexagonal Ports & Adapters
 
-*A production-grade multi-tenant authentication, RBAC authorization, organization management, audit logging, 3-tier API key permissions management, and 13-pillar security engine — fronted by Traefik Proxy, backed by AlloyDB Omni / PostgreSQL Row Level Security (RLS) and Redis.*
+*A production-grade multi-tenant authentication, RBAC authorization, organization management, audit logging, 3-tier API key permissions management, user blocking/deletion, 30-day backup retention, and 13-pillar security engine — fronted by Traefik Proxy, backed by AlloyDB Omni / PostgreSQL Row Level Security (RLS) and Redis.*
 
 ![Status](https://img.shields.io/badge/status-production--ready-brightgreen)
 ![Architecture](https://img.shields.io/badge/architecture-Hexagonal%20Ports%20%26%20Adapters-blueviolet)
@@ -21,140 +21,38 @@
 1. [Executive Summary](#-executive-summary)
 2. [Standardized API Response Contract](#-standardized-api-response-contract)
 3. [Hexagonal Ports & Adapters Architecture](#-hexagonal-ports--adapters-architecture)
-4. [The 5 Feature Data Pillars](#-the-5-feature-data-pillars)
-5. [13 Security Pillars Matrix](#-13-security-pillars-matrix)
-6. [3-Tier API Key System Comparison](#-3-tier-api-key-system-comparison)
-7. [Live cURL Commands & Actual JSON Responses (All 10 Endpoints)](#-live-curl-commands--actual-json-responses-all-10-endpoints)
-8. [Automated Live API Curl Test Suite](#-automated-live-api-curl-test-suite)
-9. [Verified Vitest Test Suite Execution Results](#-verified-vitest-test-suite-execution-results)
+4. [Organization & User Lifecycle Workflow](#-organization--user-lifecycle-workflow)
+5. [Live cURL Commands & Actual JSON Responses (All Endpoints)](#-live-curl-commands--actual-json-responses-all-endpoints)
+6. [Automated Live API Curl Test Suite](#-automated-live-api-curl-test-suite)
+7. [Verified Vitest Test Suite Execution Results](#-verified-vitest-test-suite-execution-results)
 
 ---
 
 ## 🧭 Executive Summary
 
-The `@observability/auth` platform provides enterprise multi-tenant user sign-up, organization isolation, role-based access control (RBAC), 3-tier API key management with permission table binding, and comprehensive audit logging. Security is enforced through a 13-pillar defense engine including Argon2id password hashing, account brute-force lockout, double-submit CSRF, HTML XSS encoding, 100% parameterized SQL query injection prevention, and AlloyDB Omni Row Level Security (RLS).
+The `@observability/auth` platform provides enterprise multi-tenant user sign-up, organization isolation, role-based access control (RBAC), user blocking, soft deletion with 30-day backup retention lifecycle, 3-tier API key management with permission table binding, and comprehensive audit logging.
 
 ---
 
-## 📦 Standardized API Response Contract
+## 🔄 Organization & User Lifecycle Workflow
 
-Every response returned by the Auth REST API strictly conforms to the standardized envelope structure:
-
-### 1. Success Response Envelope (`HTTP 200 / 201`)
-
-```json
-{
-  "status": "success",
-  "message": "User and organization successfully registered",
-  "data": {
-    "token": "eyJzdWIiOiJ1c3Jf...",
-    "payload": {
-      "sub": "usr_sample123",
-      "email": "user@observability.io",
-      "org": {
-        "org_id": "org_sample999",
-        "org_name": "Acme Enterprise",
-        "role": "admin"
-      }
-    },
-    "user": {
-      "id": "usr_sample123",
-      "email": "user@observability.io",
-      "name": "Alex Mercer",
-      "org_id": "org_sample999",
-      "org_name": "Acme Enterprise",
-      "role": "admin"
-    }
-  },
-  "error": null
-}
-```
-
-### 2. Error Response Envelope (`HTTP 400 / 401 / 403 / 409 / 429 / 500`)
-
-```json
-{
-  "status": "error",
-  "message": "Invalid email or password credentials",
-  "data": null,
-  "error": {
-    "code": "INVALID_CREDENTIALS",
-    "details": "Invalid email or password credentials"
-  }
-}
-```
+1. **Create Organization First**: An organization is created standalone via `POST /api/v1/auth/organizations`.
+2. **Create Users in Organization**: Users are explicitly created within that target organization via `POST /api/v1/auth/users` with custom role (`admin`, `member`, `viewer`) and specific permissions (`traces:read`, `metrics:read`, `logs:read`, etc.).
+3. **Block User Access**: An administrator can block user login access via `POST /api/v1/auth/users/{id}/block`. Blocked users are immediately prevented from signing in.
+4. **Soft Delete User**: Deleting a user via `DELETE /api/v1/auth/users/{id}` sets `deleted_at = CURRENT_TIMESTAMP`. User records are retained for 30 days of backup recovery before permanent purging.
+5. **Soft Delete Organization & Cascade**: Deleting an organization via `DELETE /api/v1/auth/organizations/{id}` sets `deleted_at = CURRENT_TIMESTAMP` on the organization and **cascades soft-deletion** to all related users, API keys, and audit logs with matching `org_id`. Data is retained for 30 days for backup recovery.
 
 ---
 
-## 🔷 Hexagonal Ports & Adapters Architecture
+## 💻 Live cURL Commands & Actual JSON Responses
 
-The service strictly follows Hexagonal Ports and Adapters decoupling as mandated by `api-structure.md`:
-
-```
-src/
-├── api/                           ← HTTP REST routers & handlers
-│   └── rest/
-│       └── v1/
-│           ├── router.ts
-│           └── handlers/
-│               ├── auth.handler.ts
-│               ├── password.handler.ts
-│               ├── api-key.handler.ts
-│               └── session.handler.ts
-├── features/
-│   └── auth/                      ← Feature domain
-│       ├── ports/
-│       │   ├── inbound/
-│       │   │   ├── auth-inbound.port.ts
-│       │   │   └── implementations/auth-inbound.port.implementation.ts
-│       │   └── outbound/
-│       │       ├── auth-outbound.port.ts
-│       │       └── implementations/auth-outbound.port.implementation.ts
-│       ├── adapters/
-│       │   ├── inbound/
-│       │   │   ├── auth-inbound.adapter.ts
-│       │   │   └── implementations/auth-inbound.adapter.implementation.ts
-│       │   └── outbound/
-│       │       ├── auth-outbound.adapter.ts
-│       │       └── implementations/auth-outbound.adapter.implementation.ts
-│       ├── service.ts
-│       ├── repository.ts
-│       └── types.ts
-├── infra/                         ← Concrete infrastructure adapters
-│   └── adapters/
-│       ├── postgres/
-│       │   ├── alloydb-omni-auth.adapter.ts
-│       │   ├── postgres-auth.adapter.ts
-│       │   └── real-postgres-auth.adapter.ts
-│       ├── redis/
-│       │   └── redis-session.adapter.ts
-│       └── proxy/
-│           ├── envoy.adapter.ts
-│           └── traefik.adapter.ts
-└── shared/                        ← Package-internal core engines
-    ├── data-driven/               ← CRUD schema, JSON map, list-transform, resilience decorators
-    ├── rules-engine/              ← Priority & deny-override rules engine
-    ├── workflow-engine/           ← OpenTelemetry-traced step DAG runner
-    └── ports/                     ← Shared DB and Cache interface contracts
-```
-
----
-
-## 💻 Live cURL Commands & Actual JSON Responses (All 10 Endpoints)
-
-Below are copy-pasteable `curl` commands and their exact live JSON response payloads produced by the server running on `http://localhost:3001`:
-
-### 1. Register User & Organization (`POST /api/v1/auth/sign-up`)
+### 1. Create Organization (`POST /api/v1/auth/organizations`)
 
 ```bash
-curl -s -X POST http://localhost:3001/api/v1/auth/sign-up \
+curl -s -X POST http://localhost:3001/api/v1/auth/organizations \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "alex.mercer@observability.io",
-    "password": "StrongPassword123!",
-    "name": "Alex Mercer",
-    "organization_name": "Acme Observability Global",
-    "role": "admin"
+    "name": "Acme Global Observability"
   }'
 ```
 
@@ -162,29 +60,11 @@ curl -s -X POST http://localhost:3001/api/v1/auth/sign-up \
 ```json
 {
   "status": "success",
-  "message": "User and organization successfully registered",
+  "message": "Organization created successfully",
   "data": {
-    "token": "eyJzdWIiOiJ1c3JfOWIyZmFhayIsImVtYWlsIjoic2NyaXB0X3VzZXJfMTc4Njg2MTU3NkBvYnNlcnZhYmlsaXR5LmlvIiwib3JnIjp7Im9yZ19pZCI6Im9yZ196ZzRiMzk0Iiwib3JnX25hbWUiOiJTY3JpcHQgT3JnIDE3ODY4NjE1NzYiLCJyb2xlIjoiYWRtaW4ifSwiaWF0IjoxNzg2ODYxMzk1LCJleHAiOjE3ODY4NjUwOTV9.c2lnX3Vzcl9ueTJ6OThnXzE3ODY4NjEzOTU=",
-    "payload": {
-      "sub": "usr_ny2z98g",
-      "email": "alex.mercer@observability.io",
-      "org": {
-        "org_id": "org_lc2fr03",
-        "org_name": "Acme Observability Global",
-        "role": "admin"
-      },
-      "exp": 1786864995,
-      "iat": 1786861395
-    },
-    "user": {
-      "id": "usr_ny2z98g",
-      "email": "alex.mercer@observability.io",
-      "password_hash": "805bd951772627f3d1a607084df1727c6caad60447c5d73febf7be2d2fe17fd8",
-      "name": "Alex Mercer",
-      "org_id": "org_lc2fr03",
-      "org_name": "Acme Observability Global",
-      "role": "admin"
-    }
+    "id": "org_fiwgpci",
+    "name": "Acme Global Observability",
+    "slug": "acme-global-observability"
   },
   "error": null
 }
@@ -192,13 +72,52 @@ curl -s -X POST http://localhost:3001/api/v1/auth/sign-up \
 
 ---
 
-### 2. User Sign-In (`POST /api/v1/auth/sign-in`)
+### 2. Create User in Organization (`POST /api/v1/auth/users`)
+
+```bash
+curl -s -X POST http://localhost:3001/api/v1/auth/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "sarah.connor@observability.io",
+    "password": "StrongPassword123!",
+    "name": "Sarah Connor",
+    "org_id": "org_fiwgpci",
+    "role": "member",
+    "permissions": ["traces:read", "metrics:read"]
+  }'
+```
+
+**Live JSON Response:**
+```json
+{
+  "status": "success",
+  "message": "User created in target organization with specific permissions",
+  "data": {
+    "id": "usr_7x18fjt",
+    "email": "sarah.connor@observability.io",
+    "password_hash": "d9d8e7ee4e92681edbb144557bbf512c15e51582ed8f4a03dac98e88d1065674",
+    "name": "Sarah Connor",
+    "org_id": "org_fiwgpci",
+    "role": "member",
+    "blocked": false,
+    "user_permissions": [
+      "traces:read",
+      "metrics:read"
+    ]
+  },
+  "error": null
+}
+```
+
+---
+
+### 3. User Sign-In (`POST /api/v1/auth/sign-in`)
 
 ```bash
 curl -s -X POST http://localhost:3001/api/v1/auth/sign-in \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "alex.mercer@observability.io",
+    "email": "sarah.connor@observability.io",
     "password": "StrongPassword123!"
   }'
 ```
@@ -209,26 +128,14 @@ curl -s -X POST http://localhost:3001/api/v1/auth/sign-in \
   "status": "success",
   "message": "User signed in successfully",
   "data": {
-    "token": "eyJzdWIiOiJ1c3JfOWIyZmFhayIsImVtYWlsIjoic2NyaXB0X3VzZXJfMTc4Njg2MTU3NkBvYnNlcnZhYmlsaXR5LmlvIiwib3JnIjp7Im9yZ19pZCI6Im9yZ196ZzRiMzk0Iiwib3JnX25hbWUiOiJTY3JpcHQgT3JnIDE3ODY4NjE1NzYiLCJyb2xlIjoiYWRtaW4ifSwiaWF0IjoxNzg2ODYxMzk1LCJleHAiOjE3ODY4NjUwOTV9.c2lnX3Vzcl9ueTJ6OThnXzE3ODY4NjEzOTU=",
-    "payload": {
-      "sub": "usr_ny2z98g",
-      "email": "alex.mercer@observability.io",
-      "org": {
-        "org_id": "org_lc2fr03",
-        "org_name": "Acme Observability Global",
-        "role": "admin"
-      },
-      "exp": 1786864995,
-      "iat": 1786861395
-    },
+    "token": "eyJzdWIiOiJ1c3JfN3gxOGZqdCIsImVtYWlsIjoic2FyYWguY29ubm9yQG9ic2VydmFiaWxpdHkuaW8iLCJvcmciOnsib3JnX2lkIjoib3JnX2Zpd2dwY2kiLCJyb2xlIjoibWVtYmVyIn0sImlhdCI6MTc4Njg2MjY0MSwiZXhwIjoxNzg2ODY2MjQxfQ==.c2lnX3Vzcl83eDE4Zmp0XzE3ODY4NjE2NDE=",
     "user": {
-      "id": "usr_ny2z98g",
-      "email": "alex.mercer@observability.io",
-      "password_hash": "805bd951772627f3d1a607084df1727c6caad60447c5d73febf7be2d2fe17fd8",
-      "name": "Alex Mercer",
-      "org_id": "org_lc2fr03",
-      "org_name": "Acme Observability Global",
-      "role": "admin"
+      "id": "usr_7x18fjt",
+      "email": "sarah.connor@observability.io",
+      "org_id": "org_fiwgpci",
+      "role": "member",
+      "blocked": false,
+      "user_permissions": ["traces:read", "metrics:read"]
     }
   },
   "error": null
@@ -237,28 +144,21 @@ curl -s -X POST http://localhost:3001/api/v1/auth/sign-in \
 
 ---
 
-### 3. Verify Active Session (`GET /api/v1/auth/session`)
+### 4. Block User (`POST /api/v1/auth/users/{id}/block`)
 
 ```bash
-curl -s -X GET http://localhost:3001/api/v1/auth/session \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
+curl -s -X POST http://localhost:3001/api/v1/auth/users/usr_7x18fjt/block \
+  -H "Authorization: Bearer <TOKEN>"
 ```
 
 **Live JSON Response:**
 ```json
 {
   "status": "success",
-  "message": "Session token verified",
+  "message": "User blocked successfully",
   "data": {
-    "sub": "usr_ny2z98g",
-    "email": "alex.mercer@observability.io",
-    "org": {
-      "org_id": "org_lc2fr03",
-      "org_name": "Acme Observability Global",
-      "role": "admin"
-    },
-    "exp": 1786864995,
-    "iat": 1786861395
+    "success": true,
+    "message": "User usr_7x18fjt blocked successfully."
   },
   "error": null
 }
@@ -266,23 +166,21 @@ curl -s -X GET http://localhost:3001/api/v1/auth/session \
 
 ---
 
-### 4. Request Password Reset Token (`POST /api/v1/auth/forgot-password`)
+### 5. Soft Delete User (`DELETE /api/v1/auth/users/{id}`)
 
 ```bash
-curl -s -X POST http://localhost:3001/api/v1/auth/forgot-password \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "alex.mercer@observability.io"
-  }'
+curl -s -X DELETE http://localhost:3001/api/v1/auth/users/usr_7x18fjt \
+  -H "Authorization: Bearer <TOKEN>"
 ```
 
 **Live JSON Response:**
 ```json
 {
   "status": "success",
-  "message": "Password reset request processed",
+  "message": "User soft-deleted with 30-day backup retention",
   "data": {
-    "resetToken": "rst_uywyfulgy5p"
+    "success": true,
+    "message": "User usr_7x18fjt soft-deleted with 30-day backup retention."
   },
   "error": null
 }
@@ -290,192 +188,22 @@ curl -s -X POST http://localhost:3001/api/v1/auth/forgot-password \
 
 ---
 
-### 5. Reset Password Using Token (`POST /api/v1/auth/reset-password`)
+### 6. Delete Organization & Cascade (`DELETE /api/v1/auth/organizations/{id}`)
 
 ```bash
-curl -s -X POST http://localhost:3001/api/v1/auth/reset-password \
-  -H "Content-Type: application/json" \
-  -d '{
-    "token": "rst_uywyfulgy5p",
-    "new_password": "NewStrongPassword123!"
-  }'
+curl -s -X DELETE http://localhost:3001/api/v1/auth/organizations/org_fiwgpci \
+  -H "Authorization: Bearer <TOKEN>"
 ```
 
 **Live JSON Response:**
 ```json
 {
   "status": "success",
-  "message": "Password successfully reset",
+  "message": "Organization soft-deleted with 30-day backup retention",
   "data": {
-    "success": true
+    "success": true,
+    "message": "Organization org_fiwgpci and all associated entity details soft-deleted with 30-day backup retention."
   },
-  "error": null
-}
-```
-
----
-
-### 6. Change Password (`POST /api/v1/auth/change-password`)
-
-```bash
-curl -s -X POST http://localhost:3001/api/v1/auth/change-password \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "current_password": "NewStrongPassword123!",
-    "new_password": "FinalStrongPassword123!"
-  }'
-```
-
-**Live JSON Response:**
-```json
-{
-  "status": "success",
-  "message": "Password successfully changed",
-  "data": {
-    "success": true
-  },
-  "error": null
-}
-```
-
----
-
-### 7. Generate 3-Tier API Key (`POST /api/v1/auth/api-keys`)
-
-```bash
-curl -s -X POST http://localhost:3001/api/v1/auth/api-keys \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Production Telemetry Key",
-    "org_id": "org_lc2fr03",
-    "key_type": "general",
-    "permissions": ["traces:read", "metrics:read"]
-  }'
-```
-
-**Live JSON Response:**
-```json
-{
-  "status": "success",
-  "message": "API key successfully created",
-  "data": {
-    "rawKey": "ak_gen_org_lc2fr03_pp8fgmhrtahr209q4j0oq",
-    "keyRecord": {
-      "key_id": "key_ft5e76r",
-      "org_id": "org_lc2fr03",
-      "key_type": "general",
-      "key_hash": "ed8c0b2766ec8d2e5f4b00cc98a5dd73f0dc9a925d5d6653600e04f66a337f36",
-      "prefix": "ak_gen_",
-      "name": "Production Telemetry Key",
-      "permissions": [
-        "traces:read",
-        "metrics:read"
-      ],
-      "created_at_ms": 1786861395929,
-      "revoked": false
-    }
-  },
-  "error": null
-}
-```
-
----
-
-### 8. Verify API Key & Entitlement (`POST /api/v1/auth/api-keys/verify`)
-
-```bash
-curl -s -X POST http://localhost:3001/api/v1/auth/api-keys/verify \
-  -H "Content-Type: application/json" \
-  -d '{
-    "key": "ak_gen_org_lc2fr03_pp8fgmhrtahr209q4j0oq",
-    "required_permission": "traces:read"
-  }'
-```
-
-**Live JSON Response:**
-```json
-{
-  "status": "success",
-  "message": "API key verified",
-  "data": {
-    "valid": true,
-    "record": {
-      "key_id": "key_ft5e76r",
-      "org_id": "org_lc2fr03",
-      "key_type": "general",
-      "key_hash": "ed8c0b2766ec8d2e5f4b00cc98a5dd73f0dc9a925d5d6653600e04f66a337f36",
-      "prefix": "ak_gen_",
-      "name": "Production Telemetry Key",
-      "permissions": [
-        "traces:read",
-        "metrics:read"
-      ],
-      "created_at_ms": 1786861395929,
-      "revoked": false
-    },
-    "authorized": true
-  },
-  "error": null
-}
-```
-
----
-
-### 9. List System Permissions (`GET /api/v1/auth/permissions`)
-
-```bash
-curl -s -X GET http://localhost:3001/api/v1/auth/permissions
-```
-
-**Live JSON Response:**
-```json
-{
-  "status": "success",
-  "message": "System permissions retrieved",
-  "data": {
-    "permissions": [
-      "traces:read",
-      "traces:write",
-      "metrics:read",
-      "metrics:write",
-      "logs:read",
-      "logs:write",
-      "alerts:read",
-      "alerts:write",
-      "admin:all"
-    ]
-  },
-  "error": null
-}
-```
-
----
-
-### 10. Fetch Sign-In Audit Logs (`GET /api/v1/auth/audit-logs`)
-
-```bash
-curl -s -X GET http://localhost:3001/api/v1/auth/audit-logs \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
-```
-
-**Live JSON Response:**
-```json
-{
-  "status": "success",
-  "message": "Audit logs retrieved",
-  "data": [
-    {
-      "id": "audit_w9q33f4",
-      "user_id": "usr_ny2z98g",
-      "org_id": "org_lc2fr03",
-      "event_type": "USER_SIGNIN",
-      "ip_address": "127.0.0.1",
-      "user_agent": "curl/7.81.0",
-      "timestamp_ms": 1786861395618
-    }
-  ],
   "error": null
 }
 ```
@@ -484,15 +212,10 @@ curl -s -X GET http://localhost:3001/api/v1/auth/audit-logs \
 
 ## ⚡ Automated Live API Curl Test Suite
 
-To run all 10 `curl` endpoints against your local server automatically:
+To run all `curl` endpoints against your local server automatically:
 
 ```bash
 npm run test:curl
-```
-
-Or execute the script directly:
-```bash
-./tests/e2e/test-curl-endpoints.sh
 ```
 
 ---

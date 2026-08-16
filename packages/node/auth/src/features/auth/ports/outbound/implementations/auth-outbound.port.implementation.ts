@@ -4,7 +4,31 @@ import type { AuthUserRecord, AuditLogRecord } from '../../../types';
 import type { ApiKeyRecord } from '../../../../../shared/types/auth.types';
 
 export class AuthOutboundPortImplementation implements IAuthOutboundPort {
-  constructor(private readonly repository: AuthRepositoryPort) {}
+  constructor(private readonly repository: IAuthOutboundPort | AuthRepositoryPort) {}
+
+  createOrganization(org: { id: string; name: string; slug: string }): Promise<void> {
+    return this.repository.createOrganization(org);
+  }
+
+  deleteOrganization(orgId: string): Promise<void> {
+    return this.repository.deleteOrganization(orgId);
+  }
+
+  createUser(userRecord: AuthUserRecord): Promise<void> {
+    return this.repository.createUser(userRecord);
+  }
+
+  blockUser(userId: string): Promise<void> {
+    return this.repository.blockUser(userId);
+  }
+
+  deleteUser(userId: string): Promise<void> {
+    return this.repository.deleteUser(userId);
+  }
+
+  purgeExpiredSoftDeletes(): Promise<number> {
+    return this.repository.purgeExpiredSoftDeletes();
+  }
 
   findUserByEmail(email: string): Promise<AuthUserRecord | null> {
     return this.repository.findUserByEmail(email);

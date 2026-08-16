@@ -39,6 +39,97 @@ export class RealPostgresAuthAdapter implements AuthRepositoryPort {
     await client.query(AUTH_QUERIES.TENANT_RLS.SET_LOCAL_TENANT_CONTEXT, [orgId]);
   }
 
+  async createOrganization(org: { id: string; name: string; slug: string }): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      const check = await client.query(AUTH_QUERIES.FLOW_CREATE_ORGANIZATION.CHECK_ORG_NAME, [org.name]);
+      if (check.rows.length > 0) {
+        throw new Error(`Organization name already exists: ${org.name}`);
+      }
+      await client.query(AUTH_QUERIES.FLOW_CREATE_ORGANIZATION.INSERT_ORG, [org.id, org.name, org.slug]);
+    } finally {
+      client.release();
+    }
+  }
+
+  async deleteOrganization(orgId: string): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(AUTH_QUERIES.FLOW_DELETE_ORGANIZATION.SOFT_DELETE_ORG, [orgId]);
+      await client.query(AUTH_QUERIES.FLOW_DELETE_ORGANIZATION.CASCADE_SOFT_DELETE_USERS, [orgId]);
+      await client.query(AUTH_QUERIES.FLOW_DELETE_ORGANIZATION.CASCADE_SOFT_DELETE_KEYS, [orgId]);
+      await client.query(AUTH_QUERIES.FLOW_DELETE_ORGANIZATION.CASCADE_SOFT_DELETE_LOGS, [orgId]);
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  async createUser(userRecord: AuthUserRecord): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      const orgCheck = await client.query(AUTH_QUERIES.FLOW_CREATE_USER.FIND_ORG_BY_ID, [userRecord.org_id]);
+      if (orgCheck.rows.length === 0) {
+        throw new Error(`Organization ${userRecord.org_id} does not exist or has been deleted`);
+      }
+      const orgName = orgCheck.rows[0].name;
+      await this.setTenantRlsContext(client, userRecord.org_id);
+      await client.query(AUTH_QUERIES.FLOW_CREATE_USER.INSERT_USER, [
+        userRecord.id,
+        userRecord.email,
+        userRecord.password_hash,
+        userRecord.name,
+        userRecord.org_id,
+        orgName,
+        userRecord.role ?? AUTH_CONSTANTS.ROLE_MEMBER,
+        userRecord.user_permissions ?? [],
+      ]);
+    } finally {
+      client.release();
+    }
+  }
+
+  async blockUser(userId: string): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query(AUTH_QUERIES.FLOW_BLOCK_USER.BLOCK_USER, [userId]);
+    } finally {
+      client.release();
+    }
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query(AUTH_QUERIES.FLOW_DELETE_USER.SOFT_DELETE_USER, [userId]);
+    } finally {
+      client.release();
+    }
+  }
+
+  async purgeExpiredSoftDeletes(): Promise<number> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const r1 = await client.query(AUTH_QUERIES.FLOW_RETENTION_PURGE.PURGE_ORGS);
+      const r2 = await client.query(AUTH_QUERIES.FLOW_RETENTION_PURGE.PURGE_USERS);
+      const r3 = await client.query(AUTH_QUERIES.FLOW_RETENTION_PURGE.PURGE_KEYS);
+      const r4 = await client.query(AUTH_QUERIES.FLOW_RETENTION_PURGE.PURGE_LOGS);
+      const r5 = await client.query(AUTH_QUERIES.FLOW_RETENTION_PURGE.PURGE_RESETS);
+      await client.query('COMMIT');
+      return (r1.rowCount ?? 0) + (r2.rowCount ?? 0) + (r3.rowCount ?? 0) + (r4.rowCount ?? 0) + (r5.rowCount ?? 0);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
   async findUserByEmail(email: string): Promise<AuthUserRecord | null> {
     const client = await this.pool.connect();
     try {
@@ -53,6 +144,8 @@ export class RealPostgresAuthAdapter implements AuthRepositoryPort {
         org_id: row.org_id,
         org_name: row.org_name,
         role: row.role,
+        blocked: row.blocked,
+        user_permissions: row.user_permissions ?? [],
       };
     } finally {
       client.release();
@@ -73,6 +166,8 @@ export class RealPostgresAuthAdapter implements AuthRepositoryPort {
         org_id: row.org_id,
         org_name: row.org_name,
         role: row.role,
+        blocked: row.blocked,
+        user_permissions: row.user_permissions ?? [],
       };
     } finally {
       client.release();
@@ -98,6 +193,7 @@ export class RealPostgresAuthAdapter implements AuthRepositoryPort {
         userRecord.org_id,
         userRecord.org_name,
         userRecord.role ?? AUTH_CONSTANTS.ROLE_ADMIN,
+        userRecord.user_permissions ?? [],
       ]);
       await client.query('COMMIT');
     } catch (err) {

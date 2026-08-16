@@ -18,6 +18,20 @@ export const PasswordValidationSchema = z
   .min(AUTH_CONSTANTS.PASSWORD_MIN_LENGTH)
   .regex(AUTH_CONSTANTS.PASSWORD_REGEX);
 
+export const CreateOrganizationInputSchema = z.object({
+  name: z.string().min(2),
+  slug: z.string().optional(),
+});
+
+export const CreateUserInputSchema = z.object({
+  email: z.string().email(),
+  password: PasswordValidationSchema,
+  name: z.string().min(2),
+  org_id: z.string().min(1),
+  role: UserRoleSchema.default(AUTH_CONSTANTS.ROLE_MEMBER),
+  permissions: z.array(z.string()).default([]),
+});
+
 export const SignUpInputSchema = z.object({
   email: z.string().email().max(255),
   password: PasswordValidationSchema,
@@ -81,6 +95,8 @@ export const AuthUserEntitySchema = z.object({
   org_id: z.string().min(1),
   org_name: z.string().min(1),
   role: UserRoleSchema,
+  blocked: z.boolean().default(false),
+  user_permissions: z.array(z.string()).default([]),
 });
 
 export const ApiKeyEntitySchema = z.object({

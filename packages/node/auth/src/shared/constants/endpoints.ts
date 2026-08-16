@@ -9,6 +9,8 @@ export const AUTH_ENDPOINTS = {
   API_KEYS_VERIFY: '/api/v1/auth/api-keys/verify',
   PERMISSIONS: '/api/v1/auth/permissions',
   AUDIT_LOGS: '/api/v1/auth/audit-logs',
+  ORGANIZATIONS: '/api/v1/auth/organizations',
+  USERS: '/api/v1/auth/users',
   HEALTH: '/health',
 } as const;
 
