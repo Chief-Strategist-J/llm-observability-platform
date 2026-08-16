@@ -1282,3 +1282,16 @@
         ├── states -> Implement SkeletonState, EmptyState, and ErrorState triad.
         ├── theme -> Implement ThemeProvider and useTheme hook supporting light, dark, and high-contrast modes via CSS variables.
         └── storybook -> Build Storybook static bundle with zero errors and full story coverage.
+
+[2026-08-16T09:10:00+05:30] Complete Layer 2 features F-05 through F-16 and strict type/lint guidelines
+└── File: packages/node/api-types/src/*, packages/node/web-app/src/*, packages/node/web-app/package.json, packages/node/web-app/tsconfig.json
+    ├── Choice: Scaffold tRPC server procedures, TanStack Query rate-limit-aware client, org switcher cache invalidation, global error boundary Sentry integration, and deep-linkable filter state. Enforce 32 strict production code quality rules without comments.
+    └── Changes:
+        ├── api-types -> Add Zod schemas for cost, quality, prompt, and trace detail types.
+        ├── trpc-server -> Implement org-scoped context.ts, auth/admin middleware in trpc.ts, domain routers (cost, latency, quality, prompt, trace, admin), root appRouter, and Next.js route handler.
+        ├── query-client -> Implement rate-limit-aware Retry-After header parsing and exponential backoff retry in query-client.ts.
+        ├── providers -> Wire tRPC, TanStack Query, Redux, Theme, Notifications, and FeatureFlags into root Providers.
+        ├── shell-ui -> Add query cache invalidation on org switch in OrgSwitcher.tsx, SessionExpiredModal.tsx, ImpersonationBanner.tsx, and FeatureFlagGate.
+        ├── error-boundary -> Integrate Sentry trace_id logging in error.tsx.
+        └── filter-state -> Implement useFilterState custom hook bridging URL search parameters with FilterState schema.
+

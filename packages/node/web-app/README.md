@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Web App Package (`@observability/web-app`)
 
-## Getting Started
+The frontend web application for the LLM Observability Platform, built with Next.js 15, React 19, TypeScript, Redux Toolkit/Saga, and Tailwind CSS.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🚀 Available Commands
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Run all commands from within the `packages/node/web-app` directory (or use `npm --prefix packages/node/web-app <command>` from the root).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 🛠️ Development & Build
+| Command | Description |
+| :--- | :--- |
+| `npm run dev` | Automatically frees ports `31400` & `31406`, clears `.next` cache, and launches Next.js (`http://localhost:31400`) and Storybook (`http://localhost:31406`) concurrently |
+| `npm run clean` | Removes the `.next` cache directory |
+| `npm run free-ports` | Kills any processes currently bound to ports `31400` or `31406` |
+| `npm run build` | Compiles and builds production bundle |
+| `npm run start` | Starts production server on port `31400` after build |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 🧹 Linting & Type Checking
+| Command | Description |
+| :--- | :--- |
+| `npm run lint` | Runs ESLint checks against strict type-safety, async safety, and complexity rules |
+| `npx tsc --noEmit` | Runs strict TypeScript type checking without emitting files |
 
-## Learn More
+### 🧪 Testing & Storybook
+| Command | Description |
+| :--- | :--- |
+| `npm run test` | Runs unit and component tests using Vitest |
+| `npm run storybook` | Starts Storybook dev environment at http://localhost:31406 |
+| `npm run build-storybook` | Builds static Storybook documentation |
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🛡️ Production Next.js + TypeScript Standard Enforced
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 1. Strict Type Safety
+- **No `any`**: `any` is prohibited (`@typescript-eslint/no-explicit-any`).
+- **No Unsafe Type Assertions**: Restricted via `@typescript-eslint/consistent-type-assertions`.
+- **No Non-Null Assertions**: Prohibited `!` (`@typescript-eslint/no-non-null-assertion`).
+- **No Unsafe Operations**: Enforced `@typescript-eslint/no-unsafe-assignment`, `no-unsafe-call`, `no-unsafe-member-access`, `no-unsafe-return`, and `no-unsafe-argument`.
+- **Type Checking Flags**: `noImplicitAny`, `strictNullChecks`, `strictFunctionTypes`, `strictBindCallApply`, `noUncheckedIndexedAccess`.
 
-## Deploy on Vercel
+### 2. Async & Promise Safety
+- **Never Ignore Promises**: Enforced `@typescript-eslint/no-floating-promises`.
+- **Async Callbacks & Failures**: Enforced `@typescript-eslint/no-misused-promises`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 3. Complexity & Limits
+- **Cyclomatic Complexity**: Max **10** (`complexity`).
+- **Function Length**: Warning at **50** lines (`max-lines-per-function`).
+- **Maximum Parameters**: Max **4** (`max-params`).
+- **Maximum Nesting Depth**: Max **3** (`max-depth`).
+- **Maximum Nested Callbacks**: Max **3** (`max-nested-callbacks`).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 4. Control Flow & Code Quality
+- **Exhaustive State Handling**: `default-case`, `default-case-last`, `no-fallthrough`.
+- **Strict Equality**: Enforced `eqeqeq` (`===` and `!==` only).
+- **Unused Variables**: Enforced `@typescript-eslint/no-unused-vars`.
+- **Console Standard**: Production console logs restricted (`no-console`).
