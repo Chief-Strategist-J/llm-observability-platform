@@ -1,37 +1,27 @@
 'use client';
 
 import React from 'react';
-import { ShieldAlert, X } from 'lucide-react';
+import { Eye, ShieldAlert } from 'lucide-react';
+import { Button } from '../primitives/Button';
 
 interface ImpersonationBannerProps {
-  readonly active: boolean;
-  readonly targetOrgName?: string;
-  readonly onExit?: () => void;
+  readonly impersonatedUser: string;
+  readonly onEndImpersonation: () => void;
 }
 
-export function ImpersonationBanner({ active, targetOrgName = 'Target Org', onExit }: ImpersonationBannerProps) {
-  if (!active) return null;
-
+export function ImpersonationBanner({ impersonatedUser, onEndImpersonation }: ImpersonationBannerProps) {
   return (
-    <div
-      role="banner"
-      className="flex items-center justify-between bg-[hsl(var(--severity-warn))] px-4 py-2 text-xs font-semibold text-black shadow-md"
-    >
+    <div className="sticky top-0 z-40 flex items-center justify-between border-b border-[hsl(var(--severity-warn)/.3)] bg-[hsl(var(--severity-warn)/.15)] px-4 py-2 text-xs font-medium text-[hsl(var(--foreground))] backdrop-blur-md">
       <div className="flex items-center gap-2">
-        <ShieldAlert size={16} aria-hidden="true" />
+        <ShieldAlert size={16} className="text-[hsl(var(--severity-warn))]" />
         <span>
-          SUPPORT IMPERSONATION MODE ACTIVE — Viewing workspace for <strong>{targetOrgName}</strong>. All admin mutations are audit-logged (F-16).
+          <strong>Support Mode Active:</strong> Impersonating <code className="rounded bg-[hsl(var(--muted))] px-1 py-0.5 font-mono">{impersonatedUser}</code> (Read-Only Audit Logging Enforced)
         </span>
       </div>
-      {onExit && (
-        <button
-          onClick={onExit}
-          className="flex items-center gap-1 rounded bg-black/20 px-2 py-0.5 text-xs font-bold text-black hover:bg-black/30"
-        >
-          Exit Support Mode
-          <X size={12} />
-        </button>
-      )}
+      <Button size="sm" variant="outline" onClick={onEndImpersonation} className="h-6 gap-1 px-2 text-xs">
+        <Eye size={12} />
+        Exit Impersonation
+      </Button>
     </div>
   );
 }

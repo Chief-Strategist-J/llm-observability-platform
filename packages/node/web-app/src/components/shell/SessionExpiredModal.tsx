@@ -2,42 +2,42 @@
 
 import React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../primitives/Dialog';
 import { Button } from '../primitives/Button';
-import { AlertTriangle } from 'lucide-react';
 
 interface SessionExpiredModalProps {
-  readonly open: boolean;
-  readonly onOpenChange?: (open: boolean) => void;
+  readonly isOpen: boolean;
+  readonly onReauth?: () => void;
 }
 
-export function SessionExpiredModal({ open, onOpenChange }: SessionExpiredModalProps) {
+export function SessionExpiredModal({ isOpen, onReauth }: SessionExpiredModalProps) {
   const router = useRouter();
   const pathname = usePathname();
 
-  function handleReauth() {
+  if (!isOpen) return null;
+
+  function handleSignIn() {
+    if (onReauth) {
+      onReauth();
+    }
     const signInUrl = `/auth/sign-in?callbackUrl=${encodeURIComponent(pathname)}`;
     router.push(signInUrl);
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-[hsl(var(--severity-warn)/.1)] text-[hsl(var(--severity-warn))]">
-            <AlertTriangle size={20} />
-          </div>
-          <DialogTitle className="text-center">Session Expired</DialogTitle>
-          <DialogDescription className="text-center">
-            Your organization session has timed out. Please sign in again to continue. Your current view filters and URL context will be preserved.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="mt-4 flex justify-end">
-          <Button onClick={handleReauth} className="w-full">
-            Sign In Again
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-[var(--radius-xl)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl">
+        <h2 className="text-lg font-bold tracking-tight text-[hsl(var(--foreground))]">
+          Session Expired
+        </h2>
+        <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">
+          Your session has timed out due to inactivity. Please sign in again to preserve your current work and continue.
+        </p>
+        <div className="mt-6 flex justify-end">
+          <Button onClick={handleSignIn}>
+            Sign in again
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
