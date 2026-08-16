@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeAll } from 'vitest';
 import { AuthService } from '../../src/features/auth/service';
 import { AuthRestV1Router } from '../../src/api/rest/v1/router';
 import { AlloyDBOmniAuthAdapter } from '../../src/infra/adapters/alloydb-omni-auth.adapter';

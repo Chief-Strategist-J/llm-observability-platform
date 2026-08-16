@@ -1,4 +1,7 @@
 export const AUTH_QUERIES = {
+  TENANT_RLS: {
+    SET_LOCAL_TENANT_CONTEXT: `SET LOCAL app.current_org_id = $1`,
+  },
   FLOW_SIGN_UP: {
     CHECK_ORG_EXISTS: `SELECT id FROM auth_organizations WHERE name = $1 OR slug = $2 LIMIT 1`,
     INSERT_ORG: `INSERT INTO auth_organizations (id, name, slug) VALUES ($1, $2, $3)`,
