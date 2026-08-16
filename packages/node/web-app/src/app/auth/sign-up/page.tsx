@@ -1,17 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { authApiClient } from '../../../lib/auth-client';
 
-export default function SignInPage() {
+export default function SignUpPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') ?? '/';
 
-  const [email, setEmail] = useState('admin@acme.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [orgName, setOrgName] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -21,21 +21,16 @@ export default function SignInPage() {
     setErrorMsg(null);
 
     try {
-      const res = await authApiClient.signIn({ email, password });
-      document.cookie = `authjs.session-token=${res.token}; path=/`;
-      document.cookie = `mock_role=${res.user.role || "owner"}; path=/`;
-      router.push(callbackUrl);
-      router.refresh();
+      await authApiClient.signUp({
+        email,
+        password,
+        name,
+        organization_name: orgName,
+        role: 'admin',
+      });
+      router.push('/auth/sign-in');
     } catch (err: any) {
-      if (err?.code === "USER_BLOCKED" || err?.message?.includes("blocked")) {
-        setErrorMsg("Access Denied: Your user account has been blocked by your organization administrator.");
-      } else {
-        // Fallback demo sign in
-        document.cookie = 'authjs.session-token=mock-token; path=/';
-        document.cookie = 'mock_role=owner; path=/';
-        router.push(callbackUrl);
-        router.refresh();
-      }
+      setErrorMsg(err?.message || 'Sign up failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -46,10 +41,10 @@ export default function SignInPage() {
       <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/60 p-8 backdrop-blur-md shadow-2xl space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-            LLM Observability Platform
+            Register Organization
           </h1>
           <p className="text-xs text-slate-400">
-            Sign in to access your multi-tenant observability workspace
+            Create your multi-tenant organization workspace
           </p>
         </div>
 
@@ -61,8 +56,36 @@ export default function SignInPage() {
 
         <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4">
           <div className="space-y-1.5">
+            <label htmlFor="name" className="text-xs font-semibold uppercase text-slate-400">
+              Full Name
+            </label>
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="orgName" className="text-xs font-semibold uppercase text-slate-400">
+              Organization Name
+            </label>
+            <input
+              id="orgName"
+              type="text"
+              value={orgName}
+              onChange={(e) => setOrgName(e.target.value)}
+              required
+              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all"
+            />
+          </div>
+
+          <div className="space-y-1.5">
             <label htmlFor="email" className="text-xs font-semibold uppercase text-slate-400">
-              Email address
+              Email Address
             </label>
             <input
               id="email"
@@ -76,12 +99,13 @@ export default function SignInPage() {
 
           <div className="space-y-1.5">
             <label htmlFor="password" className="text-xs font-semibold uppercase text-slate-400">
-              Password
+              Password (Min 12 chars)
             </label>
             <input
               id="password"
               type="password"
               value={password}
+              minLength={12}
               onChange={(e) => setPassword(e.target.value)}
               required
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all"
@@ -93,14 +117,14 @@ export default function SignInPage() {
             disabled={loading}
             className="w-full rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-cyan-500/20 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50 transition-all"
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? 'Creating Organization...' : 'Register Organization'}
           </button>
         </form>
 
         <div className="text-center text-xs text-slate-400 pt-2">
-          Need a new organization?{" "}
-          <Link href="/auth/sign-up" className="text-cyan-400 hover:underline">
-            Register Organization
+          Already have an organization?{" "}
+          <Link href="/auth/sign-in" className="text-cyan-400 hover:underline">
+            Sign In
           </Link>
         </div>
       </div>
