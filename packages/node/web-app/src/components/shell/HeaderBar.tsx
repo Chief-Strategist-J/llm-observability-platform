@@ -18,7 +18,7 @@ export function HeaderBar() {
     <header className="h-14 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 flex items-center justify-between text-xs text-[hsl(var(--foreground))] shrink-0 shadow-sm">
       {/* Left: Environment & Live Status */}
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-950/60 dark:bg-emerald-950/60 bg-emerald-100 text-emerald-700 dark:text-emerald-300 border border-emerald-500/50 font-bold text-[11px] shrink-0">
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full dark:bg-emerald-950/80 bg-emerald-100/90 dark:text-emerald-300 text-emerald-900 border border-emerald-500/50 font-bold text-[11px] shrink-0">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
