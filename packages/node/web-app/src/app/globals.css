@@ -5,12 +5,16 @@
 @custom-variant high-contrast (&:where(.high-contrast, .high-contrast *));
 
 @layer base {
-  /* Font — Inter loaded from Google Fonts in layout.tsx */
   :root {
-    font-family: "Inter", sans-serif;
+    font-family: var(--font-sans), "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
-  /* Animation keyframes for toast/dialog transitions */
+  code, pre, kbd, samp {
+    font-family: var(--font-mono), "JetBrains Mono", monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
   @keyframes slide-in {
     from {
       transform: translateX(100%);
