@@ -51,4 +51,8 @@ export class AuthOutboundAdapterImplementation implements IAuthOutboundAdapter {
   revokeApiKey(keyId: string): Promise<void> {
     return this.repository.revokeApiKey(keyId);
   }
+
+  fetchUserAuditLogs(userId: string): Promise<AuditLogRecord[]> {
+    return this.repository.fetchUserAuditLogs(userId);
+  }
 }

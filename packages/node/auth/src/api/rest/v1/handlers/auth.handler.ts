@@ -12,3 +12,7 @@ export async function handleSignIn(service: AuthService, body: unknown, headers?
   const userAgent = headers?.['user-agent'] ?? 'unknown';
   return service.signIn({ ...input, ip_address: ipAddress, user_agent: userAgent });
 }
+
+export async function handleFetchAuditLogs(service: AuthService, userId: string): Promise<unknown> {
+  return service.fetchUserAuditLogs(userId);
+}

@@ -1,5 +1,5 @@
 import type { AuthService } from '../../../features/auth/service';
-import { handleSignUp, handleSignIn } from './handlers/auth.handler';
+import { handleSignUp, handleSignIn, handleFetchAuditLogs } from './handlers/auth.handler';
 import { handleVerifySession } from './handlers/session.handler';
 import { handleForgotPassword, handleResetPassword, handleChangePassword } from './handlers/password.handler';
 import { handleCreateApiKey, handleVerifyApiKey, handleListPermissions } from './handlers/api-key.handler';
@@ -57,6 +57,12 @@ export class AuthRestV1Router {
         if (method === HTTP_METHODS.GET && path === AUTH_ENDPOINTS.PERMISSIONS) {
           resultData = await handleListPermissions(this.service);
           return { statusCode: 200, payload: createSuccessResponse(resultData, 'System permissions retrieved') };
+        }
+        if (method === HTTP_METHODS.GET && path === AUTH_ENDPOINTS.AUDIT_LOGS) {
+          const authHeader = headers?.[AUTH_CONSTANTS.HEADER_AUTHORIZATION] ?? headers?.[AUTH_CONSTANTS.HEADER_AUTHORIZATION_CAMEL];
+          const session = await handleVerifySession(this.service, authHeader);
+          resultData = await handleFetchAuditLogs(this.service, session.sub);
+          return { statusCode: 200, payload: createSuccessResponse(resultData, 'Audit logs retrieved') };
         }
 
         throw new Error(`Route not found: ${method} ${path}`);

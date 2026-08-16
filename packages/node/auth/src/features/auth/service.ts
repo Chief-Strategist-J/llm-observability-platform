@@ -1,5 +1,5 @@
 import type { AuthRepositoryPort } from './repository';
-import type { SignUpInput, SignInInput, ForgotPasswordInput, ResetPasswordInput, ChangePasswordInput, CreateApiKeyInput, VerifyApiKeyInput, AuthUserRecord } from './types';
+import type { SignUpInput, SignInInput, ForgotPasswordInput, ResetPasswordInput, ChangePasswordInput, CreateApiKeyInput, VerifyApiKeyInput, AuthUserRecord, AuditLogRecord } from './types';
 import type { ApiKeyRecord, AuthTokenPayload } from '../../shared/types/auth.types';
 import { SignUpInputSchema, SignInInputSchema, ResetPasswordInputSchema, ChangePasswordInputSchema, CreateApiKeyInputSchema, VerifyApiKeyInputSchema } from './schema/auth.schema';
 import { InvalidCredentialsError, ApiKeyRevokedError, UserAlreadyExistsError, OrgAlreadyExistsError, InsufficientPermissionError, ValidationError } from '../../shared/errors/auth.errors';
@@ -185,6 +185,10 @@ export class AuthService {
     }
 
     return { valid: true, record, authorized };
+  }
+
+  async fetchUserAuditLogs(userId: string): Promise<AuditLogRecord[]> {
+    return this.repo.fetchUserAuditLogs(userId);
   }
 
   getSystemPermissions(): string[] {

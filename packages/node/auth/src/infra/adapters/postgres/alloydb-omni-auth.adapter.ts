@@ -96,4 +96,9 @@ export class AlloyDBOmniAuthAdapter implements AuthRepositoryPort {
       }
     }
   }
+
+  async fetchUserAuditLogs(userId: string): Promise<AuditLogRecord[]> {
+    this.getFlowQuery('FLOW_AUDIT_LOGS');
+    return [...this.mockAuditLogs.values()].filter((log) => log.user_id === userId);
+  }
 }

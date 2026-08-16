@@ -220,4 +220,22 @@ export class RealPostgresAuthAdapter implements AuthRepositoryPort {
       client.release();
     }
   }
+
+  async fetchUserAuditLogs(userId: string): Promise<AuditLogRecord[]> {
+    const client = await this.pool.connect();
+    try {
+      const res = await client.query(AUTH_QUERIES.FLOW_AUDIT_LOGS.FETCH_LOGS_BY_USER, [userId]);
+      return res.rows.map((row: any) => ({
+        id: row.id,
+        user_id: row.user_id,
+        org_id: row.org_id,
+        event_type: row.event_type,
+        ip_address: row.ip_address,
+        user_agent: row.user_agent,
+        timestamp_ms: parseInt(row.timestamp_ms, 10),
+      }));
+    } finally {
+      client.release();
+    }
+  }
 }

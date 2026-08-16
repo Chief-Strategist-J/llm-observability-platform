@@ -13,4 +13,5 @@ export interface AuthRepositoryPort {
   saveApiKey(keyRecord: ApiKeyRecord): Promise<void>;
   findApiKeyByHash(hash: string): Promise<ApiKeyRecord | null>;
   revokeApiKey(keyId: string): Promise<void>;
+  fetchUserAuditLogs(userId: string): Promise<AuditLogRecord[]>;
 }
