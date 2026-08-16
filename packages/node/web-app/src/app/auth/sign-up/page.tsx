@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Eye, EyeOff } from 'lucide-react';
 import { authApiClient } from '../../../lib/auth-client';
 import { Button } from '../../../components/primitives/Button';
 import { Input } from '../../../components/primitives/Input';
@@ -14,8 +15,18 @@ export default function SignUpPage() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [orgName, setOrgName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const getPasswordStrength = (pass: string) => {
+    if (!pass) return { label: '', score: 0, color: '' };
+    if (pass.length < 8) return { label: 'Weak', score: 1, color: 'bg-[hsl(var(--destructive))]' };
+    if (pass.length < 12) return { label: 'Medium', score: 2, color: 'bg-amber-500' };
+    return { label: 'Strong', score: 3, color: 'bg-emerald-500' };
+  };
+
+  const strength = getPasswordStrength(password);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,7 +77,7 @@ export default function SignUpPage() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="John Doe"
+              placeholder="Jaydeep"
               required
             />
           </div>
@@ -80,7 +91,7 @@ export default function SignUpPage() {
               type="text"
               value={orgName}
               onChange={(e) => setOrgName(e.target.value)}
-              placeholder="Acme Corporation"
+              placeholder="Scaibu"
               required
             />
           </div>
@@ -94,7 +105,7 @@ export default function SignUpPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@acme.com"
+              placeholder="jaydeep@gmail.com"
               required
             />
           </div>
@@ -103,15 +114,37 @@ export default function SignUpPage() {
             <label htmlFor="password" className="text-xs font-semibold uppercase text-[hsl(var(--muted-foreground))]">
               Password (Min 12 chars)
             </label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              minLength={12}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••••"
-              required
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                minLength={12}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                className="pr-10"
+                required
+              />
+              <button
+                type="button"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+
+            {password && (
+              <div className="space-y-1 pt-1">
+                <div className="flex justify-between items-center text-[10px] text-[hsl(var(--muted-foreground))] font-medium">
+                  <span>Strength: {strength.label}</span>
+                </div>
+                <div className="h-1 w-full bg-[hsl(var(--muted)/.3)] rounded-full overflow-hidden flex">
+                  <div className={`h-full transition-all duration-300 ${strength.color} ${strength.score === 1 ? 'w-1/3' : strength.score === 2 ? 'w-2/3' : 'w-full'}`} />
+                </div>
+              </div>
+            )}
           </div>
 
           <Button type="submit" className="w-full mt-4" disabled={loading}>
