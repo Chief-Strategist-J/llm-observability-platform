@@ -1315,3 +1315,10 @@
     └── Changes:
         ├── data-table -> Add tabular-nums to right-aligned cells in DataTable.tsx.
         └── storybook -> Update spanColumns in DataTable.stories.tsx with status pill dot indicators and UX Gold Standard alignment metadata.
+
+[2026-08-16T09:46:00+05:30] Sync platform design system policies and component updates across web-app workspace
+└── File: policies/*, packages/node/web-app/src/*
+    ├── Choice: Commit all workspace policy documentation (UX gold standard, performance engineering, git stacked PRs) and UI component updates cleanly to origin main.
+    └── Changes:
+        ├── policies -> Add UX-gold-standard-reference.md, performance-engineering.md, and github-stacked-pull-requests.md rules.
+        └── web-app -> Synchronize UI components, auth session handlers, and Storybook stories across workspace.

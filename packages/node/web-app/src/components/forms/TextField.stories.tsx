@@ -8,7 +8,7 @@ function TextFieldDemo({ defaultValues = { modelName: 'gpt-4o' } }: { defaultVal
 
   return (
     <FormProvider {...methods}>
-      <form className="space-y-4" onSubmit={methods.handleSubmit((data) => alert(JSON.stringify(data)))}>
+      <form className="space-y-4" onSubmit={(e) => { void methods.handleSubmit((data) => alert(JSON.stringify(data)))(e); }}>
         <TextField name="modelName" label="Model Name" placeholder="e.g. gpt-4o" />
         <Button type="submit" size="sm">Submit</Button>
       </form>

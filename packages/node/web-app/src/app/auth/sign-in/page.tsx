@@ -38,7 +38,7 @@ export default function SignInPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={(e) => { void handleSubmit(e); }} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="email" className="text-xs font-semibold uppercase text-[hsl(var(--muted-foreground))]">
               Email address

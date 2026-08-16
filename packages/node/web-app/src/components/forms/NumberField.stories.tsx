@@ -10,7 +10,7 @@ function NumberFieldDemo() {
 
   return (
     <FormProvider {...methods}>
-      <form className="space-y-4" onSubmit={methods.handleSubmit((data) => alert(JSON.stringify(data)))}>
+      <form className="space-y-4" onSubmit={(e) => { void methods.handleSubmit((data) => alert(JSON.stringify(data)))(e); }}>
         <NumberField name="maxLatencyMs" label="Max Latency" unit="ms" min={0} max={5000} />
         <NumberField name="maxBudgetUsd" label="Monthly Budget" unit="$" min={0} max={10000} />
         <Button type="submit" size="sm">Save Thresholds</Button>

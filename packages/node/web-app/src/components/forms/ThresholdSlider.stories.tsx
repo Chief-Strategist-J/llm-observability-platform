@@ -10,7 +10,7 @@ function ThresholdSliderDemo() {
 
   return (
     <FormProvider {...methods}>
-      <form className="space-y-6" onSubmit={methods.handleSubmit((data) => alert(JSON.stringify(data)))}>
+      <form className="space-y-6" onSubmit={(e) => { void methods.handleSubmit((data) => alert(JSON.stringify(data)))(e); }}>
         <ThresholdSlider name="latencySloMs" label="Latency SLO Threshold" min={50} max={1000} step={10} unit="ms" />
         <ThresholdSlider name="costCapMicroUsd" label="Cost Cap" min={1000} max={50000} step={500} unit="µ$" />
         <Button type="submit" size="sm">Update SLO Config</Button>

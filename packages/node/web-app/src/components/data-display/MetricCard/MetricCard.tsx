@@ -80,6 +80,52 @@ function Sparkline({ data, severity }: { readonly data: readonly number[]; reado
   );
 }
 
+function MetricHeader({ label, severity, dense }: { readonly label: string; readonly severity?: SeverityLevel; readonly dense: boolean }) {
+  return (
+    <div className="flex items-start justify-between">
+      <span className={cn('font-medium text-[hsl(var(--muted-foreground))]', dense ? 'text-xs' : 'text-sm')}>
+        {label}
+      </span>
+      {severity !== undefined && (
+        <span className="inline-flex items-center rounded-full bg-[hsl(var(--muted))] px-1.5 py-0.5 text-xs font-medium text-[hsl(var(--muted-foreground))]">
+          <span className={cn('mr-1.5 h-1.5 w-1.5 rounded-full', SEVERITY_DOT[severity])} />
+          {severity.toUpperCase()}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function MetricValue({ value, delta, dense }: { readonly value: string | number; readonly delta?: DeltaValue; readonly dense: boolean }) {
+  return (
+    <div className="flex flex-col">
+      <span
+        className={cn(
+          'truncate font-bold tracking-tight text-[hsl(var(--foreground))]',
+          dense ? 'max-w-[120px] text-xl' : 'max-w-[200px] text-3xl'
+        )}
+      >
+        {value}
+      </span>
+      {delta !== undefined && (
+        <span
+          className={cn(
+            'mt-1 inline-flex items-center gap-1 text-xs font-semibold',
+            delta.neutral === true
+              ? 'text-[hsl(var(--muted-foreground))]'
+              : delta.direction === 'up'
+                ? 'text-[hsl(var(--severity-good))]'
+                : 'text-[hsl(var(--severity-bad))]'
+          )}
+        >
+          {delta.direction === 'up' ? <ArrowUpRight size={12} aria-hidden="true" /> : <ArrowDownRight size={12} aria-hidden="true" />}
+          {delta.value}
+        </span>
+      )}
+    </div>
+  );
+}
+
 /**
  * F-04: MetricCard.
  * The single most-reused component: label, value, delta, sparkline, severity.
@@ -104,46 +150,10 @@ export function MetricCard({
         className
       )}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <span className={cn('font-medium text-[hsl(var(--muted-foreground))]', dense ? 'text-xs' : 'text-sm')}>
-          {label}
-        </span>
-        {severity !== undefined && (
-          <span className="inline-flex items-center rounded-full bg-[hsl(var(--muted))] px-1.5 py-0.5 text-xs font-medium text-[hsl(var(--muted-foreground))]">
-            <span className={cn('mr-1.5 h-1.5 w-1.5 rounded-full', SEVERITY_DOT[severity])} />
-            {severity.toUpperCase()}
-          </span>
-        )}
-      </div>
+      <MetricHeader label={label} severity={severity} dense={dense} />
 
-      {/* Value + Sparkline */}
       <div className={cn('flex items-end justify-between', dense ? 'mt-2' : 'mt-4')}>
-        <div className="flex flex-col">
-          <span
-            className={cn(
-              'truncate font-bold tracking-tight text-[hsl(var(--foreground))]',
-              dense ? 'max-w-[120px] text-xl' : 'max-w-[200px] text-3xl'
-            )}
-          >
-            {value}
-          </span>
-          {delta !== undefined && (
-            <span
-              className={cn(
-                'mt-1 inline-flex items-center gap-1 text-xs font-semibold',
-                delta.neutral === true
-                  ? 'text-[hsl(var(--muted-foreground))]'
-                  : delta.direction === 'up'
-                    ? 'text-[hsl(var(--severity-good))]'
-                    : 'text-[hsl(var(--severity-bad))]'
-              )}
-            >
-              {delta.direction === 'up' ? <ArrowUpRight size={12} aria-hidden="true" /> : <ArrowDownRight size={12} aria-hidden="true" />}
-              {delta.value}
-            </span>
-          )}
-        </div>
+        <MetricValue value={value} delta={delta} dense={dense} />
         {sparklineData !== undefined && sparklineData.length > 1 && (
           <div className="flex max-w-[120px] flex-grow items-center justify-end">
             <Sparkline data={sparklineData} severity={severity} />

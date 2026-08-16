@@ -27,9 +27,11 @@ export function deriveSeverity(type: SeverityMetricType, value: number): Severit
       return 'bad';
     }
     case 'quality': {
-      // Quality: higher is better
       if (value >= quality_score.good) return 'good';
       if (value >= quality_score.warn) return 'warn';
+      return 'bad';
+    }
+    default: {
       return 'bad';
     }
   }

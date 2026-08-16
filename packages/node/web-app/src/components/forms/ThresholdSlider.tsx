@@ -14,6 +14,42 @@ interface ThresholdSliderProps<T extends FieldValues> {
   readonly className?: string;
 }
 
+function parseSliderChange<T extends FieldValues>(
+  e: React.ChangeEvent<HTMLInputElement>,
+  name: FieldPath<T>,
+  setValue: (name: FieldPath<T>, value: never, options?: { shouldValidate?: boolean }) => void
+) {
+  const parsed = parseFloat(e.target.value);
+  if (!Number.isNaN(parsed)) {
+    setValue(name, parsed as never, { shouldValidate: true });
+  }
+}
+
+function SliderHeader({ label, name, numValue, unit }: { readonly label: string; readonly name: string; readonly numValue: number; readonly unit: string }) {
+  const formattedValue = unit.length > 0 ? `${numValue} ${unit}` : `${numValue}`;
+  return (
+    <div className="flex items-center justify-between">
+      <label htmlFor={name} className="text-sm font-medium text-[hsl(var(--foreground))]">
+        {label}
+      </label>
+      <span className="text-sm font-semibold text-[hsl(var(--foreground))]">
+        {formattedValue}
+      </span>
+    </div>
+  );
+}
+
+function SliderFooter({ min, max, unit }: { readonly min: number; readonly max: number; readonly unit: string }) {
+  const minText = unit.length > 0 ? `${min} ${unit}` : `${min}`;
+  const maxText = unit.length > 0 ? `${max} ${unit}` : `${max}`;
+  return (
+    <div className="flex justify-between text-xs text-[hsl(var(--muted-foreground))]">
+      <span>{minText}</span>
+      <span>{maxText}</span>
+    </div>
+  );
+}
+
 /**
  * F-11: ThresholdSlider.
  * Reused directly by Layer 4's SLO/budget editors.
@@ -38,24 +74,17 @@ export function ThresholdSlider<T extends FieldValues>({
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const parsed = parseFloat(e.target.value);
-      if (!Number.isNaN(parsed)) {
-        setValue(name, parsed as never, { shouldValidate: true });
-      }
+      parseSliderChange(e, name, setValue as never);
     },
     [name, setValue]
   );
 
+  const hasError = error !== undefined;
+  const errorId = hasError ? `${name}-error` : undefined;
+
   return (
     <div className={cn('flex flex-col gap-2', className)}>
-      <div className="flex items-center justify-between">
-        <label htmlFor={name} className="text-sm font-medium text-[hsl(var(--foreground))]">
-          {label}
-        </label>
-        <span className="text-sm font-semibold text-[hsl(var(--foreground))]">
-          {numValue}{unit !== '' ? ` ${unit}` : ''}
-        </span>
-      </div>
+      <SliderHeader label={label} name={name} numValue={numValue} unit={unit} />
       <div className="relative">
         <input
           id={name}
@@ -63,8 +92,8 @@ export function ThresholdSlider<T extends FieldValues>({
           min={min}
           max={max}
           step={step}
-          aria-invalid={error !== undefined}
-          aria-describedby={error !== undefined ? `${name}-error` : undefined}
+          aria-invalid={hasError}
+          aria-describedby={errorId}
           aria-valuemin={min}
           aria-valuemax={max}
           aria-valuenow={numValue}
@@ -80,12 +109,9 @@ export function ThresholdSlider<T extends FieldValues>({
           onChange={handleChange}
         />
       </div>
-      <div className="flex justify-between text-xs text-[hsl(var(--muted-foreground))]">
-        <span>{min}{unit !== '' ? ` ${unit}` : ''}</span>
-        <span>{max}{unit !== '' ? ` ${unit}` : ''}</span>
-      </div>
-      {error !== undefined && (
-        <p id={`${name}-error`} className="text-xs text-[hsl(var(--severity-bad))]" role="alert">
+      <SliderFooter min={min} max={max} unit={unit} />
+      {hasError && (
+        <p id={errorId} className="text-xs text-[hsl(var(--severity-bad))]" role="alert">
           {String(error.message ?? 'Invalid value')}
         </p>
       )}
