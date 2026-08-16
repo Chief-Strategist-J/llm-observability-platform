@@ -3,9 +3,9 @@ WORKDIR /app
 ENV NODE_ENV=development
 
 COPY package*.json tsconfig*.json ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm install
+RUN npm install && npm install zod pg @opentelemetry/api tsx
 
-COPY . .
+COPY src ./src
+COPY contracts ./contracts
 EXPOSE 3001
-CMD ["npm", "run", "dev"]
+CMD ["npx", "tsx", "src/server.ts"]

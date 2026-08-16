@@ -10,6 +10,8 @@
     "./contracts": "./contracts/openapi/v1.yaml"
   },
   "scripts": {
+    "start": "npx tsx src/server.ts",
+    "dev": "npx tsx src/server.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --config vitest.config.ts",
     "test:allure": "vitest run --config vitest.config.ts --reporter=html",
@@ -19,6 +21,7 @@
     "@opentelemetry/api": "^1.9.0",
     "@types/pg": "^8.21.0",
     "pg": "^8.23.0",
+    "tsx": "^4.19.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {

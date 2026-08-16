@@ -22,11 +22,6 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
-    "typeRoots": ["../web-app/node_modules/@types"],
-    "paths": {
-      "zod": ["../web-app/node_modules/zod"],
-      "@opentelemetry/api": ["../web-app/node_modules/@opentelemetry/api"]
-    },
     "noEmit": true
   },
   "include": ["src/**/*", "contracts/**/*"]
