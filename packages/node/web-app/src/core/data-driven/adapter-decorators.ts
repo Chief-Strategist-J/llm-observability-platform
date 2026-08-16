@@ -1,10 +1,24 @@
 export interface BaseAdapter {
-  [key: string]: (...args: any[]) => Promise<any>;
+  [key: string]: any;
+}
+
+function getAdapterKeys(adapter: any): string[] {
+  const keys = new Set<string>([...Object.keys(adapter)]);
+  const proto = Object.getPrototypeOf(adapter);
+  if (proto && proto !== Object.prototype) {
+    Object.getOwnPropertyNames(proto).forEach((k) => {
+      if (k !== "constructor") {
+        keys.add(k);
+      }
+    });
+  }
+  return Array.from(keys);
 }
 
 export function withRetry<T extends BaseAdapter>(adapter: T, retries = 3, delayMs = 300): T {
   const wrapped: any = {};
-  for (const key of Object.keys(adapter)) {
+  const keys = getAdapterKeys(adapter);
+  for (const key of keys) {
     const fn = adapter[key];
     if (typeof fn === "function") {
       wrapped[key] = async (...args: any[]) => {
@@ -29,7 +43,8 @@ export function withRetry<T extends BaseAdapter>(adapter: T, retries = 3, delayM
 export function withCache<T extends BaseAdapter>(adapter: T, ttlMs = 5000): T {
   const cache = new Map<string, { val: any; exp: number }>();
   const wrapped: any = {};
-  for (const key of Object.keys(adapter)) {
+  const keys = getAdapterKeys(adapter);
+  for (const key of keys) {
     const fn = adapter[key];
     if (typeof fn === "function" && (key.startsWith("get") || key.startsWith("list") || key.startsWith("fetch"))) {
       wrapped[key] = async (...args: any[]) => {
@@ -53,8 +68,9 @@ export function withCircuitBreaker<T extends BaseAdapter>(adapter: T, threshold 
   let failures = 0;
   let nextAttemptTime = 0;
   const wrapped: any = {};
+  const keys = getAdapterKeys(adapter);
 
-  for (const key of Object.keys(adapter)) {
+  for (const key of keys) {
     const fn = adapter[key];
     if (typeof fn === "function") {
       wrapped[key] = async (...args: any[]) => {
