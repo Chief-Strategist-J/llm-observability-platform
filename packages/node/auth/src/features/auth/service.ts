@@ -1,24 +1,71 @@
 import type { AuthRepositoryPort } from './repository';
-import type { SignInCredentials, CreateApiKeyInput } from './types';
+import type { SignUpInput, SignInInput, ForgotPasswordInput, ResetPasswordInput, ChangePasswordInput, CreateApiKeyInput, VerifyApiKeyInput, AuthUserRecord } from './types';
 import type { ApiKeyRecord, AuthTokenPayload } from '../../shared/types/auth.types';
+import { SignUpInputSchema, SignInInputSchema, ResetPasswordInputSchema, ChangePasswordInputSchema, CreateApiKeyInputSchema, VerifyApiKeyInputSchema } from './schema/auth.schema';
 import { InvalidCredentialsError, ApiKeyRevokedError } from '../../shared/errors/auth.errors';
-import { verifyPassword, hashApiKey } from '../../shared/utils/argon2.util';
+import { hashPassword, verifyPassword, hashApiKey } from '../../shared/utils/argon2.util';
 import { createToken, verifyToken } from '../../shared/utils/jwt.util';
 import { AUTH_CONSTANTS } from '../../shared/constants/auth.constants';
 
 export class AuthService {
   constructor(private readonly repo: AuthRepositoryPort) {}
 
-  async signIn(credentials: SignInCredentials): Promise<{ token: string; payload: AuthTokenPayload }> {
-    const user = await this.repo.findUserByEmail(credentials.email);
+  async signUp(input: SignUpInput): Promise<{ token: string; payload: AuthTokenPayload; user: AuthUserRecord }> {
+    const validated = SignUpInputSchema.parse(input);
+
+    const existingUser = await this.repo.findUserByEmail(validated.email);
+    if (existingUser) {
+      throw new Error(`Email address already registered: ${validated.email}`);
+    }
+
+    const passwordHash = await hashPassword(validated.password);
+    const userId = `usr_${Math.random().toString(36).substring(2, 9)}`;
+    const orgId = `org_${Math.random().toString(36).substring(2, 9)}`;
+
+    const userRecord: AuthUserRecord = {
+      id: userId,
+      email: validated.email,
+      password_hash: passwordHash,
+      name: validated.name,
+      org_id: orgId,
+      org_name: validated.organization_name,
+      role: validated.role ?? AUTH_CONSTANTS.ROLE_ADMIN,
+    };
+
+    await this.repo.createOrganizationAndUser(userRecord);
+
+    const token = createToken(userRecord.id, userRecord.email, {
+      org_id: userRecord.org_id,
+      org_name: userRecord.org_name,
+      role: userRecord.role,
+    });
+
+    const payload = verifyToken(token);
+    return { token, payload, user: userRecord };
+  }
+
+  async signIn(input: SignInInput): Promise<{ token: string; payload: AuthTokenPayload; user: AuthUserRecord }> {
+    const validated = SignInInputSchema.parse(input);
+
+    const user = await this.repo.findUserByEmail(validated.email);
     if (!user) {
       throw new InvalidCredentialsError();
     }
 
-    const isValid = await verifyPassword(credentials.password, user.password_hash);
+    const isValid = await verifyPassword(validated.password, user.password_hash);
     if (!isValid) {
       throw new InvalidCredentialsError();
     }
+
+    await this.repo.recordAuditLog({
+      id: `audit_${Math.random().toString(36).substring(2, 9)}`,
+      user_id: user.id,
+      org_id: user.org_id,
+      event_type: AUTH_CONSTANTS.AUDIT_EVENT_SIGNIN,
+      ip_address: validated.ip_address,
+      user_agent: validated.user_agent,
+      timestamp_ms: Date.now(),
+    });
 
     const token = createToken(user.id, user.email, {
       org_id: user.org_id,
@@ -27,25 +74,80 @@ export class AuthService {
     });
 
     const payload = verifyToken(token);
-    return { token, payload };
+    return { token, payload, user };
   }
 
   async validateSession(token: string): Promise<AuthTokenPayload> {
     return verifyToken(token);
   }
 
+  async forgotPassword(input: ForgotPasswordInput): Promise<{ resetToken: string }> {
+    const user = await this.repo.findUserByEmail(input.email);
+    if (!user) {
+      return { resetToken: '' };
+    }
+
+    const rawToken = `rst_${Math.random().toString(36).substring(2, 15)}`;
+    const tokenHash = await hashApiKey(rawToken);
+    const expiresAtMs = Date.now() + 3600000;
+
+    await this.repo.savePasswordResetToken(tokenHash, user.id, expiresAtMs);
+    return { resetToken: rawToken };
+  }
+
+  async resetPassword(input: ResetPasswordInput): Promise<void> {
+    const validated = ResetPasswordInputSchema.parse(input);
+    const tokenHash = await hashApiKey(validated.token);
+
+    const record = await this.repo.findPasswordResetToken(tokenHash);
+    if (!record || record.used || record.expiresAtMs < Date.now()) {
+      throw new Error('Invalid or expired password reset token');
+    }
+
+    const newHash = await hashPassword(validated.new_password);
+    await this.repo.updateUserPassword(record.userId, newHash);
+    await this.repo.markPasswordResetTokenUsed(tokenHash);
+  }
+
+  async changePassword(userId: string, input: ChangePasswordInput): Promise<void> {
+    const validated = ChangePasswordInputSchema.parse(input);
+    const user = await this.repo.findUserById(userId);
+    if (!user) {
+      throw new InvalidCredentialsError();
+    }
+
+    const isValid = await verifyPassword(validated.current_password, user.password_hash);
+    if (!isValid) {
+      throw new InvalidCredentialsError();
+    }
+
+    const newHash = await hashPassword(validated.new_password);
+    await this.repo.updateUserPassword(user.id, newHash);
+  }
+
   async generateApiKey(input: CreateApiKeyInput): Promise<{ rawKey: string; keyRecord: ApiKeyRecord }> {
-    const keyId = `${AUTH_CONSTANTS.API_KEY_PREFIX}${Math.random().toString(36).substring(2, 9)}`;
+    const validated = CreateApiKeyInputSchema.parse(input);
+
+    let prefix: string = AUTH_CONSTANTS.API_KEY_PREFIX_GENERAL;
+    if (validated.key_type === AUTH_CONSTANTS.KEY_TYPE_SUPER_SECRET) {
+      prefix = AUTH_CONSTANTS.API_KEY_PREFIX_SUPER_SECRET;
+    } else if (validated.key_type === AUTH_CONSTANTS.KEY_TYPE_TESTING) {
+      prefix = AUTH_CONSTANTS.API_KEY_PREFIX_TESTING;
+    }
+
+    const keyId = `key_${Math.random().toString(36).substring(2, 9)}`;
     const secret = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    const rawKey = `${AUTH_CONSTANTS.API_KEY_PREFIX}${input.org_id}_${secret}`;
+    const rawKey = `${prefix}${validated.org_id}_${secret}`;
     const keyHash = await hashApiKey(rawKey);
 
     const keyRecord: ApiKeyRecord = {
       key_id: keyId,
-      org_id: input.org_id,
+      org_id: validated.org_id,
+      key_type: validated.key_type,
       key_hash: keyHash,
-      prefix: `${AUTH_CONSTANTS.API_KEY_PREFIX}${input.org_id}`,
-      name: input.name,
+      prefix,
+      name: validated.name,
+      permissions: validated.permissions,
       created_at_ms: Date.now(),
       revoked: false,
     };
@@ -54,12 +156,41 @@ export class AuthService {
     return { rawKey, keyRecord };
   }
 
-  async verifyApiKey(rawKey: string): Promise<ApiKeyRecord> {
-    const keyHash = await hashApiKey(rawKey);
+  async verifyApiKey(input: VerifyApiKeyInput): Promise<{ valid: boolean; record: ApiKeyRecord; authorized: boolean }> {
+    const validated = VerifyApiKeyInputSchema.parse(input);
+    const keyHash = await hashApiKey(validated.key);
     const record = await this.repo.findApiKeyByHash(keyHash);
+
     if (!record || record.revoked) {
       throw new ApiKeyRevokedError();
     }
-    return record;
+
+    let authorized = true;
+    if (validated.required_permission) {
+      const isSuperSecret = record.key_type === AUTH_CONSTANTS.KEY_TYPE_SUPER_SECRET;
+      const hasAdminAll = record.permissions.includes(AUTH_CONSTANTS.PERMISSION_ADMIN_ALL);
+      const hasSpecific = record.permissions.includes(validated.required_permission);
+      authorized = isSuperSecret || hasAdminAll || hasSpecific;
+
+      if (!authorized) {
+        throw new Error(`Insufficient permission: key lacks ${validated.required_permission}`);
+      }
+    }
+
+    return { valid: true, record, authorized };
+  }
+
+  getSystemPermissions(): string[] {
+    return [
+      AUTH_CONSTANTS.PERMISSION_TRACES_READ,
+      AUTH_CONSTANTS.PERMISSION_TRACES_WRITE,
+      AUTH_CONSTANTS.PERMISSION_METRICS_READ,
+      AUTH_CONSTANTS.PERMISSION_METRICS_WRITE,
+      AUTH_CONSTANTS.PERMISSION_LOGS_READ,
+      AUTH_CONSTANTS.PERMISSION_LOGS_WRITE,
+      AUTH_CONSTANTS.PERMISSION_ALERTS_READ,
+      AUTH_CONSTANTS.PERMISSION_ALERTS_WRITE,
+      AUTH_CONSTANTS.PERMISSION_ADMIN_ALL,
+    ];
   }
 }

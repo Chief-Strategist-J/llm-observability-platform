@@ -1,17 +1,14 @@
 import type { AuthService } from '../../../../features/auth/service';
-import { SignInCredentialsSchema } from '../../../../features/auth/types';
+import type { SignUpInput, SignInInput } from '../../../../features/auth/types';
 
-export async function handleSignIn(service: AuthService, body: unknown): Promise<{ token: string; user: { id: string; email: string; org_id: string; role: string } }> {
-  const parsed = SignInCredentialsSchema.parse(body);
-  const { token, payload } = await service.signIn(parsed);
+export async function handleSignUp(service: AuthService, body: unknown): Promise<unknown> {
+  const input = body as SignUpInput;
+  return service.signUp(input);
+}
 
-  return {
-    token,
-    user: {
-      id: payload.sub,
-      email: payload.email,
-      org_id: payload.org.org_id,
-      role: payload.org.role,
-    },
-  };
+export async function handleSignIn(service: AuthService, body: unknown, headers?: Record<string, string>): Promise<unknown> {
+  const input = body as SignInInput;
+  const ipAddress = headers?.['x-forwarded-for'] ?? '127.0.0.1';
+  const userAgent = headers?.['user-agent'] ?? 'unknown';
+  return service.signIn({ ...input, ip_address: ipAddress, user_agent: userAgent });
 }
