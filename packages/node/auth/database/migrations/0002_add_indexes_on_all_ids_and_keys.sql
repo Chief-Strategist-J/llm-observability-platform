@@ -1,5 +1,12 @@
--- Migration: 0002_add_indexes_on_all_ids_and_keys.sql
--- Description: Add high-performance B-tree indexes for all primary/foreign IDs and lookup keys
+-- migration:      0002
+-- description:    add B-tree indexes on all primary foreign keys tenant IDs and timestamps
+-- author:         engineering
+-- date:           2026-08-16
+-- depends_on:     0001
+-- reversible:     YES
+-- lock_risk:      LOW
+-- rows_affected:  schema index creation
+-- reason:         optimize query latency to <=2ms p99 according to query-writing-rules.md
 
 CREATE INDEX IF NOT EXISTS idx_auth_users_id_org_id ON auth_users(id, org_id);
 CREATE INDEX IF NOT EXISTS idx_auth_api_keys_key_id_org_id ON auth_api_keys(key_id, org_id);

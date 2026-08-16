@@ -1,3 +1,13 @@
+-- migration:      0001
+-- description:    create auth tables for multi-tenant organizations users api keys audit logs password resets
+-- author:         engineering
+-- date:           2026-08-16
+-- depends_on:     none
+-- reversible:     YES
+-- lock_risk:      LOW
+-- rows_affected:  schema only
+-- reason:         initial schema setup for multi-tenant auth module
+
 CREATE TABLE IF NOT EXISTS auth_organizations (
   id VARCHAR(64) PRIMARY KEY,
   name VARCHAR(255) NOT NULL UNIQUE,
