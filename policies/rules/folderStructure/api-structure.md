@@ -14,14 +14,17 @@
    - **Immutability & Deprecation Lifecycle**: Merged contract versions (`v1.yaml`, `v1.graphql`) are strictly immutable. Any breaking modification requires a new version (`v2.yaml`) running in parallel with deprecation headers (`Deprecation`, `Sunset`) for a minimum sunset window of 6 months.
 
 4. **Data-Driven Logic Rule**: Write core engine logic ONCE (adapters, pipeline decorators, rules evaluator, workflow runner). New domain features are created by declaring schemas, transform rules, flow-by-flow queries, and state machine definitions as data — not by duplicating boilerplate logic.
-   - **Single Engine Implementation**: Infrastructure engine mechanics — including database CRUD adapters, anti-corruption mapping layers (`fromApi`/`toApi`), list transformations (search, filter, sort, pagination), resilience pipeline decorators (`withRetry`, `withCache`, `withCircuitBreaker`, `withTracing`), rules evaluation engines, and DAG workflow runners — are implemented exactly ONCE inside `shared/data-driven/`, `shared/rules-engine/`, and `shared/workflow-engine/`.
-   - **Declarative Feature Artifacts**: Features are created purely as declarative DATA artifacts inside `src/features/{feature-name}/`:
-     - **Entity Schemas (`schema/`)**: Runtime field definitions, data types, validation constraints, and field transformation mappers (`fromApi`/`toApi`).
-     - **Flow-by-Flow Queries (`queries/`)**: Parameterized database statements declared by execution flow (`{feature}.queries.[ext|sql]`) for clear tracing.
-     - **Rules as Data (`rules/`)**: Business rule sets with priority weights, decision categories, deny-override conflict resolution, and async live-data checkers.
-     - **State Machines as Data (`machines/`)**: State transition graphs, guards, and event-driven action definitions.
-     - **Workflows as Data (`workflows/`)**: Step DAG automation specifications executed by the generic DAG runner.
-   - **Anti-Corruption Layer (ACL)**: All external API/DB payload mapping is handled declaratively via JSON mapping operations (`rename`, `pick`, `omit`, `coerce`, `default`) rather than imperative mapping code per entity.
+   - **Single Engine Implementation Mandate**: Core infrastructure and logic engine mechanics — including CRUD adapters, payload transformation mappers, list operators (search, filter, sort, pagination), resilience pipeline decorators, business rules evaluators, and step DAG workflow runners — are implemented ONCE inside `shared/data-driven/`, `shared/rules-engine/`, and `shared/workflow-engine/`. Imperative re-implementation of engine logic inside individual feature directories is strictly forbidden.
+   - **The 5 Immutable Feature Data Pillars**: Every feature inside `src/features/{feature-name}/` is defined purely as declarative DATA artifacts conforming to five standardized pillars:
+     1. **Entity Schema Contract (`schema/`)**: Runtime field definitions, data types, validation constraints, default values, and bidirectional API/DB transformation mappers (`fromApi` / `toApi`).
+     2. **Flow-by-Flow Parameterized Queries (`queries/`)**: Every database operation MUST be explicitly declared inside `features/{feature}/queries/{feature}.queries.[ext|sql]` as a named, flow-grouped parameterized query structure (`FLOW_SIGN_IN`, `FLOW_VERIFY_SESSION`, `FLOW_CREATE_API_KEY`). Raw inline SQL string construction inside services or handlers is strictly prohibited.
+     3. **Rules as Data (`rules/`)**: Business logic decision trees declared as structured rule sets with priority weights, decision categories, deny-override conflict resolution, and async condition checkers (`evaluate.ts` / `rules.json`).
+     4. **State Machines as Data (`machines/`)**: Multi-state lifecycle flows declared as state transition graphs with guard conditions, valid state triggers, and event side-effects evaluated by generic state machine actors.
+     5. **Workflows as Data (`workflows/`)**: Multi-step DAG automation flows declared as step arrays (e.g. `evaluateRules`, `callEntity`, `callAI`, `humanApproval`) executed by the generic, OpenTelemetry-traced workflow engine.
+   - **Declarative Anti-Corruption Layer (ACL)**: Imperative payload translation code (e.g. manually copying and renaming object properties line-by-line) is prohibited. Payload translation between external contract schemas and internal entity models MUST be handled declaratively using standardized data mapping operations (`rename`, `pick`, `omit`, `coerce`, `default`).
+   - **Resilience Decorator Composition**: Infrastructure adapters MUST be wrapped using standardized pipeline decorator composition (`withTracing(withCircuitBreaker(withCache(withRetry(adapter))))`) at the call site, eliminating per-feature error handling, caching, or retry boilerplate.
+   - **Strict Architecture Enforcement**: Any PR introducing imperative `if/else` forest logic, custom payload mappers, inline query strings, or bespoke state toggles inside feature packages violates this architecture and will be rejected.
+
 
 
 ---
