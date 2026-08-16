@@ -1332,3 +1332,11 @@
         ├── adapters -> Implement PostgresAuthAdapter and RedisSessionAdapter.
         ├── api-handlers -> Implement REST v1 router and handlers (auth, session, api-key).
         └── web-app -> Wire @observability/auth into auth.config.ts and tsconfig.json paths.
+
+[2026-08-16T10:12:00+05:30] Expand api-structure.md policy with Dockerization, full test suite tree, and language-agnostic Data-Driven Core rules
+└── File: policies/rules/folderStructure/api-structure.md
+    ├── Choice: Update API-First folder structure policy in a language-agnostic way preserving existing contracts while adding Dockerization files (Dockerfile, Dockerfile.dev, docker-compose.yml), expanded testing tree (unit, integration, performance load tests with k6 thresholds, contract, e2e), and Data-Driven core rules.
+    └── Changes:
+        ├── dockerization -> Add Dockerfile, Dockerfile.dev, docker-compose.yml, .dockerignore, and deploy/k8s/ to package tree.
+        ├── testing-tree -> Expand package test hierarchy with unit/, integration/, contract/, performance/ (scenarios & thresholds.json SLA rules), and e2e/.
+        └── data-driven-core -> Add language-agnostic guidelines for writing engine logic once and declaring features as data (EntitySchema, rules as data, state machines, step DAGs).
