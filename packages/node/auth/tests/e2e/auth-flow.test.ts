@@ -5,7 +5,7 @@ import { AlloyDBOmniAuthAdapter } from '../../src/infra/adapters/alloydb-omni-au
 import { AUTH_CONSTANTS } from '../../src/shared/constants/auth.constants';
 import { AUTH_ENDPOINTS, HTTP_METHODS } from '../../src/shared/constants/endpoints';
 
-describe('Auth End-to-End API Flow', () => {
+describe('Auth End-to-End API Flow Test Suite', () => {
   let router: AuthRestV1Router;
 
   beforeAll(() => {
@@ -14,7 +14,7 @@ describe('Auth End-to-End API Flow', () => {
     router = new AuthRestV1Router(service);
   });
 
-  it('should execute sign-up, sign-in, session verification, forgot password, and 3-tier API key verification flow', async () => {
+  it('should execute end-to-end flow: sign-up, sign-in audit logging, session verification, forgot/reset password, permissions listing, and 3-tier API key verification', async () => {
     const signUpResult = (await router.route(HTTP_METHODS.POST, AUTH_ENDPOINTS.SIGN_UP, {
       email: 'e2euser@observability.io',
       password: 'StrongPass123!',
@@ -36,11 +36,20 @@ describe('Auth End-to-End API Flow', () => {
 
     expect(signInResult.token).toBeDefined();
 
+    const sessionResult = (await router.route(HTTP_METHODS.GET, AUTH_ENDPOINTS.SESSION, undefined, {
+      authorization: `${AUTH_CONSTANTS.BEARER_PREFIX}${signInResult.token}`,
+    })) as { sub: string; email: string };
+
+    expect(sessionResult.email).toBe('e2euser@observability.io');
+
     const forgotResult = (await router.route(HTTP_METHODS.POST, AUTH_ENDPOINTS.FORGOT_PASSWORD, {
       email: 'e2euser@observability.io',
     })) as { resetToken: string };
 
     expect(forgotResult.resetToken).toBeDefined();
+
+    const permsResult = (await router.route(HTTP_METHODS.GET, AUTH_ENDPOINTS.PERMISSIONS)) as { permissions: string[] };
+    expect(permsResult.permissions).toContain(AUTH_CONSTANTS.PERMISSION_ADMIN_ALL);
 
     const keyResult = (await router.route(HTTP_METHODS.POST, AUTH_ENDPOINTS.API_KEYS, {
       name: 'Testing Key',
