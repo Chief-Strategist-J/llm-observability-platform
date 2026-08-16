@@ -334,20 +334,20 @@ export function MemberManagementTable({
       )}
 
       {/* Main Members Table */}
-      <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-hidden shadow-md">
+      <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-md relative">
         {members.length === 0 ? (
           <div className="p-6 text-center text-xs text-[hsl(var(--muted-foreground))]">
             No team members found. Click &quot;Invite Team Member&quot; to add team members to this organization.
           </div>
         ) : (
           <table className="w-full text-left text-xs">
-            <thead className="bg-[hsl(var(--muted)/.5)] border-b border-[hsl(var(--border))]">
+            <thead className="bg-[hsl(var(--muted)/.5)] border-b border-[hsl(var(--border))] rounded-t-2xl">
               <tr>
-                <th className="p-3.5 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Member Info (Tap to View/Edit)</th>
+                <th className="p-3.5 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))] rounded-tl-2xl">Member Info (Tap to View/Edit)</th>
                 <th className="p-3.5 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">RBAC Role</th>
                 <th className="p-3.5 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))] min-w-[170px]">Quick Change Role</th>
                 <th className="p-3.5 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Status</th>
-                <th className="p-3.5 text-right font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Actions</th>
+                <th className="p-3.5 text-right font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))] rounded-tr-2xl">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[hsl(var(--border))]">
@@ -368,12 +368,14 @@ export function MemberManagementTable({
                     {renderRoleBadge(member.role)}
                   </td>
                   <td className="p-3.5" onClick={(e) => e.stopPropagation()}>
-                    <SearchableDropdown
-                      items={ROLE_DROPDOWN_ITEMS}
-                      value={member.role}
-                      onChange={(val) => (onUpdateRole || defaultRoleUpdateHandler)(member.id, val)}
-                      placeholder="Role..."
-                    />
+                    <div className="w-40">
+                      <SearchableDropdown
+                        items={ROLE_DROPDOWN_ITEMS}
+                        value={member.role}
+                        onChange={(val) => (onUpdateRole || defaultRoleUpdateHandler)(member.id, val)}
+                        placeholder="Role..."
+                      />
+                    </div>
                   </td>
                   <td className="p-3.5">
                     {member.blocked ? (
