@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - ALLOYDB_OMNI_HOST=alloydb-omni
+      - ALLOYDB_OMNI_PORT=5432
+      - ALLOYDB_OMNI_USER=postgres
+      - ALLOYDB_OMNI_PASSWORD=postgres
+      - ALLOYDB_OMNI_DB=observability_auth
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=dev-secret-key-change-in-production
+    depends_on:
+      alloydb-omni:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  alloydb-omni:
+    image: google/alloydb-omni:latest
+    container_name: auth-alloydb-omni
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=observability_auth
+    volumes:
+      - alloydb_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: auth-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  alloydb_data:
