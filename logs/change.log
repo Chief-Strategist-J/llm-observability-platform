@@ -1,3 +1,25 @@
+[2026-08-16T12:05:00+05:30] Refactor @observability/auth README to match messaging-pipeline blueprint with relative markdown links
+└── File: packages/node/auth/README.md
+    ├── Choice: Transform README.md to follow the exact messaging-pipeline blueprint with HTML centered header banner, Shields.io badges, 14-section Table of Contents, Executive Summary Audience table, Mermaid System Architecture flowchart, End-to-End Decision Flow, 13 Security Pillars Matrix, 5 Feature Data Pillars table, 3-Tier API Key Comparison, OpenAPI REST Reference table, Service Configuration tables, Truth Tables, Verified Allure Test Suite table, Ports & Credentials table, and clean relative markdown links (./src/...).
+    └── Architecture & Design:
+        ┌──────────────────────────────────────────────────────────┐
+        │        messaging-pipeline Blueprint README Refactoring   │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │
+        ┌────────────────────────────┼─────────────────────────────┐
+        ▼                            ▼                             ▼
+  ┌───────────┐               ┌────────────┐               ┌──────────────┐
+  │ Centered  │               │ Mermaid &  │               │ Clean        │
+  │ Banner    │               │ Truth      │               │ Relative     │
+  │ & Badges  │               │ Tables     │               │ File Links   │
+  └─────┬─────┘               └─────┬──────┘               └──────┬───────┘
+        │                            │                            │
+        ▼                            ▼                            ▼
+  (HTML div,                  (flowchart TD,               (./src/...,    
+   Shields.io)                 Truth Tables)                ./database/...)
+    └── Changes:
+        └── readme -> Refactor README.md to match messaging-pipeline blueprint with relative markdown links.
+
 [2026-08-16T12:00:00+05:30] Enhance @observability/auth README with Rich Markdown Tables and End-to-End Sequence Diagram
 └── File: packages/node/auth/README.md
     ├── Choice: Upgrade README.md to enterprise gold standard with 5 comprehensive markdown tables (Features Summary, 13 Security Pillars Matrix, 3-Tier API Key Comparison, OpenAPI REST Reference, Verified Allure Test Results) and a complete step-by-step End-to-End Sequence & Decision Flow Diagram.
