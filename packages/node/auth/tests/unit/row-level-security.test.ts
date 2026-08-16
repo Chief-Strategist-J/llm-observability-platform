@@ -12,7 +12,7 @@ describe('AlloyDB Omni Row Level Security (RLS) & Tenant Isolation Tests', () =>
 
   it('should verify Row Level Security (RLS) tenant context query definition', () => {
     const rlsQuery = AUTH_QUERIES.TENANT_RLS.SET_LOCAL_TENANT_CONTEXT;
-    expect(rlsQuery).toBe('SET LOCAL app.current_org_id = $1');
+    expect(rlsQuery).toBe("SELECT set_config('app.current_org_id', $1, true)");
   });
 
   it('should enforce tenant isolation between Org A and Org B users', async () => {

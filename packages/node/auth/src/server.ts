@@ -2,6 +2,7 @@ import * as http from 'http';
 import { AuthService } from './features/auth/service';
 import { AuthRestV1Router } from './api/rest/v1/router';
 import { AlloyDBOmniAuthAdapter } from './infra/adapters/postgres/alloydb-omni-auth.adapter';
+import { RealPostgresAuthAdapter } from './infra/adapters/postgres/real-postgres-auth.adapter';
 import { AuthInboundPortImplementation } from './features/auth/ports/inbound/implementations/auth-inbound.port.implementation';
 import { AuthOutboundPortImplementation } from './features/auth/ports/outbound/implementations/auth-outbound.port.implementation';
 import { AuthInboundAdapterImplementation } from './features/auth/adapters/inbound/implementations/auth-inbound.adapter.implementation';
@@ -11,7 +12,9 @@ import { AUTH_CONSTANTS } from './shared/constants/auth.constants';
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 
 // 1. Initialize Hexagonal Outbound Adapter & Port
-const repositoryAdapter = new AlloyDBOmniAuthAdapter();
+const repositoryAdapter = (process.env.DATABASE_URL || process.env.USE_REAL_DB === 'true')
+  ? new RealPostgresAuthAdapter()
+  : new AlloyDBOmniAuthAdapter();
 export const outboundAdapter = new AuthOutboundAdapterImplementation(repositoryAdapter);
 export const outboundPort = new AuthOutboundPortImplementation(outboundAdapter);
 

@@ -69,16 +69,18 @@ curl -s -X POST "${BASE_URL}/api/v1/auth/change-password" \
     "new_password": "FinalStrongPassword123!"
   }'
 
+ORG_ID=$(echo "${SIGNUP_RESP}" | node -e "const fs=require('fs'); const d=JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.data?.user?.org_id || '');")
+
 echo -e "\n\n--- 7. POST /api/v1/auth/api-keys ---"
 KEY_RESP=$(curl -s -X POST "${BASE_URL}/api/v1/auth/api-keys" \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
-  -d '{
-    "name": "Script Generated Key",
-    "org_id": "org_script_test",
-    "key_type": "general",
-    "permissions": ["traces:read", "metrics:read"]
-  }')
+  -d "{
+    \"name\": \"Script Generated Key\",
+    \"org_id\": \"${ORG_ID}\",
+    \"key_type\": \"general\",
+    \"permissions\": [\"traces:read\", \"metrics:read\"]
+  }")
 echo "${KEY_RESP}"
 
 RAW_KEY=$(echo "${KEY_RESP}" | node -e "const fs=require('fs'); const d=JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.data?.rawKey || '');")
