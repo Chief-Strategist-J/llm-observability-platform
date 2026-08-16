@@ -5,7 +5,7 @@ import { eventBus } from "../../core/event-bus/event-bus";
 
 function* handleSignUp(action: ReturnType<typeof authActions.signUpSubmitted>): Generator<any, void, any> {
   try {
-    const response = yield call([authApiClient, authApiClient.signUp], action.payload);
+    const response = yield call([authApiClient, "signUp"], action.payload);
     yield put(authActions.authSuccess({ user: response.user, organization: response.organization }));
     if (typeof document !== "undefined") {
       document.cookie = `authjs.session-token=mock-token-${response.user?.id || "123"}; path=/`;
@@ -21,7 +21,7 @@ function* handleSignUp(action: ReturnType<typeof authActions.signUpSubmitted>): 
 
 function* handleSignIn(action: ReturnType<typeof authActions.signInSubmitted>): Generator<any, void, any> {
   try {
-    const response = yield call([authApiClient, authApiClient.signIn], action.payload);
+    const response = yield call([authApiClient, "signIn"], action.payload);
     yield put(authActions.authSuccess({ user: response.user }));
     if (typeof document !== "undefined") {
       document.cookie = `authjs.session-token=${response.token}; path=/`;
