@@ -18,6 +18,10 @@ import {
   Lock,
   Flag,
   Activity,
+  Key,
+  Building2,
+  Users,
+  Settings,
 } from 'lucide-react';
 
 interface NavItem {
@@ -39,7 +43,16 @@ const NAV_GROUPS: readonly { title: string; items: readonly NavItem[] }[] = [
     ],
   },
   {
-    title: 'Administration',
+    title: 'Access & Security',
+    items: [
+      { label: 'API Keys', href: '/settings/api-keys', icon: Key },
+      { label: 'Member Management', href: '/settings/members', icon: Users },
+      { label: 'Organizations Admin', href: '/admin/organizations', icon: Building2, adminOnly: true },
+      { label: 'Org Settings', href: '/settings/org', icon: Settings },
+    ],
+  },
+  {
+    title: 'Platform Administration',
     items: [
       { label: 'Budgets', href: '/admin/budgets', icon: Sliders, adminOnly: true },
       { label: 'SLO Thresholds', href: '/admin/slos', icon: ShieldCheck, adminOnly: true },

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSelector, useDispatch } from 'react-redux';
 import { authActions } from '../../features/auth/auth.slice';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../primitives/DropdownMenu';
-import { User, Settings, LogOut, ShieldAlert } from 'lucide-react';
+import { User, Settings, Key, LogOut, ShieldAlert } from 'lucide-react';
 
 interface UserMenuProps {
   readonly user?: {
@@ -55,15 +55,21 @@ export function UserMenu({ user: propUser, impersonating = false }: UserMenuProp
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/settings/org" className="flex w-full items-center gap-2">
-            <Settings size={14} />
-            Org Settings
+          <Link href="/settings/api-keys" className="flex w-full items-center gap-2">
+            <Key size={14} />
+            API Keys
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/settings/members" className="flex w-full items-center gap-2">
             <User size={14} />
             Member Management
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/settings/org" className="flex w-full items-center gap-2">
+            <Settings size={14} />
+            Org Settings
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
