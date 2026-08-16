@@ -12,15 +12,7 @@ export default function ApiKeysPage() {
     name: string;
     permissions: string[];
     rawKey?: string;
-  }>>([
-    {
-      key_id: "key_sample1",
-      org_id: "org_default",
-      key_type: "general",
-      name: "Default Ingestion Key",
-      permissions: ["traces:write", "metrics:write"],
-    },
-  ]);
+  }>>([]);
 
   const [verificationResult, setVerificationResult] = useState<any | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -95,7 +87,7 @@ export default function ApiKeysPage() {
     try {
       const foundKey = keys.find((k) => k.rawKey === values.key || values.key.includes(k.org_id));
       const hasPerm = !values.required_permission || (foundKey && foundKey.permissions.includes(values.required_permission));
-      
+
       setVerificationResult({
         valid: !!foundKey || values.key.startsWith("ak_"),
         authorized: hasPerm,
@@ -119,7 +111,7 @@ export default function ApiKeysPage() {
       render: (r) => (
         <div className="flex flex-wrap gap-1">
           {r.permissions.map((p) => (
-            <span key={p} className="px-1.5 py-0.5 text-[10px] rounded bg-slate-800 text-cyan-300 border border-slate-700">
+            <span key={p} className="px-1.5 py-0.5 text-[10px] rounded bg-[hsl(var(--muted)/.3)] text-[hsl(var(--foreground))] border border-[hsl(var(--border))] font-mono">
               {p}
             </span>
           ))}
@@ -131,28 +123,28 @@ export default function ApiKeysPage() {
       label: "Raw Key",
       render: (r) =>
         r.rawKey ? (
-          <code className="text-xs text-amber-300 bg-amber-950/50 px-2 py-0.5 rounded border border-amber-800">
+          <code className="text-xs text-amber-400 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800 font-mono">
             {r.rawKey}
           </code>
         ) : (
-          <span className="text-slate-500 text-xs">Hidden</span>
+          <span className="text-[hsl(var(--muted-foreground))] text-xs">Hidden</span>
         ),
     },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6 md:p-10 text-slate-100 space-y-8">
+    <div className="min-h-screen bg-[hsl(var(--background))] p-6 md:p-10 text-[hsl(var(--foreground))] space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+        <h1 className="text-3xl font-bold tracking-tight text-[hsl(var(--foreground))]">
           API Key Management
         </h1>
-        <p className="text-slate-400 text-sm mt-1">
+        <p className="text-[hsl(var(--muted-foreground))] text-sm mt-1">
           Generate 3-tier API keys bound to specific organization permission tables and verify entitlements.
         </p>
       </div>
 
       {statusMessage && (
-        <div className="rounded-lg border border-cyan-500/30 bg-cyan-950/40 p-4 text-sm text-cyan-200">
+        <div className="rounded-[var(--radius-md)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-4 text-sm text-[hsl(var(--foreground))] shadow">
           {statusMessage}
         </div>
       )}
@@ -174,18 +166,18 @@ export default function ApiKeysPage() {
           />
 
           {verificationResult && (
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-md space-y-2">
-              <h4 className="text-sm font-semibold text-slate-200">Verification Inspection Result</h4>
+            <div className="rounded-[var(--radius-xl)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-md space-y-2">
+              <h4 className="text-sm font-semibold text-[hsl(var(--foreground))]">Verification Inspection Result</h4>
               <div className="flex items-center space-x-3 text-xs">
-                <span className={`px-2 py-0.5 rounded font-medium border ${verificationResult.valid ? "bg-emerald-950 text-emerald-300 border-emerald-800" : "bg-rose-950 text-rose-300 border-rose-800"}`}>
+                <span className={`px-2 py-0.5 rounded font-semibold border ${verificationResult.valid ? "bg-emerald-950/60 text-emerald-300 border-emerald-800" : "bg-[hsl(var(--destructive)/.2)] text-[hsl(var(--destructive))] border border-[hsl(var(--destructive)/.4)]"}`}>
                   Valid: {verificationResult.valid ? "YES" : "NO"}
                 </span>
-                <span className={`px-2 py-0.5 rounded font-medium border ${verificationResult.authorized ? "bg-cyan-950 text-cyan-300 border-cyan-800" : "bg-amber-950 text-amber-300 border-amber-800"}`}>
+                <span className={`px-2 py-0.5 rounded font-semibold border ${verificationResult.authorized ? "bg-cyan-950/60 text-cyan-300 border-cyan-800" : "bg-amber-950/60 text-amber-300 border-amber-800"}`}>
                   Authorized: {verificationResult.authorized ? "YES" : "NO"}
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
-                Required Permission Checked: <code className="text-cyan-300">{verificationResult.requiredPermission}</code>
+              <p className="text-xs text-[hsl(var(--muted-foreground))]">
+                Required Permission Checked: <code className="text-[hsl(var(--primary))] font-mono">{verificationResult.requiredPermission}</code>
               </p>
             </div>
           )}

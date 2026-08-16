@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { Button } from "../../primitives/Button";
+import { Input } from "../../primitives/Input";
 
 export interface FieldConfig {
   key: string;
@@ -60,24 +62,23 @@ export function DataForm<T extends Record<string, any>>({
         e.preventDefault();
         onSubmit(values as T);
       }}
-      className="space-y-4 rounded-xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-md shadow-xl"
+      className="space-y-4 rounded-[var(--radius-xl)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-md text-[hsl(var(--card-foreground))]"
     >
-      <h3 className="text-lg font-semibold text-slate-100 mb-4">{schema.name}</h3>
+      <h3 className="text-lg font-bold tracking-tight text-[hsl(var(--foreground))]">{schema.name}</h3>
 
       {schema.fields.map((field) => (
         <div key={field.key} className="flex flex-col space-y-1.5">
-          <label htmlFor={field.key} className="text-sm font-medium text-slate-300">
-            {field.label} {field.required && <span className="text-rose-400">*</span>}
+          <label htmlFor={field.key} className="text-xs font-semibold uppercase text-[hsl(var(--muted-foreground))]">
+            {field.label} {field.required && <span className="text-[hsl(var(--destructive))]">*</span>}
           </label>
 
           {field.kind === "text" || field.kind === "email" || field.kind === "password" ? (
-            <input
+            <Input
               id={field.key}
               type={field.kind}
               required={field.required}
               value={values[field.key] || ""}
               onChange={(e) => handleChange(field.key, e.target.value)}
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all"
             />
           ) : field.kind === "select" ? (
             <select
@@ -85,7 +86,7 @@ export function DataForm<T extends Record<string, any>>({
               required={field.required}
               value={values[field.key] || ""}
               onChange={(e) => handleChange(field.key, e.target.value)}
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-2 text-sm text-slate-100 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all"
+              className="w-full rounded-[var(--radius-md)] border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3.5 py-2 text-sm text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
             >
               <option value="">Select {field.label}...</option>
               {field.options?.map((opt) => (
@@ -95,17 +96,17 @@ export function DataForm<T extends Record<string, any>>({
               ))}
             </select>
           ) : field.kind === "checkbox-group" ? (
-            <div className="grid grid-cols-2 gap-2 rounded-lg border border-slate-800 bg-slate-950/80 p-3">
+            <div className="grid grid-cols-2 gap-2 rounded-[var(--radius-md)] border border-[hsl(var(--border))] bg-[hsl(var(--muted)/.2)] p-3">
               {field.options?.map((opt) => {
                 const currentArr: string[] = values[field.key] || [];
                 const isChecked = currentArr.includes(opt.value);
                 return (
-                  <label key={opt.value} className="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer">
+                  <label key={opt.value} className="flex items-center space-x-2 text-xs text-[hsl(var(--foreground))] cursor-pointer">
                     <input
                       type="checkbox"
                       checked={isChecked}
                       onChange={(e) => handleCheckboxGroup(field.key, opt.value, e.target.checked)}
-                      className="rounded border-slate-700 bg-slate-900 text-cyan-500 focus:ring-cyan-500"
+                      className="rounded border-[hsl(var(--border))] text-[hsl(var(--primary))]"
                     />
                     <span>{opt.label}</span>
                   </label>
@@ -117,13 +118,9 @@ export function DataForm<T extends Record<string, any>>({
       ))}
 
       <div className="pt-2">
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-cyan-500/20 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50 transition-all"
-        >
+        <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Processing..." : submitLabel}
-        </button>
+        </Button>
       </div>
     </form>
   );

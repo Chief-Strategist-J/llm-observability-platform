@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { DataForm, type SchemaConfig } from "../../../components/ui/data-driven/DataForm";
 import { DataTable, type ColumnConfig } from "../../../components/ui/data-driven/DataTable";
+import { Button } from "../../../components/primitives/Button";
 
 export default function OrganizationsAdminPage() {
   const [orgs, setOrgs] = useState<Array<{ id: string; name: string; slug: string; soft_deleted?: boolean }>>([]);
@@ -108,7 +109,7 @@ export default function OrganizationsAdminPage() {
         user_permissions: values.permissions || [],
       };
       setUsers((prev) => [...prev, newUser]);
-      setStatusMessage(`User "${values.name}" created for Org ${values.org_id} with ${newUser.user_permissions.length} permissions.`);
+      setStatusMessage(`User "${values.name}" created for Org ${values.org_id}.`);
     } finally {
       setLoading(false);
     }
@@ -125,7 +126,7 @@ export default function OrganizationsAdminPage() {
     setUsers((prev) =>
       prev.map((u) => (u.id === userId ? { ...u, soft_deleted: true } : u))
     );
-    setStatusMessage(`User ${userId} soft-deleted (30-day retention).`);
+    setStatusMessage(`User ${userId} soft-deleted (30-day backup retention).`);
   };
 
   const handleDeleteOrg = (orgId: string) => {
@@ -135,7 +136,7 @@ export default function OrganizationsAdminPage() {
     setUsers((prev) =>
       prev.map((u) => (u.org_id === orgId ? { ...u, soft_deleted: true } : u))
     );
-    setStatusMessage(`Organization ${orgId} soft-deleted (30-day retention).`);
+    setStatusMessage(`Organization ${orgId} soft-deleted (30-day backup retention).`);
   };
 
   const orgColumns: ColumnConfig<typeof orgs[0]>[] = [
@@ -147,11 +148,11 @@ export default function OrganizationsAdminPage() {
       label: "Retention Status",
       render: (r) =>
         r.soft_deleted ? (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-rose-900/50 text-rose-300 border border-rose-700">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-[var(--radius-sm)] text-xs font-semibold bg-[hsl(var(--destructive)/.2)] text-[hsl(var(--destructive))] border border-[hsl(var(--destructive)/.4)]">
             Soft-Deleted (30d Backup)
           </span>
         ) : (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-900/50 text-emerald-300 border border-emerald-700">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-[var(--radius-sm)] text-xs font-semibold bg-emerald-950/60 text-emerald-400 border border-emerald-800">
             Active
           </span>
         ),
@@ -170,7 +171,7 @@ export default function OrganizationsAdminPage() {
       render: (r) => (
         <div className="flex flex-wrap gap-1">
           {r.user_permissions.map((p) => (
-            <span key={p} className="px-1.5 py-0.5 text-[10px] rounded bg-slate-800 text-cyan-300 border border-slate-700">
+            <span key={p} className="px-1.5 py-0.5 text-[10px] rounded bg-[hsl(var(--muted)/.3)] text-[hsl(var(--foreground))] border border-[hsl(var(--border))] font-mono">
               {p}
             </span>
           ))}
@@ -182,11 +183,11 @@ export default function OrganizationsAdminPage() {
       label: "Status",
       render: (r) =>
         r.soft_deleted ? (
-          <span className="text-rose-400 text-xs font-medium">Soft-Deleted</span>
+          <span className="text-[hsl(var(--destructive))] text-xs font-semibold">Soft-Deleted</span>
         ) : r.blocked ? (
-          <span className="text-amber-400 text-xs font-medium">Blocked</span>
+          <span className="text-amber-400 text-xs font-semibold">Blocked</span>
         ) : (
-          <span className="text-emerald-400 text-xs font-medium">Active</span>
+          <span className="text-emerald-400 text-xs font-semibold">Active</span>
         ),
     },
   ];
@@ -204,18 +205,18 @@ export default function OrganizationsAdminPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6 md:p-10 text-slate-100 space-y-8">
+    <div className="min-h-screen bg-[hsl(var(--background))] p-6 md:p-10 text-[hsl(var(--foreground))] space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+        <h1 className="text-3xl font-bold tracking-tight text-[hsl(var(--foreground))]">
           Organization & User Administration
         </h1>
-        <p className="text-slate-400 text-sm mt-1">
+        <p className="text-[hsl(var(--muted-foreground))] text-sm mt-1">
           Manage multi-tenant organizations, granular user permissions, user blocking, soft deletion retention, and audit logs.
         </p>
       </div>
 
       {statusMessage && (
-        <div className="rounded-lg border border-cyan-500/30 bg-cyan-950/40 p-4 text-sm text-cyan-200">
+        <div className="rounded-[var(--radius-md)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-4 text-sm text-[hsl(var(--foreground))] shadow">
           {statusMessage}
         </div>
       )}
@@ -243,12 +244,13 @@ export default function OrganizationsAdminPage() {
         searchFields={["name", "id", "slug"]}
         actions={(r) => (
           !r.soft_deleted && (
-            <button
+            <Button
+              variant="destructive"
+              size="sm"
               onClick={() => handleDeleteOrg(r.id)}
-              className="px-2.5 py-1 text-xs rounded bg-rose-950 text-rose-300 hover:bg-rose-900 border border-rose-800 transition-colors"
             >
               Soft Delete Org
-            </button>
+            </Button>
           )
         )}
       />
@@ -262,19 +264,21 @@ export default function OrganizationsAdminPage() {
           !r.soft_deleted && (
             <div className="flex items-center justify-end space-x-2">
               {!r.blocked && (
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => handleBlockUser(r.id)}
-                  className="px-2.5 py-1 text-xs rounded bg-amber-950 text-amber-300 hover:bg-amber-900 border border-amber-800 transition-colors"
                 >
                   Block
-                </button>
+                </Button>
               )}
-              <button
+              <Button
+                variant="destructive"
+                size="sm"
                 onClick={() => handleDeleteUser(r.id)}
-                className="px-2.5 py-1 text-xs rounded bg-rose-950 text-rose-300 hover:bg-rose-900 border border-rose-800 transition-colors"
               >
                 Soft Delete
-              </button>
+              </Button>
             </div>
           )
         )}
