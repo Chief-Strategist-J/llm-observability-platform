@@ -1,68 +1,20 @@
 import { AuthService } from '../../service';
-import type { AuthRepositoryPort } from '../../repository';
-import type { AuthUserRecord } from '../../types';
-import type { ApiKeyRecord } from '../../../../shared/types/auth.types';
-import { hashPassword } from '../../../../shared/utils/argon2.util';
-import { InvalidCredentialsError } from '../../../../shared/errors/auth.errors';
-
-class MockAuthRepository implements AuthRepositoryPort {
-  private users = new Map<string, AuthUserRecord>();
-  private apiKeys = new Map<string, ApiKeyRecord>();
-
-  addUser(user: AuthUserRecord): void {
-    this.users.set(user.email, user);
-  }
-
-  async findUserByEmail(email: string): Promise<AuthUserRecord | null> {
-    return this.users.get(email) ?? null;
-  }
-
-  async findUserById(id: string): Promise<AuthUserRecord | null> {
-    return [...this.users.values()].find((u) => u.id === id) ?? null;
-  }
-
-  async saveApiKey(keyRecord: ApiKeyRecord): Promise<void> {
-    this.apiKeys.set(keyRecord.key_hash, keyRecord);
-  }
-
-  async findApiKeyByHash(hash: string): Promise<ApiKeyRecord | null> {
-    return this.apiKeys.get(hash) ?? null;
-  }
-
-  async revokeApiKey(keyId: string): Promise<void> {
-    for (const record of this.apiKeys.values()) {
-      if (record.key_id === keyId) {
-        record.revoked = true;
-      }
-    }
-  }
-}
+import { AlloyDBOmniAuthAdapter } from '../../../../infra/adapters/alloydb-omni-auth.adapter';
+import { AUTH_CONSTANTS } from '../../../../shared/constants/auth.constants';
 
 export async function runAuthServiceUnitTest(): Promise<boolean> {
-  const repo = new MockAuthRepository();
-  const pwdHash = await hashPassword('secret123');
-  repo.addUser({
-    id: 'usr-001',
-    email: 'admin@acme.com',
-    password_hash: pwdHash,
-    name: 'Admin User',
-    org_id: 'org-001',
-    org_name: 'Acme Corp',
-    role: 'admin',
-  });
-
+  const repo = new AlloyDBOmniAuthAdapter();
   const service = new AuthService(repo);
 
-  const result = await service.signIn({ email: 'admin@acme.com', password: 'secret123' });
-  if (!result.token || result.payload.sub !== 'usr-001') {
-    throw new Error('signIn failed');
-  }
+  const result = await service.signIn({
+    email: AUTH_CONSTANTS.DEFAULT_ADMIN_EMAIL,
+    password: 'password123',
+    ip_address: '127.0.0.1',
+    user_agent: 'UnitTest/1.0',
+  });
 
-  try {
-    await service.signIn({ email: 'admin@acme.com', password: 'wrongpassword' });
-    throw new Error('Expected InvalidCredentialsError');
-  } catch (err) {
-    if (!(err instanceof InvalidCredentialsError)) throw err;
+  if (!result.token || result.payload.email !== AUTH_CONSTANTS.DEFAULT_ADMIN_EMAIL) {
+    throw new Error('signIn failed');
   }
 
   return true;

@@ -1,25 +1,22 @@
 import { z } from 'zod';
-import { UserRoleSchema } from '../../shared/types/auth.types';
+import {
+  SignUpInputSchema,
+  SignInInputSchema,
+  AuthUserEntitySchema,
+  AuditLogRecordSchema,
+  ForgotPasswordInputSchema,
+  ResetPasswordInputSchema,
+  ChangePasswordInputSchema,
+  CreateApiKeyInputSchema,
+  VerifyApiKeyInputSchema,
+} from './schema/auth.schema';
 
-export const SignInCredentialsSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-});
-export type SignInCredentials = z.infer<typeof SignInCredentialsSchema>;
-
-export const AuthUserRecordSchema = z.object({
-  id: z.string().min(1),
-  email: z.string().email(),
-  password_hash: z.string().min(1),
-  name: z.string().min(1),
-  org_id: z.string().min(1),
-  org_name: z.string().min(1),
-  role: UserRoleSchema,
-});
-export type AuthUserRecord = z.infer<typeof AuthUserRecordSchema>;
-
-export const CreateApiKeyInputSchema = z.object({
-  org_id: z.string().min(1),
-  name: z.string().min(1),
-});
+export type SignUpInput = z.infer<typeof SignUpInputSchema>;
+export type SignInInput = z.infer<typeof SignInInputSchema>;
+export type AuthUserRecord = z.infer<typeof AuthUserEntitySchema>;
+export type AuditLogRecord = z.infer<typeof AuditLogRecordSchema>;
+export type ForgotPasswordInput = z.infer<typeof ForgotPasswordInputSchema>;
+export type ResetPasswordInput = z.infer<typeof ResetPasswordInputSchema>;
+export type ChangePasswordInput = z.infer<typeof ChangePasswordInputSchema>;
 export type CreateApiKeyInput = z.infer<typeof CreateApiKeyInputSchema>;
+export type VerifyApiKeyInput = z.infer<typeof VerifyApiKeyInputSchema>;

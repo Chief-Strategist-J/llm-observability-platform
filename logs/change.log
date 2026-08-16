@@ -1,3 +1,28 @@
+[2026-08-16T11:35:00+05:30] Enhance OpenAPI contract and auth package with Sign-Up, Unique Orgs, RBAC Roles, Audit Logs, Password Resets, and 3-Tier API Key Permissions Table
+└── File: packages/node/auth/contracts/openapi/v1.yaml, packages/node/auth/database/migrations/0001_create_auth_tables.sql, packages/node/auth/src/features/auth/schema/auth.schema.ts, packages/node/auth/src/features/auth/service.ts, packages/node/auth/src/api/rest/v1/router.ts
+    ├── Choice: Implement multi-tenant sign-up with unique organization constraints, RBAC roles (admin, member, viewer), sign-in audit logging with IP and user-agent metadata tracking, forgot/reset/change password lifecycle, and 3-tier API keys (general, testing, super_secret) bound to granular permission tables.
+    └── Architecture & Design:
+        ┌──────────────────────────────────────────────────────────┐
+        │        Enhanced @observability/auth Feature Architecture │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │
+        ┌────────────────────────────┼─────────────────────────────┐
+        ▼                            ▼                             ▼
+  ┌───────────┐               ┌────────────┐               ┌──────────────┐
+  │ Sign-Up & │               │ Audit Log  │               │ 3-Tier Keys  │
+  │ Unique Org│               │ Metadata   │               │ & Permissions│
+  └─────┬─────┘               └─────┬──────┘               └──────┬───────┘
+        │                            │                            │
+        ▼                            ▼                            ▼
+  (auth_orgs,                 (auth_audit_                  (ak_gen_,ak_tst
+   auth_users)                 logs, IP/UA)                  ak_sec_, perms)
+    └── Changes:
+        ├── contract -> Update contracts/openapi/v1.yaml with sign-up, unique organization name, RBAC roles, audit log headers (X-Forwarded-For, User-Agent), forgot/reset/change password, 3-tier API key types (general, testing, super_secret), and permissions table.
+        ├── migrations -> Update 0001_create_auth_tables.sql adding auth_organizations (UNIQUE name & slug), auth_audit_logs, auth_password_resets, and auth_api_keys with key_type and permissions array.
+        ├── validation -> Add Zod input validation schemas in auth.schema.ts (email validation, 12-char password complexity regex, unique orgs, role enum).
+        ├── service -> Implement signUp(), signIn() with IP/UA audit logging, forgotPassword(), resetPassword(), changePassword(), generateApiKey() (3 prefixes), and verifyApiKey() with permission table evaluation.
+        └── endpoints -> Update router.ts, handlers, and test suites with zero comments and zero hardcoded static strings.
+
 [2026-08-16T11:30:00+05:30] Implement 5 Immutable Feature Data Pillars in @observability/auth package
 └── File: packages/node/auth/src/features/auth/schema/auth.schema.ts, packages/node/auth/src/features/auth/rules/auth.rules.ts, packages/node/auth/src/features/auth/machines/auth-session.machine.ts, packages/node/auth/src/features/auth/workflows/auth-provisioning.workflow.ts, packages/node/auth/src/features/auth/index.ts
     ├── Choice: Update @observability/auth package to conform to the 5 Immutable Feature Data Pillars specification with declarative entity schemas, flow-by-flow queries, rules as data, state machines as data, and workflows as data.

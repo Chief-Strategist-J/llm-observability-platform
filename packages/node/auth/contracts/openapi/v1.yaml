@@ -1,41 +1,349 @@
 openapi: 3.0.3
 info:
   title: Observability Auth Service API
-  description: Multi-tenant authentication, RBAC authorization, and API key management contract.
+  description: Multi-tenant authentication, RBAC authorization, organization management, audit logging, and 3-tier API key (general, testing, super_secret) permissions lifecycle contract.
   version: 1.0.0
 paths:
+  /api/v1/auth/sign-up:
+    post:
+      summary: Register new user and unique organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+      responses:
+        '201':
+          description: User and organization successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSessionResponse'
+        '400':
+          description: Validation failure or non-unique organization name
+        '409':
+          description: User email or organization name already exists
+
   /api/v1/auth/sign-in:
     post:
-      summary: User sign in with credentials
+      summary: User sign in with IP and client audit logging metadata
+      parameters:
+        - in: header
+          name: X-Forwarded-For
+          required: false
+          schema:
+            type: string
+        - in: header
+          name: User-Agent
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignInRequest'
+      responses:
+        '200':
+          description: Successful authentication with audit log recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSessionResponse'
+        '401':
+          description: Invalid credentials
+
+  /api/v1/auth/session:
+    get:
+      summary: Verify session token and return user context
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Active session payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenPayload'
+        '401':
+          description: Unauthorized or token expired
+
+  /api/v1/auth/forgot-password:
+    post:
+      summary: Request password reset token via email
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [email, password]
+              required: [email]
               properties:
                 email:
                   type: string
                   format: email
-                password:
-                  type: string
       responses:
         '200':
-          description: Successful authentication
-        '401':
-          description: Invalid credentials
-  /api/v1/auth/session:
-    get:
-      summary: Verify session token and return context
+          description: Password reset request accepted
+
+  /api/v1/auth/reset-password:
+    post:
+      summary: Reset user password using token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
       responses:
         '200':
-          description: Session active
+          description: Password reset successful
+        '400':
+          description: Invalid token or password complexity validation failed
+
+  /api/v1/auth/change-password:
+    post:
+      summary: Change password for authenticated user
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password successfully changed
         '401':
-          description: Unauthorized
+          description: Unauthorized or current password incorrect
+
   /api/v1/auth/api-keys:
     post:
-      summary: Generate tenant API key
+      summary: Generate 3-tier API key (general, testing, super_secret) bound to specific permission table
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateApiKeyRequest'
       responses:
         '201':
-          description: API key generated
+          description: API key generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateApiKeyResponse'
+
+  /api/v1/auth/api-keys/verify:
+    post:
+      summary: Verify API key validity and evaluate permission table entitlement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyApiKeyRequest'
+      responses:
+        '200':
+          description: API key verified with permission evaluation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyApiKeyResponse'
+        '401':
+          description: API key invalid or revoked
+        '403':
+          description: Insufficient permission for requested API operation
+
+  /api/v1/auth/permissions:
+    get:
+      summary: List all system permission definitions and scopes
+      responses:
+        '200':
+          description: Available system permissions table
+
+  /api/v1/auth/audit-logs:
+    get:
+      summary: Fetch sign-in audit logs for security oversight
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Audit log records
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    SignUpRequest:
+      type: object
+      required: [email, password, name, organization_name]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+          minLength: 12
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*]).{12,}$'
+        name:
+          type: string
+          minLength: 2
+        organization_name:
+          type: string
+          minLength: 2
+        role:
+          type: string
+          enum: [admin, member, viewer]
+          default: admin
+
+    SignInRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    ResetPasswordRequest:
+      type: object
+      required: [token, new_password]
+      properties:
+        token:
+          type: string
+        new_password:
+          type: string
+          minLength: 12
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*]).{12,}$'
+
+    ChangePasswordRequest:
+      type: object
+      required: [current_password, new_password]
+      properties:
+        current_password:
+          type: string
+        new_password:
+          type: string
+          minLength: 12
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*]).{12,}$'
+
+    CreateApiKeyRequest:
+      type: object
+      required: [name, org_id, key_type, permissions]
+      properties:
+        name:
+          type: string
+        org_id:
+          type: string
+        key_type:
+          type: string
+          enum: [general, testing, super_secret]
+          default: general
+        permissions:
+          type: array
+          items:
+            type: string
+
+    CreateApiKeyResponse:
+      type: object
+      required: [raw_key, key_id, key_type, permissions]
+      properties:
+        raw_key:
+          type: string
+        key_id:
+          type: string
+        key_type:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+
+    VerifyApiKeyRequest:
+      type: object
+      required: [key]
+      properties:
+        key:
+          type: string
+        required_permission:
+          type: string
+
+    VerifyApiKeyResponse:
+      type: object
+      required: [valid, key_id, org_id, key_type, permissions, authorized]
+      properties:
+        valid:
+          type: boolean
+        key_id:
+          type: string
+        org_id:
+          type: string
+        key_type:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        authorized:
+          type: boolean
+
+    AuthSessionResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/AuthUser'
+
+    AuthUser:
+      type: object
+      required: [id, email, name, org_id, org_name, role]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        org_id:
+          type: string
+        org_name:
+          type: string
+        role:
+          type: string
+
+    AuthTokenPayload:
+      type: object
+      required: [sub, email, org, iat, exp]
+      properties:
+        sub:
+          type: string
+        email:
+          type: string
+        org:
+          type: object
+          properties:
+            org_id:
+              type: string
+            org_name:
+              type: string
+            role:
+              type: string
+        iat:
+          type: integer
+        exp:
+          type: integer
