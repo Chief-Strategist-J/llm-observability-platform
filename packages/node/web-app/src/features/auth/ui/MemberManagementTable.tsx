@@ -2,9 +2,10 @@
 
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { UserPlus, Shield, UserX, Ban, CheckCircle2 } from 'lucide-react';
+import { UserPlus, Shield, UserX, Ban, CheckCircle2, Crown, Sparkles } from 'lucide-react';
 import { authActions } from '../auth.slice';
 import { authApiClient } from '../../../lib/auth-client';
+import { Button } from '../../../components/primitives/Button';
 
 export interface Member {
   readonly id: string;
@@ -19,6 +20,7 @@ interface MemberManagementTableProps {
   readonly onInviteMember?: (data: { email: string; name: string; role: string }) => void;
   readonly onBlockMember?: (userId: string) => void;
   readonly onDeleteMember?: (userId: string) => void;
+  readonly onUpdateRole?: (userId: string, role: string) => void;
 }
 
 function getCookieToken(): string | undefined {
@@ -32,6 +34,7 @@ export function MemberManagementTable({
   onInviteMember,
   onBlockMember,
   onDeleteMember,
+  onUpdateRole,
 }: MemberManagementTableProps) {
   const dispatch = useDispatch();
   const [showInviteForm, setShowInviteForm] = useState(false);
@@ -63,21 +66,64 @@ export function MemberManagementTable({
     }
   };
 
+  const defaultRoleUpdateHandler = async (userId: string, role: string) => {
+    const token = getCookieToken();
+    try {
+      await authApiClient.updateUserRole(userId, role, token);
+      dispatch(authActions.fetchMembersSubmitted());
+    } catch (err) {
+      console.error('Failed to update user role:', err);
+    }
+  };
+
+  const renderRoleBadge = (role: string) => {
+    switch (role) {
+      case 'owner':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-extrabold uppercase text-[10px] bg-gradient-to-r from-amber-500 to-purple-600 text-white shadow-sm">
+            <Crown size={10} />
+            Owner
+          </span>
+        );
+      case 'admin':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold uppercase text-[10px] bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-sm">
+            <Shield size={10} />
+            Admin
+          </span>
+        );
+      case 'member':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold uppercase text-[10px] bg-emerald-950/80 text-emerald-300 border border-emerald-700 shadow-sm">
+            <Sparkles size={10} />
+            Member
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold uppercase text-[10px] bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] border border-[hsl(var(--border))]">
+            Viewer
+          </span>
+        );
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-4xl text-left">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-bold text-[hsl(var(--foreground))]">Active Organization Members</h2>
-          <p className="text-xs text-[hsl(var(--muted-foreground))]">Manage team seats, RBAC permissions, and access blocks.</p>
+          <p className="text-xs text-[hsl(var(--muted-foreground))]">Manage team seats, RBAC permissions, role transitions, and access blocks.</p>
         </div>
-        <button
-          type="button"
+        <Button
+          variant="gradient"
+          size="sm"
           onClick={() => setShowInviteForm(!showInviteForm)}
-          className="flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[hsl(var(--primary))] px-3 py-2 text-xs font-semibold text-[hsl(var(--primary-foreground))]"
+          className="flex items-center gap-1.5"
         >
           <UserPlus size={14} />
           Invite Team Member
-        </button>
+        </Button>
       </div>
 
       {showInviteForm && (
@@ -90,9 +136,12 @@ export function MemberManagementTable({
             setNewName('');
             setShowInviteForm(false);
           }}
-          className="rounded-[var(--radius-md)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-4 space-y-4 text-left"
+          className="rounded-[var(--radius-lg)] border-2 border-purple-500/40 bg-[hsl(var(--card))] p-5 space-y-4 text-left shadow-xl animate-in fade-in duration-200"
         >
-          <h3 className="text-xs font-bold text-[hsl(var(--foreground))]">New Member Invitation</h3>
+          <h3 className="text-xs font-bold text-[hsl(var(--foreground))] uppercase tracking-wider flex items-center gap-2">
+            <UserPlus size={14} className="text-purple-400" />
+            New Member Invitation
+          </h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <input
               type="text"
@@ -100,7 +149,7 @@ export function MemberManagementTable({
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               required
-              className="rounded-[var(--radius-md)] border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 py-2 text-xs font-medium text-[hsl(var(--foreground))]"
+              className="rounded-[var(--radius-md)] border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 py-2 text-xs font-medium text-[hsl(var(--foreground))] outline-none focus:border-purple-500"
             />
             <input
               type="email"
@@ -108,37 +157,38 @@ export function MemberManagementTable({
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
               required
-              className="rounded-[var(--radius-md)] border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 py-2 text-xs font-medium text-[hsl(var(--foreground))]"
+              className="rounded-[var(--radius-md)] border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 py-2 text-xs font-medium text-[hsl(var(--foreground))] outline-none focus:border-purple-500"
             />
             <select
               value={newRole}
               onChange={(e) => setNewRole(e.target.value)}
-              className="rounded-[var(--radius-md)] border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 py-2 text-xs font-medium text-[hsl(var(--foreground))]"
+              className="rounded-[var(--radius-md)] border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 py-2 text-xs font-medium text-[hsl(var(--foreground))] outline-none focus:border-purple-500 cursor-pointer"
             >
-              <option value="admin">Admin</option>
-              <option value="member">Member</option>
-              <option value="viewer">Viewer</option>
+              <option value="admin">Admin (Full Control)</option>
+              <option value="member">Member (Standard Access)</option>
+              <option value="viewer">Viewer (Read Only)</option>
             </select>
           </div>
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setShowInviteForm(false)}
-              className="rounded-[var(--radius-md)] border border-[hsl(var(--border))] px-3 py-1.5 text-xs font-medium"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="gradient"
+              size="sm"
               type="submit"
-              className="rounded-[var(--radius-md)] bg-[hsl(var(--primary))] px-3 py-1.5 text-xs font-semibold text-[hsl(var(--primary-foreground))]"
             >
               Send Invitation
-            </button>
+            </Button>
           </div>
         </form>
       )}
 
-      <div className="rounded-[var(--radius-md)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-hidden">
+      <div className="rounded-[var(--radius-lg)] border border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-hidden shadow-lg">
         {members.length === 0 ? (
           <div className="p-8 text-center text-xs text-[hsl(var(--muted-foreground))]">
             No team members found. Click &quot;Invite Team Member&quot; to add team members to this organization.
@@ -147,55 +197,65 @@ export function MemberManagementTable({
           <table className="w-full text-left text-xs">
             <thead className="bg-[hsl(var(--muted)/.5)] border-b border-[hsl(var(--border))]">
               <tr>
-                <th className="p-3 font-semibold text-[hsl(var(--muted-foreground))]">Member</th>
-                <th className="p-3 font-semibold text-[hsl(var(--muted-foreground))]">Role</th>
-                <th className="p-3 font-semibold text-[hsl(var(--muted-foreground))]">Status</th>
-                <th className="p-3 text-right font-semibold text-[hsl(var(--muted-foreground))]">Actions</th>
+                <th className="p-3.5 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Member Info</th>
+                <th className="p-3.5 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">RBAC Role</th>
+                <th className="p-3.5 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Change Role</th>
+                <th className="p-3.5 font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Status</th>
+                <th className="p-3.5 text-right font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[hsl(var(--border))]">
               {members.map((member) => (
-                <tr key={member.id} className="hover:bg-[hsl(var(--muted)/.3)]">
-                  <td className="p-3">
-                    <div className="font-semibold text-[hsl(var(--foreground))]">{member.name}</div>
-                    <div className="text-[10px] text-[hsl(var(--muted-foreground))]">{member.email}</div>
+                <tr key={member.id} className="hover:bg-[hsl(var(--muted)/.3)] transition-colors">
+                  <td className="p-3.5">
+                    <div className="font-bold text-xs text-[hsl(var(--foreground))]">{member.name}</div>
+                    <div className="text-[10px] text-[hsl(var(--muted-foreground))] font-mono">{member.email}</div>
                   </td>
-                  <td className="p-3">
-                    <span className="inline-flex items-center gap-1 rounded bg-[hsl(var(--primary)/.1)] px-2 py-0.5 font-bold uppercase text-[10px] text-[hsl(var(--primary))]">
-                      <Shield size={10} />
-                      {member.role}
-                    </span>
+                  <td className="p-3.5">
+                    {renderRoleBadge(member.role)}
                   </td>
-                  <td className="p-3">
+                  <td className="p-3.5">
+                    <select
+                      value={member.role}
+                      onChange={(e) => (onUpdateRole || defaultRoleUpdateHandler)(member.id, e.target.value)}
+                      className="rounded-[var(--radius-md)] border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-2.5 py-1 text-xs font-semibold text-[hsl(var(--foreground))] outline-none cursor-pointer hover:border-[hsl(var(--ring))]"
+                    >
+                      <option value="admin">Admin</option>
+                      <option value="member">Member</option>
+                      <option value="viewer">Viewer</option>
+                      <option value="owner">Owner</option>
+                    </select>
+                  </td>
+                  <td className="p-3.5">
                     {member.blocked ? (
-                      <span className="inline-flex items-center gap-1 text-[hsl(var(--destructive))] font-semibold">
+                      <span className="inline-flex items-center gap-1 text-[hsl(var(--destructive))] font-bold text-xs">
                         <Ban size={12} />
                         Blocked
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-[hsl(var(--success,green))] font-semibold">
+                      <span className="inline-flex items-center gap-1 text-emerald-400 font-bold text-xs">
                         <CheckCircle2 size={12} />
                         Active
                       </span>
                     )}
                   </td>
-                  <td className="p-3 text-right">
+                  <td className="p-3.5 text-right">
                     <div className="flex justify-end gap-2">
                       <button
                         type="button"
                         onClick={() => (onBlockMember || defaultBlockHandler)(member.id)}
-                        className="rounded p-1 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
-                        title="Block Member"
+                        className="rounded p-1.5 text-[hsl(var(--muted-foreground))] hover:bg-amber-950/40 hover:text-amber-300 transition-colors"
+                        title="Block Access"
                       >
-                        <Ban size={14} />
+                        <Ban size={15} />
                       </button>
                       <button
                         type="button"
                         onClick={() => (onDeleteMember || defaultDeleteHandler)(member.id)}
-                        className="rounded p-1 text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive)/.1)]"
+                        className="rounded p-1.5 text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive)/.15)] transition-colors"
                         title="Soft Delete Member"
                       >
-                        <UserX size={14} />
+                        <UserX size={15} />
                       </button>
                     </div>
                   </td>
