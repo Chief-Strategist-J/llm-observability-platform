@@ -1369,3 +1369,10 @@
         ├── strict-anti-patterns -> Ban relational JSONB, unconstrained foreign keys, native DB enums, and comma-separated lists.
         ├── denormalization-rfc -> Require Denormalization RFC with EXPLAIN ANALYZE proof and 100:1 read-to-write ratio justification.
         └── drift-sla -> Enforce 0.001% data drift SLA and zero application dual-write rule.
+
+[2026-08-16T10:25:00+05:30] Expand data-normalization.md with 14 non-negotiable strict rules and zero-tolerance CI enforcement
+└── File: policies/rules/database/data-normalization.md
+    ├── Choice: Add 8 additional strict architectural rules (surrogate PK requirement, single-column entity PKs, zero implicit nullability, integer/fixed-precision currency types, snake_case naming, plural tables/singular FKs, partition key immutability, cross-shard FK bans) and zero-tolerance automated CI failure rules.
+    └── Changes:
+        ├── non-negotiable-rules -> Expand normalization rules matrix from 6 to 14 strict non-negotiable rules.
+        └── zero-tolerance-ci -> Enforce automated CI build failure for any schema migration violating rules RULE-01 through RULE-14.

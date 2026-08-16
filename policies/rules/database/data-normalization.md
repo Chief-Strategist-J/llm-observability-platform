@@ -45,6 +45,14 @@ All relational OLTP databases (PostgreSQL) MUST adhere to **3rd Normal Form (3NF
 | **RULE-04** | **Mandatory Identity & Audit Columns**: Every normalized table MUST include `id` (PK), `created_at` (TIMESTAMPTZ), `updated_at` (TIMESTAMPTZ), and `deleted_at` (TIMESTAMPTZ, nullable for soft deletes). | Enables auditability, event sourcing, and soft-delete recovery. | Schema Validation CI |
 | **RULE-05** | **No Comma-Separated Lists or Arrays**: Storing lists (`"1,2,3"`) or native array columns to simulate 1:N relations is prohibited. Use a dedicated Junction/Bridge table for M:N relationships. | Violates 1NF; breaks relational indexing and join efficiency. | Code Review |
 | **RULE-06** | **Explicit ON DELETE Behavior**: Every foreign key constraint MUST explicitly declare `ON DELETE RESTRICT` or `ON DELETE CASCADE`. Implicit default deletion behavior is banned. | Prevents silent data deletion anomalies or unintended cascading purges. | Schema Linter |
+| **RULE-07** | **Surrogate Primary Keys Required**: Every entity table MUST use a single surrogate primary key (`id` as UUIDv7 or BigInt). Natural primary keys (e.g., `email`, `ssn`) are strictly banned as primary keys. | Domain attributes change over time; natural PK updates break foreign keys across the system. | Migration CI Check |
+| **RULE-08** | **No Composite Primary Keys on Entity Tables**: Composite primary keys are allowed ONLY on M:N junction/bridge tables. Main entity tables MUST use a single-column `id` PK. | Simplifies ORM mappings, foreign key references, and global routing. | Linter Check |
+| **RULE-09** | **Zero Implicit Nullability**: Columns MUST be declared `NOT NULL` by default. Any nullable column MUST have an explicit migration header comment explaining why nullability is unavoidable. | Nullable columns create three-valued logic (`NULL = NULL` is NULL) and cause silent application bugs. | Schema Linter |
+| **RULE-10** | **Strict Money & Currency Representation**: Monetary values MUST be stored as integer cents (`BIGINT`) or fixed-precision `NUMERIC(18, 4)`. Floating point types (`FLOAT`, `REAL`, `DOUBLE PRECISION`) are strictly forbidden. | Floating point arithmetic causes inexact rounding errors in financial transactions. | Migration Linter |
+| **RULE-11** | **Snake_Case Naming Convention**: Table and column names MUST be lowercase `snake_case`. CamelCase, PascalCase, or mixed-case identifiers are forbidden. | Bypasses PostgreSQL case-sensitivity quoting issues (`"userName"` vs `user_name`). | Naming Linter |
+| **RULE-12** | **Plural Tables & Singular FK Columns**: Table names MUST be plural (`users`, `orders`). Foreign key columns MUST use singular target name + `_id` (`user_id`, `order_id`). | Standardizes naming across all services, ORMs, and analytics pipelines. | Naming Linter |
+| **RULE-13** | **Shard/Partition Key Immutability**: Once a row is written, its Shard Key or Partition Key column MUST NEVER be updated or mutated. | Mutating partition keys forces cross-partition tuple migration and breaks lock ordering. | DB Trigger & CI |
+| **RULE-14** | **No Cross-Shard Foreign Keys**: Foreign key constraints MUST NOT cross physical database shard or database instance boundaries. Cross-shard integrity is handled via Saga pattern. | Physical databases cannot enforce cross-instance constraints. | Architecture CI |
 
 ---
 
@@ -85,6 +93,7 @@ When denormalization is approved, the following 4 architectural controls are **M
    - Synchronization MUST be handled via **Database Triggers**, **Transactional Outbox Pattern**, or **Change Data Capture (CDC via Debezium)**.
 3. **Data Drift Reconciler Job**:
    - A scheduled background job MUST run periodically (nightly) to compare normalized source data with denormalized projections, log all diffs, and automatically repair data drift.
-4. **Drift SLA & Alerting**:
+4. **Drift SLA & Zero-Tolerance CI Enforcement**:
    - Data drift count MUST NOT exceed **0.001%** of total row count.
    - Reconciler jobs MUST export `database_data_drift_count` Prometheus metrics and trigger high-priority alerts if drift exceeds zero.
+   - Any PR violating RULE-01 through RULE-14 will automatically fail CI schema validation and block deployment. No manual overrides allowed.
