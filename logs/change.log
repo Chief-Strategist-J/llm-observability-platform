@@ -1,3 +1,29 @@
+[2026-08-16T10:50:00+05:30] Track and version database performance queries reference library
+└── File: policies/rules/database/queries/performance-queries-0.md, policies/rules/database/queries/performance-queries-1.md, policies/rules/database/queries/performance-queries-2.md, policies/rules/database/queries/performance-queries-3.md, policies/rules/database/queries/performance-queries-4.md, policies/rules/database/queries/performance-queries-5.md, policies/rules/database/queries/performance-queries-6.md, policies/rules/database/queries/performance-queries-7.md, policies/rules/database/queries/performance-queries-8.md
+    ├── Choice: Track the complete 9-file database performance query reference library under policies/rules/database/queries/ to serve as the underlying reference base for database query writing policy enforcement.
+    └── Architecture & Design:
+        ┌──────────────────────────────────────────────────────────┐
+        │        Database Query Performance Reference Library      │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │
+        ┌────────────────────────────┴─────────────────────────────┐
+        │  9 Specialized Performance Query Files (0 through 8)     │
+        └────────────────────────────┬─────────────────────────────┘
+                                     ▼
+        ┌──────────────────────────────────────────────────────────┐
+        │  - performance-queries-0.md: Top 50 core SQL anti-patterns│
+        │  - performance-queries-1.md: Partitioning & Citus sharding│
+        │  - performance-queries-2.md: Legacy DBs, locks & PgBouncer│
+        │  - performance-queries-3.md: Distributed consensus & sagas│
+        │  - performance-queries-4.md: Atomic MERGE & graph algorithms│
+        │  - performance-queries-5.md: Real EXPLAIN production fixes│
+        │  - performance-queries-6.md: Diagnostic tools & templates │
+        │  - performance-queries-7.md: Layered data modeling & CQRS│
+        │  - performance-queries-8.md: Double-entry financial ledgers│
+        └──────────────────────────────────────────────────────────┘
+    └── Changes:
+        └── query-reference-library -> Track all 9 performance query reference files under policies/rules/database/queries/ supporting policies/rules/database/query-writing-rules.md.
+
 [2026-08-16T10:45:00+05:30] Create Master Database Query Writing and Optimization Policy
 └── File: policies/rules/database/query-writing-rules.md
     ├── Choice: Deeply analyze all 9 reference query files (performance-queries-0.md through performance-queries-8.md) without modifying any reference files, and construct a master 40-rule policy governing database query writing and optimization.
