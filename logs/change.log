@@ -1,3 +1,31 @@
+[2026-08-16T10:45:00+05:30] Create Master Database Query Writing and Optimization Policy
+└── File: policies/rules/database/query-writing-rules.md
+    ├── Choice: Deeply analyze all 9 reference query files (performance-queries-0.md through performance-queries-8.md) without modifying any reference files, and construct a master 40-rule policy governing database query writing and optimization.
+    └── Architecture & Design:
+        ┌──────────────────────────────────────────────────────────┐
+        │            Master Database Query Writing Policy          │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │
+        ┌────────────────────────────┴─────────────────────────────┐
+        │  40 Non-Negotiable Query Writing Rules (RULE-QW-01..40)   │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │ (Cross-References performance-queries-0..8.md)
+                                     ▼
+        ┌──────────────────────────────────────────────────────────┐
+        │  - Indexing & Sargability Governance (QW-01..06)         │
+        │  - SELECT, Aggregation & Join Optimization (QW-07..12)    │
+        │  - Pagination, Window & Aggregation Mechanics (QW-13..15)│
+        │  - CTEs, Recursion & Graph Traversals (QW-16..18)        │
+        │  - Locking, Transactions & Advisory Mutexes (QW-19..23)  │
+        │  - Schema Data Types & 1NF Governance (QW-24..27)        │
+        │  - Partitioning, Sub-Partitioning & Archival (QW-28..30) │
+        │  - Distributed Sharding & CRDT Upserts (QW-31..32)       │
+        │  - Streaming, CDC & Replica LSN Routing (QW-33..35)      │
+        │  - Special Domains, Ledgers, EXPLAIN Gates & ORM (36..40) │
+        └──────────────────────────────────────────────────────────┘
+    └── Changes:
+        └── query-writing-rules -> Create policies/rules/database/query-writing-rules.md containing 40 strict, non-negotiable rules with SLA thresholds, bad vs good code snippets, and explicit markdown cross-references to queries in policies/rules/database/queries/ (0 through 8).
+
 [2026-07-16T17:27:00+05:30] Create unified observability-deploy config package containing Docker Compose, Kubernetes, AWS/GCP/Azure Terraform configs, Ansible playbooks, automation scripts, and orchestrators
 └── File: packages/configs/observability-deploy/.package-meta.yaml, packages/configs/observability-deploy/README.md, packages/configs/observability-deploy/deploy/docker/docker-compose.yaml, packages/configs/observability-deploy/deploy/kubernetes/namespace.yaml, packages/configs/observability-deploy/deploy/kubernetes/network-policies.yaml, packages/configs/observability-deploy/deploy/kubernetes/configmap.yaml, packages/configs/observability-deploy/deploy/kubernetes/databases.yaml, packages/configs/observability-deploy/deploy/kubernetes/temporal.yaml, packages/configs/observability-deploy/deploy/kubernetes/api-deployment.yaml, packages/configs/observability-deploy/deploy/kubernetes/workers-deployment.yaml, packages/configs/observability-deploy/deploy/kubernetes/migrations-job.yaml, packages/configs/observability-deploy/deploy/kubernetes/backup-cronjob.yaml, packages/configs/observability-deploy/deploy/kubernetes/backup-pvc.yaml, packages/configs/observability-deploy/deploy/terraform/aws/main.tf, packages/configs/observability-deploy/deploy/terraform/aws/variables.tf, packages/configs/observability-deploy/deploy/terraform/aws/outputs.tf, packages/configs/observability-deploy/deploy/terraform/gcp/main.tf, packages/configs/observability-deploy/deploy/terraform/gcp/variables.tf, packages/configs/observability-deploy/deploy/terraform/gcp/outputs.tf, packages/configs/observability-deploy/deploy/terraform/azure/main.tf, packages/configs/observability-deploy/deploy/terraform/azure/variables.tf, packages/configs/observability-deploy/deploy/terraform/azure/outputs.tf, packages/configs/observability-deploy/deploy/ansible/hosts.ini, packages/configs/observability-deploy/deploy/ansible/playbook.yaml, packages/configs/observability-deploy/DATA_MIGRATION_AND_BACKUP.md, packages/configs/observability-deploy/scripts/deploy.sh, packages/configs/observability-deploy/scripts/backup.sh, packages/configs/observability-deploy/scripts/run-migrations.sh, packages/configs/observability-deploy/scripts/setup-cron.sh
     ├── Choice: Package deployment configuration under packages/configs/observability-deploy to host multi-environment configs for the 13 platform services. Automate database schema migrations and daily backups via integrated scripts, Kubernetes Jobs, and CronJobs.
