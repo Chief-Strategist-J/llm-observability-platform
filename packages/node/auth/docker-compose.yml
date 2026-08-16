@@ -20,6 +20,9 @@ services:
     container_name: observability-auth-service
     ports:
       - "3001:3001"
+    volumes:
+      - .:/app
+      - /app/node_modules
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.auth.rule=PathPrefix(`/api/v1/auth`)"

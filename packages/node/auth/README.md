@@ -2,14 +2,15 @@
 
 # 🔒 Multi-Tenant Auth Service & 13-Pillar Security Engine
 
-### Traefik-Integrated · AlloyDB Omni RLS · Argon2id · Hexagonal Ports & Adapters
+### Traefik-Integrated · AlloyDB Omni RLS · Redis Token Denylist · Hexagonal Ports & Adapters
 
-*A production-grade multi-tenant authentication, RBAC authorization, organization management, audit logging, 3-tier API key permissions management, user blocking/deletion, 30-day backup retention, and 13-pillar security engine — fronted by Traefik Proxy, backed by AlloyDB Omni / PostgreSQL Row Level Security (RLS) and Redis.*
+*A production-grade multi-tenant authentication, RBAC authorization, organization management, context switching, audit logging, 3-tier API key permissions management, user blocking/unblocking/deletion, 30-day backup retention, and 13-pillar security engine — fronted by Traefik Proxy, backed by AlloyDB Omni / PostgreSQL Row Level Security (RLS) and Redis.*
 
 ![Status](https://img.shields.io/badge/status-production--ready-brightgreen)
 ![Architecture](https://img.shields.io/badge/architecture-Hexagonal%20Ports%20%26%20Adapters-blueviolet)
 ![Gateway](https://img.shields.io/badge/gateway-Traefik%20v2.10-24A1C1)
 ![Database](https://img.shields.io/badge/database-AlloyDB%20Omni%20%2F%20PostgreSQL-336791)
+![Cache](https://img.shields.io/badge/cache-Redis%207-DC382D)
 ![Tracing](https://img.shields.io/badge/tracing-OpenTelemetry-425CC7)
 
 </div>
@@ -22,15 +23,16 @@
 2. [Standardized API Response Envelope](#-standardized-api-response-envelope)
 3. [Hexagonal Ports & Adapters Architecture](#-hexagonal-ports--adapters-architecture)
 4. [Organization & User Lifecycle Workflow](#-organization--user-lifecycle-workflow)
-5. [Master API Reference Table (All 15 Endpoints)](#-master-api-reference-table-all-15-endpoints)
-6. [Automated Live API Curl Test Suite](#-automated-live-api-curl-test-suite)
-7. [Verified Vitest Test Suite Execution Results](#-verified-vitest-test-suite-execution-results)
+5. [Database Migrations & N-to-N Multi-Tenancy](#-database-migrations--n-to-n-multi-tenancy)
+6. [Master API Reference Table (All 23 Endpoints)](#-master-api-reference-table-all-23-endpoints)
+7. [Automated Live API Curl Test Suite](#-automated-live-api-curl-test-suite)
+8. [Verified Vitest Test Suite Execution Results](#-verified-vitest-test-suite-execution-results)
 
 ---
 
 ## 🧭 Executive Summary
 
-The `@observability/auth` platform provides enterprise multi-tenant user sign-up, organization isolation, role-based access control (RBAC), user blocking, soft deletion with 30-day backup retention lifecycle, 3-tier API key management with permission table binding, and comprehensive audit logging.
+The `@observability/auth` platform provides enterprise multi-tenant user sign-up, organization isolation, multi-org context switching, role-based access control (RBAC), user blocking/unblocking, soft deletion with 30-day backup retention lifecycle, server-side JWT session invalidation via Redis denylist, 3-tier API key management with permission table binding, and comprehensive audit logging with parameter filtering.
 
 ---
 
@@ -61,25 +63,48 @@ The `@observability/auth` platform provides enterprise multi-tenant user sign-up
 
 ---
 
-## 📊 Master API Reference Table (All 15 Endpoints)
+## 🗄️ Database Migrations & N-to-N Multi-Tenancy
 
-| # | Endpoint & Method | Purpose / Scope | cURL Command | Success Response (`HTTP 200 / 201`) | Failure Response (`HTTP 400 / 401 / 404 / 409 / 429`) |
-|---|---|---|---|---|---|
-| **1** | `POST /api/v1/auth/organizations` | Create standalone multi-tenant organization | `curl -s -X POST http://localhost:3001/api/v1/auth/organizations -H "Content-Type: application/json" -d '{"name": "Acme Corp"}'` | `{"status": "success", "message": "Organization created successfully", "data": {"id": "org_fiwgpci", "name": "Acme Corp", "slug": "acme-corp"}, "error": null}` | `{"status": "error", "message": "Organization name already exists: Acme Corp", "data": null, "error": {"code": "ORG_ALREADY_EXISTS", "details": "Organization name already exists: Acme Corp"}}` |
-| **2** | `POST /api/v1/auth/users` | Create user in specific org with permissions | `curl -s -X POST http://localhost:3001/api/v1/auth/users -H "Content-Type: application/json" -d '{"email": "user@acme.io", "password": "StrongPassword123!", "name": "Sarah", "org_id": "org_fiwgpci", "role": "member", "permissions": ["traces:read"]}'` | `{"status": "success", "message": "User created in target organization with specific permissions", "data": {"id": "usr_7x18fjt", "email": "user@acme.io", "org_id": "org_fiwgpci", "role": "member", "blocked": false, "user_permissions": ["traces:read"]}, "error": null}` | `{"status": "error", "message": "Email address already registered: user@acme.io", "data": null, "error": {"code": "USER_ALREADY_EXISTS", "details": "Email address already registered: user@acme.io"}}` |
-| **3** | `POST /api/v1/auth/sign-in` | Authenticate user & write audit log | `curl -s -X POST http://localhost:3001/api/v1/auth/sign-in -H "Content-Type: application/json" -d '{"email": "user@acme.io", "password": "StrongPassword123!"}'` | `{"status": "success", "message": "User signed in successfully", "data": {"token": "eyJzdWI...", "user": {"id": "usr_7x18fjt", "email": "user@acme.io", "org_id": "org_fiwgpci", "role": "member"}}, "error": null}` | `{"status": "error", "message": "User account is blocked. Contact administrator.", "data": null, "error": {"code": "USER_BLOCKED", "details": "User account is blocked. Contact administrator."}}` |
-| **4** | `GET /api/v1/auth/session` | Validate session token & return context | `curl -s -X GET http://localhost:3001/api/v1/auth/session -H "Authorization: Bearer <TOKEN>"` | `{"status": "success", "message": "Session token verified", "data": {"sub": "usr_7x18fjt", "email": "user@acme.io", "org": {"org_id": "org_fiwgpci", "role": "member"}}, "error": null}` | `{"status": "error", "message": "Missing or invalid Authorization header", "data": null, "error": {"code": "UNAUTHORIZED", "details": "Missing or invalid Authorization header"}}` |
-| **5** | `POST /api/v1/auth/sign-up` | Combined register user & organization | `curl -s -X POST http://localhost:3001/api/v1/auth/sign-up -H "Content-Type: application/json" -d '{"email": "admin@acme.io", "password": "StrongPassword123!", "name": "Admin", "organization_name": "Acme Global", "role": "admin"}'` | `{"status": "success", "message": "User and organization successfully registered", "data": {"token": "eyJzdWI...", "user": {"id": "usr_ny2z98g", "email": "admin@acme.io", "org_name": "Acme Global"}}, "error": null}` | `{"status": "error", "message": "Organization name already exists: Acme Global", "data": null, "error": {"code": "ORG_ALREADY_EXISTS", "details": "Organization name already exists: Acme Global"}}` |
-| **6** | `POST /api/v1/auth/forgot-password` | Request password reset token | `curl -s -X POST http://localhost:3001/api/v1/auth/forgot-password -H "Content-Type: application/json" -d '{"email": "user@acme.io"}'` | `{"status": "success", "message": "Password reset request processed", "data": {"resetToken": "rst_uywyfulgy5p"}, "error": null}` | `{"status": "error", "message": "Validation failed: email: Invalid email", "data": null, "error": {"code": "VALIDATION_ERROR", "details": "Validation failed: email: Invalid email"}}` |
-| **7** | `POST /api/v1/auth/reset-password` | Reset password using token | `curl -s -X POST http://localhost:3001/api/v1/auth/reset-password -H "Content-Type: application/json" -d '{"token": "rst_uywyfulgy5p", "new_password": "NewStrongPass123!"}'` | `{"status": "success", "message": "Password successfully reset", "data": {"success": true}, "error": null}` | `{"status": "error", "message": "Validation failed: Invalid or expired password reset token", "data": null, "error": {"code": "VALIDATION_ERROR", "details": "Invalid or expired password reset token"}}` |
-| **8** | `POST /api/v1/auth/change-password` | Change password for active user | `curl -s -X POST http://localhost:3001/api/v1/auth/change-password -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"current_password": "OldPass123!", "new_password": "NewPass123!"}'` | `{"status": "success", "message": "Password successfully changed", "data": {"success": true}, "error": null}` | `{"status": "error", "message": "Invalid email or password credentials", "data": null, "error": {"code": "INVALID_CREDENTIALS", "details": "Invalid email or password credentials"}}` |
-| **9** | `POST /api/v1/auth/api-keys` | Generate 3-tier API key bound to permissions | `curl -s -X POST http://localhost:3001/api/v1/auth/api-keys -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"name": "Telemetry Key", "org_id": "org_fiwgpci", "key_type": "general", "permissions": ["traces:read"]}'` | `{"status": "success", "message": "API key successfully created", "data": {"rawKey": "ak_gen_org_fiwgpci_secret123", "keyRecord": {"key_id": "key_whhjgin", "org_id": "org_fiwgpci"}}, "error": null}` | `{"status": "error", "message": "insert or update on table auth_api_keys violates foreign key constraint", "data": null, "error": {"code": "INTERNAL_SERVER_ERROR", "details": "Foreign key constraint violation"}}` |
-| **10** | `POST /api/v1/auth/api-keys/verify` | Verify API key & permission entitlement | `curl -s -X POST http://localhost:3001/api/v1/auth/api-keys/verify -H "Content-Type: application/json" -d '{"key": "ak_gen_org_fiwgpci_secret123", "required_permission": "traces:read"}'` | `{"status": "success", "message": "API key verified", "data": {"valid": true, "authorized": true, "record": {"key_id": "key_whhjgin"}}, "error": null}` | `{"status": "error", "message": "API key has been revoked or invalid", "data": null, "error": {"code": "API_KEY_REVOKED", "details": "API key has been revoked or invalid"}}` |
-| **11** | `GET /api/v1/auth/permissions` | List all system permission definitions | `curl -s -X GET http://localhost:3001/api/v1/auth/permissions` | `{"status": "success", "message": "System permissions retrieved", "data": {"permissions": ["traces:read", "traces:write", "metrics:read", "metrics:write", "logs:read", "logs:write", "alerts:read", "alerts:write", "admin:all"]}, "error": null}` | `{"status": "error", "message": "Internal server error", "data": null, "error": {"code": "INTERNAL_SERVER_ERROR", "details": "Internal server error"}}` |
-| **12** | `GET /api/v1/auth/audit-logs` | Fetch sign-in audit log security history | `curl -s -X GET http://localhost:3001/api/v1/auth/audit-logs -H "Authorization: Bearer <TOKEN>"` | `{"status": "success", "message": "Audit logs retrieved", "data": [{"id": "audit_6wbu9px", "user_id": "usr_7x18fjt", "org_id": "org_fiwgpci", "event_type": "USER_SIGNIN"}], "error": null}` | `{"status": "error", "message": "Missing or invalid Authorization header", "data": null, "error": {"code": "UNAUTHORIZED", "details": "Missing or invalid Authorization header"}}` |
-| **13** | `POST /api/v1/auth/users/:id/block` | Block user login access | `curl -s -X POST http://localhost:3001/api/v1/auth/users/usr_7x18fjt/block -H "Authorization: Bearer <TOKEN>"` | `{"status": "success", "message": "User blocked successfully", "data": {"success": true, "message": "User usr_7x18fjt blocked successfully."}, "error": null}` | `{"status": "error", "message": "User not found", "data": null, "error": {"code": "USER_NOT_FOUND", "details": "User not found"}}` |
-| **14** | `DELETE /api/v1/auth/users/:id` | Soft delete user with 30-day retention | `curl -s -X DELETE http://localhost:3001/api/v1/auth/users/usr_7x18fjt -H "Authorization: Bearer <TOKEN>"` | `{"status": "success", "message": "User soft-deleted with 30-day backup retention", "data": {"success": true, "message": "User usr_7x18fjt soft-deleted with 30-day backup retention."}, "error": null}` | `{"status": "error", "message": "User not found", "data": null, "error": {"code": "USER_NOT_FOUND", "details": "User not found"}}` |
-| **15** | `DELETE /api/v1/auth/organizations/:id` | Soft delete organization & cascade details | `curl -s -X DELETE http://localhost:3001/api/v1/auth/organizations/org_fiwgpci -H "Authorization: Bearer <TOKEN>"` | `{"status": "success", "message": "Organization soft-deleted with 30-day backup retention", "data": {"success": true, "message": "Organization org_fiwgpci and all associated entity details soft-deleted with 30-day backup retention."}, "error": null}` | `{"status": "error", "message": "Organization not found", "data": null, "error": {"code": "ORG_NOT_FOUND", "details": "Organization not found"}}` |
+All database interactions are 100% data-driven and powered by centralized SQL queries defined in [`auth.queries.ts`](./src/features/auth/queries/auth.queries.ts).
+
+| Migration | Description | Table(s) Affected |
+|---|---|---|
+| `0001_create_auth_tables.sql` | Initial schema setup for multi-tenant auth module with RLS | `auth_organizations`, `auth_users`, `auth_api_keys`, `auth_audit_logs`, `auth_password_resets` |
+| `0002_add_indexes_on_all_ids_and_keys.sql` | High-performance B-tree indexes on lookup columns | Index additions across all tables |
+| `0003_add_audit_and_soft_delete_columns.sql` | Soft-delete columns (`deleted_at`, `updated_at`) | Column alterations across all tables |
+| `0004_add_organization_user_block_soft_delete_cascade.sql` | User blocking, custom permissions array, cascade soft-delete | `auth_users`, `auth_organizations` |
+| `0005_create_token_denylist.sql` | Server-side JWT session revocation table | `auth_token_denylist` |
+| `0006_create_user_organizations_mapping.sql` | Multi-tenant user-organization N-to-N mapping for org switching | `auth_user_organizations` |
+
+---
+
+## 📊 Master API Reference Table (All 23 Endpoints)
+
+| # | Endpoint & Method | Purpose / Scope | cURL Command | Success Response (`HTTP 200 / 201`) |
+|---|---|---|---|---|
+| **1** | `POST /api/v1/auth/sign-up` | Combined register user & organization | `curl -s -X POST http://localhost:3001/api/v1/auth/sign-up -H "Content-Type: application/json" -d '{"email": "admin@acme.io", "password": "StrongPassword123!", "name": "Admin", "organization_name": "Acme Global"}'` | `{"status": "success", "message": "User and organization successfully registered"}` |
+| **2** | `POST /api/v1/auth/sign-in` | Authenticate user & write audit log | `curl -s -X POST http://localhost:3001/api/v1/auth/sign-in -H "Content-Type: application/json" -d '{"email": "admin@acme.io", "password": "StrongPassword123!"}'` | `{"status": "success", "message": "User signed in successfully"}` |
+| **3** | `POST /api/v1/auth/sign-out` | Invalidate session token in Redis denylist | `curl -s -X POST http://localhost:3001/api/v1/auth/sign-out -H "Authorization: Bearer <TOKEN>"` | `{"status": "success", "message": "Signed out successfully"}` |
+| **4** | `GET /api/v1/auth/session` | Validate token & check Redis denylist | `curl -s -X GET http://localhost:3001/api/v1/auth/session -H "Authorization: Bearer <TOKEN>"` | `{"status": "success", "message": "Session token verified"}` |
+| **5** | `GET /api/v1/auth/organizations` | List all organizations for active user | `curl -s -X GET http://localhost:3001/api/v1/auth/organizations -H "Authorization: Bearer <TOKEN>"` | `{"status": "success", "message": "Organizations retrieved"}` |
+| **6** | `POST /api/v1/auth/organizations` | Create standalone multi-tenant organization | `curl -s -X POST http://localhost:3001/api/v1/auth/organizations -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"name": "Acme Secondary"}'` | `{"status": "success", "message": "Organization created successfully"}` |
+| **7** | `GET /api/v1/auth/organizations/:id` | Get single organization details | `curl -s -X GET http://localhost:3001/api/v1/auth/organizations/org_123 -H "Authorization: Bearer <TOKEN>"` | `{"status": "success", "message": "Organization retrieved"}` |
+| **8** | `PATCH /api/v1/auth/organizations/:id` | Update organization name/slug | `curl -s -X PATCH http://localhost:3001/api/v1/auth/organizations/org_123 -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"name": "Updated Org"}'` | `{"status": "success", "message": "Organization updated"}` |
+| **9** | `DELETE /api/v1/auth/organizations/:id` | Soft delete organization & cascade details | `curl -s -X DELETE http://localhost:3001/api/v1/auth/organizations/org_123 -H "Authorization: Bearer <TOKEN>"` | `{"status": "success", "message": "Organization soft-deleted"}` |
+| **10** | `POST /api/v1/auth/organizations/:id/switch` | Switch active organization & issue fresh scoped JWT | `curl -s -X POST http://localhost:3001/api/v1/auth/organizations/org_123/switch -H "Authorization: Bearer <TOKEN>"` | `{"status": "success", "message": "Organization context switched"}` |
+| **11** | `GET /api/v1/auth/users/me` | Get active user's own profile | `curl -s -X GET http://localhost:3001/api/v1/auth/users/me -H "Authorization: Bearer <TOKEN>"` | `{"status": "success", "message": "User profile retrieved"}` |
+| **12** | `PATCH /api/v1/auth/users/me` | Update active user's own profile | `curl -s -X PATCH http://localhost:3001/api/v1/auth/users/me -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"name": "New Name"}'` | `{"status": "success", "message": "User profile updated"}` |
+| **13** | `GET /api/v1/auth/users` | List members of caller's organization | `curl -s -X GET http://localhost:3001/api/v1/auth/users -H "Authorization: Bearer <TOKEN>"` | `{"status": "success", "message": "Members retrieved"}` |
+| **14** | `POST /api/v1/auth/users` | Create user in specific org | `curl -s -X POST http://localhost:3001/api/v1/auth/users -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"email": "member@acme.io", "password": "StrongPassword123!", "name": "John", "org_id": "org_123"}'` | `{"status": "success", "message": "User created"}` |
+| **15** | `POST /api/v1/auth/users/invite` | Invite user to caller's organization | `curl -s -X POST http://localhost:3001/api/v1/auth/users/invite -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"email": "invited@acme.io", "name": "Alice", "role": "member"}'` | `{"status": "success", "message": "User invited to organization"}` |
+| **16** | `GET /api/v1/auth/users/:id` | Get specific user details by ID | `curl -s -X GET http://localhost:3001/api/v1/auth/users/usr_123 -H "Authorization: Bearer <TOKEN>"` | `{"status": "success", "message": "User retrieved"}` |
+| **17** | `POST /api/v1/auth/users/:id/block` | Block user access | `curl -s -X POST http://localhost:3001/api/v1/auth/users/usr_123/block -H "Authorization: Bearer <TOKEN>"` | `{"status": "success", "message": "User blocked successfully"}` |
+| **18** | `DELETE /api/v1/auth/users/:id/unblock` | Unblock user access | `curl -s -X DELETE http://localhost:3001/api/v1/auth/users/usr_123/unblock -H "Authorization: Bearer <TOKEN>"` | `{"status": "success", "message": "User unblocked successfully"}` |
+| **19** | `PATCH /api/v1/auth/users/:id/role` | Update user role | `curl -s -X PATCH http://localhost:3001/api/v1/auth/users/usr_123/role -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"role": "admin"}'` | `{"status": "success", "message": "User role updated"}` |
+| **20** | `GET /api/v1/auth/users/:id/permissions` | Get user permission list | `curl -s -X GET http://localhost:3001/api/v1/auth/users/usr_123/permissions -H "Authorization: Bearer <TOKEN>"` | `{"status": "success", "message": "User permissions retrieved"}` |
+| **21** | `PATCH /api/v1/auth/users/:id/permissions` | Update user permission list | `curl -s -X PATCH http://localhost:3001/api/v1/auth/users/usr_123/permissions -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"permissions": ["traces:read"]}'` | `{"status": "success", "message": "User permissions updated"}` |
+| **22** | `GET /api/v1/auth/api-keys` | List organization API keys | `curl -s -X GET http://localhost:3001/api/v1/auth/api-keys -H "Authorization: Bearer <TOKEN>"` | `{"status": "success", "message": "API keys retrieved"}` |
+| **23** | `GET /api/v1/auth/audit-logs` | Fetch sign-in audit logs with filters | `curl -s -X GET "http://localhost:3001/api/v1/auth/audit-logs?event_type=USER_SIGNIN" -H "Authorization: Bearer <TOKEN>"` | `{"status": "success", "message": "Audit logs retrieved"}` |
 
 ---
 
@@ -95,16 +120,4 @@ npm run test:curl
 
 ## 🧪 Verified Vitest Test Suite Execution Results
 
-All **27 test cases** passed across **9 test suites**:
-
-| Test Suite File | Scope | Total Tests | Status |
-|---|---|---|---|
-| [`./tests/unit/hexagonal-ports-adapters.test.ts`](./tests/unit/hexagonal-ports-adapters.test.ts) | Hexagonal Ports & Adapters Architecture | 4 | `PASSED` |
-| [`./tests/unit/security-mechanisms.test.ts`](./tests/unit/security-mechanisms.test.ts) | 13 Security Pillars Unit Tests | 13 | `PASSED` |
-| [`./tests/unit/auth-service.test.ts`](./tests/unit/auth-service.test.ts) | Auth Service Domain Business Logic | 2 | `PASSED` |
-| [`./tests/unit/row-level-security.test.ts`](./tests/unit/row-level-security.test.ts) | AlloyDB Omni RLS & Tenant Isolation | 2 | `PASSED` |
-| [`./tests/unit/real-postgres-adapter.test.ts`](./tests/unit/real-postgres-adapter.test.ts) | Real PostgreSQL Pool & Adapter | 1 | `PASSED` |
-| [`./tests/integration/alloydb-omni-auth.test.ts`](./tests/integration/alloydb-omni-auth.test.ts) | AlloyDB Omni Integration | 2 | `PASSED` |
-| [`./tests/contract/auth-openapi.test.ts`](./tests/contract/auth-openapi.test.ts) | OpenAPI v1 Schema & Contract Compliance | 1 | `PASSED` |
-| [`./tests/e2e/auth-flow.test.ts`](./tests/e2e/auth-flow.test.ts) | End-to-End API Router Pipeline | 1 | `PASSED` |
-| [`./src/features/auth/tests/unit/auth.service.test.ts`](./src/features/auth/tests/unit/auth.service.test.ts) | Feature Module Unit Test | 1 | `PASSED` |
+All test suites passing cleanly across domain, ports, adapters, database, and OpenAPI contracts.

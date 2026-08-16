@@ -1,6 +1,7 @@
 export const AUTH_ENDPOINTS = {
   SIGN_UP: '/api/v1/auth/sign-up',
   SIGN_IN: '/api/v1/auth/sign-in',
+  SIGN_OUT: '/api/v1/auth/sign-out',
   SESSION: '/api/v1/auth/session',
   FORGOT_PASSWORD: '/api/v1/auth/forgot-password',
   RESET_PASSWORD: '/api/v1/auth/reset-password',
@@ -11,6 +12,8 @@ export const AUTH_ENDPOINTS = {
   AUDIT_LOGS: '/api/v1/auth/audit-logs',
   ORGANIZATIONS: '/api/v1/auth/organizations',
   USERS: '/api/v1/auth/users',
+  USERS_ME: '/api/v1/auth/users/me',
+  USERS_INVITE: '/api/v1/auth/users/invite',
   HEALTH: '/health',
 } as const;
 

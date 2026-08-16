@@ -43,7 +43,7 @@ describe('Auth End-to-End API Flow Test Suite', () => {
     expect(signInData.token).toBeDefined();
 
     const sessionRes = await router.route(HTTP_METHODS.GET, AUTH_ENDPOINTS.SESSION, undefined, {
-      authorization: `${AUTH_CONSTANTS.BEARER_PREFIX}${signInData.token}`,
+      authorization: `${AUTH_CONSTANTS.HEADERS.BEARER_PREFIX}${signInData.token}`,
     });
 
     expect(sessionRes.statusCode).toBe(200);

@@ -1,15 +1,17 @@
-import type { AuthRepositoryPort } from '../../../features/auth/repository';
+import type { AuthRepositoryPort, OrganizationRecord } from '../../../features/auth/repository';
 import type { AuthUserRecord, AuditLogRecord } from '../../../features/auth/types';
 import type { ApiKeyRecord } from '../../../shared/types/auth.types';
 import { AUTH_CONSTANTS } from '../../../shared/constants/auth.constants';
 import { AUTH_QUERIES } from '../../../features/auth/queries/auth.queries';
 
 export class AlloyDBOmniAuthAdapter implements AuthRepositoryPort {
-  private readonly mockOrgs = new Map<string, { id: string; name: string; slug: string; deleted_at?: number }>();
+  private readonly mockOrgs = new Map<string, OrganizationRecord>();
   private readonly mockUsers = new Map<string, AuthUserRecord & { deleted_at?: number }>();
+  private readonly mockUserOrgs = new Map<string, Set<string>>();
   private readonly mockApiKeys = new Map<string, ApiKeyRecord & { deleted_at?: number }>();
   private readonly mockAuditLogs = new Map<string, AuditLogRecord & { deleted_at?: number }>();
   private readonly mockResets = new Map<string, { tokenHash: string; userId: string; expiresAtMs: number; used: boolean; deleted_at?: number }>();
+  private readonly tokenDenylist = new Map<string, number>();
   public readonly queries = AUTH_QUERIES;
 
   constructor() {
@@ -30,19 +32,55 @@ export class AlloyDBOmniAuthAdapter implements AuthRepositoryPort {
       blocked: false,
       user_permissions: [AUTH_CONSTANTS.PERMISSION_ADMIN_ALL],
     });
+
+    this.mockUserOrgs.set(AUTH_CONSTANTS.DEFAULT_ADMIN_ID, new Set([AUTH_CONSTANTS.DEFAULT_ORG_ID]));
   }
 
   public getFlowQuery(flow: keyof typeof AUTH_QUERIES): string {
     return JSON.stringify(this.queries[flow]);
   }
 
-  async createOrganization(org: { id: string; name: string; slug: string }): Promise<void> {
+  async createOrganization(org: OrganizationRecord, creatorUserId?: string): Promise<void> {
     this.getFlowQuery('FLOW_CREATE_ORGANIZATION');
     const existing = [...this.mockOrgs.values()].find((o) => !o.deleted_at && o.name.toLowerCase() === org.name.toLowerCase());
     if (existing) {
       throw new Error(`Organization name already exists: ${org.name}`);
     }
     this.mockOrgs.set(org.id, { ...org });
+    if (creatorUserId) {
+      if (!this.mockUserOrgs.has(creatorUserId)) this.mockUserOrgs.set(creatorUserId, new Set());
+      this.mockUserOrgs.get(creatorUserId)!.add(org.id);
+    }
+  }
+
+  async listOrganizationsByUserId(userId: string): Promise<OrganizationRecord[]> {
+    this.getFlowQuery('FLOW_CREATE_ORGANIZATION');
+    const orgIds = this.mockUserOrgs.get(userId) ?? new Set();
+    const user = [...this.mockUsers.values()].find((u) => u.id === userId && !u.deleted_at);
+    if (user) orgIds.add(user.org_id);
+
+    const result: OrganizationRecord[] = [];
+    for (const orgId of orgIds) {
+      const org = this.mockOrgs.get(orgId);
+      if (org && !org.deleted_at) result.push(org);
+    }
+    return result;
+  }
+
+  async getOrganizationById(orgId: string): Promise<OrganizationRecord | null> {
+    this.getFlowQuery('FLOW_CREATE_ORGANIZATION');
+    const org = this.mockOrgs.get(orgId);
+    if (!org || org.deleted_at) return null;
+    return org;
+  }
+
+  async updateOrganization(orgId: string, patch: { name?: string; slug?: string }): Promise<void> {
+    this.getFlowQuery('FLOW_CREATE_ORGANIZATION');
+    const org = this.mockOrgs.get(orgId);
+    if (org && !org.deleted_at) {
+      if (patch.name) org.name = patch.name;
+      if (patch.slug) org.slug = patch.slug;
+    }
   }
 
   async deleteOrganization(orgId: string): Promise<void> {
@@ -69,6 +107,13 @@ export class AlloyDBOmniAuthAdapter implements AuthRepositoryPort {
       throw new Error(`User with email ${userRecord.email} already exists`);
     }
     this.mockUsers.set(userRecord.email, { ...userRecord });
+    if (!this.mockUserOrgs.has(userRecord.id)) this.mockUserOrgs.set(userRecord.id, new Set());
+    this.mockUserOrgs.get(userRecord.id)!.add(userRecord.org_id);
+  }
+
+  async listUsersByOrgId(orgId: string): Promise<AuthUserRecord[]> {
+    this.getFlowQuery('FLOW_CREATE_USER');
+    return [...this.mockUsers.values()].filter((u) => u.org_id === orgId && !u.deleted_at);
   }
 
   async blockUser(userId: string): Promise<void> {
@@ -80,12 +125,45 @@ export class AlloyDBOmniAuthAdapter implements AuthRepositoryPort {
     }
   }
 
+  async unblockUser(userId: string): Promise<void> {
+    this.getFlowQuery('FLOW_BLOCK_USER');
+    for (const user of this.mockUsers.values()) {
+      if (user.id === userId && !user.deleted_at) {
+        user.blocked = false;
+      }
+    }
+  }
+
   async deleteUser(userId: string): Promise<void> {
     this.getFlowQuery('FLOW_DELETE_USER');
     const now = Date.now();
     for (const user of this.mockUsers.values()) {
       if (user.id === userId) {
         user.deleted_at = now;
+      }
+    }
+  }
+
+  async updateUserProfile(userId: string, patch: { name?: string }): Promise<void> {
+    for (const user of this.mockUsers.values()) {
+      if (user.id === userId && !user.deleted_at) {
+        if (patch.name) user.name = patch.name;
+      }
+    }
+  }
+
+  async updateUserRole(userId: string, role: string): Promise<void> {
+    for (const user of this.mockUsers.values()) {
+      if (user.id === userId && !user.deleted_at) {
+        (user as any).role = role;
+      }
+    }
+  }
+
+  async updateUserPermissions(userId: string, permissions: string[]): Promise<void> {
+    for (const user of this.mockUsers.values()) {
+      if (user.id === userId && !user.deleted_at) {
+        user.user_permissions = permissions;
       }
     }
   }
@@ -111,6 +189,11 @@ export class AlloyDBOmniAuthAdapter implements AuthRepositoryPort {
       if (keyRecord.deleted_at && keyRecord.deleted_at < cutoff) {
         this.mockApiKeys.delete(key);
         purged++;
+      }
+    }
+    for (const [token, expiresAtMs] of this.tokenDenylist.entries()) {
+      if (expiresAtMs < Date.now()) {
+        this.tokenDenylist.delete(token);
       }
     }
     return purged;
@@ -141,6 +224,8 @@ export class AlloyDBOmniAuthAdapter implements AuthRepositoryPort {
       slug: userRecord.org_name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
     });
     this.mockUsers.set(userRecord.email, { ...userRecord });
+    if (!this.mockUserOrgs.has(userRecord.id)) this.mockUserOrgs.set(userRecord.id, new Set());
+    this.mockUserOrgs.get(userRecord.id)!.add(userRecord.org_id);
   }
 
   async recordAuditLog(logRecord: AuditLogRecord): Promise<void> {
@@ -182,6 +267,11 @@ export class AlloyDBOmniAuthAdapter implements AuthRepositoryPort {
     this.mockApiKeys.set(keyRecord.key_hash, keyRecord);
   }
 
+  async listApiKeysByOrgId(orgId: string): Promise<ApiKeyRecord[]> {
+    this.getFlowQuery('FLOW_VERIFY_API_KEY');
+    return [...this.mockApiKeys.values()].filter((k) => k.org_id === orgId && !k.deleted_at);
+  }
+
   async findApiKeyByHash(hash: string): Promise<ApiKeyRecord | null> {
     this.getFlowQuery('FLOW_VERIFY_API_KEY');
     const key = this.mockApiKeys.get(hash);
@@ -198,8 +288,28 @@ export class AlloyDBOmniAuthAdapter implements AuthRepositoryPort {
     }
   }
 
-  async fetchUserAuditLogs(userId: string): Promise<AuditLogRecord[]> {
+  async fetchUserAuditLogs(userId: string, filters?: { event_type?: string; from_ms?: number; to_ms?: number }): Promise<AuditLogRecord[]> {
     this.getFlowQuery('FLOW_AUDIT_LOGS');
-    return [...this.mockAuditLogs.values()].filter((log) => log.user_id === userId && !log.deleted_at);
+    return [...this.mockAuditLogs.values()].filter((log) => {
+      if (log.user_id !== userId || log.deleted_at) return false;
+      if (filters?.event_type && log.event_type !== filters.event_type) return false;
+      if (filters?.from_ms && log.timestamp_ms < filters.from_ms) return false;
+      if (filters?.to_ms && log.timestamp_ms > filters.to_ms) return false;
+      return true;
+    });
+  }
+
+  async addTokenToDenylist(token: string, expiresAtMs: number): Promise<void> {
+    this.tokenDenylist.set(token, expiresAtMs);
+  }
+
+  async isTokenDenylisted(token: string): Promise<boolean> {
+    const exp = this.tokenDenylist.get(token);
+    if (!exp) return false;
+    if (exp < Date.now()) {
+      this.tokenDenylist.delete(token);
+      return false;
+    }
+    return true;
   }
 }

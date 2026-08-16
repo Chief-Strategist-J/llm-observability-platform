@@ -58,13 +58,25 @@ const server = http.createServer((req, res) => {
       }
     }
 
-    const { statusCode, payload } = await router.route(method, url, parsedBody, headersRecord);
+    const parsedUrl = new URL(url, `http://localhost:${port}`);
+    const path = parsedUrl.pathname;
+    const queryParams: Record<string, string> = {};
+    parsedUrl.searchParams.forEach((value, key) => { queryParams[key] = value; });
+
+    const { statusCode, payload } = await router.route(method, path, parsedBody, headersRecord, queryParams);
     res.writeHead(statusCode, {
       'Content-Type': AUTH_CONSTANTS.HEADERS.CONTENT_TYPE_JSON,
       ...AUTH_CONSTANTS.SECURITY_CONFIG.CORS_HEADERS,
     });
     res.end(JSON.stringify(payload, null, 2));
   });
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[Unhandled Rejection]', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[Uncaught Exception]', err);
 });
 
 server.listen(port, () => {

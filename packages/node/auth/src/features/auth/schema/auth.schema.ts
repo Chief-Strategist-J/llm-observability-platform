@@ -83,6 +83,36 @@ export const VerifyApiKeyInputSchema = z.object({
   required_permission: z.string().optional(),
 });
 
+export const UpdateUserProfileInputSchema = z.object({
+  name: z.string().min(2, 'Full name must be at least 2 characters long').optional(),
+});
+
+export const InviteUserInputSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+  name: z.string().min(2, 'Full name must be at least 2 characters long'),
+  role: UserRoleSchema.default(AUTH_CONSTANTS.ROLE_MEMBER),
+  permissions: z.array(z.string()).default([]),
+});
+
+export const UpdateUserRoleInputSchema = z.object({
+  role: UserRoleSchema,
+});
+
+export const UpdateUserPermissionsInputSchema = z.object({
+  permissions: z.array(z.string()).min(0),
+});
+
+export const UpdateOrganizationInputSchema = z.object({
+  name: z.string().min(2, 'Organization name must be at least 2 characters long').optional(),
+  slug: z.string().min(2, 'Slug must be at least 2 characters long').optional(),
+});
+
+export const AuditLogFilterSchema = z.object({
+  event_type: z.string().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+});
+
 export const AuditLogRecordSchema = z.object({
   id: z.string().min(1),
   user_id: z.string().min(1),

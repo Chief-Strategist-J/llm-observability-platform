@@ -84,9 +84,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/StandardApiErrorResponse'
 
+  /api/v1/auth/sign-out:
+    post:
+      summary: Invalidate current JWT session token and add to Redis denylist. Records sign-out audit event.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Session token invalidated and denylist entry created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
+
   /api/v1/auth/session:
     get:
-      summary: Verify session token and return user context
+      summary: Verify session token, check Redis denylist, and return user context
       security:
         - BearerAuth: []
       responses:
@@ -97,13 +116,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/StandardApiResponse'
         '401':
-          description: Unauthorized or token expired
+          description: Unauthorized, token expired, or token denylisted
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/StandardApiErrorResponse'
 
   /api/v1/auth/organizations:
+    get:
+      summary: List all organizations the authenticated user belongs to
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of organizations for the authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
     post:
       summary: Create a new multi-tenant organization
       security:
@@ -129,6 +165,58 @@ paths:
                 $ref: '#/components/schemas/StandardApiErrorResponse'
 
   /api/v1/auth/organizations/{id}:
+    get:
+      summary: Get single organization details by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Organization details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
+        '404':
+          description: Organization not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
+    patch:
+      summary: Update organization name or slug
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrganizationRequest'
+      responses:
+        '200':
+          description: Organization updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
+        '404':
+          description: Organization not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
     delete:
       summary: Soft delete organization and cascade delete all related user details, API keys, and logs with timestamp. Retained for 30 days before permanent deletion.
       security:
@@ -153,7 +241,79 @@ paths:
               schema:
                 $ref: '#/components/schemas/StandardApiErrorResponse'
 
+  /api/v1/auth/organizations/{id}/switch:
+    post:
+      summary: Switch active organization context. Invalidates current token and issues a new scoped JWT for the target organization.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: New scoped token issued for target organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
+        '403':
+          description: User does not belong to target organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
+
+  /api/v1/auth/users/me:
+    get:
+      summary: Get the authenticated user's own profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Authenticated user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
+    patch:
+      summary: Update the authenticated user's own profile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserProfileRequest'
+      responses:
+        '200':
+          description: User profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
+
   /api/v1/auth/users:
+    get:
+      summary: List all users in the authenticated user's organization
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of organization members
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
     post:
       summary: Create new user belonging to a specific organization with specific permissions
       security:
@@ -173,6 +333,79 @@ paths:
                 $ref: '#/components/schemas/StandardApiResponse'
         '400':
           description: Validation error or invalid org_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
+
+  /api/v1/auth/users/invite:
+    post:
+      summary: Invite a user to the current organization by email. Creates user with specified role and permissions.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteUserRequest'
+      responses:
+        '201':
+          description: User invited and created in organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
+        '409':
+          description: User with that email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
+
+  /api/v1/auth/users/{id}:
+    get:
+      summary: Get specific user profile by ID (admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
+    delete:
+      summary: Soft delete user record with timestamp (30-day backup retention)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User soft-deleted with timestamp recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
+        '404':
+          description: User not found
           content:
             application/json:
               schema:
@@ -203,9 +436,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/StandardApiErrorResponse'
 
-  /api/v1/auth/users/{id}:
+  /api/v1/auth/users/{id}/unblock:
     delete:
-      summary: Soft delete user record with timestamp (30-day backup retention)
+      summary: Unblock a previously blocked user
       security:
         - BearerAuth: []
       parameters:
@@ -216,7 +449,7 @@ paths:
             type: string
       responses:
         '200':
-          description: User soft-deleted with timestamp recorded
+          description: User unblocked successfully
           content:
             application/json:
               schema:
@@ -227,6 +460,85 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StandardApiErrorResponse'
+
+  /api/v1/auth/users/{id}/role:
+    patch:
+      summary: Update a user's role in the organization (admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRoleRequest'
+      responses:
+        '200':
+          description: User role updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
+
+  /api/v1/auth/users/{id}/permissions:
+    get:
+      summary: Get a specific user's effective permission set
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
+    patch:
+      summary: Update a specific user's permission set (admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserPermissionsRequest'
+      responses:
+        '200':
+          description: User permissions updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
 
   /api/v1/auth/forgot-password:
     post:
@@ -287,6 +599,17 @@ paths:
                 $ref: '#/components/schemas/StandardApiResponse'
 
   /api/v1/auth/api-keys:
+    get:
+      summary: List all API keys for the authenticated user's organization
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: API keys for the organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
     post:
       summary: Generate 3-tier API key bound to specific permission table
       security:
@@ -322,6 +645,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/StandardApiResponse'
 
+  /api/v1/auth/api-keys/{id}/revoke:
+    post:
+      summary: Revoke a specific API key by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: API key revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiResponse'
+        '404':
+          description: API key not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardApiErrorResponse'
+
   /api/v1/auth/permissions:
     get:
       summary: List all system permission definitions and scopes
@@ -335,9 +683,28 @@ paths:
 
   /api/v1/auth/audit-logs:
     get:
-      summary: Fetch sign-in audit logs for security oversight
+      summary: Fetch sign-in audit logs for security oversight with optional filters
       security:
         - BearerAuth: []
+      parameters:
+        - in: query
+          name: event_type
+          required: false
+          schema:
+            type: string
+            enum: [USER_SIGNIN, USER_SIGNOUT, USER_SIGNUP, PASSWORD_RESET, API_KEY_CREATED, ORG_SWITCH]
+        - in: query
+          name: from
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          required: false
+          schema:
+            type: string
+            format: date-time
       responses:
         '200':
           description: Audit log records
@@ -403,6 +770,16 @@ components:
         slug:
           type: string
 
+    UpdateOrganizationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+        slug:
+          type: string
+          minLength: 2
+
     CreateUserRequest:
       type: object
       required: [email, password, name, org_id, role, permissions]
@@ -420,6 +797,49 @@ components:
         role:
           type: string
           enum: [admin, member, viewer]
+        permissions:
+          type: array
+          items:
+            type: string
+
+    InviteUserRequest:
+      type: object
+      required: [email, name]
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          minLength: 2
+        role:
+          type: string
+          enum: [admin, member, viewer]
+          default: member
+        permissions:
+          type: array
+          items:
+            type: string
+
+    UpdateUserProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+
+    UpdateUserRoleRequest:
+      type: object
+      required: [role]
+      properties:
+        role:
+          type: string
+          enum: [admin, member, viewer]
+
+    UpdateUserPermissionsRequest:
+      type: object
+      required: [permissions]
+      properties:
         permissions:
           type: array
           items:
