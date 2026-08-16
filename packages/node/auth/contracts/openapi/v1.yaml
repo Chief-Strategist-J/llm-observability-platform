@@ -1,0 +1,41 @@
+openapi: 3.0.3
+info:
+  title: Observability Auth Service API
+  description: Multi-tenant authentication, RBAC authorization, and API key management contract.
+  version: 1.0.0
+paths:
+  /api/v1/auth/sign-in:
+    post:
+      summary: User sign in with credentials
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Successful authentication
+        '401':
+          description: Invalid credentials
+  /api/v1/auth/session:
+    get:
+      summary: Verify session token and return context
+      responses:
+        '200':
+          description: Session active
+        '401':
+          description: Unauthorized
+  /api/v1/auth/api-keys:
+    post:
+      summary: Generate tenant API key
+      responses:
+        '201':
+          description: API key generated

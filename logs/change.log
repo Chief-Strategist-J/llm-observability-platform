@@ -1322,3 +1322,13 @@
     └── Changes:
         ├── policies -> Add UX-gold-standard-reference.md, performance-engineering.md, and github-stacked-pull-requests.md rules.
         └── web-app -> Synchronize UI components, auth session handlers, and Storybook stories across workspace.
+
+[2026-08-16T10:05:00+05:30] Create @observability/auth package following strict API-first folder structure rules
+└── File: packages/node/auth/*, packages/node/web-app/src/server/auth/auth.config.ts, packages/node/web-app/tsconfig.json
+    ├── Choice: Scaffold @observability/auth package adhering strictly to policies/rules/folderStructure/api-structure.md with contracts/openapi/v1.yaml, src/api/rest/v1/ (router, handlers), src/features/auth/ (service, repository, types, unit tests), src/infra/adapters/ (PostgresAuthAdapter, RedisSessionAdapter), src/shared/ (types, errors, utils), and .gitkeep in every folder.
+    └── Changes:
+        ├── contracts -> Add OpenAPI 3.0 v1.yaml contract and changelog.md.
+        ├── auth-feature -> Implement AuthService business logic, AuthRepositoryPort, Zod schemas, unit tests, and export barrel.
+        ├── adapters -> Implement PostgresAuthAdapter and RedisSessionAdapter.
+        ├── api-handlers -> Implement REST v1 router and handlers (auth, session, api-key).
+        └── web-app -> Wire @observability/auth into auth.config.ts and tsconfig.json paths.
