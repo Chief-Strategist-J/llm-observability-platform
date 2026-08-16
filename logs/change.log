@@ -1,3 +1,25 @@
+[2026-08-16T11:20:00+05:30] Expand Contract-First Constraint and Data-Driven Logic Rule in API Structure Policy
+└── File: policies/rules/folderStructure/api-structure.md
+    ├── Choice: Expand Core Rule 3 (Contract-First Constraint) and Core Rule 4 (Data-Driven Logic Rule) into exhaustive, non-negotiable sub-sections defining contract merge pre-conditions, automated stub generation, single engine implementation, declarative feature artifacts, and declarative anti-corruption mapping.
+    └── Architecture & Design:
+        ┌──────────────────────────────────────────────────────────┐
+        │            API Structure Policy Expansion                │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │
+        ┌────────────────────────────┴─────────────────────────────┐
+        │  Expanded Core Rules 3 & 4 (Contract-First & Data-Driven) │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │
+        ┌────────────────────────────┴─────────────────────────────┐
+        │  - Rule 3: Contract Merge Pre-Condition, Single Format   │
+        │    Selection, Automated Stub Generation, Immutability    │
+        │  - Rule 4: Single Engine Implementation, Declarative     │
+        │    Feature Artifacts (schema, queries, rules, machines,  │
+        │    workflows), Declarative Anti-Corruption Layer (ACL)   │
+        └──────────────────────────────────────────────────────────┘
+    └── Changes:
+        └── policy-expansion -> Expand lines 10-11 of policies/rules/folderStructure/api-structure.md with comprehensive architectural guidelines.
+
 [2026-08-16T11:15:00+05:30] Add database/migrations and src/features/{feature}/queries to language-agnostic api-structure policy and update auth package
 └── File: policies/rules/folderStructure/api-structure.md, packages/node/auth/database/migrations/0001_create_auth_tables.sql, packages/node/auth/database/migrations/0001_create_auth_tables.rollback.sql, packages/node/auth/src/features/auth/queries/auth.queries.ts, packages/node/auth/src/infra/adapters/alloydb-omni-auth.adapter.ts
     ├── Choice: Update API structure reference policy to mandate database/migrations/ and src/features/{feature}/queries/ flow-by-flow database queries across all programming languages (Go, Python, Rust, Java, C++, TypeScript, C#). Update @observability/auth package accordingly with zero code comments.
