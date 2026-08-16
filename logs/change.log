@@ -1,3 +1,30 @@
+[2026-08-16T11:25:00+05:30] Expand Data-Driven Logic Rule into 5 Immutable Feature Data Pillars Specification
+└── File: policies/rules/folderStructure/api-structure.md
+    ├── Choice: Expand Core Rule 4 (Data-Driven Logic Rule) in policies/rules/folderStructure/api-structure.md into a strict, in-depth architectural mandate detailing the 5 Immutable Feature Data Pillars (Entity Schemas, Flow-by-Flow Queries, Rules as Data, State Machines as Data, Workflows as Data), Declarative Anti-Corruption Layer (ACL), and Resilience Decorator Composition.
+    └── Architecture & Design:
+        ┌──────────────────────────────────────────────────────────┐
+        │        Data-Driven Architecture Specification            │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │
+        ┌────────────────────────────┴─────────────────────────────┐
+        │  The 5 Immutable Feature Data Pillars (src/features/)     │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │
+        ┌────────────────────────────┼─────────────────────────────┐
+        ▼                            ▼                             ▼
+  ┌───────────┐               ┌────────────┐               ┌──────────────┐
+  │ 1. Schema │               │ 2. Queries │               │ 3. Rules     │
+  │ (from/to) │               │ (flow-by-  │               │ (priority/   │
+  └─────┬─────┘               │  flow SQL) │               │  deny-over)  │
+        │                     └─────┬──────┘               └──────┬───────┘
+        ▼                           ▼                             ▼
+  ┌───────────┐               ┌────────────┐               ┌──────────────┐
+  │ 4. State  │               │ 5. Work-   │               │ Declarative  │
+  │ Machines  │               │    flows   │               │ ACL & Decor. │
+  └───────────┘               └────────────┘               └──────────────┘
+    └── Changes:
+        └── data-driven-expansion -> Expand Core Rule 4 in policies/rules/folderStructure/api-structure.md with strict architectural mandates and the 5 Immutable Feature Data Pillars.
+
 [2026-08-16T11:20:00+05:30] Expand Contract-First Constraint and Data-Driven Logic Rule in API Structure Policy
 └── File: policies/rules/folderStructure/api-structure.md
     ├── Choice: Expand Core Rule 3 (Contract-First Constraint) and Core Rule 4 (Data-Driven Logic Rule) into exhaustive, non-negotiable sub-sections defining contract merge pre-conditions, automated stub generation, single engine implementation, declarative feature artifacts, and declarative anti-corruption mapping.
