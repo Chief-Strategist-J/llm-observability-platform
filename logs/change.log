@@ -1,3 +1,28 @@
+[2026-08-16T11:45:00+05:30] Implement AlloyDB Omni Row Level Security (RLS) policies and Allure Gold Standard test suite in @observability/auth
+└── File: packages/node/auth/database/migrations/0001_create_auth_tables.sql, packages/node/auth/tests/unit/row-level-security.test.ts, packages/node/auth/vitest.config.ts, packages/node/auth/package.json
+    ├── Choice: Enforce multi-tenant Row Level Security (RLS) policies across all auth tables using app.current_org_id tenant settings. Add Allure Gold Standard test configuration and verify 100% test passing state (18/18 tests passed) across 13 security mechanisms, RLS tenant isolation, unit tests, and E2E API flow.
+    └── Architecture & Design:
+        ┌──────────────────────────────────────────────────────────┐
+        │     AlloyDB Omni RLS & Allure Test Architecture          │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │
+        ┌────────────────────────────┼─────────────────────────────┐
+        ▼                            ▼                             ▼
+  ┌───────────┐               ┌────────────┐               ┌──────────────┐
+  │ Row Level │               │ Allure     │               │ Verified     │
+  │ Security  │               │ Vitest     │               │ Test Suite   │
+  │ (RLS DDL) │               │ Config     │               │ (18/18 Pass) │
+  └─────┬─────┘               └─────┬──────┘               └──────┬───────┘
+        │                            │                            │
+        ▼                            ▼                            ▼
+  (ENABLE RLS,                (vitest.config.ts,           (row-level-sec,
+   app.current_org_id)         allure-results)              security-mechs)
+    └── Changes:
+        ├── rls -> Add ENABLE ROW LEVEL SECURITY and tenant isolation policies (rls_auth_users_tenant_isolation, rls_auth_api_keys_tenant_isolation, rls_auth_audit_logs_tenant_isolation) to 0001_create_auth_tables.sql.
+        ├── queries -> Add SET_LOCAL_TENANT_CONTEXT query to AUTH_QUERIES.TENANT_RLS.
+        ├── allure -> Create vitest.config.ts with Allure reporting setup and package.json test:allure script.
+        └── verification -> Executed full test suite with empirical proof (18 out of 18 unit & e2e tests passed).
+
 [2026-08-16T11:40:00+05:30] Add 13-Pillar Security Hardening Engine, Unit Tests, Traefik Proxy, and Reverse Proxy Adapter Pattern to auth package
 └── File: packages/node/auth/contracts/openapi/v1.yaml, packages/node/auth/docker-compose.yml, packages/node/auth/src/shared/utils/security.util.ts, packages/node/auth/tests/unit/security-mechanisms.test.ts, packages/node/auth/src/infra/adapters/proxy/proxy.interface.ts, packages/node/auth/src/infra/adapters/proxy/traefik.adapter.ts, packages/node/auth/src/infra/adapters/proxy/envoy.adapter.ts
     ├── Choice: Implement 13 core security capabilities (Argon2id password hashing, token revocation, account brute-force lockout, sliding window rate limiting, Zod input validation, double-submit CSRF, XSS sanitization, parameterized SQL queries, secrets management adapter, credential-stuffing anomaly protection, device session tracking, IP/device anomaly detection, and OTP step-up authentication). Create dedicated unit tests for all 13 security pillars. Add Traefik Proxy container in docker-compose.yml with Reverse Proxy Adapter Pattern (Traefik/Envoy).

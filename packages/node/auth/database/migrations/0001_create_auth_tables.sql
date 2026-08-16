@@ -22,6 +22,11 @@ CREATE TABLE IF NOT EXISTS auth_users (
 CREATE INDEX IF NOT EXISTS idx_auth_users_email ON auth_users(email);
 CREATE INDEX IF NOT EXISTS idx_auth_users_org_id ON auth_users(org_id);
 
+ALTER TABLE auth_users ENABLE ROW LEVEL SECURITY;
+CREATE POLICY rls_auth_users_tenant_isolation ON auth_users
+  FOR ALL
+  USING (org_id = current_setting('app.current_org_id', true));
+
 CREATE TABLE IF NOT EXISTS auth_api_keys (
   key_id VARCHAR(64) PRIMARY KEY,
   org_id VARCHAR(64) NOT NULL REFERENCES auth_organizations(id),

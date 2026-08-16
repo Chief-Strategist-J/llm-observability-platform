@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach } from 'vitest';
 import { AuthService } from '../../src/features/auth/service';
 import { AlloyDBOmniAuthAdapter } from '../../src/infra/adapters/alloydb-omni-auth.adapter';
 import { AUTH_CONSTANTS } from '../../src/shared/constants/auth.constants';

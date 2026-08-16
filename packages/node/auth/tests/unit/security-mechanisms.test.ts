@@ -1,10 +1,11 @@
+import { describe, it, expect, beforeEach } from 'vitest';
 import { SecurityEngine, EnvSecretStoreAdapter } from '../../src/shared/utils/security.util';
 import { hashPassword, verifyPassword } from '../../src/shared/utils/argon2.util';
 import { SignUpInputSchema } from '../../src/features/auth/schema/auth.schema';
 import { AUTH_QUERIES } from '../../src/features/auth/queries/auth.queries';
 import { AUTH_CONSTANTS } from '../../src/shared/constants/auth.constants';
 
-describe('Comprehensive Security Mechanisms Unit Tests (13 Pillars)', () => {
+describe('Allure Gold Standard Test Suite: 13-Pillar Security Hardening', () => {
   let security: SecurityEngine;
 
   beforeEach(() => {
