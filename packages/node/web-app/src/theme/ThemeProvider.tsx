@@ -19,32 +19,33 @@ interface ThemeProviderProps {
   readonly defaultTheme?: Theme;
 }
 
-/**
- * F-09: Theme provider.
- * Light / dark / high-contrast via CSS variables on <html>.
- * No component-level conditionals — all theming flows through CSS custom properties
- * defined in design-tokens/dist/variables.css.
- */
 export function ThemeProvider({ children, defaultTheme = 'dark' }: ThemeProviderProps) {
   const [theme, setThemeState] = useState<Theme>(defaultTheme);
 
   // Hydrate from localStorage on mount
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('theme');
       if (stored !== null && VALID_THEMES.has(stored)) {
         setThemeState(stored as Theme);
+        applyThemeToRoot(stored as Theme);
       }
-    } catch {
-      // localStorage may be unavailable (e.g. SSR, incognito restrictions)
-    }
+    } catch {}
   }, []);
+
+  const applyThemeToRoot = (targetTheme: Theme) => {
+    const root = document.documentElement;
+    root.classList.remove('light', 'dark', 'high-contrast');
+    if (targetTheme === 'high-contrast') {
+      root.classList.add('dark', 'high-contrast');
+    } else {
+      root.classList.add(targetTheme);
+    }
+  };
 
   // Apply theme class to <html> and persist
   useEffect(() => {
-    const root = document.documentElement;
-    root.classList.remove('light', 'dark', 'high-contrast');
-    root.classList.add(theme);
+    applyThemeToRoot(theme);
   }, [theme]);
 
   const setTheme = useCallback((newTheme: Theme) => {
@@ -52,11 +53,11 @@ export function ThemeProvider({ children, defaultTheme = 'dark' }: ThemeProvider
       return;
     }
     setThemeState(newTheme);
+    applyThemeToRoot(newTheme);
     try {
       localStorage.setItem(STORAGE_KEY, newTheme);
-    } catch {
-      // Silently fail if localStorage is unavailable
-    }
+      localStorage.setItem('theme', newTheme);
+    } catch {}
   }, []);
 
   return (
