@@ -1,3 +1,36 @@
+[2026-08-16T11:30:00+05:30] Implement 5 Immutable Feature Data Pillars in @observability/auth package
+└── File: packages/node/auth/src/features/auth/schema/auth.schema.ts, packages/node/auth/src/features/auth/rules/auth.rules.ts, packages/node/auth/src/features/auth/machines/auth-session.machine.ts, packages/node/auth/src/features/auth/workflows/auth-provisioning.workflow.ts, packages/node/auth/src/features/auth/index.ts
+    ├── Choice: Update @observability/auth package to conform to the 5 Immutable Feature Data Pillars specification with declarative entity schemas, flow-by-flow queries, rules as data, state machines as data, and workflows as data.
+    └── Architecture & Design:
+        ┌──────────────────────────────────────────────────────────┐
+        │        @observability/auth Feature 5-Pillar Data Architecture │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │
+        ┌────────────────────────────┴─────────────────────────────┐
+        │  The 5 Immutable Feature Data Pillars (src/features/auth/)│
+        └────────────────────────────┬─────────────────────────────┘
+                                     │
+        ┌────────────────────────────┼─────────────────────────────┐
+        ▼                            ▼                             ▼
+  ┌───────────┐               ┌────────────┐               ┌──────────────┐
+  │ 1. Schema │               │ 2. Queries │               │ 3. Rules     │
+  │ (auth.    │               │ (auth.     │               │ (auth.       │
+  │  schema)  │               │  queries)  │               │  rules)      │
+  └─────┬─────┘               └─────┬──────┘               └──────┬───────┘
+        │                           │                             │
+        ▼                           ▼                             ▼
+  ┌───────────┐               ┌────────────┐               ┌──────────────┐
+  │ 4. State  │               │ 5. Work-   │               │ Declarative  │
+  │ Machine   │               │    flows   │               │ ACL & Export │
+  │ (session) │               │(provsn-wf) │               │ (index.ts)   │
+  └───────────┘               └────────────┘               └──────────────┘
+    └── Changes:
+        ├── schema -> Implement Pillar 1 Entity Schema contract (auth.schema.ts) with Zod runtime validation and bidirectional fromApi/toApi ACL JSON mapping rules.
+        ├── rules -> Implement Pillar 3 Rules as Data (auth.rules.ts) with priority weights, decision categories, deny-override resolution, and condition evaluators.
+        ├── machine -> Implement Pillar 4 State Machine as Data (auth-session.machine.ts) defining session lifecycle state transition graph.
+        ├── workflow -> Implement Pillar 5 Workflows as Data (auth-provisioning.workflow.ts) defining step DAG automation.
+        └── export -> Re-export all 5 Pillars from src/features/auth/index.ts with zero code comments.
+
 [2026-08-16T11:25:00+05:30] Expand Data-Driven Logic Rule into 5 Immutable Feature Data Pillars Specification
 └── File: policies/rules/folderStructure/api-structure.md
     ├── Choice: Expand Core Rule 4 (Data-Driven Logic Rule) in policies/rules/folderStructure/api-structure.md into a strict, in-depth architectural mandate detailing the 5 Immutable Feature Data Pillars (Entity Schemas, Flow-by-Flow Queries, Rules as Data, State Machines as Data, Workflows as Data), Declarative Anti-Corruption Layer (ACL), and Resilience Decorator Composition.
