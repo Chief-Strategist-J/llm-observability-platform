@@ -1347,3 +1347,10 @@
     └── Changes:
         ├── development-order -> Add strict 7-step feature development pipeline and 5-PR column rename / expand-contract sequence to api-structure.md.
         └── database-architecture -> Create sharding-replication-architecture.md detailing Tier 1 fundamentals, Tier 2 distributed systems depth, and Tier 3 storage engine internals.
+
+[2026-08-16T10:20:00+05:30] Create caching-and-normalization.md policy for database rules
+└── File: policies/rules/database/caching-and-normalization.md, policies/rules/database/sharding-replication-architecture.md
+    ├── Choice: Establish comprehensive caching and data normalization policy detailing Cache-Aside, Write-Through, Write-Behind patterns, Redis namespaced key hierarchy ({namespace}:{tenant_id}:{entity}:{id}:{v}), Single-flight mutex locking & XFetch probabilistic early expiration algorithms, 1NF to 3NF/BCNF normalization standards, pragmatic denormalization thresholds, and SSOT reconciler jobs.
+    └── Changes:
+        ├── caching-mechanics -> Add Cache-Aside/Write-Through/Write-Behind rules, Redis key naming schema, and cache stampede mitigations.
+        └── data-normalization -> Define 1NF-3NF relational standards, performance denormalization criteria, and background drift reconciler job rules.
