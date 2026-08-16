@@ -1,3 +1,29 @@
+[2026-08-16T11:40:00+05:30] Add 13-Pillar Security Hardening Engine, Unit Tests, Traefik Proxy, and Reverse Proxy Adapter Pattern to auth package
+└── File: packages/node/auth/contracts/openapi/v1.yaml, packages/node/auth/docker-compose.yml, packages/node/auth/src/shared/utils/security.util.ts, packages/node/auth/tests/unit/security-mechanisms.test.ts, packages/node/auth/src/infra/adapters/proxy/proxy.interface.ts, packages/node/auth/src/infra/adapters/proxy/traefik.adapter.ts, packages/node/auth/src/infra/adapters/proxy/envoy.adapter.ts
+    ├── Choice: Implement 13 core security capabilities (Argon2id password hashing, token revocation, account brute-force lockout, sliding window rate limiting, Zod input validation, double-submit CSRF, XSS sanitization, parameterized SQL queries, secrets management adapter, credential-stuffing anomaly protection, device session tracking, IP/device anomaly detection, and OTP step-up authentication). Create dedicated unit tests for all 13 security pillars. Add Traefik Proxy container in docker-compose.yml with Reverse Proxy Adapter Pattern (Traefik/Envoy).
+    └── Architecture & Design:
+        ┌──────────────────────────────────────────────────────────┐
+        │        13-Pillar Security & Reverse Proxy Architecture   │
+        └────────────────────────────┬─────────────────────────────┘
+                                     │
+        ┌────────────────────────────┼─────────────────────────────┐
+        ▼                            ▼                             ▼
+  ┌───────────┐               ┌────────────┐               ┌──────────────┐
+  │ 13-Pillar │               │ Reverse    │               │ Traefik      │
+  │ Security  │               │ Proxy      │               │ Proxy        │
+  │ Engine    │               │ Adapter    │               │ Container    │
+  └─────┬─────┘               └─────┬──────┘               └──────┬───────┘
+        │                            │                            │
+        ▼                            ▼                            ▼
+  (security.util.ts,          (ReverseProxyPort,           (docker-compose.yml,
+   mechanisms.test.ts)         traefik/envoy adapters)      traefik:v2.10)
+    └── Changes:
+        ├── security -> Implement SecurityEngine in src/shared/utils/security.util.ts providing all 13 security capabilities.
+        ├── tests -> Create tests/unit/security-mechanisms.test.ts with dedicated unit test cases for each of the 13 security mechanisms.
+        ├── proxy -> Implement ReverseProxyPort interface with TraefikProxyAdapter and EnvoyProxyAdapter in src/infra/adapters/proxy/.
+        ├── container -> Add Traefik Proxy (traefik:v2.10) in docker-compose.yml with Docker routing labels.
+        └── contract -> Update contracts/openapi/v1.yaml with full 13-pillar security specification.
+
 [2026-08-16T11:35:00+05:30] Enhance OpenAPI contract and auth package with Sign-Up, Unique Orgs, RBAC Roles, Audit Logs, Password Resets, and 3-Tier API Key Permissions Table
 └── File: packages/node/auth/contracts/openapi/v1.yaml, packages/node/auth/database/migrations/0001_create_auth_tables.sql, packages/node/auth/src/features/auth/schema/auth.schema.ts, packages/node/auth/src/features/auth/service.ts, packages/node/auth/src/api/rest/v1/router.ts
     ├── Choice: Implement multi-tenant sign-up with unique organization constraints, RBAC roles (admin, member, viewer), sign-in audit logging with IP and user-agent metadata tracking, forgot/reset/change password lifecycle, and 3-tier API keys (general, testing, super_secret) bound to granular permission tables.
