@@ -1,7 +1,7 @@
 import { WebTracerProvider, BatchSpanProcessor } from '@opentelemetry/sdk-trace-web';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { Resource } from '@opentelemetry/resources';
-import { SEMRESATTRS_SERVICE_NAME, SEMRESATTRS_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
+import { resourceFromAttributes } from '@opentelemetry/resources';
+import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import { trace } from '@opentelemetry/api';
 
 let providerInitialized = false;
@@ -11,12 +11,10 @@ export function initOpenTelemetryTracer(): void {
     return;
   }
 
-  const resource = new Resource({
-    [SEMRESATTRS_SERVICE_NAME]: 'web-app',
-    [SEMRESATTRS_SERVICE_VERSION]: '0.1.0',
+  const resource = resourceFromAttributes({
+    [ATTR_SERVICE_NAME]: 'web-app',
+    [ATTR_SERVICE_VERSION]: '0.1.0',
   });
-
-  const provider = new WebTracerProvider({ resource });
 
   const otlpEndpoint = process.env.NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318/v1/traces';
 
@@ -24,7 +22,11 @@ export function initOpenTelemetryTracer(): void {
     url: otlpEndpoint,
   });
 
-  provider.addSpanProcessor(new BatchSpanProcessor(exporter));
+  const provider = new WebTracerProvider({
+    resource,
+    spanProcessors: [new BatchSpanProcessor(exporter)],
+  });
+
   provider.register();
 
   providerInitialized = true;
