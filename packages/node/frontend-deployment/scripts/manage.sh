@@ -68,8 +68,8 @@ cmd_up() {
   echo -e "  - OTel Collector HTTP: http://localhost:31417"
   echo -e "  - OTel Collector gRPC: localhost:31418"
 
-  echo -e "\n${BLUE}[frontend-deployment] Waiting 3s for web endpoints to bind...${NC}"
-  sleep 3
+  echo -e "\n${BLUE}[frontend-deployment] Waiting 5s for web endpoints to bind...${NC}"
+  sleep 5
   echo -e "${BLUE}[frontend-deployment] Running automatic container & service health diagnostic...${NC}"
   "$SCRIPT_DIR/test-health.sh"
 }
