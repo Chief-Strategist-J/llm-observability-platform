@@ -1,9 +1,9 @@
-# ADR 0006: Kafka Messaging Pipeline & Distributed Tracing Architecture
+# ADR 0006: Centralized Kafka Messaging Pipeline & Distributed Tracing Architecture
 
 - **Status**: Accepted
 - **Date**: 2026-08-23
 - **Author**: @Chief-Strategist-J
-- **Scope**: Centralized Kafka event producer/consumer pipeline, `ProducerMiddlewarePipeline`, `ConsumerMiddlewarePipeline`, W3C traceparent propagation in Kafka message headers, and dead-letter queue (DLQ) fallbacks.
+- **Scope**: Centralized Kafka event producer/consumer pipeline, `CentralMessagingTracer`, `BaseTracedKafkaHandler`, `ProducerMiddlewarePipeline`, `ConsumerMiddlewarePipeline`, W3C traceparent propagation in Kafka message headers, and dead-letter queue (DLQ) fallbacks.
 
 ---
 
@@ -11,23 +11,25 @@
 
 The `@observability/auth` service emits asynchronous domain events (`USER_SIGNED_IN`, `USER_SIGNED_UP`, `USER_SIGNOUT`, `API_KEY_CREATED`, `ORG_SWITCHED`) to Kafka topic `auth.events.v1`. 
 
-Previously, event publishing operated as isolated background operations without propagating W3C trace contexts across message boundary headers. Consequently, Kafka consumer executions could not be linked back to the originating HTTP request trace waterfall graph.
+Previously:
+1. Event publishing operated as isolated background operations without propagating W3C trace contexts across message boundary headers.
+2. Individual consumer handlers wrote repetitive `withSpan` and attribute tagging boilerplate.
+3. Middleware order placed consumer tracing at the bottom of the stack rather than wrapping the entire consumption lifecycle.
 
 ---
 
 ## 2. Decision & Architecture Overview
 
-1. **Centralized Kafka Client Adapter (`CentralizedKafkaClient`)**:
-   - Manages connection lifecycle to Kafka broker (`localhost:9092` / container `frontend-kafka:9092`).
-   - Supports idempotent publishing, linger, and retry configuration.
+1. **Centralized Messaging Tracer (`CentralMessagingTracer` in `@observability/core/tracing`)**:
+   - `createProducerSpan()` extracts the active HTTP request trace context (`traceparent`) and injects W3C headers (`traceparent`, `tracestate`, `correlationId`, `requestId`, `tenantId`) directly into Kafka message headers. Spans are created with `SpanKind.PRODUCER`.
+   - `createConsumerSpan()` parses `event.headers.traceparent` on message consumption and creates a `SpanKind.CONSUMER` child span inheriting the exact `traceId` and `parentSpanId`.
 
-2. **Middleware Pipeline Pattern (`ProducerMiddlewarePipeline` & `ConsumerMiddlewarePipeline`)**:
-   - Encapsulates event publishing and consumption in reusable, composable middleware chains.
-   - Includes `loggingProducerMiddleware`, `tracingProducerMiddleware`, `validationMiddleware`, and `dlqConsumerMiddleware`.
+2. **Centralized Base Traced Handler (`BaseTracedKafkaHandler`)**:
+   - Abstract base handler in `@observability/core/tracing` that automatically wraps `handlePayload(payload, event, span)` in an OpenTelemetry child span (`Handler <eventName>`).
+   - Automatically populates standard CQRS attributes (`cqrs.event_name`, `cqrs.event_id`, `cqrs.tenant_id`, `cqrs.user_id`, `cqrs.org_id`) without requiring repetitive per-handler boilerplate.
 
-3. **W3C Distributed Trace Context Propagation (`MessagingTracer`)**:
-   - `createProducerSpan()` extracts the active HTTP request trace context (`activeCtx.traceparent`) and injects W3C headers (`traceparent`, `tracestate`, `correlationId`, `requestId`, `tenantId`) directly into Kafka message headers.
-   - `createConsumerSpan()` parses `event.headers.traceparent` on message consumption and creates a child span inheriting the exact `traceId` and `parentSpanId`.
+3. **Consumer Middleware Order**:
+   - Registered `tracingConsumerMiddleware` at the entry (position 0) of `ConsumerMiddlewarePipeline` in `AuthEventConsumer` to ensure tracing covers idempotency checks, retries, handler execution, and DLQ routing.
 
 ---
 
@@ -39,22 +41,22 @@ graph TD
         HTTP["HTTP Endpoint Handler"] --> Producer["AuthEventProducer"]
     end
 
-    subgraph Kafka Producer Pipeline
+    subgraph Centralized Messaging Engine (@observability/core/tracing)
         Producer --> Pipeline["ProducerMiddlewarePipeline"]
-        Pipeline --> LogMW["loggingProducerMiddleware"]
         Pipeline --> TraceMW["tracingProducerMiddleware"]
-        TraceMW --> MsgTracer["MessagingTracer (Inject W3C Headers)"]
-        MsgTracer --> KafkaClient["CentralizedKafkaClient"]
+        TraceMW --> CentralTracer["CentralMessagingTracer (SpanKind.PRODUCER)"]
+        CentralTracer --> KafkaClient["CentralizedKafkaClient"]
     end
 
-    KafkaClient -->|Publish Event + Headers| KafkaBroker["Kafka Broker (Port 31414 / 9092) Topic: auth.events.v1"]
+    KafkaClient -->|Publish Event + W3C Headers| KafkaBroker["Kafka Broker (Port 31414 / 9092) Topic: auth.events.v1"]
 
     subgraph Kafka Consumer Pipeline
         KafkaBroker --> ConsumerClient["KafkaConsumerClient"]
         ConsumerClient --> ConsumerPipe["ConsumerMiddlewarePipeline"]
-        ConsumerPipe --> ExtractMW["tracingConsumerMiddleware (Extract W3C Headers)"]
+        ConsumerPipe --> ExtractMW["tracingConsumerMiddleware (SpanKind.CONSUMER)"]
         ExtractMW --> EventConsumer["AuthEventConsumer"]
-        EventConsumer --> AuditLog["Audit Logger / Webhook Dispatcher"]
+        EventConsumer --> BaseHandler["BaseTracedKafkaHandler"]
+        BaseHandler --> CQRSStore["AuthReadProjectionStore (CQRS Projection)"]
     end
 ```
 
@@ -67,71 +69,64 @@ sequenceDiagram
     autonumber
     actor HTTP as Auth REST Service
     participant Producer as AuthEventProducer
-    participant Tracer as MessagingTracer
+    participant Tracer as CentralMessagingTracer
     participant Pipeline as ProducerMiddlewarePipeline
     participant Kafka as Kafka Broker (Port 31414)
     participant Consumer as AuthEventConsumer
-    participant Tempo as Grafana Tempo (:3200)
+    participant BaseHandler as BaseTracedKafkaHandler
+    participant Collector as OTEL Collector (:31417)
 
     HTTP->>Producer: publishUserSignedIn({ userId, email, orgId })
     Producer->>Tracer: createProducerSpan("auth.events.v1", "USER_SIGNED_IN")
-    Tracer->>Tracer: Extract activeCtx.traceparent & format W3C traceparent header
+    Tracer->>Tracer: Start SpanKind.PRODUCER & format W3C traceparent header
     Producer->>Pipeline: execute(event, headers)
     Pipeline->>Kafka: CentralizedKafkaClient.publishToTopic("auth.events.v1", event, headers)
-    Kafka-->>Producer: Acknowledge RecordMetadata (partition, offset)
+    Kafka-->>Producer: Acknowledge RecordMetadata
     Producer->>Collector: Export Producer Span (http://localhost:31417/v1/traces)
 
     Kafka->>Consumer: Consume Message (Topic: auth.events.v1)
     Consumer->>Tracer: createConsumerSpan(event, "auth.events.v1")
-    Tracer->>Tracer: Parse traceparent header (Inherit traceId & parentSpanId)
-    Consumer->>Consumer: Process Event Payload (Update Audit Log / Stats)
-    Consumer->>Collector: Export Consumer Span (http://localhost:31417/v1/traces)
-    Collector->>Tempo: Render unified trace graph connecting HTTP -> Kafka Producer -> Kafka Consumer
+    Tracer->>Tracer: Parse traceparent header (Start SpanKind.CONSUMER inheriting traceId)
+    Consumer->>BaseHandler: handle(event)
+    BaseHandler->>BaseHandler: Start "Handler USER_SIGNED_IN" & tag cqrs attributes
+    BaseHandler->>BaseHandler: handlePayload(payload) -> AuthReadProjectionStore
+    Consumer->>Collector: Export Consumer & Handler Spans
 ```
 
 ---
 
 ## 5. End-to-End Functional Call Stack Topology
 
-```tree
-Domain Event Triggered (e.g. User Sign-In Success)
+```text
+Domain Event Triggered (User Sign-In Success)
 └── 1. UserAuthDomainService.signIn() [services/user-auth.service.ts]
     └── 2. AuthEventProducer.publishUserSignedIn(payload) [producers/auth-event.producer.ts]
         │
-        ├── 3. MessagingTracer.createProducerSpan("auth.events.v1", "USER_SIGNED_IN") [tracing/messaging-tracer.ts]
-        │   ├── Read active RequestContextHolder context (traceparent, requestId, correlationId, tenantId)
-        │   ├── Generate child spanId
-        │   ├── Format W3C traceparent header ("00-{traceId}-{spanId}-01")
-        │   └── Log: [MessagingTracer] PRODUCE SPAN STARTED [traceId=..., spanId=..., reqId=...]
+        ├── 3. CentralMessagingTracer.createProducerSpan("auth.events.v1", "USER_SIGNED_IN")
+        │   ├── Read active trace context & format W3C traceparent header
+        │   └── Start OpenTelemetry PRODUCER span
         │
-        ├── 4. ProducerMiddlewarePipeline.execute(context) [middleware/producer-pipeline.ts]
-        │   ├── loggingProducerMiddleware() -> Log outgoing event metadata & correlation ID
-        │   ├── tracingProducerMiddleware() -> Attach OpenTelemetry attributes (messaging.system='kafka')
-        │   └── validationProducerMiddleware() -> Validate event schema against KafkaEventSchema
+        ├── 4. CentralizedKafkaClient.publishToTopic('auth.events.v1', payload, headers)
+        │   │
+        │   ├── [Kafka Wire Protocol: TCP localhost:9092] ──> [Kafka Broker: auth.events.v1 Topic]
+        │   │
+        │   └── 5. AuthEventConsumer.subscribeToTopic('auth.events.v1')
+        │       │
+        │       ├── 6. ConsumerMiddlewarePipeline (Position 0: tracingConsumerMiddleware)
+        │       │   └── CentralMessagingTracer.createConsumerSpan(event) -> Start CONSUMER span
+        │       │
+        │       └── 7. UserSignedInHandler extends BaseTracedKafkaHandler
+        │           ├── Start INTERNAL span "Handler USER_SIGNED_IN"
+        │           ├── Tag Attributes: cqrs.event_name, cqrs.event_id, cqrs.user_id, cqrs.org_id
+        │           └── handlePayload() -> AuthReadProjectionStore.getInstance().applyUserSignedIn()
         │
-        └── 5. CentralizedKafkaClient.publishToTopic('auth.events.v1', payload, headers) [client/kafka-client.ts]
-            │
-            ├── [Kafka Wire Protocol: TCP localhost:9092] ──> [Kafka Broker: auth.events.v1 Topic]
-            │
-            └── 6. AuthEventConsumer.handleUserSignedIn(event) [consumers/auth-event.consumer.ts]
-                │
-                ├── 7. MessagingTracer.createConsumerSpan(event, "auth.events.v1") [tracing/messaging-tracer.ts]
-                │   ├── Parse incoming event.headers.traceparent
-                │   ├── Inherit traceId & set parentSpanId = producer.spanId
-                │   └── Log: [MessagingTracer] CONSUME SPAN STARTED [traceId=..., spanId=...]
-                │
-                ├── 8. ConsumerMiddlewarePipeline.execute(event) [middleware/consumer-pipeline.ts]
-                │   ├── tracingConsumerMiddleware() -> Wrap consumer processing in active span
-                │   ├── auditConsumerMiddleware() -> Persist event copy in PostgreSQL auth_audit_logs
-                │   └── dlqConsumerMiddleware() -> Catch processing errors and route to auth.events.dlq
-                │
-                └── 9. MessagingTracer.finishSpan(consumerSpan)
-                    └── Export Consumer Span to OTEL Collector (:31417) -> Grafana Tempo (:3200)
+        └── 8. CentralMessagingTracer.finishSpan()
+            └── Export Spans to OTEL Collector (:31417) -> Grafana Tempo (:3200)
 ```
 
 ---
 
 ## 6. Verification & Observability Results
 
-- **Trace Propagation**: Verified via `[MessagingTracer] PRODUCE SPAN STARTED [traceId=c728be67f070991a4ac34c58b4c3227b, spanId=6e50ef202adcc29c]`.
-- **Grafana Visualization**: In Grafana Tempo, querying `{ messaging.system = "kafka" }` or searching by `traceId` displays the complete parent-child waterfall connecting HTTP request → Kafka producer → Kafka consumer.
+- **Trace Propagation**: Verified via `[CentralMessagingTracer] PRODUCE SPAN STARTED [traceId=2b6395f2fe098406e91aa6789bd6d919, spanId=9ee9f4d8f4568b23]`.
+- **Grafana Visualization**: Querying `{ messaging.system = "kafka" }` or searching by `traceId` displays the complete 7-span waterfall graph connecting HTTP request -> Kafka producer -> Kafka consumer -> CQRS projection.
