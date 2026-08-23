@@ -1,7 +1,13 @@
+'use client';
+
 import React from 'react';
+import { useDashboardFilters } from '../../../hooks/useDashboardFilters';
+import { DashboardFilterBar } from '../../../components/forms/DashboardFilterBar';
 import { EmptyState } from '../../../components/states/EmptyState';
 
 export default function QualityDashboardPage() {
+  const { filters, setFilter, resetFilters, hasActiveFilters } = useDashboardFilters();
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -11,9 +17,16 @@ export default function QualityDashboardPage() {
         </p>
       </div>
 
+      <DashboardFilterBar
+        filters={filters}
+        onFilterChange={setFilter}
+        onReset={resetFilters}
+        hasActiveFilters={hasActiveFilters}
+      />
+
       <EmptyState
         title="Quality Intelligence Ready"
-        description="Quality evaluation scores will be calculated as spans undergo automated evaluation."
+        description={`Showing quality evaluation scores for ${filters.timeRange} range | Model: ${filters.model} | Service: ${filters.service} | Environment: ${filters.environment}`}
       />
     </div>
   );

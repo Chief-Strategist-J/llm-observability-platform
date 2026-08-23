@@ -5,15 +5,15 @@ import { useDashboardFilters } from '../../../hooks/useDashboardFilters';
 import { DashboardFilterBar } from '../../../components/forms/DashboardFilterBar';
 import { EmptyState } from '../../../components/states/EmptyState';
 
-export default function CostDashboardPage() {
+export default function TracesDashboardPage() {
   const { filters, setFilter, resetFilters, hasActiveFilters } = useDashboardFilters();
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Cost Analytics</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Trace Explorer</h1>
         <p className="text-sm text-[hsl(var(--muted-foreground))]">
-          Track USD spend breakdown by provider, model, and service pipeline.
+          Search and filter distributed spans, execution DAGs, and latency bottlenecks.
         </p>
       </div>
 
@@ -25,8 +25,8 @@ export default function CostDashboardPage() {
       />
 
       <EmptyState
-        title="Cost Analytics Ready"
-        description={`Showing data for ${filters.timeRange} range | Model: ${filters.model} | Service: ${filters.service} | Environment: ${filters.environment}`}
+        title="Trace Explorer Ready"
+        description={`Showing trace logs for ${filters.timeRange} range | Model: ${filters.model} | Service: ${filters.service} | Environment: ${filters.environment}`}
       />
     </div>
   );
