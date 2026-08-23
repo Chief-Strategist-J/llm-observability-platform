@@ -2,7 +2,6 @@
 
 import { useMemo, useCallback } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import type { ListOp } from '../core/data-driven/transform.types';
 import {
   DEFAULT_DASHBOARD_FILTERS,
   type DashboardFilters,
@@ -23,7 +22,10 @@ export function useDashboardFilters() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const filters = useMemo(() => executeFilterPipeline(searchParams), [searchParams]);
+  const pipelineResult = useMemo(() => executeFilterPipeline(searchParams), [searchParams]);
+  const filters = pipelineResult.filters;
+  const trace = pipelineResult.trace;
+
   const listOps = useMemo(() => buildFilterListOps(filters), [filters]);
   const hasActiveFilters = useMemo(() => checkHasActiveFilters(filters), [filters]);
 
@@ -45,5 +47,5 @@ export function useDashboardFilters() {
     router.push(pathname, { scroll: false });
   }, [pathname, router]);
 
-  return { filters, listOps, setFilter, setFilters, resetFilters, hasActiveFilters };
+  return { filters, listOps, trace, setFilter, setFilters, resetFilters, hasActiveFilters };
 }

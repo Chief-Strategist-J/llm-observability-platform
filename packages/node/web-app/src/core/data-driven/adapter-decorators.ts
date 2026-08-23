@@ -1,3 +1,5 @@
+import { trace } from '@opentelemetry/api';
+
 export interface BaseAdapter {
   [key: string]: any;
 }
@@ -27,7 +29,6 @@ export function withRetry<T extends BaseAdapter>(adapter: T, retries = 3, delayM
           try {
             return await fn.call(adapter, ...args);
           } catch (err: any) {
-            // Do not retry authorization/authentication failures
             if (err?.status === 401 || err?.status === 403 || err?.code === "UNAUTHORIZED" || err?.code === "TOKEN_EXPIRED") {
               throw err;
             }
@@ -86,7 +87,6 @@ export function withCircuitBreaker<T extends BaseAdapter>(adapter: T, threshold 
           failures = 0;
           return res;
         } catch (err: any) {
-          // Do not count 401/403 auth errors towards circuit breaker trips
           if (err?.status !== 401 && err?.status !== 403 && err?.code !== "UNAUTHORIZED" && err?.code !== "TOKEN_EXPIRED") {
             failures++;
             if (failures >= threshold) {
@@ -95,6 +95,34 @@ export function withCircuitBreaker<T extends BaseAdapter>(adapter: T, threshold 
           }
           throw err;
         }
+      };
+    } else {
+      wrapped[key] = fn;
+    }
+  }
+  return wrapped as T;
+}
+
+export function withTracing<T extends BaseAdapter>(adapter: T, scopeName = "adapter"): T {
+  const wrapped: any = {};
+  const keys = getAdapterKeys(adapter);
+  const tracer = trace.getTracer(scopeName);
+
+  for (const key of keys) {
+    const fn = adapter[key];
+    if (typeof fn === "function") {
+      wrapped[key] = async (...args: any[]) => {
+        return tracer.startActiveSpan(`${scopeName}.${key}`, async (span) => {
+          try {
+            const res = await fn.call(adapter, ...args);
+            span.end();
+            return res;
+          } catch (err: any) {
+            span.recordException(err as Error);
+            span.end();
+            throw err;
+          }
+        });
       };
     } else {
       wrapped[key] = fn;
