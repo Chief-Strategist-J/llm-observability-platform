@@ -3,10 +3,7 @@ import { AuthService } from './features/auth/service';
 import { AuthRestV1Router } from './api/rest/v1/router';
 import { AlloyDBOmniAuthAdapter } from './infra/adapters/postgres/alloydb-omni-auth.adapter';
 import { RealPostgresAuthAdapter } from './infra/adapters/postgres/real-postgres-auth.adapter';
-import { AuthInboundPortImplementation } from './features/auth/ports/inbound/implementations/auth-inbound.port.implementation';
-import { AuthOutboundPortImplementation } from './features/auth/ports/outbound/implementations/auth-outbound.port.implementation';
-import { AuthInboundAdapterImplementation } from './features/auth/adapters/inbound/implementations/auth-inbound.adapter.implementation';
-import { AuthOutboundAdapterImplementation } from './features/auth/adapters/outbound/implementations/auth-outbound.adapter.implementation';
+import type { AuthRepositoryPort } from './features/auth/repository';
 import { AuthEventProducer } from './shared/messaging/producers/auth-event.producer';
 import { AuthEventConsumer } from './shared/messaging/consumers/auth-event.consumer';
 import { AUTH_CONSTANTS } from './shared/constants/auth.constants';
@@ -14,11 +11,9 @@ import { AUTH_CONSTANTS } from './shared/constants/auth.constants';
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : AUTH_CONSTANTS.DEFAULT_PORT;
 
 const dbUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:31412/observability_auth';
-const repositoryAdapter = (process.env.USE_MOCK_DB === 'true')
+export const repositoryAdapter: AuthRepositoryPort = (process.env.USE_MOCK_DB === 'true')
   ? new AlloyDBOmniAuthAdapter()
   : new RealPostgresAuthAdapter(dbUrl);
-export const outboundAdapter = new AuthOutboundAdapterImplementation(repositoryAdapter);
-export const outboundPort = new AuthOutboundPortImplementation(outboundAdapter);
 
 export const authEventProducer = new AuthEventProducer();
 export const authEventConsumer = new AuthEventConsumer();
@@ -31,11 +26,7 @@ authEventConsumer.init().catch((err: any) => {
   console.warn('[kafka-consumer] Operating in fallback mode:', err?.message || err);
 });
 
-export const service = new AuthService(outboundPort, authEventProducer);
-
-export const inboundPort = new AuthInboundPortImplementation(service);
-export const inboundAdapter = new AuthInboundAdapterImplementation(inboundPort);
-
+export const service = new AuthService(repositoryAdapter, authEventProducer);
 export const router = new AuthRestV1Router(service);
 
 const server = http.createServer((req, res) => {
