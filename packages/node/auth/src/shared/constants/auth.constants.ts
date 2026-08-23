@@ -23,7 +23,8 @@ export const AUTH_CONSTANTS = {
     CORS_HEADERS: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+      'Access-Control-Allow-Headers': '*',
+      'Access-Control-Expose-Headers': 'traceparent, tracestate, x-request-id, x-correlation-id, x-causation-id',
       'Access-Control-Max-Age': '86400',
     },
     TOKEN_EXPIRE_SECONDS: 3600,
