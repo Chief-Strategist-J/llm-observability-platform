@@ -12,6 +12,10 @@ services:
       - "31411:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`llmobs.gateway`) || Host(`gateway.llmobs.local`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
 
   redis:
     image: redis:7-alpine
@@ -58,6 +62,11 @@ services:
     ports:
       - "31416:3200" # Tempo HTTP
       - "4317:4317" # OTLP gRPC internal receiver
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tempo.rule=Host(`llmobs.tempo`) || Host(`tempo.llmobs.local`) || PathPrefix(`/tempo`)"
+      - "traefik.http.routers.tempo.entrypoints=web"
+      - "traefik.http.services.tempo.loadbalancer.server.port=3200"
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
@@ -68,6 +77,11 @@ services:
     ports:
       - "31417:4318" # OTLP HTTP receiver
       - "31418:4317" # OTLP gRPC receiver
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.otel.rule=Host(`llmobs.otel`) || Host(`otel.llmobs.local`) || PathPrefix(`/v1/traces`)"
+      - "traefik.http.routers.otel.entrypoints=web"
+      - "traefik.http.services.otel.loadbalancer.server.port=4318"
     depends_on:
       - tempo
 
@@ -83,6 +97,11 @@ services:
     volumes:
       - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana_data:/var/lib/grafana
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`llmobs.grafana`) || Host(`grafana.llmobs.local`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
     depends_on:
       - tempo
 

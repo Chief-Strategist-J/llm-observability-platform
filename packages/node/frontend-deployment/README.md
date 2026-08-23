@@ -1,12 +1,34 @@
 # `@observability/frontend-deployment`
 
-Unified deployment & observability package for the Observability Platform providing network routing, messaging queues, event streaming pipelines, and OpenTelemetry trace visualization.
+Unified deployment & observability package for the Observability Platform providing Traefik API Gateway routing, custom domain aliases, Kafka messaging queues, and OpenTelemetry trace visualization via Grafana & Tempo.
+
+---
+
+## 🌐 Custom Gateway Domain Links & Gateway Mapping
+
+All services are fronted by **Traefik API Gateway** (`:31410`). You can access services using human-readable custom gateway URLs via local domain mapping (`/etc/hosts`):
+
+### Custom Gateway URLs
+
+| Service / Module | Custom Gateway URL | Gateway Path / Host | Target Service Port |
+| :--- | :--- | :--- | :--- |
+| **API Gateway Dashboard** | [http://llmobs.gateway:31410](http://llmobs.gateway:31410) | `Host(llmobs.gateway)` | `:8080` (Traefik) |
+| **Grafana UI Dashboard** | [http://llmobs.grafana:31410](http://llmobs.grafana:31410) | `Host(llmobs.grafana)` | `:3000` (Grafana) |
+| **Grafana Tempo (Traces)** | [http://llmobs.tempo:31410](http://llmobs.tempo:31410) | `Host(llmobs.tempo)` | `:3200` (Tempo) |
+| **OTel Collector (Ingest)** | [http://llmobs.otel:31410/v1/traces](http://llmobs.otel:31410/v1/traces) | `Host(llmobs.otel)` | `:4318` (OTel Ingest) |
+| **Auth Microservice API** | [http://llmobs.gateway:31410/api/v1/auth](http://llmobs.gateway:31410/api/v1/auth) | `PathPrefix(/api/v1/auth)` | `:3001` (Auth) |
+| **Kafka Event Broker** | `llmobs.kafka:31414` | Direct TCP Endpoint | `:9092` (Kafka) |
+| **Redis Cache Store** | `llmobs.redis:31413` | Direct TCP Endpoint | `:6379` (Redis) |
+
+> 💡 **Quick Setup for Custom Domains:**
+> Add the following line to your `/etc/hosts` file:
+> ```bash
+> 127.0.0.1  llmobs.gateway llmobs.grafana llmobs.tempo llmobs.otel llmobs.kafka llmobs.redis
+> ```
 
 ---
 
 ## 🏛 High-Level System Architecture (HLD)
-
-The high-level design separates client-facing HTTP/WebSocket traffic from background telemetry ingestion pipelines and event streaming queues.
 
 ```mermaid
 flowchart TD
@@ -15,103 +37,73 @@ flowchart TD
         AuthApp["Auth Microservice (:3001)"]
     end
 
-    subgraph GatewayLayer["API Gateway & Reverse Proxy Layer"]
-        Traefik["Traefik API Gateway (:31410 / :31411)"]
+    subgraph GatewayLayer["API Gateway Layer (Traefik :31410)"]
+        Traefik["Traefik Gateway (llmobs.gateway)"]
     end
 
     subgraph MessagingLayer["Messaging & Event Pipeline Layer"]
-        Kafka["Apache Kafka Event Broker (:31414)"]
-        Redis["Redis Cache & Session Store (:31413)"]
+        Kafka["Kafka Event Broker (llmobs.kafka:31414)"]
+        Redis["Redis Cache Store (llmobs.redis:31413)"]
     end
 
     subgraph TelemetryPipeline["Observability & Tracing Pipeline"]
-        OTel["OpenTelemetry Collector (:31417 HTTP / :31418 gRPC)"]
-        Tempo["Grafana Tempo Trace Engine (:31416)"]
-        Grafana["Grafana Telemetry Dashboard (:31415)"]
+        OTel["OTel Collector (llmobs.otel:31410)"]
+        Tempo["Grafana Tempo Engine (llmobs.tempo:31410)"]
+        Grafana["Grafana UI (llmobs.grafana:31410)"]
     end
 
-    subgraph ServiceDB["Database Layer"]
-        AuthDB[("Auth Service Database (:31412)")]
-    end
-
-    %% Client traffic flow
-    Browser -->|HTTP/REST| Traefik
-    Traefik -->|Route /api/v1/auth| AuthApp
-    AuthApp -->|SQL Queries| AuthDB
-
-    %% Event & Session messaging flow
-    AuthApp -->|Publish Auth Events| Kafka
+    %% Routing
+    Browser -->|http://llmobs.gateway| Traefik
+    Traefik -->|/api/v1/auth| AuthApp
+    AuthApp -->|Auth Events| Kafka
     AuthApp -->|Session Cache| Redis
 
-    %% Telemetry pipeline flow
-    Browser -->|OTLP Traces| OTel
-    AuthApp -->|OTLP Traces| OTel
+    %% Telemetry
+    Browser -->|http://llmobs.otel/v1/traces| OTel
+    AuthApp -->|OTLP Spans| OTel
     OTel -->|Batch Export| Tempo
-    Grafana -->|Query Traces| Tempo
+    Grafana -->|Query Spans| Tempo
 ```
 
 ---
 
-## 🔬 Low-Level System Design (LLD) — Telemetry & Messaging Pipeline
-
-The low-level design details the exact data processing flow for telemetry events and message queue pipeline handling.
+## 🔬 Low-Level Design & Telemetry Pipeline (LLD)
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant App as Next.js / Auth App
-    participant OTel as OTel Collector (:31417)
-    participant Batch as Batch Processor
-    participant Tempo as Grafana Tempo (:31416)
-    participant Grafana as Grafana UI (:31415)
-    participant Kafka as Kafka Broker (:31414)
+    participant Gateway as Traefik Gateway (llmobs.gateway:31410)
+    participant OTel as OTel Collector (llmobs.otel)
+    participant Tempo as Grafana Tempo (llmobs.tempo)
+    participant Grafana as Grafana UI (llmobs.grafana)
 
-    box Observability Ingestion Pipeline
-        participant OTel
-        participant Batch
-        participant Tempo
-        participant Grafana
-    end
+    Note over App, Gateway: 1. Trace Emission via Gateway
+    App->>Gateway: POST http://llmobs.otel:31410/v1/traces
+    Gateway->>OTel: Forward OTLP Protobuf Payload
+    OTel->>Tempo: Batch Export Spans over gRPC (:4317)
+    Tempo-->>Tempo: Persist Trace Block to Disk
 
-    box Event Streaming Pipeline
-        participant Kafka
-    end
-
-    %% Telemetry Flow
-    Note over App, OTel: 1. OpenTelemetry Trace Generation
-    App->>OTel: POST /v1/traces (JSON/Protobuf over OTLP)
-    OTel->>Batch: Queue Span in Memory Buffer
-    Note over Batch: 2. Batching (1s timeout / 1024 spans)
-    Batch->>Tempo: Export Batched Spans over gRPC (:4317)
-    Tempo-->>Tempo: Store Chunk & Index in Local WAL
-
-    %% Grafana Query Flow
-    Note over Grafana, Tempo: 3. Trace Visualization Query
-    Grafana->>Tempo: GET /api/traces/{traceId} (:3200)
-    Tempo-->>Grafana: Return Span Waterfall & Metadata
-
-    %% Messaging Event Flow
-    Note over App, Kafka: 4. Async Event Streaming
-    App->>Kafka: Produce Event to Topic (e.g. user.signed_up)
-    Kafka-->>App: ACK (Offset Saved)
+    Note over Grafana, Tempo: 2. Trace Query & Visualization
+    Grafana->>Gateway: GET http://llmobs.tempo:31410/api/traces/{traceId}
+    Gateway->>Tempo: Forward Query Request
+    Tempo-->>Grafana: Return Span Waterfall Data
 ```
 
 ---
 
-## 🚀 Services & Unique Port Allocation Matrix
+## 🚀 Dedicated Port Allocation Matrix
 
-To prevent port collisions with system or local development services, all services in this stack use unique dedicated host ports:
-
-| Service | Host Port | Internal Port | Protocol / Description |
+| Service | Dedicated Port | Protocol / Path | Custom Gateway Alias |
 | :--- | :--- | :--- | :--- |
-| **Traefik API Gateway** | `31410` | `80` | Entrypoint router |
-| **Traefik Dashboard** | `31411` | `8080` | Gateway Web UI |
-| **Redis** | `31413` | `6379` | Cache & Session Store |
-| **Kafka Broker** | `31414` | `9092` | Event Streaming Broker |
-| **Grafana UI** | `31415` | `3000` | Telemetry Dashboard (`admin` / `admin`) |
-| **Grafana Tempo** | `31416` | `3200` | Trace Backend Store |
-| **OTel Collector HTTP** | `31417` | `4318` | OpenTelemetry OTLP HTTP Ingestion |
-| **OTel Collector gRPC** | `31418` | `4317` | OpenTelemetry OTLP gRPC Ingestion |
+| **Traefik Gateway** | `31410` | HTTP / Proxy | `llmobs.gateway` |
+| **Traefik Dashboard** | `31411` | HTTP / Dashboard | `llmobs.gateway:31411` |
+| **Redis** | `31413` | TCP | `llmobs.redis:31413` |
+| **Kafka Broker** | `31414` | TCP | `llmobs.kafka:31414` |
+| **Grafana UI** | `31415` | HTTP (`admin`/`admin`) | `llmobs.grafana:31410` |
+| **Grafana Tempo** | `31416` | HTTP / OTLP | `llmobs.tempo:31410` |
+| **OTel Collector HTTP** | `31417` | HTTP (`/v1/traces`) | `llmobs.otel:31410` |
+| **OTel Collector gRPC** | `31418` | gRPC | `llmobs.otel:31418` |
 
 ---
 
@@ -120,20 +112,17 @@ To prevent port collisions with system or local development services, all servic
 From inside this package (`packages/node/frontend-deployment`):
 
 ```bash
-# Start all infrastructure containers
+# Start all infrastructure containers with auto-recreate & port cleaning
 npm run up
 
-# Check health and status of containers
-npm run status
+# Run container & service health diagnostic (14/14 checks)
+npm run health
+
+# Restart all infrastructure containers
+npm run restart
 
 # View live container logs
 npm run logs
-
-# Run integration & health test suite
-npm run test
-
-# Free stack ports if needed
-npm run free-ports
 
 # Stop all infrastructure containers
 npm run down
