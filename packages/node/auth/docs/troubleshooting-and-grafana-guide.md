@@ -1,10 +1,10 @@
-# 🔍 Troubleshooting & Grafana Tempo Debugging Guide
+# Troubleshooting & Grafana Tempo Debugging Guide
 
 This guide provides end-to-end instructions for running Grafana, searching traces using TraceQL, filtering by time ranges, debugging authentication & database failures, and resolving common operational issues across `@observability/auth`.
 
 ---
 
-## 🚀 1. Accessing & Running Grafana & Tempo
+## 1. Accessing & Running Grafana & Tempo
 
 | Component | Endpoint / Port | Description | Credentials |
 | :--- | :--- | :--- | :--- |
@@ -16,7 +16,7 @@ This guide provides end-to-end instructions for running Grafana, searching trace
 
 ---
 
-## 🎛️ 2. How to Search & Filter in Grafana Explore
+## 2. How to Search & Filter in Grafana Explore
 
 1. Navigate to **Grafana Explore**: `http://localhost:31415/explore` (or `https://llmobs.grafana:31419/explore`).
 2. Select Datasource: **Tempo** (`P214B5B846CF3925F`).
@@ -27,7 +27,7 @@ This guide provides end-to-end instructions for running Grafana, searching trace
 
 ---
 
-## 📚 3. TraceQL Query Library for Debugging
+## 3. TraceQL Query Library for Debugging
 
 ### A. General Service Traces
 - **All Auth Service Spans**:
@@ -97,7 +97,7 @@ This guide provides end-to-end instructions for running Grafana, searching trace
 
 ---
 
-## 🛠️ 4. Common Operational Issues & Troubleshooting Matrix
+## 4. Common Operational Issues & Troubleshooting Matrix
 
 ### Issue 1: "CORS Error in Browser / Network Tab Options Preflight Blocked"
 - **Symptom**: Browser throws CORS preflight rejection when calling `http://localhost:3001/api/v1/auth/sign-in` or pushing traces to `http://localhost:31417/v1/traces`.
@@ -165,9 +165,9 @@ This guide provides end-to-end instructions for running Grafana, searching trace
 
 ---
 
-## ⚡ 5. End-to-End Tracing via `curl` with Request Keys & Traceparents
+## 5. End-to-End Tracing via `curl` with Request Keys & JSON Responses
 
-### Step 1: Execute Request with Explicit Request Key & Traceparent
+### Step 1: Execute Sign-In Request with Explicit Request Key & Traceparent
 ```bash
 curl -s -X POST http://localhost:3001/api/v1/auth/sign-in \
   -H "Content-Type: application/json" \
@@ -177,47 +177,165 @@ curl -s -X POST http://localhost:3001/api/v1/auth/sign-in \
   -d '{"email":"jaydeep@gmail.com","password":"Scaibu@123456"}'
 ```
 
+**JSON Response Payload Returned**:
+```json
+{
+  "status": "success",
+  "message": "User signed in successfully",
+  "data": {
+    "token": "eyJzdWIiOiJ1c3JfOTlzM2NxbiIsImVtYWlsIjoiamF5ZGVlcEBnbWFpbC5jb20iLCJvcmciOnsib3JnX2lkIjoib3JnX3lpdTR6NmYiLCJvcmdfbmFtZSI6IlNjYWlidSIsInJvbGUiOiJhZG1pbiJ9LCJpYXQiOjE3ODc0OTEyNTEsImV4cCI6MTc4NzQ5NDg1MX0=.c2lnX3Vzcl85OXMzY3FuXzE3ODc0OTEyNTE=",
+    "payload": {
+      "sub": "usr_99s3cqn",
+      "email": "jaydeep@gmail.com",
+      "org": {
+        "org_id": "org_yiu4z6f",
+        "org_name": "Scaibu",
+        "role": "admin"
+      },
+      "exp": 1787494851,
+      "iat": 1787491251
+    },
+    "user": {
+      "id": "usr_99s3cqn",
+      "email": "jaydeep@gmail.com",
+      "name": "Jaydeep",
+      "org_id": "org_yiu4z6f",
+      "org_name": "Scaibu",
+      "role": "admin",
+      "blocked": false,
+      "user_permissions": [
+        "admin:all"
+      ]
+    }
+  },
+  "error": null
+}
+```
+
+---
+
 ### Step 2: Query Grafana Tempo Directly for Trace ID (`4bf92f3577b34da6a3ce929d0e0e4736`)
 ```bash
 curl -s -u admin:admin 'http://localhost:31415/api/datasources/proxy/uid/P214B5B846CF3925F/api/traces/4bf92f3577b34da6a3ce929d0e0e4736'
 ```
+
+**JSON Response Payload Returned**:
+```json
+{
+  "batches": [
+    {
+      "resource": {
+        "attributes": [
+          { "key": "service.name", "value": { "stringValue": "auth-service" } },
+          { "key": "service.version", "value": { "stringValue": "1.0.0" } },
+          { "key": "telemetry.sdk.language", "value": { "stringValue": "collector" } }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": { "name": "auth-service", "version": "1.0.0" },
+          "spans": [
+            {
+              "traceId": "S/kvNXezTaajzpKdDg5HNg==",
+              "spanId": "YxxSJux1Tv8=",
+              "parentSpanId": "APBnqgupArc=",
+              "name": "HTTP POST /api/v1/auth/sign-in",
+              "kind": "SPAN_KIND_SERVER",
+              "startTimeUnixNano": "1787490773208000000",
+              "endTimeUnixNano": "1787490773405738618",
+              "attributes": [
+                { "key": "http.method", "value": { "stringValue": "POST" } },
+                { "key": "http.target", "value": { "stringValue": "/api/v1/auth/sign-in" } },
+                { "key": "x-request-id", "value": { "stringValue": "req-1787491177230-g4lb89" } },
+                { "key": "x-correlation-id", "value": { "stringValue": "req-1787491177230-g4lb89" } },
+                { "key": "user.email", "value": { "stringValue": "jaydeep@gmail.com" } },
+                { "key": "http.status_code", "value": { "intValue": 200 } }
+              ],
+              "status": { "code": "STATUS_CODE_OK" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
 
 ### Step 3: Query Grafana Tempo TraceQL API for Request Key (`req-1787491177230-g4lb89`)
 ```bash
 curl -s -u admin:admin 'http://localhost:31415/api/datasources/proxy/uid/P214B5B846CF3925F/api/search?q=%7Bspan.x-request-id%3D%22req-1787491177230-g4lb89%22%7D'
 ```
 
+**JSON Response Payload Returned**:
+```json
+{
+  "traces": [
+    {
+      "traceID": "4bf92f3577b34da6a3ce929d0e0e4736",
+      "rootServiceName": "auth-service",
+      "rootTraceName": "HTTP POST /api/v1/auth/sign-in",
+      "startTimeUnixNano": "1787490773208000000",
+      "durationMs": 65,
+      "spanSet": {
+        "spans": [
+          {
+            "spanID": "60cec4c718c7607e",
+            "startTimeUnixNano": "1787490773208000000",
+            "attributes": [
+              { "key": "service.name", "value": { "stringValue": "auth-service" } },
+              { "key": "user.email", "value": { "stringValue": "jaydeep@gmail.com" } },
+              { "key": "x-request-id", "value": { "stringValue": "req-1787491177230-g4lb89" } }
+            ]
+          }
+        ],
+        "matched": 1
+      },
+      "serviceStats": {
+        "auth-service": { "spanCount": 1 }
+      }
+    }
+  ],
+  "metrics": {
+    "inspectedBytes": "362324",
+    "completedJobs": 3,
+    "totalJobs": 3
+  }
+}
+```
+
 ---
 
-## 📊 6. Visualizing Spans in Grafana (What the Trace Waterfall Looks Like)
+## 6. Visualizing Spans in Grafana (What the Trace Waterfall Looks Like)
 
-When you search Grafana Tempo by Request Key (`req-1787491177230-g4lb89`) or open the Trace ID link, Grafana renders a **single unified end-to-end trace waterfall**:
+When searching Grafana Tempo by Request Key (`req-1787491177230-g4lb89`) or opening the Trace ID link, Grafana renders a single unified end-to-end trace waterfall:
 
 ```text
 Grafana Tempo Trace Waterfall Graph [Trace ID: 4bf92f3577b34da6a3ce929d0e0e4736]
-┌─────────────────────────────────────────────────────────────────────────────────────────────┐
-│ Service & Span Name                        Kind     Duration   Attributes                   │
-├─────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 🟢 web-app: authApiClient.signIn          CLIENT   68ms       user.email=jaydeep@gmail.com │
-│  └── 🟢 auth-service: HTTP POST /sign-in   SERVER   65ms       x-request-id=req-g4lb89      │
-│       └── 🟢 auth-service: REST POST      INTERNAL 62ms       route.name=SIGN_IN           │
-│            ├── 🟢 DB SELECT findUserByEmail CLIENT 12ms       db.system=postgresql         │
-│            ├── 🟢 Argon2id Password Check  INTERNAL 42ms       crypto.algorithm=argon2id    │
-│            ├── 🟢 DB INSERT recordAuditLog  CLIENT   5ms        db.system=postgresql         │
-│            └── 🟢 Kafka PRODUCE USER_IN    PRODUCER 2ms        topic=auth.events.v1         │
-│                 └── 🟢 Kafka CONSUMER      CONSUMER 1ms        messaging.operation=process  │
-└─────────────────────────────────────────────────────────────────────────────────────────────┘
+-----------------------------------------------------------------------------------------------
+Service & Span Name                        Kind     Duration   Attributes                   
+-----------------------------------------------------------------------------------------------
+[OK] web-app: authApiClient.signIn          CLIENT   68ms       user.email=jaydeep@gmail.com 
+ `-- [OK] auth-service: HTTP POST /sign-in   SERVER   65ms       x-request-id=req-g4lb89      
+      `-- [OK] auth-service: REST POST      INTERNAL 62ms       route.name=SIGN_IN           
+           |-- [OK] DB SELECT findUserByEmail CLIENT 12ms       db.system=postgresql         
+           |-- [OK] Argon2id Password Check  INTERNAL 42ms       crypto.algorithm=argon2id    
+           |-- [OK] DB INSERT recordAuditLog  CLIENT   5ms        db.system=postgresql         
+           `-- [OK] Kafka PRODUCE USER_IN    PRODUCER 2ms        topic=auth.events.v1         
+                `-- [OK] Kafka CONSUMER      CONSUMER 1ms        messaging.operation=process  
+-----------------------------------------------------------------------------------------------
 ```
 
-#### 🔴 If a Failure Occurs (e.g. Wrong Password):
+#### If a Failure Occurs (e.g. Wrong Password):
 ```text
 Grafana Tempo Error Trace Waterfall Graph [Trace ID: 7ddc5fc112278d5075421c35704bea2e]
-┌─────────────────────────────────────────────────────────────────────────────────────────────┐
-│ Service & Span Name                        Kind     Duration   Attributes / Error           │
-├─────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 🔴 auth-service: HTTP POST /sign-in        SERVER   78ms       status=ERROR (HTTP 401)      │
-│  └── 🔴 auth-service: REST POST /sign-in   INTERNAL 75ms       error.code=INVALID_CREDENTIALS│
-│       ├── 🟢 DB SELECT findUserByEmail     CLIENT   14ms       db.system=postgresql         │
-│       └── 🔴 Argon2id Password Check      INTERNAL 58ms       error="Invalid credentials"  │
-└─────────────────────────────────────────────────────────────────────────────────────────────┘
+-----------------------------------------------------------------------------------------------
+Service & Span Name                        Kind     Duration   Attributes / Error           
+-----------------------------------------------------------------------------------------------
+[ERROR] auth-service: HTTP POST /sign-in    SERVER   78ms       status=ERROR (HTTP 401)      
+ `-- [ERROR] auth-service: REST POST       INTERNAL 75ms       error.code=INVALID_CREDENTIALS
+      |-- [OK] DB SELECT findUserByEmail    CLIENT   14ms       db.system=postgresql         
+      `-- [ERROR] Argon2id Password Check  INTERNAL 58ms       error="Invalid credentials"  
+-----------------------------------------------------------------------------------------------
 ```
