@@ -32,7 +32,7 @@ flowchart TD
 
     UI -->|Protected Request| Router
     Router --> SessionManager
-    SessionManager -->|O(1) GET denylist:jti| DenylistSet
+    SessionManager -->|"O(1) GET denylist:jti"| DenylistSet
     DenylistSet -- Revoked / Active Status --> SessionManager
 ```
 
