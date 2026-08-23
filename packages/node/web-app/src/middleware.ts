@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { withSpan } from '@observability/core/tracing';
+import { SpanKind } from '@opentelemetry/api';
 
 const PUBLIC_ROUTES = [
   '/auth/sign-in',
@@ -33,6 +35,7 @@ function generateW3CTraceparent(): string {
 
 export function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
+  const method = req.method;
 
   const requestId = req.headers.get('x-request-id') || `req-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
   const correlationId = req.headers.get('x-correlation-id') || requestId;
@@ -43,6 +46,19 @@ export function middleware(req: NextRequest) {
   requestHeaders.set('x-correlation-id', correlationId);
   requestHeaders.set('traceparent', traceparent);
   requestHeaders.set('tracestate', req.headers.get('tracestate') || 'rojo=1');
+
+  withSpan(
+    `HTTP ${method} ${pathname}`,
+    async (span) => {
+      span.setAttribute('http.method', method);
+      span.setAttribute('http.target', pathname);
+      span.setAttribute('x-request-id', requestId);
+      span.setAttribute('request_id', requestId);
+      span.setAttribute('x-correlation-id', correlationId);
+      span.setAttribute('correlation_id', correlationId);
+    },
+    { kind: SpanKind.SERVER, serviceName: 'web-app' }
+  ).catch(() => {});
 
   if (!isPublicPath(pathname)) {
     const sessionToken = getSessionToken(req);
