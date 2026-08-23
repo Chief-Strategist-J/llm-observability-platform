@@ -162,3 +162,62 @@ This guide provides end-to-end instructions for running Grafana, searching trace
   ```bash
   docker ps | grep frontend-kafka
   ```
+
+---
+
+## ⚡ 5. End-to-End Tracing via `curl` with Request Keys & Traceparents
+
+### Step 1: Execute Request with Explicit Request Key & Traceparent
+```bash
+curl -s -X POST http://localhost:3001/api/v1/auth/sign-in \
+  -H "Content-Type: application/json" \
+  -H "x-request-id: req-1787491177230-g4lb89" \
+  -H "x-correlation-id: req-1787491177230-g4lb89" \
+  -H "traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01" \
+  -d '{"email":"jaydeep@gmail.com","password":"Scaibu@123456"}'
+```
+
+### Step 2: Query Grafana Tempo Directly for Trace ID (`4bf92f3577b34da6a3ce929d0e0e4736`)
+```bash
+curl -s -u admin:admin 'http://localhost:31415/api/datasources/proxy/uid/P214B5B846CF3925F/api/traces/4bf92f3577b34da6a3ce929d0e0e4736'
+```
+
+### Step 3: Query Grafana Tempo TraceQL API for Request Key (`req-1787491177230-g4lb89`)
+```bash
+curl -s -u admin:admin 'http://localhost:31415/api/datasources/proxy/uid/P214B5B846CF3925F/api/search?q=%7Bspan.x-request-id%3D%22req-1787491177230-g4lb89%22%7D'
+```
+
+---
+
+## 📊 6. Visualizing Spans in Grafana (What the Trace Waterfall Looks Like)
+
+When you search Grafana Tempo by Request Key (`req-1787491177230-g4lb89`) or open the Trace ID link, Grafana renders a **single unified end-to-end trace waterfall**:
+
+```text
+Grafana Tempo Trace Waterfall Graph [Trace ID: 4bf92f3577b34da6a3ce929d0e0e4736]
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│ Service & Span Name                        Kind     Duration   Attributes                   │
+├─────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 🟢 web-app: authApiClient.signIn          CLIENT   68ms       user.email=jaydeep@gmail.com │
+│  └── 🟢 auth-service: HTTP POST /sign-in   SERVER   65ms       x-request-id=req-g4lb89      │
+│       └── 🟢 auth-service: REST POST      INTERNAL 62ms       route.name=SIGN_IN           │
+│            ├── 🟢 DB SELECT findUserByEmail CLIENT 12ms       db.system=postgresql         │
+│            ├── 🟢 Argon2id Password Check  INTERNAL 42ms       crypto.algorithm=argon2id    │
+│            ├── 🟢 DB INSERT recordAuditLog  CLIENT   5ms        db.system=postgresql         │
+│            └── 🟢 Kafka PRODUCE USER_IN    PRODUCER 2ms        topic=auth.events.v1         │
+│                 └── 🟢 Kafka CONSUMER      CONSUMER 1ms        messaging.operation=process  │
+└─────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### 🔴 If a Failure Occurs (e.g. Wrong Password):
+```text
+Grafana Tempo Error Trace Waterfall Graph [Trace ID: 7ddc5fc112278d5075421c35704bea2e]
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│ Service & Span Name                        Kind     Duration   Attributes / Error           │
+├─────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 🔴 auth-service: HTTP POST /sign-in        SERVER   78ms       status=ERROR (HTTP 401)      │
+│  └── 🔴 auth-service: REST POST /sign-in   INTERNAL 75ms       error.code=INVALID_CREDENTIALS│
+│       ├── 🟢 DB SELECT findUserByEmail     CLIENT   14ms       db.system=postgresql         │
+│       └── 🔴 Argon2id Password Check      INTERNAL 58ms       error="Invalid credentials"  │
+└─────────────────────────────────────────────────────────────────────────────────────────────┘
+```
