@@ -2,7 +2,7 @@
 
 - **Status**: Accepted
 - **Date**: 2026-08-23
-- **Context**: The `@observability/auth` service requires strict separation of concerns between HTTP delivery, core domain rules, security mechanisms, and database persistence, as well as an extensible route matcher that eliminates repetitive conditional statements.
+- **Context**: The `@observability/auth` service requires strict separation of concerns between HTTP delivery, core domain rules, security mechanisms, OpenTelemetry W3C distributed tracing, and database persistence, as well as an extensible route matcher that eliminates repetitive conditional statements.
 
 ---
 
@@ -21,12 +21,14 @@ flowchart TD
 
     subgraph AuthModule["@observability/auth Service (:3001)"]
         Server["HTTP Server (server.ts)"]
+        Middleware["traceHttpMiddleware (W3C Extract)"]
         RuleRouter["AuthRestV1Router (Engine)"]
         RuleRegistry["ROUTE_RULES (Data Registry)"]
         AuthCore["AuthService (Domain Core)"]
         SecurityEngine["13-Pillar Security Engine"]
 
-        Server --> RuleRouter
+        Server --> Middleware
+        Middleware --> RuleRouter
         RuleRouter --> RuleRegistry
         RuleRouter --> AuthCore
         AuthCore --> SecurityEngine
@@ -36,15 +38,17 @@ flowchart TD
         AlloyDB[("AlloyDB / Postgres DB (:31412)")]
         RedisStore[("Redis Token Denylist (:31413)")]
         KafkaBroker["Kafka Messaging Broker (:31414)"]
+        OTELCollector["OTEL Collector (:31417)"]
     end
 
-    WebApp -->|HTTP REST| Traefik
+    WebApp -->|HTTP REST + traceparent| Traefik
     ExternalAPI -->|Bearer JWT / API Key| Traefik
     Traefik -->|Route /api/v1/auth| Server
 
-    AuthCore -->|SQL Queries| AlloyDB
+    Middleware -->|OTLP HTTP Spans| OTELCollector
+    AuthCore -->|SQL Queries via DB Child Spans| AlloyDB
     AuthCore -->|Session Revocation Check| RedisStore
-    AuthCore -->|Publish Auth Events| KafkaBroker
+    AuthCore -->|Publish Auth Events with W3C Headers| KafkaBroker
 ```
 
 ---
@@ -55,14 +59,17 @@ flowchart TD
 sequenceDiagram
     autonumber
     participant HTTP as Node.js HTTP Server
+    participant Middleware as traceHttpMiddleware
     participant Router as AuthRestV1Router
     participant Rules as ROUTE_RULES Registry
     participant Handler as Route Handler
     participant Domain as AuthService Engine
-    participant DB as AlloyDB Adapter
+    participant DB as AlloyDB Adapter (RealPostgresAuthAdapter)
 
-    HTTP->>Router: route(method, path, body, headers, queryParams)
-    Router->>Router: Wrap with OpenTelemetry Span ("REST {method} {path}")
+    HTTP->>Middleware: Incoming Request (traceparent, x-request-id)
+    Middleware->>Middleware: Extract W3C traceparent & start SERVER span
+    Middleware->>Router: route(method, path, body, headers, queryParams)
+    Router->>Router: Start INTERNAL span & tag user.email, x-request-id
     Router->>Rules: findMatchingRule(method, path)
     Rules-->>Router: Matched Rule + Extracted Path Parameters
     
@@ -73,11 +80,12 @@ sequenceDiagram
 
     Router->>Handler: rule.handler(ctx, session)
     Handler->>Domain: Invoke core domain method
-    Domain->>DB: Execute SQL persistence query
+    Domain->>DB: Execute SQL persistence query (SpanKind.CLIENT)
     DB-->>Domain: SQL result set
     Domain-->>Handler: Domain result
     Handler-->>Router: Response data payload
-    Router-->>HTTP: HTTP { statusCode, payload: createSuccessResponse(...) }
+    Router-->>Middleware: HTTP { statusCode, payload: createSuccessResponse(...) }
+    Middleware->>Middleware: Set Span Status OK / ERROR & End Span
 ```
 
 ---
@@ -87,42 +95,33 @@ sequenceDiagram
 ```tree
 HTTP Request Received (Any Endpoint)
 └── http.createServer [server.ts]
-    └── req.on('end') [server.ts]
-        └── AuthRestV1Router.route(method, path, body, headers, queryParams) [router.ts]
+    └── traceHttpMiddleware(req, res) [infra/tracing/middleware.ts]
+        ├── Extract W3C traceparent via propagation.extract(ROOT_CONTEXT, headers)
+        └── Start Root SERVER Span ("HTTP {method} {path}")
             │
-            ├── 1. OpenTelemetry Span Start ("REST {method} {path}") [tracer.ts]
-            ├── 2. Match ROUTE_RULES Table [route.rules.ts]
-            │   ├── Match HTTP Method ("GET" / "POST" / "DELETE")
-            │   └── Match Pre-compiled Regex Path Pattern
-            │
-            ├── 3. Session Verification (If authRequired === true)
-            │   ├── extractBearerToken(headers.authorization)
-            │   └── UserAuthDomainService.validateSession(token) [services/user-auth.service.ts]
-            │       ├── RealPostgresAuthAdapter.isTokenDenylisted(token) [real-postgres-auth.adapter.ts]
-            │       └── verifyToken(token) [shared/utils/jwt.util.ts]
-            │
-            ├── 4. Execute Route Handler Callback [route.rules.ts]
-            │   └── AuthService.<domainMethod>() [service.ts] (Facade)
-            │       └── <SRPDomainService>.<method>() [services/*.service.ts]
-            │           └── RealPostgresAuthAdapter.<queryMethod>() [real-postgres-auth.adapter.ts]
-            │               ├── pool.connect() [pg Pool]
-            │               ├── client.query(sqlQuery, params) [auth.queries.ts]
-            │               └── client.release() [pg Pool]
-            │
-            ├── 5. Construct Standardized JSON Response [router.ts]
-            │   └── createSuccessResponse(data, message) / createErrorResponse(error)
-            │
-            └── 6. Write Response & End Stream [server.ts]
-                └── res.writeHead(statusCode, headers) & res.end(JSON.stringify(payload))
+            └── AuthRestV1Router.route(method, path, body, headers, queryParams) [router.ts]
+                │
+                ├── 1. OpenTelemetry Span Start ("REST {method} {path}") [tracer.ts]
+                │   ├── Tag Attribute: user.email (if present in payload)
+                │   ├── Tag Attribute: x-request-id / x-correlation-id
+                │   └── Set SpanStatus.ERROR on validation/auth failure
+                │
+                ├── 2. Match ROUTE_RULES Table [route.rules.ts]
+                │   ├── Match HTTP Method ("GET" / "POST" / "DELETE")
+                │   └── Match Pre-compiled Regex Path Pattern
+                │
+                ├── 3. Session Verification (If authRequired === true)
+                │   ├── extractBearerToken(headers.authorization)
+                │   └── UserAuthDomainService.validateSession(token) [services/user-auth.service.ts]
+                │
+                └── 4. Execute Rule Handler
+                    └── AuthService Engine [service.ts]
+                        └── RealPostgresAuthAdapter [infra/adapters/postgres/real-postgres-auth.adapter.ts]
+                            └── withSpan("DB SELECT ...", kind: CLIENT)
 ```
 
 ---
 
-## 📋 Architectural Decisions & Trade-Offs
+## 🔐 CORS & Security Configuration
 
-1. **Separation of Router Data vs Engine Logic**:
-   - `route.rules.ts` contains strictly declarative data configuration mapping HTTP methods and path patterns to handler functions.
-   - `router.ts` contains strictly executable engine logic (regex path matching, trace span wrapping, central session validation, error handling).
-
-2. **Compiled Regex Path Matcher**:
-   - Route path patterns like `/api/v1/auth/organizations/:id/switch` are pre-compiled into regular expressions at router instantiation for high-performance matching.
+The server enforces wildcard CORS preflight handling (`Access-Control-Allow-Headers: *`) to ensure custom OpenTelemetry headers (`traceparent`, `tracestate`, `x-request-id`, `x-correlation-id`) are accepted seamlessly without preflight blocks.
