@@ -7,7 +7,7 @@
     "run": "./scripts/app.sh run",
     "auth": "./scripts/app.sh auth",
     "web-app": "./scripts/app.sh web-app",
-    "storybook": "./scripts/app.sh storybook",
+    "storybook": "storybook dev -p 31406",
     "dev": "./scripts/app.sh dev",
     "dev:all": "./scripts/app.sh dev",
     "dev:next": "./scripts/app.sh web-app",
@@ -29,7 +29,6 @@
     "start": "./scripts/app.sh free-ports && next start -p ${PORT_UNIT:-31400}",
     "lint": "eslint",
     "test": "vitest run",
-    "storybook": "storybook dev -p 31406",
     "build-storybook": "storybook build"
   },
   "dependencies": {
@@ -38,6 +37,11 @@
     "@observability/core": "file:../core",
     "@observability/design-tokens": "file:../design-tokens",
     "@observability/realtime-sdk": "file:../realtime-sdk",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.221.0",
+    "@opentelemetry/resources": "^2.10.0",
+    "@opentelemetry/sdk-trace-web": "^2.10.0",
+    "@opentelemetry/semantic-conventions": "^1.43.0",
     "@radix-ui/react-dialog": "^1.1.0",
     "@radix-ui/react-dropdown-menu": "^2.1.0",
     "@radix-ui/react-popover": "^1.1.0",
