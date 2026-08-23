@@ -1,6 +1,8 @@
 entryPoints:
   web:
     address: ":80"
+  websecure:
+    address: ":443"
   dashboard:
     address: ":8080"
 
@@ -11,7 +13,22 @@ api:
 providers:
   docker:
     exposedByDefault: false
+    network: llmobs-network
     endpoint: "unix:///var/run/docker.sock"
   file:
     directory: "/etc/traefik/dynamic"
     watch: true
+
+tls:
+  certificates:
+    - certFile: /etc/traefik/certs/server.pem
+      keyFile: /etc/traefik/certs/server-key.pem
+
+accessLog:
+  format: json
+  fields:
+    headers:
+      defaultMode: keep
+
+metrics:
+  prometheus: {}

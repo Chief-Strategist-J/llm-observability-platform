@@ -1,4 +1,20 @@
 #!/usr/bin/env bash
+#
+# manage.sh — LLMObs Frontend Deployment — Infrastructure Manager
+#
+# Commands: up, restart, down, status, logs, health, free-ports, certs, setup
+#
+# Usage:
+#   ./scripts/manage.sh up          Start all containers with auto-health check
+#   ./scripts/manage.sh restart     Restart all containers
+#   ./scripts/manage.sh down        Stop and remove all containers
+#   ./scripts/manage.sh status      Show running container status
+#   ./scripts/manage.sh logs        Tail container logs
+#   ./scripts/manage.sh health      Run health diagnostic
+#   ./scripts/manage.sh free-ports  Kill processes occupying stack ports
+#   ./scripts/manage.sh certs       Generate/regenerate TLS certificates
+#   ./scripts/manage.sh setup       Run full environment setup for new machine
+#
 
 set -e
 
@@ -13,7 +29,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PKG_DIR="$(dirname "$SCRIPT_DIR")"
 COMPOSE_FILE="$PKG_DIR/docker-compose.yml"
 
-PORTS=(31410 31411 31412 31413 31414 31415 31416 31417 31418)
+PORTS=(31410 31411 31412 31413 31414 31415 31416 31417 31418 31419)
 
 get_docker_compose_cmd() {
   if docker compose version >/dev/null 2>&1; then
@@ -40,7 +56,7 @@ free_port() {
 }
 
 cmd_free_ports() {
-  echo -e "${BLUE}[frontend-deployment] Freeing all stack ports (31410-31418)...${NC}"
+  echo -e "${BLUE}[frontend-deployment] Freeing all stack ports (31410-31419)...${NC}"
   for p in "${PORTS[@]}"; do
     free_port "$p"
   done
@@ -54,19 +70,24 @@ cmd_up() {
     echo -e "${RED}Error: Docker Compose is not available.${NC}"
     exit 1
   fi
-  echo -e "${BLUE}[frontend-deployment] Ensuring ports are free & restarting existing containers...${NC}"
+
+  echo -e "${BLUE}[frontend-deployment] Generating TLS certificates if needed...${NC}"
+  bash "$SCRIPT_DIR/generate-certs.sh"
+
+  echo -e "\n${BLUE}[frontend-deployment] Ensuring ports are free & restarting existing containers...${NC}"
   cmd_free_ports
   $bin -f "$COMPOSE_FILE" up -d --force-recreate
   echo -e "${GREEN}✓ All infrastructure services started/restarted successfully!${NC}"
   echo -e "${BOLD}Service Endpoints:${NC}"
-  echo -e "  - Traefik Gateway: http://localhost:31410"
-  echo -e "  - Traefik Dashboard: http://localhost:31411"
-  echo -e "  - Redis: localhost:31413"
-  echo -e "  - Kafka: localhost:31414"
-  echo -e "  - Grafana UI: http://localhost:31415 (admin / admin)"
-  echo -e "  - Grafana Tempo: http://localhost:31416"
-  echo -e "  - OTel Collector HTTP: http://localhost:31417"
-  echo -e "  - OTel Collector gRPC: localhost:31418"
+  echo -e "  - Traefik Gateway HTTP:  http://localhost:31410  (→ redirects to HTTPS)"
+  echo -e "  - Traefik Gateway HTTPS: https://localhost:31419"
+  echo -e "  - Traefik Dashboard:     http://localhost:31411"
+  echo -e "  - Redis (auth required): localhost:31413"
+  echo -e "  - Kafka:                 localhost:31414"
+  echo -e "  - Grafana UI:            https://llmobs.grafana:31419"
+  echo -e "  - Grafana Tempo:         https://llmobs.tempo:31419"
+  echo -e "  - OTel Collector HTTP:   http://localhost:31417"
+  echo -e "  - OTel Collector gRPC:   localhost:31418"
 
   echo -e "\n${BLUE}[frontend-deployment] Waiting 5s for web endpoints to bind...${NC}"
   sleep 5
@@ -84,7 +105,7 @@ cmd_restart() {
   echo -e "${BLUE}[frontend-deployment] Restarting infrastructure stack...${NC}"
   $bin -f "$COMPOSE_FILE" restart
   echo -e "${GREEN}✓ Infrastructure stack restarted.${NC}"
-  
+
   echo -e "\n${BLUE}[frontend-deployment] Running automatic container & service health diagnostic...${NC}"
   "$SCRIPT_DIR/test-health.sh"
 }
@@ -146,8 +167,14 @@ case "$COMMAND" in
   health)
     "$SCRIPT_DIR/test-health.sh"
     ;;
+  certs)
+    bash "$SCRIPT_DIR/generate-certs.sh" "$@"
+    ;;
+  setup)
+    bash "$SCRIPT_DIR/setup.sh"
+    ;;
   *)
-    echo "Usage: $0 {up|restart|down|status|logs|free-ports|health}"
+    echo "Usage: $0 {up|restart|down|status|logs|free-ports|health|certs|setup}"
     exit 1
     ;;
 esac

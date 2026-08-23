@@ -11,6 +11,38 @@ processors:
     timeout: 1s
     send_batch_size: 1024
 
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  attributes:
+    actions:
+      - key: deployment.environment
+        value: development
+        action: upsert
+      - key: service.namespace
+        value: llmobs-platform
+        action: upsert
+      - key: network.transport
+        value: tcp
+        action: upsert
+      - key: network.protocol.name
+        value: otlp
+        action: upsert
+
+  resource:
+    attributes:
+      - key: infra.stack
+        value: frontend-deployment
+        action: upsert
+      - key: infra.network
+        value: llmobs-network
+        action: upsert
+      - key: telemetry.sdk.language
+        value: collector
+        action: upsert
+
 exporters:
   otlp:
     endpoint: "tempo:4317"
@@ -23,5 +55,5 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [batch]
+      processors: [memory_limiter, attributes, resource, batch]
       exporters: [otlp, debug]

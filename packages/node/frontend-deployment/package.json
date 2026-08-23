@@ -2,7 +2,7 @@
   "name": "@observability/frontend-deployment",
   "version": "1.0.0",
   "private": true,
-  "description": "Unified infrastructure & telemetry deployment package",
+  "description": "Unified infrastructure, telemetry & security deployment package",
   "scripts": {
     "up": "./scripts/manage.sh up",
     "restart": "./scripts/manage.sh restart",
@@ -11,6 +11,8 @@
     "health": "./scripts/manage.sh health",
     "logs": "./scripts/manage.sh logs",
     "free-ports": "./scripts/manage.sh free-ports",
+    "certs": "./scripts/manage.sh certs",
+    "setup": "./scripts/manage.sh setup",
     "test": "npx tsx --test tests/integration/services-health.test.ts"
   },
   "devDependencies": {

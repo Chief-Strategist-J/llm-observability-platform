@@ -1,129 +1,151 @@
 # `@observability/frontend-deployment`
 
-Unified deployment & observability package for the Observability Platform providing Traefik API Gateway routing, custom domain aliases, Kafka messaging queues, and OpenTelemetry trace visualization via Grafana & Tempo.
+Unified deployment, observability & security package for the LLMObs Platform. Provides Traefik API Gateway with TLS termination, request-level security (rate limiting, payload limits, circuit breaker), Redis cache with auth, Kafka messaging, and OpenTelemetry trace visualization via Grafana & Tempo.
 
 ---
 
-## 🌐 Custom Gateway Domain Links & Gateway Mapping
+## 🌐 Custom Gateway Domain Links
 
-All services are fronted by **Traefik API Gateway** (`:31410`). You can access services using human-readable custom gateway URLs via local domain mapping (`/etc/hosts`):
+All services are fronted by **Traefik API Gateway** with TLS termination on `:31419`.
 
-### Custom Gateway URLs
+| Service | Custom Gateway URL | Routing Rule |
+| :--- | :--- | :--- |
+| **API Gateway Dashboard** | [https://llmobs.gateway:31419](https://llmobs.gateway:31419) | `Host(llmobs.gateway)` |
+| **Grafana UI Dashboard** | [https://llmobs.grafana:31419](https://llmobs.grafana:31419) | `Host(llmobs.grafana)` |
+| **Grafana Tempo (Traces)** | [https://llmobs.tempo:31419](https://llmobs.tempo:31419) | `Host(llmobs.tempo)` |
+| **OTel Collector (Ingest)** | [https://llmobs.otel:31419](https://llmobs.otel:31419) | `Host(llmobs.otel)` |
+| **Auth Microservice** | [https://llmobs.gateway:31419/api/v1/auth](https://llmobs.gateway:31419/api/v1/auth) | `PathPrefix(/api/v1/auth)` |
+| **Kafka Event Broker** | `llmobs.kafka:31414` | Direct TCP |
+| **Redis Cache** | `llmobs.redis:31413` | Direct TCP (auth required) |
 
-| Service / Module | Custom Gateway URL | Gateway Path / Host | Target Service Port |
-| :--- | :--- | :--- | :--- |
-| **API Gateway Dashboard** | [http://llmobs.gateway:31410](http://llmobs.gateway:31410) | `Host(llmobs.gateway)` | `:8080` (Traefik) |
-| **Grafana UI Dashboard** | [http://llmobs.grafana:31410](http://llmobs.grafana:31410) | `Host(llmobs.grafana)` | `:3000` (Grafana) |
-| **Grafana Tempo (Traces)** | [http://llmobs.tempo:31410](http://llmobs.tempo:31410) | `Host(llmobs.tempo)` | `:3200` (Tempo) |
-| **OTel Collector (Ingest)** | [http://llmobs.otel:31410/v1/traces](http://llmobs.otel:31410/v1/traces) | `Host(llmobs.otel)` | `:4318` (OTel Ingest) |
-| **Auth Microservice API** | [http://llmobs.gateway:31410/api/v1/auth](http://llmobs.gateway:31410/api/v1/auth) | `PathPrefix(/api/v1/auth)` | `:3001` (Auth) |
-| **Kafka Event Broker** | `llmobs.kafka:31414` | Direct TCP Endpoint | `:9092` (Kafka) |
-| **Redis Cache Store** | `llmobs.redis:31413` | Direct TCP Endpoint | `:6379` (Redis) |
-
-> 💡 **Quick Setup for Custom Domains:**
-> Add the following line to your `/etc/hosts` file:
-> ```bash
-> 127.0.0.1  llmobs.gateway llmobs.grafana llmobs.tempo llmobs.otel llmobs.kafka llmobs.redis
-> ```
-
----
-
-## 🏛 High-Level System Architecture (HLD)
-
-```mermaid
-flowchart TD
-    subgraph Clients["Client Layer"]
-        Browser["Browser / Next.js Web App (:31400)"]
-        AuthApp["Auth Microservice (:3001)"]
-    end
-
-    subgraph GatewayLayer["API Gateway Layer (Traefik :31410)"]
-        Traefik["Traefik Gateway (llmobs.gateway)"]
-    end
-
-    subgraph MessagingLayer["Messaging & Event Pipeline Layer"]
-        Kafka["Kafka Event Broker (llmobs.kafka:31414)"]
-        Redis["Redis Cache Store (llmobs.redis:31413)"]
-    end
-
-    subgraph TelemetryPipeline["Observability & Tracing Pipeline"]
-        OTel["OTel Collector (llmobs.otel:31410)"]
-        Tempo["Grafana Tempo Engine (llmobs.tempo:31410)"]
-        Grafana["Grafana UI (llmobs.grafana:31410)"]
-    end
-
-    %% Routing
-    Browser -->|http://llmobs.gateway| Traefik
-    Traefik -->|/api/v1/auth| AuthApp
-    AuthApp -->|Auth Events| Kafka
-    AuthApp -->|Session Cache| Redis
-
-    %% Telemetry
-    Browser -->|http://llmobs.otel/v1/traces| OTel
-    AuthApp -->|OTLP Spans| OTel
-    OTel -->|Batch Export| Tempo
-    Grafana -->|Query Spans| Tempo
+**Quick /etc/hosts setup:**
+```
+127.0.0.1  llmobs.gateway llmobs.grafana llmobs.tempo llmobs.otel llmobs.kafka llmobs.redis
 ```
 
 ---
 
-## 🔬 Low-Level Design & Telemetry Pipeline (LLD)
+## 🔐 Security Architecture
+
+```mermaid
+flowchart TD
+    subgraph ClientLayer["Client Layer"]
+        Browser["Browser / App"]
+    end
+
+    subgraph GatewayLayer["Traefik API Gateway (:31419 TLS)"]
+        TLS["TLS Termination (self-signed CA)"]
+        RL["Rate Limit (100 req/s per IP)"]
+        PL["Payload Limit (10 MB max)"]
+        SH["Security Headers (HSTS, XSS, CSP)"]
+        CB["Circuit Breaker (50% error threshold)"]
+        RT["Retry (3 attempts, 100ms backoff)"]
+    end
+
+    subgraph NetworkLayer["llmobs-network (Isolated Docker Bridge)"]
+        Redis["Redis (requirepass + cmd rename)"]
+        Kafka["Kafka (internal only)"]
+        Tempo["Tempo (trace storage)"]
+        OTel["OTel Collector (memory limited)"]
+        Grafana["Grafana (sign-up disabled)"]
+    end
+
+    Browser -->|HTTPS :31419| TLS
+    TLS --> RL --> PL --> SH --> CB --> RT
+    RT --> Redis
+    RT --> Kafka
+    RT --> Tempo
+    RT --> OTel
+    RT --> Grafana
+```
+
+---
+
+## 🛡 Request-Level Security (Traefik Middlewares)
+
+All middleware is centrally defined ONCE in `config/traefik/dynamic.yml` and referenced by name.
+
+| Middleware | Purpose | Default | Applied To |
+| :--- | :--- | :--- | :--- |
+| **rate-limit** | Per-IP request throttle | 100 req/s avg, 200 burst | All gateway routes |
+| **rate-limit-ingest** | Higher limit for telemetry ingestion | 500 req/s avg, 1000 burst | OTel Collector |
+| **payload-limit** | Max request/response body size | 10 MB request, 10 MB response | OTel Collector |
+| **payload-limit-small** | Stricter limit for API routes | 1 MB request, 5 MB response | Auth API |
+| **security-headers** | HSTS, X-Frame, XSS, Referrer-Policy | See table below | All routes |
+| **circuit-breaker** | Auto-disable unhealthy backends | 50% error → 30s fallback | Auth API |
+| **retry-middleware** | Retry failed requests | 3 attempts, 100ms interval | Auth API |
+| **https-redirect** | HTTP → HTTPS redirect | Permanent (301) | HTTP entrypoint |
+
+### Security Headers Applied
+
+| Header | Value |
+| :--- | :--- |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` |
+| `X-Content-Type-Options` | `nosniff` |
+| `X-Frame-Options` | `DENY` |
+| `X-XSS-Protection` | `1; mode=block` |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` |
+| `Server` | _(removed)_ |
+| `X-Powered-By` | _(removed)_ |
+
+---
+
+## 🔬 Telemetry Pipeline (Network-Level Tracing)
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant App as Next.js / Auth App
-    participant Gateway as Traefik Gateway (llmobs.gateway:31410)
-    participant OTel as OTel Collector (llmobs.otel)
-    participant Tempo as Grafana Tempo (llmobs.tempo)
-    participant Grafana as Grafana UI (llmobs.grafana)
+    participant App as Application
+    participant Gateway as Traefik Gateway (TLS :31419)
+    participant OTel as OTel Collector
+    participant Tempo as Grafana Tempo
+    participant Grafana as Grafana UI
 
-    Note over App, Gateway: 1. Trace Emission via Gateway
-    App->>Gateway: POST http://llmobs.otel:31410/v1/traces
-    Gateway->>OTel: Forward OTLP Protobuf Payload
-    OTel->>Tempo: Batch Export Spans over gRPC (:4317)
-    Tempo-->>Tempo: Persist Trace Block to Disk
-
-    Note over Grafana, Tempo: 2. Trace Query & Visualization
-    Grafana->>Gateway: GET http://llmobs.tempo:31410/api/traces/{traceId}
-    Gateway->>Tempo: Forward Query Request
-    Tempo-->>Grafana: Return Span Waterfall Data
+    App->>Gateway: HTTPS POST /v1/traces (OTLP spans)
+    Gateway->>Gateway: Access Log (source IP, method, path, latency, TLS version)
+    Gateway->>OTel: Forward (rate-limited, payload-limited)
+    OTel->>OTel: Inject network metadata (deployment.environment, service.namespace, network.transport)
+    OTel->>Tempo: Batch export over gRPC
+    Grafana->>Tempo: Query traces
+    Tempo-->>Grafana: Span waterfall with network attributes
 ```
 
 ---
 
-## 🚀 Dedicated Port Allocation Matrix
+## 📊 Port Allocation Matrix
 
-| Service | Dedicated Port | Protocol / Path | Custom Gateway Alias |
+| Port | Protocol | Service | Security |
 | :--- | :--- | :--- | :--- |
-| **Traefik Gateway** | `31410` | HTTP / Proxy | `llmobs.gateway` |
-| **Traefik Dashboard** | `31411` | HTTP / Dashboard | `llmobs.gateway:31411` |
-| **Redis** | `31413` | TCP | `llmobs.redis:31413` |
-| **Kafka Broker** | `31414` | TCP | `llmobs.kafka:31414` |
-| **Grafana UI** | `31415` | HTTP (`admin`/`admin`) | `llmobs.grafana:31410` |
-| **Grafana Tempo** | `31416` | HTTP / OTLP | `llmobs.tempo:31410` |
-| **OTel Collector HTTP** | `31417` | HTTP (`/v1/traces`) | `llmobs.otel:31410` |
-| **OTel Collector gRPC** | `31418` | gRPC | `llmobs.otel:31418` |
+| `31410` | HTTP | Traefik (→ HTTPS redirect) | Redirect to :31419 |
+| `31411` | HTTP | Traefik Dashboard | Internal use |
+| `31413` | TCP | Redis | `requirepass` auth |
+| `31414` | TCP | Kafka | Network-isolated |
+| `31415` | HTTP | Grafana UI | Admin auth |
+| `31416` | HTTP | Grafana Tempo | Network-isolated |
+| `31417` | HTTP | OTel Collector OTLP | Rate/payload limited |
+| `31418` | gRPC | OTel Collector OTLP | Rate/payload limited |
+| `31419` | HTTPS | Traefik TLS Gateway | Self-signed CA + security headers |
 
 ---
 
 ## 🛠 Usage Commands
 
-From inside this package (`packages/node/frontend-deployment`):
-
 ```bash
-# Start all infrastructure containers with auto-recreate & port cleaning
-npm run up
-
-# Run container & service health diagnostic (14/14 checks)
-npm run health
-
-# Restart all infrastructure containers
-npm run restart
-
-# View live container logs
-npm run logs
-
-# Stop all infrastructure containers
-npm run down
+npm run setup       # Full setup for new machine (prereqs, certs, /etc/hosts, images)
+npm run up          # Start all containers with auto-health check
+npm run health      # Run 5-section health & security diagnostic
+npm run restart     # Restart all containers
+npm run down        # Stop all containers
+npm run status      # Show container status
+npm run logs        # Tail container logs
+npm run certs       # Generate/regenerate TLS certificates
+npm run free-ports  # Kill processes on stack ports
+npm run test        # Run TypeScript integration tests (8 test groups)
 ```
+
+---
+
+## 📋 Requirements
+
+See [REQUIREMENTS.md](./REQUIREMENTS.md) for full system prerequisites, dependencies, and security configuration reference.

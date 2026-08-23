@@ -1,13 +1,163 @@
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/traefik/certs/server.pem
+        keyFile: /etc/traefik/certs/server-key.pem
+  options:
+    default:
+      minVersion: VersionTLS12
+      cipherSuites:
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+      sniStrict: false
+
 http:
+  middlewares:
+    security-headers:
+      headers:
+        browserXssFilter: true
+        contentTypeNosniff: true
+        frameDeny: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+        customResponseHeaders:
+          X-Powered-By: ""
+          Server: ""
+          Referrer-Policy: "strict-origin-when-cross-origin"
+          Permissions-Policy: "camera=(), microphone=(), geolocation=()"
+          X-Content-Type-Options: "nosniff"
+          X-Frame-Options: "SAMEORIGIN"
+          X-XSS-Protection: "1; mode=block"
+
+    https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 200
+        period: 1s
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    rate-limit-ingest:
+      rateLimit:
+        average: 500
+        burst: 1000
+        period: 1s
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    payload-limit:
+      buffering:
+        maxRequestBodyBytes: 10485760
+        maxResponseBodyBytes: 10485760
+        memRequestBodyBytes: 2097152
+        memResponseBodyBytes: 2097152
+
+    payload-limit-small:
+      buffering:
+        maxRequestBodyBytes: 1048576
+        maxResponseBodyBytes: 5242880
+        memRequestBodyBytes: 524288
+        memResponseBodyBytes: 1048576
+
+    circuit-breaker:
+      circuitBreaker:
+        expression: "ResponseCodeRatio(500, 600, 0, 600) > 0.50"
+        checkPeriod: 10s
+        fallbackDuration: 30s
+        recoveryDuration: 60s
+
+    retry-middleware:
+      retry:
+        attempts: 3
+        initialInterval: 100ms
+
   routers:
+    dashboard-router:
+      rule: "Host(`llmobs.gateway`) || Host(`gateway.llmobs.local`)"
+      service: "api@internal"
+      entryPoints:
+        - "websecure"
+      tls: {}
+      middlewares:
+        - "security-headers"
+        - "rate-limit"
+
+    grafana-router:
+      rule: "Host(`llmobs.grafana`) || Host(`grafana.llmobs.local`)"
+      service: "grafana-service"
+      entryPoints:
+        - "websecure"
+      tls: {}
+      middlewares:
+        - "security-headers"
+        - "rate-limit"
+
+    tempo-router:
+      rule: "Host(`llmobs.tempo`) || Host(`tempo.llmobs.local`)"
+      service: "tempo-service"
+      entryPoints:
+        - "websecure"
+      tls: {}
+      middlewares:
+        - "security-headers"
+        - "rate-limit"
+
+    otel-router:
+      rule: "Host(`llmobs.otel`) || Host(`otel.llmobs.local`)"
+      service: "otel-service"
+      entryPoints:
+        - "websecure"
+      tls: {}
+      middlewares:
+        - "security-headers"
+        - "rate-limit-ingest"
+        - "payload-limit"
+
     auth-router:
       rule: "PathPrefix(`/api/v1/auth`)"
       service: "auth-service"
       entryPoints:
-        - "web"
+        - "websecure"
+      tls: {}
+      middlewares:
+        - "security-headers"
+        - "rate-limit"
+        - "payload-limit-small"
+        - "circuit-breaker"
+        - "retry-middleware"
 
   services:
+    grafana-service:
+      loadBalancer:
+        servers:
+          - url: "http://frontend-grafana:3000"
+
+    tempo-service:
+      loadBalancer:
+        servers:
+          - url: "http://frontend-tempo:3200"
+
+    otel-service:
+      loadBalancer:
+        servers:
+          - url: "http://frontend-otel-collector:4318"
+
     auth-service:
       loadBalancer:
         servers:
           - url: "http://host.docker.internal:3001"
+        healthCheck:
+          path: /api/v1/auth/health
+          interval: 10s
+          timeout: 3s
