@@ -10,7 +10,7 @@ All web services are fronted by **Traefik API Gateway** with TLS termination on 
 
 | Service | Custom Gateway URL | Port | Auth Type | Username / Password |
 | :--- | :--- | :--- | :--- | :--- |
-| **Grafana UI Dashboard** | [https://llmobs.grafana:31419](https://llmobs.grafana:31419) | `31419` / `31415` | Basic Auth | `admin` / `llmobs_grafana_s3cret_2024` |
+| **Grafana UI Dashboard** | [https://llmobs.grafana:31419](https://llmobs.grafana:31419) | `31419` / `31415` | Basic Auth | `admin` / `admin` |
 | **API Gateway Dashboard** | [https://llmobs.gateway:31419](https://llmobs.gateway:31419) | `31419` / `31411` | Insecure (Dev) | None (Admin Dashboard) |
 | **Grafana Tempo (Traces)** | [https://llmobs.tempo:31419](https://llmobs.tempo:31419) | `31419` / `31416` | Network Isolated | None (Internal API) |
 | **OTel Collector (Ingest)** | [https://llmobs.otel:31419](https://llmobs.otel:31419) | `31419` / `31417` | Ingestion | None (OTLP Ingestion) |
