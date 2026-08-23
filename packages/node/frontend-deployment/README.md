@@ -30,16 +30,16 @@ All web services are fronted by **Traefik API Gateway** with TLS termination on 
 
 Because the platform uses auto-generated self-signed TLS certificates for development security, Chrome/Firefox will display **"Your connection is not private"** (`NET::ERR_CERT_AUTHORITY_INVALID`). This is normal for local self-signed HTTPS.
 
-### Option A: Instant Bypass (No Setup Needed)
+### Option A: Instant Bypass (2 Seconds)
 1. Click **Advanced** on the browser warning page.
 2. Click **Proceed to llmobs.grafana (unsafe)**.
-3. *(Alternative in Chrome)*: Click anywhere on the warning page and type **`thisisunsafe`** on your keyboard.
+3. *(Chrome Keyword Shortcut)*: Click anywhere on the warning page and type **`thisisunsafe`** on your keyboard to instantly bypass.
 
-### Option B: Trust CA Certificate Permanently (Green Lock)
-To make your system trust the local Root CA certificate (`ca.pem`):
+### Option B: Trust Root CA Certificate Permanently (Green Lock)
+Run this single command in your terminal to trust the local Root CA certificate (`ca.pem`):
+
 ```bash
-sudo cp packages/node/frontend-deployment/config/certs/ca.pem /usr/local/share/ca-certificates/llmobs-ca.crt
-sudo update-ca-certificates
+sudo cp packages/node/frontend-deployment/config/certs/ca.pem /usr/local/share/ca-certificates/llmobs-ca.crt && sudo update-ca-certificates
 ```
 
 ---
