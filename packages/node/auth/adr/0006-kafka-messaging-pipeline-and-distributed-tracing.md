@@ -98,30 +98,43 @@ sequenceDiagram
 ## 5. End-to-End Functional Call Stack Topology
 
 ```text
-Domain Event Triggered (User Sign-In Success)
-└── 1. UserAuthDomainService.signIn() [services/user-auth.service.ts]
-    └── 2. AuthEventProducer.publishUserSignedIn(payload) [producers/auth-event.producer.ts]
+Domain Event Triggered (e.g. User Sign-In Success)
+└── 1. UserAuthDomainService.signIn() [packages/node/auth/src/features/auth/services/user-auth.service.ts]
+    └── 2. AuthEventProducer.publishUserSignedIn(payload) [packages/node/auth/src/shared/messaging/producers/auth-event.producer.ts]
         │
-        ├── 3. CentralMessagingTracer.createProducerSpan("auth.events.v1", "USER_SIGNED_IN")
-        │   ├── Read active trace context & format W3C traceparent header
-        │   └── Start OpenTelemetry PRODUCER span
+        ├── 3. CentralMessagingTracer.createProducerSpan("auth.events.v1", "USER_SIGNED_IN") [@observability/core/tracing/messaging-tracer.ts]
+        │   ├── Read active RequestContextHolder context (traceparent, requestId, correlationId, tenantId)
+        │   ├── Generate PRODUCER spanId
+        │   ├── Format W3C traceparent header ("00-{traceId}-{spanId}-01")
+        │   └── Log: [CentralMessagingTracer] PRODUCE SPAN STARTED [traceId=..., spanId=...]
         │
-        ├── 4. CentralizedKafkaClient.publishToTopic('auth.events.v1', payload, headers)
-        │   │
-        │   ├── [Kafka Wire Protocol: TCP localhost:9092] ──> [Kafka Broker: auth.events.v1 Topic]
-        │   │
-        │   └── 5. AuthEventConsumer.subscribeToTopic('auth.events.v1')
-        │       │
-        │       ├── 6. ConsumerMiddlewarePipeline (Position 0: tracingConsumerMiddleware)
-        │       │   └── CentralMessagingTracer.createConsumerSpan(event) -> Start CONSUMER span
-        │       │
-        │       └── 7. UserSignedInHandler extends BaseTracedKafkaHandler
-        │           ├── Start INTERNAL span "Handler USER_SIGNED_IN"
-        │           ├── Tag Attributes: cqrs.event_name, cqrs.event_id, cqrs.user_id, cqrs.org_id
-        │           └── handlePayload() -> AuthReadProjectionStore.getInstance().applyUserSignedIn()
+        ├── 4. ProducerMiddlewarePipeline.execute(context) [packages/node/auth/src/shared/messaging/middleware/messaging-middleware.ts]
+        │   ├── loggingProducerMiddleware() -> Log outgoing event metadata & correlation ID
+        │   ├── tracingProducerMiddleware() -> Attach OpenTelemetry attributes (messaging.system='kafka')
+        │   └── CentralMessagingTracer -> Start PRODUCER span
         │
-        └── 8. CentralMessagingTracer.finishSpan()
-            └── Export Spans to OTEL Collector (:31417) -> Grafana Tempo (:3200)
+        └── 5. CentralizedKafkaClient.publishToTopic('auth.events.v1', payload, headers) [packages/node/core/src/kafka/kafka-client.ts]
+            │
+            ├── [Kafka Wire Protocol: TCP localhost:9092] ──> [Kafka Broker: auth.events.v1 Topic]
+            │
+            └── 6. AuthEventConsumer.subscribeToTopic('auth.events.v1') [packages/node/auth/src/shared/messaging/consumers/auth-event.consumer.ts]
+                │
+                ├── 7. ConsumerMiddlewarePipeline (Position 0: tracingConsumerMiddleware) [packages/node/auth/src/shared/messaging/middleware/messaging-middleware.ts]
+                │   ├── CentralMessagingTracer.createConsumerSpan(event, "auth.events.v1") [@observability/core/tracing/messaging-tracer.ts]
+                │   │   ├── Parse incoming event.headers.traceparent
+                │   │   ├── Inherit traceId & set parentSpanId = producer.spanId
+                │   │   └── Log: [CentralMessagingTracer] CONSUME SPAN STARTED [traceId=..., spanId=...]
+                │   │
+                │   ├── idempotencyConsumerMiddleware() -> Check IdempotencyStore(key)
+                │   └── dlqConsumerMiddleware() -> Route failed messages to auth.events.v1-dlq
+                │
+                └── 8. UserSignedInHandler extends BaseTracedKafkaHandler [@observability/core/tracing/traced-handler.ts]
+                    ├── Start INTERNAL Span: `Handler USER_SIGNED_IN`
+                    ├── Tag Attributes: cqrs.event_name, cqrs.event_id, cqrs.user_id, cqrs.org_id
+                    └── AuthReadProjectionStore.getInstance().applyUserSignedIn() [packages/node/auth/src/shared/messaging/cqrs/projection.store.ts]
+
+    └── 9. CentralMessagingTracer.finishSpan(consumerSpan) [@observability/core/tracing/messaging-tracer.ts]
+        └── Export Spans to OTEL Collector (:31417) -> Grafana Tempo (:3200)
 ```
 
 ---
