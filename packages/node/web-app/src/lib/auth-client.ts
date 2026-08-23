@@ -1,3 +1,4 @@
+import { propagation, context } from "@opentelemetry/api";
 import { withRetry, withCache, withCircuitBreaker } from "../core/data-driven/adapter-decorators";
 import { AUTH_ENDPOINTS } from "./auth-endpoints";
 
@@ -31,6 +32,17 @@ export class RawAuthApiClient {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
+
+    const carrier: Record<string, string> = {};
+    propagation.inject(context.active(), carrier);
+    if (carrier.traceparent) {
+      headers["traceparent"] = carrier.traceparent;
+    }
+
+    const reqId = `req-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    headers["x-request-id"] = reqId;
+    headers["x-correlation-id"] = reqId;
+
     if (params?.token) {
       headers["Authorization"] = `Bearer ${params.token}`;
     }

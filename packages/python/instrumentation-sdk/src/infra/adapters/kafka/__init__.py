@@ -1,4 +1,7 @@
-from src.infra.adapters.kafka.confluent_producer_adapter import ConfluentKafkaProducerAdapter
-from src.infra.adapters.kafka.reliable_adapter import ReliableKafkaSpanReporter
+from .reliable_adapter import ReliableKafkaSpanReporter
+from .python_producer_adapter import KafkaPythonProducerAdapter
 
-__all__ = ["ConfluentKafkaProducerAdapter", "ReliableKafkaSpanReporter"]
+__all__ = [
+    "ReliableKafkaSpanReporter",
+    "KafkaPythonProducerAdapter",
+]

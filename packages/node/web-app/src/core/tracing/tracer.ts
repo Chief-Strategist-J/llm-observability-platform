@@ -16,7 +16,7 @@ export function initOpenTelemetryTracer(): void {
     [ATTR_SERVICE_VERSION]: '0.1.0',
   });
 
-  const otlpEndpoint = process.env.NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318/v1/traces';
+  const otlpEndpoint = process.env.NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:31417/v1/traces';
 
   const exporter = new OTLPTraceExporter({
     url: otlpEndpoint,

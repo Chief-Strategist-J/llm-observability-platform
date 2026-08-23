@@ -1,3 +1,4 @@
+import { SpanStatusCode } from '@opentelemetry/api';
 import type { AuthService } from '../../../features/auth/service';
 import { handleVerifySession } from './handlers/session.handler';
 import { withSpan } from '../../../infra/tracing/tracer';
@@ -49,6 +50,19 @@ export class AuthRestV1Router {
       span.setAttribute('http.method', method);
       span.setAttribute('http.target', path);
 
+      if (headers) {
+        if (headers['x-request-id']) span.setAttribute('x-request-id', headers['x-request-id']);
+        if (headers['x-correlation-id']) span.setAttribute('x-correlation-id', headers['x-correlation-id']);
+        if (headers['x-tenant-id']) span.setAttribute('x-tenant-id', headers['x-tenant-id']);
+      }
+
+      if (body && typeof body === 'object') {
+        const b = body as Record<string, unknown>;
+        if (typeof b['email'] === 'string') span.setAttribute('user.email', b['email']);
+        if (typeof b['org_id'] === 'string') span.setAttribute('org.id', b['org_id']);
+        if (typeof b['organization_name'] === 'string') span.setAttribute('org.name', b['organization_name']);
+      }
+
       try {
         const matched = this.findMatchingRule(method, path);
         if (!matched) {
@@ -63,6 +77,8 @@ export class AuthRestV1Router {
 
         if (rule.requiresAuth) {
           session = await handleVerifySession(this.service, authHeader);
+          if (session?.payload?.sub) span.setAttribute('user.id', session.payload.sub);
+          if (session?.payload?.org?.org_id) span.setAttribute('org.id', session.payload.org.org_id);
         }
 
         const ctx: RouteContext = {
@@ -77,12 +93,27 @@ export class AuthRestV1Router {
         const resultData = await rule.handler(ctx, session);
         const statusCode = rule.successStatus ?? 200;
 
+        span.setAttribute('http.status_code', statusCode);
         return {
           statusCode,
           payload: createSuccessResponse(resultData, rule.successMessage),
         };
       } catch (err: unknown) {
-        return createErrorResponse(err);
+        const errorRes = createErrorResponse(err);
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: errorRes.payload.message,
+        });
+        if (err instanceof Error) {
+          span.recordException(err);
+        } else {
+          span.recordException(new Error(errorRes.payload.message));
+        }
+        span.setAttribute('error', true);
+        span.setAttribute('error.code', errorRes.payload.error?.code ?? 'UNKNOWN_ERROR');
+        span.setAttribute('error.message', errorRes.payload.message);
+        span.setAttribute('http.status_code', errorRes.statusCode);
+        return errorRes;
       }
     });
   }

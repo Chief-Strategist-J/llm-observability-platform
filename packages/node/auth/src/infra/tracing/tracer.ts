@@ -1,9 +1,40 @@
 import { trace, type Tracer, SpanKind, SpanStatusCode, type Span } from '@opentelemetry/api';
+import { NodeTracerProvider, BatchSpanProcessor } from '@opentelemetry/sdk-trace-node';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { resourceFromAttributes } from '@opentelemetry/resources';
+import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import { AUTH_CONSTANTS } from '../../shared/constants/auth.constants';
 
 let activeTracer: Tracer | null = null;
+let providerInitialized = false;
+
+export function initAuthTracing(): void {
+  if (providerInitialized) return;
+
+  const resource = resourceFromAttributes({
+    [ATTR_SERVICE_NAME]: AUTH_CONSTANTS.SERVICE_NAME,
+    [ATTR_SERVICE_VERSION]: AUTH_CONSTANTS.SERVICE_VERSION,
+  });
+
+  const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:31417/v1/traces';
+
+  const exporter = new OTLPTraceExporter({
+    url: otlpEndpoint,
+  });
+
+  const provider = new NodeTracerProvider({
+    resource,
+    spanProcessors: [new BatchSpanProcessor(exporter)],
+  });
+
+  provider.register();
+  providerInitialized = true;
+}
 
 export function getTracer(): Tracer {
+  if (!providerInitialized) {
+    initAuthTracing();
+  }
   if (!activeTracer) {
     activeTracer = trace.getTracer(AUTH_CONSTANTS.SERVICE_NAME, AUTH_CONSTANTS.SERVICE_VERSION);
   }

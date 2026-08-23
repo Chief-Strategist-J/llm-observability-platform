@@ -1,9 +1,11 @@
 import { Pool } from 'pg';
+import { SpanKind } from '@opentelemetry/api';
 import type { AuthRepositoryPort, OrganizationRecord } from '../../../features/auth/repository';
 import type { AuthUserRecord, AuditLogRecord } from '../../../features/auth/types';
 import type { ApiKeyRecord } from '../../../shared/types/auth.types';
 import { AUTH_QUERIES } from '../../../features/auth/queries/auth.queries';
 import { AUTH_CONSTANTS } from '../../../shared/constants/auth.constants';
+import { withSpan } from '../../tracing/tracer';
 
 export class RealPostgresAuthAdapter implements AuthRepositoryPort {
   private readonly pool: Pool;
@@ -237,25 +239,30 @@ export class RealPostgresAuthAdapter implements AuthRepositoryPort {
   }
 
   async findUserByEmail(email: string): Promise<AuthUserRecord | null> {
-    const client = await this.pool.connect();
-    try {
-      const res = await client.query(AUTH_QUERIES.FLOW_SIGN_IN.FIND_USER_BY_EMAIL, [email]);
-      if (res.rows.length === 0) return null;
-      const row = res.rows[0];
-      return {
-        id: row.id,
-        email: row.email,
-        password_hash: row.password_hash,
-        name: row.name,
-        org_id: row.org_id,
-        org_name: row.org_name,
-        role: row.role,
-        blocked: row.blocked,
-        user_permissions: row.user_permissions ?? [],
-      };
-    } finally {
-      client.release();
-    }
+    return withSpan('DB SELECT findUserByEmail', async (span) => {
+      span.setAttribute('db.system', 'postgresql');
+      span.setAttribute('db.operation', 'SELECT');
+      span.setAttribute('db.sql.table', 'users');
+      const client = await this.pool.connect();
+      try {
+        const res = await client.query(AUTH_QUERIES.FLOW_SIGN_IN.FIND_USER_BY_EMAIL, [email]);
+        if (res.rows.length === 0) return null;
+        const row = res.rows[0];
+        return {
+          id: row.id,
+          email: row.email,
+          password_hash: row.password_hash,
+          name: row.name,
+          org_id: row.org_id,
+          org_name: row.org_name,
+          role: row.role,
+          blocked: row.blocked,
+          user_permissions: row.user_permissions ?? [],
+        };
+      } finally {
+        client.release();
+      }
+    }, { kind: SpanKind.CLIENT });
   }
 
   async findUserById(id: string): Promise<AuthUserRecord | null> {

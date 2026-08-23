@@ -2,13 +2,97 @@ openapi: 3.1.0
 info:
   title: LLM Observability Raw Spans API
   version: 1.0.0
-  description: REST API for synchronous ingestion of raw LLM observability spans.
+  description: REST API for synchronous ingestion of raw LLM observability spans and API Key verification.
 
 servers:
   - url: https://api.llm-observability.local/v1
     description: Ingestion endpoint
 
 paths:
+  /auth/api-keys/verify:
+    post:
+      summary: Verify API key and return tenant organization metadata
+      operationId: verifyApiKey
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - key
+              properties:
+                key:
+                  type: string
+                  example: "llm_obs_live_8f3a"
+                required_permission:
+                  type: string
+                  example: "spans:write"
+      responses:
+        '200':
+          description: API key verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - valid
+                properties:
+                  valid:
+                    type: boolean
+                  org_id:
+                    type: string
+                    nullable: true
+                  permissions:
+                    type: array
+                    items:
+                      type: string
+
+  /auth/api-keys/generate:
+    post:
+      summary: Generate a new mock API key for developer testing
+      operationId: generateApiKey
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - org_id
+              properties:
+                name:
+                  type: string
+                  example: "dev-local-key"
+                org_id:
+                  type: string
+                  example: "org_default_123"
+                permissions:
+                  type: array
+                  items:
+                    type: string
+                  default: ["spans:write", "spans:read"]
+      responses:
+        '200':
+          description: Generated API key payload
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - key
+                  - key_hash
+                properties:
+                  key:
+                    type: string
+                  key_hash:
+                    type: string
+
   /spans:
     post:
       summary: Ingest a new LLM observability span
@@ -141,6 +225,7 @@ paths:
                 properties:
                   success:
                     type: boolean
+
   /token-counting/count:
     post:
       summary: Count prompt tokens using tiktoken or model family heuristics
@@ -184,6 +269,7 @@ paths:
                   method:
                     type: string
                     example: "tiktoken"
+
   /streaming/test-stream-call:
     post:
       summary: Trigger a mock streaming call to verify streaming instrumentation

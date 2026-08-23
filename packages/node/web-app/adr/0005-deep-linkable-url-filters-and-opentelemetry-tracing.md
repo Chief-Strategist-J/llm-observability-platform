@@ -19,8 +19,9 @@ Prior implementations suffered from imperative loops, duplicated state handling 
 
 1. **Pure Data-Driven Architecture**: Declarative filter rules table separate from evaluation engine logic.
 2. **Functional Pipeline (Zero Loops)**: Use `reduce` (fold), `map`, and `filter` array transformations instead of imperative loops.
-3. **OpenTelemetry Web SDK Integration**: Automatically emit active spans with modern semantic conventions (`ATTR_SERVICE_NAME`, `ATTR_SERVICE_VERSION`) via `BatchSpanProcessor` and `OTLPTraceExporter` to Grafana Tempo.
-4. **Next.js 15 RSC & Suspense Safety**: Wrap `useSearchParams()` consumption inside `<Suspense>` boundaries to ensure server-side rendering (RSC) and client navigation stability.
+3. **OpenTelemetry Web SDK Integration**: Automatically emit active spans with modern semantic conventions (`ATTR_SERVICE_NAME`, `ATTR_SERVICE_VERSION`) via `BatchSpanProcessor` and `OTLPTraceExporter` to `http://localhost:31417/v1/traces` (Grafana Tempo).
+4. **CORS & Preflight Compliance**: OpenTelemetry Collector configured with `cors.allowed_origins` to allow cross-origin span ingestion from Next.js dashboard origins (`http://localhost:31400`).
+5. **Next.js 15 RSC & Suspense Safety**: Wrap `useSearchParams()` consumption inside `<Suspense>` boundaries to ensure server-side rendering (RSC) and client navigation stability.
 
 ---
 
@@ -30,11 +31,13 @@ Prior implementations suffered from imperative loops, duplicated state handling 
 
 ```mermaid
 graph TD
-    Browser["Next.js Browser Client"] -->|"URL Query Params (/costs?timeRange=7d&model=gpt-4o)"| Hook["useDashboardFilters Hook"]
+    Browser["Next.js Browser Client (Port 31400)"] -->|"URL Query Params (/costs?timeRange=7d&model=gpt-4o)"| Hook["useDashboardFilters Hook"]
     Hook -->|"Declarative Rules"| Pipeline["executeFilterPipeline Engine"]
     Pipeline -->|"Functional Fold"| ListOps["ListOp Data Steps"]
     Pipeline -->|"Active Span"| OTEL["OpenTelemetry Web SDK"]
-    OTEL -->|"BatchSpanProcessor (OTLP/HTTP)"| Tempo["Grafana Tempo (Port 4318)"]
+    OTEL -->|"BatchSpanProcessor (OTLP/HTTP Port 31417)"| Collector["frontend-otel-collector (Port 31417)"]
+    Collector -->|"gRPC Spans (Port 3200)"| Tempo["frontend-tempo (Port 3200)"]
+    Tempo -->|"TraceQL Query"| Grafana["Grafana Explore UI (Port 31415 / 31419)"]
     ListOps -->|"transformList()"| UI["DataTable / EmptyState View"]
 ```
 
@@ -49,7 +52,8 @@ sequenceDiagram
     participant Hook as useDashboardFilters
     participant Engine as filter-pipeline.engine
     participant OTEL as OpenTelemetry Web SDK
-    participant Collector as Tempo Collector (OTLP/HTTP)
+    participant Collector as OTEL Collector (OTLP/HTTP Port 31417)
+    participant Tempo as Grafana Tempo (Port 3200)
 
     User->>Router: Select Filter / Load Deep-Link URL
     Router->>Page: Render Page Shell & Suspense Boundary
@@ -59,7 +63,8 @@ sequenceDiagram
     Engine->>Engine: FILTER_PIPELINE_RULES.reduce(fold)
     Engine->>OTEL: span.setAttribute("filter.model", "gpt-4o")
     Engine->>OTEL: span.end()
-    OTEL->>Collector: Export OTLP Trace Span (http://localhost:4318/v1/traces)
+    OTEL->>Collector: OPTIONS Preflight & POST OTLP Trace Span (http://localhost:31417/v1/traces)
+    Collector->>Tempo: Export gRPC Spans (Port 3200)
     Engine-->>Hook: Return { filters, listOps, trace }
     Hook-->>Page: Render FilterBar & Data Views
 ```
@@ -68,7 +73,7 @@ sequenceDiagram
 
 ## End-to-End Function Call Stack (ASCII Tree)
 
-```
+```text
 URL Query Param Update / Deep-Link Filter Execution Flow
 └── User Selects Filter / Navigates to Deep Link (/costs?timeRange=7d&model=gpt-4o)
     └── Next.js App Router (RSC + Client Boundary) [page.tsx]
@@ -95,7 +100,8 @@ URL Query Param Update / Deep-Link Filter Execution Flow
                     ├── 3. transformList(rows, listOps) [core/data-driven/list-transform.ts]
                     │   └── Functional reduce fold filtering rows with zero imperative loops
                     │
-                    └── 4. OTLPTraceExporter -> BatchSpanProcessor -> Tempo (http://localhost:4318/v1/traces)
+                    └── 4. OTLPTraceExporter -> BatchSpanProcessor -> OTEL Collector (http://localhost:31417/v1/traces)
+                        └── gRPC -> Tempo:3200 -> Queryable in Grafana Explore via TraceQL
 ```
 
 ---
@@ -104,7 +110,8 @@ URL Query Param Update / Deep-Link Filter Execution Flow
 
 ### Positive
 - **Deep-Linkable URL State**: Bookmarkable filter URLs across all dashboard pages.
-- **Trace Observability**: End-to-end active span propagation into Grafana Tempo.
+- **Trace Observability**: End-to-end active span propagation into Grafana Tempo via port 31417.
+- **CORS Compliant**: Preflight OPTIONS requests handled seamlessly across cross-origin ports.
 - **Zero Imperative Loops**: Clean functional pipeline using `reduce`, `map`, and `filter`.
 - **RSC Stability**: Wrapped in `<Suspense>` boundaries to ensure Next.js 15 streaming support.
 
