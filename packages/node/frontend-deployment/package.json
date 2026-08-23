@@ -8,6 +8,7 @@
     "restart": "./scripts/manage.sh restart",
     "down": "./scripts/manage.sh down",
     "status": "./scripts/manage.sh status",
+    "health": "./scripts/manage.sh health",
     "logs": "./scripts/manage.sh logs",
     "free-ports": "./scripts/manage.sh free-ports",
     "test": "npx tsx --test tests/integration/services-health.test.ts"

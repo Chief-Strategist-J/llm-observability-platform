@@ -67,6 +67,11 @@ cmd_up() {
   echo -e "  - Grafana Tempo: http://localhost:31416"
   echo -e "  - OTel Collector HTTP: http://localhost:31417"
   echo -e "  - OTel Collector gRPC: localhost:31418"
+
+  echo -e "\n${BLUE}[frontend-deployment] Waiting 3s for web endpoints to bind...${NC}"
+  sleep 3
+  echo -e "${BLUE}[frontend-deployment] Running automatic container & service health diagnostic...${NC}"
+  "$SCRIPT_DIR/test-health.sh"
 }
 
 cmd_restart() {
@@ -79,6 +84,9 @@ cmd_restart() {
   echo -e "${BLUE}[frontend-deployment] Restarting infrastructure stack...${NC}"
   $bin -f "$COMPOSE_FILE" restart
   echo -e "${GREEN}✓ Infrastructure stack restarted.${NC}"
+  
+  echo -e "\n${BLUE}[frontend-deployment] Running automatic container & service health diagnostic...${NC}"
+  "$SCRIPT_DIR/test-health.sh"
 }
 
 cmd_down() {
@@ -135,8 +143,11 @@ case "$COMMAND" in
   free-ports)
     cmd_free_ports
     ;;
+  health)
+    "$SCRIPT_DIR/test-health.sh"
+    ;;
   *)
-    echo "Usage: $0 {up|restart|down|status|logs|free-ports}"
+    echo "Usage: $0 {up|restart|down|status|logs|free-ports|health}"
     exit 1
     ;;
 esac

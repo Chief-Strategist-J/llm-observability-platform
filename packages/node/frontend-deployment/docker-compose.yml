@@ -3,16 +3,15 @@ services:
     image: traefik:v2.10
     container_name: frontend-traefik-gateway
     command:
-      - "--configFile=/etc/traefik/traefik.yml"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
     ports:
       - "31410:80"
       - "31411:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./config/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
-      - ./config/traefik/dynamic.yml:/etc/traefik/dynamic/dynamic.yml:ro
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
   redis:
     image: redis:7-alpine
@@ -59,11 +58,6 @@ services:
     ports:
       - "31416:3200" # Tempo HTTP
       - "4317:4317" # OTLP gRPC internal receiver
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3200/ready || exit 0"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
