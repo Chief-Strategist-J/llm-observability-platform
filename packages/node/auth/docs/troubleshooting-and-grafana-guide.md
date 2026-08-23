@@ -1,6 +1,6 @@
 # Troubleshooting & Grafana Tempo Debugging Guide
 
-This guide provides end-to-end instructions for running Grafana, searching traces using TraceQL, filtering by time ranges, debugging authentication & database failures, and resolving common operational issues across `@observability/auth`.
+This guide provides end-to-end instructions for running Grafana, searching traces using TraceQL, filtering by time ranges, debugging authentication & database failures, and resolving common operational issues across `@observability/auth` and `@observability/web-app`.
 
 ---
 
@@ -20,16 +20,17 @@ This guide provides end-to-end instructions for running Grafana, searching trace
 
 1. Navigate to **Grafana Explore**: `http://localhost:31415/explore` (or `https://llmobs.grafana:31419/explore`).
 2. Select Datasource: **Tempo** (`P214B5B846CF3925F`).
-3. Set Query Type to **TraceQL**.
-4. Adjust the **Time Range Selector** in top-right corner:
-   - Quick ranges: **Last 5 minutes**, **Last 15 minutes**, **Last 1 hour**.
-   - Custom range: Specify start and end timestamps.
+3. Select Query Type:
+   - **Search UI Tab**: Use dropdown selectors for Service Name (`web-app`, `auth-service`) and Span Name.
+   - **Trace ID Tab**: Paste a 32-character hex Trace ID directly from HTTP response headers for instant lookup.
+   - **TraceQL Tab**: Write declarative TraceQL filter expressions.
+4. Adjust the **Time Range Selector** in top-right corner (Last 5 minutes, Last 15 minutes, Last 1 hour).
 
 ---
 
 ## 3. TraceQL Query Library for Debugging
 
-> Note: In Tempo TraceQL, span attributes use dot prefixes (e.g. `{.x-request-id = "value"}`) rather than `span.`.
+> Note: In Tempo TraceQL, resource attributes use `resource.service.name` and span attributes use `.attribute_name` or `span.attribute_name`.
 
 ### A. General Service Traces
 - **All Auth Service Spans**:
@@ -67,6 +68,10 @@ This guide provides end-to-end instructions for running Grafana, searching trace
 - **High-Latency Database Queries (> 100ms)**:
   ```traceql
   { .db.system = "postgresql" && duration > 100ms }
+  ```
+- **Web App Dashboard Route Latency (`/costs`)**:
+  ```traceql
+  { resource.service.name = "web-app" && name = "HTTP GET /costs" }
   ```
 
 ---
@@ -114,11 +119,12 @@ This guide provides end-to-end instructions for running Grafana, searching trace
 
 ---
 
-### Issue 2: "TraceQL Syntax Error: unknown identifier: span"
-- **Symptom**: Grafana UI returns `0 series returned` or `unknown identifier: span` when typing `{ span.x-request-id = "val" }`.
-- **Root Cause**: Tempo TraceQL requires span attributes to be prefixed with a dot (`.x-request-id`) instead of `span.`.
+### Issue 2: "Grafana Explore UI Returns 0 Series Returned"
+- **Symptom**: Grafana UI returns `0 series returned` when querying by TraceQL.
+- **Root Cause**: Query syntax used unindexed custom brackets or missing resource prefixes.
 - **Solution / Fix**:
-  Use `{.x-request-id = "req-root-test-001"}` or `{.user.email = "jaydeep@gmail.com"}`.
+  1. For service filtering, use `resource.service.name = "web-app"` instead of `.service.name`.
+  2. For request lookup, use **Trace ID** tab with the exact 32-character hex ID from the HTTP `traceparent` response header.
 
 ---
 
@@ -138,28 +144,22 @@ This guide provides end-to-end instructions for running Grafana, searching trace
 
 ---
 
-### Issue 4: "PostgreSQL Database Connection Terminated / Fatal Pool Error"
+### Issue 4: "Next.js Route Traces Missing in Grafana Tempo (`/costs`)"
+- **Symptom**: Requests to `http://localhost:31400/costs` execute successfully, but no server spans appear in Tempo.
+- **Root Cause**: `typeof window === 'undefined'` guard blocked Node.js OpenTelemetry initialization on Next.js server boot.
+- **Solution / Fix**:
+  1. Ensure `initOpenTelemetryTracer()` in `web-app/src/core/tracing/tracer.ts` dynamically imports `@observability/core/tracing` for Node.js server side.
+  2. Verify Next.js `middleware.ts` extracts or generates `traceparent` and `x-request-id` headers on both request and response pipelines.
+
+---
+
+### Issue 5: "PostgreSQL Database Connection Terminated / Fatal Pool Error"
 - **Symptom**: Server returns `HTTP 500` with `Connection terminated unexpectedly` or `FATAL: terminating connection`.
 - **Root Cause**: Database pool connection dropped due to PostgreSQL process restart or idle timeout.
 - **Solution / Fix**:
   Verify PostgreSQL container status on port `31412`:
   ```bash
   docker ps | grep auth-service-db
-  ```
-  If container dropped, restart:
-  ```bash
-  docker restart auth-service-db
-  ```
-
----
-
-### Issue 5: "Kafka Event Producer Operating in Fallback Mode"
-- **Symptom**: Console logs warning `[kafka-producer] Operating in fallback mode: Connection refused`.
-- **Root Cause**: Kafka broker on `localhost:9092` / container `frontend-kafka:31414` unreachable.
-- **Solution / Fix**:
-  Verify Kafka container status:
-  ```bash
-  docker ps | grep frontend-kafka
   ```
 
 ---
@@ -182,28 +182,13 @@ curl -s -X POST http://localhost:3001/api/v1/auth/sign-in \
   "message": "User signed in successfully",
   "data": {
     "token": "eyJzdWIiOiJ1c3JfOTlzM2NxbiIsImVtYWlsIjoiamF5ZGVlcEBnbWFpbC5jb20iLCJvcmciOnsib3JnX2lkIjoib3JnX3lpdTR6NmYiLCJvcmdfbmFtZSI6IlNjYWlidSIsInJvbGUiOiJhZG1pbiJ9LCJpYXQiOjE3ODc0OTI0NDEsImV4cCI6MTc4NzQ5NjA0MX0=.c2lnX3Vzcl85OXMzY3FuXzE3ODc0OTI0NDE=",
-    "payload": {
-      "sub": "usr_99s3cqn",
-      "email": "jaydeep@gmail.com",
-      "org": {
-        "org_id": "org_yiu4z6f",
-        "org_name": "Scaibu",
-        "role": "admin"
-      },
-      "exp": 1787496041,
-      "iat": 1787492441
-    },
     "user": {
       "id": "usr_99s3cqn",
       "email": "jaydeep@gmail.com",
       "name": "Jaydeep",
       "org_id": "org_yiu4z6f",
       "org_name": "Scaibu",
-      "role": "admin",
-      "blocked": false,
-      "user_permissions": [
-        "admin:all"
-      ]
+      "role": "admin"
     }
   },
   "error": null
@@ -212,49 +197,7 @@ curl -s -X POST http://localhost:3001/api/v1/auth/sign-in \
 
 ---
 
-### Step 2: Query Grafana Tempo TraceQL API for Request Key (`req-root-test-001`)
-```bash
-curl -s -u admin:admin 'http://localhost:31415/api/datasources/proxy/uid/P214B5B846CF3925F/api/search?q=%7B.x-request-id%3D%22req-root-test-001%22%7D'
-```
-
-**JSON Response Payload Returned**:
-```json
-{
-  "traces": [
-    {
-      "traceID": "cfa926f3d5688f652da89e6ef4deee18",
-      "rootServiceName": "auth-service",
-      "rootTraceName": "HTTP POST /api/v1/auth/sign-in",
-      "startTimeUnixNano": "1787492441750000000",
-      "durationMs": 34,
-      "spanSet": {
-        "spans": [
-          {
-            "spanID": "b0e9c4d34d3b1412",
-            "startTimeUnixNano": "1787492441750000000",
-            "attributes": [
-              { "key": "x-request-id", "value": { "stringValue": "req-root-test-001" } }
-            ]
-          }
-        ],
-        "matched": 2
-      },
-      "serviceStats": {
-        "auth-service": { "spanCount": 3 }
-      }
-    }
-  ],
-  "metrics": {
-    "inspectedBytes": "535788",
-    "completedJobs": 3,
-    "totalJobs": 3
-  }
-}
-```
-
----
-
-### Step 3: Query Grafana Tempo Directly for Trace ID (`cfa926f3d5688f652da89e6ef4deee18`)
+### Step 2: Query Grafana Tempo Direct Trace ID
 ```bash
 curl -s -u admin:admin 'http://localhost:31415/api/datasources/proxy/uid/P214B5B846CF3925F/api/traces/cfa926f3d5688f652da89e6ef4deee18'
 ```
@@ -263,7 +206,7 @@ curl -s -u admin:admin 'http://localhost:31415/api/datasources/proxy/uid/P214B5B
 
 ## 6. Visualizing Spans in Grafana (What the Trace Waterfall Looks Like)
 
-When searching Grafana Tempo by Request Key (`{.x-request-id = "req-root-test-001"}`) or opening the Trace ID link, Grafana renders a single unified end-to-end trace waterfall:
+When searching Grafana Tempo by Request Key or opening the Trace ID link, Grafana renders a single unified end-to-end trace waterfall:
 
 ```text
 Grafana Tempo Trace Waterfall Graph [Trace ID: cfa926f3d5688f652da89e6ef4deee18]
@@ -278,18 +221,5 @@ Service & Span Name                        Kind     Duration   Attributes
            |-- [OK] DB INSERT recordAuditLog  CLIENT   3ms        db.system=postgresql         
            `-- [OK] Kafka PRODUCE USER_IN    PRODUCER 2ms        topic=auth.events.v1         
                 `-- [OK] Kafka CONSUMER      CONSUMER 1ms        messaging.operation=process  
------------------------------------------------------------------------------------------------
-```
-
-#### If a Failure Occurs (e.g. Wrong Password):
-```text
-Grafana Tempo Error Trace Waterfall Graph [Trace ID: 7ddc5fc112278d5075421c35704bea2e]
------------------------------------------------------------------------------------------------
-Service & Span Name                        Kind     Duration   Attributes / Error           
------------------------------------------------------------------------------------------------
-[ERROR] auth-service: HTTP POST /sign-in    SERVER   78ms       status=ERROR (HTTP 401)      
- `-- [ERROR] auth-service: REST POST       INTERNAL 75ms       error.code=INVALID_CREDENTIALS
-      |-- [OK] DB SELECT findUserByEmail    CLIENT   14ms       db.system=postgresql         
-      `-- [ERROR] Argon2id Password Check  INTERNAL 58ms       error="Invalid credentials"  
 -----------------------------------------------------------------------------------------------
 ```
