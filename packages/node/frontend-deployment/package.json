@@ -5,6 +5,7 @@
   "description": "Unified infrastructure & telemetry deployment package",
   "scripts": {
     "up": "./scripts/manage.sh up",
+    "restart": "./scripts/manage.sh restart",
     "down": "./scripts/manage.sh down",
     "status": "./scripts/manage.sh status",
     "logs": "./scripts/manage.sh logs",

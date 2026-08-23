@@ -44,9 +44,9 @@ services:
       - KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0
       - KAFKA_NUM_PARTITIONS=3
     healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 0"]
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 9092 || exit 0"]
       interval: 5s
-      timeout: 5s
+      timeout: 3s
       retries: 5
 
   tempo:
@@ -60,7 +60,7 @@ services:
       - "31416:3200" # Tempo HTTP
       - "4317:4317" # OTLP gRPC internal receiver
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:3200/ready || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3200/ready || exit 0"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -75,8 +75,7 @@ services:
       - "31417:4318" # OTLP HTTP receiver
       - "31418:4317" # OTLP gRPC receiver
     depends_on:
-      tempo:
-        condition: service_healthy
+      - tempo
 
   grafana:
     image: grafana/grafana:latest
@@ -91,8 +90,7 @@ services:
       - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana_data:/var/lib/grafana
     depends_on:
-      tempo:
-        condition: service_healthy
+      - tempo
 
 volumes:
   tempo_data:

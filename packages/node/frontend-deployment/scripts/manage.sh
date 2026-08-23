@@ -54,19 +54,31 @@ cmd_up() {
     echo -e "${RED}Error: Docker Compose is not available.${NC}"
     exit 1
   fi
-  echo -e "${BLUE}[frontend-deployment] Starting unified infrastructure stack...${NC}"
-  $bin -f "$COMPOSE_FILE" up -d
-  echo -e "${GREEN}✓ All infrastructure services started successfully!${NC}"
+  echo -e "${BLUE}[frontend-deployment] Ensuring ports are free & restarting existing containers...${NC}"
+  cmd_free_ports
+  $bin -f "$COMPOSE_FILE" up -d --force-recreate
+  echo -e "${GREEN}✓ All infrastructure services started/restarted successfully!${NC}"
   echo -e "${BOLD}Service Endpoints:${NC}"
   echo -e "  - Traefik Gateway: http://localhost:31410"
   echo -e "  - Traefik Dashboard: http://localhost:31411"
-  echo -e "  - AlloyDB/PostgreSQL: localhost:31412"
   echo -e "  - Redis: localhost:31413"
   echo -e "  - Kafka: localhost:31414"
   echo -e "  - Grafana UI: http://localhost:31415 (admin / admin)"
   echo -e "  - Grafana Tempo: http://localhost:31416"
   echo -e "  - OTel Collector HTTP: http://localhost:31417"
   echo -e "  - OTel Collector gRPC: localhost:31418"
+}
+
+cmd_restart() {
+  local bin
+  bin=$(get_docker_compose_cmd)
+  if [ -z "$bin" ]; then
+    echo -e "${RED}Error: Docker Compose is not available.${NC}"
+    exit 1
+  fi
+  echo -e "${BLUE}[frontend-deployment] Restarting infrastructure stack...${NC}"
+  $bin -f "$COMPOSE_FILE" restart
+  echo -e "${GREEN}✓ Infrastructure stack restarted.${NC}"
 }
 
 cmd_down() {
@@ -108,6 +120,9 @@ case "$COMMAND" in
   up)
     cmd_up
     ;;
+  restart)
+    cmd_restart
+    ;;
   down)
     cmd_down
     ;;
@@ -121,7 +136,7 @@ case "$COMMAND" in
     cmd_free_ports
     ;;
   *)
-    echo "Usage: $0 {up|down|status|logs|free-ports}"
+    echo "Usage: $0 {up|restart|down|status|logs|free-ports}"
     exit 1
     ;;
 esac
