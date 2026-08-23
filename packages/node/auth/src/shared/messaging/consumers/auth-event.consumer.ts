@@ -20,11 +20,11 @@ export class AuthEventConsumer {
     this.client = createKafkaClient('auth-service-consumer');
     this.registry = registry || new AuthEventHandlerRegistry();
     this.pipeline = new ConsumerMiddlewarePipeline()
+      .use(tracingConsumerMiddleware)
       .use(loggingConsumerMiddleware)
       .use(idempotencyConsumerMiddleware)
       .use(dlqConsumerMiddleware(this.client))
-      .use(retryConsumerMiddleware(3, 50))
-      .use(tracingConsumerMiddleware);
+      .use(retryConsumerMiddleware(3, 50));
   }
 
   public async init(): Promise<void> {

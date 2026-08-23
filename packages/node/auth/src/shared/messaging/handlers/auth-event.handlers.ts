@@ -1,4 +1,5 @@
 import { KafkaEvent } from '@observability/core';
+import { withSpan } from '@observability/core/tracing';
 import { BaseTracedKafkaHandler } from './base-traced-handler';
 import { AuthReadProjectionStore } from '../cqrs/projection.store';
 
@@ -18,11 +19,16 @@ export class UserSignedInHandler extends BaseTracedKafkaHandler<UserSignedInPayl
   public readonly eventName = 'USER_SIGNED_IN';
 
   public async handle(event: KafkaEvent<UserSignedInPayload>): Promise<void> {
-    AuthReadProjectionStore.getInstance().applyUserSignedIn({
-      userId: event.payload.userId,
-      email: event.payload.email,
-      orgId: event.payload.orgId,
-      timestamp: event.timestamp,
+    await withSpan('CQRS Apply UserSignedIn Projection', async (span) => {
+      span.setAttribute('cqrs.event', event.eventName);
+      span.setAttribute('cqrs.user_id', event.payload.userId);
+      span.setAttribute('cqrs.org_id', event.payload.orgId);
+      AuthReadProjectionStore.getInstance().applyUserSignedIn({
+        userId: event.payload.userId,
+        email: event.payload.email,
+        orgId: event.payload.orgId,
+        timestamp: event.timestamp,
+      });
     });
   }
 }
@@ -31,11 +37,16 @@ export class UserSignedUpHandler extends BaseTracedKafkaHandler<UserSignedUpPayl
   public readonly eventName = 'USER_SIGNED_UP';
 
   public async handle(event: KafkaEvent<UserSignedUpPayload>): Promise<void> {
-    AuthReadProjectionStore.getInstance().applyUserSignedUp({
-      userId: event.payload.userId,
-      email: event.payload.email,
-      orgId: event.payload.orgId,
-      timestamp: event.timestamp,
+    await withSpan('CQRS Apply UserSignedUp Projection', async (span) => {
+      span.setAttribute('cqrs.event', event.eventName);
+      span.setAttribute('cqrs.user_id', event.payload.userId);
+      span.setAttribute('cqrs.org_id', event.payload.orgId);
+      AuthReadProjectionStore.getInstance().applyUserSignedUp({
+        userId: event.payload.userId,
+        email: event.payload.email,
+        orgId: event.payload.orgId,
+        timestamp: event.timestamp,
+      });
     });
   }
 }
