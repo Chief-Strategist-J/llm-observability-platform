@@ -1,0 +1,18 @@
+{
+  "name": "@observability/frontend-deployment",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Unified infrastructure & telemetry deployment package",
+  "scripts": {
+    "up": "./scripts/manage.sh up",
+    "down": "./scripts/manage.sh down",
+    "status": "./scripts/manage.sh status",
+    "logs": "./scripts/manage.sh logs",
+    "free-ports": "./scripts/manage.sh free-ports",
+    "test": "npx tsx --test tests/integration/services-health.test.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vitest": "^4.1.0"
+  }
+}

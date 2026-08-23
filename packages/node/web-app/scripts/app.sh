@@ -19,13 +19,13 @@ PORT_KAFKA="${PORT_KAFKA:-9092}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(dirname "$SCRIPT_DIR")"
 AUTH_DIR="$(dirname "$APP_DIR")/auth"
-AUTH_COMPOSE_FILE="$AUTH_DIR/docker-compose.yml"
+DEPLOYMENT_DIR="$(dirname "$APP_DIR")/frontend-deployment"
+AUTH_COMPOSE_FILE="$DEPLOYMENT_DIR/docker-compose.yml"
 
 SERVICE_REGISTRY=(
   "web-app:Next.js Web Application:${PORT_UNIT}:${APP_DIR}:PORT=${PORT_UNIT} npx next dev -p ${PORT_UNIT}"
   "auth:Auth HTTP Service:${PORT_AUTH}:${AUTH_DIR}:PORT=${PORT_AUTH} npx tsx src/server.ts"
   "storybook:Storybook Server:${PORT_STORYBOOK}:${APP_DIR}:npx storybook dev -p ${PORT_STORYBOOK}"
-  "kafka:Kafka Messaging Broker:${PORT_KAFKA}:${AUTH_DIR}:echo 'Kafka service managed via Docker Compose on port ${PORT_KAFKA}'"
 )
 
 BUILD_TARGETS=(
