@@ -11,6 +11,7 @@
     "dev": "./scripts/app.sh dev",
     "dev:all": "./scripts/app.sh dev",
     "dev:next": "./scripts/app.sh web-app",
+    "db:up": "./scripts/app.sh db:up",
     "db:migrate": "./scripts/app.sh db:migrate",
     "db:setup": "./scripts/app.sh db:setup",
     "clean": "./scripts/app.sh clean",

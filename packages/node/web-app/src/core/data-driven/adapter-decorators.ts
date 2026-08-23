@@ -26,7 +26,11 @@ export function withRetry<T extends BaseAdapter>(adapter: T, retries = 3, delayM
         while (attempt < retries) {
           try {
             return await fn.call(adapter, ...args);
-          } catch (err) {
+          } catch (err: any) {
+            // Do not retry authorization/authentication failures
+            if (err?.status === 401 || err?.status === 403 || err?.code === "UNAUTHORIZED" || err?.code === "TOKEN_EXPIRED") {
+              throw err;
+            }
             attempt++;
             if (attempt >= retries) throw err;
             await new Promise((r) => setTimeout(r, delayMs * Math.pow(2, attempt - 1)));
@@ -81,10 +85,13 @@ export function withCircuitBreaker<T extends BaseAdapter>(adapter: T, threshold 
           const res = await fn.call(adapter, ...args);
           failures = 0;
           return res;
-        } catch (err) {
-          failures++;
-          if (failures >= threshold) {
-            nextAttemptTime = Date.now() + cooldownMs;
+        } catch (err: any) {
+          // Do not count 401/403 auth errors towards circuit breaker trips
+          if (err?.status !== 401 && err?.status !== 403 && err?.code !== "UNAUTHORIZED" && err?.code !== "TOKEN_EXPIRED") {
+            failures++;
+            if (failures >= threshold) {
+              nextAttemptTime = Date.now() + cooldownMs;
+            }
           }
           throw err;
         }

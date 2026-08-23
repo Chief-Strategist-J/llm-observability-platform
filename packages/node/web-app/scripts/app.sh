@@ -21,6 +21,7 @@ APP_DIR="$(dirname "$SCRIPT_DIR")"
 AUTH_DIR="$(dirname "$APP_DIR")/auth"
 DEPLOYMENT_DIR="$(dirname "$APP_DIR")/frontend-deployment"
 AUTH_COMPOSE_FILE="$DEPLOYMENT_DIR/docker-compose.yml"
+AUTH_DB_COMPOSE_FILE="$AUTH_DIR/docker-compose.yml"
 
 SERVICE_REGISTRY=(
   "web-app:Next.js Web Application:${PORT_UNIT}:${APP_DIR}:PORT=${PORT_UNIT} npx next dev -p ${PORT_UNIT}"
@@ -138,9 +139,13 @@ cmd_docker_up() {
     echo -e "${RED}Error: Neither 'docker compose' nor 'docker-compose' is installed or accessible.${NC}"
     exit 1
   fi
-  echo -e "${BLUE}[docker] Starting centralized container services (PostgreSQL, Redis, Kafka)...${NC}"
+  echo -e "${BLUE}[docker] Starting infra container services (Traefik, Redis, Kafka, Tempo, Grafana)...${NC}"
   $compose_bin -f "$AUTH_COMPOSE_FILE" up -d
-  echo -e "${GREEN}✓ Centralized Docker services (including Kafka on 9092) started successfully.${NC}"
+  if [ -f "$AUTH_DB_COMPOSE_FILE" ]; then
+    echo -e "${BLUE}[docker] Starting Auth DB container service (AlloyDB / PostgreSQL on port 31412)...${NC}"
+    $compose_bin -f "$AUTH_DB_COMPOSE_FILE" up -d auth-db
+  fi
+  echo -e "${GREEN}✓ All container services (Infra + Auth DB) started successfully.${NC}"
 }
 
 cmd_docker_down() {
@@ -150,9 +155,12 @@ cmd_docker_down() {
     echo -e "${RED}Error: Neither 'docker compose' nor 'docker-compose' is installed or accessible.${NC}"
     exit 1
   fi
-  echo -e "${BLUE}[docker] Stopping centralized container services...${NC}"
+  echo -e "${BLUE}[docker] Stopping all container services...${NC}"
   $compose_bin -f "$AUTH_COMPOSE_FILE" down
-  echo -e "${GREEN}✓ Centralized Docker services stopped.${NC}"
+  if [ -f "$AUTH_DB_COMPOSE_FILE" ]; then
+    $compose_bin -f "$AUTH_DB_COMPOSE_FILE" down
+  fi
+  echo -e "${GREEN}✓ All container services stopped.${NC}"
 }
 
 cmd_docker_status() {
@@ -162,7 +170,12 @@ cmd_docker_status() {
     echo -e "${RED}Error: Neither 'docker compose' nor 'docker-compose' is installed or accessible.${NC}"
     exit 1
   fi
+  echo -e "${BLUE}--- Infra Services Status ---${NC}"
   $compose_bin -f "$AUTH_COMPOSE_FILE" ps
+  if [ -f "$AUTH_DB_COMPOSE_FILE" ]; then
+    echo -e "${BLUE}--- Auth Database Status ---${NC}"
+    $compose_bin -f "$AUTH_DB_COMPOSE_FILE" ps
+  fi
 }
 
 cmd_docker_logs() {
@@ -175,9 +188,27 @@ cmd_docker_logs() {
   $compose_bin -f "$AUTH_COMPOSE_FILE" logs -f "$@"
 }
 
+cmd_db_up() {
+  local compose_bin
+  compose_bin=$(get_docker_compose_cmd)
+  if [ -z "$compose_bin" ]; then
+    echo -e "${RED}Error: Neither 'docker compose' nor 'docker-compose' is installed or accessible.${NC}"
+    exit 1
+  fi
+  if [ -f "$AUTH_DB_COMPOSE_FILE" ]; then
+    echo -e "${BLUE}[db] Starting Auth DB container (AlloyDB / PostgreSQL on port 31412)...${NC}"
+    $compose_bin -f "$AUTH_DB_COMPOSE_FILE" up -d auth-db
+    echo -e "${GREEN}✓ Auth DB container started on port 31412.${NC}"
+  else
+    echo -e "${RED}Error: Auth DB docker-compose.yml not found at $AUTH_DB_COMPOSE_FILE${NC}"
+    exit 1
+  fi
+}
+
 cmd_db_migrate() {
   echo -e "${BLUE}[db] Running database migration suite [ENV=${APP_ENV}]...${NC}"
   load_env_variant "$AUTH_DIR" "$APP_ENV"
+  export DATABASE_URL="${DATABASE_URL:-postgresql://postgres:postgres@localhost:31412/observability_auth}"
   cd "$AUTH_DIR"
   npx tsx database/migrate.ts
   echo -e "${GREEN}✓ Database migration completed.${NC}"
@@ -185,9 +216,9 @@ cmd_db_migrate() {
 
 cmd_db_setup() {
   echo -e "${BLUE}[db] Setting up database containers and executing migrations [ENV=${APP_ENV}]...${NC}"
-  cmd_docker_up
+  cmd_db_up
   echo -e "${YELLOW}[db] Waiting for database health check...${NC}"
-  sleep 3
+  sleep 4
   cmd_db_migrate
 }
 
@@ -400,6 +431,9 @@ case "$COMMAND" in
     ;;
   kafka)
     cmd_run_service "kafka"
+    ;;
+  db:up|db-up)
+    cmd_db_up
     ;;
   db:migrate|db-migrate)
     cmd_db_migrate

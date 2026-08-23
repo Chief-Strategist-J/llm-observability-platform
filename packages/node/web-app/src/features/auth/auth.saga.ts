@@ -76,6 +76,10 @@ function* handleFetchOrganizations(): Generator<any, void, any> {
     const orgs = yield call([authApiClient, "listOrganizations"], token);
     yield put(authActions.setOrganizations(orgs || []));
   } catch (err: any) {
+    if (err?.status === 401 || err?.code === "UNAUTHORIZED" || err?.code === "TOKEN_EXPIRED") {
+      clearAuthCookies();
+      yield put(authActions.loggedOut());
+    }
     console.error("Failed to fetch organizations:", err);
   }
 }
@@ -93,6 +97,10 @@ function* handleSwitchOrganization(action: ReturnType<typeof authActions.switchO
     }));
     eventBus.emit(AUTH_EVENTS.ORG_SWITCH_SUCCESS, result);
   } catch (err: any) {
+    if (err?.status === 401 || err?.code === "UNAUTHORIZED" || err?.code === "TOKEN_EXPIRED") {
+      clearAuthCookies();
+      yield put(authActions.loggedOut());
+    }
     const errorMsg = err?.message || AUTH_MESSAGES.ORG_SWITCH_FAILED;
     yield put(authActions.authFailed(errorMsg));
     eventBus.emit(AUTH_EVENTS.ORG_SWITCH_FAILURE, errorMsg);
@@ -105,6 +113,10 @@ function* handleFetchMembers(): Generator<any, void, any> {
     const members = yield call([authApiClient, "listUsers"], token);
     yield put(authActions.setMembers(members || []));
   } catch (err: any) {
+    if (err?.status === 401 || err?.code === "UNAUTHORIZED" || err?.code === "TOKEN_EXPIRED") {
+      clearAuthCookies();
+      yield put(authActions.loggedOut());
+    }
     console.error("Failed to fetch members:", err);
   }
 }
@@ -116,6 +128,10 @@ function* handleInviteUser(action: ReturnType<typeof authActions.inviteUserSubmi
     yield put(authActions.fetchMembersSubmitted());
     eventBus.emit(AUTH_EVENTS.INVITE_SUCCESS, invited);
   } catch (err: any) {
+    if (err?.status === 401 || err?.code === "UNAUTHORIZED" || err?.code === "TOKEN_EXPIRED") {
+      clearAuthCookies();
+      yield put(authActions.loggedOut());
+    }
     const errorMsg = err?.message || AUTH_MESSAGES.INVITE_FAILED;
     yield put(authActions.authFailed(errorMsg));
     eventBus.emit(AUTH_EVENTS.INVITE_FAILURE, errorMsg);
@@ -128,6 +144,10 @@ function* handleFetchApiKeys(): Generator<any, void, any> {
     const keys = yield call([authApiClient, "listApiKeys"], token);
     yield put(authActions.setApiKeys(keys || []));
   } catch (err: any) {
+    if (err?.status === 401 || err?.code === "UNAUTHORIZED" || err?.code === "TOKEN_EXPIRED") {
+      clearAuthCookies();
+      yield put(authActions.loggedOut());
+    }
     console.error("Failed to fetch API keys:", err);
   }
 }
@@ -138,6 +158,10 @@ function* handleFetchAuditLogs(action: ReturnType<typeof authActions.fetchAuditL
     const logs = yield call([authApiClient, "fetchAuditLogs"], action.payload, token);
     yield put(authActions.setAuditLogs(logs || []));
   } catch (err: any) {
+    if (err?.status === 401 || err?.code === "UNAUTHORIZED" || err?.code === "TOKEN_EXPIRED") {
+      clearAuthCookies();
+      yield put(authActions.loggedOut());
+    }
     console.error("Failed to fetch audit logs:", err);
   }
 }

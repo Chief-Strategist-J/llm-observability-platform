@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 
 const connectionString =
   process.env.DATABASE_URL ||
-  'postgresql://postgres:postgres@localhost:5433/observability_auth';
+  'postgresql://postgres:postgres@localhost:31412/observability_auth';
 
 const pool = new pg.Pool({ connectionString });
 
