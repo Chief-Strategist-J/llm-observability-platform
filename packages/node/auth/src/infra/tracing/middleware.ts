@@ -1,4 +1,4 @@
-import { runWithHttpTracing as runWithCoreHttpTracing } from '@observability/core';
+import { runWithHttpTracing as runWithCoreHttpTracing } from '@observability/core/tracing';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { AUTH_CONSTANTS } from '../../shared/constants/auth.constants';
 

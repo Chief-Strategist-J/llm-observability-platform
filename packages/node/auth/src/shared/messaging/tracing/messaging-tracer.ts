@@ -1,4 +1,4 @@
-import { CentralMessagingTracer } from '@observability/core';
+import { CentralMessagingTracer } from '@observability/core/tracing';
 
 export class MessagingTracer {
   public static createProducerSpan(topic: string, eventName: string, headers?: any) {
