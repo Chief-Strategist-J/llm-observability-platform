@@ -1,14 +1,21 @@
-import { trace, type Tracer, SpanKind, SpanStatusCode, type Span } from '@opentelemetry/api';
+import { trace, context, type Tracer, SpanKind, SpanStatusCode, type Span } from '@opentelemetry/api';
 import { NodeTracerProvider, SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
+import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
 import { AUTH_CONSTANTS } from '../../shared/constants/auth.constants';
+
+process.env.OTEL_EXPORTER_OTLP_PROTOCOL = 'http/json';
 
 let providerInitialized = false;
 
 export function initAuthTracing(): void {
   if (providerInitialized) return;
+
+  const contextManager = new AsyncLocalStorageContextManager();
+  contextManager.enable();
+  context.setGlobalContextManager(contextManager);
 
   const resource = resourceFromAttributes({
     [ATTR_SERVICE_NAME]: AUTH_CONSTANTS.SERVICE_NAME,

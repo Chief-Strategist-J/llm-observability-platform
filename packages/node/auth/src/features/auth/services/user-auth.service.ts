@@ -7,6 +7,7 @@ import { UserAlreadyExistsError, OrgAlreadyExistsError, InvalidCredentialsError,
 import { hashPassword, verifyPassword } from '../../../shared/utils/argon2.util';
 import { createToken, verifyToken } from '../../../shared/utils/jwt.util';
 import { AUTH_CONSTANTS } from '../../../shared/constants/auth.constants';
+import { withSpan } from '../../../infra/tracing/tracer';
 
 export class UserAuthDomainService {
   constructor(
@@ -22,7 +23,11 @@ export class UserAuthDomainService {
       throw new UserAlreadyExistsError(validated.email);
     }
 
-    const passwordHash = await hashPassword(validated.password);
+    const passwordHash = await withSpan('Argon2id Password Hash', async (span) => {
+      span.setAttribute('crypto.algorithm', 'argon2id');
+      return hashPassword(validated.password);
+    });
+
     const userId = `usr_${Math.random().toString(36).substring(2, 9)}`;
     const orgId = `org_${Math.random().toString(36).substring(2, 9)}`;
 
@@ -55,7 +60,7 @@ export class UserAuthDomainService {
 
     const payload = verifyToken(token);
     if (this.eventProducer) {
-      this.eventProducer.publishUserSignedUp({
+      await this.eventProducer.publishUserSignedUp({
         userId: userRecord.id,
         email: userRecord.email,
         orgId: userRecord.org_id,
@@ -76,7 +81,11 @@ export class UserAuthDomainService {
       throw new UserBlockedError();
     }
 
-    const isValid = await verifyPassword(validated.password, user.password_hash);
+    const isValid = await withSpan('Argon2id Password Check', async (span) => {
+      span.setAttribute('crypto.algorithm', 'argon2id');
+      return verifyPassword(validated.password, user.password_hash);
+    });
+
     if (!isValid) {
       throw new InvalidCredentialsError();
     }
@@ -99,7 +108,7 @@ export class UserAuthDomainService {
 
     const payload = verifyToken(token);
     if (this.eventProducer) {
-      this.eventProducer.publishUserSignedIn({
+      await this.eventProducer.publishUserSignedIn({
         userId: user.id,
         email: user.email,
         orgId: user.org_id,

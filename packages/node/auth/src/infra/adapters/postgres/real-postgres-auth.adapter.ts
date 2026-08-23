@@ -319,21 +319,26 @@ export class RealPostgresAuthAdapter implements AuthRepositoryPort {
   }
 
   async recordAuditLog(logRecord: AuditLogRecord): Promise<void> {
-    const client = await this.pool.connect();
-    try {
-      await this.setTenantRlsContext(client, logRecord.org_id);
-      await client.query(AUTH_QUERIES.FLOW_SIGN_IN.RECORD_AUDIT_LOG, [
-        logRecord.id,
-        logRecord.user_id,
-        logRecord.org_id,
-        logRecord.event_type,
-        logRecord.ip_address,
-        logRecord.user_agent,
-        logRecord.timestamp_ms,
-      ]);
-    } finally {
-      client.release();
-    }
+    return withSpan('DB INSERT recordAuditLog', async (span) => {
+      span.setAttribute('db.system', 'postgresql');
+      span.setAttribute('db.operation', 'INSERT');
+      span.setAttribute('db.sql.table', 'audit_logs');
+      const client = await this.pool.connect();
+      try {
+        await this.setTenantRlsContext(client, logRecord.org_id);
+        await client.query(AUTH_QUERIES.FLOW_SIGN_IN.RECORD_AUDIT_LOG, [
+          logRecord.id,
+          logRecord.user_id,
+          logRecord.org_id,
+          logRecord.event_type,
+          logRecord.ip_address,
+          logRecord.user_agent,
+          logRecord.timestamp_ms,
+        ]);
+      } finally {
+        client.release();
+      }
+    }, { kind: SpanKind.CLIENT });
   }
 
   async savePasswordResetToken(tokenHash: string, userId: string, expiresAtMs: number): Promise<void> {
