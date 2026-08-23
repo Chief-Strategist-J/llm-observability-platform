@@ -8,22 +8,20 @@ Unified deployment, observability & security package for the LLMObs Platform. Pr
 
 All web services are fronted by **Traefik API Gateway** with TLS termination on `:31419`.
 
-| Service | Custom Gateway URL | Port | Auth Type | Username / Password | `.env` Variable |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **API Gateway HTTPS** | [https://llmobs.gateway:31419](https://llmobs.gateway:31419) | `31419` | TLS | CA Cert + SANs | `TLS_CERT_FILE` |
-| **API Gateway HTTP** | `http://llmobs.gateway:31410` | `31410` | 301 Redirect | Auto-redirects to HTTPS | `PORT_TRAEFIK_HTTP` |
-| **Traefik Dashboard** | [http://llmobs.gateway:31411](http://llmobs.gateway:31411) | `31411` | Insecure (Dev) | None (Admin Dashboard) | `PORT_TRAEFIK_DASHBOARD` |
-| **Grafana UI Dashboard** | [https://llmobs.grafana:31419](https://llmobs.grafana:31419) | `31419` | Basic Auth | `admin` / `${GF_SECURITY_ADMIN_PASSWORD}` | `GF_SECURITY_ADMIN_PASSWORD` |
-| **Grafana Tempo (Traces)** | [https://llmobs.tempo:31419](https://llmobs.tempo:31419) | `31419` | Network Isolated | None (Internal API) | `PORT_TEMPO` |
-| **OTel Collector (Ingest)** | [https://llmobs.otel:31419](https://llmobs.otel:31419) | `31419` | Rate & Payload Limit | None (Ingestion Endpoint) | `PORT_OTEL_HTTP` |
-| **Auth Microservice** | [https://llmobs.gateway:31419/api/v1/auth](https://llmobs.gateway:31419/api/v1/auth) | `31419` | Bearer JWT | Application Tokens | `PORT_TRAEFIK_HTTPS` |
-| **Redis Cache** | `llmobs.redis:31413` | `31413` | Password (`requirepass`) | `${REDIS_PASSWORD}` | `REDIS_PASSWORD` |
-| **Kafka Event Broker** | `llmobs.kafka:31414` | `31414` | Plaintext (Internal) | None (Network Isolated) | `PORT_KAFKA` |
+| Service | Custom Gateway URL | Port | Auth Type | Username / Password |
+| :--- | :--- | :--- | :--- | :--- |
+| **Grafana UI Dashboard** | [https://llmobs.grafana:31419](https://llmobs.grafana:31419) | `31419` / `31415` | Basic Auth | `admin` / `llmobs_grafana_s3cret_2024` |
+| **API Gateway Dashboard** | [https://llmobs.gateway:31419](https://llmobs.gateway:31419) | `31419` / `31411` | Insecure (Dev) | None (Admin Dashboard) |
+| **Grafana Tempo (Traces)** | [https://llmobs.tempo:31419](https://llmobs.tempo:31419) | `31419` / `31416` | Network Isolated | None (Internal API) |
+| **OTel Collector (Ingest)** | [https://llmobs.otel:31419](https://llmobs.otel:31419) | `31419` / `31417` | Ingestion | None (OTLP Ingestion) |
+| **Auth Microservice** | [https://llmobs.gateway:31419/api/v1/auth](https://llmobs.gateway:31419/api/v1/auth) | `31419` | Bearer JWT | Application Tokens |
+| **Redis Cache** | `llmobs.redis:31413` | `31413` | Password (`requirepass`) | `llmobs_redis_s3cret_2024` |
+| **Kafka Event Broker** | `llmobs.kafka:31414` | `31414` | Plaintext | None |
 
-> 💡 **Quick Setup for Custom Domains:**
-> Add the following line to your `/etc/hosts` file:
+> 💡 **Required 1-Line Setup for Custom Domains (`llmobs.*`):**
+> Run this command once in your terminal to enable DNS resolution for all custom domain URLs:
 > ```bash
-> 127.0.0.1  llmobs.gateway llmobs.grafana llmobs.tempo llmobs.otel llmobs.kafka llmobs.redis
+> echo "127.0.0.1  llmobs.gateway llmobs.grafana llmobs.tempo llmobs.otel llmobs.kafka llmobs.redis" | sudo tee -a /etc/hosts
 > ```
 
 ---
