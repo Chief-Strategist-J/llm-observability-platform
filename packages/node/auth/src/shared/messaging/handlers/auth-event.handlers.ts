@@ -1,5 +1,4 @@
 import { KafkaEvent } from '@observability/core';
-import { withSpan } from '@observability/core/tracing';
 import { BaseTracedKafkaHandler } from './base-traced-handler';
 import { AuthReadProjectionStore } from '../cqrs/projection.store';
 
@@ -18,17 +17,12 @@ export interface UserSignedUpPayload {
 export class UserSignedInHandler extends BaseTracedKafkaHandler<UserSignedInPayload> {
   public readonly eventName = 'USER_SIGNED_IN';
 
-  public async handle(event: KafkaEvent<UserSignedInPayload>): Promise<void> {
-    await withSpan('CQRS Apply UserSignedIn Projection', async (span) => {
-      span.setAttribute('cqrs.event', event.eventName);
-      span.setAttribute('cqrs.user_id', event.payload.userId);
-      span.setAttribute('cqrs.org_id', event.payload.orgId);
-      AuthReadProjectionStore.getInstance().applyUserSignedIn({
-        userId: event.payload.userId,
-        email: event.payload.email,
-        orgId: event.payload.orgId,
-        timestamp: event.timestamp,
-      });
+  protected async handlePayload(payload: UserSignedInPayload, event: KafkaEvent<UserSignedInPayload>): Promise<void> {
+    AuthReadProjectionStore.getInstance().applyUserSignedIn({
+      userId: payload.userId,
+      email: payload.email,
+      orgId: payload.orgId,
+      timestamp: event.timestamp,
     });
   }
 }
@@ -36,17 +30,12 @@ export class UserSignedInHandler extends BaseTracedKafkaHandler<UserSignedInPayl
 export class UserSignedUpHandler extends BaseTracedKafkaHandler<UserSignedUpPayload> {
   public readonly eventName = 'USER_SIGNED_UP';
 
-  public async handle(event: KafkaEvent<UserSignedUpPayload>): Promise<void> {
-    await withSpan('CQRS Apply UserSignedUp Projection', async (span) => {
-      span.setAttribute('cqrs.event', event.eventName);
-      span.setAttribute('cqrs.user_id', event.payload.userId);
-      span.setAttribute('cqrs.org_id', event.payload.orgId);
-      AuthReadProjectionStore.getInstance().applyUserSignedUp({
-        userId: event.payload.userId,
-        email: event.payload.email,
-        orgId: event.payload.orgId,
-        timestamp: event.timestamp,
-      });
+  protected async handlePayload(payload: UserSignedUpPayload, event: KafkaEvent<UserSignedUpPayload>): Promise<void> {
+    AuthReadProjectionStore.getInstance().applyUserSignedUp({
+      userId: payload.userId,
+      email: payload.email,
+      orgId: payload.orgId,
+      timestamp: event.timestamp,
     });
   }
 }
