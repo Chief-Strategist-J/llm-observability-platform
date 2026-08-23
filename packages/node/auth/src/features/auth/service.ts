@@ -48,8 +48,13 @@ import { hashPassword, verifyPassword, hashApiKey } from '../../shared/utils/arg
 import { createToken, verifyToken } from '../../shared/utils/jwt.util';
 import { AUTH_CONSTANTS } from '../../shared/constants/auth.constants';
 
+import type { AuthEventProducer } from '../../shared/messaging/producers/auth-event.producer';
+
 export class AuthService {
-  constructor(private readonly repo: AuthRepositoryPort) {}
+  constructor(
+    private readonly repo: AuthRepositoryPort,
+    private readonly eventProducer?: AuthEventProducer,
+  ) {}
 
   async listOrganizations(userId: string): Promise<OrganizationRecord[]> {
     return this.repo.listOrganizationsByUserId(userId);
@@ -268,6 +273,13 @@ export class AuthService {
     });
 
     const payload = verifyToken(token);
+    if (this.eventProducer) {
+      this.eventProducer.publishUserSignedUp({
+        userId: userRecord.id,
+        email: userRecord.email,
+        orgId: userRecord.org_id,
+      }).catch(() => {});
+    }
     return { token, payload, user: userRecord };
   }
 
@@ -305,6 +317,13 @@ export class AuthService {
     });
 
     const payload = verifyToken(token);
+    if (this.eventProducer) {
+      this.eventProducer.publishUserSignedIn({
+        userId: user.id,
+        email: user.email,
+        orgId: user.org_id,
+      }).catch(() => {});
+    }
     return { token, payload, user };
   }
 

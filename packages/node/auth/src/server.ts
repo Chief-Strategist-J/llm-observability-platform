@@ -7,6 +7,8 @@ import { AuthInboundPortImplementation } from './features/auth/ports/inbound/imp
 import { AuthOutboundPortImplementation } from './features/auth/ports/outbound/implementations/auth-outbound.port.implementation';
 import { AuthInboundAdapterImplementation } from './features/auth/adapters/inbound/implementations/auth-inbound.adapter.implementation';
 import { AuthOutboundAdapterImplementation } from './features/auth/adapters/outbound/implementations/auth-outbound.adapter.implementation';
+import { AuthEventProducer } from './shared/messaging/producers/auth-event.producer';
+import { AuthEventConsumer } from './shared/messaging/consumers/auth-event.consumer';
 import { AUTH_CONSTANTS } from './shared/constants/auth.constants';
 
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : AUTH_CONSTANTS.DEFAULT_PORT;
@@ -17,7 +19,18 @@ const repositoryAdapter = (process.env.DATABASE_URL || process.env.USE_REAL_DB =
 export const outboundAdapter = new AuthOutboundAdapterImplementation(repositoryAdapter);
 export const outboundPort = new AuthOutboundPortImplementation(outboundAdapter);
 
-export const service = new AuthService(outboundPort);
+export const authEventProducer = new AuthEventProducer();
+export const authEventConsumer = new AuthEventConsumer();
+
+authEventProducer.init().catch((err: any) => {
+  console.warn('[kafka-producer] Operating in fallback mode:', err?.message || err);
+});
+
+authEventConsumer.init().catch((err: any) => {
+  console.warn('[kafka-consumer] Operating in fallback mode:', err?.message || err);
+});
+
+export const service = new AuthService(outboundPort, authEventProducer);
 
 export const inboundPort = new AuthInboundPortImplementation(service);
 export const inboundAdapter = new AuthInboundAdapterImplementation(inboundPort);

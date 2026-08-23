@@ -1,8 +1,8 @@
-# ADR 0002: Sign-Up, Sign-In, Argon2id Hashing & Audit Logging
+# ADR 0002: Sign-Up, Sign-In, Argon2id Hashing, Kafka Event Pipeline & Audit Logging
 
 - **Status**: Accepted
 - **Date**: 2026-08-23
-- **Context**: User registration (Sign-Up) and authentication (Sign-In) must provide secure password hashing using Argon2id, atomic user & organization creation, structured audit logging, and JWT session token generation.
+- **Context**: User registration (Sign-Up) and authentication (Sign-In) must provide secure password hashing using Argon2id, atomic user & organization creation, structured audit logging, JWT session token generation, and asynchronous Kafka event publishing.
 
 ---
 
@@ -21,6 +21,11 @@ flowchart TD
         DomainCore["AuthService Core"]
         ArgonEngine["Argon2id Password Engine"]
         JWTEngine["JWT Token Generator"]
+        KafkaProducer["AuthEventProducer Pipeline"]
+    end
+
+    subgraph Messaging["Kafka Messaging Broker (:31414)"]
+        KafkaTopic["Topic: auth.events (USER_SIGNED_UP / USER_SIGNED_IN)"]
     end
 
     subgraph Persistence["AlloyDB / PostgreSQL Storage (:31412)"]
@@ -37,6 +42,8 @@ flowchart TD
 
     DomainCore --> ArgonEngine
     DomainCore --> JWTEngine
+    DomainCore -->|Publish Kafka Event| KafkaProducer
+    KafkaProducer -->|Publish Event| KafkaTopic
 
     DomainCore -->|Insert / Verify User| UsersTable
     DomainCore -->|Create Organization| OrgsTable
@@ -58,6 +65,7 @@ sequenceDiagram
     participant Service as AuthService Engine
     participant Argon as Argon2id Engine
     participant DB as AlloyDB / PostgreSQL
+    participant Kafka as Kafka Event Pipeline
 
     Client->>Router: POST /api/v1/auth/sign-up { email, password, name, organization_name }
     Router->>Service: handleSignUp(input)
@@ -72,6 +80,9 @@ sequenceDiagram
     Service->>DB: INSERT INTO auth_users (user_id, email, password_hash, name)
     Service->>DB: INSERT INTO auth_user_organizations (user_id, org_id, role)
     Service->>DB: COMMIT Transaction
+
+    Service->>Kafka: publishUserSignedUp({ userId, email, orgId })
+    Kafka-->>Service: Event published to topic auth.events
 
     Service->>Service: Issue Scoped JWT (sub: user_id, org_id, role: owner)
     Service-->>Router: Return { status: "success", token, user }
@@ -90,6 +101,7 @@ sequenceDiagram
     participant Service as AuthService Engine
     participant Argon as Argon2id Engine
     participant DB as AlloyDB / PostgreSQL
+    participant Kafka as Kafka Event Pipeline
 
     Client->>Router: POST /api/v1/auth/sign-in { email, password }
     Router->>Service: handleSignIn(input, headers)
@@ -108,6 +120,8 @@ sequenceDiagram
         Router-->>Client: HTTP 401 Unauthorized Response
     else Password Match
         Service->>DB: INSERT INTO auth_audit_logs (user_id, event_type, ip_address, user_agent)
+        Service->>Kafka: publishUserSignedIn({ userId, email, orgId })
+        Kafka-->>Service: Event published to topic auth.events
         Service->>Service: Issue Scoped JWT Token
         Service-->>Router: Return { status: "success", token, user }
         Router-->>Client: HTTP 200 OK Response Payload
@@ -120,4 +134,4 @@ sequenceDiagram
 
 1. **Argon2id Standard**: Password verification enforces Argon2id with memory cost and time cost parameters to prevent GPU brute-force attacks.
 2. **Atomic Multi-Entity Transactions**: Sign-up executes user creation, organization initialization, and N-to-N membership mapping inside an atomic PostgreSQL database transaction.
-3. **Structured Audit Trail**: Every sign-in attempt captures IP address and user-agent string into `auth_audit_logs`.
+3. **Structured Audit Trail & Kafka Events**: Every sign-in attempt captures IP address and user-agent string into `auth_audit_logs` and emits real-time `USER_SIGNED_IN` / `USER_SIGNED_UP` events over Kafka.
