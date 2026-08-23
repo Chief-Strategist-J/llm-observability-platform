@@ -7,7 +7,13 @@ import { trace } from '@opentelemetry/api';
 let providerInitialized = false;
 
 export function initOpenTelemetryTracer(): void {
-  if (providerInitialized || typeof window === 'undefined') {
+  if (providerInitialized) return;
+
+  if (typeof window === 'undefined') {
+    import('@observability/core/tracing').then(({ initNodeTracing }) => {
+      initNodeTracing('web-app', '0.1.0');
+    }).catch(() => {});
+    providerInitialized = true;
     return;
   }
 
@@ -28,7 +34,6 @@ export function initOpenTelemetryTracer(): void {
   });
 
   provider.register();
-
   providerInitialized = true;
 }
 

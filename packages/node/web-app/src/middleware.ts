@@ -22,23 +22,55 @@ function getSessionToken(req: NextRequest): string | undefined {
   );
 }
 
+function generateW3CTraceparent(): string {
+  const hexChars = '0123456789abcdef';
+  let traceId = '';
+  let spanId = '';
+  for (let i = 0; i < 32; i++) traceId += hexChars[Math.floor(Math.random() * 16)];
+  for (let i = 0; i < 16; i++) spanId += hexChars[Math.floor(Math.random() * 16)];
+  return `00-${traceId}-${spanId}-01`;
+}
+
 export function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
-  if (isPublicPath(pathname)) {
-    return NextResponse.next();
+  const requestId = req.headers.get('x-request-id') || `req-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+  const correlationId = req.headers.get('x-correlation-id') || requestId;
+  const traceparent = req.headers.get('traceparent') || generateW3CTraceparent();
+
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set('x-request-id', requestId);
+  requestHeaders.set('x-correlation-id', correlationId);
+  requestHeaders.set('traceparent', traceparent);
+  requestHeaders.set('tracestate', req.headers.get('tracestate') || 'rojo=1');
+
+  if (!isPublicPath(pathname)) {
+    const sessionToken = getSessionToken(req);
+    if (!sessionToken) {
+      const signInUrl = new URL('/auth/sign-in', req.url);
+      signInUrl.searchParams.set('callbackUrl', pathname);
+      const redirectRes = NextResponse.redirect(signInUrl);
+      redirectRes.headers.set('x-request-id', requestId);
+      redirectRes.headers.set('x-correlation-id', correlationId);
+      redirectRes.headers.set('traceparent', traceparent);
+      return redirectRes;
+    }
   }
 
-  const sessionToken = getSessionToken(req);
-  if (!sessionToken) {
-    const signInUrl = new URL('/auth/sign-in', req.url);
-    signInUrl.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(signInUrl);
-  }
+  const res = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 
-  return NextResponse.next();
+  res.headers.set('x-request-id', requestId);
+  res.headers.set('x-correlation-id', correlationId);
+  res.headers.set('traceparent', traceparent);
+  res.headers.set('tracestate', 'rojo=1');
+
+  return res;
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };
