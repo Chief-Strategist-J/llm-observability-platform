@@ -1,11 +1,10 @@
 import { trace, type Tracer, SpanKind, SpanStatusCode, type Span } from '@opentelemetry/api';
-import { NodeTracerProvider, BatchSpanProcessor } from '@opentelemetry/sdk-trace-node';
+import { NodeTracerProvider, SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import { AUTH_CONSTANTS } from '../../shared/constants/auth.constants';
 
-let activeTracer: Tracer | null = null;
 let providerInitialized = false;
 
 export function initAuthTracing(): void {
@@ -24,7 +23,9 @@ export function initAuthTracing(): void {
 
   const provider = new NodeTracerProvider({
     resource,
-    spanProcessors: [new BatchSpanProcessor(exporter)],
+    spanProcessors: [
+      new SimpleSpanProcessor(exporter),
+    ],
   });
 
   provider.register();
@@ -35,10 +36,7 @@ export function getTracer(): Tracer {
   if (!providerInitialized) {
     initAuthTracing();
   }
-  if (!activeTracer) {
-    activeTracer = trace.getTracer(AUTH_CONSTANTS.SERVICE_NAME, AUTH_CONSTANTS.SERVICE_VERSION);
-  }
-  return activeTracer;
+  return trace.getTracer(AUTH_CONSTANTS.SERVICE_NAME, AUTH_CONSTANTS.SERVICE_VERSION);
 }
 
 export async function withSpan<T>(

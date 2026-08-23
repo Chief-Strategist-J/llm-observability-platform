@@ -8,7 +8,7 @@ import { AuthEventProducer } from './shared/messaging/producers/auth-event.produ
 import { AuthEventConsumer } from './shared/messaging/consumers/auth-event.consumer';
 import { AUTH_CONSTANTS } from './shared/constants/auth.constants';
 import { initAuthTracing } from './infra/tracing/tracer';
-import { traceHttpMiddleware } from './infra/tracing/middleware';
+import { runWithHttpTracing } from './infra/tracing/middleware';
 
 initAuthTracing();
 
@@ -34,22 +34,22 @@ export const service = new AuthService(repositoryAdapter, authEventProducer);
 export const router = new AuthRestV1Router(service);
 
 const server = http.createServer((req, res) => {
-  traceHttpMiddleware(req, res, () => {
-    const method = req.method ?? 'GET';
-    const url = req.url ?? '/';
+  const method = req.method ?? 'GET';
+  const url = req.url ?? '/';
 
-    if (method === 'OPTIONS') {
-      res.writeHead(204, AUTH_CONSTANTS.SECURITY_CONFIG.CORS_HEADERS);
-      res.end();
-      return;
-    }
+  if (method === 'OPTIONS') {
+    res.writeHead(204, AUTH_CONSTANTS.SECURITY_CONFIG.CORS_HEADERS);
+    res.end();
+    return;
+  }
 
-    let bodyData = '';
-    req.on('data', (chunk) => {
-      bodyData += chunk.toString();
-    });
+  let bodyData = '';
+  req.on('data', (chunk) => {
+    bodyData += chunk.toString();
+  });
 
-    req.on('end', async () => {
+  req.on('end', async () => {
+    await runWithHttpTracing(req, res, async () => {
       let parsedBody: unknown = undefined;
       if (bodyData) {
         try {

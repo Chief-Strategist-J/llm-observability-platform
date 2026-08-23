@@ -29,6 +29,8 @@ This guide provides end-to-end instructions for running Grafana, searching trace
 
 ## 3. TraceQL Query Library for Debugging
 
+> Note: In Tempo TraceQL, span attributes use dot prefixes (e.g. `{.x-request-id = "value"}`) rather than `span.`.
+
 ### A. General Service Traces
 - **All Auth Service Spans**:
   ```traceql
@@ -48,11 +50,11 @@ This guide provides end-to-end instructions for running Grafana, searching trace
   ```
 - **Search by Specific Error Code (e.g. Invalid Password)**:
   ```traceql
-  { span.error.code = "INVALID_CREDENTIALS" }
+  { .error.code = "INVALID_CREDENTIALS" }
   ```
 - **Search by Validation Errors (Zod Schema Failure)**:
   ```traceql
-  { span.error.code = "VALIDATION_ERROR" }
+  { .error.code = "VALIDATION_ERROR" }
   ```
 
 ---
@@ -64,23 +66,23 @@ This guide provides end-to-end instructions for running Grafana, searching trace
   ```
 - **High-Latency Database Queries (> 100ms)**:
   ```traceql
-  { span.db.system = "postgresql" && duration > 100ms }
+  { .db.system = "postgresql" && duration > 100ms }
   ```
 
 ---
 
 ### D. User & Request Correlation Tracing
-- **Filter Traces by User Email**:
+- **Filter Traces by Request ID / Request Key**:
   ```traceql
-  { span.user.email = "devuser@example.com" }
-  ```
-- **Filter Traces by Request ID**:
-  ```traceql
-  { span.x-request-id = "req-1787491177230-g4lb89" }
+  { .x-request-id = "req-root-test-001" }
   ```
 - **Filter Traces by Correlation ID**:
   ```traceql
-  { span.x-correlation-id = "corr-101" }
+  { .x-correlation-id = "corr-clean-101" }
+  ```
+- **Filter Traces by User Email**:
+  ```traceql
+  { .user.email = "jaydeep@gmail.com" }
   ```
 
 ---
@@ -88,11 +90,11 @@ This guide provides end-to-end instructions for running Grafana, searching trace
 ### E. Infrastructure & Message Queue Tracing
 - **PostgreSQL Database Child Spans**:
   ```traceql
-  { span.db.system = "postgresql" }
+  { .db.system = "postgresql" }
   ```
 - **Kafka Event Producer & Consumer Spans**:
   ```traceql
-  { span.messaging.system = "kafka" }
+  { .messaging.system = "kafka" }
   ```
 
 ---
@@ -112,14 +114,11 @@ This guide provides end-to-end instructions for running Grafana, searching trace
 
 ---
 
-### Issue 2: "No Traces Showing up in Grafana Tempo"
-- **Symptom**: Querying `{ resource.service.name = "auth-service" }` returns empty results (`{"traces": []}`).
-- **Root Cause**:
-  1. Time range filter in Grafana is set outside the active span window (e.g. `Last 6 hours` when trace occurred 1 minute ago).
-  2. OpenTelemetry `BatchSpanProcessor` holds spans in buffer for 5 seconds before dispatching.
+### Issue 2: "TraceQL Syntax Error: unknown identifier: span"
+- **Symptom**: Grafana UI returns `0 series returned` or `unknown identifier: span` when typing `{ span.x-request-id = "val" }`.
+- **Root Cause**: Tempo TraceQL requires span attributes to be prefixed with a dot (`.x-request-id`) instead of `span.`.
 - **Solution / Fix**:
-  - Set Grafana Time Range to **Last 5 minutes**.
-  - Wait 5 seconds after executing a request and click **Run Query**.
+  Use `{.x-request-id = "req-root-test-001"}` or `{.user.email = "jaydeep@gmail.com"}`.
 
 ---
 
@@ -167,13 +166,12 @@ This guide provides end-to-end instructions for running Grafana, searching trace
 
 ## 5. End-to-End Tracing via `curl` with Request Keys & JSON Responses
 
-### Step 1: Execute Sign-In Request with Explicit Request Key & Traceparent
+### Step 1: Execute Sign-In Request with Explicit Request Key
 ```bash
 curl -s -X POST http://localhost:3001/api/v1/auth/sign-in \
   -H "Content-Type: application/json" \
-  -H "x-request-id: req-1787491177230-g4lb89" \
-  -H "x-correlation-id: req-1787491177230-g4lb89" \
-  -H "traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01" \
+  -H "x-request-id: req-root-test-001" \
+  -H "x-correlation-id: corr-root-test-001" \
   -d '{"email":"jaydeep@gmail.com","password":"Scaibu@123456"}'
 ```
 
@@ -183,7 +181,7 @@ curl -s -X POST http://localhost:3001/api/v1/auth/sign-in \
   "status": "success",
   "message": "User signed in successfully",
   "data": {
-    "token": "eyJzdWIiOiJ1c3JfOTlzM2NxbiIsImVtYWlsIjoiamF5ZGVlcEBnbWFpbC5jb20iLCJvcmciOnsib3JnX2lkIjoib3JnX3lpdTR6NmYiLCJvcmdfbmFtZSI6IlNjYWlidSIsInJvbGUiOiJhZG1pbiJ9LCJpYXQiOjE3ODc0OTEyNTEsImV4cCI6MTc4NzQ5NDg1MX0=.c2lnX3Vzcl85OXMzY3FuXzE3ODc0OTEyNTE=",
+    "token": "eyJzdWIiOiJ1c3JfOTlzM2NxbiIsImVtYWlsIjoiamF5ZGVlcEBnbWFpbC5jb20iLCJvcmciOnsib3JnX2lkIjoib3JnX3lpdTR6NmYiLCJvcmdfbmFtZSI6IlNjYWlidSIsInJvbGUiOiJhZG1pbiJ9LCJpYXQiOjE3ODc0OTI0NDEsImV4cCI6MTc4NzQ5NjA0MX0=.c2lnX3Vzcl85OXMzY3FuXzE3ODc0OTI0NDE=",
     "payload": {
       "sub": "usr_99s3cqn",
       "email": "jaydeep@gmail.com",
@@ -192,8 +190,8 @@ curl -s -X POST http://localhost:3001/api/v1/auth/sign-in \
         "org_name": "Scaibu",
         "role": "admin"
       },
-      "exp": 1787494851,
-      "iat": 1787491251
+      "exp": 1787496041,
+      "iat": 1787492441
     },
     "user": {
       "id": "usr_99s3cqn",
@@ -214,58 +212,9 @@ curl -s -X POST http://localhost:3001/api/v1/auth/sign-in \
 
 ---
 
-### Step 2: Query Grafana Tempo Directly for Trace ID (`4bf92f3577b34da6a3ce929d0e0e4736`)
+### Step 2: Query Grafana Tempo TraceQL API for Request Key (`req-root-test-001`)
 ```bash
-curl -s -u admin:admin 'http://localhost:31415/api/datasources/proxy/uid/P214B5B846CF3925F/api/traces/4bf92f3577b34da6a3ce929d0e0e4736'
-```
-
-**JSON Response Payload Returned**:
-```json
-{
-  "batches": [
-    {
-      "resource": {
-        "attributes": [
-          { "key": "service.name", "value": { "stringValue": "auth-service" } },
-          { "key": "service.version", "value": { "stringValue": "1.0.0" } },
-          { "key": "telemetry.sdk.language", "value": { "stringValue": "collector" } }
-        ]
-      },
-      "scopeSpans": [
-        {
-          "scope": { "name": "auth-service", "version": "1.0.0" },
-          "spans": [
-            {
-              "traceId": "S/kvNXezTaajzpKdDg5HNg==",
-              "spanId": "YxxSJux1Tv8=",
-              "parentSpanId": "APBnqgupArc=",
-              "name": "HTTP POST /api/v1/auth/sign-in",
-              "kind": "SPAN_KIND_SERVER",
-              "startTimeUnixNano": "1787490773208000000",
-              "endTimeUnixNano": "1787490773405738618",
-              "attributes": [
-                { "key": "http.method", "value": { "stringValue": "POST" } },
-                { "key": "http.target", "value": { "stringValue": "/api/v1/auth/sign-in" } },
-                { "key": "x-request-id", "value": { "stringValue": "req-1787491177230-g4lb89" } },
-                { "key": "x-correlation-id", "value": { "stringValue": "req-1787491177230-g4lb89" } },
-                { "key": "user.email", "value": { "stringValue": "jaydeep@gmail.com" } },
-                { "key": "http.status_code", "value": { "intValue": 200 } }
-              ],
-              "status": { "code": "STATUS_CODE_OK" }
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}
-```
-
----
-
-### Step 3: Query Grafana Tempo TraceQL API for Request Key (`req-1787491177230-g4lb89`)
-```bash
-curl -s -u admin:admin 'http://localhost:31415/api/datasources/proxy/uid/P214B5B846CF3925F/api/search?q=%7Bspan.x-request-id%3D%22req-1787491177230-g4lb89%22%7D'
+curl -s -u admin:admin 'http://localhost:31415/api/datasources/proxy/uid/P214B5B846CF3925F/api/search?q=%7B.x-request-id%3D%22req-root-test-001%22%7D'
 ```
 
 **JSON Response Payload Returned**:
@@ -273,32 +222,30 @@ curl -s -u admin:admin 'http://localhost:31415/api/datasources/proxy/uid/P214B5B
 {
   "traces": [
     {
-      "traceID": "4bf92f3577b34da6a3ce929d0e0e4736",
+      "traceID": "cfa926f3d5688f652da89e6ef4deee18",
       "rootServiceName": "auth-service",
       "rootTraceName": "HTTP POST /api/v1/auth/sign-in",
-      "startTimeUnixNano": "1787490773208000000",
-      "durationMs": 65,
+      "startTimeUnixNano": "1787492441750000000",
+      "durationMs": 34,
       "spanSet": {
         "spans": [
           {
-            "spanID": "60cec4c718c7607e",
-            "startTimeUnixNano": "1787490773208000000",
+            "spanID": "b0e9c4d34d3b1412",
+            "startTimeUnixNano": "1787492441750000000",
             "attributes": [
-              { "key": "service.name", "value": { "stringValue": "auth-service" } },
-              { "key": "user.email", "value": { "stringValue": "jaydeep@gmail.com" } },
-              { "key": "x-request-id", "value": { "stringValue": "req-1787491177230-g4lb89" } }
+              { "key": "x-request-id", "value": { "stringValue": "req-root-test-001" } }
             ]
           }
         ],
-        "matched": 1
+        "matched": 2
       },
       "serviceStats": {
-        "auth-service": { "spanCount": 1 }
+        "auth-service": { "spanCount": 3 }
       }
     }
   ],
   "metrics": {
-    "inspectedBytes": "362324",
+    "inspectedBytes": "535788",
     "completedJobs": 3,
     "totalJobs": 3
   }
@@ -307,21 +254,28 @@ curl -s -u admin:admin 'http://localhost:31415/api/datasources/proxy/uid/P214B5B
 
 ---
 
+### Step 3: Query Grafana Tempo Directly for Trace ID (`cfa926f3d5688f652da89e6ef4deee18`)
+```bash
+curl -s -u admin:admin 'http://localhost:31415/api/datasources/proxy/uid/P214B5B846CF3925F/api/traces/cfa926f3d5688f652da89e6ef4deee18'
+```
+
+---
+
 ## 6. Visualizing Spans in Grafana (What the Trace Waterfall Looks Like)
 
-When searching Grafana Tempo by Request Key (`req-1787491177230-g4lb89`) or opening the Trace ID link, Grafana renders a single unified end-to-end trace waterfall:
+When searching Grafana Tempo by Request Key (`{.x-request-id = "req-root-test-001"}`) or opening the Trace ID link, Grafana renders a single unified end-to-end trace waterfall:
 
 ```text
-Grafana Tempo Trace Waterfall Graph [Trace ID: 4bf92f3577b34da6a3ce929d0e0e4736]
+Grafana Tempo Trace Waterfall Graph [Trace ID: cfa926f3d5688f652da89e6ef4deee18]
 -----------------------------------------------------------------------------------------------
 Service & Span Name                        Kind     Duration   Attributes                   
 -----------------------------------------------------------------------------------------------
-[OK] web-app: authApiClient.signIn          CLIENT   68ms       user.email=jaydeep@gmail.com 
- `-- [OK] auth-service: HTTP POST /sign-in   SERVER   65ms       x-request-id=req-g4lb89      
-      `-- [OK] auth-service: REST POST      INTERNAL 62ms       route.name=SIGN_IN           
+[OK] web-app: authApiClient.signIn          CLIENT   38ms       user.email=jaydeep@gmail.com 
+ `-- [OK] auth-service: HTTP POST /sign-in   SERVER   34ms       x-request-id=req-root-test-001
+      `-- [OK] auth-service: REST POST      INTERNAL 32ms       route.name=SIGN_IN           
            |-- [OK] DB SELECT findUserByEmail CLIENT 12ms       db.system=postgresql         
-           |-- [OK] Argon2id Password Check  INTERNAL 42ms       crypto.algorithm=argon2id    
-           |-- [OK] DB INSERT recordAuditLog  CLIENT   5ms        db.system=postgresql         
+           |-- [OK] Argon2id Password Check  INTERNAL 15ms       crypto.algorithm=argon2id    
+           |-- [OK] DB INSERT recordAuditLog  CLIENT   3ms        db.system=postgresql         
            `-- [OK] Kafka PRODUCE USER_IN    PRODUCER 2ms        topic=auth.events.v1         
                 `-- [OK] Kafka CONSUMER      CONSUMER 1ms        messaging.operation=process  
 -----------------------------------------------------------------------------------------------

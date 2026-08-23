@@ -51,16 +51,35 @@ export class AuthRestV1Router {
       span.setAttribute('http.target', path);
 
       if (headers) {
-        if (headers['x-request-id']) span.setAttribute('x-request-id', headers['x-request-id']);
-        if (headers['x-correlation-id']) span.setAttribute('x-correlation-id', headers['x-correlation-id']);
-        if (headers['x-tenant-id']) span.setAttribute('x-tenant-id', headers['x-tenant-id']);
+        if (headers['x-request-id']) {
+          span.setAttribute('x-request-id', headers['x-request-id']);
+          span.setAttribute('request_id', headers['x-request-id']);
+        }
+        if (headers['x-correlation-id']) {
+          span.setAttribute('x-correlation-id', headers['x-correlation-id']);
+          span.setAttribute('correlation_id', headers['x-correlation-id']);
+        }
+        if (headers['x-tenant-id']) {
+          span.setAttribute('x-tenant-id', headers['x-tenant-id']);
+          span.setAttribute('tenant_id', headers['x-tenant-id']);
+        }
       }
 
       if (body && typeof body === 'object') {
         const b = body as Record<string, unknown>;
-        if (typeof b['email'] === 'string') span.setAttribute('user.email', b['email']);
-        if (typeof b['org_id'] === 'string') span.setAttribute('org.id', b['org_id']);
-        if (typeof b['organization_name'] === 'string') span.setAttribute('org.name', b['organization_name']);
+        if (typeof b['email'] === 'string') {
+          span.setAttribute('user.email', b['email']);
+          span.setAttribute('user_email', b['email']);
+          span.setAttribute('email', b['email']);
+        }
+        if (typeof b['org_id'] === 'string') {
+          span.setAttribute('org.id', b['org_id']);
+          span.setAttribute('org_id', b['org_id']);
+        }
+        if (typeof b['organization_name'] === 'string') {
+          span.setAttribute('org.name', b['organization_name']);
+          span.setAttribute('org_name', b['organization_name']);
+        }
       }
 
       try {

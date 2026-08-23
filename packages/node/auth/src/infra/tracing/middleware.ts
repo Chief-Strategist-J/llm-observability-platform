@@ -1,13 +1,13 @@
-import { propagation, ROOT_CONTEXT, defaultTextMapGetter, context, SpanKind, SpanStatusCode } from '@opentelemetry/api';
+import { propagation, ROOT_CONTEXT, defaultTextMapGetter, context, trace, SpanKind, SpanStatusCode, type Span } from '@opentelemetry/api';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { getTracer } from './tracer';
 import { HTTP_METHODS } from '../../shared/constants/endpoints';
 
-export function traceHttpMiddleware(
+export async function runWithHttpTracing(
   req: IncomingMessage,
   res: ServerResponse,
-  next: (err?: unknown) => void
-): void {
+  handler: (span: Span) => Promise<void>
+): Promise<void> {
   const tracer = getTracer();
   const route = req.url ?? '/';
   const method = req.method ?? HTTP_METHODS.GET;
@@ -23,8 +23,8 @@ export function traceHttpMiddleware(
 
   const extractedContext = propagation.extract(ROOT_CONTEXT, headerRecord, defaultTextMapGetter);
 
-  context.with(extractedContext, () => {
-    tracer.startActiveSpan(
+  return context.with(extractedContext, async () => {
+    return tracer.startActiveSpan(
       `HTTP ${method} ${route}`,
       {
         kind: SpanKind.SERVER,
@@ -35,9 +35,9 @@ export function traceHttpMiddleware(
           'x-correlation-id': headerRecord['x-correlation-id'] ?? '',
         },
       },
-      (span) => {
-        const originalEnd = res.end.bind(res);
-        res.end = function (...args: unknown[]) {
+      async (span) => {
+        try {
+          await handler(span);
           span.setAttribute('http.status_code', res.statusCode);
           if (res.statusCode >= 400) {
             span.setStatus({
@@ -48,11 +48,17 @@ export function traceHttpMiddleware(
           } else {
             span.setStatus({ code: SpanStatusCode.OK });
           }
+        } catch (err: unknown) {
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: err instanceof Error ? err.message : String(err),
+          });
+          span.recordException(err instanceof Error ? err : new Error(String(err)));
+          span.setAttribute('error', true);
+          throw err;
+        } finally {
           span.end();
-          return (originalEnd as Function).apply(res, args);
-        } as typeof res.end;
-
-        next();
+        }
       }
     );
   });
