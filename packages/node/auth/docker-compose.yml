@@ -14,7 +14,7 @@ services:
       - PORT=3001
       - USE_REAL_DB=true
       - DATABASE_URL=postgresql://postgres:postgres@auth-db:5432/observability_auth
-      - REDIS_URL=redis://localhost:31413
+      - REDIS_URL=redis://:llmobs_redis_s3cret_2024@localhost:31413
       - KAFKA_BROKERS=localhost:31414
       - JWT_SECRET=dev-secret-key-change-in-production
     depends_on:
