@@ -82,6 +82,42 @@ sequenceDiagram
 
 ---
 
+## 🌳 End-to-End Function Call Stack (ASCII Tree)
+
+```tree
+HTTP Request Received (Any Endpoint)
+└── http.createServer [server.ts]
+    └── req.on('end') [server.ts]
+        └── AuthRestV1Router.route(method, path, body, headers, queryParams) [router.ts]
+            │
+            ├── 1. OpenTelemetry Span Start ("REST {method} {path}") [tracer.ts]
+            ├── 2. Match ROUTE_RULES Table [route.rules.ts]
+            │   ├── Match HTTP Method ("GET" / "POST" / "DELETE")
+            │   └── Match Pre-compiled Regex Path Pattern
+            │
+            ├── 3. Session Verification (If authRequired === true)
+            │   ├── extractBearerToken(headers.authorization)
+            │   └── UserAuthDomainService.validateSession(token) [services/user-auth.service.ts]
+            │       ├── RealPostgresAuthAdapter.isTokenDenylisted(token) [real-postgres-auth.adapter.ts]
+            │       └── verifyToken(token) [shared/utils/jwt.util.ts]
+            │
+            ├── 4. Execute Route Handler Callback [route.rules.ts]
+            │   └── AuthService.<domainMethod>() [service.ts] (Facade)
+            │       └── <SRPDomainService>.<method>() [services/*.service.ts]
+            │           └── RealPostgresAuthAdapter.<queryMethod>() [real-postgres-auth.adapter.ts]
+            │               ├── pool.connect() [pg Pool]
+            │               ├── client.query(sqlQuery, params) [auth.queries.ts]
+            │               └── client.release() [pg Pool]
+            │
+            ├── 5. Construct Standardized JSON Response [router.ts]
+            │   └── createSuccessResponse(data, message) / createErrorResponse(error)
+            │
+            └── 6. Write Response & End Stream [server.ts]
+                └── res.writeHead(statusCode, headers) & res.end(JSON.stringify(payload))
+```
+
+---
+
 ## 📋 Architectural Decisions & Trade-Offs
 
 1. **Separation of Router Data vs Engine Logic**:

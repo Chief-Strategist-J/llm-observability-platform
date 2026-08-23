@@ -76,6 +76,48 @@ sequenceDiagram
 
 ---
 
+## 🌳 End-to-End Function Call Stack (ASCII Tree)
+
+```tree
+User selects new Organization from dropdown (Frontend User Action)
+└── OrgSelector.tsx [src/components/shell/OrgSelector.tsx]
+    └── handleSelectOrg(targetOrgId)
+        └── dispatch(authActions.switchOrganizationSubmitted({ targetOrgId })) [Redux Action Dispatch]
+            │
+            └── rootSaga -> authSaga Watcher [src/features/auth/auth.saga.ts]
+                └── takeEvery(authActions.switchOrganizationSubmitted.type, handleSwitchOrg)
+                    └── handleSwitchOrg(action) [Redux-Saga Generator]
+                        └── authApiClient.switchOrganization(targetOrgId, currentToken) [src/lib/auth-client.ts]
+                            └── RawAuthApiClient.execute('switchOrganization', { pathParams: { id: targetOrgId }, token })
+                                └── fetch('http://localhost:3001/api/v1/auth/organizations/org_target/switch', { method: 'POST' })
+                                    │
+                                    ├── [HTTP Network Request Wire] ──> [Backend Auth Service :3001]
+                                    │   └── http.createServer [server.ts]
+                                    │       └── req.on('end') [server.ts]
+                                    │           └── AuthRestV1Router.route() [router.ts]
+                                    │               ├── 1. Session Verification: UserAuthDomainService.validateSession(currentToken)
+                                    │               └── 2. handleSwitchOrganization() [route.rules.ts]
+                                    │                   └── AuthService.switchOrganization() [service.ts] (Facade)
+                                    │                       └── OrganizationDomainService.switchOrganization() [services/organization.service.ts]
+                                    │                           │
+                                    │                           ├── a. RealPostgresAuthAdapter.listOrganizationsByUserId() [real-postgres-auth.adapter.ts]
+                                    │                           │   └── client.query(AUTH_QUERIES.FLOW_CREATE_ORGANIZATION.LIST_BY_USER) [auth.queries.ts]
+                                    │                           ├── b. Verify user belongs to targetOrgId (or throw InsufficientPermissionError)
+                                    │                           ├── c. RealPostgresAuthAdapter.addTokenToDenylist(currentToken, exp) [Revoke Old Token]
+                                    │                           ├── d. createToken(userId, email, { org_id: targetOrgId, org_name, role }) [Issue Scoped JWT]
+                                    │                           ├── e. verifyToken(newToken) [shared/utils/jwt.util.ts]
+                                    │                           └── f. RealPostgresAuthAdapter.recordAuditLog() [real-postgres-auth.adapter.ts]
+                                    │                               ├── client.query(AUTH_QUERIES.TENANT_RLS.SET_LOCAL_TENANT_CONTEXT) [RLS Context]
+                                    │                               └── client.query(AUTH_QUERIES.FLOW_SIGN_IN.RECORD_AUDIT_LOG) [ORG_SWITCH Log]
+                                    │
+                                    └── ON RESPONSE SUCCESS (200 OK):
+                                        ├── setAuthCookies(newToken, role) [document.cookie: authjs.session-token]
+                                        ├── put(authActions.organizationSwitched({ organization, token: newToken })) [Redux State Update]
+                                        └── router.refresh() [Next.js Page Cache Refresh]
+```
+
+---
+
 ## 📋 Multi-Tenant Isolation Principles
 
 1. **N-to-N Mapping**: User and Organization relationships are decoupled via `auth_user_organizations` table.

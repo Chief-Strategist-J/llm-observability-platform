@@ -81,6 +81,44 @@ sequenceDiagram
 
 ---
 
+## 🌳 End-to-End Function Call Stack (ASCII Tree)
+
+```tree
+User clicks "Sign Out" button (Frontend User Action)
+└── UserMenu.tsx [src/components/shell/UserMenu.tsx]
+    └── handleSignOut()
+        └── dispatch(authActions.signOutSubmitted()) [Redux Action Dispatch]
+            │
+            └── rootSaga -> authSaga Watcher [src/features/auth/auth.saga.ts]
+                └── takeEvery(authActions.signOutSubmitted.type, handleSignOut)
+                    └── handleSignOut() [Redux-Saga Generator]
+                        └── authApiClient.signOut(token) [src/lib/auth-client.ts]
+                            └── RawAuthApiClient.execute('signOut', { token })
+                                └── fetch('http://localhost:3001/api/v1/auth/sign-out', { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
+                                    │
+                                    ├── [HTTP Network Request Wire] ──> [Backend Auth Service :3001]
+                                    │   └── http.createServer [server.ts]
+                                    │       └── req.on('end') [server.ts]
+                                    │           └── AuthRestV1Router.route() [router.ts]
+                                    │               ├── 1. Session Verification: UserAuthDomainService.validateSession(token)
+                                    │               └── 2. handleSignOut() [route.rules.ts]
+                                    │                   └── AuthService.signOut(token) [service.ts] (Facade)
+                                    │                       └── UserAuthDomainService.signOut(token) [services/user-auth.service.ts]
+                                    │                           │
+                                    │                           ├── a. verifyToken(token) [shared/utils/jwt.util.ts] (Extract Payload & Exp)
+                                    │                           ├── b. RealPostgresAuthAdapter.addTokenToDenylist(token, expMs) [real-postgres-auth.adapter.ts]
+                                    │                           │   └── client.query(AUTH_QUERIES.FLOW_SESSION_VERIFY.ADD_TOKEN_DENYLIST) [auth.queries.ts]
+                                    │                           └── c. RealPostgresAuthAdapter.recordAuditLog() [real-postgres-auth.adapter.ts]
+                                    │                               └── client.query(AUTH_QUERIES.FLOW_SIGN_IN.RECORD_AUDIT_LOG) [SIGNOUT Audit Log]
+                                    │
+                                    └── ON RESPONSE SUCCESS (200 OK):
+                                        ├── clearAuthCookies() [Purge document.cookie]
+                                        ├── put(authActions.loggedOut()) [Redux State -> Reset State]
+                                        └── router.push('/auth/sign-in') [Next.js Navigation to Login]
+```
+
+---
+
 ## 📋 Architectural Principles & Performance
 
 1. **O(1) Redis Lookup**: Session validation performs an instant `O(1)` key lookup against Redis before allowing requests to proceed.
