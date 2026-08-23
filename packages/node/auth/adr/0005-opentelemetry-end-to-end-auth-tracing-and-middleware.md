@@ -44,9 +44,9 @@ The `@observability/auth` service executes critical authentication operations in
 
 ```mermaid
 graph TD
-    Client["Client App / Web-App Browser (Port 31400)"] -->|HTTP POST /sign-in (traceparent, x-request-id)| AuthServer["Auth HTTP Server (Port 3001)"]
+    Client["Client App / Web-App Browser (Port 31400)"] -->|HTTP POST /sign-in| AuthServer["Auth HTTP Server (Port 3001)"]
     
-    subgraph Central Core Tracing Engine (@observability/core/tracing)
+    subgraph CoreEngine["Central Core Tracing Engine"]
         TracerEngine["initNodeTracing & getTracer"]
         AsyncHooks["AsyncLocalStorageContextManager"]
         HttpTracing["runWithHttpTracing Middleware"]
@@ -54,7 +54,7 @@ graph TD
         BaseHandler["BaseTracedKafkaHandler"]
     end
 
-    subgraph Auth Microservice Engine
+    subgraph AuthEngine["Auth Microservice Engine"]
         AuthServer --> HttpTracing
         HttpTracing --> Router["AuthRestV1Router (Attributes Tagging)"]
         Router --> Service["UserAuthDomainService (Argon2id & Service Spans)"]
@@ -63,7 +63,7 @@ graph TD
         Kafka --> Consumer["AuthEventConsumer (BaseTracedKafkaHandler Dispatch)"]
     end
     
-    HttpTracing -->|OTLP HTTP Spans (JSON)| OTELCollector["frontend-otel-collector (Port 31417)"]
+    HttpTracing -->|OTLP HTTP Spans JSON| OTELCollector["frontend-otel-collector (Port 31417)"]
     OTELCollector -->|gRPC Spans| Tempo["frontend-tempo (Port 3200)"]
     Tempo -->|TraceQL Search| Grafana["Grafana Explore UI (Port 31415 / 31419)"]
 ```

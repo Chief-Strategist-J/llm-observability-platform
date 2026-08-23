@@ -37,11 +37,11 @@ Previously:
 
 ```mermaid
 graph TD
-    subgraph Auth REST Service
+    subgraph AuthRestService["Auth REST Service"]
         HTTP["HTTP Endpoint Handler"] --> Producer["AuthEventProducer"]
     end
 
-    subgraph Centralized Messaging Engine (@observability/core/tracing)
+    subgraph CentralMessagingEngine["Centralized Messaging Engine"]
         Producer --> Pipeline["ProducerMiddlewarePipeline"]
         Pipeline --> TraceMW["tracingProducerMiddleware"]
         TraceMW --> CentralTracer["CentralMessagingTracer (SpanKind.PRODUCER)"]
@@ -50,7 +50,7 @@ graph TD
 
     KafkaClient -->|Publish Event + W3C Headers| KafkaBroker["Kafka Broker (Port 31414 / 9092) Topic: auth.events.v1"]
 
-    subgraph Kafka Consumer Pipeline
+    subgraph KafkaConsumerPipeline["Kafka Consumer Pipeline"]
         KafkaBroker --> ConsumerClient["KafkaConsumerClient"]
         ConsumerClient --> ConsumerPipe["ConsumerMiddlewarePipeline"]
         ConsumerPipe --> ExtractMW["tracingConsumerMiddleware (SpanKind.CONSUMER)"]
