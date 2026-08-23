@@ -20,19 +20,112 @@
 ## 📖 Table of Contents
 
 1. [Executive Summary](#-executive-summary)
-2. [Standardized API Response Envelope](#-standardized-api-response-envelope)
-3. [Hexagonal Ports & Adapters Architecture](#-hexagonal-ports--adapters-architecture)
-4. [Organization & User Lifecycle Workflow](#-organization--user-lifecycle-workflow)
-5. [Database Migrations & N-to-N Multi-Tenancy](#-database-migrations--n-to-n-multi-tenancy)
-6. [Master API Reference Table (All 23 Endpoints)](#-master-api-reference-table-all-23-endpoints)
-7. [Automated Live API Curl Test Suite](#-automated-live-api-curl-test-suite)
-8. [Verified Vitest Test Suite Execution Results](#-verified-vitest-test-suite-execution-results)
+2. [High-Level Architecture (HLD)](#-high-level-architecture-hld)
+3. [Low-Level Design & Security Flow (LLD)](#-low-level-design--security-flow-lld)
+4. [Standardized API Response Envelope](#-standardized-api-response-envelope)
+5. [Hexagonal Ports & Adapters Architecture](#-hexagonal-ports--adapters-architecture)
+6. [Organization & User Lifecycle Workflow](#-organization--user-lifecycle-workflow)
+7. [Database Migrations & N-to-N Multi-Tenancy](#-database-migrations--n-to-n-multi-tenancy)
+8. [Master API Reference Table (All 23 Endpoints)](#-master-api-reference-table-all-23-endpoints)
+9. [Automated Live API Curl Test Suite](#-automated-live-api-curl-test-suite)
+10. [Verified Vitest Test Suite Execution Results](#-verified-vitest-test-suite-execution-results)
 
 ---
 
 ## 🧭 Executive Summary
 
 The `@observability/auth` platform provides enterprise multi-tenant user sign-up, organization isolation, multi-org context switching, role-based access control (RBAC), user blocking/unblocking, soft deletion with 30-day backup retention lifecycle, server-side JWT session invalidation via Redis denylist, 3-tier API key management with permission table binding, and comprehensive audit logging with parameter filtering.
+
+---
+
+## 🏛 High-Level Architecture (HLD)
+
+The Auth service follows **Hexagonal Architecture (Ports & Adapters)**, completely separating HTTP REST delivery and database persistence from core auth & security logic.
+
+```mermaid
+flowchart TD
+    subgraph Clients["Client Layer"]
+        WebApp["Next.js Web App (:31400)"]
+        ExternalAPI["External API Consumer"]
+    end
+
+    subgraph Gateway["Gateway & Proxy Layer"]
+        Traefik["Traefik API Gateway (:31410 / :31411)"]
+    end
+
+    subgraph AuthModule["@observability/auth Service (:3001)"]
+        Router["AuthRestV1Router"]
+        Handlers["Request Handlers"]
+        AuthCore["AuthService (Domain Core Engine)"]
+        SecurityEngine["13-Pillar Security Engine"]
+        Tracer["OpenTelemetry Tracer Middleware"]
+
+        Router --> Handlers
+        Handlers --> AuthCore
+        AuthCore --> SecurityEngine
+        AuthCore --> Tracer
+    end
+
+    subgraph InfrastructureLayer["Infrastructure Adapters & Storage"]
+        AuthDB[("AlloyDB Omni / PostgreSQL (:31412)")]
+        RedisStore[("Redis Token Denylist (:31413)")]
+        KafkaBroker["Kafka Messaging Broker (:31414)"]
+        OTelCollector["OTel Collector (:31417 / :31418)"]
+    end
+
+    %% Flow connections
+    WebApp -->|HTTP / REST| Traefik
+    ExternalAPI -->|API Key Auth| Traefik
+    Traefik -->|Route /api/v1/auth| Router
+
+    AuthCore -->|SQL via Postgres Adapter| AuthDB
+    AuthCore -->|Revocation Check| RedisStore
+    AuthCore -->|Publish Auth Events| KafkaBroker
+    Tracer -->|Send Spans| OTelCollector
+```
+
+---
+
+## 🔬 Low-Level Design & Security Flow (LLD)
+
+### 1. Dual-Phase Authentication & Session Validation Pipeline
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client as Client Application
+    participant Router as REST Router
+    participant Service as AuthService Engine
+    participant Redis as Redis Denylist (:31413)
+    participant DB as AlloyDB / Postgres (:31412)
+    participant OTel as OpenTelemetry Collector
+
+    Note over Client, DB: Phase 1: Authentication & Token Generation
+    Client->>Router: POST /api/v1/auth/sign-in
+    Router->>Service: handleSignIn(email, password)
+    Service->>DB: Fetch user & verify Argon2id hash
+    DB-->>Service: User record & org metadata
+    Service->>Service: Issue Scoped JWT (sub, org_id, role)
+    Service-->>Router: JWT Token & Session Payload
+    Router-->>Client: HTTP 200 { status: "success", token: "..." }
+
+    Note over Client, DB: Phase 2: Protected Request & Token Revocation Verification
+    Client->>Router: GET /api/v1/auth/organizations (Bearer JWT)
+    Router->>Service: handleVerifySession(authHeader)
+    Service->>Redis: GET denylist:{token_id}
+    alt Token is revoked (Found in Redis)
+        Redis-->>Service: Token Revoked Flag
+        Service-->>Router: Throw AuthError (UNAUTHORIZED)
+        Router-->>Client: HTTP 401 { error: "TOKEN_REVOKED" }
+    else Token is active
+        Redis-->>Service: Null
+        Service->>DB: Query orgs with Tenant Context
+        DB-->>Service: Organization Records
+        Service->>OTel: Emit Audit Span
+        Service-->>Router: Success Response
+        Router-->>Client: HTTP 200 { data: [...] }
+    end
+```
 
 ---
 
