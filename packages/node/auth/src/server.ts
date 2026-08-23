@@ -13,9 +13,10 @@ import { AUTH_CONSTANTS } from './shared/constants/auth.constants';
 
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : AUTH_CONSTANTS.DEFAULT_PORT;
 
-const repositoryAdapter = (process.env.DATABASE_URL || process.env.USE_REAL_DB === 'true')
-  ? new RealPostgresAuthAdapter()
-  : new AlloyDBOmniAuthAdapter();
+const dbUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:31412/observability_auth';
+const repositoryAdapter = (process.env.USE_MOCK_DB === 'true')
+  ? new AlloyDBOmniAuthAdapter()
+  : new RealPostgresAuthAdapter(dbUrl);
 export const outboundAdapter = new AuthOutboundAdapterImplementation(repositoryAdapter);
 export const outboundPort = new AuthOutboundPortImplementation(outboundAdapter);
 
