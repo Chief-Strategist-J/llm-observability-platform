@@ -125,6 +125,10 @@ Every service/package declares its contract, database schema migrations, contain
 │   │   ├── .gitkeep
 │   │   ├── 0001_initial_schema.sql
 │   │   └── 0001_initial_schema.rollback.sql
+│   ├── kafka-topics/                    ← Versioned Kafka Topic Provisioning & Rollback Specs
+│   │   ├── .gitkeep
+│   │   ├── 0001_create_user_events.json
+│   │   └── 0001_create_user_events.rollback.json
 │   └── seeds/                           ← Development & test seed datasets
 │       └── .gitkeep
 │
@@ -195,7 +199,7 @@ Every service/package declares its contract, database schema migrations, contain
     │   │   ├── .gitkeep
     │   │   ├── v1/
     │   │   │   ├── .gitkeep
-    │   │   │   ├── router               �    ├── features/                        ← All business logic & data-driven declarations
+    │   │   │   ├── router                   ├── features/                        ← All business logic & data-driven declarations
     │   ├── .gitkeep
     │   └── {feature-name}/
     │       ├── .gitkeep
@@ -260,6 +264,11 @@ Every service/package declares its contract, database schema migrations, contain
     │   ├── adapters/                    ← DB, Redis, S3, Email implementation adapters
     │   │   ├── .gitkeep
     │   │   └── {vendor}/
+    │   ├── messaging/                   ← Centralized Kafka broker connection & driver management
+    │   │   ├── .gitkeep
+    │   │   ├── broker-config            ← Broker endpoints, connection pooling & health checks
+    │   │   ├── client-factory           ← Single-instance Kafka producer & consumer connection factory
+    │   │   └── migrations/              ← Automated Topic Provisioner & Config Rollback Engine
     │   ├── clients/                     ← Generated client SDKs only, never hand-written
     │   │   ├── .gitkeep
     │   │   └── {upstream-service}/
@@ -285,6 +294,15 @@ Every service/package declares its contract, database schema migrations, contain
         │   ├── .gitkeep
         │   ├── step-registry
         │   └── runner
+        ├── messaging/                   ← Centralized Kafka producer, consumer, middleware & topic management
+        │   ├── .gitkeep
+        │   ├── middleware/              ← Reusable Producer & Consumer Middleware Pipeline Engine (Zero Code Repetition)
+        │   ├── tracing/                 ← MessagingTracer W3C Distributed Trace Context engine & span lifecycle
+        │   ├── producers/               ← Middleware-driven typed Kafka event producers
+        │   ├── consumers/               ← Middleware-driven consumer group manager & event dispatcher
+        │   ├── topics/                  ← Centralized topic catalog & schema registry bindings
+        │   ├── handlers/                ← Abstract message handler contracts & event registries
+        │   └── cqrs/                    ← CQRS Write Commands, Materialized Read Projections & Query Selectors
         ├── types/
         ├── errors/
         ├── di/
@@ -302,6 +320,24 @@ Every service/package declares its contract, database schema migrations, contain
    - **Rules as Data**: Declarative rule sets with priority levels, categories, and async condition checkers (`evaluate` / `rules.json`).
    - **State Machines as Data**: Declarative state transitions and guards.
    - **Workflows as Data**: Step DAG automation definitions evaluated by a traced DAG runner.
+
+---
+
+### Kafka & Messaging Architecture Guidelines (Language-Agnostic)
+
+1. **Centralized Messaging Infra (`infra/messaging/`)**: Low-level Kafka broker connections, connection pooling, security/SASL configs, and connection factories are maintained in `infra/messaging/`. Never open raw Kafka sockets or initialize driver instances inside feature handlers or HTTP routers.
+2. **Topic Migrations & Rollback Engine (`database/kafka-topics/` & `infra/messaging/migrations/`)**: Every Kafka topic must be provisioned via versioned migration specs (`NNNN_topic_name.json`) and matching rollback files (`NNNN_topic_name.rollback.json`). Topic definitions declare partition counts, replication factor, retention MS, cleanup policy (`delete` | `compact`), and `min.insync.replicas`. Topic provisioner automatically applies or rolls back topic configurations safely across environments.
+3. **Distributed Tracing Graph & W3C Context Propagation**:
+   - **Producer Injection**: Producer automatically injects OpenTelemetry W3C Trace Context (`traceparent` and `tracestate`) into Kafka Message Headers before publishing.
+   - **Consumer Extraction**: Consumer extracts `traceparent` from Kafka Message Headers to parent child spans, generating a complete, contiguous distributed tracing graph across microservice boundaries.
+   - **Correlation & Baggage**: Passes `correlation_id` and `tenant_id` in headers for global trace query filtering.
+4. **Scale & Performance Optimizations**:
+   - **Idempotence & Reliability**: Enable idempotent producer (`enable.idempotence=true`, `acks=all`) for exactly-once in-order message delivery.
+   - **Batching & Compression**: Configure producer batching (`linger.ms=10`, `batch.size=32768`) with `snappy` or `zstd` compression.
+   - **Consumer Backpressure & Offsets**: Consumers process messages in batches, commit offsets asynchronously (`commitAsync`), and route unprocessable messages to Dead Letter Queue (DLQ) retry topics (`{topic}-dlq`).
+5. **Pluggable Messaging Middleware Engine (`shared/messaging/middleware/`)**: All event producers and consumers **MUST** execute through composable middleware pipelines (`ProducerMiddlewarePipeline`, `ConsumerMiddlewarePipeline`). Imperative duplicate `try/catch`, logging, or tracing boilerplate inside individual producer methods or consumer handler classes is strictly prohibited.
+6. **Messaging Tracing Engine (`shared/messaging/tracing/`)**: Dedicated `MessagingTracer` handles W3C trace parent context generation, span lifecycle tracking, and attribute tagging (`messaging.system`, `messaging.destination`, `messaging.kafka.event_name`, `messaging.correlation_id`, `messaging.tenant_id`) across producer and consumer middleware chains.
+7. **CQRS & Append-Only Event Stream (`shared/messaging/cqrs/`)**: Write commands publish immutable, append-only events to Kafka. Writes never mutate read tables directly. Consumers fold incoming event streams into materialized projection stores (`projection.store.ts`), and isolated query selectors (`query.selectors.ts`) serve reads with zero write-side coupling.
 
 ---
 

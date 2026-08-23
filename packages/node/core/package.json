@@ -12,7 +12,8 @@
     "./data-driven": "./src/data-driven/index.ts",
     "./event-bus": "./src/event-bus/event-bus.ts",
     "./rules-engine": "./src/rules-engine/index.ts",
-    "./feature-flags": "./src/feature-flags/resolve-flag.ts"
+    "./feature-flags": "./src/feature-flags/resolve-flag.ts",
+    "./kafka": "./src/kafka/kafka-client.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
@@ -27,6 +28,7 @@
     "react-redux": ">=9"
   },
   "devDependencies": {
+    "@types/node": "^20.11.0",
     "typescript": "^5.4.0",
     "react": "^19.0.0",
     "react-redux": "^9.2.0"

@@ -1,0 +1,11 @@
+{
+  "migration": "0001",
+  "topic": "auth.events.v1",
+  "partitions": 3,
+  "replicationFactor": 1,
+  "config": {
+    "cleanup.policy": "delete",
+    "retention.ms": "604800000",
+    "min.insync.replicas": "1"
+  }
+}

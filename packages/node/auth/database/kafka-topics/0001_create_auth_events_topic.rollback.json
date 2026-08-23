@@ -1,0 +1,5 @@
+{
+  "migration": "0001",
+  "topic": "auth.events.v1",
+  "action": "delete"
+}

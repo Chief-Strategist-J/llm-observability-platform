@@ -22,6 +22,10 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
+    "paths": {
+      "@observability/core": ["../core/src/index.ts"],
+      "@observability/core/*": ["../core/src/*"]
+    },
     "noEmit": true
   },
   "include": ["src/**/*", "contracts/**/*"]

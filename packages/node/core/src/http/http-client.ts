@@ -1,13 +1,31 @@
+import { RequestContextHolder } from '../tracing/request-context';
+
 async function request<T = unknown>(
   method: string,
   url: string,
   body?: unknown,
   headers?: Record<string, string>,
 ): Promise<{ data: T; status: number; headers: Headers }> {
+  let contextHeaders: Record<string, string> = {};
+  try {
+    const ctx = RequestContextHolder.get();
+    contextHeaders = {
+      'x-request-id': ctx.requestId,
+      'x-correlation-id': ctx.correlationId,
+      'x-idempotency-key': ctx.idempotencyKey,
+      'x-tenant-id': ctx.tenantId || 'tenant-default',
+      traceparent: ctx.traceparent,
+      tracestate: ctx.tracestate || 'rojo=1',
+    };
+  } catch {
+    // Context holder optional
+  }
+
   const res = await fetch(url, {
     method,
     headers: {
       'Content-Type': 'application/json',
+      ...contextHeaders,
       ...headers,
     },
     body: body ? JSON.stringify(body) : undefined,

@@ -12,12 +12,14 @@
   "scripts": {
     "start": "npx tsx src/server.ts",
     "dev": "npx tsx src/server.ts",
+    "db:migrate": "npx tsx database/migrate.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --config vitest.config.ts",
     "test:allure": "vitest run --config vitest.config.ts --reporter=html",
     "test:curl": "./tests/e2e/test-curl-endpoints.sh"
   },
   "dependencies": {
+    "@observability/core": "file:../core",
     "@opentelemetry/api": "^1.9.0",
     "@types/pg": "^8.21.0",
     "pg": "^8.23.0",
