@@ -72,7 +72,7 @@ sequenceDiagram
     Evaluator-->>Guard: SyncToolEvaluationResult (is_approved: false, score: 20.0)
 
     alt Custom or Bespoke Tooling Proposed (Anti-Pattern)
-        Guard-->>Architect: ArchitectureRejected (Bespoke custom poller rejected; use Debezium/Kafka Connect)
+        Guard-->>Architect: ArchitectureRejected (Bespoke custom poller rejected, use Debezium or Kafka Connect)
         Note over Architect: Reject custom script, enforce established industry CDC engine
     else Established CDC Tool Proposed (Debezium)
         Evaluator-->>Guard: SyncToolEvaluationResult (is_approved: true, tool: "Debezium")

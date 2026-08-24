@@ -75,7 +75,7 @@ sequenceDiagram
     Auditor-->>Guard: ObservabilityReadinessResult (is_ready: true, coverage_pct: 100.0)
 
     alt Pre-Migration Observability Verified
-        Guard-->>Developer: CodeApproved (Pre-code telemetry verified; unblock migration coding)
+        Guard-->>Developer: CodeApproved (Pre-code telemetry verified, unblock migration coding)
         Guard->>Audit: record_observability_verified_event(service_id: "svc_payment")
         Note over Developer: Unblock migration code, full observability active before code execution
     else Observability Missing or Un-Verified

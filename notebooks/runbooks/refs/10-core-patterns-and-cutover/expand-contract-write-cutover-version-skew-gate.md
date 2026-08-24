@@ -78,7 +78,7 @@ sequenceDiagram
         Note over Pipeline: Block write cutover sharp criterion! Version-skew must be 0% across fleet first
     else Version Skew Zero (100% Fleet on v2.0 Expand Code)
         Evaluator-->>Guard: VersionSkewGateResult (is_version_skew_zero: true, legacy_nodes: 0)
-        Guard-->>Pipeline: WriteCutoverApproved (Fleet-wide version skew zero confirmed; flip primary write target)
+        Guard-->>Pipeline: WriteCutoverApproved (Fleet-wide version skew zero confirmed, flip primary write target)
         Guard->>Audit: record_write_cutover_approved_event(target_store: "new_db")
         Note over Pipeline: Flip primary write target safely, all fleet nodes support expand-contract write path
     end

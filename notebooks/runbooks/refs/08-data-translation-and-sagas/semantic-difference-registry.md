@@ -65,9 +65,9 @@ sequenceDiagram
     participant Guard as verify_signoff_validity
     participant Audit as Telemetry Emitter
 
-    Differ->>Registry: evaluate_diff(endpoint: "/api/orders", field: "status_code", val_a: 200, val_b: 201)
+    Differ->>Registry: evaluate_diff(endpoint: " or api or orders", field: "status_code", val_a: 200, val_b: 201)
     
-    Registry->>Matcher: match_diff_pattern("/api/orders", "status_code")
+    Registry->>Matcher: match_diff_pattern(" or api or orders", "status_code")
     
     alt Pattern Matched in Registry
         Matcher-->>Registry: SemanticDiffEntry (owner: "order_team", signed_off: true, expires_at: "2026-12-31")

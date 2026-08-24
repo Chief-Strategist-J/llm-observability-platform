@@ -79,7 +79,7 @@ sequenceDiagram
     
     alt High Implicit Coupling (Multiple Writers or Readers)
         Auditor->>Decoupler: extract_explicit_api_seams("orders", AccessMap)
-        Decoupler-->>Auditor: SeamDefinition (owner: "svc_checkout", api_endpoints: ["GET /orders", "POST /orders"])
+        Decoupler-->>Auditor: SeamDefinition (owner: "svc_checkout", api_endpoints: ["GET or orders", "POST or orders"])
         Auditor-->>Planner: CouplingAuditResult (requires_decoupling: true, seam: SeamDefinition)
         Note over Planner: Block direct DB migration, force API/Event refactoring first
     else Single Service Owner (No Shared Coupling)

@@ -77,12 +77,12 @@ sequenceDiagram
         Infra-->>Executor: FreezeConfirmed (Read-only active)
 
         Executor-->>Guard: DecomExecutionResult (status: "PHASE_1_FREEZE_ACTIVE", can_proceed: true)
-        Guard-->>Engineer: DecomApproved (Phase 1 Read-Only Freeze active; 14-day tripwire started)
+        Guard-->>Engineer: DecomApproved (Phase 1 Read-Only Freeze active, 14-day tripwire started)
         Guard->>Audit: record_decommissioning_phase1_passed_event(asset_id: "legacy_orders_db")
         Note over Engineer: Initiate 3-phase decommissioning backed by 90-day silence proof
     else Silence Proof Incomplete or Active Hits Discovered
         Auditor-->>Guard: SilenceStatus (is_proven: false, hit_count: 3)
-        Guard-->>Engineer: DecomRejected (Decommissioning blocked; 3 active log hits detected)
+        Guard-->>Engineer: DecomRejected (Decommissioning blocked, 3 active log hits detected)
         Note over Engineer: REJECT decommissioning, enforce continued Pillar H discovery scanning
     end
 ```

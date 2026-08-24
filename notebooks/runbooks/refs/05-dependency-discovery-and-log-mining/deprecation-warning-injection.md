@@ -66,9 +66,9 @@ sequenceDiagram
     participant LegacySvc as Legacy Response Handler
     participant Audit as Telemetry Emitter
 
-    Caller->>Injector: GET /api/v1/legacy_orders
+    Caller->>Injector: GET or api or v1 or legacy_orders
     
-    Injector->>RuleEngine: eval_sunset_status("/api/v1/legacy_orders")
+    Injector->>RuleEngine: eval_sunset_status(" or api or v1 or legacy_orders")
     RuleEngine-->>Injector: DeprecationRule (sunset_date: "Wed, 11 Nov 2026 00:00:00 GMT", is_active: true)
 
     Injector->>LegacySvc: execute_legacy_handler(payload)
@@ -77,8 +77,8 @@ sequenceDiagram
     Injector->>Injector: inject_rfc_deprecation_headers(headers, DeprecationRule)
     Note over Injector: Inject 'Sunset: Wed, 11 Nov 2026...' and 'Deprecation: @1787590000'
 
-    Injector->>Audit: record_deprecation_access(caller_ip, endpoint: "/api/v1/legacy_orders")
-    Injector-->>Caller: HttpResponse (200 OK + Sunset/Deprecation Headers)
+    Injector->>Audit: record_deprecation_access(caller_ip, endpoint: " or api or v1 or legacy_orders")
+    Injector-->>Caller: HttpResponse (200 OK + Sunset or Deprecation Headers)
 ```
 
 ---

@@ -68,7 +68,7 @@ sequenceDiagram
     participant Aggregator as aggregate_caller_dependencies
     participant Store as Dependency Map Repository
 
-    Scheduler->>Streamer: fetch_log_chunk(file_path: "/var/log/pg_query.log")
+    Scheduler->>Streamer: fetch_log_chunk(file_path: " or var or log or pg_query.log")
     Streamer-->>Scheduler: LogChunkLines ["SELECT * FROM orders...", "UPDATE users..."]
 
     loop For Each Log Line

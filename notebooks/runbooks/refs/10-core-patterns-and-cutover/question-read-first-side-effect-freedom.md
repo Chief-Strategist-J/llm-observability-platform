@@ -61,17 +61,17 @@ sequenceDiagram
     participant DBTracer as Database Mutation Log Tracer
     participant Audit as Telemetry Emitter
 
-    Architect->>Guard: audit_endpoint_side_effects(endpoint: "/account/profile")
+    Architect->>Guard: audit_endpoint_side_effects(endpoint: " or account or profile")
     
-    Guard->>Auditor: audit_read_side_effect_freedom("/account/profile")
-    Auditor->>DBTracer: trace_db_writes_during_execution("/account/profile")
+    Guard->>Auditor: audit_read_side_effect_freedom(" or account or profile")
+    Auditor->>DBTracer: trace_db_writes_during_execution(" or account or profile")
     DBTracer-->>Auditor: MutationTrace (mutations_detected: 1, table: "user_audit", field: "last_seen_at")
 
     Auditor-->>Guard: SideEffectAuditResult (is_side_effect_free: false, mutations_count: 1)
 
     alt Hidden State Mutations Discovered in "Read" Endpoint
-        Guard-->>Architect: SideEffectAuditResult (is_approved: false, reason: "GET /account/profile mutates user_audit.last_seen_at")
-        Guard->>Audit: record_side_effect_discovered_event(endpoint: "/account/profile")
+        Guard-->>Architect: SideEffectAuditResult (is_approved: false, reason: "GET or account or profile mutates user_audit.last_seen_at")
+        Guard->>Audit: record_side_effect_discovered_event(endpoint: " or account or profile")
         Note over Architect: REJECT read-first cutover, refactor hidden mutation out of read path first
     else 100% Pure Read Confirmed (Zero State Mutations)
         Auditor-->>Guard: SideEffectAuditResult (is_approved: true, mutations_count: 0)

@@ -73,7 +73,7 @@ sequenceDiagram
     Evaluator->>Evaluator: check_default_load_bearing_assumption("bug_901")
     
     alt Phase 1 Migration Active (Bug Fix Prohibited)
-        Evaluator-->>Refactorer: BugPreservationResult (preserve: true, reason: "Load-bearing by default per T18; defer fix to Phase 2")
+        Evaluator-->>Refactorer: BugPreservationResult (preserve: true, reason: "Load-bearing by default per T18, defer fix to Phase 2")
         Refactorer->>TargetSvc: fetch_raw_output()
         TargetSvc-->>Refactorer: RawOutput (month_index: 0)
         Refactorer->>Reproducer: preserve_load_bearing_bug(RawOutput, "bug_901")
@@ -81,7 +81,7 @@ sequenceDiagram
         Refactorer->>Audit: record_bug_preserved(bug_id: "bug_901")
         Note over Refactorer: REJECT bug fix in Phase 1, preserve bug 1:1 to protect downstream callers
     else Phase 2 Active and Downstream Clean
-        Evaluator-->>Refactorer: BugPreservationResult (preserve: false, reason: "Phase 2 active; bug fix approved")
+        Evaluator-->>Refactorer: BugPreservationResult (preserve: false, reason: "Phase 2 active, bug fix approved")
         Note over Refactorer: Approve bug fix in Phase 2 independently
     end
 ```

@@ -71,7 +71,7 @@ sequenceDiagram
     Orchestrator->>Checkpoint: create_pre_cutover_checkpoint(cutover_id: "co_901")
     
     Checkpoint->>SourceDB: quiesce_and_read_watermark()
-    SourceDB-->>Checkpoint: SourceWatermark (lsn: "0/16B38E0", ts: 1787590000.0)
+    SourceDB-->>Checkpoint: SourceWatermark (lsn: "0 or 16B38E0", ts: 1787590000.0)
 
     Checkpoint->>TargetDB: quiesce_and_read_watermark()
     TargetDB-->>Checkpoint: TargetWatermark (offset: 89401, ts: 1787590000.0)

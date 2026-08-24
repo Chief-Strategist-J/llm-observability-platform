@@ -73,7 +73,7 @@ sequenceDiagram
     Differ->>Pipeline: normalize_payload(raw_json, rules_config)
     
     Pipeline->>Stripper: strip_volatile_keys(raw_json, ignored_keys)
-    Stripper-->>Pipeline: PrunedJSON (Dynamic timestamps & trace IDs removed)
+    Stripper-->>Pipeline: PrunedJSON (Dynamic timestamps and trace IDs removed)
 
     Pipeline->>Masker: mask_dynamic_patterns(PrunedJSON, regex_patterns)
     Masker-->>Pipeline: MaskedJSON (UUIDs replaced with "UUID_MASKED")

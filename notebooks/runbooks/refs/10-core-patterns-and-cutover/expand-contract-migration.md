@@ -82,18 +82,18 @@ sequenceDiagram
     alt Phase == EXPAND
         Router->>Mapper: expand_payload(payload)
         Mapper-->>Router: Dual-Field Payload (old_field + new_field)
-        Router->>DB: INSERT / UPDATE dual fields
+        Router->>DB: INSERT or UPDATE dual fields
         DB-->>Router: Success Response
     else Phase == MIGRATE
         Router->>Mapper: dual_read_fallback(payload)
-        Router->>DB: Execute Read/Write
+        Router->>DB: Execute Read or Write
         DB-->>Router: Response Data
         Router->>Worker: spawn_backfill_task(batch_id)
         Note over Worker: Async backfill of unmigrated legacy rows
     else Phase == CONTRACT
         Router->>Mapper: contract_payload(payload)
         Mapper-->>Router: New Field Payload (new_field ONLY)
-        Router->>DB: INSERT / UPDATE new_field
+        Router->>DB: INSERT or UPDATE new_field
         DB-->>Router: Success Response
     end
 

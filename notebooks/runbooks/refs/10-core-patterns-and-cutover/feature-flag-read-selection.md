@@ -45,7 +45,7 @@ flowchart TD
         LegacyDB["Legacy Monolith Database\n(Read Source: LEGACY)"]
         NewMicroserviceDB["New Microservice Database\n(Read Source: NEW_SERVICE)"]
 
-        SourceResolver -->|Flag: False / Fallback| LegacyDB
+        SourceResolver -->|Flag: False or Fallback| LegacyDB
         SourceResolver -->|Flag: True| NewMicroserviceDB
     end
 

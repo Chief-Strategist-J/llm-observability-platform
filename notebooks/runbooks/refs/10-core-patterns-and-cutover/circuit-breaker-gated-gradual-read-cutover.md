@@ -70,7 +70,7 @@ sequenceDiagram
     Guard->>Shifter: eval_percentage_sampling("corr_901", shift_pct: 5.0)
     Shifter-->>Guard: SampleDecision (is_sampled: true)
 
-    Guard->>Circuit: check_circuit_health(endpoint: "/orders/901")
+    Guard->>Circuit: check_circuit_health(endpoint: " or orders or 901")
     
     alt Circuit Healthy and Sampled (5% Exposure)
         Circuit-->>Guard: HealthStatus (is_open: false, error_rate: 0.02%)

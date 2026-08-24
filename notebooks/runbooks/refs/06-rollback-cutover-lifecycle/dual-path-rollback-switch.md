@@ -76,7 +76,7 @@ sequenceDiagram
             NewSvc-->>Switch: PrimaryResponse (200 OK)
             Switch-->>Gateway: HttpResponse (200 OK)
         else Primary Error or Timeout (Auto-Trip Circuit)
-            NewSvc-->>Switch: PrimaryError (500 / Timeout)
+            NewSvc-->>Switch: PrimaryError (500 or Timeout)
             Note over Switch: Instant auto-trip: fallback to legacy path immediately
             Switch->>LegacySvc: dispatch_legacy_fallback(payload)
             LegacySvc-->>Switch: LegacyResponse (200 OK)

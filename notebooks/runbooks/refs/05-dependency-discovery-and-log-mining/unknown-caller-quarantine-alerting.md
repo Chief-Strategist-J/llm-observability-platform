@@ -62,13 +62,13 @@ sequenceDiagram
     participant Alerter as emit_instant_pagerduty_alert
     participant Sandbox as Quarantine Sandbox Handler
 
-    Caller->>Guard: GET /api/v1/legacy_orders (Headers: IP="10.0.9.99")
+    Caller->>Guard: GET or api or v1 or legacy_orders (Headers: IP="10.0.9.99")
     
     Guard->>Registry: check_caller_approved("10.0.9.99")
     Registry-->>Guard: RegistryResult (is_approved: false)
 
     par Real-Time Alerting (Instant PagerDuty / Slack)
-        Guard->>Alerter: emit_instant_pagerduty_alert(caller_ip: "10.0.9.99", uri: "/api/v1/legacy_orders")
+        Guard->>Alerter: emit_instant_pagerduty_alert(caller_ip: "10.0.9.99", uri: " or api or v1 or legacy_orders")
         Note over Alerter: Fire real-time PagerDuty incident immediately (Layer 1 Real-Time)
     and Quarantine Routing
         Guard->>Sandbox: route_to_quarantine_sandbox(CallerRequest)

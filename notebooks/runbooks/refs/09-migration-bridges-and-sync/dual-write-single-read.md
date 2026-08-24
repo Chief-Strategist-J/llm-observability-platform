@@ -38,7 +38,7 @@ flowchart TD
         SingleReadDispatcher["dispatch_single_read\n(Strict Legacy Read Isolation)"]
 
         ClientConsumer --> OperationClassifier
-        OperationClassifier -->|Mutation: POST/PUT/DELETE| DualWriteDispatcher
+        OperationClassifier -->|Mutation: POST or PUT or DELETE| DualWriteDispatcher
         OperationClassifier -->|Read Query: GET| SingleReadDispatcher
     end
 

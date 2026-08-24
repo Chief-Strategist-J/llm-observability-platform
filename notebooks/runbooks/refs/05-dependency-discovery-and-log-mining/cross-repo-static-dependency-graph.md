@@ -71,11 +71,11 @@ sequenceDiagram
     participant Merger as merge_static_dependency_graphs
     participant Store as Dependency Graph Repository
 
-    Scanner->>AST: scan_repo(repo_path: "/repos/billing_service")
+    Scanner->>AST: scan_repo(repo_path: " or repos or billing_service")
     AST-->>Scanner: ASTNodeList [import_nodes, class_nodes, function_nodes]
 
     Scanner->>URI: extract_api_endpoint_uris(ASTNodeList)
-    URI-->>Scanner: EndpointRefList ["GET /api/v1/orders", "POST /api/v1/payments"]
+    URI-->>Scanner: EndpointRefList ["GET or api or v1 or orders", "POST or api or v1 or payments"]
 
     Scanner->>SQL: extract_db_table_references(ASTNodeList)
     SQL-->>Scanner: TableRefList ["orders", "payments", "users"]

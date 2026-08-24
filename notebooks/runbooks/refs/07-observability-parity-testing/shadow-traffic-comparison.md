@@ -78,7 +78,7 @@ sequenceDiagram
         alt Candidate Success
             Candidate-->>Engine: CandidateResult (200 OK, payload_B)
         else Candidate Exception or Timeout
-            Candidate-->>Engine: CandidateError (500 / Exception)
+            Candidate-->>Engine: CandidateError (500 or Exception)
             Note over Engine: Exception swallowed, control result unaffected
         end
     end

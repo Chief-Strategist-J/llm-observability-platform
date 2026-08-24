@@ -76,7 +76,7 @@ sequenceDiagram
         Validator-->>Planner: PlanApproved (Wave 2 rollback boundary validated)
     else Boundary Breach (Forbidden Cross-Wave Dependency)
         GraphChecker-->>Validator: ContainmentResult (is_contained: false, illegal_edge: "Wave_2 -> Wave_1")
-        Validator-->>Planner: PlanRejected (Fix topology; block wave deployment)
+        Validator-->>Planner: PlanRejected (Fix topology, block wave deployment)
         Note over Planner: Reject wave plan, resolve cyclic dependency before deployment
     end
 

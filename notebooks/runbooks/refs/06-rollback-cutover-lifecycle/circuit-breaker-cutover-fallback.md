@@ -45,8 +45,8 @@ flowchart TD
         NewMicroservice["New Microservice API\n(Primary Target)"]
         LegacyMonolith["Legacy Monolith API\n(Fallback Target)"]
 
-        TargetDispatcher -->|State: CLOSED / HALF_OPEN| NewMicroservice
-        TargetDispatcher -->|State: OPEN / Error Fallback| LegacyMonolith
+        TargetDispatcher -->|State: CLOSED or HALF_OPEN| NewMicroservice
+        TargetDispatcher -->|State: OPEN or Error Fallback| LegacyMonolith
     end
 
     subgraph ObservabilityLayer["Circuit Telemetry & Auditing"]

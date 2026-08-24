@@ -79,7 +79,7 @@ sequenceDiagram
             PaymentSvc-->>Saga: ChildResult (status: 200 OK, child_id: "pay_901")
             Saga-->>Client: SagaSuccess (200 OK - FK Invariant Maintained)
         else Child Creation Failure or Timeout
-            PaymentSvc-->>Saga: ChildError (500 / Exception)
+            PaymentSvc-->>Saga: ChildError (500 or Exception)
             Saga->>Saga: dispatch_compensating_action(saga_id, "ROLLBACK_CHILD")
             Saga->>PaymentSvc: delete_child_record("pay_901")
             PaymentSvc-->>Saga: CompensatedOK

@@ -90,7 +90,7 @@ sequenceDiagram
     participant ShadowWorker as log_and_diff_async (Background)
 
     HTTP->>Middleware: Incoming Request (headers, path, body)
-    Middleware->>Middleware: Extract W3C traceparent & start SERVER span
+    Middleware->>Middleware: Extract W3C traceparent and start SERVER span
     Middleware->>Context: build_request_context(request, path)
     Context-->>Middleware: Immutable RequestContext record
     
@@ -99,7 +99,7 @@ sequenceDiagram
 
     alt Target == NEW_SERVICE
         Middleware->>Pipeline: dispatch(method, path, headers, body)
-        Pipeline->>NewService: execute HTTP call (with Circuit Breaker & OTEL span)
+        Pipeline->>NewService: execute HTTP call (with Circuit Breaker and OTEL span)
         NewService-->>Pipeline: HttpResponse
         Pipeline-->>Middleware: HttpResponse
     else Target == SHADOW
@@ -120,7 +120,7 @@ sequenceDiagram
         Pipeline-->>Middleware: HttpResponse
     end
 
-    Middleware->>Middleware: Attach trace headers & status code
+    Middleware->>Middleware: Attach trace headers and status code
     Middleware-->>HTTP: Return FastAPI Response
 ```
 

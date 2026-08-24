@@ -68,10 +68,10 @@ sequenceDiagram
     participant LogStore as Ingress Access Log Store
     participant Audit as Telemetry Emitter
 
-    Pipeline->>Guard: validate_decommission_plan(endpoint: "/api/v1/users", wiki_claim: "UNUSED")
+    Pipeline->>Guard: validate_decommission_plan(endpoint: " or api or v1 or users", wiki_claim: "UNUSED")
     
-    Guard->>Arbitrator: arbitrate_logs_vs_wiki("/api/v1/users", wiki_claim: "UNUSED")
-    Arbitrator->>LogStore: query_access_log_hits("/api/v1/users", window: "30d")
+    Guard->>Arbitrator: arbitrate_logs_vs_wiki(" or api or v1 or users", wiki_claim: "UNUSED")
+    Arbitrator->>LogStore: query_access_log_hits(" or api or v1 or users", window: "30d")
     LogStore-->>Arbitrator: AccessLogHits (total_hits: 14200, callers: ["svc_billing"])
 
     Arbitrator->>Arbitrator: resolve_conflict(wiki_claim: "UNUSED", total_hits: 14200)
@@ -79,11 +79,11 @@ sequenceDiagram
     alt Wiki Claim Contradicted by Access Logs (Logs Win!)
         Arbitrator-->>Guard: ArbitrationResult (logs_win: true, wiki_invalid: true, active_callers: ["svc_billing"])
         Guard-->>Pipeline: PlanRejected (Logs win: Endpoint is ACTIVE with 14,200 hits. Wiki claim 'UNUSED' disproven.)
-        Guard->>Audit: record_wiki_disproven_event(endpoint: "/api/v1/users")
+        Guard->>Audit: record_wiki_disproven_event(endpoint: " or api or v1 or users")
         Note over Pipeline: Block decommission, update wiki documentation with empirical log reality
     else Wiki Claim Confirmed by Logs (Zero Hits)
         Arbitrator-->>Guard: ArbitrationResult (logs_win: true, wiki_invalid: false)
-        Guard-->>Pipeline: PlanApproved (Zero log hits confirmed; safe to proceed)
+        Guard-->>Pipeline: PlanApproved (Zero log hits confirmed, safe to proceed)
     end
 ```
 

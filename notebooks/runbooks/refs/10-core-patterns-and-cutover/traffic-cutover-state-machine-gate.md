@@ -68,12 +68,12 @@ sequenceDiagram
     participant LegacySvc as Legacy Monolith
     participant Audit as Telemetry Emitter
 
-    Gateway->>Guard: route_request(entity_id: "ord_901", endpoint: "/orders/901")
+    Gateway->>Guard: route_request(entity_id: "ord_901", endpoint: " or orders or 901")
     
     Guard->>StateMachine: get_entity_state("ord_901")
     StateMachine-->>Guard: EntityState (state: "MIGRATED_READ_PRIMARY")
 
-    Guard->>Circuit: check_circuit_health(endpoint: "/orders/901")
+    Guard->>Circuit: check_circuit_health(endpoint: " or orders or 901")
     
     alt Circuit Healthy (Error Rate < 0.5%)
         Circuit-->>Guard: CircuitStatus (is_open: false, error_rate: 0.01%)

@@ -71,7 +71,7 @@ sequenceDiagram
     participant Sink as Target Store Dispatcher
     participant Offset as commit_cdc_offset
 
-    Engine->>Kafka: Publish RAW WAL/Binlog JSON Event
+    Engine->>Kafka: Publish RAW WAL or Binlog JSON Event
     Kafka->>Stream: Consume Record (key, payload, offset)
     
     Stream->>Parser: parse_cdc_event(payload)

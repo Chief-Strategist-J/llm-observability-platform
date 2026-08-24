@@ -76,7 +76,7 @@ sequenceDiagram
         Guard->>Audit: record_reversibility_verified_event(step_id: "step_301")
         Note over Orchestrator: Execute step safely, instant sub-second undo target secured
     else Step Irreversible or Target Unverified
-        Guard-->>Orchestrator: StepBlocked (Irreversible shortcut rejected; enforce undo target first)
+        Guard-->>Orchestrator: StepBlocked (Irreversible shortcut rejected, enforce undo target first)
         Note over Orchestrator: Block execution, force team to build undo target before proceeding
     end
 ```

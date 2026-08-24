@@ -83,7 +83,7 @@ sequenceDiagram
 
         alt Compliance Passed
             Central->>Fleet: execute_automated_migration_pr(service_id)
-            Fleet-->>Central: ExecutionResult (PR_CREATED / AUTO_MERGED)
+            Fleet-->>Central: ExecutionResult (PR_CREATED or AUTO_MERGED)
             Central->>Dashboard: record_fleet_progress(service_id, "COMPLETED")
         else Compliance Failed
             Central->>Dashboard: record_fleet_progress(service_id, "BLOCKED")

@@ -68,21 +68,21 @@ sequenceDiagram
     participant LogStore as Centralized Access Log Store
     participant Audit as Telemetry Emitter
 
-    Pipeline->>Guard: request_decommission_approval(endpoint: "/api/v1/orders", window_days: 90)
+    Pipeline->>Guard: request_decommission_approval(endpoint: " or api or v1 or orders", window_days: 90)
     
-    Guard->>Miner: mine_ingress_access_logs("/api/v1/orders", window_days: 90)
-    Miner->>LogStore: query_log_hits("/api/v1/orders", span: "90d")
+    Guard->>Miner: mine_ingress_access_logs(" or api or v1 or orders", window_days: 90)
+    Miner->>LogStore: query_log_hits(" or api or v1 or orders", span: "90d")
     LogStore-->>Miner: LogQueryResult (total_hits: 0, callers: [])
 
     Miner-->>Guard: SilenceVerificationResult (is_silent: true, silent_days: 90, total_hits: 0)
 
     alt Sustained 90-Day Silence Verified (Zero Log Hits)
-        Guard-->>Pipeline: SilenceApproved (Decommissioning go/no-go unblocked)
-        Guard->>Audit: record_sustained_silence_verified_event(endpoint: "/api/v1/orders")
+        Guard-->>Pipeline: SilenceApproved (Decommissioning go or no-go unblocked)
+        Guard->>Audit: record_sustained_silence_verified_event(endpoint: " or api or v1 or orders")
         Note over Pipeline: Unblock Pillar I decommissioning, sustained silence proven by Pillar H
     else Active Log Hits Discovered (Traffic Present)
         Miner-->>Guard: SilenceVerificationResult (is_silent: false, total_hits: 14, callers: ["svc_billing"])
-        Guard-->>Pipeline: SilenceRejected (Decommissioning blocked; 14 active log hits discovered)
+        Guard-->>Pipeline: SilenceRejected (Decommissioning blocked, 14 active log hits discovered)
         Note over Pipeline: Block decommissioning, force team to migrate remaining 14 callers first
     end
 ```

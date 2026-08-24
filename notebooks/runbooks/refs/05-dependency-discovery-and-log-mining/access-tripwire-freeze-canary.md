@@ -65,13 +65,13 @@ sequenceDiagram
     participant Alert as emit_tripwire_tripped_alert
     participant Admin as Migration Operator
 
-    Caller->>Tripwire: POST /api/v1/legacy_orders (Write Mutation)
+    Caller->>Tripwire: POST or api or v1 or legacy_orders (Write Mutation)
     
     Tripwire->>Tripwire: check_freeze_state(resource_id: "tbl_orders")
     
     alt Read-Only Freeze Active (Tripwire Armed)
         Tripwire->>Alert: emit_tripwire_tripped_alert(caller_ip: "10.0.2.14", resource: "tbl_orders")
-        Tripwire-->>Caller: HttpResponse (423 Locked / Read-Only Error)
+        Tripwire-->>Caller: HttpResponse (423 Locked or Read-Only Error)
         Note over Caller: Unmigrated caller caught by Layer 3 tripwire canary
 
         Admin->>Tripwire: toggle_freeze_canary(resource: "tbl_orders", is_frozen: false)

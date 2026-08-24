@@ -90,7 +90,7 @@ sequenceDiagram
     alt Legacy Write-Back Success
         LegacyDB-->>Queue: WriteSuccess (200 OK)
     else Legacy Write-Back Failure
-        LegacyDB-->>Queue: WriteError (500 / Timeout)
+        LegacyDB-->>Queue: WriteError (500 or Timeout)
         Note over Queue: Retry with exponential backoff and push to DLQ if max retries exceeded
     end
 ```

@@ -71,8 +71,8 @@ sequenceDiagram
     participant Legacy as Legacy Monolith Dispatcher
     participant NewService as New Microservice Dispatcher
 
-    App->>Middleware: POST /bridge/v1/orders (legacy_payload)
-    Middleware->>Middleware: Extract W3C traceparent & tenant ID
+    App->>Middleware: POST or bridge or v1 or orders (legacy_payload)
+    Middleware->>Middleware: Extract W3C traceparent and tenant ID
     
     Middleware->>Translator: translate_payload(legacy_payload, schema_rules)
     Translator-->>Middleware: CanonicalPayload (new_field_names, typed_values)
