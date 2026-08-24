@@ -85,7 +85,7 @@ sequenceDiagram
         Evaluator-->>Engine: ReconciliationResult (is_reconciled: false, delta: 0.25)
         Engine->>Audit: record_reconciliation_metric(success: false, alert: "FINANCIAL_DRIFT")
         Engine-->>App: ReconciliationFlagged (Block audit pass)
-        Note over App: Flag financial mismatch; escalate to finance engineering
+        Note over App: Flag financial mismatch, escalate to finance engineering
     end
 ```
 

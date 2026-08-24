@@ -72,7 +72,7 @@ sequenceDiagram
 
     Worker->>Gate: process_migration_write(token: "ik_701", payload)
     
-    alt Token Seen in Cache & Cached Status == SUCCESS
+    alt Token Seen in Cache and Cached Status == SUCCESS
         Gate-->>Worker: DeduplicationResult (is_duplicate: true, cached_response: 200 OK)
         Note over Worker: Fast-return cached response and skip duplicate database write
     else Token Not Seen (New Key)

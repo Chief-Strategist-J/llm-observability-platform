@@ -77,10 +77,10 @@ sequenceDiagram
     alt Pre-Migration Observability Verified
         Guard-->>Developer: CodeApproved (Pre-code telemetry verified; unblock migration coding)
         Guard->>Audit: record_observability_verified_event(service_id: "svc_payment")
-        Note over Developer: Unblock migration code; full observability active before code execution
+        Note over Developer: Unblock migration code, full observability active before code execution
     else Observability Missing or Un-Verified
         Guard-->>Developer: CodeRejected (Observability required BEFORE first line of migration code)
-        Note over Developer: REJECT PR; enforce OTel tracer & discovery census setup first
+        Note over Developer: REJECT PR, enforce OTel tracer and discovery census setup first
     end
 ```
 

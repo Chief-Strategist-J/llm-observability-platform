@@ -71,13 +71,13 @@ sequenceDiagram
 
     Guard->>Guard: lock_ground_truth_suite(GoldenMasterContext)
 
-    alt Ground Truth Suite Locked & Verified
+    alt Ground Truth Suite Locked and Verified
         Guard-->>Developer: GroundTruthCharacterizationResult (is_locked: true, fixtures: 50)
         Guard->>Audit: record_ground_truth_locked_event(service_id: "svc_billing")
-        Note over Developer: Ground truth locked; unblock target microservice implementation
+        Note over Developer: Ground truth locked, unblock target microservice implementation
     else Fixture Suite Incomplete
         Guard-->>Developer: GroundTruthCharacterizationResult (is_locked: false, missing_cases: 4)
-        Note over Developer: Block coding; capture remaining legacy edge cases first
+        Note over Developer: Block coding, capture remaining legacy edge cases first
     end
 ```
 

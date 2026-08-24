@@ -80,7 +80,7 @@ sequenceDiagram
         Arbitrator-->>Guard: ArbitrationResult (logs_win: true, wiki_invalid: true, active_callers: ["svc_billing"])
         Guard-->>Pipeline: PlanRejected (Logs win: Endpoint is ACTIVE with 14,200 hits. Wiki claim 'UNUSED' disproven.)
         Guard->>Audit: record_wiki_disproven_event(endpoint: "/api/v1/users")
-        Note over Pipeline: Block decommission; update wiki documentation with empirical log reality
+        Note over Pipeline: Block decommission, update wiki documentation with empirical log reality
     else Wiki Claim Confirmed by Logs (Zero Hits)
         Arbitrator-->>Guard: ArbitrationResult (logs_win: true, wiki_invalid: false)
         Guard-->>Pipeline: PlanApproved (Zero log hits confirmed; safe to proceed)

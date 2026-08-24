@@ -79,8 +79,8 @@ sequenceDiagram
         Refactorer->>Reproducer: preserve_load_bearing_bug(RawOutput, "bug_901")
         Reproducer-->>Refactorer: BugOutput (month_index: 0 - Preserved legacy off-by-one bug)
         Refactorer->>Audit: record_bug_preserved(bug_id: "bug_901")
-        Note over Refactorer: REJECT bug fix in Phase 1; preserve bug 1:1 to protect downstream callers
-    else Phase 2 Active & Downstream Clean
+        Note over Refactorer: REJECT bug fix in Phase 1, preserve bug 1:1 to protect downstream callers
+    else Phase 2 Active and Downstream Clean
         Evaluator-->>Refactorer: BugPreservationResult (preserve: false, reason: "Phase 2 active; bug fix approved")
         Note over Refactorer: Approve bug fix in Phase 2 independently
     end

@@ -73,7 +73,7 @@ sequenceDiagram
 
     alt Exposure Exceeds Max Cap (100% > 5%)
         Guard-->>Pipeline: RiskContainmentResult (is_approved: false, reason: "Big-bang 100% exposure violates blast-radius cap (max 5%)")
-        Note over Pipeline: Block deployment; partition plan into incremental wave rollouts
+        Note over Pipeline: Block deployment, partition plan into incremental wave rollouts
     else Exposure Bounded to Wave Cap (1% <= 5%)
         Guard-->>Pipeline: RiskContainmentResult (is_approved: true, wave_id: "wave_1")
         Guard->>Audit: record_blast_radius_approved_event(wave_id: "wave_1")

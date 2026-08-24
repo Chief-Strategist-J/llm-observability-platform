@@ -82,7 +82,7 @@ sequenceDiagram
         alt Microservice Success (200 OK)
             NewService-->>Breaker: HttpResponse (200 OK)
             Breaker-->>Client: HttpResponse (200 OK)
-        else Microservice Error (5xx / Timeout)
+        else Microservice Error (5xx or Timeout)
             NewService-->>Breaker: HttpResponse (500 Error)
             Note over Breaker: Increment failure count and trip circuit if threshold reached
             Breaker->>Legacy: execute_legacy_fallback(payload)

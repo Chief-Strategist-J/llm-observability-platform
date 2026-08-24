@@ -90,7 +90,7 @@ sequenceDiagram
             Differ-->>Runner: ReplayResult (is_matched: true, latency_delta_ms: -5.2)
         else Output Mismatch
             Differ-->>Runner: ReplayResult (is_matched: false, diff_details: "Field Mismatch")
-            Note over Runner: Log regression discrepancy; continue stream playback
+            Note over Runner: Log regression discrepancy, continue stream playback
         end
 
         Runner->>Telemetry: record_replay_telemetry(ReplayResult)

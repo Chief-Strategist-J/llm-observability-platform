@@ -77,14 +77,14 @@ sequenceDiagram
     else Boundary Breach (Forbidden Cross-Wave Dependency)
         GraphChecker-->>Validator: ContainmentResult (is_contained: false, illegal_edge: "Wave_2 -> Wave_1")
         Validator-->>Planner: PlanRejected (Fix topology; block wave deployment)
-        Note over Planner: Reject wave plan; resolve cyclic dependency before deployment
+        Note over Planner: Reject wave plan, resolve cyclic dependency before deployment
     end
 
     Note over Runtime: Runtime Outage Scenario in Wave 2
 
     Runtime->>Runtime: execute_scoped_rollback(wave_id: 2)
     Runtime->>Audit: record_blast_radius_telemetry(contained_wave: 2, affected_services: 2)
-    Note over Runtime: Rollback contained strictly within Wave 2; Wave 1 and Wave 3 remain unaffected
+    Note over Runtime: Rollback contained strictly within Wave 2, Wave 1 and Wave 3 remain unaffected
 ```
 
 ---

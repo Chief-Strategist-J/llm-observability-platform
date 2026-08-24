@@ -72,7 +72,7 @@ sequenceDiagram
 
     Guard->>Circuit: check_circuit_health(endpoint: "/orders/901")
     
-    alt Circuit Healthy & Sampled (5% Exposure)
+    alt Circuit Healthy and Sampled (5% Exposure)
         Circuit-->>Guard: HealthStatus (is_open: false, error_rate: 0.02%)
         Guard->>TargetSvc: read_target(payload + corr_901)
         TargetSvc-->>Gateway: Response (200 OK with Target Read)

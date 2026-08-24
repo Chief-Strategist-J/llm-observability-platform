@@ -80,7 +80,7 @@ sequenceDiagram
     else Schema Violation
         Schema-->>Adapter: ValidationError ("Field 'user_id' required")
         Adapter-->>Client: TranslationError (Contract violation details)
-        Note over Client: Reject payload at perimeter; protect domain core
+        Note over Client: Reject payload at perimeter, protect domain core
     end
 ```
 

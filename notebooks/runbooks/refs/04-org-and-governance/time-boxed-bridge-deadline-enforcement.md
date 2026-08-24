@@ -72,7 +72,7 @@ sequenceDiagram
         Guard->>Teardown: execute_automated_bridge_sunset("br_501")
         Teardown-->>Guard: SunsetComplete (CDC stream deprovisioned)
         Guard->>Audit: record_bridge_decommissioned_event(bridge_id: "br_501")
-        Note over Developer: Execute automated bridge teardown; hold sunset deadline without exception
+        Note over Developer: Execute automated bridge teardown, hold sunset deadline without exception
     else Valid Future Sunset Date Set
         Evaluator-->>Guard: DeadlineEnforcementResult (is_approved: true, days_remaining: 28.0)
         Guard-->>Developer: ProvisioningApproved (Hard Sunset Date 2026-11-11 Registered)

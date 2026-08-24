@@ -81,7 +81,7 @@ sequenceDiagram
         
         alt Secondary Success
             Secondary-->>Client: SecondaryResponse (status_code: 200)
-        else Secondary Failure / Timeout
+        else Secondary Failure or Timeout
             Secondary-->>Client: SecondaryResponse (status_code: 500)
             Client->>Kafka: emit_compensating_audit_event(failure_payload)
             Note over Kafka: Audit event queued for asynchronous background repair

@@ -77,11 +77,11 @@ sequenceDiagram
 
     Auditor->>Auditor: calculate_coupling_score(AccessMap)
     
-    alt High Implicit Coupling (Multiple Writers/Readers)
+    alt High Implicit Coupling (Multiple Writers or Readers)
         Auditor->>Decoupler: extract_explicit_api_seams("orders", AccessMap)
         Decoupler-->>Auditor: SeamDefinition (owner: "svc_checkout", api_endpoints: ["GET /orders", "POST /orders"])
         Auditor-->>Planner: CouplingAuditResult (requires_decoupling: true, seam: SeamDefinition)
-        Note over Planner: Block direct DB migration; force API/Event refactoring first
+        Note over Planner: Block direct DB migration, force API/Event refactoring first
     else Single Service Owner (No Shared Coupling)
         Auditor-->>Planner: CouplingAuditResult (requires_decoupling: false)
         Note over Planner: Safe to migrate as single-service private DB

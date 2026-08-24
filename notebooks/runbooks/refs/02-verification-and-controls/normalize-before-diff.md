@@ -79,9 +79,9 @@ sequenceDiagram
 
     Normalizer->>DiffEngine: compare_normalized_diff(CanonicalLegacy, CanonicalTarget)
     
-    alt Payloads 100% Structurally & Semantically Identical
+    alt Payloads 100% Structurally and Semantically Identical
         DiffEngine-->>Harness: DiffResult (is_matched: true, noise_filtered_count: 14)
-        Note over Harness: Clean high-signal pass; 14 expected diffs filtered up front
+        Note over Harness: Clean high-signal pass, 14 expected diffs filtered up front
     else Real Functional Regression Detected
         DiffEngine-->>Harness: DiffResult (is_matched: false, real_diff: "Price mismatch 10.00 vs 12.00")
         DiffEngine->>Audit: record_real_diff_regression(real_diff)

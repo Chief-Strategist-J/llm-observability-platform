@@ -78,14 +78,14 @@ sequenceDiagram
         alt Child Creation Success
             PaymentSvc-->>Saga: ChildResult (status: 200 OK, child_id: "pay_901")
             Saga-->>Client: SagaSuccess (200 OK - FK Invariant Maintained)
-        else Child Creation Failure / Timeout
+        else Child Creation Failure or Timeout
             PaymentSvc-->>Saga: ChildError (500 / Exception)
             Saga->>Saga: dispatch_compensating_action(saga_id, "ROLLBACK_CHILD")
             Saga->>PaymentSvc: delete_child_record("pay_901")
             PaymentSvc-->>Saga: CompensatedOK
             Saga-->>Client: SagaFailed (FK Invariant Protected via Compensation)
         end
-    else Parent Missing / Not Found
+    else Parent Missing or Not Found
         OrderSvc-->>Saga: ParentResult (exists: false)
         Saga-->>Client: SagaFailed (HTTP 400 Bad Request - FK Invariant Violation Prevented)
         Note over Client: Prevent creation of orphaned child record in Service B

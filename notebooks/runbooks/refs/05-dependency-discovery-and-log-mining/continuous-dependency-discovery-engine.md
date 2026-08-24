@@ -79,11 +79,11 @@ sequenceDiagram
     alt Sustained 90-Day Silence Verified (Zero Log Hits)
         Guard-->>Pipeline: SilenceApproved (Decommissioning go/no-go unblocked)
         Guard->>Audit: record_sustained_silence_verified_event(endpoint: "/api/v1/orders")
-        Note over Pipeline: Unblock Pillar I decommissioning; sustained silence proven by Pillar H
+        Note over Pipeline: Unblock Pillar I decommissioning, sustained silence proven by Pillar H
     else Active Log Hits Discovered (Traffic Present)
         Miner-->>Guard: SilenceVerificationResult (is_silent: false, total_hits: 14, callers: ["svc_billing"])
         Guard-->>Pipeline: SilenceRejected (Decommissioning blocked; 14 active log hits discovered)
-        Note over Pipeline: Block decommissioning; force team to migrate remaining 14 callers first
+        Note over Pipeline: Block decommissioning, force team to migrate remaining 14 callers first
     end
 ```
 

@@ -75,7 +75,7 @@ sequenceDiagram
         alt Primary Execution Success
             NewSvc-->>Switch: PrimaryResponse (200 OK)
             Switch-->>Gateway: HttpResponse (200 OK)
-        else Primary Error / Timeout (Auto-Trip Circuit)
+        else Primary Error or Timeout (Auto-Trip Circuit)
             NewSvc-->>Switch: PrimaryError (500 / Timeout)
             Note over Switch: Instant auto-trip: fallback to legacy path immediately
             Switch->>LegacySvc: dispatch_legacy_fallback(payload)
@@ -84,7 +84,7 @@ sequenceDiagram
             Switch->>Audit: record_switch_event(status: "AUTO_ROLLED_BACK")
         end
     else Rollback Switch Triggered (Explicit Rollback)
-        Note over Switch: Per-service rollback active; bypass primary path completely
+        Note over Switch: Per-service rollback active, bypass primary path completely
         Switch->>LegacySvc: dispatch_legacy_fallback(payload)
         LegacySvc-->>Switch: LegacyResponse (200 OK)
         Switch-->>Gateway: HttpResponse (200 OK)

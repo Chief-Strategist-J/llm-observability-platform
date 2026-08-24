@@ -86,13 +86,13 @@ sequenceDiagram
     Auditor->>LegacyDB: fetch_record("corr_801")
     Auditor->>TargetDB: fetch_record("corr_801")
     
-    alt Both Stores Structurally & Semantically Matched
+    alt Both Stores Structurally and Semantically Matched
         Auditor-->>App: DualStoreParityResult (is_matched: true, lag_ms: 1.2)
         Auditor->>Audit: record_sync_parity_passed_event(corr_id: "corr_801")
         Note over App: Both stores verified simultaneously true
     else Parity Discrepancy Discovered
         Auditor-->>App: DualStoreParityResult (is_matched: false, reason: "Field mismatch")
-        Note over App: Flag discrepancy; trigger auto-healing repair saga
+        Note over App: Flag discrepancy, trigger auto-healing repair saga
     end
 ```
 

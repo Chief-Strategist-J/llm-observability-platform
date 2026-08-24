@@ -71,14 +71,14 @@ sequenceDiagram
 
     Simulator-->>Guard: RollbackDrillResult (is_capability_proven: true, drill_lag_ms: 0.8)
 
-    alt Rollback Switch Live & Drilled Under 48h Drift
+    alt Rollback Switch Live and Drilled Under 48h Drift
         Guard-->>Operations: DrillPassed (Rollback capability verified live under realistic drift)
         Guard->>Audit: record_rollback_drill_passed_event(checkpoint_id: "chk_901")
         Note over Operations: Rollback verified as true capability under 48h time-since-checkpoint
     else Untested or Stale Checkpoint Detected
         Simulator-->>Guard: RollbackDrillResult (is_capability_proven: false, reason: "Untested under 48h drift")
         Guard-->>Operations: DrillFailed (Untested checkpoint is a hypothesis, not a capability!)
-        Note over Operations: Block deployment; run mandatory chaos drill before cutover
+        Note over Operations: Block deployment, run mandatory chaos drill before cutover
     end
 ```
 

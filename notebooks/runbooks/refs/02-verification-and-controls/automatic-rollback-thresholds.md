@@ -75,7 +75,7 @@ sequenceDiagram
         Tripper->>Router: revert_traffic_to_legacy("svc_orders")
         Router-->>Tripper: ReversionConfirmed (Reverted in <1ms)
         Tripper->>Alert: emit_automated_rollback_alert(reason: "THRESHOLD_BREACHED")
-        Note over Router: Sub-second automated rollback executed; human hesitation eliminated
+        Note over Router: Sub-second automated rollback executed, human hesitation eliminated
     else Metrics Within Pre-Agreed Bounds
         Evaluator-->>Telemetry: ThresholdsOK (Error rate 0.02% <= 0.1%)
     end

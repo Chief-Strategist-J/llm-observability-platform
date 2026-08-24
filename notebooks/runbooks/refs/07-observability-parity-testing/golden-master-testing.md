@@ -77,7 +77,7 @@ sequenceDiagram
     else Behavioral Discrepancy (Regression Detected)
         Evaluator-->>TestRunner: ParityReport (is_matched: false, diffs: ["field_xyz"])
         TestRunner->>Reporter: emit_parity_report(ParityReport)
-        Note over TestRunner: Flag characterization regression; block cutover build
+        Note over TestRunner: Flag characterization regression, block cutover build
     end
 ```
 

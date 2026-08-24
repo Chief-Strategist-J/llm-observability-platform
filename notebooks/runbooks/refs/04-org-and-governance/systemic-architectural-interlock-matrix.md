@@ -98,11 +98,11 @@ sequenceDiagram
     alt All 9 Architectural Interlocks Validated (100% Governance)
         MatrixGuard-->>Controller: GovernancePassed (All 9 pillars interlocked deterministically)
         MatrixGuard->>Audit: record_systemic_governance_passed_event(migration_id: "mig_1001")
-        Note over Controller: Migration unblocked end-to-end; zero broken interlock dependencies
+        Note over Controller: Migration unblocked end-to-end, zero broken interlock dependencies
     else Broken Interlock Link Discovered
         Evaluator-->>MatrixGuard: EndToEndGovernanceResult (is_fully_interlocked: false, broken_link: "H -> I missing silence proof")
         MatrixGuard-->>Controller: GovernanceFailed (Pillar I decommissioning blocked by Pillar H silence gap)
-        Note over Controller: Block execution; force remediation of broken pillar interlock
+        Note over Controller: Block execution, force remediation of broken pillar interlock
     end
 ```
 

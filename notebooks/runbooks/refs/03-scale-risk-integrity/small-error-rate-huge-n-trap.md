@@ -74,7 +74,7 @@ sequenceDiagram
 
     alt Absolute Error Count Breached (1,000,000 > 10)
         Guard-->>Pipeline: ScaleRiskEvaluationResult (is_approved: false, reason: "0.1% error rate = 1,000,000 wrong records!")
-        Note over Pipeline: Block release; percentage framing rejected at extreme N
+        Note over Pipeline: Block release, percentage framing rejected at extreme N
     else Absolute Error Count Within Cap
         Guard-->>Pipeline: ScaleRiskEvaluationResult (is_approved: true)
         Guard->>Audit: record_scale_risk_passed_event(absolute_errors: 0)

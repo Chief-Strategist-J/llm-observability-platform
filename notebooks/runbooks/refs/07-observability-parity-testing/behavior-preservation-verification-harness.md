@@ -75,10 +75,10 @@ sequenceDiagram
 
     Harness->>Comparator: compare_canonical_diff(CanonicalLegacy, CanonicalTarget)
     
-    alt Payloads Structurally & Semantically Identical
+    alt Payloads Structurally and Semantically Identical
         Comparator-->>Harness: BehaviorPreservationResult (is_matched: true, noise_stripped: 12)
         Harness->>Audit: record_verification_passed_event(noise_stripped: 12)
-        Note over ShadowRunner: High-signal parity proof confirmed; noise filtered up front
+        Note over ShadowRunner: High-signal parity proof confirmed, noise filtered up front
     else Real Functional Divergence Detected
         Comparator-->>Harness: BehaviorPreservationResult (is_matched: false, real_diff: "Price mismatch")
         Harness->>Audit: record_real_functional_regression_event(real_diff)

@@ -72,17 +72,17 @@ sequenceDiagram
     
     Evaluator->>Evaluator: assert_quirk_rationale_known("q_401")
     
-    alt Historical Rationale Known & Safe to Remove
+    alt Historical Rationale Known and Safe to Remove
         Evaluator-->>Refactorer: QuirkPreservationResult (preserve: false, reason: "Decommissioned 3rd party API")
-        Note over Refactorer: Approved removal; quirk no longer required
-    else Rationale Unknown / Load-Bearing Quirk
+        Note over Refactorer: Approved removal, quirk no longer required
+    else Rationale Unknown or Load-Bearing Quirk
         Evaluator-->>Refactorer: QuirkPreservationResult (preserve: true, reason: "Chesterton's Fence Guard Active")
         Refactorer->>Microservice: fetch_raw_output()
         Microservice-->>Refactorer: RawOutput ("value  ")
         Refactorer->>QuirkApp: preserve_legacy_quirk(RawOutput, "q_401")
         QuirkApp-->>Refactorer: QuirkOutput ("value  " - Trailing space preserved)
         Refactorer->>Audit: record_quirk_preserved(quirk_id: "q_401")
-        Note over Refactorer: Preserve quirk strictly; prevent silent refactoring regression
+        Note over Refactorer: Preserve quirk strictly, prevent silent refactoring regression
     end
 ```
 

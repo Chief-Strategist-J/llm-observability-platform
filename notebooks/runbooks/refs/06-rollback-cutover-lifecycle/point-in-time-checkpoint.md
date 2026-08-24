@@ -81,14 +81,14 @@ sequenceDiagram
 
     Checkpoint->>Verifier: verify_checkpoint_integrity(SnapshotMetadata)
     
-    alt Checkpoint Valid & Verified
+    alt Checkpoint Valid and Verified
         Verifier-->>Checkpoint: CheckpointResult (is_valid: true, checksum: "a1b2c3d4...")
         Checkpoint-->>Orchestrator: CheckpointConfirmed (Pre-Cutover Recovery Guarantee OK)
-        Note over Orchestrator: Unblock cutover traffic shifting; recovery point secured
-    else Checkpoint Creation Failed / Corrupted
+        Note over Orchestrator: Unblock cutover traffic shifting, recovery point secured
+    else Checkpoint Creation Failed or Corrupted
         Verifier-->>Checkpoint: CheckpointResult (is_valid: false, error: "Snapshot Timeout")
         Checkpoint-->>Orchestrator: CheckpointFailed
-        Note over Orchestrator: ABORT cutover immediately; do NOT shift traffic without checkpoint
+        Note over Orchestrator: ABORT cutover immediately, do NOT shift traffic without checkpoint
     end
 ```
 

@@ -75,8 +75,8 @@ sequenceDiagram
         Note over Caller: Unmigrated caller caught by Layer 3 tripwire canary
 
         Admin->>Tripwire: toggle_freeze_canary(resource: "tbl_orders", is_frozen: false)
-        Note over Admin: Instant sub-millisecond reversal; un-freeze resource immediately
-    else Tripwire Disarmed / Normal Mode
+        Note over Admin: Instant sub-millisecond reversal, un-freeze resource immediately
+    else Tripwire Disarmed or Normal Mode
         Tripwire->>Storage: execute_write_mutation(payload)
         Storage-->>Tripwire: MutationSuccess (200 OK)
         Tripwire-->>Caller: HttpResponse (200 OK)

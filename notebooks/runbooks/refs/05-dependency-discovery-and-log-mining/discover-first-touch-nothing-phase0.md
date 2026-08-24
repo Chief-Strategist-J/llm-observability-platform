@@ -78,13 +78,13 @@ sequenceDiagram
 
     Guard->>Guard: arbitrate_logs_vs_wiki(AccessLogs, ASTCallers, wiki_docs)
     
-    alt Empirical Census Complete & Verified (Zero Code Mutated)
+    alt Empirical Census Complete and Verified (Zero Code Mutated)
         Guard-->>Engineer: DiscoveryCensusResult (is_complete: true, empirical_callers: 3, wiki_overridden: true)
         Guard->>Audit: record_phase0_discovery_complete_event(service_id: "svc_payment")
-        Note over Engineer: Phase 0 complete; empirical reality captured without touching code
+        Note over Engineer: Phase 0 complete, empirical reality captured without touching code
     else Un-Mapped Active Callers Discovered
         Guard-->>Engineer: DiscoveryCensusResult (is_complete: false, unmapped: ["analytics_svc"])
-        Note over Engineer: Unblock Phase 0; complete dependency mapping first
+        Note over Engineer: Unblock Phase 0, complete dependency mapping first
     end
 ```
 

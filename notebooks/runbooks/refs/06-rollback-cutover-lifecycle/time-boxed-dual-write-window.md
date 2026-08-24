@@ -69,13 +69,13 @@ sequenceDiagram
     Evaluator->>ReaderAudit: audit_remaining_legacy_readers("br_701")
     ReaderAudit-->>Evaluator: ReaderMetrics (active_legacy_readers: 0)
 
-    alt Sunset Date Passed & Zero Legacy Readers
+    alt Sunset Date Passed and Zero Legacy Readers
         Evaluator-->>Scheduler: WindowStatus (status: "EXPIRED", ready_for_sunset: true)
         Scheduler->>Decommissioner: decommission_dual_write_bridge("br_701")
         Decommissioner->>Decommissioner: disable_secondary_write_dispatcher()
         Decommissioner-->>Scheduler: DecommissionResult (is_decommissioned: true)
         Scheduler->>Audit: record_decommission_event("br_701", status: "SUNSET_COMPLETE")
-        Note over Scheduler: Bridge permanently decommissioned; tech debt eliminated
+        Note over Scheduler: Bridge permanently decommissioned, tech debt eliminated
     else Sunset Date Approaching (Within 7 Days)
         Evaluator-->>Scheduler: WindowStatus (status: "EXPIRING_SOON", days_remaining: 5)
         Scheduler->>Audit: emit_sunset_warning_alert("br_701", owner: "billing_team")
@@ -83,7 +83,7 @@ sequenceDiagram
     else Active Readers Remaining on Expiry Date
         Evaluator-->>Scheduler: WindowStatus (status: "BLOCKED", legacy_readers: 3)
         Scheduler->>Audit: emit_decommission_blocked_alert("br_701", active_readers: 3)
-        Note over Scheduler: Block auto-shutdown; trigger high-priority incident for unmigrated readers
+        Note over Scheduler: Block auto-shutdown, trigger high-priority incident for unmigrated readers
     end
 ```
 

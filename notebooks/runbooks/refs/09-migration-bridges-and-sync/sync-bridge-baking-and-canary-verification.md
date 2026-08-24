@@ -68,14 +68,14 @@ sequenceDiagram
 
     Evaluator-->>Guard: BridgeBakingResult (is_baked: true, bake_days: 14, lag_ms: 0.8)
 
-    alt Mandatory 14-Day Bake Window Completed & Canary Verified
+    alt Mandatory 14-Day Bake Window Completed and Canary Verified
         Guard-->>Pipeline: CutoverReadinessApproved (Bridge fully baked; unblock read cutover)
         Guard->>Audit: record_bridge_baking_passed_event(bridge_id: "br_301")
-        Note over Pipeline: Bridge verified stable under production load; ready for read cutover
+        Note over Pipeline: Bridge verified stable under production load, ready for read cutover
     else Bake Window Incomplete or Canary Mismatch
         Evaluator-->>Guard: BridgeBakingResult (is_baked: false, remaining_days: 4)
         Guard-->>Pipeline: CutoverReadinessRejected (Bake window incomplete: 4 days remaining)
-        Note over Pipeline: Block cutover; force bridge to complete full 14-day bake window
+        Note over Pipeline: Block cutover, force bridge to complete full 14-day bake window
     end
 ```
 

@@ -78,10 +78,10 @@ sequenceDiagram
     
     alt Latency Dropped Significantly (Observable Shift Detected)
         Evaluator-->>Auditor: SilenceVerificationResult (is_silent: false, reason: "P50 latency shift detected: 42ms -> 18ms")
-        Note over Auditor: REJECT cutover; latency shift violates behavior preservation contract
-    else Complete Silence (Metrics & Alerts Unchanged)
+        Note over Auditor: REJECT cutover, latency shift violates behavior preservation contract
+    else Complete Silence (Metrics and Alerts Unchanged)
         Evaluator-->>Auditor: SilenceVerificationResult (is_silent: true)
-        Note over Auditor: APPROVE cutover; silence metric win condition satisfied
+        Note over Auditor: APPROVE cutover, silence metric win condition satisfied
     end
 ```
 

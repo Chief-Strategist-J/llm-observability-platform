@@ -81,7 +81,7 @@ sequenceDiagram
         Resolver-->>App: ReadSource (NEW_SERVICE)
         App->>NewDB: execute_read_query(payload)
         NewDB-->>App: QueryResults
-    else Flag Provider Error / Timeout
+    else Flag Provider Error or Timeout
         Evaluator-->>Cell: FlagResult (is_enabled: false, fallback: true)
         Cell->>Resolver: resolve_read_source(FlagResult)
         Resolver-->>App: ReadSource (LEGACY)

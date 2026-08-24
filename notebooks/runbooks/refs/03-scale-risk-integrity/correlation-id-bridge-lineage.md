@@ -85,7 +85,7 @@ sequenceDiagram
         Auditor-->>Client: LineageVerificationResult (is_traced: true, match: 100%)
     else Lineage Mismatch or Missing Trace
         Auditor-->>Client: LineageVerificationResult (is_traced: false, reason: "Target missing corr_id")
-        Note over Client: Flag un-traced record; trigger lineage repair saga
+        Note over Client: Flag un-traced record, trigger lineage repair saga
     end
 ```
 

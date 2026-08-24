@@ -84,7 +84,7 @@ sequenceDiagram
         alt Canary Record Found (Pipeline Healthy)
             TargetDB-->>Probe: CanaryRow (_is_synthetic_canary: true)
             Probe-->>Scheduler: CanaryProbeResult (is_healthy: true, propagation_latency_ms: 120.5)
-        else Probe Timeout (Pipeline Lag / Outage)
+        else Probe Timeout (Pipeline Lag or Outage)
             Probe-->>Scheduler: CanaryProbeResult (is_healthy: false, error: "Canary Timeout")
             Note over Scheduler: Emit critical pipeline outage alert
         end

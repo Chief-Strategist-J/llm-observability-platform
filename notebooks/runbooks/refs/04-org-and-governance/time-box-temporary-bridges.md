@@ -70,7 +70,7 @@ sequenceDiagram
     alt Sunset Date Missing or Exceeds Max 90-Day SLA
         Evaluator-->>Guard: SunsetComplianceResult (is_approved: false, reason: "Undated or SLA > 90 days")
         Guard-->>Developer: ProvisioningRejected (Time-box every temporary bridge at creation)
-        Note over Developer: REJECT provisioning; require approved sunset date <= 90 days
+        Note over Developer: REJECT provisioning, require approved sunset date <= 90 days
     else Valid Sunset Date Specified
         Evaluator->>Store: register_bridge_sunset("br_901", sunset_ts: 1787590000.0)
         Store-->>Evaluator: RegisterConfirmed

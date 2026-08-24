@@ -80,10 +80,10 @@ sequenceDiagram
     alt Both Gates Cleared by 2 Separate Owners
         Guard-->>Pipeline: DualGateGovernanceResult (is_approved: true, eng_owner: "arch_smith", biz_owner: "vp_jones")
         Guard->>Audit: record_dual_gate_decommissioning_passed_event(asset_id: "legacy_db_01")
-        Note over Pipeline: Authorize permanent legacy deprovisioning; two distinct owners signed off
+        Note over Pipeline: Authorize permanent legacy deprovisioning, two distinct owners signed off
     else Single Owner or Gate Missing (Violation)
         Guard-->>Pipeline: DualGateGovernanceResult (is_approved: false, reason: "Engineering and Business gates must be owned by 2 separate people")
-        Note over Pipeline: Block teardown; enforce two separate owner sign-offs per §4.8
+        Note over Pipeline: Block teardown, enforce two separate owner sign-offs per §4.8
     end
 ```
 

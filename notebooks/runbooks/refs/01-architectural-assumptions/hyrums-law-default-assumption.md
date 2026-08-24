@@ -90,7 +90,7 @@ sequenceDiagram
         Gate-->>Client: ParityApproved
     else Observable Behavior Shift Detected
         Gate-->>Client: ParityBlocked (Hyrum's Law Violation)
-        Note over Client: Block cutover; treat modified header order as breaking change
+        Note over Client: Block cutover, treat modified header order as breaking change
     end
 ```
 

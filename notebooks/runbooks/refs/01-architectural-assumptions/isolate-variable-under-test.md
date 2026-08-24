@@ -76,7 +76,7 @@ sequenceDiagram
 
     alt Multiple Variables Modified (Isolation Breach)
         Guard-->>Pipeline: DeploymentRejected (Isolation Violation: DB_ENDPOINT + DRIVER_VERSION)
-        Note over Pipeline: Block deployment; split changes into 2 independent single-variable releases
+        Note over Pipeline: Block deployment, split changes into 2 independent single-variable releases
     else Single Variable Modified (Strictly Isolated)
         Evaluator-->>Guard: IsolationVerificationResult (is_isolated: true, active_axis: "DB_ENDPOINT")
         Guard-->>Pipeline: DeploymentApproved (Single Variable Under Test: DB_ENDPOINT)

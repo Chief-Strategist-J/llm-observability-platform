@@ -83,7 +83,7 @@ sequenceDiagram
     else Silence Proof Incomplete or Active Hits Discovered
         Auditor-->>Guard: SilenceStatus (is_proven: false, hit_count: 3)
         Guard-->>Engineer: DecomRejected (Decommissioning blocked; 3 active log hits detected)
-        Note over Engineer: REJECT decommissioning; enforce continued Pillar H discovery scanning
+        Note over Engineer: REJECT decommissioning, enforce continued Pillar H discovery scanning
     end
 ```
 

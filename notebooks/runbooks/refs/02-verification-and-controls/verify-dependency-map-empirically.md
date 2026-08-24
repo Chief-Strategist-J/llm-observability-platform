@@ -83,7 +83,7 @@ sequenceDiagram
     
     alt Un-documented Caller Discovered ("svc_billing_cron")
         Verifier-->>Pipeline: EmpiricalVerificationResult (is_verified: false, missing_callers: ["svc_billing_cron"])
-        Note over Pipeline: Block cutover; update map with empirical log evidence
+        Note over Pipeline: Block cutover, update map with empirical log evidence
     else 100% Empirically Verified
         Verifier-->>Pipeline: EmpiricalVerificationResult (is_verified: true)
         Verifier->>Audit: record_map_verification_event(resource_id: "tbl_users")

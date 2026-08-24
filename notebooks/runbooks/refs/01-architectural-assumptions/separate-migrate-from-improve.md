@@ -74,7 +74,7 @@ sequenceDiagram
     alt Change Contains Entangled Feature Improvements in Phase 1
         Evaluator-->>Gate: PhaseGateDecision (is_approved: false, reason: "Feature improvement detected in Phase 1 PR")
         Gate-->>Developer: ChangeRejected (Separate Migrate from Improve)
-        Note over Developer: REJECT PR; revert feature changes and resubmit 1:1 migration PR only
+        Note over Developer: REJECT PR, revert feature changes and resubmit 1:1 migration PR only
     else Strict 1:1 Migration Change
         Evaluator-->>Gate: PhaseGateDecision (is_approved: true, stage: "PHASE1_1TO1_MIGRATE")
         Gate-->>Developer: ChangeApproved (Phase 1 1:1 Migration Confirmed)

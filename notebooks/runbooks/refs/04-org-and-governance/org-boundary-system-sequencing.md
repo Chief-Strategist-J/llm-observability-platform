@@ -74,7 +74,7 @@ sequenceDiagram
 
     alt High Coordination Friction (Spans 4 Teams > 2)
         Guard-->>Planner: SequencingApprovalResult (is_approved: false, reason: "Wave spans 4 teams simultaneously; Conway's Law breach")
-        Note over Planner: Block plan; re-sequence wave to align with single team boundaries
+        Note over Planner: Block plan, re-sequence wave to align with single team boundaries
     else Low Coordination Friction (Spans 1-2 Teams)
         Guard-->>Planner: SequencingApprovalResult (is_approved: true)
         Guard->>Audit: record_org_sequencing_approved_event(wave_id: "wave_2")

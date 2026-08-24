@@ -88,7 +88,7 @@ sequenceDiagram
         
         alt Real Functional Parity Confirmed
             ShadowRunner->>Audit: record_shadow_parity_passed_event(is_matched: true)
-            Note over ShadowRunner: High-signal shadow pass; noise stripped via human-reviewed rule
+            Note over ShadowRunner: High-signal shadow pass, noise stripped via human-reviewed rule
         else Real Functional Divergence Detected
             ShadowRunner->>Audit: record_real_functional_divergence_event(diff: "Price 10 vs 12")
             Note over ShadowRunner: Alert emitted on true business logic divergence in shadow

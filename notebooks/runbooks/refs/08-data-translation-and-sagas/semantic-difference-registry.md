@@ -73,16 +73,16 @@ sequenceDiagram
         Matcher-->>Registry: SemanticDiffEntry (owner: "order_team", signed_off: true, expires_at: "2026-12-31")
         Registry->>Guard: verify_signoff_validity(entry, current_time)
         
-        alt Sign-Off Valid & Not Expired
+        alt Sign-Off Valid and Not Expired
             Guard-->>Registry: ValidityResult (is_valid: true)
             Registry-->>Differ: DiffEvaluationResult (is_suppressed: true, reason: "Approved Status Code Normalization")
             Registry->>Audit: record_suppressed_diff(entry)
-            Note over Differ: Suppress alert; treat as approved intentional difference
-        else Sign-Off Expired / Invalid
+            Note over Differ: Suppress alert, treat as approved intentional difference
+        else Sign-Off Expired or Invalid
             Guard-->>Registry: ValidityResult (is_valid: false, reason: "Sign-Off Expired")
             Registry-->>Differ: DiffEvaluationResult (is_suppressed: false, reason: "Expired Intentional Approval")
             Registry->>Audit: record_unapproved_diff(entry)
-            Note over Differ: Flag regression; block deployment pipeline
+            Note over Differ: Flag regression, block deployment pipeline
         end
     else Unregistered Diff Pattern
         Matcher-->>Registry: PatternNotFound

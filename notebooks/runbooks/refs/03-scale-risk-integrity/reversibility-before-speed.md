@@ -71,13 +71,13 @@ sequenceDiagram
 
     Evaluator-->>Guard: UndoableStepResult (is_undoable: true, reversal_lag_ms: 0.8)
 
-    alt Step Fully Undoable & Target Verified
+    alt Step Fully Undoable and Target Verified
         Guard-->>Orchestrator: StepApproved (Reversibility Guarantee Verified)
         Guard->>Audit: record_reversibility_verified_event(step_id: "step_301")
-        Note over Orchestrator: Execute step safely; instant sub-second undo target secured
+        Note over Orchestrator: Execute step safely, instant sub-second undo target secured
     else Step Irreversible or Target Unverified
         Guard-->>Orchestrator: StepBlocked (Irreversible shortcut rejected; enforce undo target first)
-        Note over Orchestrator: Block execution; force team to build undo target before proceeding
+        Note over Orchestrator: Block execution, force team to build undo target before proceeding
     end
 ```
 

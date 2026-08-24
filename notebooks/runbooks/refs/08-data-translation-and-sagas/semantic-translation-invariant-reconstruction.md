@@ -72,7 +72,7 @@ sequenceDiagram
 
     SagaRebuilder-->>Guard: InvariantReconstructionResult (is_valid: true, invariant: "FOREIGN_KEY_OK")
 
-    alt All Semantic Rules & Invariants Rebuilt
+    alt All Semantic Rules and Invariants Rebuilt
         Guard-->>Adapter: TranslationApproved (Canonical target record & saga invariant verified)
         Guard->>Audit: record_translation_passed_event(record_id: "rec_901")
         Note over Adapter: Lost DB-level invariant rebuilt successfully as saga protocol

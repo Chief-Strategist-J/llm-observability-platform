@@ -80,13 +80,13 @@ sequenceDiagram
 
     Guard->>Guard: verify_reverse_rollback_target("br_801")
     
-    alt Sync Infrastructure Stable & Verified
+    alt Sync Infrastructure Stable and Verified
         Guard-->>Pipeline: SyncReadinessResult (is_ready: true, lag_ms: 12.0)
         Guard->>Audit: record_sync_infra_verified_event(bridge_id: "br_801")
-        Note over Pipeline: Unblock traffic cutover; rollback target verified
+        Note over Pipeline: Unblock traffic cutover, rollback target verified
     else Replication Lag High or Reverse Path Failed
         Guard-->>Pipeline: SyncReadinessResult (is_ready: false, reason: "Replication lag 4500ms > max 100ms")
-        Note over Pipeline: Block cutover; do NOT shift traffic onto unproven bridge
+        Note over Pipeline: Block cutover, do NOT shift traffic onto unproven bridge
     end
 ```
 

@@ -72,7 +72,7 @@ sequenceDiagram
     alt Hidden State Mutations Discovered in "Read" Endpoint
         Guard-->>Architect: SideEffectAuditResult (is_approved: false, reason: "GET /account/profile mutates user_audit.last_seen_at")
         Guard->>Audit: record_side_effect_discovered_event(endpoint: "/account/profile")
-        Note over Architect: REJECT read-first cutover; refactor hidden mutation out of read path first
+        Note over Architect: REJECT read-first cutover, refactor hidden mutation out of read path first
     else 100% Pure Read Confirmed (Zero State Mutations)
         Auditor-->>Guard: SideEffectAuditResult (is_approved: true, mutations_count: 0)
         Guard-->>Architect: SideEffectAuditApproved (Read endpoint verified side-effect-free)
