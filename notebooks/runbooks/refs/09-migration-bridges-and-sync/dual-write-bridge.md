@@ -125,11 +125,8 @@ dual-write-bridge/
 
 ```tree
 Mutation Request Initiated
-├── bridge/precondition.py: validate_dual_write_preconditions(ctx: DualWriteContext, payload: Mapping[str, Any])
-└── bridge/dispatcher.py: create_dual_write_dispatcher(primary_fn: StoreDispatcher,
-    secondary_fn: StoreDispatch...)
-        ├── models.py: DualWriteContext(tenant_id, entity_name, idempotency_key, timestamp, headers)
-        └── models.py: BridgeResult(status, primary_code, secondary_code, audit_event_emitted)
+└── bridge/dispatcher.py: create_dual_write_dispatcher(primary_fn, secondary_fn, audit_fn, Any]], Awaitable)
+    └── models.py: BridgeResult(status, primary_code, secondary_code, audit_event_emitted)
 ```
 
 ---

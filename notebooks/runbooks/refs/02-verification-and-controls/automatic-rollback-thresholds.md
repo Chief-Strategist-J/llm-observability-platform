@@ -113,13 +113,8 @@ sequenceDiagram
 
 ```tree
 Metric Stream Evaluated
-└── threshold_engine/tripper.py: execute_automated_rollback_guard(ctx: ThresholdContext,
-    metrics: Mapping[str, Any],
-    r...)
-    └── threshold_engine/evaluator.py: eval_automatic_rollback_thresholds(ctx: ThresholdContext,
-    metrics: Mapping[str, Any])
-        ├── models.py: ThresholdContext(service_id, max_error_rate_pct, max_p99_latency_ms, max_mismatch_count, evaluation_window_sec)
-        └── models.py: AutomatedRollbackResult(service_id, is_triggered, breached_metric, observed_value, limit_value, reverted_at_ts, diagnostic_reason)
+└── threshold_engine/evaluator.py: eval_automatic_rollback_thresholds(ctx, metrics, Any])
+    └── models.py: AutomatedRollbackResult(service_id, is_triggered, breached_metric, observed_value, limit_value, reverted_at_ts, diagnostic_reason)
 ```
 
 ---

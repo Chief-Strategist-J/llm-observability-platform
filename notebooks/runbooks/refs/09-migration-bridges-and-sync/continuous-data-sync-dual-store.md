@@ -128,13 +128,10 @@ sequenceDiagram
 
 ```tree
 Dual-Write Mutation Executed
-└── sync_bridge_engine/guard.py: assert_dual_store_parity(legacy_payload: Mapping[str, Any],
-    target_payload: Mappi...)
-    └── sync_bridge_engine/dispatcher.py: sync_dual_store_mutation(legacy_payload: Mapping[str, Any],
-    target_payload: Mappi...)
-        └── sync_bridge_engine/dispatcher.py: compute_payload_hash(payload: Mapping[str, Any])
-            ├── models.py: SyncContext(correlation_id, bridge_id, legacy_row_hash, target_row_hash, replication_lag_ms)
-            └── models.py: DualStoreParityResult(correlation_id, is_matched, replication_lag_ms, mismatched_fields, rejection_reason)
+└── sync_bridge_engine/guard.py: assert_dual_store_parity(legacy_payload, Any], target_payload, Any], corr_id, bridge_id, lag_ms)
+    └── sync_bridge_engine/dispatcher.py: sync_dual_store_mutation(legacy_payload, Any], target_payload, Any], corr_id, bridge_id, lag_ms)
+        ├── sync_bridge_engine/dispatcher.py: compute_payload_hash(payload, Any])
+        └── models.py: DualStoreParityResult(correlation_id, is_matched, replication_lag_ms, mismatched_fields, rejection_reason)
 ```
 
 ---

@@ -124,13 +124,7 @@ branch-by-abstraction/
 
 ```tree
 Consumer Call Initiated
-├── seams/core_seam.py: create_atomic_seam_cell(legacy_fn: SeamSupplier, new_fn: SeamSupplier, initial_targe...)
-├── seams/core_seam.py: get_target()
-├── seams/core_seam.py: set_target(new_target: SeamTarget)
-├── seams/core_seam.py: invoke(ctx: SeamContext, payload: Mapping[str, Any])
-└── decorators/seam_resilience.py: with_seam_fallback(primary_fn: SeamSupplier, fallback_fn: SeamSupplier)
-    ├── models.py: SeamContext(tenant_id, feature_key, user_id, metadata)
-    └── models.py: SeamResult(success, data, executed_target, execution_time_ms)
+└── decorators/seam_resilience.py: with_seam_fallback(primary_fn, fallback_fn)
 ```
 
 ---

@@ -121,10 +121,8 @@ sequenceDiagram
 
 ```tree
 Phase 0 Discovery Initiated
-├── phase0_engine/miner.py: mine_passive_ingress_logs(log_records: list)
-└── phase0_engine/guard.py: assert_phase0_discovery_complete(ctx: Phase0DiscoveryContext)
-    └── phase0_engine/miner.py: eval_phase0_discovery_census(ctx: Phase0DiscoveryContext)
-        ├── models.py: Phase0DiscoveryContext(service_id, sample_window_days, total_log_hits, empirical_callers, static_ast_callers, wiki_claimed_callers)
+└── phase0_engine/guard.py: assert_phase0_discovery_complete(ctx)
+    └── phase0_engine/miner.py: eval_phase0_discovery_census(ctx)
         └── models.py: DiscoveryCensusResult(service_id, is_complete, total_empirical_callers_count, overridden_wiki_claims, discovered_callers, rejection_reason)
 ```
 

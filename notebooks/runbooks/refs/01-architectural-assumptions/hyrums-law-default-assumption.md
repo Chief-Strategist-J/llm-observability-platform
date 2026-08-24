@@ -128,10 +128,9 @@ hyrums-law-default-assumption/
 
 ```tree
 API Behavior Verification Initiated
-├── hyrum_engine/evaluator.py: compare_headers_strict(legacy_h: Mapping[str, str], target_h: Mapping[str, str])
-└── hyrum_engine/guard.py: create_hyrums_law_guard(legacy_fn: ExecFn, target_fn: ExecFn)
-    └── hyrum_engine/evaluator.py: eval_hyrums_law_parity(legacy: ObservedBehavior, target: ObservedBehavior)
-        ├── models.py: ObservedBehavior(endpoint, status_code, headers, body, duration_ms)
+└── hyrum_engine/guard.py: create_hyrums_law_guard(legacy_fn, target_fn)
+    └── hyrum_engine/evaluator.py: eval_hyrums_law_parity(legacy, target)
+        ├── hyrum_engine/evaluator.py: compare_headers_strict(legacy_h, str], target_h, str])
         └── models.py: BehaviorParityResult(endpoint, is_matched, status_matched, headers_matched, body_matched, mismatched_axes, diagnostic_details)
 ```
 

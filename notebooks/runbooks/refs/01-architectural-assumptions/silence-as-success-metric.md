@@ -119,13 +119,9 @@ silence-as-success-metric/
 
 ```tree
 Silence Verification Job Executed
-├── silence_engine/shift_detector.py: is_metric_shifted(base_val: float, curr_val: float, max_variance_pct: float = ...)
-└── silence_engine/evaluator.py: verify_silence_win_condition(base: MetricBaseline,
-    current_metrics: Mapping[str, Any])
-    └── silence_engine/shift_detector.py: eval_metric_silence(base: MetricBaseline,
-    current_p50: float,
-    current_p9...)
-        ├── models.py: MetricBaseline(service_id, p50_latency_ms, p99_latency_ms, error_rate_pct, active_alert_count)
+└── silence_engine/evaluator.py: verify_silence_win_condition(base, current_metrics, Any])
+    └── silence_engine/shift_detector.py: eval_metric_silence(base, current_p50, current_p99, current_error_rate, current_alerts, max_variance_pct)
+        ├── silence_engine/shift_detector.py: is_metric_shifted(base_val, curr_val, max_variance_pct)
         └── models.py: SilenceVerificationResult(service_id, is_silent, latency_shift_detected, error_rate_shift_detected, new_alerts_fired, shifted_metrics, diagnostic_details)
 ```
 

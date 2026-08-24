@@ -118,12 +118,11 @@ sequenceDiagram
 
 ```tree
 Gradual Read Request Routed
-└── read_cutover_engine/guard.py: assert_read_cutover_safety(ctx: ReadCutoverContext)
-    └── read_cutover_engine/shifter.py: shift_gradual_read_traffic(ctx: ReadCutoverContext)
-        ├── read_cutover_engine/shifter.py: eval_read_circuit_health(error_rate_pct: float, max_cap: float)
-        └── read_cutover_engine/shifter.py: is_sampled_by_correlation_id(corr_id: str, shift_pct: float)
-            ├── models.py: ReadCutoverContext(correlation_id, endpoint_uri, shift_percentage, error_rate_pct, max_allowed_error_rate_pct)
-            └── models.py: ReadShiftRoutingResult(correlation_id, destination, is_sampled_for_target, is_circuit_open, error_rate_pct, rejection_reason)
+└── read_cutover_engine/guard.py: assert_read_cutover_safety(ctx)
+    └── read_cutover_engine/shifter.py: shift_gradual_read_traffic(ctx)
+        ├── read_cutover_engine/shifter.py: eval_read_circuit_health(error_rate_pct, max_cap)
+        ├── read_cutover_engine/shifter.py: is_sampled_by_correlation_id(corr_id, shift_pct)
+        └── models.py: ReadShiftRoutingResult(correlation_id, destination, is_sampled_for_target, is_circuit_open, error_rate_pct, rejection_reason)
 ```
 
 ---

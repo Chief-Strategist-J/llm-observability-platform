@@ -129,15 +129,7 @@ write-back-bridge/
 
 ```tree
 Primary Write Request Received
-├── bridge_engine/mapper.py: map_new_to_legacy_schema(new_payload: Mapping[str, Any],
-    entity_type: str,
-    fi...)
-├── bridge_engine/queue_worker.py: create_write_back_queue_worker(legacy_write_fn: LegacyWriteFn, max_queue_size: int = 1000)
-├── bridge_engine/queue_worker.py: enqueue_item(payload: WriteBackPayload)
-└── bridge_engine/queue_worker.py: start_worker()
-    ├── models.py: BridgeContext(entity_type, entity_id, tenant_id)
-    ├── models.py: WriteBackPayload(entity_id, legacy_table, data_fields, operation)
-    └── models.py: BridgeResult(primary_status, entity_id, is_write_back_enqueued)
+└── bridge_engine/queue_worker.py: create_write_back_queue_worker(legacy_write_fn, max_queue_size)
 ```
 
 ---

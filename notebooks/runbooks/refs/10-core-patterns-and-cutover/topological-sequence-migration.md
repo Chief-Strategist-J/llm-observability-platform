@@ -123,14 +123,7 @@ topological-sequence-migration/
 
 ```tree
 Migration Sequence Initiated
-├── graph_engine/dag.py: find_leaf_nodes(graph: DependencyMap)
-├── graph_engine/dag.py: topological_sort(graph: DependencyMap)
-└── gates/sequence_gate.py: assert_topological_gate(completed_nodes: Set[str],
-    target_node: str,
-    graph: ...)
-        ├── models.py: GraphNode(service_id, bounded_context, dependencies)
-        ├── models.py: GraphIntegrity(is_dag, circular_paths)
-        └── models.py: MigrationStep(step_number, executable_nodes)
+└── gates/sequence_gate.py: assert_topological_gate(completed_nodes, target_node, graph, Set)
 ```
 
 ---

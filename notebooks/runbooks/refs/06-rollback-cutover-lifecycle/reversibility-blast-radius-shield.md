@@ -118,14 +118,9 @@ sequenceDiagram
 
 ```tree
 Emergency Rollback Triggered
-└── safety_engine/guard.py: assert_reversibility_shield(ctx: SafetyContext,
-    target_active: bool,
-    measured_du...)
-    └── safety_engine/dispatcher.py: execute_blast_radius_rollback(ctx: SafetyContext,
-    target_active: bool,
-    measured_du...)
+└── safety_engine/guard.py: assert_reversibility_shield(ctx, target_active, measured_duration_ms)
+    └── safety_engine/dispatcher.py: execute_blast_radius_rollback(ctx, target_active, measured_duration_ms)
         └── models.py: RollbackExecutionResult(step_id, is_reverted, duration_ms, contained_affected_users_pct, rejection_reason)
-            ├── models.py: SafetyContext(step_id, wave_id, is_strategy_isolated, reversal_target_type, max_allowed_rollback_latency_ms)
 ```
 
 ---

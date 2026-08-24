@@ -127,14 +127,7 @@ bulkhead-isolated-waves/
 
 ```tree
 API Request Received
-├── bulkheads/concurrency_cell.py: create_bulkhead_pool(max_capacity: int)
-├── bulkheads/concurrency_cell.py: try_acquire()
-├── bulkheads/concurrency_cell.py: release()
-├── bulkheads/concurrency_cell.py: get_active()
-└── bulkheads/isolation_decorator.py: with_bulkhead_isolation(service_fn: ServiceFn,
-    try_acquire_fn: Callable[[], bool...)
-        ├── models.py: WaveConfig(wave_level, service_id, max_concurrency, timeout_ms)
-        └── models.py: BulkheadStatus(active_count, max_capacity, is_rejected, rejection_reason)
+└── bulkheads/isolation_decorator.py: with_bulkhead_isolation(service_fn, try_acquire_fn, bool], release_fn, None])
 ```
 
 ---

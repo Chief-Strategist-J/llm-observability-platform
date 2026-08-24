@@ -118,13 +118,10 @@ sequenceDiagram
 
 ```tree
 Code Modification or Bug Evaluation Initiated
-├── bug_engine/reproducer.py: reproduce_legacy_bug_behavior(val: Any, bug_id: str)
-└── bug_engine/guard.py: assert_bug_preservation_phase1(payload: Mapping[str, Any],
-    ctx: BugContext)
-    └── bug_engine/reproducer.py: preserve_load_bearing_bug(payload: Mapping[str, Any],
-    ctx: BugContext)
+└── bug_engine/guard.py: assert_bug_preservation_phase1(payload, Any], ctx)
+    └── bug_engine/reproducer.py: preserve_load_bearing_bug(payload, Any], ctx)
+        ├── bug_engine/reproducer.py: reproduce_legacy_bug_behavior(val, bug_id)
         └── models.py: BugPreservationResult(bug_id, is_preserved, original_value, bug_applied_value, rationale)
-            ├── models.py: BugContext(bug_id, description, affected_field, is_load_bearing_default, phase_stage)
 ```
 
 ---

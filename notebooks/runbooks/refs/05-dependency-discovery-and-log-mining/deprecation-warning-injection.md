@@ -115,11 +115,8 @@ deprecation-warning-injection/
 
 ```tree
 HTTP Request Received on Deprecated Endpoint
-├── warning_engine/rfc_formatter.py: format_deprecation_headers(existing_headers: Mapping[str, str],
-    rule: DeprecationRu...)
-└── warning_engine/injector.py: with_deprecation_headers(handler_fn: HandlerFn, rule: DeprecationRule)
-    ├── models.py: DeprecationRule(endpoint_path, sunset_date_gmt, deprecation_epoch, doc_link, is_active)
-    └── models.py: DeprecationInjectionResult(endpoint_path, caller_identity, sunset_header_value, deprecation_header_value, headers_injected_count)
+└── warning_engine/injector.py: with_deprecation_headers(handler_fn, rule)
+    └── warning_engine/rfc_formatter.py: format_deprecation_headers(existing_headers, str], rule)
 ```
 
 ---

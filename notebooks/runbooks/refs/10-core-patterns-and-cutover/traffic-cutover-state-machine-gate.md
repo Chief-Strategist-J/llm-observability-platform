@@ -121,11 +121,10 @@ sequenceDiagram
 
 ```tree
 Traffic Cutover Routing Initiated
-└── cutover_engine/guard.py: assert_cutover_safety_gate(ctx: CutoverContext)
-    └── cutover_engine/router.py: route_cutover_request(ctx: CutoverContext)
-        └── cutover_engine/router.py: eval_cutover_circuit_breaker(error_rate_pct: float, max_cap: float)
-            ├── models.py: CutoverContext(entity_id, endpoint_uri, migration_state, error_rate_pct, max_allowed_error_rate_pct)
-            └── models.py: CutoverRoutingResult(entity_id, destination, is_circuit_open, error_rate_pct, rejection_reason)
+└── cutover_engine/guard.py: assert_cutover_safety_gate(ctx)
+    └── cutover_engine/router.py: route_cutover_request(ctx)
+        ├── cutover_engine/router.py: eval_cutover_circuit_breaker(error_rate_pct, max_cap)
+        └── models.py: CutoverRoutingResult(entity_id, destination, is_circuit_open, error_rate_pct, rejection_reason)
 ```
 
 ---

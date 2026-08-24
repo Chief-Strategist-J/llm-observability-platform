@@ -124,13 +124,7 @@ feature-flag-read-selection/
 
 ```tree
 Data Read Request Initiated
-├── flag_engine/evaluator.py: create_flag_store_cell(initial_rules: Mapping[str, Any])
-├── flag_engine/evaluator.py: get_snapshot()
-├── flag_engine/evaluator.py: update_rules(new_rules: Mapping[str, Any])
-├── flag_engine/evaluator.py: eval_feature_flag(flag_key: str, ctx: FlagContext, rules: Mapping[str, Any])
-│   └── models.py: ReadSourceDecision(target, flag_key, variant, is_fallback)
-└── storage/data_dispatcher.py: create_read_source_dispatcher(legacy_db_fn: QueryDispatcher, new_db_fn: QueryDispatcher)
-    ├── models.py: FlagContext(tenant_id, user_id, environment, attributes)
+└── storage/data_dispatcher.py: create_read_source_dispatcher(legacy_db_fn, new_db_fn)
 ```
 
 ---

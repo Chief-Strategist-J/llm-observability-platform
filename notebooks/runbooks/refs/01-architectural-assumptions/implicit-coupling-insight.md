@@ -124,12 +124,11 @@ implicit-coupling-insight/
 
 ```tree
 Database Table Decoupling Audit Initiated
-└── coupling_engine/guard.py: evaluate_decoupling_readiness(ctx: SharedTableCouplingContext)
-    └── coupling_engine/auditor.py: audit_implicit_db_coupling(ctx: SharedTableCouplingContext)
-        └── coupling_engine/auditor.py: calculate_coupling_score(readers: FrozenSet[str], writers: FrozenSet[str], triggers: ...)
-            ├── models.py: SharedTableCouplingContext(table_name, reader_services, writer_services, db_triggers_count, foreign_keys_count)
-            ├── models.py: SeamDefinition(owner_service, proposed_api_routes, proposed_event_topics)
-            └── models.py: CouplingAuditResult(table_name, is_shared_coupling_detected, coupling_score, requires_api_seam, seam)
+└── coupling_engine/guard.py: evaluate_decoupling_readiness(ctx)
+    └── coupling_engine/auditor.py: audit_implicit_db_coupling(ctx)
+        ├── coupling_engine/auditor.py: calculate_coupling_score(readers, writers, triggers)
+        ├── models.py: SeamDefinition(owner_service, proposed_api_routes, proposed_event_topics)
+        └── models.py: CouplingAuditResult(table_name, is_shared_coupling_detected, coupling_score, requires_api_seam, seam)
 ```
 
 ---

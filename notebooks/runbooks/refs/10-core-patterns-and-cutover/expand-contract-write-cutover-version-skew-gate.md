@@ -116,9 +116,8 @@ sequenceDiagram
 
 ```tree
 Write Cutover Request Submitted
-└── write_cutover_engine/guard.py: assert_write_cutover_version_gate(ctx: WriteCutoverContext)
-    └── write_cutover_engine/version_skew.py: eval_version_skew_elimination(ctx: WriteCutoverContext)
-        ├── models.py: WriteCutoverContext(service_id, target_store_name, total_fleet_nodes_count, v1_legacy_nodes_count, v2_expand_nodes_count, backfill_completion_pct)
+└── write_cutover_engine/guard.py: assert_write_cutover_version_gate(ctx)
+    └── write_cutover_engine/version_skew.py: eval_version_skew_elimination(ctx)
         └── models.py: VersionSkewGateResult(service_id, is_approved_for_write_cutover, is_version_skew_zero, version_skew_pct, backfill_completion_pct, rejection_reason)
 ```
 

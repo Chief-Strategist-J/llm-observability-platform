@@ -112,9 +112,8 @@ sequenceDiagram
 
 ```tree
 Read Endpoint Cutover Proposed
-└── side_effect_engine/guard.py: assert_read_pure_query(ctx: SideEffectContext)
-    └── side_effect_engine/auditor.py: audit_read_side_effect_freedom(ctx: SideEffectContext)
-        ├── models.py: SideEffectContext(endpoint_uri, is_http_get, mutations_count, mutated_tables, mutated_fields)
+└── side_effect_engine/guard.py: assert_read_pure_query(ctx)
+    └── side_effect_engine/auditor.py: audit_read_side_effect_freedom(ctx)
         └── models.py: SideEffectAuditResult(endpoint_uri, is_approved_for_read_first, is_pure_read, mutations_count, mutated_tables, rejection_reason)
 ```
 

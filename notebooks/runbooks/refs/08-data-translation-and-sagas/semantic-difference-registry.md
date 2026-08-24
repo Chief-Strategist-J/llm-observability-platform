@@ -125,16 +125,10 @@ semantic-difference-registry/
 
 ```tree
 Discrepancy Detected by Parity Differ
-├── registry_engine/pattern_matcher.py: verify_signoff_validity(entry: SemanticDiffEntry, current_ts: float)
-└── registry_engine/evaluator.py: evaluate_semantic_diff(endpoint: str,
-    field_path: str,
-    legacy_val: Any,
-   ...)
-    └── registry_engine/pattern_matcher.py: match_diff_pattern(endpoint: str,
-    field_path: str,
-    rules: List[Semantic...)
-        ├── models.py: SemanticDiffEntry(rule_id, endpoint_pattern, field_path, category, rationale, owner_team, signed_off_by, expires_at_ts)
-        └── models.py: DiffEvaluationResult(rule_id, is_suppressed, category, reason)
+└── registry_engine/evaluator.py: evaluate_semantic_diff(endpoint, field_path, legacy_val, new_val, rules)
+    ├── registry_engine/pattern_matcher.py: match_diff_pattern(endpoint, field_path, rules)
+    ├── registry_engine/pattern_matcher.py: verify_signoff_validity(entry, current_ts)
+    └── models.py: DiffEvaluationResult(rule_id, is_suppressed, category, reason)
 ```
 
 ---

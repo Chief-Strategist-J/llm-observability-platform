@@ -121,14 +121,7 @@ time-boxed-dual-write-window/
 
 ```tree
 Bridge Lifecycle Audit Scheduled
-└── window_engine/decommissioner.py: decommission_dual_write_bridge(ctx: BridgeWindowContext,
-    current_ts: float,
-    audit_r...)
-    ├── window_engine/evaluator.py: eval_bridge_window_status(ctx: BridgeWindowContext,
-    current_ts: float,
-    warn_da...)
-    └── models.py: DecommissionResult(bridge_id, is_decommissioned, state, active_legacy_readers, decommissioned_at_ts, ...)
-        ├── models.py: BridgeWindowContext(bridge_id, owner_team, created_at_ts, sunset_deadline_ts, max_window_days)
+└── window_engine/evaluator.py: eval_bridge_window_status(ctx, current_ts, warn_days)
 ```
 
 ---

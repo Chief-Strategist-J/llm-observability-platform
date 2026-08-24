@@ -120,13 +120,8 @@ query-access-log-mining/
 
 ```tree
 Log Mining Job Initiated
-├── mining_engine/parser.py: parse_access_log_line(line: str, timestamp_now: float)
-│   └── models.py: LogEntry(client_ip, user_agent, resource_path, raw_query, timestamp)
-├── mining_engine/parser.py: extract_sql_table_names(sql_query: str)
-├── mining_engine/aggregator.py: create_dependency_aggregator()
-├── mining_engine/aggregator.py: aggregate(entry: LogEntry, target_resource: str, op_type: str = "READ")
-└── mining_engine/aggregator.py: get_maps()
-    └── models.py: CallerDependencyMap(caller_identity, target_resource, operation_type, hit_count, first_seen_ts, ...)
+└── mining_engine/aggregator.py: create_dependency_aggregator()
+    └── models.py: CallerDependencyMap(caller_identity, target_resource, operation_type, hit_count, first_seen_ts, last_seen_ts)
 ```
 
 ---

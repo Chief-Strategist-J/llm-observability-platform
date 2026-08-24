@@ -122,11 +122,7 @@ percentage-traffic-shifting/
 
 ```tree
 API Request Received
-├── shift_engine/hasher.py: calculate_rollout_bucket(key: str, salt: str = "canary_v1", modulus: int = 100)
-├── shift_engine/hasher.py: eval_traffic_shift(ctx: TrafficContext, config: ShiftConfig)
-└── shift_engine/safety_guard.py: assert_side_effect_free(ctx: TrafficContext, payload: Mapping[str, Any])
-    ├── models.py: TrafficContext(tenant_id, endpoint, method, headers)
-    └── models.py: ShiftConfig(endpoint, rollout_percentage, feature_salt, is_mutation_allowed)
+└── shift_engine/safety_guard.py: assert_side_effect_free(ctx, payload, Any])
 ```
 
 ---

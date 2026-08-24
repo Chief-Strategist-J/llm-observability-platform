@@ -116,13 +116,10 @@ separate-migrate-from-improve/
 
 ```tree
 Change Proposal Submitted to Migration Pipeline
-└── phase_engine/gate.py: assert_phase1_migration_only(ctx: MigrationPhaseContext,
-    diff_summary: Mapping[str, A...)
-    └── phase_engine/evaluator.py: eval_phase_separation(ctx: MigrationPhaseContext,
-    diff_summary: Mapping[str, A...)
-        └── phase_engine/evaluator.py: analyze_diff_for_entanglement(diff_summary: Mapping[str, Any])
-            ├── models.py: MigrationPhaseContext(migration_id, stage, soak_days_required, soak_days_completed)
-            └── models.py: PhaseGateDecision(migration_id, is_approved, current_stage, has_entangled_improvements, rejection_reason)
+└── phase_engine/gate.py: assert_phase1_migration_only(ctx, diff_summary, Any])
+    └── phase_engine/evaluator.py: eval_phase_separation(ctx, diff_summary, Any])
+        ├── phase_engine/evaluator.py: analyze_diff_for_entanglement(diff_summary, Any])
+        └── models.py: PhaseGateDecision(migration_id, is_approved, current_stage, has_entangled_improvements, rejection_reason)
 ```
 
 ---

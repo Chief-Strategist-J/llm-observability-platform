@@ -125,10 +125,7 @@ continuous-reconciliation-sweep/
 
 ```tree
 Reconciliation Sweep Triggered
-├── hashing/merkle_tree.py: hash_row_payload(row_payload: Mapping[str, Any], ignored_keys: set = {"timest...)
-├── hashing/merkle_tree.py: build_merkle_tree(row_hashes: List[tuple], range_start: int, range_end: int)
-│   └── models.py: MerkleNode(hash_val, level, range_start, range_end, children)
-└── differ/tree_differ.py: diff_merkle_nodes(source_node: MerkleNode, target_node: MerkleNode)
+└── differ/tree_differ.py: diff_merkle_nodes(source_node, target_node)
     └── models.py: ReconciliationDiff(is_parity, scanned_buckets, mismatched_keys, repair_required)
 ```
 

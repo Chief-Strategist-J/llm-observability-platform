@@ -119,9 +119,8 @@ sequenceDiagram
 
 ```tree
 Legacy Deprovisioning Requested
-└── dual_gate_engine/guard.py: assert_dual_gate_decommissioning_cleared(ctx: DualGateContext)
-    └── dual_gate_engine/guard.py: eval_dual_gate_compliance(ctx: DualGateContext)
-        ├── models.py: DualGateContext(asset_id, engineering_owner_id, is_engineering_gate_cleared, engineering_signoff_ts, business_owner_id, is_business_gate_cleared, business_signoff_ts)
+└── dual_gate_engine/guard.py: assert_dual_gate_decommissioning_cleared(ctx)
+    └── dual_gate_engine/guard.py: eval_dual_gate_compliance(ctx)
         └── models.py: DualGateGovernanceResult(asset_id, is_approved, are_owners_distinct, engineering_owner_id, business_owner_id, rejection_reason)
 ```
 

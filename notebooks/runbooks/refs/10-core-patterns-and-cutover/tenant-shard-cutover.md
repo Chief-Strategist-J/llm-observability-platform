@@ -125,10 +125,7 @@ tenant-shard-cutover/
 
 ```tree
 API Request Received (With Tenant Context)
-├── cutover_engine/evaluator.py: eval_tenant_cutover(tenant_id: str, cutover_map: Mapping[str, Mapping[str, Any]])
-│   └── models.py: TenantCutoverState(tenant_id, status, target_shard, sla_tier)
-└── cutover_engine/risk_checker.py: assert_blast_radius_safety(tenant_id: str, tenant_metrics: Mapping[str, Any], max_allow...)
-    └── models.py: ShardConfig(shard_id, base_url, max_capacity_qps, is_active)
+└── cutover_engine/risk_checker.py: assert_blast_radius_safety(tenant_id, tenant_metrics, Any], max_allowed_qps)
 ```
 
 ---

@@ -123,10 +123,8 @@ cross-repo-static-dependency-graph/
 
 ```tree
 Static Analysis Job Initiated
-├── scanner_engine/ast_scanner.py: scan_python_file_ast(file_path: str, repo_name: str)
-└── scanner_engine/uri_extractor.py: extract_code_references(code_text: str, file_path: str, repo_name: str)
-    ├── models.py: StaticCodeReference(repo_name, file_path, line_number, edge_type, target_symbol)
-    └── models.py: DependencyGraphNode(source_repo, target_resource, edge_type, reference_count, locations)
+└── scanner_engine/uri_extractor.py: extract_code_references(code_text, file_path, repo_name)
+    └── models.py: StaticCodeReference(repo_name, file_path, line_number, edge_type, target_symbol)
 ```
 
 ---

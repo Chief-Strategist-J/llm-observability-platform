@@ -125,12 +125,7 @@ central-migration-team-model/
 
 ```tree
 Central Campaign Initiated
-├── governance/policy_engine.py: evaluate_compliance_policy(report: ReadinessReport, policy_rules: Mapping[str, Any])
-└── control_plane/orchestrator.py: process_fleet_batch(services: List[FleetService],
-    audit_fn: Callable[[str], ...)
-        ├── models.py: FleetService(service_id, owner_team, tier, repo_url, current_version)
-        ├── models.py: ReadinessReport(service_id, has_tracing, has_circuit_breaker, has_health_check, is_eligible)
-        └── models.py: CampaignProgress(campaign_id, total_services, completed_count, blocked_count)
+└── governance/policy_engine.py: evaluate_compliance_policy(report, policy_rules, Any])
 ```
 
 ---

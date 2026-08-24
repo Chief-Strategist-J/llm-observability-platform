@@ -119,11 +119,8 @@ sequenceDiagram
 
 ```tree
 Decommissioning Approval Requested
-├── discovery_engine/miner.py: mine_ingress_access_logs(endpoint_uri: str,
-    log_records: list)
-└── discovery_engine/guard.py: assert_sustained_silence_gate(ctx: DiscoveryContext)
-    └── discovery_engine/miner.py: eval_sustained_silence_window(ctx: DiscoveryContext)
-        ├── models.py: DiscoveryContext(endpoint_uri, total_log_hits, active_callers, sample_window_days, min_required_silence_days)
+└── discovery_engine/guard.py: assert_sustained_silence_gate(ctx)
+    └── discovery_engine/miner.py: eval_sustained_silence_window(ctx)
         └── models.py: SilenceVerificationResult(endpoint_uri, is_silent, total_log_hits, silent_days_count, active_callers, rejection_reason)
 ```
 

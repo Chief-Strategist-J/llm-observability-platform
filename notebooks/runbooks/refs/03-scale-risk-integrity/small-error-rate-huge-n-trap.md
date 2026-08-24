@@ -113,15 +113,10 @@ sequenceDiagram
 
 ```tree
 Scale Risk Verification Initiated
-└── scale_impact_engine/guard.py: assert_absolute_error_bounds(total_n: int,
-    error_rate_pct: float,
-    max_allowed: in...)
-    └── scale_impact_engine/calculator.py: eval_absolute_scale_impact(total_n: int,
-    error_rate_pct: float,
-    max_allowed_err...)
-        └── scale_impact_engine/calculator.py: calculate_absolute_errors(total_n: int, error_rate_pct: float)
-            ├── models.py: AbsoluteImpactContext(total_records_n, error_rate_pct, absolute_error_count, max_allowed_absolute_errors)
-            └── models.py: ScaleRiskEvaluationResult(total_records_n, is_approved, absolute_error_count, error_rate_pct, severity_label, rejection_reason)
+└── scale_impact_engine/guard.py: assert_absolute_error_bounds(total_n, error_rate_pct, max_allowed)
+    └── scale_impact_engine/calculator.py: eval_absolute_scale_impact(total_n, error_rate_pct, max_allowed_errors)
+        ├── scale_impact_engine/calculator.py: calculate_absolute_errors(total_n, error_rate_pct)
+        └── models.py: ScaleRiskEvaluationResult(total_records_n, is_approved, absolute_error_count, error_rate_pct, severity_label, rejection_reason)
 ```
 
 ---

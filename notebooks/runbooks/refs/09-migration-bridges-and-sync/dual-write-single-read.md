@@ -128,10 +128,7 @@ dual-write-single-read/
 
 ```tree
 API Request Received
-├── staging_engine/evaluator.py: eval_staging_mode(ctx: StagingContext, config: Mapping[str, Any])
-│   └── models.py: StagingDecision(phase, read_target, write_targets)
-└── storage/dual_dispatcher.py: create_staged_dispatcher(legacy_read_fn: QueryFn, legacy_write_fn: QueryFn, microserv...)
-    ├── models.py: StagingContext(tenant_id, endpoint, method, headers)
+└── storage/dual_dispatcher.py: create_staged_dispatcher(legacy_read_fn, legacy_write_fn, microservice_write_fn)
 ```
 
 ---

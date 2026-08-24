@@ -110,14 +110,7 @@ unknown-caller-quarantine-alerting/
 
 ```tree
 Perimeter Ingress Request Received
-├── quarantine_engine/alerter.py: emit_instant_pagerduty_alert(ctx: QuarantineContext,
-    webhook_fn: WebhookFn)
-│   └── quarantine_engine/alerter.py: format_pagerduty_alert_payload(ctx: QuarantineContext)
-└── quarantine_engine/guard.py: evaluate_quarantine_action(ctx: QuarantineContext,
-    approved_subnets: FrozenSet[str]...)
-    └── quarantine_engine/guard.py: is_caller_in_registry(client_ip: str, approved_subnets: FrozenSet[str])
-        ├── models.py: QuarantineContext(client_ip, user_agent, request_uri, headers, timestamp)
-        └── models.py: QuarantineActionResult(client_ip, is_approved, is_quarantined, alert_triggered, status_code, diagnostic_message)
+└── quarantine_engine/guard.py: is_caller_in_registry(client_ip, approved_subnets)
 ```
 
 ---

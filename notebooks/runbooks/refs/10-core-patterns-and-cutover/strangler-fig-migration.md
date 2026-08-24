@@ -173,14 +173,7 @@ strangler-fig-migration/
 
 ```tree
 HTTP Request Received (Any Endpoint)
-├── rules/evaluator.py: calculate_rollout_bucket(key: str, salt: str = "strangler_salt", modulus: int = 100)
-├── rules/evaluator.py: evaluate_routing_rules(ctx: RequestContext, config: Mapping[str, Any])
-├── adapters/http_dispatcher.py: create_http_dispatcher(base_url: str, timeout_seconds: float = 5.0)
-│   └── models.py: HttpResponse(status_code, body, headers)
-├── adapters/http_dispatcher.py: with_retry(dispatcher: HttpDispatcher, max_retries: int = 3)
-└── facade/main.py: strangler_facade_route(request: Request, path: str)
-    ├── models.py: RequestContext(tenant_id, endpoint, method, user_id, headers, query_params)
-    ├── models.py: RoutingDecision(target, matched_rule, rollout_bucket, metadata)
+└── adapters/http_dispatcher.py: with_retry(dispatcher, max_retries)
 ```
 
 ---

@@ -138,9 +138,8 @@ sequenceDiagram
 
 ```tree
 End-to-End Governance Audit Executed
-└── matrix_engine/guard.py: assert_end_to_end_governance(ctx: SystemicMatrixContext)
-    └── matrix_engine/evaluator.py: evaluate_systemic_interlock_matrix(ctx: SystemicMatrixContext)
-        ├── models.py: SystemicMatrixContext(migration_id, pillar_a_strategy_ok, pillar_b_sync_ok, pillar_cd_cutover_ok, pillar_e_verification_ok, pillar_f_translation_ok, pillar_g_safety_ok, pillar_h_discovery_ok, pillar_i_decom_ok)
+└── matrix_engine/guard.py: assert_end_to_end_governance(ctx)
+    └── matrix_engine/evaluator.py: evaluate_systemic_interlock_matrix(ctx)
         └── models.py: EndToEndGovernanceResult(migration_id, is_fully_interlocked, governance_score, broken_interlocks, rejection_reason)
 ```
 

@@ -131,12 +131,7 @@ production-traffic-replay/
 
 ```tree
 Traffic Replay Session Initiated
-├── replay_engine/pacer.py: calculate_replay_delay(prev_timestamp: float,
-    current_timestamp: float,
-    spe...)
-├── replay_engine/pacer.py: apply_pacing_delay(delay_seconds: float)
-└── replay_engine/dispatcher.py: create_replay_dispatcher(staging_base_url: str, http_client: HttpClientFn)
-    ├── models.py: RecordedRequest(request_id, method, path, headers, body, timestamp, expected_status_code, expected_response_body)
+└── replay_engine/dispatcher.py: create_replay_dispatcher(staging_base_url, http_client)
     └── models.py: ReplayResult(request_id, is_matched, status_code_matched, recorded_latency_ms, replayed_latency_ms, diff_summary)
 ```
 

@@ -110,14 +110,8 @@ sequenceDiagram
 
 ```tree
 Record Migration State Debug Query Executed
-├── state_debug_engine/tracer.py: trace_state_transition(entity_id: str,
-    from_st: RecordMigrationState,
-    to_st...)
-│   └── models.py: MigrationStateTrace(entity_id, from_state, to_state, trace_id, timestamp, ...)
-└── state_debug_engine/guard.py: assert_migration_state_debuggability(entity_id: str,
-    history_traces: List[MigrationStateTrace...)
-    └── state_debug_engine/tracer.py: query_record_migration_state(entity_id: str,
-    history_traces: List[MigrationStateTrace...)
+└── state_debug_engine/guard.py: assert_migration_state_debuggability(entity_id, history_traces)
+    └── state_debug_engine/tracer.py: query_record_migration_state(entity_id, history_traces)
         └── models.py: StateDebugQueryResult(entity_id, current_state, transition_count, first_transition_ts, last_transition_ts, history)
 ```
 

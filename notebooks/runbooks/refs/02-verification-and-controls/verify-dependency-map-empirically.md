@@ -124,11 +124,10 @@ verify-dependency-map-empirically/
 
 ```tree
 Dependency Map Verification Executed
-└── verification_engine/gate.py: assert_dependency_map_empirically_verified(ctx: DependencyVerificationContext)
-    └── verification_engine/verifier.py: verify_dependency_map(ctx: DependencyVerificationContext)
-        └── verification_engine/verifier.py: compare_doc_vs_empirical(doc: FrozenSet[str], empirical: FrozenSet[str])
-            ├── models.py: DependencyVerificationContext(resource_id, documented_callers, empirical_callers, log_sample_days)
-            └── models.py: EmpiricalVerificationResult(resource_id, is_approved, unmapped_active_callers, stale_documented_callers, rejection_reason)
+└── verification_engine/gate.py: assert_dependency_map_empirically_verified(ctx)
+    └── verification_engine/verifier.py: verify_dependency_map(ctx)
+        ├── verification_engine/verifier.py: compare_doc_vs_empirical(doc, empirical)
+        └── models.py: EmpiricalVerificationResult(resource_id, is_approved, unmapped_active_callers, stale_documented_callers, rejection_reason)
 ```
 
 ---

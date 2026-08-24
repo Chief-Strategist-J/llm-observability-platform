@@ -129,11 +129,7 @@ per-entity-state-machine/
 
 ```tree
 Entity Request Initiated
-├── machine_engine/transitioner.py: transition_entity_state(record: EntityStateRecord, target_status: EntityStatus)
-│   ├── machine_engine/transitioner.py: assert_valid_transition(current: EntityStatus, target: EntityStatus)
-│   └── models.py: TransitionResult(is_allowed, new_status, error_message)
-└── machine_engine/router.py: create_entity_state_router(legacy_db_fn: QueryFn, microservice_db_fn: QueryFn)
-    ├── models.py: EntityStateRecord(entity_id, entity_type, status, version, last_updated)
+└── machine_engine/router.py: create_entity_state_router(legacy_db_fn, microservice_db_fn)
 ```
 
 ---

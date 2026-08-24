@@ -111,12 +111,9 @@ sequenceDiagram
 
 ```tree
 Bridge Lifetime Audit Initiated
-└── deadline_enforcement_engine/guard.py: assert_bridge_deadline_enforced(ctx: DeadlineContext,
-    current_ts: float)
-    └── deadline_enforcement_engine/evaluator.py: eval_bridge_lifetime_compliance(ctx: DeadlineContext,
-    current_ts: float)
-        └── models.py: DeadlineEnforcementResult(bridge_id, is_approved, is_overdue, days_remaining, is_auto_teardown_triggered, ...)
-            ├── models.py: DeadlineContext(bridge_id, owner_team_id, created_at_ts, sunset_deadline_ts, max_post_cutover_days)
+└── deadline_enforcement_engine/guard.py: assert_bridge_deadline_enforced(ctx, current_ts)
+    └── deadline_enforcement_engine/evaluator.py: eval_bridge_lifetime_compliance(ctx, current_ts)
+        └── models.py: DeadlineEnforcementResult(bridge_id, is_approved, is_overdue, days_remaining, is_auto_teardown_triggered, rejection_reason)
 ```
 
 ---

@@ -129,13 +129,10 @@ sequenceDiagram
 
 ```tree
 Shadow Traffic Request Executed
-├── shadow_verification_engine/runner.py: apply_human_reviewed_normalization(raw_dict: Mapping[str, Any],
-    rules: List[NormalizationRu...)
-└── shadow_verification_engine/guard.py: assert_shadow_verification_complete(ctx: ShadowContext)
-    └── shadow_verification_engine/runner.py: run_shadow_traffic_comparison(ctx: ShadowContext)
-        └── models.py: HumanReviewedRuleResult(request_id, is_matched, unreviewed_rules_count, real_mismatches_count, real_mismatches, ...)
-            ├── models.py: NormalizationRule(rule_id, field_path, action, is_signed_off_by_human, signed_by_engineer_id)
-            ├── models.py: ShadowContext(request_id, legacy_response_dict, target_response_dict, active_rules)
+└── shadow_verification_engine/guard.py: assert_shadow_verification_complete(ctx)
+    └── shadow_verification_engine/runner.py: run_shadow_traffic_comparison(ctx)
+        ├── shadow_verification_engine/runner.py: apply_human_reviewed_normalization(raw_dict, Any], rules)
+        └── models.py: HumanReviewedRuleResult(request_id, is_matched, unreviewed_rules_count, real_mismatches_count, real_mismatches, rejection_reason)
 ```
 
 ---

@@ -116,9 +116,8 @@ sequenceDiagram
 
 ```tree
 Migration Development Proposal Submitted
-└── obs_readiness_engine/guard.py: assert_observability_ready(ctx: ObservabilityContext)
-    └── obs_readiness_engine/auditor.py: eval_pre_migration_telemetry(ctx: ObservabilityContext)
-        ├── models.py: ObservabilityContext(service_id, otel_tracer_active, prometheus_dashboard_active, discovery_census_active, coverage_pct)
+└── obs_readiness_engine/guard.py: assert_observability_ready(ctx)
+    └── obs_readiness_engine/auditor.py: eval_pre_migration_telemetry(ctx)
         └── models.py: ObservabilityReadinessResult(service_id, is_ready, coverage_pct, missing_components, rejection_reason)
 ```
 

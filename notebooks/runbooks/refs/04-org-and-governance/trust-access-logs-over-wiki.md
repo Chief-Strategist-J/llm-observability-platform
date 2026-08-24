@@ -119,9 +119,8 @@ sequenceDiagram
 
 ```tree
 Decommission Plan Submitted
-└── log_arbitrator_engine/guard.py: assert_logs_win_without_exception(ctx: LogVsWikiContext)
-    └── log_arbitrator_engine/arbitrator.py: arbitrate_logs_vs_wiki(ctx: LogVsWikiContext)
-        ├── models.py: LogVsWikiContext(endpoint_uri, wiki_claim, total_log_hits, empirical_callers, sample_days)
+└── log_arbitrator_engine/guard.py: assert_logs_win_without_exception(ctx)
+    └── log_arbitrator_engine/arbitrator.py: arbitrate_logs_vs_wiki(ctx)
         └── models.py: ArbitrationResult(endpoint_uri, logs_win, is_wiki_disproven, total_log_hits, active_callers, rejection_reason)
 ```
 

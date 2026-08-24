@@ -112,12 +112,8 @@ sequenceDiagram
 
 ```tree
 Cutover Readiness Check Initiated
-├── bridge_baking_engine/evaluator.py: generate_idempotency_key(payload: Mapping[str, Any], corr_id: str)
-└── bridge_baking_engine/guard.py: assert_bridge_baking_complete(ctx: BridgeBakingContext,
-    is_canary_ok: bool)
-    └── bridge_baking_engine/evaluator.py: eval_bridge_baking_status(ctx: BridgeBakingContext,
-    is_canary_ok: bool)
-        ├── models.py: BridgeBakingContext(bridge_id, started_at_ts, current_bake_days, min_required_bake_days, replication_lag_ms, is_idempotent)
+└── bridge_baking_engine/guard.py: assert_bridge_baking_complete(ctx, is_canary_ok)
+    └── bridge_baking_engine/evaluator.py: eval_bridge_baking_status(ctx, is_canary_ok)
         └── models.py: BridgeBakingResult(bridge_id, is_baked, current_bake_days, is_canary_matched, replication_lag_ms, rejection_reason)
 ```
 

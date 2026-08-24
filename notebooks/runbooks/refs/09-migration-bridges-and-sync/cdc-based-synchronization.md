@@ -123,10 +123,7 @@ cdc-based-synchronization/
 
 ```tree
 CDC Stream Message Received
-├── cdc_engine/parser.py: parse_cdc_event(raw_json: Mapping[str, Any])
-└── storage/target_sink.py: create_target_sink_dispatcher(upsert_fn: SinkDispatcher, delete_fn: SinkDispatcher)
-    ├── models.py: OffsetPosition(topic, partition, offset_lsn, timestamp_ms)
-    └── models.py: CdcEnvelope(op, source_table, before_state, after_state, offset_pos)
+└── storage/target_sink.py: create_target_sink_dispatcher(upsert_fn, delete_fn)
 ```
 
 ---

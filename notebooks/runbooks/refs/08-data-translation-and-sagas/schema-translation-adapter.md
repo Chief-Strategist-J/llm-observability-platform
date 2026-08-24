@@ -119,11 +119,10 @@ schema-translation-adapter/
 
 ```tree
 Data Payload Received at Perimeter
-├── adapter_engine/null_resolver.py: map_enum_value(val: Any, enum_map: Mapping[Any, Any], default_val: Any = "U...)
-└── adapter_engine/forward_mapper.py: translate_from_legacy(raw_payload: Mapping[str, Any], rule: SchemaTranslationRule)
-    └── adapter_engine/null_resolver.py: coerce_null_semantics(data: Mapping[str, Any], null_sentinels: FrozenSet[str] = fr...)
-        ├── models.py: SchemaTranslationRule(entity_name, field_mappings, enum_mappings, null_sentinels)
-        └── models.py: TranslatedPayload(entity_name, translated_data, translation_duration_ms, is_valid, error_message)
+└── adapter_engine/forward_mapper.py: translate_from_legacy(raw_payload, Any], rule)
+    ├── adapter_engine/null_resolver.py: coerce_null_semantics(data, Any], null_sentinels, "NULL", "N/A", "undefined"})
+    ├── adapter_engine/null_resolver.py: map_enum_value(val, enum_map, Any], default_val)
+    └── models.py: TranslatedPayload(entity_name, translated_data, translation_duration_ms, is_valid, error_message)
 ```
 
 ---

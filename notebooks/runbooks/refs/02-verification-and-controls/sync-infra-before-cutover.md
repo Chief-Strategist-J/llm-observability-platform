@@ -124,9 +124,8 @@ sync-infra-before-cutover/
 
 ```tree
 Traffic Cutover Pre-Check Initiated
-└── sync_engine/gate.py: assert_sync_infra_stable(ctx: SyncInfraContext)
-    └── sync_engine/lag_evaluator.py: eval_replication_lag(ctx: SyncInfraContext)
-        ├── models.py: SyncInfraContext(bridge_id, forward_sync_active, reverse_sync_active, forward_lag_ms, reverse_lag_ms, max_allowed_lag_ms)
+└── sync_engine/gate.py: assert_sync_infra_stable(ctx)
+    └── sync_engine/lag_evaluator.py: eval_replication_lag(ctx)
         └── models.py: SyncReadinessResult(bridge_id, is_ready, forward_lag_ok, reverse_path_ok, current_max_lag_ms, rejection_reason)
 ```
 

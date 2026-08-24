@@ -122,15 +122,7 @@ backfill-live-tail/
 
 ```tree
 Pipeline Execution Initiated
-├── backfill/chunk_generator.py: generate_backfill_chunks(start_id: int,
-    watermark_id: int,
-    chunk_size: int = ...)
-├── deduplication/dedup_cell.py: create_dedup_cell()
-├── deduplication/dedup_cell.py: is_seen(entity_id: Any)
-├── deduplication/dedup_cell.py: mark_seen(entity_id: Any)
-└── deduplication/dedup_cell.py: filter_unseen(records: List[Mapping[str, Any]], pk_col: str)
-    ├── models.py: WatermarkState(watermark_id, watermark_timestamp, is_backfill_complete)
-    └── models.py: BackfillChunk(chunk_index, start_id, end_id, record_count)
+└── deduplication/dedup_cell.py: create_dedup_cell()
 ```
 
 ---

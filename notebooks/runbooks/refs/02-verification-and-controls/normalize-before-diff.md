@@ -121,13 +121,7 @@ sequenceDiagram
 
 ```tree
 Differential Test Executed
-├── normalizer_engine/rules.py: apply_action_to_value(val: Any, rule: NormalizationRule)
-├── normalizer_engine/rules.py: apply_normalization_rules(raw_payload: Mapping[str, Any],
-    rules: List[Normalizatio...)
-└── normalizer_engine/diff_comparator.py: compare_normalized_diff(legacy_norm: NormalizedPayloadResult,
-    target_norm: Norma...)
-        ├── models.py: NormalizationRule(field_path, action, param)
-        └── models.py: NormalizedPayloadResult(canonical_payload, fields_masked_count, rule_applied_types)
+└── normalizer_engine/diff_comparator.py: compare_normalized_diff(legacy_norm, target_norm)
 ```
 
 ---

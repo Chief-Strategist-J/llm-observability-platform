@@ -129,11 +129,8 @@ synthetic-canary-records/
 
 ```tree
 Canary Probe Scheduled
-├── canary_engine/generator.py: generate_canary_record(canary_prefix: str = "canary",
-    canary_tenant: str = "can...)
-└── canary_engine/probe.py: create_canary_probe_runner(fetch_fn: FetchRecordFn, delete_fn: DeleteRecordFn)
+└── canary_engine/probe.py: create_canary_probe_runner(fetch_fn, delete_fn)
     └── models.py: CanaryProbeResult(canary_id, is_healthy, propagation_latency_ms, error_message)
-        ├── models.py: CanaryRecord(canary_id, tenant_id, is_synthetic_canary, payload, planted_at)
 ```
 
 ---

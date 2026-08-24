@@ -113,17 +113,8 @@ sequenceDiagram
 
 ```tree
 Ground Truth Characterization Initiated
-├── ground_truth_engine/recorder.py: capture_golden_master_truth(input_key: str,
-    raw_response: Mapping[str, Any],
-    ser...)
-│   ├── ground_truth_engine/recorder.py: detect_load_bearing_quirks(response_dict: Mapping[str, Any])
-│   └── models.py: GoldenMasterContext(service_id, input_key, raw_response_dict, detected_quirks, captured_at_ts)
-└── ground_truth_engine/guard.py: assert_ground_truth_captured(fixtures: list,
-    service_id: str,
-    min_fixtures: int =...)
-    └── ground_truth_engine/recorder.py: eval_ground_truth_parity(fixtures: list,
-    service_id: str,
-    min_required_fixtur...)
+└── ground_truth_engine/guard.py: assert_ground_truth_captured(fixtures, service_id, min_fixtures)
+    └── ground_truth_engine/recorder.py: eval_ground_truth_parity(fixtures, service_id, min_required_fixtures)
         └── models.py: GroundTruthCharacterizationResult(service_id, is_locked, total_fixtures_captured, detected_bugs_count, captured_quirks, rejection_reason)
 ```
 

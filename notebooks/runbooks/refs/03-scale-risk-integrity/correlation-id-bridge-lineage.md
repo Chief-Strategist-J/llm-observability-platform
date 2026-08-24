@@ -121,14 +121,8 @@ sequenceDiagram
 
 ```tree
 Dual-Write Mutation Executed
-├── lineage_engine/injector.py: inject_lineage_correlation_id(payload: Mapping[str, Any],
-    bridge_id: str,
-    source_i...)
-│   ├── lineage_engine/injector.py: generate_correlation_id(bridge_id: str)
-│   └── models.py: LineageContext(correlation_id, bridge_id, source_entity_id, target_entity_id, created_at_ts)
-└── lineage_engine/auditor.py: verify_record_lineage(corr_id: str,
-    source_record: Optional[Mapping[str, Any]]...)
-        └── models.py: LineageVerificationResult(correlation_id, is_traced, is_matched, source_found, target_found, rejection_reason)
+└── lineage_engine/auditor.py: verify_record_lineage(corr_id, source_record, Any]], target_record, Any]])
+    └── models.py: LineageVerificationResult(correlation_id, is_traced, is_matched, source_found, target_found, rejection_reason)
 ```
 
 ---

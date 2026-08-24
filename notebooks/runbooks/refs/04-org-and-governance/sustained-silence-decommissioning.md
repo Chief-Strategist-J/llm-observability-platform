@@ -119,12 +119,9 @@ sequenceDiagram
 
 ```tree
 Decommissioning Execution Initiated
-└── decom_engine/guard.py: assert_decommissioning_safety_gate(ctx: DecommissioningContext,
-    target_phase: DecomPhase)
-    └── decom_engine/executor.py: execute_safe_decommissioning(ctx: DecommissioningContext,
-    target_phase: DecomPhase)
+└── decom_engine/guard.py: assert_decommissioning_safety_gate(ctx, target_phase)
+    └── decom_engine/executor.py: execute_safe_decommissioning(ctx, target_phase)
         └── models.py: DecomExecutionResult(asset_id, is_approved, current_phase, is_teardown_complete, rejection_reason)
-            ├── models.py: DecommissioningContext(asset_id, asset_type, silence_proof_days, min_required_silence_days, is_silence_proven)
 ```
 
 ---

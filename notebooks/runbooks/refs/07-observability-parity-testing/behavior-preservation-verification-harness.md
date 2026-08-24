@@ -118,13 +118,10 @@ sequenceDiagram
 
 ```tree
 Differential Test Executed
-└── verification_engine/guard.py: assert_behavior_preservation(legacy_raw: Mapping[str, Any],
-    target_raw: Mapping[str, ...)
-    └── verification_engine/comparator.py: verify_behavior_preservation(legacy_raw: Mapping[str, Any],
-    target_raw: Mapping[str, ...)
-        └── verification_engine/comparator.py: normalize_expected_noise(raw_dict: Mapping[str, Any])
-            ├── models.py: VerificationContext(legacy_canonical, target_canonical, noise_stripped_count)
-            └── models.py: BehaviorPreservationResult(is_matched, noise_stripped_count, real_mismatches_count, real_mismatches, rejection_reason)
+└── verification_engine/guard.py: assert_behavior_preservation(legacy_raw, Any], target_raw, Any])
+    └── verification_engine/comparator.py: verify_behavior_preservation(legacy_raw, Any], target_raw, Any])
+        ├── verification_engine/comparator.py: normalize_expected_noise(raw_dict, Any])
+        └── models.py: BehaviorPreservationResult(is_matched, noise_stripped_count, real_mismatches_count, real_mismatches, rejection_reason)
 ```
 
 ---

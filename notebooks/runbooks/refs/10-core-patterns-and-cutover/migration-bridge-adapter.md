@@ -124,11 +124,7 @@ migration-bridge-adapter/
 
 ```tree
 Bridge API Call Initiated
-├── translation/mapper.py: translate_payload(raw_payload: Mapping[str, Any], schema: TranslationSchema)
-└── translation/protocol_adapter.py: create_rest_protocol_dispatcher(base_url: str)
-    ├── models.py: BridgeContext(tenant_id, target_service, protocol, trace_id)
-    ├── models.py: TranslationSchema(source_version, target_version, field_mappings, value_transforms)
-    └── models.py: CanonicalPayload(body, headers)
+└── translation/protocol_adapter.py: create_rest_protocol_dispatcher(base_url)
 ```
 
 ---

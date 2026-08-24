@@ -128,12 +128,10 @@ write-then-verify/
 
 ```tree
 High-Value Transaction Initiated
-├── verify_engine/comparator.py: verify_written_payload(expected_data: Mapping[str, Any],
-    actual_data: Mapping[s...)
-│   └── models.py: ParityStatus(is_valid, mismatched_fields, error_message)
-└── verify_engine/runner.py: create_write_verify_runner(write_fn: WriteFn, read_fn: ReadFn, rollback_fn: RollbackFn)
+└── verify_engine/runner.py: create_write_verify_runner(write_fn, read_fn, rollback_fn)
+    ├── verify_engine/comparator.py: verify_written_payload(expected_data, Any], actual_data, Any], ignored_keys, "updated_at", "version"})
+    │   └── models.py: ParityStatus(is_valid, mismatched_fields, error_message)
     └── models.py: VerificationResult(status_code, entity_id, is_verified, data)
-        ├── models.py: VerificationContext(entity_type, entity_id, tenant_id, user_id)
 ```
 
 ---

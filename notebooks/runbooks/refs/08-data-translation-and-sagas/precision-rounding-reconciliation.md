@@ -123,14 +123,9 @@ precision-rounding-reconciliation/
 
 ```tree
 Financial Reconciliation Initiated
-├── reconciliation_engine/rounder.py: half_up_round(val: Any, scale: int = 2)
-└── reconciliation_engine/tolerance.py: reconcile_monetary_values(legacy_raw: Any,
-    new_raw: Any,
-    scale: int = 2,
-    m...)
-    └── reconciliation_engine/rounder.py: bankers_round(val: Any, scale: int = 2)
-        ├── models.py: FinancialAmount(currency, amount, scale)
-        └── models.py: PrecisionReconciliationResult(legacy_amount, new_amount, absolute_delta, percentage_delta, is_reconciled, tolerance_used, discrepancy_reason)
+└── reconciliation_engine/tolerance.py: reconcile_monetary_values(legacy_raw, new_raw, scale, max_tolerance)
+    ├── reconciliation_engine/rounder.py: bankers_round(val, scale)
+    └── models.py: PrecisionReconciliationResult(legacy_amount, new_amount, absolute_delta, percentage_delta, is_reconciled, tolerance_used, discrepancy_reason)
 ```
 
 ---

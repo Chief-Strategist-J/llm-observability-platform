@@ -114,13 +114,8 @@ sequenceDiagram
 
 ```tree
 Rollback Capability Drill Initiated
-└── rollback_drill_engine/guard.py: assert_rollback_capability_drilled(ctx: DrillContext,
-    measured_latency_ms: float,
-    curre...)
-    └── rollback_drill_engine/simulator.py: eval_checkpoint_freshness(ctx: DrillContext,
-    measured_latency_ms: float,
-    curre...)
-        ├── models.py: DrillContext(checkpoint_id, checkpoint_created_at_ts, hours_since_checkpoint, max_allowed_checkpoint_age_hours, last_drilled_at_ts, max_allowed_drill_age_days)
+└── rollback_drill_engine/guard.py: assert_rollback_capability_drilled(ctx, measured_latency_ms, current_ts)
+    └── rollback_drill_engine/simulator.py: eval_checkpoint_freshness(ctx, measured_latency_ms, current_ts)
         └── models.py: RollbackDrillResult(checkpoint_id, is_capability_proven, hours_since_checkpoint, rollback_latency_ms, data_loss_risk_label, rejection_reason)
 ```
 

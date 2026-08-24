@@ -118,9 +118,8 @@ isolate-variable-under-test/
 
 ```tree
 Deployment Manifest Submitted
-└── isolation_engine/guard.py: assert_single_variable_changed(ctx: AxisContext)
-    └── isolation_engine/evaluator.py: eval_execution_axis_isolation(ctx: AxisContext)
-        ├── models.py: AxisContext(manifest_id, modified_axes, control_axes)
+└── isolation_engine/guard.py: assert_single_variable_changed(ctx)
+    └── isolation_engine/evaluator.py: eval_execution_axis_isolation(ctx)
         └── models.py: IsolationVerificationResult(manifest_id, is_isolated, active_axis_count, active_axis, violating_axes, rejection_reason)
 ```
 

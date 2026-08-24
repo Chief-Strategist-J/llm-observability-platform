@@ -113,9 +113,8 @@ sequenceDiagram
 
 ```tree
 Sync Tool Architecture Proposal Submitted
-└── sync_provenness_engine/guard.py: assert_proven_sync_mechanism(ctx: SyncToolContext)
-    └── sync_provenness_engine/evaluator.py: eval_sync_tool_provenness(ctx: SyncToolContext)
-        ├── models.py: SyncToolContext(tool_name, is_bespoke_script, supports_native_wal, supports_exactly_once, industry_usage_tier)
+└── sync_provenness_engine/guard.py: assert_proven_sync_mechanism(ctx)
+    └── sync_provenness_engine/evaluator.py: eval_sync_tool_provenness(ctx)
         └── models.py: SyncToolEvaluationResult(tool_name, is_approved, provenness_score, rejection_reason)
 ```
 

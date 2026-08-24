@@ -137,12 +137,7 @@ expand-contract-migration/
 
 ```tree
 API Request Received
-├── mappers/expand_mapper.py: populate_both_fields(payload: Mapping[str, Any], old_key: str, new_key: str)
-├── mappers/expand_mapper.py: read_with_fallback(record: Mapping[str, Any], old_key: str, new_key: str)
-├── mappers/expand_mapper.py: strip_legacy_fields(payload: Mapping[str, Any], old_key: str)
-└── storage/db_dispatcher.py: create_db_dispatcher(connection_string: str)
-    ├── models.py: SchemaContext(entity_name, tenant_id, current_phase, metadata)
-    └── models.py: EntityPayload(legacy_data, expanded_data, canonical_data)
+└── storage/db_dispatcher.py: create_db_dispatcher(connection_string)
 ```
 
 ---

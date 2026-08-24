@@ -115,12 +115,11 @@ golden-master-testing/
 
 ```tree
 Characterization Test Suite Initiated
-└── master_engine/runner.py: create_characterization_runner(candidate_fn: CandidateFn)
-    ├── master_engine/evaluator.py: assert_golden_master_parity(snapshot: GoldenMasterSnapshot,
-    actual_output: Mapping[s...)
-    │   └── master_engine/evaluator.py: normalize_payload_for_master(payload: Mapping[str, Any], ignored_keys: set = {"timestamp"...)
+└── master_engine/runner.py: create_characterization_runner(candidate_fn)
+    ├── master_engine/evaluator.py: assert_golden_master_parity(snapshot, actual_output, Any], actual_status_code)
+    │   ├── master_engine/evaluator.py: normalize_payload_for_master(payload, Any], ignored_keys, "trace_id"})
+    │   └── models.py: ParityReport(test_id, is_matched, status_code_matched, mismatched_fields, diff_details)
     └── models.py: ParityReport(test_id, is_matched, status_code_matched, mismatched_fields, diff_details)
-        ├── models.py: GoldenMasterSnapshot(test_id, endpoint, input_payload, expected_output, expected_status_code, captured_at)
 ```
 
 ---

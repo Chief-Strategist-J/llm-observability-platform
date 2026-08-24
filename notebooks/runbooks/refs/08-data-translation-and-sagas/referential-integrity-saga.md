@@ -126,16 +126,8 @@ referential-integrity-saga/
 
 ```tree
 Saga Transaction Initiated
-├── saga_engine/verifier.py: rollback_orphaned_child(delete_child_fn: ChildDeleteFn,
-    child_service: str,
-    ...)
-└── saga_engine/orchestrator.py: create_referential_saga_runner(fetch_parent_fn: ParentFetchFn,
-    create_child_fn: ChildCr...)
-    ├── saga_engine/verifier.py: verify_parent_exists(fetch_parent_fn: ParentFetchFn,
-    parent_service: str,
-   ...)
+└── saga_engine/orchestrator.py: create_referential_saga_runner(fetch_parent_fn, create_child_fn, delete_child_fn)
     └── models.py: SagaStepResult(saga_id, status, current_step, error_message)
-        ├── models.py: SagaContext(saga_id, parent_service, parent_id, child_service, child_id, tenant_id)
 ```
 
 ---

@@ -114,15 +114,11 @@ sequenceDiagram
 
 ```tree
 Data Translation Executed
-└── translation_engine/guard.py: assert_invariant_reconstruction_complete(legacy_dict: Mapping[str, Any],
-    ctx: TranslationContext,...)
-    ├── translation_engine/translator.py: translate_legacy_to_target(legacy_dict: Mapping[str, Any],
-    ctx: TranslationContext)
-    │   └── translation_engine/translator.py: round_monetary_precision(val: Any, precision: int = 4)
-    └── translation_engine/translator.py: rebuild_foreign_key_saga_invariant(target_dict: Mapping[str, Any],
-    parent_exists: bool)
-        ├── models.py: TranslationContext(legacy_entity_id, legacy_type_name, target_type_name, field_mappings, monetary_precision_places)
-        └── models.py: InvariantReconstructionResult(legacy_entity_id, is_approved, is_invariant_rebuilt, rebuilt_invariants, target_payload, rejection_reason)
+└── translation_engine/guard.py: assert_invariant_reconstruction_complete(legacy_dict, Any], ctx, parent_exists)
+    ├── translation_engine/translator.py: translate_legacy_to_target(legacy_dict, Any], ctx)
+    │   └── translation_engine/translator.py: round_monetary_precision(val, precision)
+    ├── translation_engine/translator.py: rebuild_foreign_key_saga_invariant(target_dict, Any], parent_exists)
+    └── models.py: InvariantReconstructionResult(legacy_entity_id, is_approved, is_invariant_rebuilt, rebuilt_invariants, target_payload, rejection_reason)
 ```
 
 ---
