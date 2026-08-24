@@ -18,7 +18,7 @@ Percentage-based metrics (e.g. *"99.9% migration accuracy"* or *"0.1% error rate
 This runbook enforces a **100% Pure Functional Programming (FP)** approach:
 - **No Class Instantiations**: Replaces OOP impact calculators with pure evaluation functions (`eval_absolute_scale_impact`, `assert_absolute_error_bounds`) and state cell closures.
 - **Immutable Impact Context Records**: Total record counts ($N$), error rates, absolute corrupted record counts, and severity levels are captured as frozen dataclass records (`AbsoluteImpactContext`, `ScaleRiskEvaluationResult`).
-- **Referentially Transparent Absolute Calculators**: Pure functions compute $N_{\text{errors}} = N_{\text{total}} \times \text{error\_rate}$ to expose true business impact up front.
+- **Referentially Transparent Absolute Calculators**: Pure functions compute $N_{\text{errors}} = N_{\text{total}} \times \text{error rate}$ to expose true business impact up front.
 - **Absolute Count Gating**: Rejects releases where absolute error counts exceed strict threshold caps, regardless of how small the percentage appears.
 
 ---
@@ -194,7 +194,7 @@ def eval_absolute_scale_impact(
 ```
 
 **Explanation**:
-- Pure function computing absolute error counts ($N_{\text{errors}} = N_{\text{total}} \times \text{error\_rate}$).
+- Pure function computing absolute error counts ($N_{\text{errors}} = N_{\text{total}} \times \text{error rate}$).
 - Exposes true business impact and rejects percentage-framed cutovers at extreme scale.
 
 ---
