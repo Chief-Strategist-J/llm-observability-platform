@@ -91,7 +91,7 @@ sequenceDiagram
         LegacyDB-->>Queue: WriteSuccess (200 OK)
     else Legacy Write-Back Failure
         LegacyDB-->>Queue: WriteError (500 / Timeout)
-        Note over Queue: Retry with exponential backoff; push to DLQ if max retries exceeded
+        Note over Queue: Retry with exponential backoff and push to DLQ if max retries exceeded
     end
 ```
 

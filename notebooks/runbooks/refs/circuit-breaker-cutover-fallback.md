@@ -84,13 +84,13 @@ sequenceDiagram
             Breaker-->>Client: HttpResponse (200 OK)
         else Microservice Error (5xx / Timeout)
             NewService-->>Breaker: HttpResponse (500 Error)
-            Note over Breaker: Increment failure count; trip circuit if threshold reached
+            Note over Breaker: Increment failure count and trip circuit if threshold reached
             Breaker->>Legacy: execute_legacy_fallback(payload)
             Legacy-->>Breaker: HttpResponse (200 OK)
             Breaker-->>Client: HttpResponse (200 OK)
         end
     else Circuit State == OPEN
-        Note over Breaker: Fast-fail microservice call; route directly to legacy fallback
+        Note over Breaker: Fast-fail microservice call and route directly to legacy fallback
         Breaker->>Legacy: execute_legacy_fallback(payload)
         Legacy-->>Breaker: HttpResponse (200 OK)
         Breaker-->>Client: HttpResponse (200 OK)

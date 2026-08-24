@@ -86,7 +86,7 @@ sequenceDiagram
         Target-->>Dedup: UpsertSuccess
     end
 
-    Note over Engine: Backfill reaches WatermarkID; live-tail handles ongoing mutations
+    Note over Engine: Backfill reaches WatermarkID, live-tail handles ongoing mutations
 ```
 
 ---

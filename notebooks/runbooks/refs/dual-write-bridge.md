@@ -87,7 +87,7 @@ sequenceDiagram
             Note over Kafka: Audit event queued for asynchronous background repair
         end
     else Primary Failure
-        Note over Client: Abort dual-write immediately; return primary error to client
+        Note over Client: Abort dual-write immediately and return primary error to client
     end
 ```
 

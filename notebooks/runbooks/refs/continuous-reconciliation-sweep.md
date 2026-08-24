@@ -79,7 +79,7 @@ sequenceDiagram
     
     alt Hashes Match (SourceRootHash == TargetRootHash)
         Differ-->>Sweep: ParityResult (is_matched: true, diffs: [])
-        Note over Sweep: Region verified in O(1) comparison; no row reads required
+        Note over Sweep: Region verified in O(1) comparison, no row reads required
     else Hashes Discrepancy (SourceRootHash != TargetRootHash)
         Differ->>Differ: Drill down tree branches to isolate mismatched PKs
         Differ-->>Sweep: ParityResult (is_matched: false, diff_keys: ["id_104", "id_892"])

@@ -74,7 +74,7 @@ sequenceDiagram
     
     alt Token Seen in Cache & Cached Status == SUCCESS
         Gate-->>Worker: DeduplicationResult (is_duplicate: true, cached_response: 200 OK)
-        Note over Worker: Fast-return cached response; skip duplicate database write
+        Note over Worker: Fast-return cached response and skip duplicate database write
     else Token Not Seen (New Key)
         Gate->>Mapper: map_to_upsert_statement(payload)
         Mapper->>DB: execute_upsert(payload, ON CONFLICT DO UPDATE)

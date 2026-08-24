@@ -89,7 +89,7 @@ sequenceDiagram
         Bulkhead-->>Gateway: Combined Response
     else Bulkhead Capacity Exhausted
         Bulkhead-->>Gateway: HTTP 503 Service Unavailable (Bulkhead Full)
-        Note over Gateway: Fast-fail protects downstream Wave 2 & 3 pools from starvation
+        Note over Gateway: Fast-fail protects downstream Wave 2 and 3 pools from starvation
     end
 ```
 
