@@ -125,20 +125,11 @@ dual-write-bridge/
 
 ```tree
 Mutation Request Initiated
-└── dispatcher.py: process_dual_write(context, payload)
-    ├── precondition.py: validate_dual_write_preconditions(context, payload)
-    │   └── models.py: PreconditionResult(is_valid, idempotency_key)
-    │
-    ├── primary_adapter.py: dispatch_primary_store(context, payload)
-    │   └── models.py: StoreResponse(status_code, body, headers)
-    │
-    ├── secondary_adapter.py: dispatch_secondary_store(context, payload)
-    │   └── models.py: StoreResponse(status_code, body, headers)
-    │
-    ├── recovery/audit_publisher.py: emit_compensating_audit_event(failure_record)
-    │   └── kafka_client.py: publish_to_kafka_topic(topic_name, event_data)
-    │
-    └── observability/metrics.py: record_dual_write_telemetry(primary_status, secondary_status)
+├── bridge/precondition.py: validate_dual_write_preconditions(ctx: DualWriteContext, payload: Mapping[str, Any])
+└── bridge/dispatcher.py: create_dual_write_dispatcher(primary_fn: StoreDispatcher,
+    secondary_fn: StoreDispatch...)
+        ├── models.py: DualWriteContext(tenant_id, entity_name, idempotency_key, timestamp, headers)
+        └── models.py: BridgeResult(status, primary_code, secondary_code, audit_event_emitted)
 ```
 
 ---

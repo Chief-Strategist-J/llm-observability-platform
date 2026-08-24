@@ -124,22 +124,11 @@ migration-bridge-adapter/
 
 ```tree
 Bridge API Call Initiated
-└── router.py: process_bridge_request(request, path)
-    ├── middleware.py: extract_bridge_context(request)
-    │   └── models.py: BridgeContext(tenant_id, target_service, trace_id)
-    │
-    ├── mapper.py: translate_payload(raw_body, schema_rule)
-    │   └── models.py: CanonicalPayload(transformed_dict, headers)
-    │
-    ├── decorators/resilience.py: with_bridge_resilience(dispatch_fn)
-    │   ├── circuit_breaker.py: execute_with_circuit_breaker(dispatch_fn)
-    │   └── rate_limiter.py: execute_with_rate_limit(tenant_id)
-    │
-    ├── protocol_adapter.py: dispatch_to_backend(protocol, endpoint, payload)
-    │   ├── [REST] dispatch_rest_request(url, payload)
-    │   └── [gRPC] dispatch_grpc_request(stub, payload)
-    │
-    └── observability/telemetry.py: record_bridge_metrics(target_service, latency_ms)
+├── translation/mapper.py: translate_payload(raw_payload: Mapping[str, Any], schema: TranslationSchema)
+└── translation/protocol_adapter.py: create_rest_protocol_dispatcher(base_url: str)
+    ├── models.py: BridgeContext(tenant_id, target_service, protocol, trace_id)
+    ├── models.py: TranslationSchema(source_version, target_version, field_mappings, value_transforms)
+    └── models.py: CanonicalPayload(body, headers)
 ```
 
 ---

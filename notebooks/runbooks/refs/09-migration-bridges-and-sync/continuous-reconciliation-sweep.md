@@ -125,20 +125,11 @@ continuous-reconciliation-sweep/
 
 ```tree
 Reconciliation Sweep Triggered
-└── runner.py: run_reconciliation_sweep(table_name, bucket_range)
-    ├── bucket_hasher.py: generate_source_hashes(table_name, range_id)
-    │   └── merkle_tree.py: build_merkle_tree(source_row_hashes)
-    │
-    ├── bucket_hasher.py: generate_target_hashes(table_name, range_id)
-    │   └── merkle_tree.py: build_merkle_tree(target_row_hashes)
-    │
-    ├── tree_differ.py: diff_merkle_nodes(source_tree, target_tree)
-    │   └── models.py: ReconciliationDiff(is_parity, mismatched_keys)
-    │
-    ├── repair_dispatcher.py: repair_mismatched_records(mismatched_keys)
-    │   └── target_sink.py: execute_targeted_upsert(key, canonical_data)
-    │
-    └── observability/telemetry.py: record_sweep_metrics(parity_ratio, repair_count)
+├── hashing/merkle_tree.py: hash_row_payload(row_payload: Mapping[str, Any], ignored_keys: set = {"timest...)
+├── hashing/merkle_tree.py: build_merkle_tree(row_hashes: List[tuple], range_start: int, range_end: int)
+│   └── models.py: MerkleNode(hash_val, level, range_start, range_end, children)
+└── differ/tree_differ.py: diff_merkle_nodes(source_node: MerkleNode, target_node: MerkleNode)
+    └── models.py: ReconciliationDiff(is_parity, scanned_buckets, mismatched_keys, repair_required)
 ```
 
 ---

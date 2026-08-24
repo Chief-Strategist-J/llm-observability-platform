@@ -113,17 +113,10 @@ sequenceDiagram
 
 ```tree
 Sync Tool Architecture Proposal Submitted
-└── guard.py: assert_proven_sync_mechanism(tool_name, tool_config)
-    ├── inspector.py: inspect_sync_tool_architecture(tool_config)
-    │   └── models.py: SyncToolContext(tool_name, is_bespoke, supports_wal_cdc)
-    │
-    ├── evaluator.py: eval_sync_tool_provenness(sync_tool_context)
-    │   └── models.py: ProvennessScore(battle_testing_score, is_approved)
-    │
-    ├── guard.py: format_provenness_decision(provenness_score)
-    │   └── models.py: SyncToolEvaluationResult(is_approved, rejection_reason)
-    │
-    └── observability/provenness_metrics.py: record_provenness_telemetry(evaluation_result)
+└── sync_provenness_engine/guard.py: assert_proven_sync_mechanism(ctx: SyncToolContext)
+    └── sync_provenness_engine/evaluator.py: eval_sync_tool_provenness(ctx: SyncToolContext)
+        ├── models.py: SyncToolContext(tool_name, is_bespoke_script, supports_native_wal, supports_exactly_once, industry_usage_tier)
+        └── models.py: SyncToolEvaluationResult(tool_name, is_approved, provenness_score, rejection_reason)
 ```
 
 ---

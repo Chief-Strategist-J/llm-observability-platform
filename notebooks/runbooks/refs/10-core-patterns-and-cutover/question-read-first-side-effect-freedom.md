@@ -112,17 +112,10 @@ sequenceDiagram
 
 ```tree
 Read Endpoint Cutover Proposed
-└── guard.py: assert_read_pure_query(endpoint_uri, sample_executions)
-    ├── tracer.py: trace_db_writes_during_execution(endpoint_uri)
-    │   └── models.py: DBWriteTrace(table_name, operation_type, mutated_fields)
-    │
-    ├── auditor.py: audit_read_side_effect_freedom(endpoint_uri, db_write_traces)
-    │   └── models.py: SideEffectContext(endpoint_uri, is_pure_read, mutations_count)
-    │
-    ├── guard.py: format_side_effect_gate_decision(side_effect_context)
-    │   └── models.py: SideEffectAuditResult(is_approved, rejection_reason)
-    │
-    └── observability/side_effect_metrics.py: record_side_effect_telemetry(audit_result)
+└── side_effect_engine/guard.py: assert_read_pure_query(ctx: SideEffectContext)
+    └── side_effect_engine/auditor.py: audit_read_side_effect_freedom(ctx: SideEffectContext)
+        ├── models.py: SideEffectContext(endpoint_uri, is_http_get, mutations_count, mutated_tables, mutated_fields)
+        └── models.py: SideEffectAuditResult(endpoint_uri, is_approved_for_read_first, is_pure_read, mutations_count, mutated_tables, rejection_reason)
 ```
 
 ---

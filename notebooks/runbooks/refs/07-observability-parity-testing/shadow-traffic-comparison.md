@@ -124,17 +124,17 @@ shadow-traffic-comparison/
 
 ```tree
 API Request Received
-└── runner.py: run_experiment(context, control_fn, candidate_fn, payload)
-    ├── swallower.py: execute_control_safely(control_fn, payload)
-    │   └── models.py: ControlResult(value, duration_ms)
-    │
-    ├── swallower.py: execute_candidate_safely(candidate_fn, payload)
-    │   └── models.py: CandidateResult(value, duration_ms, exception)
-    │
-    ├── comparator.py: compare_experiment_outputs(control_res, candidate_res)
-    │   └── models.py: ExperimentResult(is_match, mismatch_reason)
-    │
-    └── experiment_metrics.py: record_experiment_telemetry(experiment_result)
+├── scientist_engine/runner.py: run_experiment(ctx: ExperimentContext,
+    control_fn: ExecFn,
+    candidat...)
+│   └── models.py: ControlResult(value, duration_ms, status_code)
+└── scientist_engine/runner.py: execute_candidate_async()
+    ├── scientist_engine/comparator.py: compare_experiment_outputs(experiment_name: str,
+    control: ControlResult,
+    candid...)
+    │   └── models.py: ExperimentResult(experiment_name, is_match, control_duration_ms, candidate_duration_ms, mismatch_reason)
+    └── models.py: CandidateResult(value, duration_ms, status_code, exception_message)
+        ├── models.py: ExperimentContext(experiment_name, tenant_id, sample_rate)
 ```
 
 ---

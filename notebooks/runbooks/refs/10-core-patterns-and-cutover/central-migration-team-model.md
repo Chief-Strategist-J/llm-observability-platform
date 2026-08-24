@@ -125,20 +125,12 @@ central-migration-team-model/
 
 ```tree
 Central Campaign Initiated
-└── orchestrator.py: run_migration_campaign(campaign_id, config)
-    ├── inventory.py: fetch_fleet_inventory(campaign_id)
-    │   └── models.py: FleetInventory(services_count: 2800, batches: 14)
-    │
-    ├── scanner.py: audit_service_readiness(service_id)
-    │   └── models.py: ReadinessReport(has_otel_spans, has_circuit_breaker, is_ready)
-    │
-    ├── policy_engine.py: evaluate_compliance_policy(service_id, rules)
-    │   └── models.py: PolicyEvaluation(is_compliant, failing_rules)
-    │
-    ├── pr_generator.py: trigger_automated_refactor(service_id)
-    │   └── git_dispatcher.py: create_migration_pull_request(repo_url, patch_data)
-    │
-    └── dashboard/progress.py: record_fleet_progress(campaign_id, progress_snapshot)
+├── governance/policy_engine.py: evaluate_compliance_policy(report: ReadinessReport, policy_rules: Mapping[str, Any])
+└── control_plane/orchestrator.py: process_fleet_batch(services: List[FleetService],
+    audit_fn: Callable[[str], ...)
+        ├── models.py: FleetService(service_id, owner_team, tier, repo_url, current_version)
+        ├── models.py: ReadinessReport(service_id, has_tracing, has_circuit_breaker, has_health_check, is_eligible)
+        └── models.py: CampaignProgress(campaign_id, total_services, completed_count, blocked_count)
 ```
 
 ---

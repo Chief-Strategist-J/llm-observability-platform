@@ -116,17 +116,10 @@ sequenceDiagram
 
 ```tree
 Write Cutover Request Submitted
-└── guard.py: assert_write_cutover_version_gate(service_id, target_store)
-    ├── version_skew.py: eval_version_skew_elimination(service_id)
-    │   └── models.py: FleetVersionContext(service_id, total_nodes, legacy_v1_nodes)
-    │
-    ├── expand_contract.py: verify_expand_phase_support(fleet_version_context)
-    │   └── models.py: ExpandPhaseSupportStatus(is_expand_capable, skew_pct)
-    │
-    ├── guard.py: format_write_gate_decision(fleet_version_context, expand_status)
-    │   └── models.py: VersionSkewGateResult(is_approved, rejection_reason)
-    │
-    └── observability/write_metrics.py: record_write_telemetry(gate_decision)
+└── write_cutover_engine/guard.py: assert_write_cutover_version_gate(ctx: WriteCutoverContext)
+    └── write_cutover_engine/version_skew.py: eval_version_skew_elimination(ctx: WriteCutoverContext)
+        ├── models.py: WriteCutoverContext(service_id, target_store_name, total_fleet_nodes_count, v1_legacy_nodes_count, v2_expand_nodes_count, backfill_completion_pct)
+        └── models.py: VersionSkewGateResult(service_id, is_approved_for_write_cutover, is_version_skew_zero, version_skew_pct, backfill_completion_pct, rejection_reason)
 ```
 
 ---

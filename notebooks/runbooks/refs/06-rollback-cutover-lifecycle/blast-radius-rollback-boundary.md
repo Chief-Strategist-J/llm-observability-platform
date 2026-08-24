@@ -121,17 +121,12 @@ blast-radius-rollback-boundary/
 
 ```tree
 Wave Deployment Plan Submitted
-└── validator.py: validate_rollback_boundary(proposed_wave_config, global_graph)
-    ├── graph_checker.py: assert_topological_containment(wave_id, dependency_matrix)
-    │   └── models.py: ContainmentCheck(is_valid, violation_edge)
-    │
-    ├── containment_guard.py: calculate_blast_radius_percentage(wave_id, global_graph)
-    │   └── models.py: BlastRadiusMetric(affected_service_ratio)
-    │
-    ├── validator.py: format_boundary_result(containment_check, blast_radius_metric)
-    │   └── models.py: BoundaryValidationResult(is_approved, max_blast_radius)
-    │
-    └── observability/metrics.py: record_boundary_telemetry(boundary_validation_result)
+└── boundary_engine/validator.py: validate_rollback_boundary(cfg: BoundaryConfig,
+    service_wave_map: Mapping[str, int]...)
+    └── boundary_engine/graph_checker.py: assert_topological_containment(cfg: BoundaryConfig,
+    service_wave_map: Mapping[str, int]...)
+        ├── models.py: BoundaryConfig(wave_id, wave_name, contained_services, allowed_upstream_waves, max_blast_radius_pct)
+        └── models.py: BoundaryValidationResult(wave_id, is_approved, calculated_blast_radius_pct, violating_dependencies, rejection_reason)
 ```
 
 ---

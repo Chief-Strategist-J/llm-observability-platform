@@ -111,17 +111,12 @@ sequenceDiagram
 
 ```tree
 Bridge Lifetime Audit Initiated
-└── guard.py: assert_bridge_deadline_enforced(bridge_id, sunset_deadline_ts)
-    ├── evaluator.py: eval_bridge_lifetime_compliance(bridge_id, sunset_deadline_ts)
-    │   └── models.py: DeadlineContext(bridge_id, created_at, sunset_deadline, days_remaining)
-    │
-    ├── teardown.py: execute_automated_bridge_sunset(bridge_id)
-    │   └── models.py: BridgeTeardownStatus(is_deprovisioned, teardown_ts)
-    │
-    ├── guard.py: format_deadline_gate_decision(deadline_context, teardown_status)
-    │   └── models.py: DeadlineEnforcementResult(is_approved, rejection_reason)
-    │
-    └── observability/deadline_metrics.py: record_deadline_telemetry(enforcement_result)
+└── deadline_enforcement_engine/guard.py: assert_bridge_deadline_enforced(ctx: DeadlineContext,
+    current_ts: float)
+    └── deadline_enforcement_engine/evaluator.py: eval_bridge_lifetime_compliance(ctx: DeadlineContext,
+    current_ts: float)
+        └── models.py: DeadlineEnforcementResult(bridge_id, is_approved, is_overdue, days_remaining, is_auto_teardown_triggered, ...)
+            ├── models.py: DeadlineContext(bridge_id, owner_team_id, created_at_ts, sunset_deadline_ts, max_post_cutover_days)
 ```
 
 ---

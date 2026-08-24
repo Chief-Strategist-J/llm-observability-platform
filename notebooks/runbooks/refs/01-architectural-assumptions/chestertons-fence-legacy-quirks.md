@@ -120,15 +120,13 @@ chestertons-fence-legacy-quirks/
 
 ```tree
 Code Modification or Output Evaluation
-└── runner.py: run_chestertons_fence_check(quirk_id, output_payload)
-    ├── evaluator.py: eval_chestertons_fence(quirk_id, registry)
-    │   └── models.py: QuirkContext(quirk_id, ticket_ref, is_load_bearing)
-    │
-    ├── applier.py: preserve_legacy_quirk(output_payload, quirk_context)
-    │   └── applier.py: apply_quirk_transformation(payload, rule)
-    │       └── models.py: QuirkPreservationResult(is_preserved, quirk_payload)
-    │
-    └── observability/quirk_metrics.py: record_quirk_telemetry(quirk_preservation_result)
+├── quirk_engine/applier.py: apply_quirk_transformation(val: Any, quirk_id: str)
+├── quirk_engine/applier.py: preserve_legacy_quirk(payload: Mapping[str, Any],
+    ctx: QuirkContext)
+│   └── models.py: QuirkPreservationResult(quirk_id, is_preserved, original_value, quirk_applied_value, rationale)
+└── quirk_engine/guard.py: evaluate_quirk_preservation_suite(payload: Mapping[str, Any],
+    quirks: List[QuirkContext])
+        ├── models.py: QuirkContext(quirk_id, description, historical_ticket_ref, is_load_bearing, affected_field)
 ```
 
 ---

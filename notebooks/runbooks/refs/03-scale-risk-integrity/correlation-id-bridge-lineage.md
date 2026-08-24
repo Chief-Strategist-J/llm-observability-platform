@@ -121,17 +121,14 @@ sequenceDiagram
 
 ```tree
 Dual-Write Mutation Executed
-└── injector.py: inject_lineage_correlation_id(record_payload, bridge_id)
-    ├── injector.py: generate_correlation_uuid(bridge_id)
-    │   └── models.py: LineageContext(correlation_id, bridge_id, created_at_ts)
-    │
-    ├── storage/lineage_store.py: write_dual_store_records(record_payload, lineage_context)
-    │   └── models.py: DualStoreWriteResult(source_written, target_written)
-    │
-    ├── auditor.py: verify_record_lineage(correlation_id)
-    │   └── models.py: LineageVerificationResult(is_traced, is_matched)
-    │
-    └── observability/lineage_metrics.py: record_lineage_telemetry(verification_result)
+├── lineage_engine/injector.py: inject_lineage_correlation_id(payload: Mapping[str, Any],
+    bridge_id: str,
+    source_i...)
+│   ├── lineage_engine/injector.py: generate_correlation_id(bridge_id: str)
+│   └── models.py: LineageContext(correlation_id, bridge_id, source_entity_id, target_entity_id, created_at_ts)
+└── lineage_engine/auditor.py: verify_record_lineage(corr_id: str,
+    source_record: Optional[Mapping[str, Any]]...)
+        └── models.py: LineageVerificationResult(correlation_id, is_traced, is_matched, source_found, target_found, rejection_reason)
 ```
 
 ---

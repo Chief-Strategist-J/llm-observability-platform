@@ -108,17 +108,11 @@ sequenceDiagram
 
 ```tree
 Strategic Blueprint Proposal Submitted
-└── guard.py: assert_wave_topology_isolation(blueprint_id, topology_config)
-    ├── inspector.py: inspect_blueprint_topology(topology_config)
-    │   └── models.py: StrategicBlueprintContext(blueprint_id, wave_count, service_dag)
-    │
-    ├── evaluator.py: eval_strategic_blueprint(strategic_blueprint_context)
-    │   └── models.py: WaveDesignAssessment(bridge_count, rollback_isolated)
-    │
-    ├── guard.py: format_strategy_gate_decision(wave_design_assessment)
-    │   └── models.py: WaveDesignResult(is_approved, rejection_reason)
-    │
-    └── observability/strategy_metrics.py: record_strategy_telemetry(wave_design_result)
+└── strategy_engine/guard.py: assert_wave_topology_isolation(ctx: StrategicBlueprintContext)
+    └── strategy_engine/evaluator.py: eval_strategic_blueprint(ctx: StrategicBlueprintContext)
+        └── strategy_engine/evaluator.py: calculate_required_bridges(service_dag: Mapping[str, FrozenSet[str]])
+            ├── models.py: StrategicBlueprintContext(blueprint_id, wave_count, total_services_n, max_blast_radius_pct, service_dag)
+            └── models.py: WaveDesignResult(blueprint_id, is_approved, required_bridges_count, rollback_boundary_isolated, wave_partition_map, rejection_reason)
 ```
 
 ---

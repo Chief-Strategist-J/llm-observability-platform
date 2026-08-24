@@ -128,20 +128,10 @@ dual-write-single-read/
 
 ```tree
 API Request Received
-└── router.py: process_staged_migration_request(request, payload)
-    ├── classifier.py: classify_operation_type(request.method)
-    │   └── models.py: OperationType(READ_ONLY | MUTATION)
-    │
-    ├── evaluator.py: eval_staging_mode(request.path, config)
-    │   └── models.py: StagingDecision(is_staged, read_source, write_mode)
-    │
-    ├── dual_dispatcher.py: execute_staged_routing(staging_decision, payload)
-    │   ├── [Read Operation] dual_dispatcher.py: dispatch_legacy_read(payload)
-    │   └── [Mutation Operation] dual_dispatcher.py: dispatch_dual_write(payload)
-    │       ├── storage/legacy.py: execute_primary_write(payload)
-    │       └── storage/microservice.py: execute_secondary_write(payload)
-    │
-    └── parity_differ.py: record_staged_parity_event(entity_id, primary_res, secondary_res)
+├── staging_engine/evaluator.py: eval_staging_mode(ctx: StagingContext, config: Mapping[str, Any])
+│   └── models.py: StagingDecision(phase, read_target, write_targets)
+└── storage/dual_dispatcher.py: create_staged_dispatcher(legacy_read_fn: QueryFn, legacy_write_fn: QueryFn, microserv...)
+    ├── models.py: StagingContext(tenant_id, endpoint, method, headers)
 ```
 
 ---

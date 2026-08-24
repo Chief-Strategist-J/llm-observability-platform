@@ -126,17 +126,11 @@ dual-path-rollback-switch/
 
 ```tree
 API Request Received
-└── router.py: route_dual_path_request(service_id, payload, flag_store)
-    ├── evaluator.py: eval_rollback_switch(service_id, flag_store)
-    │   └── models.py: SwitchContext(service_id, is_rolled_back, fallback_active)
-    │
-    ├── [Primary Path] dispatcher.py: dispatch_primary_microservice(payload)
-    │   └── models.py: RouteDecision(target="PRIMARY", status_code=200)
-    │
-    ├── [Fallback Path] dispatcher.py: dispatch_legacy_fallback(payload)
-    │   └── models.py: RouteDecision(target="FALLBACK", status_code=200)
-    │
-    └── switch_metrics.py: record_switch_event(service_id, route_decision)
+├── switch_engine/evaluator.py: format_route_decision(ctx: SwitchContext, target: RouteTarget, duration_ms: float,...)
+│   └── models.py: RouteDecision(service_id, target, reason, duration_ms)
+└── switch_engine/router.py: create_dual_path_router(primary_fn: PathDispatchFn, fallback_fn: PathDispatchFn)
+    └── switch_engine/evaluator.py: eval_rollback_switch(ctx: SwitchContext)
+        ├── models.py: SwitchContext(service_id, is_explicit_rollback, circuit_open, primary_endpoint, fallback_endpoint)
 ```
 
 ---

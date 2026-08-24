@@ -113,17 +113,11 @@ sequenceDiagram
 
 ```tree
 Migration Wave Plan Submitted
-└── guard.py: assert_team_boundary_alignment(wave_id, participating_teams)
-    ├── inspector.py: inspect_wave_team_ownership(participating_teams)
-    │   └── models.py: OrgBoundaryContext(wave_id, participating_teams, max_teams_cap)
-    │
-    ├── evaluator.py: eval_org_boundary_sequencing(org_boundary_context)
-    │   └── models.py: FrictionAssessment(friction_score, is_aligned)
-    │
-    ├── guard.py: format_org_gate_decision(friction_assessment)
-    │   └── models.py: SequencingApprovalResult(is_approved, rejection_reason)
-    │
-    └── observability/org_metrics.py: record_org_telemetry(sequencing_result)
+└── org_sequencing_engine/guard.py: assert_team_boundary_alignment(ctx: OrgBoundaryContext)
+    └── org_sequencing_engine/evaluator.py: eval_org_boundary_sequencing(ctx: OrgBoundaryContext)
+        └── org_sequencing_engine/evaluator.py: calculate_coordination_friction(team_count: int)
+            ├── models.py: OrgBoundaryContext(wave_id, participating_teams, max_teams_per_wave)
+            └── models.py: SequencingApprovalResult(wave_id, is_approved, team_count, coordination_friction_score, violating_teams, rejection_reason)
 ```
 
 ---

@@ -137,20 +137,12 @@ expand-contract-migration/
 
 ```tree
 API Request Received
-└── router.py: process_schema_request(request, entity_name)
-    ├── evaluator.py: eval_migration_phase(entity_name, config)
-    │   └── models.py: MigrationPhase(EXPAND | MIGRATE | CONTRACT)
-    │
-    ├── mappers/expand_mapper.py: transform_for_phase(payload, phase)
-    │   ├── [Phase 1: EXPAND] expand_mapper.py: populate_both_fields(payload)
-    │   ├── [Phase 2: MIGRATE] expand_mapper.py: read_with_new_fallback_to_old(data)
-    │   └── [Phase 3: CONTRACT] contract_mapper.py: strip_legacy_fields(payload)
-    │
-    ├── storage/db_dispatcher.py: execute_db_operation(method, query, params)
-    │   └── db_dispatcher.py: dispatch_pg_query(sql, params)
-    │
-    └── backfill/batch_worker.py: trigger_background_backfill(entity_name)
-        └── batch_worker.py: backfill_batch_async(db_dispatch, batch_size=500)
+├── mappers/expand_mapper.py: populate_both_fields(payload: Mapping[str, Any], old_key: str, new_key: str)
+├── mappers/expand_mapper.py: read_with_fallback(record: Mapping[str, Any], old_key: str, new_key: str)
+├── mappers/expand_mapper.py: strip_legacy_fields(payload: Mapping[str, Any], old_key: str)
+└── storage/db_dispatcher.py: create_db_dispatcher(connection_string: str)
+    ├── models.py: SchemaContext(entity_name, tenant_id, current_phase, metadata)
+    └── models.py: EntityPayload(legacy_data, expanded_data, canonical_data)
 ```
 
 ---

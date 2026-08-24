@@ -126,17 +126,11 @@ invariant-assertion-harness/
 
 ```tree
 Domain State Mutation Executed
-└── evaluator.py: evaluate_all_invariants(context, payload)
-    ├── ledger_rules.py: assert_balance_conservation(payload)
-    │   └── models.py: InvariantCheck(rule_name, is_passed)
-    │
-    ├── integrity_rules.py: assert_referential_integrity(payload)
-    │   └── models.py: InvariantCheck(rule_name, is_passed)
-    │
-    ├── evaluator.py: aggregate_invariant_results(check_results)
-    │   └── models.py: InvariantResult(is_valid, violation_list)
-    │
-    └── violation_reporter.py: emit_invariant_violation_alert(invariant_result)
+└── harness_engine/evaluator.py: evaluate_all_invariants(ctx: InvariantContext, payload: Mapping[str, Any])
+    └── harness_engine/ledger_rules.py: assert_balance_conservation(payload: Mapping[str, Any])
+        ├── models.py: InvariantContext(domain_name, entity_id, tenant_id)
+        ├── models.py: InvariantCheck(rule_name, is_passed, error_message)
+        └── models.py: InvariantResult(entity_id, is_valid, violations)
 ```
 
 ---

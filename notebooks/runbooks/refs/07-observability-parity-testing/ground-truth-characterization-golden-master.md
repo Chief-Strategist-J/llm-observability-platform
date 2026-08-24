@@ -113,17 +113,18 @@ sequenceDiagram
 
 ```tree
 Ground Truth Characterization Initiated
-└── guard.py: assert_ground_truth_captured(service_id, test_suite_config)
-    ├── recorder.py: capture_golden_master_truth(service_id, input_fixtures)
-    │   └── models.py: RawLegacyFixture(input_payload, raw_response, bug_tags)
-    │
-    ├── auditor.py: detect_load_bearing_quirks(raw_fixtures)
-    │   └── models.py: LegacyQuirkSummary(quirk_count, bug_list)
-    │
-    ├── guard.py: format_truth_gate_decision(raw_fixtures, quirk_summary)
-    │   └── models.py: GroundTruthCharacterizationResult(is_locked, total_fixtures)
-    │
-    └── observability/truth_metrics.py: record_truth_telemetry(characterization_result)
+├── ground_truth_engine/recorder.py: capture_golden_master_truth(input_key: str,
+    raw_response: Mapping[str, Any],
+    ser...)
+│   ├── ground_truth_engine/recorder.py: detect_load_bearing_quirks(response_dict: Mapping[str, Any])
+│   └── models.py: GoldenMasterContext(service_id, input_key, raw_response_dict, detected_quirks, captured_at_ts)
+└── ground_truth_engine/guard.py: assert_ground_truth_captured(fixtures: list,
+    service_id: str,
+    min_fixtures: int =...)
+    └── ground_truth_engine/recorder.py: eval_ground_truth_parity(fixtures: list,
+    service_id: str,
+    min_required_fixtur...)
+        └── models.py: GroundTruthCharacterizationResult(service_id, is_locked, total_fixtures_captured, detected_bugs_count, captured_quirks, rejection_reason)
 ```
 
 ---

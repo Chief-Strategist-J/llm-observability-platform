@@ -127,18 +127,14 @@ bulkhead-isolated-waves/
 
 ```tree
 API Request Received
-└── router.py: dispatch_wave_request(service_id, payload)
-    ├── evaluator.py: eval_wave_membership(service_id, config)
-    │   └── models.py: WaveConfig(wave_name, max_capacity, timeout_ms)
-    │
-    ├── bulkheads/isolation_decorator.py: with_bulkhead_isolation(service_fn, wave_cell)
-    │   ├── concurrency_cell.py: acquire_bulkhead_slot(wave_cell)
-    │   │   ├── [Capacity OK] execute_service_fn(payload)
-    │   │   └── [Capacity Exceeded] emit_bulkhead_rejection(wave_name)
-    │   │
-    │   └── wave_metrics.py: record_wave_concurrency(wave_name, active_slots)
-    │
-    └── storage/dispatcher.py: execute_wave_downstream(payload)
+├── bulkheads/concurrency_cell.py: create_bulkhead_pool(max_capacity: int)
+├── bulkheads/concurrency_cell.py: try_acquire()
+├── bulkheads/concurrency_cell.py: release()
+├── bulkheads/concurrency_cell.py: get_active()
+└── bulkheads/isolation_decorator.py: with_bulkhead_isolation(service_fn: ServiceFn,
+    try_acquire_fn: Callable[[], bool...)
+        ├── models.py: WaveConfig(wave_level, service_id, max_concurrency, timeout_ms)
+        └── models.py: BulkheadStatus(active_count, max_capacity, is_rejected, rejection_reason)
 ```
 
 ---

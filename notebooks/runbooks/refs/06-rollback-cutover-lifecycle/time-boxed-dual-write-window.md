@@ -121,17 +121,14 @@ time-boxed-dual-write-window/
 
 ```tree
 Bridge Lifecycle Audit Scheduled
-└── evaluator.py: evaluate_all_bridge_windows(registry, current_timestamp)
-    ├── evaluator.py: eval_bridge_window_status(bridge_context, current_timestamp)
-    │   └── models.py: WindowStatus(bridge_id, is_expired, days_remaining)
-    │
-    ├── reader_auditor.py: audit_remaining_legacy_readers(bridge_id)
-    │   └── models.py: LegacyReaderMetrics(active_reader_count)
-    │
-    ├── [If Expired & Zero Readers] decommissioner.py: decommission_dual_write_bridge(bridge_id)
-    │   └── models.py: DecommissionResult(is_decommissioned, decommissioned_at)
-    │
-    └── observability/metrics.py: record_decommission_telemetry(decommission_result)
+└── window_engine/decommissioner.py: decommission_dual_write_bridge(ctx: BridgeWindowContext,
+    current_ts: float,
+    audit_r...)
+    ├── window_engine/evaluator.py: eval_bridge_window_status(ctx: BridgeWindowContext,
+    current_ts: float,
+    warn_da...)
+    └── models.py: DecommissionResult(bridge_id, is_decommissioned, state, active_legacy_readers, decommissioned_at_ts, ...)
+        ├── models.py: BridgeWindowContext(bridge_id, owner_team, created_at_ts, sunset_deadline_ts, max_window_days)
 ```
 
 ---

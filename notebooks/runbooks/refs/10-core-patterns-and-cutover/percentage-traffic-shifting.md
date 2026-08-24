@@ -122,21 +122,11 @@ percentage-traffic-shifting/
 
 ```tree
 API Request Received
-└── router.py: process_traffic_shift_request(context, payload)
-    ├── safety_guard.py: assert_side_effect_free(context.method, payload)
-    │   └── models.py: PremiseResult(is_side_effect_free, is_idempotent)
-    │
-    ├── hasher.py: calculate_rollout_bucket(context.tenant_id, salt="canary_v1")
-    │   └── hasher.py: compute_sha256_modulus(salted_key, modulus=100)
-    │
-    ├── evaluator.py: eval_traffic_shift(bucket, rollout_percentage=25)
-    │   └── models.py: RouteTarget(LEGACY | NEW_SERVICE)
-    │
-    ├── target_dispatcher.py: dispatch_to_target(target, context, payload)
-    │   ├── [NEW_SERVICE] target_dispatcher.py: dispatch_microservice(payload)
-    │   └── [LEGACY] target_dispatcher.py: dispatch_legacy(payload)
-    │
-    └── canary_metrics.py: record_traffic_shift_telemetry(target, bucket)
+├── shift_engine/hasher.py: calculate_rollout_bucket(key: str, salt: str = "canary_v1", modulus: int = 100)
+├── shift_engine/hasher.py: eval_traffic_shift(ctx: TrafficContext, config: ShiftConfig)
+└── shift_engine/safety_guard.py: assert_side_effect_free(ctx: TrafficContext, payload: Mapping[str, Any])
+    ├── models.py: TrafficContext(tenant_id, endpoint, method, headers)
+    └── models.py: ShiftConfig(endpoint, rollout_percentage, feature_salt, is_mutation_allowed)
 ```
 
 ---

@@ -124,17 +124,11 @@ verify-dependency-map-empirically/
 
 ```tree
 Dependency Map Verification Executed
-└── gate.py: assert_dependency_map_empirically_verified(resource_id, doc_callers)
-    ├── auditor.py: eval_empirical_log_evidence(resource_id, log_window)
-    │   └── models.py: EmpiricalLogEvidence(observed_callers, log_lines_analyzed)
-    │
-    ├── verifier.py: verify_dependency_map(doc_callers, empirical_evidence)
-    │   └── models.py: MapComparisonResult(unmapped_callers, is_complete)
-    │
-    ├── gate.py: format_verification_decision(map_comparison_result)
-    │   └── models.py: EmpiricalVerificationResult(is_approved, rejection_reason)
-    │
-    └── observability/verification_metrics.py: record_verification_telemetry(verification_result)
+└── verification_engine/gate.py: assert_dependency_map_empirically_verified(ctx: DependencyVerificationContext)
+    └── verification_engine/verifier.py: verify_dependency_map(ctx: DependencyVerificationContext)
+        └── verification_engine/verifier.py: compare_doc_vs_empirical(doc: FrozenSet[str], empirical: FrozenSet[str])
+            ├── models.py: DependencyVerificationContext(resource_id, documented_callers, empirical_callers, log_sample_days)
+            └── models.py: EmpiricalVerificationResult(resource_id, is_approved, unmapped_active_callers, stale_documented_callers, rejection_reason)
 ```
 
 ---

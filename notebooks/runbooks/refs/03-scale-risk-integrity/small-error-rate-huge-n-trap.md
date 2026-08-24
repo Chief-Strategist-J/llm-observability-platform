@@ -113,17 +113,15 @@ sequenceDiagram
 
 ```tree
 Scale Risk Verification Initiated
-└── guard.py: assert_absolute_error_bounds(total_records, error_rate_pct)
-    ├── calculator.py: eval_absolute_scale_impact(total_records, error_rate_pct)
-    │   └── models.py: AbsoluteImpactContext(total_n, error_rate_pct, absolute_errors)
-    │
-    ├── evaluator.py: evaluate_absolute_count_risk(absolute_impact_context)
-    │   └── models.py: RiskAssessment(severity_level, is_within_cap)
-    │
-    ├── guard.py: format_scale_gate_decision(risk_assessment)
-    │   └── models.py: ScaleRiskEvaluationResult(is_approved, rejection_reason)
-    │
-    └── observability/scale_metrics.py: record_scale_telemetry(scale_result)
+└── scale_impact_engine/guard.py: assert_absolute_error_bounds(total_n: int,
+    error_rate_pct: float,
+    max_allowed: in...)
+    └── scale_impact_engine/calculator.py: eval_absolute_scale_impact(total_n: int,
+    error_rate_pct: float,
+    max_allowed_err...)
+        └── scale_impact_engine/calculator.py: calculate_absolute_errors(total_n: int, error_rate_pct: float)
+            ├── models.py: AbsoluteImpactContext(total_records_n, error_rate_pct, absolute_error_count, max_allowed_absolute_errors)
+            └── models.py: ScaleRiskEvaluationResult(total_records_n, is_approved, absolute_error_count, error_rate_pct, severity_label, rejection_reason)
 ```
 
 ---

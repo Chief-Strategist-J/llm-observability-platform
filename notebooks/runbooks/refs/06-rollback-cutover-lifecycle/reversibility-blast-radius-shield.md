@@ -118,17 +118,14 @@ sequenceDiagram
 
 ```tree
 Emergency Rollback Triggered
-└── guard.py: assert_reversibility_shield(step_id, wave_id)
-    ├── auditor.py: verify_borrowed_strategic_guarantee(wave_id)
-    │   └── models.py: BorrowedGuaranteeContext(wave_id, is_isolated, rollback_target)
-    │
-    ├── dispatcher.py: execute_blast_radius_rollback(step_id, borrowed_context)
-    │   └── models.py: RollbackExecutionResult(is_reverted, duration_ms)
-    │
-    ├── guard.py: format_safety_gate_decision(rollback_result)
-    │   └── models.py: SafetyGateDecision(is_approved, rejection_reason)
-    │
-    └── observability/safety_metrics.py: record_safety_telemetry(safety_decision)
+└── safety_engine/guard.py: assert_reversibility_shield(ctx: SafetyContext,
+    target_active: bool,
+    measured_du...)
+    └── safety_engine/dispatcher.py: execute_blast_radius_rollback(ctx: SafetyContext,
+    target_active: bool,
+    measured_du...)
+        └── models.py: RollbackExecutionResult(step_id, is_reverted, duration_ms, contained_affected_users_pct, rejection_reason)
+            ├── models.py: SafetyContext(step_id, wave_id, is_strategy_isolated, reversal_target_type, max_allowed_rollback_latency_ms)
 ```
 
 ---

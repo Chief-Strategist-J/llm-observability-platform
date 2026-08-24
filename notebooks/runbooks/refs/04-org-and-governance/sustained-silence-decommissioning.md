@@ -119,17 +119,12 @@ sequenceDiagram
 
 ```tree
 Decommissioning Execution Initiated
-└── guard.py: assert_decommissioning_safety_gate(asset_id, silence_proof_days)
-    ├── auditor.py: assert_sustained_silence_proof(asset_id, silence_proof_days)
-    │   └── models.py: SilenceProofContext(asset_id, is_silent, silence_days_count)
-    │
-    ├── executor.py: execute_safe_decommissioning(asset_id, phase="PHASE_1_FREEZE")
-    │   └── models.py: PhaseExecutionStatus(phase_name, is_successful)
-    │
-    ├── guard.py: format_decom_gate_decision(phase_status)
-    │   └── models.py: DecomExecutionResult(is_approved, current_phase)
-    │
-    └── observability/decom_metrics.py: record_decom_telemetry(decom_result)
+└── decom_engine/guard.py: assert_decommissioning_safety_gate(ctx: DecommissioningContext,
+    target_phase: DecomPhase)
+    └── decom_engine/executor.py: execute_safe_decommissioning(ctx: DecommissioningContext,
+    target_phase: DecomPhase)
+        └── models.py: DecomExecutionResult(asset_id, is_approved, current_phase, is_teardown_complete, rejection_reason)
+            ├── models.py: DecommissioningContext(asset_id, asset_type, silence_proof_days, min_required_silence_days, is_silence_proven)
 ```
 
 ---

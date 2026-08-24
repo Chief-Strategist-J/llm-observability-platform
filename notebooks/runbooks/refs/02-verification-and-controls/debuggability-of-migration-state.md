@@ -110,17 +110,15 @@ sequenceDiagram
 
 ```tree
 Record Migration State Debug Query Executed
-└── query.py: query_record_migration_state(entity_id, ledger_store)
-    ├── tracer.py: fetch_state_history(entity_id, ledger_store)
-    │   └── models.py: MigrationStateTrace(entity_id, from_state, to_state, trace_id, timestamp)
-    │
-    ├── query.py: resolve_current_state(state_history)
-    │   └── models.py: CurrentStateSummary(current_state, transition_count)
-    │
-    ├── query.py: format_debug_result(state_summary, trace_history)
-    │   └── models.py: StateDebugQueryResult(entity_id, current_state, trace_history)
-    │
-    └── observability/state_metrics.py: record_debug_query_telemetry(debug_result)
+├── state_debug_engine/tracer.py: trace_state_transition(entity_id: str,
+    from_st: RecordMigrationState,
+    to_st...)
+│   └── models.py: MigrationStateTrace(entity_id, from_state, to_state, trace_id, timestamp, ...)
+└── state_debug_engine/guard.py: assert_migration_state_debuggability(entity_id: str,
+    history_traces: List[MigrationStateTrace...)
+    └── state_debug_engine/tracer.py: query_record_migration_state(entity_id: str,
+    history_traces: List[MigrationStateTrace...)
+        └── models.py: StateDebugQueryResult(entity_id, current_state, transition_count, first_transition_ts, last_transition_ts, history)
 ```
 
 ---

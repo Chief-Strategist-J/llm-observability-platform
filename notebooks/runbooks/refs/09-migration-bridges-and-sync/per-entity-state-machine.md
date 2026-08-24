@@ -129,18 +129,11 @@ per-entity-state-machine/
 
 ```tree
 Entity Request Initiated
-└── router.py: process_entity_request(entity_id, operation, payload)
-    ├── state_store.py: fetch_entity_state(entity_id)
-    │   └── models.py: EntityStateRecord(entity_id, status, version)
-    │
-    ├── router.py: route_by_entity_state(entity_state, operation)
-    │   └── models.py: RouteDecision(target_store, is_dual_write)
-    │
-    ├── [State Transition Triggered] transitioner.py: transition_entity_state(entity_state, event)
-    │   ├── guards.py: assert_valid_transition(current_status, target_status)
-    │   └── state_store.py: update_entity_state(entity_id, new_status)
-    │
-    └── state_metrics.py: record_state_transition_telemetry(entity_id, old_status, new_status)
+├── machine_engine/transitioner.py: transition_entity_state(record: EntityStateRecord, target_status: EntityStatus)
+│   ├── machine_engine/transitioner.py: assert_valid_transition(current: EntityStatus, target: EntityStatus)
+│   └── models.py: TransitionResult(is_allowed, new_status, error_message)
+└── machine_engine/router.py: create_entity_state_router(legacy_db_fn: QueryFn, microservice_db_fn: QueryFn)
+    ├── models.py: EntityStateRecord(entity_id, entity_type, status, version, last_updated)
 ```
 
 ---

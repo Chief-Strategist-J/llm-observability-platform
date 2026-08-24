@@ -119,17 +119,10 @@ sequenceDiagram
 
 ```tree
 Legacy Deprovisioning Requested
-└── guard.py: assert_dual_gate_decommissioning_cleared(asset_id, eng_signoff, biz_signoff)
-    ├── eng_auditor.py: verify_engineering_confidence_gate(asset_id, eng_signoff)
-    │   └── models.py: EngineeringGateContext(asset_id, is_cleared, eng_owner_id)
-    │
-    ├── biz_auditor.py: verify_business_risk_acceptance_gate(asset_id, biz_signoff)
-    │   └── models.py: BusinessGateContext(asset_id, is_cleared, biz_owner_id)
-    │
-    ├── guard.py: format_dual_gate_decision(eng_context, biz_context)
-    │   └── models.py: DualGateGovernanceResult(is_approved, rejection_reason)
-    │
-    └── observability/dual_gate_metrics.py: record_dual_gate_telemetry(governance_result)
+└── dual_gate_engine/guard.py: assert_dual_gate_decommissioning_cleared(ctx: DualGateContext)
+    └── dual_gate_engine/guard.py: eval_dual_gate_compliance(ctx: DualGateContext)
+        ├── models.py: DualGateContext(asset_id, engineering_owner_id, is_engineering_gate_cleared, engineering_signoff_ts, business_owner_id, is_business_gate_cleared, business_signoff_ts)
+        └── models.py: DualGateGovernanceResult(asset_id, is_approved, are_owners_distinct, engineering_owner_id, business_owner_id, rejection_reason)
 ```
 
 ---

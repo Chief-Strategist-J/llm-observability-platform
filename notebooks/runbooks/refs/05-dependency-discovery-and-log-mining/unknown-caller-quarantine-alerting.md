@@ -110,17 +110,14 @@ unknown-caller-quarantine-alerting/
 
 ```tree
 Perimeter Ingress Request Received
-└── guard.py: verify_caller_identity(request_headers, client_ip, registry_store)
-    ├── storage/registry_store.py: check_caller_approved(client_ip, user_agent)
-    │   └── models.py: RegistryResult(is_approved, service_name)
-    │
-    ├── [If Unapproved] alerter.py: emit_instant_pagerduty_alert(client_ip, request_uri)
-    │   └── models.py: AlertResult(alert_id, sent_at_ts, is_delivered)
-    │
-    ├── sandbox_router.py: route_to_quarantine_sandbox(request_payload)
-    │   └── models.py: QuarantineActionResult(action_taken, status_code)
-    │
-    └── observability/quarantine_metrics.py: record_quarantine_telemetry(action_result)
+├── quarantine_engine/alerter.py: emit_instant_pagerduty_alert(ctx: QuarantineContext,
+    webhook_fn: WebhookFn)
+│   └── quarantine_engine/alerter.py: format_pagerduty_alert_payload(ctx: QuarantineContext)
+└── quarantine_engine/guard.py: evaluate_quarantine_action(ctx: QuarantineContext,
+    approved_subnets: FrozenSet[str]...)
+    └── quarantine_engine/guard.py: is_caller_in_registry(client_ip: str, approved_subnets: FrozenSet[str])
+        ├── models.py: QuarantineContext(client_ip, user_agent, request_uri, headers, timestamp)
+        └── models.py: QuarantineActionResult(client_ip, is_approved, is_quarantined, alert_triggered, status_code, diagnostic_message)
 ```
 
 ---

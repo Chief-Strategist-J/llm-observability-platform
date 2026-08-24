@@ -138,17 +138,10 @@ sequenceDiagram
 
 ```tree
 End-to-End Governance Audit Executed
-└── guard.py: assert_end_to_end_governance(migration_id, interlock_config)
-    ├── auditor.py: audit_pillar_interlocks(interlock_config)
-    │   └── models.py: SystemicMatrixContext(migration_id, pillar_statuses)
-    │
-    ├── evaluator.py: evaluate_systemic_interlock_matrix(matrix_context)
-    │   └── models.py: InterlockScoreResult(is_fully_interlocked, score)
-    │
-    ├── guard.py: format_matrix_gate_decision(score_result)
-    │   └── models.py: EndToEndGovernanceResult(is_approved, rejection_reason)
-    │
-    └── observability/matrix_metrics.py: record_matrix_telemetry(governance_result)
+└── matrix_engine/guard.py: assert_end_to_end_governance(ctx: SystemicMatrixContext)
+    └── matrix_engine/evaluator.py: evaluate_systemic_interlock_matrix(ctx: SystemicMatrixContext)
+        ├── models.py: SystemicMatrixContext(migration_id, pillar_a_strategy_ok, pillar_b_sync_ok, pillar_cd_cutover_ok, pillar_e_verification_ok, pillar_f_translation_ok, pillar_g_safety_ok, pillar_h_discovery_ok, pillar_i_decom_ok)
+        └── models.py: EndToEndGovernanceResult(migration_id, is_fully_interlocked, governance_score, broken_interlocks, rejection_reason)
 ```
 
 ---

@@ -129,20 +129,13 @@ sequenceDiagram
 
 ```tree
 Shadow Traffic Request Executed
-└── runner.py: run_shadow_traffic_comparison(legacy_output, target_output, rule_registry)
-    ├── human_gate.py: verify_rule_signoff(rule_registry)
-    │   └── models.py: HumanSignoffContext(rule_id, is_signed_off, engineer_id)
-    │
-    ├── normalizer.py: apply_human_reviewed_normalization(legacy_output, target_output)
-    │   └── models.py: CanonicalPayloadPair(legacy_clean, target_clean, noise_stripped_count)
-    │
-    ├── runner.py: compare_canonical_shadow_diff(canonical_pair)
-    │   └── models.py: ShadowContext(is_matched, real_diffs_count)
-    │
-    ├── guard.py: format_shadow_gate_decision(shadow_context)
-    │   └── models.py: HumanReviewedRuleResult(is_approved, rejection_reason)
-    │
-    └── observability/shadow_metrics.py: record_shadow_telemetry(shadow_result)
+├── shadow_verification_engine/runner.py: apply_human_reviewed_normalization(raw_dict: Mapping[str, Any],
+    rules: List[NormalizationRu...)
+└── shadow_verification_engine/guard.py: assert_shadow_verification_complete(ctx: ShadowContext)
+    └── shadow_verification_engine/runner.py: run_shadow_traffic_comparison(ctx: ShadowContext)
+        └── models.py: HumanReviewedRuleResult(request_id, is_matched, unreviewed_rules_count, real_mismatches_count, real_mismatches, ...)
+            ├── models.py: NormalizationRule(rule_id, field_path, action, is_signed_off_by_human, signed_by_engineer_id)
+            ├── models.py: ShadowContext(request_id, legacy_response_dict, target_response_dict, active_rules)
 ```
 
 ---

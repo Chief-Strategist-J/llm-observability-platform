@@ -113,14 +113,13 @@ sequenceDiagram
 
 ```tree
 Metric Stream Evaluated
-└── guard.py: assert_automatic_rollback_thresholds(service_id, telemetry_payload)
-    ├── evaluator.py: eval_automatic_rollback_thresholds(telemetry_payload, threshold_rules)
-    │   └── models.py: ThresholdContext(metric_key, limit_value, window_sec)
-    │
-    ├── [If Breached] tripper.py: trigger_automated_rollback(service_id, breach_details)
-    │   └── models.py: AutomatedRollbackResult(is_triggered, reverted_at_ts, reason)
-    │
-    └── observability/threshold_metrics.py: record_threshold_telemetry(rollback_result)
+└── threshold_engine/tripper.py: execute_automated_rollback_guard(ctx: ThresholdContext,
+    metrics: Mapping[str, Any],
+    r...)
+    └── threshold_engine/evaluator.py: eval_automatic_rollback_thresholds(ctx: ThresholdContext,
+    metrics: Mapping[str, Any])
+        ├── models.py: ThresholdContext(service_id, max_error_rate_pct, max_p99_latency_ms, max_mismatch_count, evaluation_window_sec)
+        └── models.py: AutomatedRollbackResult(service_id, is_triggered, breached_metric, observed_value, limit_value, reverted_at_ts, diagnostic_reason)
 ```
 
 ---

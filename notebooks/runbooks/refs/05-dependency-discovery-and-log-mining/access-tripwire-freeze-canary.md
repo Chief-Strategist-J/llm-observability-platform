@@ -117,17 +117,14 @@ access-tripwire-freeze-canary/
 
 ```tree
 Data Access Request Received on Staged Resource
-└── guard.py: eval_access_tripwire(resource_id, operation_type, request_context)
-    ├── reversal_cell.py: get_freeze_state(resource_id)
-    │   └── models.py: TripwireContext(resource_id, is_frozen, freeze_stage)
-    │
-    ├── [If Frozen & Write Operation] simulator.py: simulate_freeze_error(resource_id)
-    │   └── models.py: TripwireResult(is_tripped, status_code=423, caller_ip)
-    │
-    ├── [If Allowed] storage/tripwire_store.py: execute_storage_operation(payload)
-    │   └── models.py: StorageResponse(status_code=200, data)
-    │
-    └── observability/tripwire_metrics.py: record_tripwire_event(tripwire_result)
+├── tripwire_engine/reversal_cell.py: create_tripwire_state_cell()
+├── tripwire_engine/reversal_cell.py: get_freeze_state(resource_id: str)
+├── tripwire_engine/reversal_cell.py: toggle_freeze_canary(resource_id: str, is_frozen: bool, stage: FreezeStage = Free...)
+└── tripwire_engine/guard.py: eval_access_tripwire(ctx: TripwireContext,
+    operation_type: str,
+    caller_ip...)
+    └── models.py: TripwireResult(resource_id, is_tripped, status_code, operation_type, caller_ip, ...)
+        ├── models.py: TripwireContext(resource_id, stage, is_frozen, allowed_callers, armed_at_ts)
 ```
 
 ---

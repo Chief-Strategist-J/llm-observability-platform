@@ -124,17 +124,10 @@ sync-infra-before-cutover/
 
 ```tree
 Traffic Cutover Pre-Check Initiated
-└── gate.py: assert_sync_infra_stable(bridge_id, max_lag_ms)
-    ├── lag_evaluator.py: eval_replication_lag(bridge_id)
-    │   └── models.py: ReplicationLagMetrics(forward_lag_ms, reverse_lag_ms)
-    │
-    ├── verifier.py: verify_rollback_target_active(bridge_id)
-    │   └── models.py: RollbackTargetStatus(is_active, last_test_ts)
-    │
-    ├── gate.py: format_sync_readiness_decision(lag_metrics, rollback_target_status)
-    │   └── models.py: SyncReadinessResult(is_ready, current_lag_ms, rejection_reason)
-    │
-    └── observability/sync_metrics.py: record_sync_telemetry(sync_readiness_result)
+└── sync_engine/gate.py: assert_sync_infra_stable(ctx: SyncInfraContext)
+    └── sync_engine/lag_evaluator.py: eval_replication_lag(ctx: SyncInfraContext)
+        ├── models.py: SyncInfraContext(bridge_id, forward_sync_active, reverse_sync_active, forward_lag_ms, reverse_lag_ms, max_allowed_lag_ms)
+        └── models.py: SyncReadinessResult(bridge_id, is_ready, forward_lag_ok, reverse_path_ok, current_max_lag_ms, rejection_reason)
 ```
 
 ---

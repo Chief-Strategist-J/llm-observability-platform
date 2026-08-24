@@ -128,20 +128,12 @@ write-then-verify/
 
 ```tree
 High-Value Transaction Initiated
-└── runner.py: execute_write_then_verify(context, payload)
-    ├── db_dispatchers.py: execute_primary_write(payload)
-    │   └── models.py: WriteResponse(entity_id, status_code)
-    │
-    ├── db_dispatchers.py: execute_read_back(entity_id)
-    │   └── models.py: ReadBackPayload(entity_id, actual_data)
-    │
-    ├── comparator.py: verify_written_payload(expected_data, actual_data)
-    │   └── models.py: ParityStatus(is_valid, mismatched_fields)
-    │
-    ├── [If Parity Failed] rollback.py: execute_compensating_rollback(entity_id)
-    │   └── db_dispatchers.py: execute_delete_or_reversal(entity_id)
-    │
-    └── verify_metrics.py: record_verification_telemetry(entity_id, is_valid)
+├── verify_engine/comparator.py: verify_written_payload(expected_data: Mapping[str, Any],
+    actual_data: Mapping[s...)
+│   └── models.py: ParityStatus(is_valid, mismatched_fields, error_message)
+└── verify_engine/runner.py: create_write_verify_runner(write_fn: WriteFn, read_fn: ReadFn, rollback_fn: RollbackFn)
+    └── models.py: VerificationResult(status_code, entity_id, is_verified, data)
+        ├── models.py: VerificationContext(entity_type, entity_id, tenant_id, user_id)
 ```
 
 ---

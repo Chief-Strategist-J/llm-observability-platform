@@ -126,20 +126,14 @@ idempotent-migration-writes/
 
 ```tree
 CDC Event or Write Request Received
-└── router.py: process_idempotent_migration_write(request, payload)
-    ├── gate.py: extract_idempotency_token(request.headers, payload)
-    │   └── models.py: IdempotencyToken(key, hash_bytes)
-    │
-    ├── gate.py: eval_idempotency_gate(token, deduplication_cell)
-    │   └── models.py: DeduplicationResult(is_duplicate, cached_res)
-    │
-    ├── [If Duplicate] lww_resolver.py: resolve_lww_conflict(incoming_ts, existing_ts)
-    │   └── models.py: LWWDecision(should_write, is_stale)
-    │
-    ├── mapper.py: map_to_upsert_statement(payload, primary_key)
-    │   └── db_dispatchers.py: execute_atomic_upsert(sql_statement)
-    │
-    └── deduplication_metrics.py: record_deduplication_telemetry(token_key, is_duplicate)
+├── idempotency_engine/gate.py: create_idempotency_state_cell(ttl_seconds: float = 300.0)
+├── idempotency_engine/gate.py: get_token(key: str)
+├── idempotency_engine/gate.py: record_token(key: str, status_code: int, response_data: Mapping[str, Any])
+├── idempotency_engine/gate.py: eval_idempotency_gate(ctx: IdempotencyContext, get_token_fn: Callable)
+│   └── models.py: DeduplicationResult(is_duplicate, status_code, cached_response, is_stale_lww)
+├── idempotency_engine/lww_resolver.py: resolve_lww_conflict(incoming_ts: float, existing_ts: float)
+└── idempotency_engine/lww_resolver.py: map_to_upsert_statement(table_name: str, pk_col: str, payload: Mapping[str, Any])
+    ├── models.py: IdempotencyContext(token_key, payload_hash, timestamp, tenant_id)
 ```
 
 ---

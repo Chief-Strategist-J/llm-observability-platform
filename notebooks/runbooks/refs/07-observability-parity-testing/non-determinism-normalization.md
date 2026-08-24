@@ -119,17 +119,13 @@ non-determinism-normalization/
 
 ```tree
 Raw Payload Comparison Initiated
-└── tree_walker.py: normalize_payload_tree(payload, rules_config)
-    ├── tree_walker.py: strip_volatile_keys(payload, ignored_keys)
-    │   └── models.py: PrunedPayload(cleaned_dict)
-    │
-    ├── pattern_masker.py: mask_dynamic_patterns(cleaned_dict, regex_patterns)
-    │   └── pattern_masker.py: apply_regex_mask(string_val, pattern)
-    │
-    ├── sorter.py: canonicalize_json_arrays(masked_dict)
-    │   └── sorter.py: sort_list_canonical(array_val)
-    │
-    └── models.py: NormalizedPayload(canonical_dict, fields_stripped_count)
+├── normalizer_engine/tree_walker.py: normalize_payload_tree(payload: Mapping[str, Any], rule: NormalizationRule)
+│   ├── normalizer_engine/tree_walker.py: normalize_dict(data: Mapping[str, Any], rule: NormalizationRule)
+│   │   └── normalizer_engine/tree_walker.py: normalize_value(val: Any, rule: NormalizationRule)
+│   └── models.py: NormalizedPayload(canonical_data, stripped_keys_count, masked_patterns_count)
+├── normalizer_engine/pattern_masker.py: mask_custom_patterns(text_val: str, pattern_replacements: Mapping[str, str])
+└── normalizer_engine/pattern_masker.py: canonicalize_json_string(json_str: str)
+    ├── models.py: NormalizationRule(rule_id, ignored_keys, uuid_masking_enabled, float_precision, sort_arrays)
 ```
 
 ---

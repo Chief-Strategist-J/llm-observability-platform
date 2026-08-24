@@ -173,41 +173,14 @@ strangler-fig-migration/
 
 ```tree
 HTTP Request Received (Any Endpoint)
-└── main.py: strangler_facade_handler(request, path)
-    └── middleware.py: trace_http_middleware(request, call_next)
-        ├── context.py: extract_w3c_traceparent(headers)
-        └── tracer.py: start_as_current_span("HTTP {method} {path}")
-            │
-            └── router.py: process_facade_request(request, path, config_cell)
-                │
-                ├── 1. context.py: build_request_context(request, path)
-                │   ├── context.py: sanitize_headers(request.headers)
-                │   ├── context.py: extract_tenant_id(headers)
-                │   └── models.py: RequestContext(tenant_id, endpoint, method, headers, query_params)
-                │
-                ├── 2. evaluator.py: evaluate_routing_rules(context, rules_config)
-                │   ├── evaluator.py: match_endpoint_rule(path, rules_config)
-                │   ├── evaluator.py: check_tenant_whitelist(tenant_id, rule)
-                │   ├── evaluator.py: calculate_rollout_bucket(tenant_id, salt, percentage)
-                │   └── models.py: RoutingDecision(target, rule_name, metadata)
-                │
-                ├── 3. composition.py: compose_pipeline(http_dispatch, [with_tracing, with_circuit_breaker, with_retry])
-                │   ├── tracing.py: with_tracing(dispatcher, name="new_service")
-                │   ├── circuit_breaker.py: with_circuit_breaker(dispatcher, state_cell)
-                │   └── retry.py: with_retry(dispatcher, max_retries=3)
-                │
-                ├── 4. router.py: execute_routing_strategy(decision, context, body, legacy_dispatch, new_dispatch)
-                │   ├── strategy.py: handle_new_service(context, body, new_dispatch)
-                │   ├── strategy.py: handle_shadow(context, body, legacy_dispatch, new_dispatch)
-                │   │   ├── http_dispatcher.py: legacy_dispatch(method, path, headers, body)
-                │   │   └── differ.py: spawn_shadow_task(new_dispatch, context, body, primary_response)
-                │   │       └── differ.py: log_and_diff_async(...)
-                │   │           ├── http_dispatcher.py: shadow new_dispatch call
-                │   │           ├── differ.py: diff_json_payloads(primary_json, shadow_json, ignore_keys)
-                │   │           └── metrics.py: record_parity_result(is_match, diff_keys)
-                │   └── strategy.py: handle_dual_write(context, body, legacy_dispatch, new_dispatch)
-                │
-                └── 5. middleware.py: inject_trace_headers(response, span)
+├── rules/evaluator.py: calculate_rollout_bucket(key: str, salt: str = "strangler_salt", modulus: int = 100)
+├── rules/evaluator.py: evaluate_routing_rules(ctx: RequestContext, config: Mapping[str, Any])
+├── adapters/http_dispatcher.py: create_http_dispatcher(base_url: str, timeout_seconds: float = 5.0)
+│   └── models.py: HttpResponse(status_code, body, headers)
+├── adapters/http_dispatcher.py: with_retry(dispatcher: HttpDispatcher, max_retries: int = 3)
+└── facade/main.py: strangler_facade_route(request: Request, path: str)
+    ├── models.py: RequestContext(tenant_id, endpoint, method, user_id, headers, query_params)
+    ├── models.py: RoutingDecision(target, matched_rule, rollout_bucket, metadata)
 ```
 
 ---

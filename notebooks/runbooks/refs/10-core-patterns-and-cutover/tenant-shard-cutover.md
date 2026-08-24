@@ -125,21 +125,10 @@ tenant-shard-cutover/
 
 ```tree
 API Request Received (With Tenant Context)
-└── router.py: process_tenant_cutover_request(request, tenant_id)
-    ├── risk_checker.py: assert_blast_radius_safety(tenant_id, risk_rules)
-    │   └── models.py: RiskCheck(is_safe, tenant_tier, volume_gb)
-    │
-    ├── evaluator.py: eval_tenant_cutover(tenant_id, cutover_map)
-    │   └── models.py: TenantCutoverState(tenant_id, status, target_shard)
-    │
-    ├── shard_resolver.py: resolve_shard_target(tenant_state, shard_topology)
-    │   └── models.py: ShardEndpoint(shard_id, base_url, db_connection_str)
-    │
-    ├── shard_dispatcher.py: dispatch_to_shard(shard_endpoint, payload)
-    │   ├── [Target: NEW_SHARD] shard_dispatcher.py: dispatch_new_shard(payload)
-    │   └── [Target: LEGACY_SHARD] shard_dispatcher.py: dispatch_legacy_shard(payload)
-    │
-    └── shard_metrics.py: record_tenant_cutover_telemetry(tenant_id, shard_id)
+├── cutover_engine/evaluator.py: eval_tenant_cutover(tenant_id: str, cutover_map: Mapping[str, Mapping[str, Any]])
+│   └── models.py: TenantCutoverState(tenant_id, status, target_shard, sla_tier)
+└── cutover_engine/risk_checker.py: assert_blast_radius_safety(tenant_id: str, tenant_metrics: Mapping[str, Any], max_allow...)
+    └── models.py: ShardConfig(shard_id, base_url, max_capacity_qps, is_active)
 ```
 
 ---

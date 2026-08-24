@@ -119,17 +119,14 @@ silence-as-success-metric/
 
 ```tree
 Silence Verification Job Executed
-└── runner.py: run_silence_verification_job(service_id, soak_window_hours)
-    ├── collector.py: capture_silence_baseline(service_id, baseline_window)
-    │   └── models.py: MetricBaseline(p50_ms, p99_ms, error_rate, qps)
-    │
-    ├── shift_detector.py: detect_distribution_shift(baseline, current_metrics)
-    │   └── models.py: ShiftDetectionResult(has_shift, shifted_metrics)
-    │
-    ├── evaluator.py: eval_metric_silence(metric_baseline, shift_detection_result)
-    │   └── models.py: SilenceVerificationResult(is_silent, failed_metric_name)
-    │
-    └── observability/silence_metrics.py: record_silence_telemetry(silence_result)
+├── silence_engine/shift_detector.py: is_metric_shifted(base_val: float, curr_val: float, max_variance_pct: float = ...)
+└── silence_engine/evaluator.py: verify_silence_win_condition(base: MetricBaseline,
+    current_metrics: Mapping[str, Any])
+    └── silence_engine/shift_detector.py: eval_metric_silence(base: MetricBaseline,
+    current_p50: float,
+    current_p9...)
+        ├── models.py: MetricBaseline(service_id, p50_latency_ms, p99_latency_ms, error_rate_pct, active_alert_count)
+        └── models.py: SilenceVerificationResult(service_id, is_silent, latency_shift_detected, error_rate_shift_detected, new_alerts_fired, shifted_metrics, diagnostic_details)
 ```
 
 ---

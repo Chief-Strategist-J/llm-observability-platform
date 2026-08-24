@@ -119,17 +119,10 @@ sequenceDiagram
 
 ```tree
 Decommission Plan Submitted
-└── guard.py: assert_logs_win_without_exception(endpoint_uri, wiki_claim)
-    ├── inspector.py: inspect_access_logs(endpoint_uri, sample_days=30)
-    │   └── models.py: LogVsWikiContext(endpoint_uri, wiki_claim, total_log_hits, callers)
-    │
-    ├── arbitrator.py: arbitrate_logs_vs_wiki(log_vs_wiki_context)
-    │   └── models.py: ArbitrationResult(logs_win, is_wiki_disproven, active_callers)
-    │
-    ├── guard.py: format_arbitration_gate_decision(arbitration_result)
-    │   └── models.py: ArbitrationGateDecision(is_approved, rejection_reason)
-    │
-    └── observability/arbitration_metrics.py: record_arbitration_telemetry(gate_decision)
+└── log_arbitrator_engine/guard.py: assert_logs_win_without_exception(ctx: LogVsWikiContext)
+    └── log_arbitrator_engine/arbitrator.py: arbitrate_logs_vs_wiki(ctx: LogVsWikiContext)
+        ├── models.py: LogVsWikiContext(endpoint_uri, wiki_claim, total_log_hits, empirical_callers, sample_days)
+        └── models.py: ArbitrationResult(endpoint_uri, logs_win, is_wiki_disproven, total_log_hits, active_callers, rejection_reason)
 ```
 
 ---

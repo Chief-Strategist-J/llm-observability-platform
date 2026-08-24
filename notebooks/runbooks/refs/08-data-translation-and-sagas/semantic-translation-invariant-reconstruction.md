@@ -114,17 +114,15 @@ sequenceDiagram
 
 ```tree
 Data Translation Executed
-└── guard.py: assert_invariant_reconstruction_complete(legacy_record, mapping_rules)
-    ├── translator.py: translate_legacy_to_target(legacy_record, mapping_rules)
-    │   └── models.py: TranslatedRecord(target_dict, coercion_applied_count)
-    │
-    ├── saga_rebuilder.py: rebuild_foreign_key_saga_invariant(translated_record)
-    │   └── models.py: InvariantVerification(invariant_name, is_valid)
-    │
-    ├── guard.py: format_translation_gate_decision(translated_record, invariant_verification)
-    │   └── models.py: InvariantReconstructionResult(is_approved, rejection_reason)
-    │
-    └── observability/translation_metrics.py: record_translation_telemetry(reconstruction_result)
+└── translation_engine/guard.py: assert_invariant_reconstruction_complete(legacy_dict: Mapping[str, Any],
+    ctx: TranslationContext,...)
+    ├── translation_engine/translator.py: translate_legacy_to_target(legacy_dict: Mapping[str, Any],
+    ctx: TranslationContext)
+    │   └── translation_engine/translator.py: round_monetary_precision(val: Any, precision: int = 4)
+    └── translation_engine/translator.py: rebuild_foreign_key_saga_invariant(target_dict: Mapping[str, Any],
+    parent_exists: bool)
+        ├── models.py: TranslationContext(legacy_entity_id, legacy_type_name, target_type_name, field_mappings, monetary_precision_places)
+        └── models.py: InvariantReconstructionResult(legacy_entity_id, is_approved, is_invariant_rebuilt, rebuilt_invariants, target_payload, rejection_reason)
 ```
 
 ---

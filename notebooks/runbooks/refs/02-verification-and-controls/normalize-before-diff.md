@@ -121,17 +121,13 @@ sequenceDiagram
 
 ```tree
 Differential Test Executed
-└── pipeline.py: run_normalized_diff_test(legacy_raw, target_raw, rules_store)
-    ├── rules.py: apply_normalization_rules(legacy_raw, rules_store)
-    │   └── models.py: NormalizedPayloadResult(canonical_payload, fields_masked_count)
-    │
-    ├── rules.py: apply_normalization_rules(target_raw, rules_store)
-    │   └── models.py: NormalizedPayloadResult(canonical_payload, fields_masked_count)
-    │
-    ├── diff_comparator.py: compare_normalized_diff(canonical_legacy, canonical_target)
-    │   └── models.py: HighSignalDiffResult(is_matched, real_mismatches_count)
-    │
-    └── observability/normalizer_metrics.py: record_normalizer_telemetry(diff_result)
+├── normalizer_engine/rules.py: apply_action_to_value(val: Any, rule: NormalizationRule)
+├── normalizer_engine/rules.py: apply_normalization_rules(raw_payload: Mapping[str, Any],
+    rules: List[Normalizatio...)
+└── normalizer_engine/diff_comparator.py: compare_normalized_diff(legacy_norm: NormalizedPayloadResult,
+    target_norm: Norma...)
+        ├── models.py: NormalizationRule(field_path, action, param)
+        └── models.py: NormalizedPayloadResult(canonical_payload, fields_masked_count, rule_applied_types)
 ```
 
 ---

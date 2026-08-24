@@ -112,17 +112,11 @@ sequenceDiagram
 
 ```tree
 Deployment Plan Submitted
-└── guard.py: assert_incremental_exposure_cap(exposure_pct, wave_id)
-    ├── calculator.py: eval_blast_radius_containment(exposure_pct, is_wave_based)
-    │   └── models.py: BlastRadiusContext(exposure_pct, is_wave_based, max_allowed_pct)
-    │
-    ├── evaluator.py: evaluate_containment_risk(blast_radius_context)
-    │   └── models.py: RiskContainmentAssessment(is_contained, max_affected_users)
-    │
-    ├── guard.py: format_blast_gate_decision(risk_containment_assessment)
-    │   └── models.py: RiskContainmentResult(is_approved, rejection_reason)
-    │
-    └── observability/blast_metrics.py: record_blast_telemetry(containment_result)
+├── blast_radius_engine/calculator.py: calculate_max_affected_users(total_users: int, exposure_pct: float)
+└── blast_radius_engine/guard.py: assert_incremental_exposure_cap(ctx: BlastRadiusContext)
+    └── blast_radius_engine/calculator.py: eval_blast_radius_containment(ctx: BlastRadiusContext)
+        ├── models.py: BlastRadiusContext(wave_id, exposure_pct, is_wave_based, max_allowed_exposure_pct, total_users_n)
+        └── models.py: RiskContainmentResult(wave_id, is_approved, exposure_pct, max_affected_users, risk_label, rejection_reason)
 ```
 
 ---

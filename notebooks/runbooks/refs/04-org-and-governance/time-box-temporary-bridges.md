@@ -112,17 +112,11 @@ sequenceDiagram
 
 ```tree
 Bridge Provisioning Request Submitted
-└── guard.py: assert_bridge_timeboxed(bridge_id, sunset_date_str)
-    ├── inspector.py: inspect_bridge_sunset_attribute(sunset_date_str)
-    │   └── models.py: BridgeSunsetContext(bridge_id, created_at, sunset_deadline)
-    │
-    ├── evaluator.py: eval_bridge_sunset_compliance(bridge_sunset_context)
-    │   └── models.py: SunsetComplianceResult(is_approved, days_remaining)
-    │
-    ├── guard.py: format_sunset_gate_decision(sunset_compliance_result)
-    │   └── models.py: SunsetGateDecision(is_approved, rejection_reason)
-    │
-    └── observability/sunset_metrics.py: record_sunset_telemetry(gate_decision)
+└── sunset_engine/guard.py: assert_bridge_timeboxed(ctx: BridgeSunsetContext, current_ts: float)
+    └── sunset_engine/evaluator.py: eval_bridge_sunset_compliance(ctx: BridgeSunsetContext,
+    current_ts: float)
+        └── models.py: SunsetComplianceResult(bridge_id, is_approved, days_remaining, is_overdue, rejection_reason)
+            ├── models.py: BridgeSunsetContext(bridge_id, owner_team, created_at_ts, sunset_deadline_ts, max_sla_days)
 ```
 
 ---

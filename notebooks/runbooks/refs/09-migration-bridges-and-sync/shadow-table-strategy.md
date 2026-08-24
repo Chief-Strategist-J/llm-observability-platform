@@ -118,18 +118,11 @@ shadow-table-strategy/
 
 ```tree
 Shadow Migration Initiated
-└── ddl_engine/table_generator.py: build_shadow_table_sql(primary_schema)
-    ├── ddl_engine/trigger_generator.py: build_sync_trigger_sql(primary_name, shadow_name)
-    │   └── storage/db_dispatcher.py: execute_ddl(trigger_sql)
-    │
-    ├── verification/parity_differ.py: verify_table_parity(primary_name, shadow_name)
-    │   └── models.py: ParityResult(primary_row_count, shadow_row_count, checksum_match)
-    │
-    ├── cutover/switcher.py: execute_atomic_table_cutover(primary_name, shadow_name)
-    │   ├── pointer_cell.py: swap_table_pointer(shadow_name)
-    │   └── ddl_engine/switcher.py: execute_rename_sql(primary_name, shadow_name)
-    │
-    └── observability/metrics.py: record_cutover_success(table_name, cutover_time_ms)
+├── ddl_engine/trigger_generator.py: build_sync_trigger_sql(primary_table: str, shadow_table: str, columns: List[str], p...)
+└── cutover/switcher.py: build_atomic_rename_sql(primary_table: str, shadow_table: str)
+    ├── models.py: ColumnConfig(name, data_type, is_nullable, is_primary_key)
+    ├── models.py: TableSchema(name, columns)
+    └── models.py: ParityResult(primary_count, shadow_count, is_checksum_equal, diff_keys)
 ```
 
 ---

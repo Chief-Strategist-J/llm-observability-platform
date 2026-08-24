@@ -123,17 +123,14 @@ precision-rounding-reconciliation/
 
 ```tree
 Financial Reconciliation Initiated
-└── reconciliation_engine/calculator.py: reconcile_monetary_values(legacy_val, new_val, config)
-    ├── rounder.py: bankers_round(legacy_val, precision=2)
-    │   └── models.py: RoundedDecimal(value)
-    │
-    ├── rounder.py: bankers_round(new_val, precision=2)
-    │   └── models.py: RoundedDecimal(value)
-    │
-    ├── calculator.py: calculate_absolute_delta(legacy_decimal, new_decimal)
-    │   └── tolerance.py: eval_tolerance_boundary(delta, config.max_tolerance)
-    │
-    └── observability/financial_metrics.py: record_financial_telemetry(reconciliation_result)
+├── reconciliation_engine/rounder.py: half_up_round(val: Any, scale: int = 2)
+└── reconciliation_engine/tolerance.py: reconcile_monetary_values(legacy_raw: Any,
+    new_raw: Any,
+    scale: int = 2,
+    m...)
+    └── reconciliation_engine/rounder.py: bankers_round(val: Any, scale: int = 2)
+        ├── models.py: FinancialAmount(currency, amount, scale)
+        └── models.py: PrecisionReconciliationResult(legacy_amount, new_amount, absolute_delta, percentage_delta, is_reconciled, tolerance_used, discrepancy_reason)
 ```
 
 ---

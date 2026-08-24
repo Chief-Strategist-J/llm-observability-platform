@@ -129,20 +129,11 @@ synthetic-canary-records/
 
 ```tree
 Canary Probe Scheduled
-└── scheduler.py: run_canary_probe_cycle(canary_config)
-    ├── generator.py: generate_canary_record(canary_id, schema_template)
-    │   └── models.py: CanaryRecord(canary_id, is_synthetic, payload, planted_at)
-    │
-    ├── pipeline_adapter.py: plant_canary_record(canary_record)
-    │   └── pipeline_adapter.py: post_to_ingress_api(payload)
-    │
-    ├── probe.py: verify_canary_parity(canary_id, planted_at, timeout_ms)
-    │   └── models.py: CanaryProbeResult(canary_id, is_healthy, propagation_latency_ms)
-    │
-    ├── sweeper.py: purge_synthetic_canary(canary_id)
-    │   └── pipeline_adapter.py: delete_from_target_store(canary_id)
-    │
-    └── canary_metrics.py: record_canary_telemetry(canary_probe_result)
+├── canary_engine/generator.py: generate_canary_record(canary_prefix: str = "canary",
+    canary_tenant: str = "can...)
+└── canary_engine/probe.py: create_canary_probe_runner(fetch_fn: FetchRecordFn, delete_fn: DeleteRecordFn)
+    └── models.py: CanaryProbeResult(canary_id, is_healthy, propagation_latency_ms, error_message)
+        ├── models.py: CanaryRecord(canary_id, tenant_id, is_synthetic_canary, payload, planted_at)
 ```
 
 ---

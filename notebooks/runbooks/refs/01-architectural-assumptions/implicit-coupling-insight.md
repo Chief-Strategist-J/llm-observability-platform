@@ -124,17 +124,12 @@ implicit-coupling-insight/
 
 ```tree
 Database Table Decoupling Audit Initiated
-└── runner.py: run_coupling_audit_job(table_name, access_logs)
-    ├── auditor.py: audit_implicit_db_coupling(table_name, access_logs)
-    │   └── models.py: SharedTableCouplingContext(table_name, readers, writers)
-    │
-    ├── seam_extractor.py: extract_explicit_api_seams(coupling_context)
-    │   └── models.py: SeamDefinition(owner_service, api_endpoints, event_topics)
-    │
-    ├── guard.py: evaluate_decoupling_readiness(coupling_context, seam_definition)
-    │   └── models.py: CouplingAuditResult(is_ready, coupling_score, seam)
-    │
-    └── observability/coupling_metrics.py: record_coupling_telemetry(coupling_audit_result)
+└── coupling_engine/guard.py: evaluate_decoupling_readiness(ctx: SharedTableCouplingContext)
+    └── coupling_engine/auditor.py: audit_implicit_db_coupling(ctx: SharedTableCouplingContext)
+        └── coupling_engine/auditor.py: calculate_coupling_score(readers: FrozenSet[str], writers: FrozenSet[str], triggers: ...)
+            ├── models.py: SharedTableCouplingContext(table_name, reader_services, writer_services, db_triggers_count, foreign_keys_count)
+            ├── models.py: SeamDefinition(owner_service, proposed_api_routes, proposed_event_topics)
+            └── models.py: CouplingAuditResult(table_name, is_shared_coupling_detected, coupling_score, requires_api_seam, seam)
 ```
 
 ---

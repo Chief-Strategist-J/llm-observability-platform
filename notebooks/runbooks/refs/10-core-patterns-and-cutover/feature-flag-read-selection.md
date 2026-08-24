@@ -124,21 +124,13 @@ feature-flag-read-selection/
 
 ```tree
 Data Read Request Initiated
-└── router.py: process_read_selection_request(context, query)
-    ├── cell.py: get_flag_snapshot(flag_store_cell)
-    │   └── models.py: FlagSnapshot(version, flag_rules)
-    │
-    ├── evaluator.py: eval_feature_flag("read_source_v2", context, flag_snapshot)
-    │   └── models.py: EvaluationResult(is_enabled, matched_rule, variant)
-    │
-    ├── resolver.py: resolve_read_source(evaluation_result)
-    │   └── models.py: ReadSourceDecision(target_source, is_fallback)
-    │
-    ├── data_dispatcher.py: dispatch_read_query(target_source, query)
-    │   ├── [NEW_SERVICE] data_dispatcher.py: query_new_microservice_db(query)
-    │   └── [LEGACY] data_dispatcher.py: query_legacy_monolith_db(query)
-    │
-    └── flag_telemetry.py: record_flag_evaluation_telemetry(flag_key, target_source)
+├── flag_engine/evaluator.py: create_flag_store_cell(initial_rules: Mapping[str, Any])
+├── flag_engine/evaluator.py: get_snapshot()
+├── flag_engine/evaluator.py: update_rules(new_rules: Mapping[str, Any])
+├── flag_engine/evaluator.py: eval_feature_flag(flag_key: str, ctx: FlagContext, rules: Mapping[str, Any])
+│   └── models.py: ReadSourceDecision(target, flag_key, variant, is_fallback)
+└── storage/data_dispatcher.py: create_read_source_dispatcher(legacy_db_fn: QueryDispatcher, new_db_fn: QueryDispatcher)
+    ├── models.py: FlagContext(tenant_id, user_id, environment, attributes)
 ```
 
 ---

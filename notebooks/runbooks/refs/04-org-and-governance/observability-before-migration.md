@@ -116,17 +116,10 @@ sequenceDiagram
 
 ```tree
 Migration Development Proposal Submitted
-└── guard.py: assert_observability_ready(service_id, project_config)
-    ├── inspector.py: inspect_telemetry_setup(service_id)
-    │   └── models.py: ObservabilityContext(service_id, otel_active, prometheus_active, census_active)
-    │
-    ├── auditor.py: eval_pre_migration_telemetry(observability_context)
-    │   └── models.py: ObservabilityReadinessResult(is_ready, coverage_pct)
-    │
-    ├── guard.py: format_obs_gate_decision(readiness_result)
-    │   └── models.py: ObsGateDecision(is_approved, rejection_reason)
-    │
-    └── observability/readiness_metrics.py: record_readiness_telemetry(gate_decision)
+└── obs_readiness_engine/guard.py: assert_observability_ready(ctx: ObservabilityContext)
+    └── obs_readiness_engine/auditor.py: eval_pre_migration_telemetry(ctx: ObservabilityContext)
+        ├── models.py: ObservabilityContext(service_id, otel_tracer_active, prometheus_dashboard_active, discovery_census_active, coverage_pct)
+        └── models.py: ObservabilityReadinessResult(service_id, is_ready, coverage_pct, missing_components, rejection_reason)
 ```
 
 ---

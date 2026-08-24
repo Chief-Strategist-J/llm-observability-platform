@@ -113,17 +113,14 @@ sequenceDiagram
 
 ```tree
 Migration Execution Step Proposed
-└── guard.py: assert_reversibility_guarantee(step_id, step_payload)
-    ├── evaluator.py: eval_execution_undoability(step_payload)
-    │   └── models.py: ReversibilityContext(step_id, is_reversible, reversal_target)
-    │
-    ├── verifier.py: verify_reversal_target_active(step_context)
-    │   └── models.py: ReversalTargetStatus(is_active, reversal_latency_ms)
-    │
-    ├── guard.py: format_reversibility_decision(reversibility_context, target_status)
-    │   └── models.py: UndoableStepResult(is_approved, rejection_reason)
-    │
-    └── observability/reversibility_metrics.py: record_reversibility_telemetry(step_result)
+└── reversibility_engine/guard.py: assert_reversibility_guarantee(ctx: ReversibilityContext,
+    target_active: bool,
+    late...)
+    └── reversibility_engine/evaluator.py: eval_execution_undoability(ctx: ReversibilityContext,
+    target_active: bool,
+    meas...)
+        ├── models.py: ReversibilityContext(step_id, description, is_reversible, reversal_target_type, max_reversal_latency_ms)
+        └── models.py: UndoableStepResult(step_id, is_approved, reversal_target_verified, reversal_latency_ms, rejection_reason)
 ```
 
 ---

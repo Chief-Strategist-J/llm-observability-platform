@@ -126,17 +126,16 @@ referential-integrity-saga/
 
 ```tree
 Saga Transaction Initiated
-└── orchestrator.py: execute_referential_saga(saga_ctx, child_payload)
-    ├── verifier.py: verify_parent_exists(saga_ctx.parent_service, saga_ctx.parent_id)
-    │   └── models.py: ParentVerificationResult(exists, parent_id)
-    │
-    ├── service_adapters.py: create_child_record(saga_ctx.child_service, child_payload)
-    │   └── models.py: ChildCreationResult(success, child_id)
-    │
-    ├── [If Failure] compensator.py: dispatch_compensating_action(saga_ctx, step_failure)
-    │   └── service_adapters.py: delete_child_record(child_id)
-    │
-    └── observability/metrics.py: record_saga_telemetry(saga_result)
+├── saga_engine/verifier.py: rollback_orphaned_child(delete_child_fn: ChildDeleteFn,
+    child_service: str,
+    ...)
+└── saga_engine/orchestrator.py: create_referential_saga_runner(fetch_parent_fn: ParentFetchFn,
+    create_child_fn: ChildCr...)
+    ├── saga_engine/verifier.py: verify_parent_exists(fetch_parent_fn: ParentFetchFn,
+    parent_service: str,
+   ...)
+    └── models.py: SagaStepResult(saga_id, status, current_step, error_message)
+        ├── models.py: SagaContext(saga_id, parent_service, parent_id, child_service, child_id, tenant_id)
 ```
 
 ---

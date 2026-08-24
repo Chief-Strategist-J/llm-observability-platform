@@ -123,18 +123,10 @@ cdc-based-synchronization/
 
 ```tree
 CDC Stream Message Received
-└── stream_handler.py: process_cdc_record(raw_kafka_message)
-    ├── parser.py: parse_cdc_event(raw_kafka_message.value)
-    │   └── models.py: CdcEnvelope(op, before, after, offset_pos)
-    │
-    ├── stream_handler.py: route_cdc_operation(cdc_envelope)
-    │   ├── [Op: "c" / "u"] target_sink.py: execute_target_upsert(after_state)
-    │   └── [Op: "d"] target_sink.py: execute_target_delete(before_state)
-    │
-    ├── offset_tracker.py: update_watermark_offset(cdc_envelope.offset_pos)
-    │   └── models.py: OffsetPosition(topic, partition, offset_lsn)
-    │
-    └── lag_monitor.py: record_cdc_replication_lag(event_timestamp, current_time)
+├── cdc_engine/parser.py: parse_cdc_event(raw_json: Mapping[str, Any])
+└── storage/target_sink.py: create_target_sink_dispatcher(upsert_fn: SinkDispatcher, delete_fn: SinkDispatcher)
+    ├── models.py: OffsetPosition(topic, partition, offset_lsn, timestamp_ms)
+    └── models.py: CdcEnvelope(op, source_table, before_state, after_state, offset_pos)
 ```
 
 ---

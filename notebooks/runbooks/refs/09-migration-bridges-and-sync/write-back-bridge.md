@@ -129,18 +129,15 @@ write-back-bridge/
 
 ```tree
 Primary Write Request Received
-└── runner.py: execute_primary_and_bridge(context, payload)
-    ├── db_dispatchers.py: execute_primary_write(payload)
-    │   └── models.py: PrimaryResult(entity_id, status_code)
-    │
-    ├── mapper.py: map_new_to_legacy_schema(payload, mapping_config)
-    │   └── models.py: WriteBackPayload(legacy_table, legacy_record)
-    │
-    ├── queue_worker.py: enqueue_write_back(write_back_payload)
-    │   └── queue_worker.py: process_queue_item_async(item)
-    │       └── db_dispatchers.py: execute_legacy_write_back(legacy_record)
-    │
-    └── bridge_metrics.py: record_write_back_telemetry(entity_id, queue_lag_ms)
+├── bridge_engine/mapper.py: map_new_to_legacy_schema(new_payload: Mapping[str, Any],
+    entity_type: str,
+    fi...)
+├── bridge_engine/queue_worker.py: create_write_back_queue_worker(legacy_write_fn: LegacyWriteFn, max_queue_size: int = 1000)
+├── bridge_engine/queue_worker.py: enqueue_item(payload: WriteBackPayload)
+└── bridge_engine/queue_worker.py: start_worker()
+    ├── models.py: BridgeContext(entity_type, entity_id, tenant_id)
+    ├── models.py: WriteBackPayload(entity_id, legacy_table, data_fields, operation)
+    └── models.py: BridgeResult(primary_status, entity_id, is_write_back_enqueued)
 ```
 
 ---

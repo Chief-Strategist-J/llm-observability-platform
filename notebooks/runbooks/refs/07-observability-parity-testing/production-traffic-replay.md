@@ -131,20 +131,13 @@ production-traffic-replay/
 
 ```tree
 Traffic Replay Session Initiated
-└── runner.py: run_traffic_replay_session(session_id, speed_multiplier=1.0)
-    ├── streamer.py: stream_recorded_traffic(session_id)
-    │   └── models.py: RecordedRequest(method, path, headers, body, timestamp)
-    │
-    ├── pacer.py: calculate_replay_delay(previous_ts, current_ts, speed_multiplier)
-    │   └── pacer.py: apply_pacing_delay(delay_seconds)
-    │
-    ├── dispatcher.py: dispatch_replay_request(staging_base_url, recorded_request)
-    │   └── models.py: ReplayResponse(status_code, body, headers)
-    │
-    ├── response_differ.py: diff_replay_response(recorded_request.expected_response, replay_response)
-    │   └── models.py: ReplayResult(is_matched, latency_delta_ms, diff_summary)
-    │
-    └── observability/metrics.py: record_replay_telemetry(replay_result)
+├── replay_engine/pacer.py: calculate_replay_delay(prev_timestamp: float,
+    current_timestamp: float,
+    spe...)
+├── replay_engine/pacer.py: apply_pacing_delay(delay_seconds: float)
+└── replay_engine/dispatcher.py: create_replay_dispatcher(staging_base_url: str, http_client: HttpClientFn)
+    ├── models.py: RecordedRequest(request_id, method, path, headers, body, timestamp, expected_status_code, expected_response_body)
+    └── models.py: ReplayResult(request_id, is_matched, status_code_matched, recorded_latency_ms, replayed_latency_ms, diff_summary)
 ```
 
 ---

@@ -120,17 +120,15 @@ sequenceDiagram
 
 ```tree
 Reconciliation Job Triggered
-└── evaluator.py: run_hybrid_reconciliation(table_name, mode="TIER1_SAMPLE")
-    ├── sampler.py: stream_sample_checksums(table_name, sample_rate)
-    │   └── models.py: BlockChecksumResult(pk_range, source_hash, target_hash)
-    │
-    ├── [Tier 2 Scheduled] sweeper.py: run_periodic_full_sweep(table_name, iops_cap)
-    │   └── models.py: FullSweepChunkResult(scanned_rows, mismatch_rows)
-    │
-    ├── evaluator.py: eval_reconciliation_parity(checksum_result, sweep_result)
-    │   └── models.py: ReconciliationSweepResult(is_matched, total_mismatches)
-    │
-    └── observability/sweep_metrics.py: record_sweep_telemetry(sweep_result)
+├── sweep_engine/sampler.py: compute_row_hash(row_dict: Mapping[str, Any])
+├── sweep_engine/sampler.py: stream_sample_checksums(ctx: SweepContext,
+    src_rows: List[Mapping[str, Any]],
+  ...)
+└── sweep_engine/sweeper.py: run_periodic_full_sweep(ctx: SweepContext,
+    src_chunk: List[Mapping[str, Any]],
+ ...)
+     ├── models.py: SweepContext(table_name, tier, sample_rate, iops_limit, pk_start, pk_end)
+     └── models.py: ReconciliationSweepResult(table_name, tier, is_matched, rows_scanned, mismatched_rows_count, mismatched_pk_list, duration_ms)
 ```
 
 ---

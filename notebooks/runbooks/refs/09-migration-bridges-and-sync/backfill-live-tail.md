@@ -122,19 +122,15 @@ backfill-live-tail/
 
 ```tree
 Pipeline Execution Initiated
-└── runner.py: run_backfill_live_tail_pipeline(config)
-    ├── live_tail/tail_consumer.py: start_live_tail(topic_name)
-    │   └── deduplication/dedup_cell.py: buffer_live_event(event)
-    │
-    ├── backfill/scanner.py: get_watermark_boundary(source_db)
-    │   └── models.py: WatermarkState(watermark_id, start_time)
-    │
-    ├── backfill/chunk_generator.py: generate_backfill_chunks(start_id, watermark_id, chunk_size=1000)
-    │   ├── scanner.py: fetch_historical_chunk(start, end)
-    │   └── deduplication/dedup_cell.py: deduplicate_and_merge(historical_records)
-    │
-    ├── storage/target_dispatcher.py: dispatch_batch_upsert(merged_records)
-    └── observability/progress.py: record_pipeline_progress(migrated_count, watermark_id)
+├── backfill/chunk_generator.py: generate_backfill_chunks(start_id: int,
+    watermark_id: int,
+    chunk_size: int = ...)
+├── deduplication/dedup_cell.py: create_dedup_cell()
+├── deduplication/dedup_cell.py: is_seen(entity_id: Any)
+├── deduplication/dedup_cell.py: mark_seen(entity_id: Any)
+└── deduplication/dedup_cell.py: filter_unseen(records: List[Mapping[str, Any]], pk_col: str)
+    ├── models.py: WatermarkState(watermark_id, watermark_timestamp, is_backfill_complete)
+    └── models.py: BackfillChunk(chunk_index, start_id, end_id, record_count)
 ```
 
 ---

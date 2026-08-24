@@ -112,17 +112,13 @@ sequenceDiagram
 
 ```tree
 Cutover Readiness Check Initiated
-└── guard.py: assert_bridge_baking_complete(bridge_id, required_bake_days)
-    ├── evaluator.py: eval_bridge_baking_status(bridge_id, required_bake_days)
-    │   └── models.py: BridgeBakingContext(bridge_id, start_ts, current_bake_days)
-    │
-    ├── canary.py: verify_synthetic_canary_pipeline(bridge_id)
-    │   └── models.py: CanaryVerificationStatus(is_matched, lag_ms)
-    │
-    ├── guard.py: format_baking_gate_decision(baking_context, canary_status)
-    │   └── models.py: BridgeBakingResult(is_baked, is_canary_ok)
-    │
-    └── observability/baking_metrics.py: record_baking_telemetry(baking_result)
+├── bridge_baking_engine/evaluator.py: generate_idempotency_key(payload: Mapping[str, Any], corr_id: str)
+└── bridge_baking_engine/guard.py: assert_bridge_baking_complete(ctx: BridgeBakingContext,
+    is_canary_ok: bool)
+    └── bridge_baking_engine/evaluator.py: eval_bridge_baking_status(ctx: BridgeBakingContext,
+    is_canary_ok: bool)
+        ├── models.py: BridgeBakingContext(bridge_id, started_at_ts, current_bake_days, min_required_bake_days, replication_lag_ms, is_idempotent)
+        └── models.py: BridgeBakingResult(bridge_id, is_baked, current_bake_days, is_canary_matched, replication_lag_ms, rejection_reason)
 ```
 
 ---

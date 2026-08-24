@@ -131,19 +131,16 @@ circuit-breaker-cutover-fallback/
 
 ```tree
 Target Service Request Initiated
-└── router.py: process_circuit_guarded_request(primary_fn, fallback_fn, payload)
-    ├── state_cell.py: get_circuit_snapshot(state_cell)
-    │   └── models.py: CircuitSnapshot(state, failure_count, last_failure_time)
-    │
-    ├── evaluator.py: eval_circuit_health(snapshot, cooldown_seconds=30.0)
-    │   └── models.py: HealthEvaluation(can_execute_primary, is_half_open)
-    │
-    ├── decorator.py: with_circuit_breaker(primary_fn, fallback_fn, state_cell)
-    │   ├── [Primary Path] backend_dispatchers.py: dispatch_primary_service(payload)
-    │   └── [Fallback Path] backend_dispatchers.py: dispatch_legacy_fallback(payload)
-    │
-    ├── evaluator.py: record_execution_result(state_cell, is_success, status_code)
-    └── breaker_metrics.py: record_circuit_telemetry(service_id, circuit_state)
+├── breaker_engine/state_cell.py: create_circuit_state_cell(failure_threshold: int = 5, cooldown_seconds: float = 30.0)
+├── breaker_engine/state_cell.py: record_success()
+├── breaker_engine/state_cell.py: record_failure()
+├── breaker_engine/decorator.py: with_circuit_breaker(primary_fn: ServiceDispatcher,
+    fallback_fn: ServiceDispa...)
+└── breaker_engine/decorator.py: circuit_guarded_dispatch(endpoint: str, payload: Mapping[str, Any])
+    ├── breaker_engine/state_cell.py: get_snapshot()
+    │   └── models.py: CircuitSnapshot(state, failure_count, last_failure_time, success_count)
+    └── breaker_engine/state_cell.py: check_cooldown()
+        └── models.py: BreakerResult(status_code, body, headers, executed_target, circuit_state_at_execution)
 ```
 
 ---

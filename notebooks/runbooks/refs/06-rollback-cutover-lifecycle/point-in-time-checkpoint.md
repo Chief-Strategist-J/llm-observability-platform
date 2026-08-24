@@ -126,18 +126,17 @@ point-in-time-checkpoint/
 
 ```tree
 Cutover Sequence Initiated
-└── trigger.py: create_pre_cutover_checkpoint(cutover_id, db_configs)
-    ├── snapshot_adapter.py: quiesce_and_read_watermark(db_conn)
-    │   └── models.py: DBWatermark(lsn_offset, timestamp)
-    │
-    ├── snapshot_adapter.py: trigger_storage_snapshot(cutover_id, watermark)
-    │   └── models.py: SnapshotMetadata(snapshot_uri, created_at)
-    │
-    ├── verifier.py: verify_checkpoint_integrity(snapshot_metadata)
-    │   └── verifier.py: compute_snapshot_checksum(snapshot_uri)
-    │       └── models.py: CheckpointResult(is_valid, checksum, watermark)
-    │
-    └── observability/metrics.py: record_checkpoint_telemetry(checkpoint_result)
+├── checkpoint_engine/verifier.py: compute_checkpoint_checksum(cutover_id: str, src_uri: str, tgt_uri: str)
+├── checkpoint_engine/verifier.py: verify_checkpoint_integrity(ctx: CheckpointContext,
+    src_uri: str,
+    tgt_uri: str,
+...)
+│   └── models.py: CheckpointResult(cutover_id, is_valid, source_snapshot_uri, target_snapshot_uri, checksum, ...)
+└── checkpoint_engine/trigger.py: create_pre_cutover_checkpoint(cutover_id: str,
+    src_watermark: DBWatermark,
+    tgt_wat...)
+    └── models.py: CheckpointContext(cutover_id, source_watermark, target_watermark, created_at)
+        ├── models.py: DBWatermark(db_name, lsn_offset, timestamp)
 ```
 
 ---

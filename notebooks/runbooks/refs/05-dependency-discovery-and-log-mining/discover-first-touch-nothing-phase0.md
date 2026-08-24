@@ -121,20 +121,11 @@ sequenceDiagram
 
 ```tree
 Phase 0 Discovery Initiated
-└── guard.py: assert_phase0_discovery_complete(service_id, wiki_claims)
-    ├── miner.py: mine_passive_ingress_logs(service_id, window_days=30)
-    │   └── models.py: Layer1LogCensus(endpoint_uri, hit_count, empirical_callers)
-    │
-    ├── ast_scanner.py: extract_static_ast_dependencies(service_id)
-    │   └── models.py: Layer2ASTCensus(repo_name, static_callers)
-    │
-    ├── tripwire.py: audit_access_tripwire_canaries(service_id)
-    │   └── models.py: Layer3TripwireCensus(is_canary_silent)
-    │
-    ├── guard.py: format_discovery_census_decision(layer1, layer2, layer3)
-    │   └── models.py: DiscoveryCensusResult(is_complete, empirical_callers)
-    │
-    └── observability/discovery_metrics.py: record_phase0_telemetry(census_result)
+├── phase0_engine/miner.py: mine_passive_ingress_logs(log_records: list)
+└── phase0_engine/guard.py: assert_phase0_discovery_complete(ctx: Phase0DiscoveryContext)
+    └── phase0_engine/miner.py: eval_phase0_discovery_census(ctx: Phase0DiscoveryContext)
+        ├── models.py: Phase0DiscoveryContext(service_id, sample_window_days, total_log_hits, empirical_callers, static_ast_callers, wiki_claimed_callers)
+        └── models.py: DiscoveryCensusResult(service_id, is_complete, total_empirical_callers_count, overridden_wiki_claims, discovered_callers, rejection_reason)
 ```
 
 ---

@@ -124,21 +124,13 @@ branch-by-abstraction/
 
 ```tree
 Consumer Call Initiated
-└── core_seam.py: invoke_seam(seam_name, context, payload)
-    ├── registry.py: lookup_seam_cell(seam_name)
-    │   └── models.py: SeamCell(active_pointer, legacy_fn, new_fn, config)
-    │
-    ├── evaluator.py: eval_seam_toggle(context, seam_cell.config)
-    │   └── models.py: SeamTarget(LEGACY | NEW | SHADOW)
-    │
-    ├── seam_resilience.py: with_seam_resilience(target_fn, seam_name)
-    │   ├── tracer.py: start_as_current_span("Seam Execution: {seam_name}")
-    │   └── retry.py: execute_with_fallback(target_fn, legacy_fallback_fn)
-    │       │
-    │       ├── [Target: NEW] new_supplier.py: execute_new_subsystem(payload)
-    │       └── [Target: LEGACY] legacy_supplier.py: execute_legacy_subsystem(payload)
-    │
-    └── middleware.py: record_seam_telemetry(span, execution_time_ms)
+├── seams/core_seam.py: create_atomic_seam_cell(legacy_fn: SeamSupplier, new_fn: SeamSupplier, initial_targe...)
+├── seams/core_seam.py: get_target()
+├── seams/core_seam.py: set_target(new_target: SeamTarget)
+├── seams/core_seam.py: invoke(ctx: SeamContext, payload: Mapping[str, Any])
+└── decorators/seam_resilience.py: with_seam_fallback(primary_fn: SeamSupplier, fallback_fn: SeamSupplier)
+    ├── models.py: SeamContext(tenant_id, feature_key, user_id, metadata)
+    └── models.py: SeamResult(success, data, executed_target, execution_time_ms)
 ```
 
 ---

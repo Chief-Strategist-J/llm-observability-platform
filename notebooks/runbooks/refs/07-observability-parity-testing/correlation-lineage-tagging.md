@@ -119,17 +119,13 @@ correlation-lineage-tagging/
 
 ```tree
 HTTP Request or CDC Event Ingestion
-└── extractor.py: extract_correlation_context(headers, metadata)
-    ├── extractor.py: resolve_trace_id(headers)
-    │   └── models.py: LineageContext(trace_id, parent_span_id, wave_tag, tenant_id)
-    │
-    ├── propagator.py: inject_lineage_headers(headers, lineage_context)
-    │   └── models.py: PropagatedHeaders(headers_dict)
-    │
-    ├── sanitizer.py: sanitize_telemetry_tags(lineage_context)
-    │   └── models.py: LineageTag(key, value)
-    │
-    └── trace_sink.py: emit_lineage_span(span_name, lineage_context)
+├── lineage_engine/extractor.py: extract_correlation_context(headers: Mapping[str, str],
+    default_wave: str = "wave_1"...)
+│   └── lineage_engine/extractor.py: resolve_trace_id(headers: Mapping[str, str])
+└── lineage_engine/propagator.py: inject_lineage_headers(existing_headers: Mapping[str, str],
+    ctx: LineageContext)
+        ├── models.py: LineageContext(trace_id, parent_span_id, wave_tag, tenant_id, depth, created_at)
+        └── models.py: LineageTag(key, value)
 ```
 
 ---

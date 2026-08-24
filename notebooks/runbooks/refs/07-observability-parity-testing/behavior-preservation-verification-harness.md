@@ -118,17 +118,13 @@ sequenceDiagram
 
 ```tree
 Differential Test Executed
-└── guard.py: assert_behavior_preservation(legacy_raw, target_raw)
-    ├── normalizer.py: normalize_expected_noise(raw_payload)
-    │   └── models.py: CanonicalPayload(clean_dict, noise_stripped_count)
-    │
-    ├── comparator.py: verify_behavior_preservation(canonical_legacy, canonical_target)
-    │   └── models.py: VerificationContext(legacy_clean, target_clean)
-    │
-    ├── guard.py: format_verification_gate_decision(verification_context)
-    │   └── models.py: BehaviorPreservationResult(is_matched, real_diffs)
-    │
-    └── observability/verification_metrics.py: record_verification_telemetry(preservation_result)
+└── verification_engine/guard.py: assert_behavior_preservation(legacy_raw: Mapping[str, Any],
+    target_raw: Mapping[str, ...)
+    └── verification_engine/comparator.py: verify_behavior_preservation(legacy_raw: Mapping[str, Any],
+    target_raw: Mapping[str, ...)
+        └── verification_engine/comparator.py: normalize_expected_noise(raw_dict: Mapping[str, Any])
+            ├── models.py: VerificationContext(legacy_canonical, target_canonical, noise_stripped_count)
+            └── models.py: BehaviorPreservationResult(is_matched, noise_stripped_count, real_mismatches_count, real_mismatches, rejection_reason)
 ```
 
 ---
