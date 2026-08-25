@@ -35,7 +35,7 @@ services:
       - llmobs-network
 
   alloydb:
-    image: google/alloydb-omni:latest
+    image: google/alloydbomni:15
     container_name: forecast-alloydb-test
     environment:
       POSTGRES_USER: postgres

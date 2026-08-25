@@ -32,7 +32,7 @@ services:
     restart: unless-stopped
 
   alloydb:
-    image: google/alloydb-omni:latest
+    image: google/alloydbomni:15
     container_name: toxicity-alloydb
     environment:
       ALLOYDB_USER: postgres

@@ -36,7 +36,7 @@ services:
       - llmobs-network
 
   alloydb:
-    image: google/alloydb-omni:latest
+    image: google/alloydbomni:15
     container_name: slo-alloydb
     environment:
       POSTGRES_USER: postgres

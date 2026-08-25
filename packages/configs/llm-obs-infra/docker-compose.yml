@@ -201,7 +201,7 @@ services:
       - llmobs-otel-collector
 
   llmobs-alloydb:
-    image: google/alloydb-omni:latest
+    image: google/alloydbomni:15
     container_name: llmobs-alloydb-db
     ports:
       - "${PORT_ALLOYDB:-31420}:5432"
