@@ -51,18 +51,22 @@ This runbook enforces a **100% Pure Functional Programming (FP)** approach:
 
 ## 2. High-Level Design (HLD)
 
+The High-Level Design (HLD) establishes the architecture for continuous out-of-band dependency discovery from raw infrastructure log streams. The system ingests raw database query logs and HTTP gateway access logs, processing them through a pure functional pipeline to produce an active caller dependency map without imposing latency on live production requests.
+
+### 2.1 End-to-End High-Level System Architecture
+
 ```mermaid
 flowchart TD
-    subgraph Phase1["Phase 1: Infrastructure Log Ingestion"]
-        DBQueryLogs["Database Query Logs\n(PostgreSQL / AlloyDB / MySQL Logs)"]
-        HTTPAccessLogs["Gateway Access Logs\n(NGINX / Traefik / Envoy Access Logs)"]
+    subgraph RawLogSources["Phase 1: Raw Infrastructure Log Sources"]
+        DBQueryLogs["Database Query Logs\n(PostgreSQL log_statement='all' / MySQL / AlloyDB)"]
+        HTTPAccessLogs["Gateway Access Logs\n(NGINX / Traefik / Envoy / gRPC Access Logs)"]
     end
 
-    subgraph Phase2["Phase 2: Pure Functional Mining & Extraction Engine"]
-        LogStreamer["stream_log_chunks\n(Pure Log Chunk Reader)"]
-        LogParser["parse_log_entry\n(Regex Log Parser)"]
-        SQLExtractor["extract_sql_table_names\n(SQL AST / Regex Table Extractor)"]
-        CallerAggregator["aggregate_caller_dependencies\n(Pure Dependency Map Builder)"]
+    subgraph MiningPipeline["Phase 2: Pure Functional Mining & Extraction Engine"]
+        LogStreamer["1. Stream Log Chunks\n(stream_log_file_lines - Generator)"]
+        LogParser["2. Ingest, Parse & Sanitize\n(parse_access_log_line & mask_ip_to_subnet)"]
+        SQLExtractor["3. SQL AST & Target Extractor\n(extract_sql_table_names & strip_sql_literals)"]
+        CallerAggregator["4. State Closure Aggregator\n(create_dependency_aggregator closure)"]
 
         DBQueryLogs --> LogStreamer
         HTTPAccessLogs --> LogStreamer
@@ -71,14 +75,25 @@ flowchart TD
         SQLExtractor --> CallerAggregator
     end
 
-    subgraph Phase3["Phase 3: Active Dependency Storage & Telemetry"]
-        DependencyStore["Active Caller Dependency Map\n(Mapped Callers & Access Frequencies)"]
-        DiscoveryDashboard["Layer 1 Discovery Dashboard"]
+    subgraph StorageObservability["Phase 3: Persistence & Discovery Telemetry"]
+        DependencyStore["Active Caller Dependency Store\n(PostgreSQL / Dependency Map Repository)"]
+        MetricsCollector["Prometheus Telemetry Collector\n(compute_discovery_coverage_rate)"]
+        DiscoveryDashboard["Layer 1 Discovery Dashboard\n(Grafana / Active Caller Dependency Topology)"]
 
         CallerAggregator --> DependencyStore
+        CallerAggregator --> MetricsCollector
         DependencyStore --> DiscoveryDashboard
+        MetricsCollector --> DiscoveryDashboard
     end
 ```
+
+### 2.2 Core HLD Subsystem Responsibilities
+
+| Subsystem Phase | Primary Responsibility | Data Artifact Input | Data Artifact Output |
+|---|---|---|---|
+| **Phase 1: Infrastructure Ingestion** | Ingest out-of-band raw query & gateway access logs asynchronously | Raw log files (`pg_query.log`, `access.log`) | Raw log streams & file line chunks |
+| **Phase 2: Mining & Extraction Engine** | Parse log lines, mask client IPs, strip SQL literals, extract targets & aggregate | Raw log chunks & mining rule configs | `LogEntry` & `CallerDependencyMap` records |
+| **Phase 3: Persistence & Telemetry** | Persist active dependency maps and emit real-time discovery coverage metrics | `CallerDependencyMap` tuples | Active Dependency DB & Prometheus metrics |
 
 ---
 
