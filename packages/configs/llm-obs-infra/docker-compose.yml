@@ -1,6 +1,6 @@
 services:
   llmobs-traefik:
-    image: traefik:v2.10
+    image: traefik:v3.7
     container_name: llmobs-traefik-gateway
     command:
       - "--api.insecure=true"
@@ -86,6 +86,45 @@ services:
       timeout: 3s
       retries: 5
 
+  llmobs-redpanda:
+    image: redpandadata/redpanda:latest
+    container_name: llmobs-redpanda-broker
+    command:
+      - redpanda
+      - start
+      - --smp=1
+      - --memory=512M
+      - --overprovisioned
+      - --kafka-addr=PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr=PLAINTEXT://redpanda:9092
+    ports:
+      - "${PORT_REDPANDA:-31422}:9092"
+    networks:
+      - llmobs-network
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  llmobs-clickhouse:
+    image: clickhouse/clickhouse-server:24.8-alpine
+    container_name: llmobs-clickhouse-analytics
+    ports:
+      - "${PORT_CLICKHOUSE_HTTP:-8123}:8123"
+      - "${PORT_CLICKHOUSE_NATIVE:-9000}:9000"
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-llm_telemetry_analytics}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
+    networks:
+      - llmobs-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   llmobs-tempo:
     image: grafana/tempo:latest
     container_name: llmobs-tempo-tracing
@@ -164,9 +203,9 @@ services:
     ports:
       - "${PORT_ALLOYDB:-31420}:5432"
     environment:
-      - POSTGRES_USER=${ALLOYDB_USER:-admin}
-      - POSTGRES_PASSWORD=${ALLOYDB_PASSWORD:-password}
-      - POSTGRES_DB=${ALLOYDB_DB:-llm_observability}
+      - ALLOYDB_USER=${ALLOYDB_USER:-admin}
+      - ALLOYDB_PASSWORD=${ALLOYDB_PASSWORD:-password}
+      - ALLOYDB_DB=${ALLOYDB_DB:-llm_observability}
     volumes:
       - alloydb_data:/var/lib/postgresql/data
     networks:
@@ -175,6 +214,29 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${ALLOYDB_USER:-admin} -d ${ALLOYDB_DB:-llm_observability}"]
       interval: 5s
       timeout: 3s
+      retries: 5
+
+  llmobs-temporal:
+    image: temporalio/auto-setup:1.24.2
+    container_name: llmobs-temporal-engine
+    ports:
+      - "7233:7233"
+      - "${PORT_TEMPORAL_UI:-8088}:8080"
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=${ALLOYDB_USER:-admin}
+      - POSTGRES_PWD=${ALLOYDB_PASSWORD:-password}
+      - POSTGRES_SEEDS=llmobs-alloydb
+    depends_on:
+      llmobs-alloydb:
+        condition: service_healthy
+    networks:
+      - llmobs-network
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 7233 || exit 0"]
+      interval: 10s
+      timeout: 5s
       retries: 5
 
 networks:
