@@ -11,7 +11,7 @@
 
 ## 1. Executive Summary & Core Architectural Principle
 
-Platform infrastructure is **neither frontend-specific nor backend-specific**—it is a universal platform contract. 
+Platform infrastructure is **neither frontend-specific nor backend-specific**—it is a universal platform contract located centrally at `packages/configs/llm-obs-infra`. 
 
 To prevent data siloing, port collisions, memory waste, and broken event streaming, **all shared infrastructure daemons (Kafka message brokers, Redis caches, OpenTelemetry Collectors, Tempo tracing engines, PostgreSQL databases, ClickHouse analytics stores, Traefik gateways, and Grafana visualizers) belong to a single Universal Platform Infrastructure Network (`llmobs-network`)**.
 
@@ -21,7 +21,7 @@ Individual microservice packages across ALL languages (`packages/{lang}/{package
 
 ## 2. Standardized Service Naming & Port Registry (`llmobs-*`)
 
-The central shared infrastructure stack is orchestrated on `llmobs-network` using standardized `llmobs-*` service names:
+The central shared infrastructure stack is orchestrated via `packages/configs/llm-obs-infra/docker-compose.yml` on `llmobs-network` using standardized `llmobs-*` service names:
 
 | Service Name | Container Name | Host Port Binding | Internal Network Endpoint | Core Service Purpose |
 |---|---|---|---|---|

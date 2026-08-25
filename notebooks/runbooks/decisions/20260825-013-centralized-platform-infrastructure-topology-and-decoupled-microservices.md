@@ -33,11 +33,11 @@ This decentralized infrastructure topology introduced severe architectural anti-
 
 We adopt a **Single Central Shared Platform Infrastructure Architecture**:
 
-1. **Single Root Platform Infrastructure (`docker-compose.yml` / `deploy/infra/`)**:
-   - **Kafka / Redpanda Broker** (`redpanda:9092` / host `31414`): Single message bus serving topic `llm.spans.raw` and DLQs for all services.
-   - **Shared Redis Cache** (`redis:6379`): Single key-value store for API key TTL caching, rate limiting, and real-time micro-USD cost ledgers.
-   - **OpenTelemetry Collector & Tempo** (`otel-collector:4317` / `tempo:31417`): Central distributed tracing and metric collection pipeline.
-   - **PostgreSQL + pgvector & ClickHouse** (`postgres:5432` / `clickhouse:8123`): Shared analytics DB servers housing partitioned logical schemas (`llm_spans`, `auth_ledger`).
+1. **Single Central Platform Infrastructure Package (`packages/configs/llm-obs-infra/docker-compose.yml`)**:
+   - **Kafka / Redpanda Broker** (`llmobs-kafka:9092` / host `31414`): Single message bus serving topic `llm.spans.raw` and DLQs for all services.
+   - **Shared Redis Cache** (`llmobs-redis:6379`): Single key-value store for API key TTL caching, rate limiting, and real-time micro-USD cost ledgers.
+   - **OpenTelemetry Collector & Tempo** (`llmobs-otel-collector:4318` / `llmobs-tempo:3200`): Central distributed tracing and metric collection pipeline.
+   - **PostgreSQL + pgvector & ClickHouse** (`llmobs-postgres:5432` / `llmobs-clickhouse:8123`): Shared analytics DB servers housing partitioned logical schemas (`llm_spans`, `auth_ledger`).
 
 2. **Application Microservices (`packages/python/*`, `packages/node/*`)**:
    - Contain **only** application code and worker logic containers.

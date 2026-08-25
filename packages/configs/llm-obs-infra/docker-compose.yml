@@ -1,7 +1,7 @@
 services:
-  traefik:
+  llmobs-traefik:
     image: traefik:v2.10
-    container_name: frontend-traefik-gateway
+    container_name: llmobs-traefik-gateway
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
@@ -39,9 +39,9 @@ services:
       - "traefik.http.routers.dashboard.tls=true"
       - "traefik.http.routers.dashboard.middlewares=security-headers@file,rate-limit@file"
 
-  redis:
+  llmobs-redis:
     image: redis:7-alpine
-    container_name: frontend-redis
+    container_name: llmobs-redis-ledger
     command: >
       redis-server
       --requirepass ${REDIS_PASSWORD:-llmobs_redis_s3cret_2024}
@@ -60,9 +60,9 @@ services:
       timeout: 3s
       retries: 5
 
-  kafka:
+  llmobs-kafka:
     image: apache/kafka:latest
-    container_name: frontend-kafka
+    container_name: llmobs-kafka-broker
     ports:
       - "${PORT_KAFKA:-31414}:9092"
     environment:
@@ -86,9 +86,9 @@ services:
       timeout: 3s
       retries: 5
 
-  tempo:
+  llmobs-tempo:
     image: grafana/tempo:latest
-    container_name: frontend-tempo
+    container_name: llmobs-tempo-tracing
     command: ["-config.file=/etc/tempo/tempo-config.yaml"]
     volumes:
       - ./config/tempo/tempo-config.yaml:/etc/tempo/tempo-config.yaml:ro
@@ -106,9 +106,9 @@ services:
       - "traefik.http.routers.tempo.middlewares=security-headers@file,rate-limit@file"
       - "traefik.http.services.tempo.loadbalancer.server.port=3200"
 
-  otel-collector:
+  llmobs-otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
-    container_name: frontend-otel-collector
+    container_name: llmobs-otel-collector
     command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
       - ./config/otel-collector/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
@@ -125,11 +125,11 @@ services:
       - "traefik.http.routers.otel.middlewares=security-headers@file,rate-limit-ingest@file,payload-limit@file"
       - "traefik.http.services.otel.loadbalancer.server.port=4318"
     depends_on:
-      - tempo
+      - llmobs-tempo
 
-  grafana:
+  llmobs-grafana:
     image: grafana/grafana:latest
-    container_name: frontend-grafana
+    container_name: llmobs-grafana-portal
     ports:
       - "${PORT_GRAFANA:-31415}:3000"
     environment:
@@ -156,7 +156,26 @@ services:
       - "traefik.http.routers.grafana.middlewares=security-headers@file,rate-limit@file"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
     depends_on:
-      - tempo
+      - llmobs-tempo
+
+  llmobs-postgres:
+    image: pgvector/pgvector:pg16
+    container_name: llmobs-postgres-db
+    ports:
+      - "${PORT_POSTGRES:-31420}:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_DB=${POSTGRES_DB:-llm_observability}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - llmobs-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-llm_observability}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
 networks:
   llmobs-network:
@@ -166,3 +185,4 @@ networks:
 volumes:
   tempo_data:
   grafana_data:
+  postgres_data:
