@@ -73,7 +73,6 @@ ALLOYDB_PORT=5432
 ALLOYDB_USER=admin
 ALLOYDB_PASSWORD=password
 ALLOYDB_DB=llm_observability
-POSTGRES_URL=postgresql://admin:password@llmobs-alloydb:5432/llm_observability
 
 CLICKHOUSE_URL=http://llmobs-clickhouse:8123
 CLICKHOUSE_HOST=llmobs-clickhouse

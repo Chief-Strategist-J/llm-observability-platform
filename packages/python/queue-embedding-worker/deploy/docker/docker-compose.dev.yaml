@@ -19,10 +19,6 @@ services:
       - ALLOYDB_USER=${ALLOYDB_USER:-postgres}
       - ALLOYDB_PASSWORD=${ALLOYDB_PASSWORD:-postgres}
       - ALLOYDB_DB=${ALLOYDB_DB:-queue_embedding_db}
-      - POSTGRES_HOST=${POSTGRES_HOST:-alloydb}
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - POSTGRES_DB=${POSTGRES_DB:-queue_embedding_db}
     depends_on:
       alloydb:
         condition: service_healthy
@@ -33,9 +29,9 @@ services:
     image: google/alloydb-omni:latest
     container_name: queue-embedding-alloydb
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: queue_embedding_db
+      ALLOYDB_USER: postgres
+      ALLOYDB_PASSWORD: postgres
+      ALLOYDB_DB: queue_embedding_db
     ports:
       - "${PORT_EMBEDDING_ALLOYDB:-31432}:5432"
     networks:

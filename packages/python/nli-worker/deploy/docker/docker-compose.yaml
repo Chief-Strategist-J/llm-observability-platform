@@ -19,10 +19,6 @@ services:
       - ALLOYDB_USER=${ALLOYDB_USER:-postgres}
       - ALLOYDB_PASSWORD=${ALLOYDB_PASSWORD:-postgres}
       - ALLOYDB_DB=${ALLOYDB_DB:-nli_worker_db}
-      - POSTGRES_HOST=${POSTGRES_HOST:-alloydb}
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - POSTGRES_DB=${POSTGRES_DB:-nli_worker_db}
     depends_on:
       alloydb:
         condition: service_healthy
@@ -33,9 +29,9 @@ services:
     image: google/alloydb-omni:latest
     container_name: nli-alloydb
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: nli_worker_db
+      ALLOYDB_USER: postgres
+      ALLOYDB_PASSWORD: postgres
+      ALLOYDB_DB: nli_worker_db
     ports:
       - "${PORT_NLI_ALLOYDB:-31429}:5432"
     networks:

@@ -14,10 +14,6 @@ services:
       - ALLOYDB_USER=${ALLOYDB_USER:-postgres}
       - ALLOYDB_PASSWORD=${ALLOYDB_PASSWORD:-postgres}
       - ALLOYDB_DB=${ALLOYDB_DB:-latency_baseline_db}
-      - POSTGRES_HOST=${POSTGRES_HOST:-alloydb}
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - POSTGRES_DB=${POSTGRES_DB:-latency_baseline_db}
       - CLICKHOUSE_HOST=${CLICKHOUSE_HOST:-llmobs-clickhouse}
       - CLICKHOUSE_PORT=${CLICKHOUSE_PORT:-8123}
       - CLICKHOUSE_USERNAME=${CLICKHOUSE_USERNAME:-default}
@@ -39,9 +35,9 @@ services:
     image: google/alloydb-omni:latest
     container_name: latency-alloydb
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: latency_baseline_db
+      ALLOYDB_USER: postgres
+      ALLOYDB_PASSWORD: postgres
+      ALLOYDB_DB: latency_baseline_db
     ports:
       - "${PORT_LATENCY_ALLOYDB:-31427}:5432"
     networks:

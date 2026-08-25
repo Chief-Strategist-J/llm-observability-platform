@@ -16,10 +16,6 @@ services:
       - ALLOYDB_USER=${ALLOYDB_USER:-postgres}
       - ALLOYDB_PASSWORD=${ALLOYDB_PASSWORD:-postgres}
       - ALLOYDB_DB=${ALLOYDB_DB:-forecast_db}
-      - POSTGRES_HOST=${POSTGRES_HOST:-alloydb}
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - POSTGRES_DB=${POSTGRES_DB:-forecast_db}
       - CLICKHOUSE_HOST=${CLICKHOUSE_HOST:-llmobs-clickhouse}
       - CLICKHOUSE_PORT=${CLICKHOUSE_PORT:-8123}
       - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
@@ -42,9 +38,9 @@ services:
     image: google/alloydb-omni:latest
     container_name: forecast-alloydb-dev
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: forecast_db
+      ALLOYDB_USER: postgres
+      ALLOYDB_PASSWORD: postgres
+      ALLOYDB_DB: forecast_db
     ports:
       - "${PORT_FORECAST_ALLOYDB:-31425}:5432"
     networks:

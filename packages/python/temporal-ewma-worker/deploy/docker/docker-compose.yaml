@@ -14,7 +14,7 @@ services:
       - ALLOYDB_USER=${ALLOYDB_USER:-postgres}
       - ALLOYDB_PASSWORD=${ALLOYDB_PASSWORD:-postgres}
       - ALLOYDB_DB=${ALLOYDB_DB:-ewma_db}
-      - POSTGRES_DSN=${POSTGRES_DSN:-postgresql://postgres:postgres@alloydb:5432/ewma_db}
+      - ALLOYDB_DSN=${ALLOYDB_DSN:-postgresql://postgres:postgres@alloydb:5432/ewma_db}
       - CLICKHOUSE_HOST=${CLICKHOUSE_HOST:-llmobs-clickhouse}
       - CLICKHOUSE_PORT=${CLICKHOUSE_PORT:-8123}
       - CLICKHOUSE_USERNAME=${CLICKHOUSE_USERNAME:-default}
@@ -35,9 +35,9 @@ services:
     image: google/alloydb-omni:latest
     container_name: ewma-alloydb
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: ewma_db
+      ALLOYDB_USER: postgres
+      ALLOYDB_PASSWORD: postgres
+      ALLOYDB_DB: ewma_db
     ports:
       - "${PORT_EWMA_ALLOYDB:-31433}:5432"
     networks:

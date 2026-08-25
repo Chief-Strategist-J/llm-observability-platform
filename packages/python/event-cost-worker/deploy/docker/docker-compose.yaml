@@ -13,7 +13,6 @@ services:
       KAFKA_DLQ_TOPIC: ${KAFKA_DLQ_TOPIC:-llm.spans.raw.dlq}
       REDIS_URL: ${REDIS_URL:-redis://:llmobs_redis_s3cret_2024@llmobs-redis:6379/0}
       ALLOYDB_URL: ${ALLOYDB_URL:-postgresql://postgres:postgres@alloydb:5432/event_cost_db}
-      POSTGRES_URL: ${POSTGRES_URL:-postgresql://postgres:postgres@alloydb:5432/event_cost_db}
       PRICE_CONFIG_PATH: /app/model_price_versions.yaml
     depends_on:
       alloydb:
@@ -25,9 +24,9 @@ services:
     image: google/alloydb-omni:latest
     container_name: event-cost-worker-alloydb
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: event_cost_db
+      ALLOYDB_USER: postgres
+      ALLOYDB_PASSWORD: postgres
+      ALLOYDB_DB: event_cost_db
     ports:
       - "${PORT_COST_ALLOYDB:-31424}:5432"
     networks:
