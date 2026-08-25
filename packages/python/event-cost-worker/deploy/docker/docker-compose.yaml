@@ -1,46 +1,43 @@
 version: "3.9"
+
 services:
-  cost-engine:
+  event-cost-worker:
     build:
       context: ../../
       dockerfile: build/Dockerfile
+    container_name: event-cost-worker
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
-      KAFKA_CONSUMER_GROUP: event-cost-worker-group
-      KAFKA_TOPIC: llm.spans.raw
-      KAFKA_DLQ_TOPIC: llm.spans.raw.dlq
-      REDIS_URL: redis://redis:6379/0
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-llmobs-kafka:9092}
+      KAFKA_CONSUMER_GROUP: ${KAFKA_CONSUMER_GROUP:-event-cost-worker-group}
+      KAFKA_TOPIC: ${KAFKA_TOPIC:-llm.spans.raw}
+      KAFKA_DLQ_TOPIC: ${KAFKA_DLQ_TOPIC:-llm.spans.raw.dlq}
+      REDIS_URL: ${REDIS_URL:-redis://:llmobs_redis_s3cret_2024@llmobs-redis:6379/0}
+      ALLOYDB_URL: ${ALLOYDB_URL:-postgresql://postgres:postgres@alloydb:5432/event_cost_db}
+      POSTGRES_URL: ${POSTGRES_URL:-postgresql://postgres:postgres@alloydb:5432/event_cost_db}
       PRICE_CONFIG_PATH: /app/model_price_versions.yaml
     depends_on:
-      redis:
+      alloydb:
         condition: service_healthy
-      redpanda:
-        condition: service_healthy
+    networks:
+      - llmobs-network
 
-  redis:
-    image: redis:7-alpine
+  alloydb:
+    image: google/alloydb-omni:latest
+    container_name: event-cost-worker-alloydb
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: event_cost_db
     ports:
-      - "6379:6379"
+      - "${PORT_COST_ALLOYDB:-31424}:5432"
+    networks:
+      - llmobs-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d event_cost_db"]
       interval: 5s
       timeout: 3s
       retries: 5
 
-  redpanda:
-    image: redpandadata/redpanda:latest
-    command:
-      - redpanda
-      - start
-      - --smp=1
-      - --memory=512M
-      - --overprovisioned
-      - --kafka-addr=PLAINTEXT://0.0.0.0:9092
-      - --advertise-kafka-addr=PLAINTEXT://redpanda:9092
-    ports:
-      - "9092:9092"
-    healthcheck:
-      test: ["CMD", "rpk", "cluster", "health"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+networks:
+  llmobs-network:
+    external: true
