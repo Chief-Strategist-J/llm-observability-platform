@@ -152,7 +152,33 @@ export async function getModelPrices(): Promise<ModelPrice[]> {
 
 ---
 
-## 4. Decision Rationale & Consequences
+## 4. End-to-End Call Stack Topology
+
+```text
+└── [User Navigation] User opens http://localhost:3000/costs
+    ├── 1. app/(dashboard)/costs/page.tsx :: CostDashboardPage()
+    │   └── 2. React.Suspense :: Fallback pulse skeleton
+    │       └── 3. page.tsx :: CostDashboardContent()
+    │           ├── 4. hooks/useDashboardFilters.ts :: useDashboardFilters()
+    │           │   └── Extract searchParams (`timeRange`, `model`, `service`, `environment`)
+    │           ├── 5. components/forms/DashboardFilterBar.tsx :: DashboardFilterBar()
+    │           └── 6. lib/telemetry-client.ts :: fetchModelPrices()
+    │               └── HTTP GET http://localhost:8000/v1/metrics/prices
+    │                   ├── 7. FastAPI :: router.get("/v1/metrics/prices")
+    │                   └── 8. price_registry.py :: get_all_prices()
+    │
+    └── [Trace Waterfall Inspection] Click Trace ID "tr-98421"
+        ├── 1. app/(dashboard)/traces/page.tsx :: TraceDetailsModal()
+        └── 2. lib/telemetry-client.ts :: fetchTraceSpans("tr-98421")
+            └── HTTP POST http://localhost:8000/v1/spans (Query trace_id)
+                ├── 3. spans/service.py :: query_span_tree("tr-98421")
+                ├── 4. postgres/adapter.py :: SELECT * FROM llm_spans WHERE trace_id = 'tr-98421'
+                └── 5. components/views/TraceWaterfall.tsx :: Render Interactive Gantt Chart
+```
+
+---
+
+## 5. Decision Rationale & Consequences
 
 ### Positive Consequences
 - **Decoupled Architecture**: `web-app` consumes standardized REST & OTLP endpoints without tight coupling to Python worker implementations.

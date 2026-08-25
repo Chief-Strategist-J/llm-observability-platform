@@ -172,7 +172,35 @@ def calculate_cost(
 
 ---
 
-## 4. Decision Rationale & Consequences
+## 4. End-to-End Call Stack Topology
+
+```text
+└── [Client LLM Call] client.chat.completions.create(model="gpt-4o", messages=[...])
+    ├── 1. auto_instrumentation/index.py :: patched_async_create()
+    │   ├── 2. pii_injection_scan/index.py :: scan_prompt(prompt_text)
+    │   │   └── Aho-Corasick Trie Regex scan -> returns (pii_detected, injection_attempt)
+    │   ├── 3. token_counting/service.py :: count_tokens(prompt_text, model)
+    │   │   └── Tiktoken encoder lookup -> returns prompt_tokens count
+    │   ├── 4. event_cost/service.py :: calculate_cost("gpt-4o", "openai", prompt_tokens, comp_tokens)
+    │   │   └── Lookup input/output rates in model_prices.yaml -> returns cost_usd_micro
+    │   └── 5. manual_instrumentation/service.py :: LLMSpanContext.__aexit__()
+    │
+    └── 6. kafka/reliable_adapter.py :: ReliableKafkaSpanReporter.report(span_dict)
+        ├── 7. Check In-Memory Queue Status
+        ├── 8. [Online] HTTP POST http://localhost:8000/v1/spans
+        │   ├── 9. api/rest/v1/handlers/spans.py :: ingest_span(span_payload)
+        │   ├── 10. messaging/client_factory.py :: get_producer()
+        │   └── 11. Kafka Producer :: send("llm.spans.raw", span_payload)
+        │       └── 12. event_cost_worker/worker.py :: process_kafka_span_batch()
+        │           └── 13. database/repository.py :: upsert_span_record(span)
+        │
+        └── 14. [Offline Fallback] sqlite_wal_adapter.py :: write_wal_record(span_dict)
+            └── Background loop :: replay_wal_records() when connection restored
+```
+
+---
+
+## 5. Decision Rationale & Consequences
 
 ### Positive Consequences
 - **Zero Latency Impact on User App**: LLM span capture and cost calculations occur asynchronously in non-blocking background tasks (`asyncio.create_task`) or reliable WAL buffers.
