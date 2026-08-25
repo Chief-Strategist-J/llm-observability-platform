@@ -113,7 +113,7 @@ services:
     networks:
       - llmobs-network
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:8123/ping"]
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -206,13 +206,15 @@ services:
     ports:
       - "${PORT_ALLOYDB:-31420}:5432"
     environment:
+      - POSTGRES_USER=${ALLOYDB_USER:-admin}
+      - POSTGRES_PASSWORD=${ALLOYDB_PASSWORD:-password}
+      - POSTGRES_DB=${ALLOYDB_DB:-llm_observability}
       - ALLOYDB_USER=${ALLOYDB_USER:-admin}
       - ALLOYDB_PASSWORD=${ALLOYDB_PASSWORD:-password}
       - ALLOYDB_DB=${ALLOYDB_DB:-llm_observability}
       - OTEL_SERVICE_NAME=llmobs-alloydb-db
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://llmobs-otel-collector:4318
     volumes:
-      - ./config/alloydb/postgresql.conf:/etc/postgresql/postgresql.conf:ro
       - alloydb_data:/var/lib/postgresql/data
     networks:
       - llmobs-network
