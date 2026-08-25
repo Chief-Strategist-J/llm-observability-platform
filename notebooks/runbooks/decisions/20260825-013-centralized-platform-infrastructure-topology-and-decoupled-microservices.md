@@ -6,7 +6,7 @@
 | **Date** | 2026-08-25 |
 | **Status** | **accepted** |
 | **Deciders** | LLM Observability Platform Architecture Team |
-| **Scope** | Root Platform Infrastructure (`docker-compose.yml`), `instrumentation-sdk`, `event-cost-worker`, `web-app`, `nli-worker`, `slo-burn-worker` |
+| **Scope** | Root Platform Infrastructure (`packages/configs/llm-obs-infra/docker-compose.yml`), `instrumentation-sdk`, `event-cost-worker`, `web-app`, `nli-worker`, `slo-burn-worker`, `quality-engine` |
 
 ---
 
@@ -17,15 +17,15 @@ As the platform expanded, multiple microservice packages (e.g. `packages/python/
 This decentralized infrastructure topology introduced severe architectural anti-patterns and production failure modes:
 
 1. **Event Delivery Isolation & Siloing**:
-   - `instrumentation-sdk` published span events to Redpanda Container A (listening on isolated network `sdk-net`).
-   - `event-cost-worker` consumed from Redpanda Container B (listening on isolated network `worker-net`).
+   - `instrumentation-sdk` published span events to an isolated message broker.
+   - `event-cost-worker` consumed from a different isolated container.
    - **Result**: `event-cost-worker` never received span events because the message broker was fragmented into two disconnected instances.
 
 2. **Host Port Collisions & Conflict Errors**:
    - Multiple local `docker-compose.yaml` files attempted to bind the same host ports (`9092` for Kafka, `6379` for Redis, `5432` for Postgres, `4317` for OTLP).
 
 3. **Resource Waste & Data Drift**:
-   - Running 3+ Redpanda containers, 4+ Redis containers, and multiple database servers across package directories consumed excessive CPU/RAM and fragmented Redis financial spend counters (`org:id:spend`).
+   - Running duplicate Kafka, Redis, and database servers across package directories consumed excessive CPU/RAM and fragmented Redis financial spend counters (`org:id:spend`).
 
 ---
 
@@ -34,21 +34,19 @@ This decentralized infrastructure topology introduced severe architectural anti-
 We adopt a **Single Central Shared Platform Infrastructure Architecture**:
 
 1. **Centralized Platform Infrastructure Package (`packages/configs/llm-obs-infra/docker-compose.yml`)**:
-   - **Kafka / Redpanda Broker** (`llmobs-kafka:9092` / host `31414`): Single message bus serving topic `llm.spans.raw` and DLQs for all services.
-   - **Shared Redis Cache** (`llmobs-redis:6379`): Single key-value store for API key TTL caching, rate limiting, and real-time micro-USD cost ledgers.
-   - **OpenTelemetry Collector & Tempo** (`llmobs-otel-collector:4318` / `llmobs-tempo:3200`): Central distributed tracing and metric collection pipeline.
+   - **Traefik Ingress Gateway** (`llmobs-traefik:80/8080/443` -> Host `31410`/`31411`/`31419`): Central reverse proxy & security rate limiter.
+   - **Kafka Broker** (`llmobs-kafka:9092` -> Host `31414`): Single KRaft event streaming bus serving `llm.spans.raw` and DLQs for all services.
+   - **Shared Redis Cache** (`llmobs-redis:6379` -> Host `31413`): Single key-value store for API key TTL caching, rate limiting, and real-time micro-USD cost ledgers.
+   - **ClickHouse Analytics Engine** (`llmobs-clickhouse:8123/9000`): Columnar telemetry engine for query log mining and token aggregates.
+   - **Tempo Tracing Engine** (`llmobs-tempo:3200` -> Host `31416` / OTLP `4317`): Central distributed trace waterfall store.
+   - **OpenTelemetry Collector** (`llmobs-otel-collector:4318/4317` -> Host `31417`/`31418`): OTLP pipeline with attributes enrichment and memory limiting.
+   - **Grafana Platform Portal** (`llmobs-grafana:3000` -> Host `31415`): Unified web dashboard portal.
+   - **Google AlloyDB Omni DB** (`llmobs-alloydb:5432` -> Host `31420`): High-performance transactional database standard (`google/alloydbomni:15`).
+   - **Temporal Workflow Engine** (`llmobs-temporal:7233` -> Host `7233`, UI `8088`): Durable execution framework backed by AlloyDB Omni.
 
 2. **Decoupled Database-per-Service Pattern (`packages/{lang}/{package-name}`)**:
-   - Each microservice package maintains its **own dedicated database instance and schema** (e.g. `alert-engine` owns `ewma_db`, `slo-burn-worker` owns `slo_db`, `event-cost` owns `cost_db`).
-   - Microservice databases attach to `llmobs-network` and bind non-conflicting host ports (e.g. `31421`, `31422`).
-
-2. **Application Microservices (`packages/python/*`, `packages/node/*`)**:
-   - Contain **only** application code and worker logic containers.
-   - Attach to the shared platform Docker network (`llm-obs-net`).
-   - Point environment variables to central infrastructure endpoints (`KAFKA_BOOTSTRAP_SERVERS="redpanda:9092"`, `REDIS_URL="redis://redis:6379"`, `POSTGRES_URL="..."`).
-
-3. **Package Local `docker-compose.dev.yaml` Policy**:
-   - Sub-package docker-compose files are strictly restricted to isolated unit-test mocks or standalone SDK demos and MUST NOT be used in integrated multi-service environments.
+   - Each microservice package maintains its **own dedicated database schema** while attaching to `llmobs-network`.
+   - Microservices use standard environment variables: `ALLOYDB_HOST`, `ALLOYDB_PORT`, `ALLOYDB_USER`, `ALLOYDB_PASSWORD`, `ALLOYDB_DB`, `ALLOYDB_DSN`.
 
 ---
 
@@ -56,60 +54,67 @@ We adopt a **Single Central Shared Platform Infrastructure Architecture**:
 
 ```mermaid
 flowchart TD
-    subgraph CentralInfra["CENTRAL SHARED PLATFORM INFRASTRUCTURE (Root docker-compose.yml)"]
-        KafkaBroker["Redpanda / Kafka Broker\n(Service: redpanda:9092 / Topic: llm.spans.raw)"]
-        RedisCache["Shared Redis Ledger & Cache\n(Service: redis:6379)"]
-        OtelPipeline["OpenTelemetry Collector & Tempo\n(Service: otel-collector:4317)"]
-        DatabaseServer[("PostgreSQL pgvector & ClickHouse\n(Service: postgres:5432 / clickhouse:8123)")]
+    subgraph CentralInfra["CENTRAL SHARED PLATFORM INFRASTRUCTURE (llmobs-network)"]
+        Traefik["Traefik Gateway\n(llmobs-traefik:31410)"]
+        KafkaBroker["Kafka KRaft Message Bus\n(llmobs-kafka:9092)"]
+        RedisCache["Redis Micro-USD Ledger\n(llmobs-redis:6379)"]
+        OtelPipeline["OpenTelemetry Collector & Tempo\n(llmobs-otel-collector:4317 / llmobs-tempo:3200)"]
+        AlloyDatabase[("Google AlloyDB Omni 15\n(llmobs-alloydb:5432)")]
+        ClickHouseDB[("ClickHouse Analytics Engine\n(llmobs-clickhouse:8123)")]
+        TemporalEngine["Temporal Workflow Engine\n(llmobs-temporal:7233)"]
+        GrafanaPortal["Grafana Portal\n(llmobs-grafana:31415)"]
     end
 
-    subgraph Microservices["APPLICATION SERVICES & WORKERS (Joined to llm-obs-net)"]
-        SDK["packages/python/instrumentation-sdk\n(FastAPI Ingestion Server :8000)"]
-        CostWorker["packages/python/event-cost-worker\n(Asynchronous Kafka Consumer Daemon)"]
+    subgraph Microservices["APPLICATION SERVICES & WORKERS"]
+        SDK["packages/python/instrumentation-sdk\n(FastAPI Ingestion Server)"]
+        CostWorker["packages/python/event-cost-worker\n(Async Kafka Consumer Daemon)"]
         NliWorker["packages/python/nli-worker\n(Evaluation Worker)"]
-        WebApp["packages/node/web-app\n(Next.js Dashboard :3000)"]
+        WebApp["packages/node/web-app\n(Next.js Dashboard)"]
     end
 
     SDK -->|Publish Spans| KafkaBroker
     KafkaBroker -->|Stream Batches| CostWorker
     KafkaBroker -->|Stream Batches| NliWorker
     CostWorker -->|HINCRBY Spend Counters| RedisCache
-    CostWorker -->|Bulk Insert Spans| DatabaseServer
+    CostWorker -->|Bulk Insert Spans| ClickHouseDB
+    TemporalEngine -->|State Persistence| AlloyDatabase
     WebApp -->|Emit UI Traces| OtelPipeline
-    WebApp -->|Query Analytics| DatabaseServer
+    WebApp -->|Query Analytics| ClickHouseDB
+    GrafanaPortal -->|Query Metrics & Traces| Tempo
 ```
 
 ---
 
-## 4. Three-Plane Architectural Blueprint (Control, Data & Messaging)
+## 4. Control, Data, and Messaging Planes Architecture
 
 ```mermaid
 flowchart TD
-    subgraph ControlPlane["1. CONTROL PLANE (Central Infrastructure Governance)"]
-        EnvConfig["Root Environment Config (.env)"]
-        DockerNetwork["Shared Container Network (llm-obs-net)"]
-        TopicProvisioner["Kafka Topic Provisioner (auto-create llm.spans.raw)"]
+    subgraph ControlPlane["1. CONTROL PLANE"]
+        EnvConfig["Central Environment Config (.env.example)"]
+        DockerNetwork["Shared Docker Bridge Network (llmobs-network)"]
+        TraefikRouter["Traefik Dynamic Ingress Router (dynamic.yml)"]
     end
 
-    subgraph DataPlane["2. DATA PLANE (Central Storage & Telemetry Pipeline)"]
+    subgraph DataPlane["2. DATA PLANE"]
         FastApiIngest["instrumentation-sdk Ingestion Engine"]
-        PostgresStore[("PostgreSQL llm_spans Partitioned Table")]
-        RedisCounters[("Redis Micro-USD Spend Ledger")]
-        NextDashboard["Next.js Web App Analytics Views"]
+        AlloyStore[("AlloyDB Omni Transactional Storage")]
+        ClickHouseAnalytics[("ClickHouse Telemetry Database")]
+        RedisLedger[("Redis Micro-USD Cost Ledger")]
 
-        FastApiIngest --> PostgresStore
-        FastApiIngest --> RedisCounters
-        NextDashboard --> PostgresStore
+        FastApiIngest --> ClickHouseAnalytics
+        FastApiIngest --> RedisLedger
     end
 
-    subgraph MessagingPlane["3. MESSAGING PLANE (Central Message Bus & Tracing)"]
-        CentralKafka["Redpanda / Kafka Broker (redpanda:9092)"]
-        CentralOtel["OTLP Exporter Pipeline (otel-collector:4317)"]
+    subgraph MessagingPlane["3. MESSAGING & TELEMETRY PLANE"]
+        CentralKafka["Apache Kafka KRaft Broker (llmobs-kafka:9092)"]
+        CentralOtel["OTLP Collector & Tempo Engine (llmobs-otel-collector)"]
+        TemporalSaga["Temporal Durable Workflow Engine (llmobs-temporal:7233)"]
         WorkerConsumers["event-cost-worker & nli-worker Consumer Groups"]
 
         FastApiIngest --> CentralKafka
         CentralKafka --> WorkerConsumers
-        NextDashboard --> CentralOtel
+        WorkerConsumers --> TemporalSaga
+        CentralOtel --> CentralKafka
     end
 
     ControlPlane --> DataPlane
@@ -118,42 +123,16 @@ flowchart TD
 
 ---
 
-## 5. End-to-End Call Stack Topology
+## 5. Summary of Verification Test Results
 
 ```text
-└── [Root Infrastructure Launch] docker compose -f docker-compose.yml up -d
-    ├── 1. Launch Central Shared Services:
-    │   ├── redpanda:9092          (Topic: llm.spans.raw)
-    │   ├── redis:6379             (Key-Value Spend Ledger)
-    │   ├── postgres:5432          (Database: llm_observability)
-    │   ├── otel-collector:4317    (OTLP Receiver)
-    │   └── tempo:31417            (Trace Waterfall Engine)
-    │
-    ├── 2. Launch Client Application LLM Call
-    │   └── client.chat.completions.create(...)
-    │       └── instrumentation-sdk :: ReliableKafkaSpanReporter.report(span)
-    │           └── HTTP POST http://localhost:8000/v1/spans
-    │               └── FastAPI Ingest -> Produce message to redpanda:9092 (llm.spans.raw)
-    │
-    ├── 3. Asynchronous Worker Execution
-    │   └── event-cost-worker :: process_kafka_span_batch()
-    │       ├── Poll batch from redpanda:9092
-    │       ├── HINCRBY org:spend on redis:6379
-    │       └── INSERT INTO llm_spans on postgres:5432
-    │
-    └── 4. Frontend Dashboard Visualization
-        └── web-app :: GET http://localhost:3000/costs
-            └── Next.js Server Route -> Query postgres:5432 -> Render Spend Charts
+✅ Traefik Gateway         HTTP GET http://localhost:31411/api/version  -> Status 200
+✅ Redis Ledger             TCP Connect localhost:31413                  -> SUCCESS
+✅ Kafka Broker             TCP Connect localhost:31414                  -> SUCCESS
+✅ ClickHouse Analytics     HTTP GET http://localhost:8123/ping          -> Status 200 (Ok.)
+✅ Tempo Tracing            HTTP GET http://localhost:31416/ready         -> Status 200 (ready)
+✅ OTEL Collector gRPC      TCP Connect localhost:31418                  -> SUCCESS
+✅ Grafana Portal           HTTP GET http://localhost:31415/api/health   -> Status 200 (database ok)
+✅ AlloyDB Omni DB          TCP Connect localhost:31420                  -> SUCCESS
+✅ Temporal Engine          TCP Connect localhost:7233                   -> SUCCESS
 ```
-
----
-
-## 6. Consequences
-
-### Positive
-- **Guaranteed Event Delivery**: `instrumentation-sdk` and `event-cost-worker` communicate on the exact same Kafka topic (`llm.spans.raw`).
-- **Eliminated Port Conflicts**: Single host binding for `9092`, `6379`, `5432`, and `4317`.
-- **~60% RAM Reduction**: Eliminates 3 duplicate Kafka and 4 duplicate Redis containers during development.
-
-### Negative
-- Local package testing requires either attaching to the central root Docker stack or specifying `--env-file` overrides.

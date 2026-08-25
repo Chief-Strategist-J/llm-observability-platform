@@ -17,10 +17,9 @@ services:
       - "--accesslog.format=json"
       - "--accesslog.fields.headers.defaultmode=keep"
       - "--metrics.prometheus=true"
-      - "--tracing.openTelemetry=true"
-      - "--tracing.openTelemetry.grpc=true"
-      - "--tracing.openTelemetry.address=llmobs-otel-collector:4317"
-      - "--tracing.openTelemetry.insecure=true"
+      - "--tracing.otlp=true"
+      - "--tracing.otlp.grpc.endpoint=llmobs-otel-collector:4317"
+      - "--tracing.otlp.grpc.insecure=true"
     ports:
       - "${PORT_TRAEFIK_HTTP:-31410}:80"
       - "${PORT_TRAEFIK_DASHBOARD:-31411}:8080"
