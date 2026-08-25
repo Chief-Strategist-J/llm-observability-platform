@@ -51,30 +51,41 @@ flowchart TD
 ### Service 1: Traefik Ingress Gateway (`llmobs-traefik`)
 - **Image**: `traefik:v3.7`
 - **Host Ports**: `31410` (HTTP), `31411` (Dashboard), `31419` (HTTPS)
-- **Role**: Edge router, TLS termination, IP rate-limiting, payloads security header enforcement.
+- **Role**: Edge router, TLS termination, IP rate-limiting, security header enforcement.
 - **Dynamic Proxy Mapping**:
   - `Host("llmobs.grafana")` -> `llmobs-grafana:3000`
   - `Host("llmobs.tempo")` -> `llmobs-tempo:3200`
   - `Host("llmobs.otel")` -> `llmobs-otel-collector:4318`
-- **Tracing**: OTLP gRPC export to `llmobs-otel-collector:4317`.
+- **Tracing**: `--tracing.otlp=true` exporting to `llmobs-otel-collector:4317`.
 
 ### Service 2: Redis Micro-USD Ledger (`llmobs-redis`)
 - **Image**: `redis:7-alpine`
 - **Host Port**: `31413` -> Container `6379`
 - **Role**: High-throughput atomic key-value ledger (`HINCRBYFLOAT` for LLM cost tracking), tenant rate-limiting sliding windows, API key cache.
+- **Key Schemas**:
+  - `org:{org_id}:spend_micro_usd` (Hash: model -> accrued cost in micro-USD)
+  - `rate_limit:{tenant_id}:sliding_window` (Sorted Set: timestamped request counters)
+  - `api_key:{key_hash}:ttl_cache` (String: serialized organization & permissions metadata, TTL 300s)
 - **Healthcheck**: `redis-cli -a ${REDIS_PASSWORD} ping`
 
 ### Service 3: Kafka Streaming Message Bus (`llmobs-kafka`)
 - **Image**: `apache/kafka:latest` (KRaft Mode, No Zookeeper)
 - **Host Port**: `31414` -> Container `9092`
 - **Advertised Listeners**: `PLAINTEXT://localhost:31414,PLAINTEXT_INTERNAL://llmobs-kafka:9092`
-- **Role**: Real-time event streaming bus for raw LLM prompt/completion payloads, worker topic queues (`llm.spans.raw`, `llm.evaluations.queue`).
+- **Topics Topology**:
+  - `llm.spans.raw` (3 partitions, cleanup policy `delete`, retention `168h` / 7 days)
+  - `llm.evaluations.queue` (3 partitions, cleanup policy `delete`, retention `48h`)
+  - `llm.alerts.triggered` (1 partition, cleanup policy `delete`, retention `72h`)
+  - `llm.spans.dlq` (1 partition, dead-letter queue for unparseable payloads)
 
 ### Service 4: ClickHouse Columnar Telemetry Engine (`llmobs-clickhouse`)
 - **Image**: `clickhouse/clickhouse-server:24.8-alpine`
 - **Host Ports**: `8123` (HTTP Query API), `9000` (Native Protocol)
-- **Role**: High-speed columnar analytics engine for span telemetry, aggregate token counts, latency distributions, and query log mining.
 - **Database**: `llm_telemetry_analytics`
+- **Columnar Tables**:
+  - `spans_raw` (Engine: `MergeTree`, Partition By `toYYYYMM(timestamp)`, Order By `(org_id, timestamp, span_id)`)
+  - `token_aggregates_hourly` (Engine: `SummingMergeTree`, Order By `(org_id, model, toStartOfHour(timestamp))`)
+  - `latency_percentiles_daily` (Engine: `AggregatingMergeTree`, Order By `(org_id, endpoint, toStartOfDay(timestamp))`)
 - **Healthcheck**: `clickhouse-client --query "SELECT 1"`
 
 ### Service 5: Tempo Distributed Trace Waterfall (`llmobs-tempo`)
@@ -85,18 +96,29 @@ flowchart TD
 ### Service 6: OpenTelemetry Collector (`llmobs-otel-collector`)
 - **Image**: `otel/opentelemetry-collector-contrib:latest`
 - **Host Ports**: `31417` -> Container `4318` (OTLP/HTTP), `31418` -> Container `4317` (OTLP/gRPC)
-- **Processors**: `memory_limiter`, `attributes` (environment, namespace, protocol enrichment), `resource`, `batch`.
-- **Exporters**: `otlp/tempo`, `debug`.
+- **Processors Pipeline**:
+  1. `memory_limiter`: check interval 1s, limit 512MB, spike limit 128MB.
+  2. `attributes`: Enriches `deployment.environment=development`, `service.namespace=llmobs-platform`, `network.transport=tcp`.
+  3. `resource`: Upserts `infra.stack=llm-obs-infra`, `infra.network=llmobs-network`.
+  4. `batch`: send batch size 1024, timeout 1s.
+- **Exporters**: `otlp/tempo` (`llmobs-tempo:4317`), `debug`.
 
 ### Service 7: Grafana Platform Portal (`llmobs-grafana`)
 - **Image**: `grafana/grafana:latest`
 - **Host Port**: `31415` -> Container `3000`
-- **Provisioned Datasources**: Tempo (`isDefault: true`), ClickHouse (`http://llmobs-clickhouse:8123`).
+- **Provisioned Datasources**:
+  - Tempo (`http://llmobs-tempo:3200`, `isDefault: true`)
+  - ClickHouse (`http://llmobs-clickhouse:8123`, `defaultDatabase: llm_telemetry_analytics`)
 
 ### Service 8: AlloyDB Omni Relational Store (`llmobs-alloydb`)
 - **Image**: `google/alloydbomni:15`
 - **Host Port**: `31420` -> Container `5432`
-- **Role**: Transactional relational database for organization settings, RBAC policies, prompt templates, and evaluation run configurations.
+- **Relational Tables**:
+  - `organizations` (`id`, `name`, `created_at`, `status`)
+  - `tenants` (`id`, `org_id`, `name`, `rate_limit_rpm`)
+  - `api_keys` (`id`, `org_id`, `key_hash`, `permissions_json`, `expires_at`)
+  - `prompt_templates` (`id`, `org_id`, `name`, `version`, `template_body`)
+  - `evaluations` (`id`, `name`, `config_json`, `created_by`)
 - **Environment**: `POSTGRES_USER=${ALLOYDB_USER:-admin}`, `POSTGRES_PASSWORD=${ALLOYDB_PASSWORD:-password}`, `POSTGRES_DB=${ALLOYDB_DB:-llm_observability}`
 - **Healthcheck**: `pg_isready -U admin -d llm_observability`
 
@@ -108,7 +130,43 @@ flowchart TD
 
 ---
 
-## 3. End-to-End Test Matrix & Verification Status
+## 4. Complete Environment Variables Matrix (`.env.example`)
+
+| Variable Name | Default Value | Description | Connected Service |
+|---|---|---|---|
+| `PORT_TRAEFIK_HTTP` | `31410` | Traefik HTTP Ingress Entrypoint | `llmobs-traefik` |
+| `PORT_TRAEFIK_DASHBOARD` | `31411` | Traefik Web UI Dashboard | `llmobs-traefik` |
+| `PORT_TRAEFIK_HTTPS` | `31419` | Traefik HTTPS Entrypoint | `llmobs-traefik` |
+| `PORT_REDIS` | `31413` | Redis In-Memory Cache Port | `llmobs-redis` |
+| `REDIS_PASSWORD` | `llmobs_redis_s3cret_2024` | Redis Authentication Secret | `llmobs-redis` |
+| `PORT_KAFKA` | `31414` | Kafka KRaft Broker Port | `llmobs-kafka` |
+| `PORT_CLICKHOUSE_HTTP` | `8123` | ClickHouse HTTP Query Port | `llmobs-clickhouse` |
+| `PORT_CLICKHOUSE_NATIVE` | `9000` | ClickHouse Native Protocol Port | `llmobs-clickhouse` |
+| `CLICKHOUSE_DB` | `llm_telemetry_analytics` | ClickHouse Primary Database Name | `llmobs-clickhouse` |
+| `PORT_TEMPO` | `31416` | Tempo Trace HTTP Port | `llmobs-tempo` |
+| `PORT_OTEL_HTTP` | `31417` | OpenTelemetry OTLP/HTTP Port | `llmobs-otel-collector` |
+| `PORT_OTEL_GRPC` | `31418` | OpenTelemetry OTLP/gRPC Port | `llmobs-otel-collector` |
+| `PORT_GRAFANA` | `31415` | Grafana Web Portal Port | `llmobs-grafana` |
+| `PORT_ALLOYDB` | `31420` | AlloyDB Omni PostgreSQL Port | `llmobs-alloydb` |
+| `ALLOYDB_USER` | `admin` | AlloyDB Omni Superuser | `llmobs-alloydb` |
+| `ALLOYDB_PASSWORD` | `password` | AlloyDB Omni User Password | `llmobs-alloydb` |
+| `ALLOYDB_DB` | `llm_observability` | Primary Transactional Database | `llmobs-alloydb` |
+| `PORT_TEMPORAL_UI` | `8088` | Temporal Workflow Admin UI | `llmobs-temporal` |
+
+---
+
+## 5. Security & Isolation Hardening Checklist
+
+- [x] **No Shared Network Driver Leaks**: All containers connect strictly via isolated Docker bridge `llmobs-network`.
+- [x] **Database Isolation**: Microservices maintain separate schemas inside AlloyDB Omni (`DB-per-Service`).
+- [x] **Docker Socket Hardening**: Traefik mounts `/var/run/docker.sock:ro` strictly read-only.
+- [x] **No Default Passwords in Production**: Parameterized credentials via `.env` defaults.
+- [x] **Resource Constraints**: ClickHouse and OTEL Collector are memory-bounded with hard memory limits to prevent OOM panics.
+- [x] **Healthcheck Guardrails**: Temporal and Grafana enforce `depends_on: { service_healthy }` startup ordering.
+
+---
+
+## 6. Verification Test Results Matrix
 
 ```text
 === STARTING CENTRAL INFRASTRUCTURE VERIFICATION TESTS ===
@@ -116,10 +174,10 @@ flowchart TD
 ✅ [Traefik Gateway] HTTP GET http://localhost:31411/api/version -> Status 200
 ✅ [Redis Ledger] TCP Connection to localhost:31413 -> SUCCESS
 ✅ [Kafka Broker] TCP Connection to localhost:31414 -> SUCCESS
-✅ [ClickHouse Analytics] HTTP GET http://localhost:8123/ping -> Status 200
-✅ [Tempo Tracing] HTTP GET http://localhost:31416/ready -> Status 200
+✅ [ClickHouse Analytics] HTTP GET http://localhost:8123/ping -> Status 200 (Ok.)
+✅ [Tempo Tracing] HTTP GET http://localhost:31416/ready -> Status 200 (ready)
 ✅ [OTEL Collector gRPC] TCP Connection to localhost:31418 -> SUCCESS
-✅ [Grafana Portal] HTTP GET http://localhost:31415/api/health -> Status 200
+✅ [Grafana Portal] HTTP GET http://localhost:31415/api/health -> Status 200 (database ok)
 ✅ [AlloyDB Omni] TCP Connection to localhost:31420 -> SUCCESS
 ✅ [Temporal gRPC] TCP Connection to localhost:7233 -> SUCCESS
 

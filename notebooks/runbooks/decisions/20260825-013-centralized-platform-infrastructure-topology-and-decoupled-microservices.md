@@ -123,7 +123,23 @@ flowchart TD
 
 ---
 
-## 5. Summary of Verification Test Results
+## 5. Schema & Key Patterns Specification
+
+### 5.1 Redis Key Schemas
+- `org:{org_id}:spend_micro_usd` -> Hash `model_name -> accrued_micro_usd`
+- `rate_limit:{tenant_id}:sliding_window` -> Sorted Set `timestamp -> req_id`
+- `api_key:{key_hash}:ttl_cache` -> Serialized metadata string (TTL 300s)
+
+### 5.2 ClickHouse Columnar Schemas
+- `llm_telemetry_analytics.spans_raw` -> Primary span log table (`MergeTree` engine)
+- `llm_telemetry_analytics.token_aggregates_hourly` -> Real-time token rollup (`SummingMergeTree`)
+
+### 5.3 AlloyDB Omni Transactional Schemas
+- `organizations`, `tenants`, `api_keys`, `prompt_templates`, `evaluations`
+
+---
+
+## 6. Summary of Verification Test Results
 
 ```text
 ✅ Traefik Gateway         HTTP GET http://localhost:31411/api/version  -> Status 200
