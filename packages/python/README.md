@@ -527,11 +527,11 @@ The following diagram illustrates how the three standalone services interact:
 
 #### Connection & Configuration Environment Variables
 
-| Environment Variable | Description | Default (All-in-One) | Default (Standalone) |
+| Environment Variable | Description | Default (Central Stack) | Default (Standalone) |
 | :--- | :--- | :--- | :--- |
-| `WITH_KAFKA` | Enable embedded Kafka & Postgres server inside container | `true` | `false` |
-| `KAFKA_BOOTSTRAP_SERVERS` | Kafka brokers connection string | `localhost:9092` | (None) |
-| `POSTGRES_URL` | PostgreSQL connection string | `postgresql://admin:password@localhost:5432/llm_observability` | (None) |
+| `KAFKA_BOOTSTRAP_SERVERS` | Kafka brokers connection string | `llmobs-kafka:9092` (Port 31414) | (None) |
+| `POSTGRES_URL` | PostgreSQL connection string | `postgresql://admin:password@llmobs-postgres:5432/llm_observability` | (None) |
+| `REDIS_URL` | Redis spend ledger connection string | `redis://:llmobs_redis_s3cret_2024@llmobs-redis:6379/0` | (None) |
 | `DEPLOYMENT_ENV` | SDK deployment environment (`production`, `staging`, `dev`) | `production` | `production` |
 
 #### Architectural Integration Flow
