@@ -44,24 +44,19 @@ processors:
     attributes:
       - key: infra.stack
         value: llm-obs-infra
+        action: upsert
       - key: infra.network
         value: llmobs-network
+        action: upsert
       - key: telemetry.sdk.language
         value: collector
+        action: upsert
 
 exporters:
   otlp/tempo:
     endpoint: "llmobs-tempo:4317"
     tls:
       insecure: true
-
-  clickhouse:
-    endpoint: "tcp://llmobs-clickhouse:9000?database=llm_telemetry_analytics"
-    sending_queue:
-      num_consumers: 10
-    batch:
-      min_size: 1000
-      flush_timeout: 5s
 
   debug:
     verbosity: basic
@@ -71,4 +66,4 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, attributes, resource, batch]
-      exporters: [otlp/tempo, clickhouse, debug]
+      exporters: [otlp/tempo, debug]

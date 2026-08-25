@@ -231,7 +231,7 @@ services:
       - "7233:7233"
       - "${PORT_TEMPORAL_UI:-8088}:8080"
     environment:
-      - DB=postgresql
+      - DB=postgres12
       - DB_PORT=5432
       - POSTGRES_USER=${ALLOYDB_USER:-admin}
       - POSTGRES_PWD=${ALLOYDB_PASSWORD:-password}

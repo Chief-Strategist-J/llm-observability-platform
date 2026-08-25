@@ -16,6 +16,7 @@ datasources:
     type: vertamedia-clickhouse-datasource
     access: proxy
     url: http://llmobs-clickhouse:8123
+    isDefault: false
     editable: false
     jsonData:
       addExtraHeaders: false
