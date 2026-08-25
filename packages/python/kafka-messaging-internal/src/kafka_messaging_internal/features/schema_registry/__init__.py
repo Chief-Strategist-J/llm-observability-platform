@@ -1,1 +1,0 @@
-"""Schema registry feature module."""
