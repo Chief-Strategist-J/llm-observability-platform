@@ -53,16 +53,20 @@ This runbook enforces a **100% Pure Functional Programming (FP)** approach:
 
 ```mermaid
 flowchart TD
-    subgraph RawLogSources["Raw Infrastructure Log Sources"]
-        DBQueryLogs["Database Query Logs\n(PostgreSQL / AlloyDB / MySQL Logs)"]
-        HTTPAccessLogs["Gateway Access Logs\n(NGINX / Traefik / Envoy Access Logs)"]
+    classDef rawFill fill:#eff6ff,stroke:#3b82f6,stroke-width:2px,color:#1e3a8a
+    classDef engineFill fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#78350f
+    classDef storageFill fill:#ecfdf5,stroke:#10b981,stroke-width:2px,color:#064e3b
+
+    subgraph Phase1["Phase 1: Infrastructure Log Ingestion"]
+        DBQueryLogs["Database Query Logs\n(PostgreSQL / AlloyDB / MySQL Logs)"]:::rawFill
+        HTTPAccessLogs["Gateway Access Logs\n(NGINX / Traefik / Envoy Access Logs)"]:::rawFill
     end
 
-    subgraph MiningEngine["Pure Functional Log Mining Engine"]
-        LogStreamer["stream_log_chunks\n(Pure Log Chunk Reader)"]
-        LogParser["parse_log_entry\n(Regex Log Parser)"]
-        SQLExtractor["extract_sql_table_names\n(SQL AST / Regex Table Extractor)"]
-        CallerAggregator["aggregate_caller_dependencies\n(Pure Dependency Map Builder)"]
+    subgraph Phase2["Phase 2: Pure Functional Mining & Extraction Engine"]
+        LogStreamer["stream_log_chunks\n(Pure Log Chunk Reader)"]:::engineFill
+        LogParser["parse_log_entry\n(Regex Log Parser)"]:::engineFill
+        SQLExtractor["extract_sql_table_names\n(SQL AST / Regex Table Extractor)"]:::engineFill
+        CallerAggregator["aggregate_caller_dependencies\n(Pure Dependency Map Builder)"]:::engineFill
 
         DBQueryLogs --> LogStreamer
         HTTPAccessLogs --> LogStreamer
@@ -71,9 +75,9 @@ flowchart TD
         SQLExtractor --> CallerAggregator
     end
 
-    subgraph DependencyMapStorage["Active Dependency Map Repository"]
-        DependencyStore["Active Caller Dependency Map\n(Mapped Callers & Access Frequencies)"]
-        DiscoveryDashboard["Layer 1 Discovery Dashboard"]
+    subgraph Phase3["Phase 3: Active Dependency Storage & Telemetry"]
+        DependencyStore["Active Caller Dependency Map\n(Mapped Callers & Access Frequencies)"]:::storageFill
+        DiscoveryDashboard["Layer 1 Discovery Dashboard"]:::storageFill
 
         CallerAggregator --> DependencyStore
         DependencyStore --> DiscoveryDashboard
@@ -84,33 +88,186 @@ flowchart TD
 
 ## 3. Low-Level Design (LLD)
 
+The Low-Level Design (LLD) provides an exhaustive, component-level breakdown of the Query/Access-Log Mining Engine, explicitly integrating all **25 edge case guards** into the functional ingestion, parsing, extraction, state aggregation, persistence, and telemetry pipelines.
+
+### 3.1 Exhaustive Edge-Case-Aware Sequence Diagram (with Colored Phase Blocks)
+
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Scheduler as Mining Job Scheduler
-    participant Streamer as stream_log_chunks
-    participant Parser as parse_log_entry
-    participant Extractor as extract_sql_table_names
-    participant Aggregator as aggregate_caller_dependencies
-    participant Store as Dependency Map Repository
+    actor Scheduler as Mining Job Scheduler
+    participant Streamer as stream_log_file_lines (EC4, EC18)
+    participant Parser as parse_access_log_line (EC1, EC2, EC6, EC7, EC12, EC13, EC15, EC19, EC23)
+    participant Extractor as extract_sql_table_names (EC3, EC5, EC8, EC9, EC17)
+    participant Aggregator as create_dependency_aggregator (EC10, EC11, EC16, EC20, EC21)
+    participant Store as safe_persist_map (EC14)
+    participant Telemetry as Telemetry & Header Injector (EC22, EC24, EC25)
 
-    Scheduler->>Streamer: fetch_log_chunk(file_path: " or var or log or pg_query.log")
-    Streamer-->>Scheduler: LogChunkLines ["SELECT * FROM orders...", "UPDATE users..."]
-
-    loop For Each Log Line
-        Scheduler->>Parser: parse_log_entry(raw_line)
-        Parser-->>Scheduler: LogEntry (client_ip: "10.0.1.42", query: "SELECT * FROM orders")
-
-        Scheduler->>Extractor: extract_sql_table_names("SELECT * FROM orders")
-        Extractor-->>Scheduler: TableList ["orders"]
-
-        Scheduler->>Aggregator: aggregate_caller_dependencies(LogEntry, TableList)
-        Aggregator-->>Scheduler: DependencyNode (caller: "order_svc", target: "orders", count: 1)
+    rect rgb(238, 242, 255)
+    Note over Scheduler, Streamer: Phase 1: Stream Ingestion & Rule Resolution
+    Scheduler->>Streamer: resolve_mining_rule("log_mining_config", rules) [EC18]
+    Streamer-->>Scheduler: MiningRuleConfig (batch_size: 5000)
+    Scheduler->>Streamer: stream_log_file_lines("/var/log/pg_query.log", 5000) [EC4]
     end
 
-    Scheduler->>Store: persist_dependency_map(CallerDependencyMap)
-    Store-->>Scheduler: PersistConfirmed (Layer 1 Active Caller Map Updated)
+    loop For Each Line Batch (5,000 Lines)
+        Streamer-->>Scheduler: List[RawLogLines]
+
+        loop For Each Log Line
+            rect rgb(254, 243, 199)
+            Note over Scheduler, Parser: Phase 2: Log Ingestion, Parsing & Sanitization
+            Scheduler->>Parser: safe_parse_log_line(line, parse_fn) [EC1]
+            activate Parser
+            Parser->>Parser: parse_log_timestamp(ts_str) [EC6]
+            Parser->>Parser: resolve_caller_identity(ip, headers) [EC7]
+            Parser->>Parser: parse_user_agent_app(user_agent) [EC12]
+            Parser->>Parser: mask_ip_to_subnet(client_ip) -> "10.0.1.0/24" [EC2]
+            
+            alt Is HTTP Access Log
+                Parser->>Parser: group_unmapped_url_path(path) -> "/orders/*" [EC13]
+                opt Is GraphQL Payload
+                    Parser->>Parser: extract_graphql_query_operation(raw_body) [EC15]
+                end
+            end
+            
+            Parser->>Parser: safe_apply_mining_transform(payload, transform_fn) [EC19]
+            Parser->>Parser: sanitize_log_entry_nulls(entry_dict) [EC23]
+            Parser-->>Scheduler: LogEntry Record (or None on parse error)
+            deactivate Parser
+            end
+
+            alt Valid LogEntry Produced
+                rect rgb(236, 253, 245)
+                Note over Scheduler, Extractor: Phase 3: SQL AST & Target Extraction
+                Scheduler->>Extractor: is_internal_system_query(sql_query) [EC3]
+                
+                alt Not System Query (NOT SET / SHOW / BEGIN)
+                    Scheduler->>Extractor: extract_nested_sql_tables(sql_query) [EC5]
+                    activate Extractor
+                    Extractor->>Extractor: is_stored_procedure_call(sql_query) [EC17]
+                    Extractor->>Extractor: strip_sql_literals(sql_query) -> "SELECT * FROM orders WHERE id = ?" [EC9]
+                    Extractor->>Extractor: resolve_tenant_query_target(tenant_id, table) [EC8]
+                    Extractor-->>Scheduler: TargetList ["tenant_101.orders", "users"]
+                    deactivate Extractor
+                end
+                end
+
+                rect rgb(243, 244, 246)
+                Note over Scheduler, Aggregator: Phase 4: State Aggregation & Memory Closure
+                Scheduler->>Aggregator: is_aggregator_memory_full(active_keys) [EC10]
+                
+                alt Aggregator Memory Within Limits (< 100,000 keys)
+                    Scheduler->>Aggregator: aggregate(LogEntry, TargetResource, op="READ")
+                    activate Aggregator
+                    Aggregator->>Aggregator: normalize_mining_duration(duration_ms) [EC11]
+                    Aggregator->>Aggregator: is_newly_discovered_caller(first_seen, now) [EC20]
+                    opt Newly Discovered Caller (< 5 mins)
+                        Aggregator-->>Telemetry: Emit NewCallerDiscoveredAlert (Alert Signal)
+                    end
+                    Aggregator->>Aggregator: compact_dependency_metrics(metrics, 500) [EC21]
+                    Aggregator-->>Scheduler: AggregationUpdated
+                    deactivate Aggregator
+                else Memory Saturated (>= 100,000 keys)
+                    Scheduler->>Scheduler: Trigger State Eviction / Compaction
+                end
+                end
+            end
+        end
+    end
+
+    rect rgb(253, 242, 248)
+    Note over Scheduler, Store: Phase 5: Regional Merge, Persistence & Telemetry
+    Scheduler->>Aggregator: combine_regional_dependency_maps(map_a, map_b) [EC16]
+    Aggregator-->>Scheduler: GlobalCallerDependencyMaps Tuple
+    
+    Scheduler->>Store: safe_persist_map(persist_fn, dependency_maps) [EC14]
+    activate Store
+    Store-->>Scheduler: PersistSuccess / False
+    deactivate Store
+
+    Scheduler->>Telemetry: inject_mining_diagnostic_header(headers, miner_id) [EC22]
+    Scheduler->>Telemetry: prune_mining_metric_queue(queue, 1000) [EC24]
+    Scheduler->>Telemetry: compute_discovery_coverage_rate(mapped_callers, total_logs) [EC25]
+    activate Telemetry
+    Telemetry-->>Scheduler: DiscoveryCoverageRate = 99.85% (Emitted to Prometheus)
+    deactivate Telemetry
+    end
 ```
+
+### 3.2 LLD Subsystem Architecture & Functional Specifications
+
+The Low-Level Design decouples processing into **four pure functional subsystems**, enforcing strict immutability, zero side-effects in transformation functions, and fault-tolerant circuit breakers:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                LOW-LEVEL SUBSYSTEM MAP                                  │
+├───────────────────────────────┬───────────────────────────────┬─────────────────────────┤
+│ Subsystem                     │ Core Module File              │ Primary Edge Cases      │
+├───────────────────────────────┼───────────────────────────────┼─────────────────────────┤
+│ A. Ingestion & Parser         │ src/mining_engine/parser.py   │ EC1,2,4,6,7,12,13,15,   │
+│                               │                               │ 18,19,23                │
+│ B. SQL & Target Extractor     │ src/mining_engine/sql_ext...  │ EC3, EC5, EC8, EC9, EC17│
+│ C. State Aggregator Closure   │ src/mining_engine/aggreg...   │ EC10, EC11, EC16, EC20, │
+│                               │                               │ EC21                    │
+│ D. Persistence & Telemetry    │ src/storage/, src/observab... │ EC14, EC22, EC24, EC25  │
+└───────────────────────────────┴───────────────────────────────┴─────────────────────────┘
+```
+
+#### Subsystem A: Defensive Log Ingestion & Parsing Engine (`src/mining_engine/parser.py`)
+- **Memory Bounded Ingestion (`stream_log_file_lines` - EC4, EC18)**: Uses Python generators to yield lines in configurable 5,000-line chunks (`batch_size`), preventing heap exhaustion when processing multi-gigabyte log streams. Config keys fall back gracefully to default batch rules via `resolve_mining_rule`.
+- **Fault-Tolerant Parsing (`safe_parse_log_line` - EC1, EC19, EC23)**: Wraps line parsing and payload transformation execution in protective `try-except` blocks. If a line is malformed, corrupt, or unparseable, `None` is returned, preventing worker thread crashes. Any `None` field values in parsed entries are sanitized to empty strings via `sanitize_log_entry_nulls`.
+- **Perimeter Identity & Subnet Masking (`mask_ip_to_subnet`, `resolve_caller_identity` - EC2, EC7)**: Resolves real caller IP addresses behind load balancers/proxies via the `X-Forwarded-For` header. IPs are immediately masked to `/24` CIDR blocks (`10.0.1.0/24`), reducing metric cardinality by $256\times$.
+- **Endpoint & Payload Normalization (`group_unmapped_url_path`, `extract_graphql_query_operation`, `parse_user_agent_app` - EC6, EC12, EC13, EC15)**: Converts microsecond epoch timestamps safely with `parse_log_timestamp`. Classifies caller tech stacks (Python SDK, Java Service) via User-Agent string inspection. Normalizes dynamic HTTP routes (`/orders/101`, `/orders/102`) into parameterized patterns (`/orders/*`). For POST GraphQL traffic, extracts operation names (`GetOrderDetails`) from raw JSON payloads.
+
+#### Subsystem B: SQL AST & Target Normalization Engine (`src/mining_engine/sql_extractor.py`)
+- **System Query Filtering (`is_internal_system_query` - EC3)**: Filters out DB administrative noise (`SET`, `SHOW`, `BEGIN`, `COMMIT`) before running heavy regex or AST analysis.
+- **Nested AST & Table Extraction (`extract_nested_sql_tables`, `is_stored_procedure_call` - EC5, EC17)**: Extracts table names across `FROM`, `JOIN`, `UPDATE`, and `INTO` clauses, handling complex nested subqueries. Detects stored procedure calls (`CALL`, `EXEC`) to trace procedure caller dependencies.
+- **SQL Sanitization & Multi-Tenant Partitioning (`strip_sql_literals`, `resolve_tenant_query_target` - EC8, EC9)**: Replaces literal strings and numeric constants with `?` parameter placeholders, yielding clean SQL query fingerprints. For multi-tenant databases, prefixes target table names with tenant IDs (`tenant_101.orders`).
+
+#### Subsystem C: Stateful Dependency Aggregator & Closure Manager (`src/mining_engine/aggregator.py`)
+- **State Saturation Guard (`is_aggregator_memory_full` - EC10)**: Enforces a strict circuit breaker at 100,000 active key pairs `(caller, target)`. Prevents memory overflow in long-running miner daemons.
+- **Duration Normalization & Compaction (`normalize_mining_duration`, `compact_dependency_metrics` - EC11, EC21)**: Rounds millisecond durations to 2 decimal places with a lower bound of `0.0`. Compacts historical dependency metric arrays when exceeding 500 items.
+- **Multi-Region Merging & Alerting (`combine_regional_dependency_maps`, `is_newly_discovered_caller` - EC16, EC20)**: Combines regional dependency maps from multi-region log streams. Triggers immediate alert signals when a caller's `first_seen_ts` is $\le 300\text{ seconds}$ old.
+
+#### Subsystem D: Persist & Telemetry Exporter (`src/storage/map_store.py` & `src/observability/mining_metrics.py`)
+- **Fault-Tolerant Persistence (`safe_persist_map` - EC14)**: Asynchronously persists `CallerDependencyMap` records into the database. Storage outages or DB connection drops are trapped, returning `False` without crashing the log mining loop.
+- **Telemetry Queue Management (`prune_mining_metric_queue`, `compute_discovery_coverage_rate` - EC24, EC25)**: Prunes telemetry queue arrays when exceeding 1,000 items. Calculates the mapped caller percentage (`DiscoveryCoverageRate`) rounded to 2 decimal places for Prometheus export.
+- **Probe Request Tagging (`inject_mining_diagnostic_header` - EC22)**: Injects `X-Log-Miner-ID` headers into probe requests to trace miner activity in downstream gateway access logs.
+
+---
+
+### 3.3 Low-Level Edge Case Execution Matrix (Edge Cases 1–25)
+
+The following matrix maps every edge case to its exact Low-Level Design subsystem, trigger condition, functional guard, and contract boundary:
+
+| EC # | Edge Case Name | LLD Subsystem | Trigger Condition | Pure Functional Guard / Logic | Input / Output Contract | Failure Mode / Circuit Breaker |
+|---|---|---|---|---|---|---|
+| **EC 1** | Regex Parsing Failure | Subsystem A (Parser) | Malformed / corrupted log line | `safe_parse_log_line(line, parse_fn)` | `str ──► Optional[LogEntry]` | Catches exception, returns `None` (line skipped) |
+| **EC 2** | IP Subnet Masking | Subsystem A (Parser) | Raw IPv4 client address | `mask_ip_to_subnet(ip_str)` | `"10.0.1.42" ──► "10.0.1.0/24"` | Falls back to `"0.0.0.0/0"` on invalid format |
+| **EC 3** | Internal System Query | Subsystem B (Extractor) | DB administrative commands | `is_internal_system_query(sql, prefixes)` | `"SET ... " ──► bool (True)` | Returns `True`, query skipped from dependency map |
+| **EC 4** | Large Log File Chunking | Subsystem A (Ingestion) | Multi-GB log stream ingestion | `stream_log_file_lines(path, batch_size)` | `filePath ──► Generator[List[str]]` | Yields 5,000-line chunks; bounds heap memory |
+| **EC 5** | Subquery Table Extraction | Subsystem B (Extractor) | Nested `JOIN` / subquery SQL | `extract_nested_sql_tables(sql_query)` | `str ──► set[str] ("orders", "users")` | Returns set of discovered table names |
+| **EC 6** | Microsecond Timestamp | Subsystem A (Parser) | Invalid float timestamp string | `parse_log_timestamp(ts_str)` | `str ──► float (epoch timestamp)` | Catches ValueError, falls back to `time.time()` |
+| **EC 7** | Proxy IP Resolution | Subsystem A (Parser) | Client behind load balancer | `resolve_caller_identity(ip, headers)` | `(ip, headers) ──► str (Client IP)` | Extracts first IP from `X-Forwarded-For` header |
+| **EC 8** | Multi-Tenant Partitioning | Subsystem B (Extractor) | Multi-tenant schema target | `resolve_tenant_query_target(tenant, table)` | `("tenant_101", "orders") ──► "tenant_101.orders"` | Prefixes table with tenant ID namespace |
+| **EC 9** | SQL Parameter Stripping | Subsystem B (Extractor) | Raw SQL query string with literals | `strip_sql_literals(sql_query)` | `"WHERE id = 42" ──► "WHERE id = ?"` | Replaces strings/numbers with `?` placeholders |
+| **EC 10** | Aggregator Memory Limit | Subsystem C (Aggregator) | Active state keys $\ge 100,000$ | `is_aggregator_memory_full(count, max_keys)` | `(int, 100000) ──► bool` | Returns `True`; blocks new keys to prevent OOM |
+| **EC 11** | Duration Underflow | Subsystem C (Aggregator) | Negative / precise duration ms | `normalize_mining_duration(duration_ms)` | `float ──► float (rounded, min 0.0)` | Caps minimum at `0.0`, rounds to 2 decimals |
+| **EC 12** | User-Agent App ID | Subsystem A (Parser) | Unclassified User-Agent string | `parse_user_agent_app(user_agent)` | `"python-requests/2.28" ──► "python-sdk"` | Substring match; falls back to `"unknown-app"` |
+| **EC 13** | Dynamic URL Path Group | Subsystem A (Parser) | High-cardinality URI paths | `group_unmapped_url_path(path_str)` | `"/orders/101/items" ──► "/orders/*"` | Collapses dynamic path IDs to wildcard routes |
+| **EC 14** | Map Persist Failure | Subsystem D (Storage) | Database outage on map persist | `safe_persist_map(persist_fn, dep_map)` | `(Callable, Maps) ──► bool` | Traps exception, returns `False` safely |
+| **EC 15** | GraphQL Operation Mining | Subsystem A (Parser) | POST `/graphql` request body | `extract_graphql_query_operation(raw_body)` | `str ──► str ("GetOrderDetails")` | Regex extracts op name; defaults to `"unknown_op"` |
+| **EC 16** | Multi-Region Map Merge | Subsystem C (Aggregator) | Multi-region regional maps | `combine_regional_dependency_maps(a, b)` | `(list, list) ──► list (Merged Maps)` | Merges regional lists into global dependency map |
+| **EC 17** | Stored Procedure Mining | Subsystem B (Extractor) | SQL query with `CALL` or `EXEC` | `is_stored_procedure_call(sql_query)` | `str ──► bool` | Detects procedure execution statements |
+| **EC 18** | Unmapped Rule Key | Subsystem A (Ingestion) | Missing mining rule config key | `resolve_mining_rule(key, rules_dict)` | `(str, dict) ──► dict (Config)` | Returns default config (`{"batch_size": 1000}`) |
+| **EC 19** | Transform Error Recovery | Subsystem A (Parser) | Payload transformation error | `safe_apply_mining_transform(payload, fn)` | `(dict, Callable) ──► dict` | Catches exception, returns raw original payload |
+| **EC 20** | New Caller Discovery Alert | Subsystem C (Aggregator) | Caller first seen in past 5 mins | `is_newly_discovered_caller(first_ts, now)` | `(float, float) ──► bool` | Returns `True` if `(now - first_ts) <= 300.0s` |
+| **EC 21** | Metric Array Compaction | Subsystem C (Aggregator) | History list $> 500$ items | `compact_dependency_metrics(metrics, 500)` | `list ──► list (Compacted Array)` | Truncates history list to 500 most recent items |
+| **EC 22** | Diagnostic Header Inject | Subsystem D (Telemetry) | Miner diagnostic request | `inject_mining_diagnostic_header(hdr, id)` | `(dict, str) ──► dict` | Injects `"X-Log-Miner-ID": miner_id` into headers |
+| **EC 23** | Null Value Safeguard | Subsystem A (Parser) | Record dictionary with `None`s | `sanitize_log_entry_nulls(entry_dict)` | `dict ──► dict (No None values)` | Replaces `None` field values with empty string `""` |
+| **EC 24** | Metric Queue Pruning | Subsystem D (Telemetry) | Telemetry queue $> 1,000$ items | `prune_mining_metric_queue(queue, 1000)` | `list ──► list (Pruned Array)` | Truncates queue array to 1,000 items |
+| **EC 25** | Discovery Coverage Rate | Subsystem D (Telemetry) | Discovery rate reporting | `compute_discovery_coverage_rate(mapped, total)`| `(int, int) ──► float (Percentage)` | Computes `(mapped / total) * 100.0` rounded to 2 decimals |
+
 
 ---
 
