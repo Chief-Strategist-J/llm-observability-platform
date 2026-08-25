@@ -141,17 +141,17 @@ http:
     grafana-service:
       loadBalancer:
         servers:
-          - url: "http://frontend-grafana:3000"
+          - url: "http://llmobs-grafana:3000"
 
     tempo-service:
       loadBalancer:
         servers:
-          - url: "http://frontend-tempo:3200"
+          - url: "http://llmobs-tempo:3200"
 
     otel-service:
       loadBalancer:
         servers:
-          - url: "http://frontend-otel-collector:4318"
+          - url: "http://llmobs-otel-collector:4318"
 
     auth-service:
       loadBalancer:
