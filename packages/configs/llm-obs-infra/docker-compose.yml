@@ -43,15 +43,12 @@ services:
     image: redis:7-alpine
     container_name: llmobs-redis-ledger
     command: >
-      redis-server
+      redis-server /etc/redis/redis.conf
       --requirepass ${REDIS_PASSWORD:-llmobs_redis_s3cret_2024}
-      --maxmemory 256mb
-      --maxmemory-policy allkeys-lru
-      --rename-command FLUSHALL ""
-      --rename-command FLUSHDB ""
-      --rename-command DEBUG ""
     ports:
       - "${PORT_REDIS:-31413}:6379"
+    volumes:
+      - ./config/redis/redis.conf:/etc/redis/redis.conf:ro
     networks:
       - llmobs-network
     healthcheck:
@@ -78,6 +75,8 @@ services:
       - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
       - KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0
       - KAFKA_NUM_PARTITIONS=3
+    volumes:
+      - ./config/kafka/server.properties:/etc/kafka/server.properties:ro
     networks:
       - llmobs-network
     healthcheck:
@@ -99,6 +98,8 @@ services:
       - --advertise-kafka-addr=PLAINTEXT://redpanda:9092
     ports:
       - "${PORT_REDPANDA:-31422}:9092"
+    volumes:
+      - ./config/redpanda/redpanda.yaml:/etc/redpanda/redpanda.yaml:ro
     networks:
       - llmobs-network
     healthcheck:
@@ -117,6 +118,8 @@ services:
       CLICKHOUSE_DB: ${CLICKHOUSE_DB:-llm_telemetry_analytics}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
+    volumes:
+      - ./config/clickhouse/config.d:/etc/clickhouse-server/config.d:ro
     networks:
       - llmobs-network
     healthcheck:
@@ -207,6 +210,7 @@ services:
       - ALLOYDB_PASSWORD=${ALLOYDB_PASSWORD:-password}
       - ALLOYDB_DB=${ALLOYDB_DB:-llm_observability}
     volumes:
+      - ./config/alloydb/postgresql.conf:/etc/postgresql/postgresql.conf:ro
       - alloydb_data:/var/lib/postgresql/data
     networks:
       - llmobs-network
@@ -228,6 +232,8 @@ services:
       - POSTGRES_USER=${ALLOYDB_USER:-admin}
       - POSTGRES_PWD=${ALLOYDB_PASSWORD:-password}
       - POSTGRES_SEEDS=llmobs-alloydb
+    volumes:
+      - ./config/temporal/temporal.yaml:/etc/temporal/config/temporal.yaml:ro
     depends_on:
       llmobs-alloydb:
         condition: service_healthy

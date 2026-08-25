@@ -1,0 +1,16 @@
+<clickhouse>
+    <listen_host>0.0.0.0</listen_host>
+    <http_port>8123</http_port>
+    <tcp_port>9000</tcp_port>
+
+    <max_connections>1024</max_connections>
+    <keep_alive_timeout>300</keep_alive_timeout>
+    <max_concurrent_queries>100</max_concurrent_queries>
+
+    <default_database>llm_telemetry_analytics</default_database>
+
+    <logger>
+        <level>information</level>
+        <console>true</console>
+    </logger>
+</clickhouse>

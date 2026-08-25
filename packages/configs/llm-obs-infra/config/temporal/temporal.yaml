@@ -1,0 +1,87 @@
+# Central Platform Temporal Server Configuration (llmobs-temporal)
+
+log:
+  stdout: true
+  level: info
+
+services:
+  frontend:
+    rpc:
+      grpcPort: 7233
+      membershipPort: 6933
+      bindOnIP: "0.0.0.0"
+
+  history:
+    rpc:
+      grpcPort: 7234
+      membershipPort: 6934
+      bindOnIP: "0.0.0.0"
+
+  matching:
+    rpc:
+      grpcPort: 7235
+      membershipPort: 6935
+      bindOnIP: "0.0.0.0"
+
+  worker:
+    rpc:
+      grpcPort: 7239
+      membershipPort: 6939
+      bindOnIP: "0.0.0.0"
+
+clusterMetadata:
+  enableGlobalNamespace: false
+  failoverVersionIncrement: 10
+  masterClusterName: "active"
+  currentClusterName: "active"
+  clusterInformation:
+    active:
+      enabled: true
+      initialFailoverVersion: 1
+      rpcAddress: "127.0.0.1:7233"
+
+dcRedirectionPolicy:
+  policy: "noop"
+
+archival:
+  history:
+    state: "disabled"
+  visibility:
+    state: "disabled"
+
+namespaceDefaults:
+  archival:
+    history:
+      state: "disabled"
+    visibility:
+      state: "disabled"
+
+persistence:
+  defaultStore: alloydb-default
+  visibilityStore: alloydb-visibility
+  numHistoryShards: 4
+  datastores:
+    alloydb-default:
+      sql:
+        pluginName: "postgres"
+        driverName: "postgres"
+        databaseName: "llm_observability"
+        connectAddr: "llmobs-alloydb:5432"
+        connectProtocol: "tcp"
+        user: "admin"
+        password: "password"
+        maxConns: 20
+        maxIdleConns: 10
+        maxConnLifetime: "1h"
+    alloydb-visibility:
+      sql:
+        pluginName: "postgres"
+        driverName: "postgres"
+        databaseName: "llm_observability"
+        connectAddr: "llmobs-alloydb:5432"
+        connectProtocol: "tcp"
+        user: "admin"
+        password: "password"
+        maxConns: 10
+        maxIdleConns: 5
+        maxConnLifetime: "1h"
