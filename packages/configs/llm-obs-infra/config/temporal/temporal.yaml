@@ -65,11 +65,11 @@ persistence:
       sql:
         pluginName: "postgres"
         driverName: "postgres"
-        databaseName: "llm_observability"
-        connectAddr: "llmobs-alloydb:5432"
+        databaseName: "${ALLOYDB_DB:llm_observability}"
+        connectAddr: "${ALLOYDB_HOST:llmobs-alloydb}:5432"
         connectProtocol: "tcp"
-        user: "admin"
-        password: "password"
+        user: "${ALLOYDB_USER:admin}"
+        password: "${ALLOYDB_PASSWORD:password}"
         maxConns: 20
         maxIdleConns: 10
         maxConnLifetime: "1h"
@@ -77,11 +77,11 @@ persistence:
       sql:
         pluginName: "postgres"
         driverName: "postgres"
-        databaseName: "llm_observability"
-        connectAddr: "llmobs-alloydb:5432"
+        databaseName: "${ALLOYDB_DB:llm_observability}"
+        connectAddr: "${ALLOYDB_HOST:llmobs-alloydb}:5432"
         connectProtocol: "tcp"
-        user: "admin"
-        password: "password"
+        user: "${ALLOYDB_USER:admin}"
+        password: "${ALLOYDB_PASSWORD:password}"
         maxConns: 10
         maxIdleConns: 5
         maxConnLifetime: "1h"
