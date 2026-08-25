@@ -9,6 +9,13 @@
 
     <default_database>llm_telemetry_analytics</default_database>
 
+    <!-- OpenTelemetry Internal Span Logging -->
+    <opentelemetry_span_log>
+        <database>system</database>
+        <table>opentelemetry_span_log</table>
+        <flush_interval_milliseconds>7500</flush_interval_milliseconds>
+    </opentelemetry_span_log>
+
     <logger>
         <level>information</level>
         <console>true</console>

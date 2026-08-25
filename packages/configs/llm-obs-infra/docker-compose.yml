@@ -17,6 +17,10 @@ services:
       - "--accesslog.format=json"
       - "--accesslog.fields.headers.defaultmode=keep"
       - "--metrics.prometheus=true"
+      - "--tracing.openTelemetry=true"
+      - "--tracing.openTelemetry.grpc=true"
+      - "--tracing.openTelemetry.address=llmobs-otel-collector:4317"
+      - "--tracing.openTelemetry.insecure=true"
     ports:
       - "${PORT_TRAEFIK_HTTP:-31410}:80"
       - "${PORT_TRAEFIK_DASHBOARD:-31411}:8080"
@@ -27,6 +31,8 @@ services:
       - ./config/certs:/etc/traefik/certs:ro
     environment:
       - DOCKER_API_VERSION=1.40
+      - OTEL_SERVICE_NAME=llmobs-traefik-gateway
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://llmobs-otel-collector:4318
     networks:
       - llmobs-network
     extra_hosts:
@@ -47,6 +53,9 @@ services:
       --requirepass ${REDIS_PASSWORD:-llmobs_redis_s3cret_2024}
     ports:
       - "${PORT_REDIS:-31413}:6379"
+    environment:
+      - OTEL_SERVICE_NAME=llmobs-redis-ledger
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://llmobs-otel-collector:4318
     volumes:
       - ./config/redis/redis.conf:/etc/redis/redis.conf:ro
     networks:
@@ -75,6 +84,8 @@ services:
       - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
       - KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0
       - KAFKA_NUM_PARTITIONS=3
+      - OTEL_SERVICE_NAME=llmobs-kafka-broker
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://llmobs-otel-collector:4318
     volumes:
       - ./config/kafka/server.properties:/etc/kafka/server.properties:ro
     networks:
@@ -98,6 +109,9 @@ services:
       - --advertise-kafka-addr=PLAINTEXT://redpanda:9092
     ports:
       - "${PORT_REDPANDA:-31422}:9092"
+    environment:
+      - OTEL_SERVICE_NAME=llmobs-redpanda-broker
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://llmobs-otel-collector:4318
     volumes:
       - ./config/redpanda/redpanda.yaml:/etc/redpanda/redpanda.yaml:ro
     networks:
@@ -118,6 +132,8 @@ services:
       CLICKHOUSE_DB: ${CLICKHOUSE_DB:-llm_telemetry_analytics}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
+      OTEL_SERVICE_NAME: llmobs-clickhouse-analytics
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://llmobs-otel-collector:4318
     volumes:
       - ./config/clickhouse/config.d:/etc/clickhouse-server/config.d:ro
     networks:
@@ -132,6 +148,9 @@ services:
     image: grafana/tempo:latest
     container_name: llmobs-tempo-tracing
     command: ["-config.file=/etc/tempo/tempo-config.yaml"]
+    environment:
+      - OTEL_SERVICE_NAME=llmobs-tempo-tracing
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://llmobs-otel-collector:4318
     volumes:
       - ./config/tempo/tempo-config.yaml:/etc/tempo/tempo-config.yaml:ro
       - tempo_data:/var/tempo
@@ -152,6 +171,8 @@ services:
     image: otel/opentelemetry-collector-contrib:latest
     container_name: llmobs-otel-collector
     command: ["--config=/etc/otel-collector-config.yaml"]
+    environment:
+      - OTEL_SERVICE_NAME=llmobs-otel-collector
     volumes:
       - ./config/otel-collector/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
     ports:
@@ -185,6 +206,10 @@ services:
       - GF_SECURITY_STRICT_TRANSPORT_SECURITY=true
       - GF_SECURITY_X_CONTENT_TYPE_OPTIONS=true
       - GF_SECURITY_X_XSS_PROTECTION=true
+      - GF_TRACING_OPENTELEMETRY_OTLP_ADDRESS=llmobs-otel-collector:4317
+      - GF_TRACING_OPENTELEMETRY_OTLP_PROPAGATION_FORMAT=w3c
+      - OTEL_SERVICE_NAME=llmobs-grafana-portal
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://llmobs-otel-collector:4318
     volumes:
       - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana_data:/var/lib/grafana
@@ -199,6 +224,7 @@ services:
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
     depends_on:
       - llmobs-tempo
+      - llmobs-otel-collector
 
   llmobs-alloydb:
     image: google/alloydb-omni:latest
@@ -209,6 +235,8 @@ services:
       - ALLOYDB_USER=${ALLOYDB_USER:-admin}
       - ALLOYDB_PASSWORD=${ALLOYDB_PASSWORD:-password}
       - ALLOYDB_DB=${ALLOYDB_DB:-llm_observability}
+      - OTEL_SERVICE_NAME=llmobs-alloydb-db
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://llmobs-otel-collector:4318
     volumes:
       - ./config/alloydb/postgresql.conf:/etc/postgresql/postgresql.conf:ro
       - alloydb_data:/var/lib/postgresql/data
@@ -232,11 +260,16 @@ services:
       - POSTGRES_USER=${ALLOYDB_USER:-admin}
       - POSTGRES_PWD=${ALLOYDB_PASSWORD:-password}
       - POSTGRES_SEEDS=llmobs-alloydb
+      - TEMPORAL_TELEMETRY_TRACING_OTLP_ENDPOINT=llmobs-otel-collector:4317
+      - OTEL_SERVICE_NAME=llmobs-temporal-engine
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://llmobs-otel-collector:4318
     volumes:
       - ./config/temporal/temporal.yaml:/etc/temporal/config/temporal.yaml:ro
     depends_on:
       llmobs-alloydb:
         condition: service_healthy
+      llmobs-otel-collector:
+        condition: service_started
     networks:
       - llmobs-network
     healthcheck:
