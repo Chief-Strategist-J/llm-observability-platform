@@ -113,12 +113,7 @@ flowchart TD
 ### Service 8: AlloyDB Omni Relational Store (`llmobs-alloydb`)
 - **Image**: `google/alloydbomni:15`
 - **Host Port**: `31420` -> Container `5432`
-- **Relational Tables**:
-  - `organizations` (`id`, `name`, `created_at`, `status`)
-  - `tenants` (`id`, `org_id`, `name`, `rate_limit_rpm`)
-  - `api_keys` (`id`, `org_id`, `key_hash`, `permissions_json`, `expires_at`)
-  - `prompt_templates` (`id`, `org_id`, `name`, `version`, `template_body`)
-  - `evaluations` (`id`, `name`, `config_json`, `created_by`)
+- **Relational Tables**: `organizations`, `tenants`, `api_keys`, `prompt_templates`, `evaluations`.
 - **Environment**: `POSTGRES_USER=${ALLOYDB_USER:-admin}`, `POSTGRES_PASSWORD=${ALLOYDB_PASSWORD:-password}`, `POSTGRES_DB=${ALLOYDB_DB:-llm_observability}`
 - **Healthcheck**: `pg_isready -U admin -d llm_observability`
 
@@ -130,7 +125,7 @@ flowchart TD
 
 ---
 
-## 4. Complete Environment Variables Matrix (`.env.example`)
+## 3. Complete Environment Variables Matrix (`.env.example`)
 
 | Variable Name | Default Value | Description | Connected Service |
 |---|---|---|---|
@@ -155,18 +150,27 @@ flowchart TD
 
 ---
 
-## 5. Security & Isolation Hardening Checklist
+## 4. Security Controls & Pending Security TODO List
 
-- [x] **No Shared Network Driver Leaks**: All containers connect strictly via isolated Docker bridge `llmobs-network`.
-- [x] **Database Isolation**: Microservices maintain separate schemas inside AlloyDB Omni (`DB-per-Service`).
+### A. Implemented Security Controls (`COMPLETED`)
+- [x] **Network Isolation**: All containers communicate exclusively through dedicated Docker bridge `llmobs-network`.
+- [x] **Database Isolation**: Decoupled `Database-per-Service` schema pattern across Python/Node microservices.
 - [x] **Docker Socket Hardening**: Traefik mounts `/var/run/docker.sock:ro` strictly read-only.
-- [x] **No Default Passwords in Production**: Parameterized credentials via `.env` defaults.
-- [x] **Resource Constraints**: ClickHouse and OTEL Collector are memory-bounded with hard memory limits to prevent OOM panics.
-- [x] **Healthcheck Guardrails**: Temporal and Grafana enforce `depends_on: { service_healthy }` startup ordering.
+- [x] **No Plaintext Passwords in Compose**: All secrets parameterized via `.env.example` defaults.
+- [x] **Memory Bounding & OOM Guardrails**: Hard memory limits configured on OTEL Collector (`512MB` limit) and ClickHouse to prevent resource exhaustion.
+- [x] **Ingress Security Middleware**: Traefik enforces HTTP security headers (`X-Frame-Options`, `HSTS`, `X-Content-Type-Options`) and rate limiting.
+
+### B. Pending Security TODO List (`NEXT ITERATIONS`)
+- [ ] **SEC-01: Inter-Container mTLS Encryption**: Implement TLS mutual authentication on internal OTLP gRPC ports (`4317`) between microservices, OTEL Collector, and Tempo.
+- [ ] **SEC-02: External Secrets Management Integration**: Migrate plain-text `.env` credential files to HashiCorp Vault or AWS Secrets Manager sidecar injectors.
+- [ ] **SEC-03: Strict Non-Root Container Execution**: Add explicit `user: "1000:1000"` non-root security context across all Docker Compose service definitions.
+- [ ] **SEC-04: Web Application Firewall (WAF) Payload Inspection**: Deploy OWASP ModSecurity / Coraza WAF plugin on Traefik to sanitize incoming API payloads for SQL injection and LLM prompt injection attempts.
+- [ ] **SEC-05: Central Audit Trail Logging (`pgaudit`)**: Enable `pgaudit` extension on AlloyDB Omni to stream DDL/DML audit events into ClickHouse security analytics table.
+- [ ] **SEC-06: CI/CD OCI Container Vulnerability Scanning**: Integrate Trivy automated container image scanning into `.github/workflows/ci.yml` pipeline.
 
 ---
 
-## 6. Verification Test Results Matrix
+## 5. Verification Test Results Matrix
 
 ```text
 === STARTING CENTRAL INFRASTRUCTURE VERIFICATION TESTS ===
