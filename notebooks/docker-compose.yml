@@ -1,14 +1,6 @@
 version: '3.8'
 
 services:
-  worker:
-    image: chiefj/toxicity-worker:stable
-    ports:
-      - "8008:8008"
-    environment:
-      - PORT=8008
-      - TOXICITY_MODEL_ID=unitary/toxic-bert
-    restart: unless-stopped
 
   jupyter:
     image: chiefj/toxicity-worker:stable
@@ -31,12 +23,12 @@ services:
     image: blang/latex:latest
     volumes:
       - ../:/workdir
-    working_dir: /workdir/notebooks/runbooks/research/pylow/2026-06-12-qwen-formatting
-    # Two passes: first builds aux/toc, second resolves \cref cross-references
+    working_dir: /workdir/notebooks/runbooks/refs/05-dependency-discovery-and-log-mining
+    # Two passes: first builds aux/toc, second resolves cross-references
     command: >
       bash -c "
-        pdflatex -interaction=nonstopmode proof.tex &&
-        pdflatex -interaction=nonstopmode proof.tex &&
-        echo '✅ PDF compiled: proof.pdf'
+        pdflatex -interaction=nonstopmode query-access-log-mining.tex &&
+        pdflatex -interaction=nonstopmode query-access-log-mining.tex &&
+        echo '✅ PDF compiled: query-access-log-mining.pdf'
       "
 
