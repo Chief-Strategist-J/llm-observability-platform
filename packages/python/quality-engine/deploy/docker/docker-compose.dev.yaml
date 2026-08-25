@@ -6,29 +6,31 @@ services:
       context: ../..
       dockerfile: build/Dockerfile
     image: chiefj/quality-engine:latest
+    container_name: quality-engine
     environment:
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-llmobs-kafka:9092}
       - KAFKA_CONSUMER_GROUP=quality-engine-group
       - KAFKA_TOPIC_INPUT=llm.spans.sampled
       - KAFKA_TOPIC_SCORES=llm.quality.scores
       - KAFKA_TOPIC_TOXICITY=llm.toxicity.flagged
       - KAFKA_TOPIC_ALERTS=alerts.quality.degradation
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=quality_engine_db
-      - REDIS_URL=redis://redis:6379/0
-      - TEMPORAL_HOST=temporal:7233
+      - ALLOYDB_HOST=${ALLOYDB_HOST:-alloydb}
+      - ALLOYDB_PORT=${ALLOYDB_PORT:-5432}
+      - ALLOYDB_USER=${ALLOYDB_USER:-postgres}
+      - ALLOYDB_PASSWORD=${ALLOYDB_PASSWORD:-postgres}
+      - ALLOYDB_DB=${ALLOYDB_DB:-quality_engine_db}
+      - POSTGRES_HOST=${POSTGRES_HOST:-alloydb}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-quality_engine_db}
+      - REDIS_URL=${REDIS_URL:-redis://:llmobs_redis_s3cret_2024@llmobs-redis:6379/0}
+      - TEMPORAL_HOST=${TEMPORAL_HOST:-temporal:7233}
       - TEMPORAL_NAMESPACE=default
       - TEMPORAL_TASK_QUEUE=quality-engine-tasks
       - EMBEDDING_WORKER_URL=http://embedding-worker:8001
     depends_on:
-      kafka:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      redis:
+      alloydb:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "bash", "-c", "echo > /dev/null && exit 0"]
@@ -36,43 +38,26 @@ services:
       timeout: 10s
       retries: 3
     restart: unless-stopped
+    networks:
+      - llmobs-network
 
-  postgres:
-    image: postgres:16-alpine
+  alloydb:
+    image: google/alloydb-omni:latest
+    container_name: quality-engine-alloydb
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: quality_engine_db
+    ports:
+      - "${PORT_QUALITY_ALLOYDB:-31428}:5432"
+    networks:
+      - llmobs-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d quality_engine_db"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  kafka:
-    image: confluentinc/cp-kafka:7.6.0
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    depends_on:
-      - zookeeper
-    healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.6.0
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
+networks:
+  llmobs-network:
+    external: true
