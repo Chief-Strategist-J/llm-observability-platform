@@ -11,11 +11,16 @@
 
 ## 1. Executive Summary & Core Architectural Principle
 
-Platform infrastructure is **neither frontend-specific nor backend-specific**—it is a universal platform contract located centrally at `packages/configs/llm-obs-infra`. 
+Platform infrastructure separates **Centralized Infrastructure-Level Services** from **Microservice-Owned Databases**:
 
-To prevent data siloing, port collisions, memory waste, and broken event streaming, **all shared infrastructure daemons (Kafka message brokers, Redis caches, OpenTelemetry Collectors, Tempo tracing engines, PostgreSQL databases, ClickHouse analytics stores, Traefik gateways, and Grafana visualizers) belong to a single Universal Platform Infrastructure Network (`llmobs-network`)**.
+1. **Centralized Infrastructure Services (`packages/configs/llm-obs-infra`)**:
+   - Infrastructure-level services (**Kafka message brokers, Redis caches/ledgers, OpenTelemetry Collectors, Tempo tracing engines, ClickHouse analytics stores, Traefik gateways, and Grafana dashboards**) are **CENTRALIZED** on the `llmobs-network` bridge.
+   - Microservices MUST NOT spawn duplicate Kafka brokers or Redis caches.
 
-Individual microservice packages across ALL languages (`packages/{lang}/{package-name}`) MUST NOT spawn redundant local instances of message brokers, databases, or caching daemons for production or integrated testing. All microservice containers attach to `llmobs-network` and consume shared platform services using standardized `llmobs-*` service hostnames and environment variables.
+2. **Decoupled Database-per-Service Rule (`packages/{lang}/{package-name}`)**:
+   - Databases follow the strict **Database-per-Service** architectural pattern.
+   - Each microservice package owns and maintains its **dedicated database schema and database instance** (e.g. `alert-engine` owns `ewma_db`, `slo-burn-worker` owns `slo_db`, `event-cost` owns `cost_ledger_db`).
+   - Microservices MUST NOT share database instances or cross-query other microservice databases directly.
 
 ---
 

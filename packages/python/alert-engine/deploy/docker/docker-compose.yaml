@@ -11,11 +11,11 @@ services:
       KAFKA_CONSUMER_GROUP: alert-engine-group
       KAFKA_TOPICS: alerts.budget,alerts.cost.anomaly,llm.toxicity.flagged,alerts.quality.degradation,alerts.latency.slo,alerts.latency.ttft_regression
       REDIS_URL: ${REDIS_URL:-redis://:llmobs_redis_s3cret_2024@llmobs-redis:6379/0}
-      POSTGRES_HOST: ${POSTGRES_HOST:-llmobs-postgres}
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
-      POSTGRES_USER: ${POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
-      POSTGRES_DB: ${POSTGRES_DB:-llm_observability}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-ewma_db}
       SLACK_WEBHOOK_URL: http://localhost:8080/mock-slack
       PAGERDUTY_ROUTING_KEY: mock-pagerduty-routing-key
       SERVICE_OWNERS_FILE_PATH: /app/service_owners.yaml
@@ -24,8 +24,28 @@ services:
     ports:
       - "8001:8001"
       - "9464:9464"
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - llmobs-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: alert-engine-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ewma_db
+    ports:
+      - "${PORT_ALERT_POSTGRES:-31421}:5432"
+    networks:
+      - llmobs-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ewma_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
 networks:
   llmobs-network:
