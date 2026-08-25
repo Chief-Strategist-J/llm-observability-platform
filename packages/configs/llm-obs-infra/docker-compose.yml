@@ -158,21 +158,21 @@ services:
     depends_on:
       - llmobs-tempo
 
-  llmobs-postgres:
-    image: pgvector/pgvector:pg16
-    container_name: llmobs-postgres-db
+  llmobs-alloydb:
+    image: google/alloydb-omni:latest
+    container_name: llmobs-alloydb-db
     ports:
-      - "${PORT_POSTGRES:-31420}:5432"
+      - "${PORT_ALLOYDB:-31420}:5432"
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-admin}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
-      - POSTGRES_DB=${POSTGRES_DB:-llm_observability}
+      - POSTGRES_USER=${ALLOYDB_USER:-admin}
+      - POSTGRES_PASSWORD=${ALLOYDB_PASSWORD:-password}
+      - POSTGRES_DB=${ALLOYDB_DB:-llm_observability}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - alloydb_data:/var/lib/postgresql/data
     networks:
       - llmobs-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-llm_observability}"]
+      test: ["CMD-SHELL", "pg_isready -U ${ALLOYDB_USER:-admin} -d ${ALLOYDB_DB:-llm_observability}"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -185,4 +185,4 @@ networks:
 volumes:
   tempo_data:
   grafana_data:
-  postgres_data:
+  alloydb_data:

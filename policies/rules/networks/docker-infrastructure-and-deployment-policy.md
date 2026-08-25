@@ -36,7 +36,7 @@ The central shared infrastructure stack is orchestrated via `packages/configs/ll
 | **`llmobs-grafana`** | `llmobs-grafana-portal` | `31415` | `http://llmobs-grafana:3000` | Operational telemetry dashboards |
 | **`llmobs-tempo`** | `llmobs-tempo-tracing` | `31416` | `http://llmobs-tempo:3200` | Trace waterfall storage & query engine |
 | **`llmobs-otel-collector`** | `llmobs-otel-collector` | `31417` (HTTP)<br>`31418` (gRPC) | `http://llmobs-otel-collector:4318`<br>`llmobs-otel-collector:4317` | OpenTelemetry OTLP receiver endpoint |
-| **`llmobs-postgres`** | `llmobs-postgres-db` | `31420` | `llmobs-postgres:5432` | Partitioned span store & relational DB |
+| **`llmobs-alloydb`** | `llmobs-alloydb-db` | `31420` | `llmobs-alloydb:5432` | Partitioned span store & relational AlloyDB engine |
 | **`llmobs-clickhouse`** | `llmobs-clickhouse-analytics` | `8123` (HTTP)<br>`9000` (Native) | `http://llmobs-clickhouse:8123` | High-throughput columnar analytics engine |
 
 ---
@@ -65,14 +65,15 @@ REDIS_MAX_MEMORY=256mb
 REDIS_EVICTION_POLICY=allkeys-lru
 ```
 
-### 3.3 Relational & Columnar Database Configuration (PostgreSQL / ClickHouse)
+### 3.3 Relational & Columnar Database Configuration (AlloyDB / ClickHouse)
 ```env
-POSTGRES_URL=postgresql://admin:password@llmobs-postgres:5432/llm_observability
-POSTGRES_HOST=llmobs-postgres
-POSTGRES_PORT=5432
-POSTGRES_USER=admin
-POSTGRES_PASSWORD=password
-POSTGRES_DB=llm_observability
+ALLOYDB_URL=postgresql://admin:password@llmobs-alloydb:5432/llm_observability
+ALLOYDB_HOST=llmobs-alloydb
+ALLOYDB_PORT=5432
+ALLOYDB_USER=admin
+ALLOYDB_PASSWORD=password
+ALLOYDB_DB=llm_observability
+POSTGRES_URL=postgresql://admin:password@llmobs-alloydb:5432/llm_observability
 
 CLICKHOUSE_URL=http://llmobs-clickhouse:8123
 CLICKHOUSE_HOST=llmobs-clickhouse
