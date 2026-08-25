@@ -9,3 +9,4 @@ This directory contains formal Architecture Decision Records (ADRs) for `instrum
 | ADR | Title | Scope / Topics | Status |
 |---|---|---|---|
 | [**0001**](./0001-centralized-kafka-and-api-key-verification.md) | Centralized Kafka Infrastructure & API Key Verification | KafkaBrokerConfig, KafkaClientFactory, ApiKeyDomainService, StandardRequestContextMiddleware, CORS | Accepted |
+| [**0002**](./0002-telemetry-ingestion-and-cost-engine-integration.md) | Telemetry Ingestion Pipeline and Event Cost Engine Integration | Span Ingestion, event-cost, event-cost-worker, SQLite WAL, Micro-USD Costs | Accepted |
