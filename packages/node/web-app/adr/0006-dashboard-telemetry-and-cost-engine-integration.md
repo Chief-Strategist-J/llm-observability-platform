@@ -55,7 +55,43 @@ flowchart TD
     end
 ```
 
-### 2.2 Integration Architectural Patterns
+### 2.3 Three-Plane Architectural Blueprint (Control, Data & Messaging)
+
+```mermaid
+flowchart TD
+    subgraph ControlPlane["1. CONTROL PLANE (Configuration & Policy Governance)"]
+        ConfigState["Dashboard Filter State (useDashboardFilters)"]
+        PriceReloadSignal["Hot-Reload Price Signal (POST /v1/metrics/prices/reload)"]
+        TenantAuth["Auth Context & API Keys (x-api-key)"]
+    end
+
+    subgraph DataPlane["2. DATA PLANE (High-Throughput Analytics & Rendering)"]
+        WebAppUI["Next.js React Dashboard UI (Pages & Suspense Views)"]
+        ServerActions["Next.js Server API Routes / Direct DB Query"]
+        RestProxy["FastAPI REST Ingestion Proxy (http://localhost:8000)"]
+        AnalyticsStore[("PostgreSQL / ClickHouse Analytics Store")]
+
+        WebAppUI --> ServerActions
+        ServerActions --> AnalyticsStore
+        WebAppUI --> RestProxy
+    end
+
+    subgraph MessagingPlane["3. MESSAGING PLANE (Asynchronous Telemetry & Tracing)"]
+        OtelExporter["OTLP Web SDK Exporter (NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT)"]
+        TempoCollector["OpenTelemetry Collector & Tempo Tracing Engine (Port 31417)"]
+        SseStreamer["Server-Sent Events (SSE) / Real-time WebSockets"]
+
+        WebAppUI --> OtelExporter
+        OtelExporter --> TempoCollector
+        RestProxy --> SseStreamer
+        SseStreamer --> WebAppUI
+    end
+
+    ControlPlane --> DataPlane
+    MessagingPlane --> DataPlane
+```
+
+### 2.4 Integration Architectural Patterns
 
 | Pattern | Description | Primary Use Case | Target Endpoint |
 |---|---|---|---|

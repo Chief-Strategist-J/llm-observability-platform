@@ -71,7 +71,46 @@ flowchart TD
     end
 ```
 
-### 2.2 Core Responsibilities
+### 2.3 Three-Plane Architectural Blueprint (Control, Data & Messaging)
+
+```mermaid
+flowchart TD
+    subgraph ControlPlane["1. CONTROL PLANE (Orchestration, Management & Rule Reloading)"]
+        RemoteMgmt["REST Management API (/instrumentation/init, /detect)"]
+        PriceRegistry["Model Price Registry (config/model_prices.yaml)"]
+        PatternRegistry["Aho-Corasick Pattern Registry (config/patterns.yaml)"]
+        SamplingGate["Deterministic Sampling Gate (SHA256(span_id) % 100 == 0)"]
+    end
+
+    subgraph DataPlane["2. DATA PLANE (High-Throughput In-App Instrumentation & Execution)"]
+        AutoPatch["Auto-Instrumentation Decorators (@llm_observe / llm_span)"]
+        TokenEngine["Tiktoken Pre-Call Token Counter (count_tokens)"]
+        CostEngine["event-cost Micro-USD Ledger Engine (calculate_cost)"]
+        PIIScanner["Inline Aho-Corasick PII/Injection Scanner (scan_prompt)"]
+        SQLiteWAL["Local SQLite WAL Buffer (/tmp/llm-obs-wal.db)"]
+
+        AutoPatch --> TokenEngine
+        TokenEngine --> CostEngine
+        AutoPatch --> PIIScanner
+        PIIScanner --> SQLiteWAL
+    end
+
+    subgraph MessagingPlane["3. MESSAGING PLANE (Asynchronous Kafka Streaming & Partitioning)"]
+        KafkaFactory["KafkaClientFactory & Broker Config (KAFKA_BOOTSTRAP_SERVERS)"]
+        KafkaTopic["Kafka Topic (llm.spans.raw)"]
+        CostWorker["event-cost-worker (Kafka Consumer Batch Processor)"]
+        AnalyticsStore[("PostgreSQL / ClickHouse Partitioned Store")]
+
+        KafkaFactory --> KafkaTopic
+        KafkaTopic --> CostWorker
+        CostWorker --> AnalyticsStore
+    end
+
+    ControlPlane --> DataPlane
+    DataPlane --> MessagingPlane
+```
+
+### 2.4 Core Responsibilities
 
 | Subsystem Component | Primary Responsibility | Data Input | Data Output |
 |---|---|---|---|
