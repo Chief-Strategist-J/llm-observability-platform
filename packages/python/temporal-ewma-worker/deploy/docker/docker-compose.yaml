@@ -1,139 +1,53 @@
 version: '3.8'
 
 services:
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.4.0
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
+  ewma-worker:
+    build:
+      context: ../..
+      dockerfile: build/Dockerfile
+    container_name: temporal-ewma-worker
     ports:
-      - "2189:2181"
-
-  kafka:
-    image: confluentinc/cp-kafka:7.4.0
+      - "8000:8000"
+    environment:
+      - ALLOYDB_HOST=${ALLOYDB_HOST:-alloydb}
+      - ALLOYDB_PORT=${ALLOYDB_PORT:-5432}
+      - ALLOYDB_USER=${ALLOYDB_USER:-postgres}
+      - ALLOYDB_PASSWORD=${ALLOYDB_PASSWORD:-postgres}
+      - ALLOYDB_DB=${ALLOYDB_DB:-ewma_db}
+      - POSTGRES_DSN=${POSTGRES_DSN:-postgresql://postgres:postgres@alloydb:5432/ewma_db}
+      - CLICKHOUSE_HOST=${CLICKHOUSE_HOST:-llmobs-clickhouse}
+      - CLICKHOUSE_PORT=${CLICKHOUSE_PORT:-8123}
+      - CLICKHOUSE_USERNAME=${CLICKHOUSE_USERNAME:-default}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-}
+      - CLICKHOUSE_DATABASE=${CLICKHOUSE_DATABASE:-default}
+      - REDIS_URL=${REDIS_URL:-redis://:llmobs_redis_s3cret_2024@llmobs-redis:6379/0}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-llmobs-kafka:9092}
+      - TEMPORAL_HOST=${TEMPORAL_HOST:-temporal:7233}
+      - TEMPORAL_NAMESPACE=${TEMPORAL_NAMESPACE:-default}
+      - TEMPORAL_TASK_QUEUE=${TEMPORAL_TASK_QUEUE:-ewma-tasks}
     depends_on:
-      - zookeeper
-    ports:
-      - "9099:9099"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9099
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      alloydb:
+        condition: service_healthy
+    networks:
+      - llmobs-network
 
-  postgres:
-    image: postgres:15-alpine
-    container_name: ewma-postgres
+  alloydb:
+    image: google/alloydb-omni:latest
+    container_name: ewma-alloydb
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ewma_db
     ports:
-      - "5439:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - "${PORT_EWMA_ALLOYDB:-31433}:5432"
+    networks:
+      - llmobs-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d ewma_db"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  clickhouse:
-    image: clickhouse/clickhouse-server:23.8
-    container_name: ewma-clickhouse
-    ports:
-      - "9009:9000"
-      - "8129:8123"
-    volumes:
-      - clickhouse_data:/var/lib/clickhouse
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "localhost:8123/ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-    container_name: ewma-redis
-    ports:
-      - "6389:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  temporal:
-    image: temporalio/auto-setup:1.22.4
-    container_name: ewma-temporal
-    ports:
-      - "7239:7233"
-      - "8089:8080"
-    environment:
-      - DB=postgresql
-      - DB_PORT=5432
-      - POSTGRES_USER=postgres
-      - POSTGRES_PWD=postgres
-      - POSTGRES_SEEDS=postgres
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "timeout", "5", "bash", "-c", "</dev/tcp/temporal/7233"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  init-kafka:
-    image: confluentinc/cp-kafka:7.4.0
-    container_name: ewma-init-kafka
-    depends_on:
-      - kafka
-    command: |
-      bash -c "
-      echo 'Waiting for Kafka to be ready...'
-      cub kafka-ready -b kafka:29092 1 30
-      echo 'Creating anomaly alert topic...'
-      kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --topic alerts.cost.anomaly --partitions 1 --replication-factor 1
-      echo 'Topic created successfully.'
-      "
-
-  ewma-worker:
-    build:
-      context: ../..
-      dockerfile: build/Dockerfile
-    container_name: temporal-ewma-worker
-    depends_on:
-      postgres:
-        condition: service_healthy
-      clickhouse:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      temporal:
-        condition: service_healthy
-      kafka:
-        condition: service_started
-    ports:
-      - "8000:8000"
-    environment:
-      - CLICKHOUSE_HOST=clickhouse
-      - CLICKHOUSE_PORT=8123
-      - CLICKHOUSE_USERNAME=default
-      - CLICKHOUSE_PASSWORD=
-      - CLICKHOUSE_DATABASE=default
-      - REDIS_URL=redis://redis:6379/0
-      - POSTGRES_DSN=postgresql://postgres:postgres@postgres:5432/ewma_db
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-      - TEMPORAL_HOST=temporal:7233
-      - TEMPORAL_NAMESPACE=default
-      - TEMPORAL_TASK_QUEUE=ewma-tasks
-
-volumes:
-  postgres_data:
-  clickhouse_data:
-  redis_data:
+networks:
+  llmobs-network:
+    external: true

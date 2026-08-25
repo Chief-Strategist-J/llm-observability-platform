@@ -12,10 +12,40 @@ services:
       - "8002:8000"
     environment:
       - DEPLOYMENT_ENV=dev
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-llmobs-kafka:9092}
+      - REDIS_URL=${REDIS_URL:-redis://:llmobs_redis_s3cret_2024@llmobs-redis:6379/0}
+      - ALLOYDB_HOST=${ALLOYDB_HOST:-alloydb}
+      - ALLOYDB_PORT=${ALLOYDB_PORT:-5432}
+      - ALLOYDB_USER=${ALLOYDB_USER:-postgres}
+      - ALLOYDB_PASSWORD=${ALLOYDB_PASSWORD:-postgres}
+      - ALLOYDB_DB=${ALLOYDB_DB:-queue_embedding_db}
+      - POSTGRES_HOST=${POSTGRES_HOST:-alloydb}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-queue_embedding_db}
+    depends_on:
+      alloydb:
+        condition: service_healthy
     networks:
-      - observability-network
+      - llmobs-network
+
+  alloydb:
+    image: google/alloydb-omni:latest
+    container_name: queue-embedding-alloydb
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: queue_embedding_db
+    ports:
+      - "${PORT_EMBEDDING_ALLOYDB:-31432}:5432"
+    networks:
+      - llmobs-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d queue_embedding_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
-  observability-network:
+  llmobs-network:
     external: true
