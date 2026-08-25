@@ -167,6 +167,57 @@ services:
       - "traefik.http.routers.tempo.middlewares=security-headers@file,rate-limit@file"
       - "traefik.http.services.tempo.loadbalancer.server.port=3200"
 
+  llmobs-prometheus:
+    image: prom/prometheus:v3.14.0
+    container_name: llmobs-prometheus-server
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+    ports:
+      - "${PORT_PROMETHEUS:-31424}:9090"
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - llmobs-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:9090/-/healthy"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  llmobs-loki:
+    image: grafana/loki:3.7.6
+    container_name: llmobs-loki-logs
+    command: ["-config.file=/etc/loki/loki-config.yaml"]
+    ports:
+      - "${PORT_LOKI:-31423}:3100"
+    volumes:
+      - ./config/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki_data:/tmp/loki
+    networks:
+      - llmobs-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3100/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  llmobs-promtail:
+    image: grafana/promtail:3.7.6
+    container_name: llmobs-promtail-shipper
+    command: ["-config.file=/etc/promtail/promtail-config.yaml"]
+    volumes:
+      - ./config/promtail/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      - llmobs-network
+    depends_on:
+      - llmobs-loki
+
   llmobs-otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     container_name: llmobs-otel-collector
@@ -225,6 +276,8 @@ services:
     depends_on:
       - llmobs-tempo
       - llmobs-otel-collector
+      - llmobs-prometheus
+      - llmobs-loki
 
   llmobs-alloydb:
     image: google/alloydb-omni:latest
@@ -287,3 +340,5 @@ volumes:
   tempo_data:
   grafana_data:
   alloydb_data:
+  prometheus_data:
+  loki_data:
