@@ -9,20 +9,51 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - POSTGRES_HOST=postgres.prod.internal
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=llm_observability
-      - CLICKHOUSE_HOST=clickhouse.prod.internal
-      - CLICKHOUSE_PORT=8123
-      - CLICKHOUSE_USER=default
-      - CLICKHOUSE_PASSWORD=
-      - CLICKHOUSE_DATABASE=llm_observability
-      - REDIS_URL=redis://redis.prod.internal:6379/0
-      - TEMPORAL_HOST=temporal.prod.internal:7233
-      - KAFKA_BOOTSTRAP_SERVERS=kafka.prod.internal:9092
-      - INSTRUMENTATION_SDK_URL=http://sdk.prod.internal:8000
+      - ALLOYDB_HOST=${ALLOYDB_HOST:-alloydb}
+      - ALLOYDB_PORT=${ALLOYDB_PORT:-5432}
+      - ALLOYDB_USER=${ALLOYDB_USER:-postgres}
+      - ALLOYDB_PASSWORD=${ALLOYDB_PASSWORD:-postgres}
+      - ALLOYDB_DB=${ALLOYDB_DB:-forecast_db}
+      - POSTGRES_HOST=${POSTGRES_HOST:-alloydb}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-forecast_db}
+      - CLICKHOUSE_HOST=${CLICKHOUSE_HOST:-llmobs-clickhouse}
+      - CLICKHOUSE_PORT=${CLICKHOUSE_PORT:-8123}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-}
+      - CLICKHOUSE_DATABASE=${CLICKHOUSE_DATABASE:-llm_observability}
+      - REDIS_URL=${REDIS_URL:-redis://:llmobs_redis_s3cret_2024@llmobs-redis:6379/0}
+      - TEMPORAL_HOST=${TEMPORAL_HOST:-temporal.prod.internal:7233}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-llmobs-kafka:9092}
+      - INSTRUMENTATION_SDK_URL=${INSTRUMENTATION_SDK_URL:-http://sdk.prod.internal:8000}
       - TIMESFM_REPO_ID=google/timesfm-1.0-200m
       - TIMESFM_BACKEND=cpu
-      - INTERNAL_JWT_SECRET=super-secret-key
+      - INTERNAL_JWT_SECRET=${INTERNAL_JWT_SECRET:-super-secret-key}
     restart: always
+    depends_on:
+      alloydb:
+        condition: service_healthy
+    networks:
+      - llmobs-network
+
+  alloydb:
+    image: google/alloydb-omni:latest
+    container_name: forecast-alloydb-prod
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: forecast_db
+    ports:
+      - "${PORT_FORECAST_ALLOYDB:-31425}:5432"
+    networks:
+      - llmobs-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d forecast_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+networks:
+  llmobs-network:
+    external: true
