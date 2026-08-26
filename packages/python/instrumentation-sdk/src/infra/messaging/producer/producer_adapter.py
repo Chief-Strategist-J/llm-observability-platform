@@ -2,7 +2,7 @@ from typing import Callable, Any, Optional
 from src.shared.ports.kafka import KafkaProducerPort
 from src.infra.messaging.producer.producer_factory import kafka_producer_factory
 
-class KafkaPythonProducerAdapter(KafkaProducerPort):
+class KafkaProducerAdapter(KafkaProducerPort):
     def __init__(self) -> None:
         self._factory = kafka_producer_factory
 
