@@ -1,1 +1,1 @@
-from __future__ import annotations
+# api rest v1 handlers init

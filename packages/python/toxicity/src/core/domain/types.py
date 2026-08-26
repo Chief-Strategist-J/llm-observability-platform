@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+
 @dataclass(frozen=True)
 class ToxicityInput:
-    response_text: str
+    text: str
+
 
 @dataclass(frozen=True)
 class ToxicityScores:
@@ -15,11 +17,14 @@ class ToxicityScores:
     insult: float
     identity_hate: float
 
+
 @dataclass(frozen=True)
 class ToxicityResult:
-    score: float | None
-    flagged: bool
-    flag: str | None
-    skipped: bool
-    skip_reason: str | None
-    scores: ToxicityScores | None
+    scores: ToxicityScores
+    long_response_strategy: str | None = None
+    # Flagging fields — populated when publisher is wired in
+    score: float | None = None
+    flagged: bool = False
+    flag: str | None = None
+    skipped: bool = False
+    skip_reason: str | None = None

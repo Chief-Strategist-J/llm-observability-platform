@@ -11,14 +11,16 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor, ConsoleSpanExporter
 
 _PROVIDER_INITIALIZED = False
+_SERVICE_NAME = "toxicity"
+
 
 def init_tracer() -> None:
     global _PROVIDER_INITIALIZED
     if _PROVIDER_INITIALIZED:
         return
     res = Resource.create({
-        "service.name": "toxicity-scorer",
-        "service.version": "0.1.0",
+        "service.name": _SERVICE_NAME,
+        "service.version": "0.2.0",
         "deployment.env": os.getenv("DEPLOYMENT_ENV", "dev"),
     })
     prov = TracerProvider(resource=res)
@@ -28,7 +30,9 @@ def init_tracer() -> None:
         try:
             from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
             endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
-            prov.add_span_processor(SimpleSpanProcessor(OTLPSpanExporter(endpoint=endpoint, insecure=True)))
+            prov.add_span_processor(
+                SimpleSpanProcessor(OTLPSpanExporter(endpoint=endpoint, insecure=True))
+            )
         except ImportError:
             try:
                 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -39,6 +43,7 @@ def init_tracer() -> None:
     trace.set_tracer_provider(prov)
     _PROVIDER_INITIALIZED = True
 
+
 @contextmanager
 def trace_span(
     name: str,
@@ -47,7 +52,7 @@ def trace_span(
     attributes: dict[str, str | int | float | bool | None] | None = None,
 ) -> Generator[Span, None, None]:
     init_tracer()
-    t = trace.get_tracer("toxicity-scorer")
+    t = trace.get_tracer(_SERVICE_NAME)
 
     parent_ctx = None
     if trace_id and span_id:

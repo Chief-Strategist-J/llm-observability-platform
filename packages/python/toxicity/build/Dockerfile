@@ -32,9 +32,9 @@ ENV PYTHONUNBUFFERED=1
 
 ENV TOXICITY_MODEL_ID=unitary/toxic-bert
 
-EXPOSE 8007
+EXPOSE 8008
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8007/health')"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8008/healthz')"
 
-CMD ["uvicorn", "api.rest.v1.app:app", "--host", "0.0.0.0", "--port", "8007"]
+CMD ["uvicorn", "api.rest.v1.app:app", "--host", "0.0.0.0", "--port", "8008"]

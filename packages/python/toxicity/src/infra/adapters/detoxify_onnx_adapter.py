@@ -4,9 +4,10 @@ from functools import cached_property
 from typing import Any
 import torch
 
-from features.score_toxicity.types import ToxicityScores
+from core.domain.ports.toxicity_scorer_port import ToxicityScorerPort
+from core.domain.types import ToxicityScores
 
-class DetoxifyOnnxAdapter:
+class DetoxifyOnnxAdapter(ToxicityScorerPort):
     def __init__(self, model_id: str = "unitary/toxic-bert") -> None:
         self._model_id = model_id
 
@@ -53,3 +54,11 @@ class DetoxifyOnnxAdapter:
             insult=probs[label_to_idx.get("insult", 4)],
             identity_hate=probs[label_to_idx.get("identity_hate", 5)],
         )
+
+    def warmup(self) -> None:
+        # Trigger cached property loading
+        _ = self._tokenizer
+        _ = self._model
+        # Run dummy inference pass
+        self.score_token_ids(self.tokenize("hello"))
+

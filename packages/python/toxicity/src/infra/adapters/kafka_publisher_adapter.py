@@ -4,9 +4,18 @@ import json
 from dataclasses import asdict
 from typing import Any
 
-from features.score_toxicity.types import ToxicityScores
+from core.domain.types import ToxicityScores
+
 
 class KafkaToxicityPublisherAdapter:
+    """
+    Publishes flagged toxicity events to Kafka topic `llm.toxicity.flagged`.
+    Disabled (no-op) when bootstrap_servers is None — safe to use in tests
+    and environments without Kafka.
+    """
+
+    TOPIC = "llm.toxicity.flagged"
+
     def __init__(self, bootstrap_servers: str | None = None) -> None:
         self._bootstrap_servers = bootstrap_servers
         self._producer: Any = None
@@ -15,6 +24,7 @@ class KafkaToxicityPublisherAdapter:
     def producer(self) -> Any:
         if self._bootstrap_servers and self._producer is None:
             from confluent_kafka import Producer
+
             self._producer = Producer({"bootstrap.servers": self._bootstrap_servers})
         return self._producer
 
@@ -32,7 +42,7 @@ class KafkaToxicityPublisherAdapter:
             "flag": "TOXIC_RESPONSE",
         }
         prod.produce(
-            topic="llm.toxicity.flagged",
+            topic=self.TOPIC,
             key=trace_id,
             value=json.dumps(payload).encode("utf-8"),
         )

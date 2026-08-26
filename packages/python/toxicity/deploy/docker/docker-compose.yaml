@@ -1,49 +1,44 @@
 version: "3.9"
 
 services:
-  toxicity:
+  toxicity-worker:
     build:
       context: ../..
       dockerfile: build/Dockerfile
-    image: chiefj/toxicity:latest
-    container_name: toxicity
+    container_name: toxicity-worker
     ports:
-      - "8007:8007"
+      - "8008:8008"
     environment:
       - TOXICITY_MODEL_ID=unitary/toxic-bert
       - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-llmobs-kafka:9092}
+      - KAFKA_CONSUMER_GROUP=toxicity-worker-group
+      - KAFKA_TOPIC_INPUT=llm.spans.sampled
+      - KAFKA_TOPIC_ALERTS=llm.toxicity.flagged
       - REDIS_URL=${REDIS_URL:-redis://:llmobs_redis_s3cret_2024@llmobs-redis:6379/0}
       - ALLOYDB_HOST=${ALLOYDB_HOST:-alloydb}
       - ALLOYDB_PORT=${ALLOYDB_PORT:-5432}
       - ALLOYDB_USER=${ALLOYDB_USER:-postgres}
       - ALLOYDB_PASSWORD=${ALLOYDB_PASSWORD:-postgres}
-      - ALLOYDB_DB=${ALLOYDB_DB:-toxicity_db}
+      - ALLOYDB_DB=${ALLOYDB_DB:-toxicity_worker_db}
     depends_on:
       alloydb:
         condition: service_healthy
     networks:
       - llmobs-network
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8007/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    restart: unless-stopped
 
   alloydb:
     image: google/alloydbomni:15
-    container_name: toxicity-alloydb
+    container_name: toxicity-worker-alloydb
     environment:
       ALLOYDB_USER: postgres
       ALLOYDB_PASSWORD: postgres
-      ALLOYDB_DB: toxicity_db
+      ALLOYDB_DB: toxicity_worker_db
     ports:
-      - "${PORT_TOXICITY_ALLOYDB:-31434}:5432"
+      - "${PORT_TOXICITY_WORKER_ALLOYDB:-31435}:5432"
     networks:
       - llmobs-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d toxicity_db"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d toxicity_worker_db"]
       interval: 10s
       timeout: 5s
       retries: 5

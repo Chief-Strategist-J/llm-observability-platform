@@ -1,7 +1,7 @@
 [project]
 name = "toxicity"
-version = "0.1.0"
-description = "Layer 3 toxicity scorer — unitary/toxic-bert ONNX Runtime on CPU"
+version = "0.2.0"
+description = "Unified toxicity service — ONNX inference + Kafka publisher + flagging rules"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -14,8 +14,10 @@ dependencies = [
     "optimum[onnxruntime]>=1.18.0",
     "torch>=2.2.0",
     "confluent-kafka>=2.3.0",
+    "prometheus-client>=0.17.0",
     "opentelemetry-sdk>=1.26.0",
     "opentelemetry-api>=1.26.0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.26.0",
 ]
 
 [project.optional-dependencies]
@@ -26,11 +28,15 @@ dev = [
     "httpx>=0.24.0",
     "mypy>=1.8.0",
     "ruff>=0.2.0",
+    "jupyterlab>=4.0.0",
+    "matplotlib>=3.8.0",
+    "pandas>=2.1.0",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+anyio_mode = "auto"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
