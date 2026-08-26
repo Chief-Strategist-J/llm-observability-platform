@@ -4,7 +4,7 @@ from .router import api_v1_router
 from src.api.middleware.request_context import StandardRequestContextMiddleware
 from src.infra.tracing.middleware import instrument_app
 from src.features.spans.globals import set_reporter
-from src.infra.messaging.producer.span_reporter import KafkaSpanReporter
+from src.infra.messaging.reporters.span_reporter import KafkaSpanReporter
 from config.infra.env_config import service_config
 
 def create_app() -> FastAPI:

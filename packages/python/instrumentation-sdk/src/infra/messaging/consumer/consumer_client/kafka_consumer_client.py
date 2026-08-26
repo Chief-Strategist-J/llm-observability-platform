@@ -1,5 +1,5 @@
 from typing import Callable, Any
-from src.infra.messaging.consumer.consumer_factory import kafka_consumer_factory
+from src.infra.messaging.factories.consumer_factory import kafka_consumer_factory
 
 class KafkaConsumerClient:
     def __init__(self) -> None:
