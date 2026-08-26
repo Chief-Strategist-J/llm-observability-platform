@@ -1,7 +1,7 @@
 import json
-from typing import Dict, Any, Callable
+from typing import Dict, Any
 from src.features.spans.types import LLMSpan
-from src.infra.messaging.cqrs.projection_store import projection_store
+from src.infra.messaging.consumer.cqrs.projections.projection_store import projection_store
 
 class SpanIngestionConsumerHandler:
     def __init__(self, projection_store_instance=projection_store):
