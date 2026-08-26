@@ -1,13 +1,21 @@
 import hashlib
 import time
+import sys
+from pathlib import Path
 from typing import Dict, Tuple, Optional, List
+
+sdk_root = Path(__file__).resolve().parents[3]
+if str(sdk_root) not in sys.path:
+    sys.path.insert(0, str(sdk_root))
+
+from config.infra.env_config import service_config
 from .schema.api_key_schema import VerifyApiKeyResponse, GenerateApiKeyResponse
 
 def hash_api_key(raw_key: str) -> str:
     return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
 
 class ApiKeyDomainService:
-    def __init__(self, ttl_seconds: int = 60):
+    def __init__(self, ttl_seconds: int = service_config.api_key_ttl_seconds):
         self.ttl_seconds = ttl_seconds
         self._cache: Dict[str, Tuple[VerifyApiKeyResponse, float]] = {}
         self._mock_store: Dict[str, Tuple[str, List[str]]] = {}

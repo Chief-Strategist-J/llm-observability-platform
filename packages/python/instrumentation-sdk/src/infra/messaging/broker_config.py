@@ -1,11 +1,19 @@
 import os
+import sys
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import List, Optional
+
+sdk_root = Path(__file__).resolve().parents[3]
+if str(sdk_root) not in sys.path:
+    sys.path.insert(0, str(sdk_root))
+
+from config.infra.env_config import service_config
 
 @dataclass
 class KafkaBrokerConfig:
     bootstrap_servers: List[str] = field(default_factory=lambda: [
-        os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+        service_config.kafka_bootstrap_servers
     ])
     client_id: str = os.getenv("KAFKA_CLIENT_ID", "instrumentation-sdk-producer")
     acks: str = os.getenv("KAFKA_ACKS", "all")
@@ -21,7 +29,7 @@ class KafkaBrokerConfig:
 
     @classmethod
     def from_env(cls) -> "KafkaBrokerConfig":
-        raw_servers = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+        raw_servers = service_config.kafka_bootstrap_servers
         servers = [s.strip() for s in raw_servers.split(",") if s.strip()]
         return cls(bootstrap_servers=servers)
 
