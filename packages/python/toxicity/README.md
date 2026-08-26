@@ -1,144 +1,180 @@
-# Toxicity Scorer Service
+# Toxicity Service
 
-Production-ready multi-label toxicity classification service built with Hexagonal Architecture (Ports and Adapters) using `unitary/toxic-bert` run with ONNX Runtime on CPU.
+Unified, production-ready multi-label toxicity classification service built on Hexagonal Architecture using `unitary/toxic-bert` with ONNX Runtime on CPU.
+
+Merges the former `toxicity` (orchestrator) and `toxicity-worker` (stateless inference) packages into one. See [ADR 0003](./adr/0003-consolidation-of-toxicity-and-toxicity-worker.md).
+
+---
 
 ## Key Features
 
-1. **Dual-Pass Inference Strategy**:
-   - For long response texts exceeding 512 tokens, the service executes a dual-pass evaluation (evaluating the first 512 tokens and the last 512 tokens separately).
-   - Combines the scores by taking the maximum score across each label to ensure toxicity at the end of a long response is flagged.
-2. **Hexagonal Architecture**:
-   - Zero infrastructure dependencies inside the domain logic.
-   - External dependencies are decoupled via `ToxicityScorerPort` and `ToxicityPublisherPort` protocols.
-3. **Observability**:
-   - Fully instrumented with OpenTelemetry tracing spans.
-   - Propagates trace/span context through headers and publishes flags.
-4. **Kafka Publisher**:
-   - Emits flagged toxic responses (`toxicity_score > 0.50`) to the `llm.toxicity.flagged` Kafka topic.
+| Feature | Detail |
+|---|---|
+| **ONNX CPU inference** | `unitary/toxic-bert` exported via `optimum` — no GPU required |
+| **Dual-pass long-text** | Texts > 510 tokens scored in two passes; element-wise max taken across labels |
+| **Optional Kafka publishing** | Flagged events (`score > 0.50`) emitted to `llm.toxicity.flagged` — disabled when `KAFKA_BOOTSTRAP_SERVERS` unset |
+| **Model warmup** | Tokenizer + model loaded eagerly on startup via `lifespan()` — zero cold-start on first request |
+| **Prometheus metrics** | Scraped at `/metrics` |
+| **OTel tracing** | Every `/score` call wrapped in a span; upstream trace context linked via `traceparent` header or request body |
+
+---
 
 ## Business Decision Tree
 
 ```
-[toxicity-ST-01 | Input Text Received]
-   |
-   +-- [toxicity-IN-01 | response_text (str)]
-       |
-       +-- [toxicity-PR-01 | Tokenizer evaluation: Check length in tokens]
-           |
-           +-- [toxicity-DC-01 | Length > 512 tokens?]
-               |-- [yes | Dual-Pass Inference: Pass 1 (first 512 tokens) AND Pass 2 (last 512 tokens)]
-               |          Combination: toxicity_score = max(score_first, score_last)
-               |-- [no  | Single-Pass Inference: Pass 1 (first 512 tokens)]
-               |
-               `-- [toxicity-PR-02 | Threshold check: primary score = output['toxicity']]
-                   |
-                   +-- [toxicity-DC-02 | primary score > 0.50?]
-                       |-- [yes | Flag: 'TOXIC_RESPONSE']
-                       |          Action: Emit event to Kafka topic 'llm.toxicity.flagged'
-                       |-- [no  | Flag: None]
-                       |          Action: Do not emit Kafka event
-                       |
-                       `-- [toxicity-OUT-01 | Return ToxicityResult](data / response / event / update / artifact)
-                           |   
-                           |
-                           `-- [toxicity-CS-01 | Toxicity scored, tracing context populated]
+[Input: POST /score { text, trace_id?, span_id? }]
+  │
+  ├─ Tokenize text
+  │
+  ├─ Length > 510 tokens?
+  │   ├─ YES → score(first 510) + score(last 510) → element-wise max
+  │   │         long_response_strategy = "max_of_two_passes"
+  │   └─ NO  → score(all tokens)
+  │
+  ├─ primary_score = scores.toxicity
+  │
+  ├─ primary_score > 0.50?
+  │   ├─ YES → flagged=True, flag="TOXIC_RESPONSE"
+  │   │         publish to Kafka llm.toxicity.flagged (if publisher wired)
+  │   └─ NO  → flagged=False, flag=None
+  │
+  └─ Return ToxicityResult (scores + flagging + strategy)
 ```
 
-## Registry Integration
+---
 
-- Registered on Port **8007**.
-- Feature configuration registered in `registry/features/toxicity.yaml`.
-- Worker service registered in `registry/workers/toxicity.yaml`.
+## Module Structure
 
-## Installation and Dependencies
+```
+src/
+├── core/domain/
+│   ├── ports/
+│   │   ├── toxicity_scorer_port.py     # Protocol: tokenize / score_token_ids
+│   │   └── toxicity_publisher_port.py  # Protocol: publish_flagged
+│   ├── rules.py                        # TOXICITY_THRESHOLD, is_flagged, determine_flag
+│   ├── service.py                      # score_toxicity() — dual-pass + optional publish
+│   └── types.py                        # ToxicityInput, ToxicityScores, ToxicityResult
+├── infra/adapters/
+│   ├── detoxify_onnx_adapter.py        # ONNX inference + warmup()
+│   └── kafka_publisher_adapter.py      # confluent-kafka producer (no-op when unset)
+├── api/rest/v1/
+│   ├── app.py                          # FastAPI app: lifespan warmup + Prometheus + optional publisher
+│   ├── router.py
+│   └── handlers/
+│       ├── health.py                   # GET/POST /healthz
+│       └── score.py                    # POST /score
+└── shared/tracing/tracer.py            # OTel TracerProvider init + trace_span() context manager
+```
 
-The service uses:
-- `fastapi` & `uvicorn` for the REST API
-- `optimum[onnxruntime]` for exporting and running the model on ONNX Runtime CPU
-- `confluent-kafka` for optional event publishing
-- `opentelemetry-api` & `opentelemetry-sdk` for tracing
+---
 
 ## Configuration & Environment Variables
 
 | Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | FastAPI service port | `8007` |
-| `TOXICITY_MODEL_ID` | Model identifier or local path | `unitary/toxic-bert` |
-| `KAFKA_BOOTSTRAP_SERVERS` | Kafka brokers list (comma-separated) | `None` (disables publishing) |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | OpenTelemetry collector endpoint | `None` |
-| `SKIP_OTLP_EXPORTER` | Skip OTLP exporter initialization | `false` |
-| `SKIP_CONSOLE_EXPORTER` | Skip logging spans to console stdout | `true` |
+|---|---|---|
+| `TOXICITY_MODEL_ID` | HuggingFace model ID or local path | `unitary/toxic-bert` |
+| `KAFKA_BOOTSTRAP_SERVERS` | Kafka brokers (comma-separated). When unset, publishing is disabled | `None` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP collector endpoint | `http://localhost:4317` |
+| `SKIP_OTLP_EXPORTER` | Set `true` to disable OTLP exporter | `false` |
+| `SKIP_CONSOLE_EXPORTER` | Set `true` to disable console span exporter | `false` |
+| `DEPLOYMENT_ENV` | Environment tag on OTel resource | `dev` |
+
+---
+
+## API Contract
+
+Full spec: [`contracts/openapi/v1.yaml`](./contracts/openapi/v1.yaml)
+
+### `GET|POST /healthz`
+
+```json
+{ "status": "ok", "model_id": "unitary/toxic-bert" }
+```
+
+### `POST /score`
+
+**Request:**
+```json
+{
+  "text": "The response text to score",
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "span_id": "00f067aa0ba902b7"
+}
+```
+`trace_id` and `span_id` are optional. Upstream trace context is also accepted via the W3C `traceparent` header.
+
+**Response:**
+```json
+{
+  "toxicity": 0.08,
+  "severe_toxicity": 0.001,
+  "obscene": 0.002,
+  "threat": 0.001,
+  "insult": 0.003,
+  "identity_hate": 0.001,
+  "score": 0.08,
+  "flagged": false,
+  "skipped": false,
+  "long_response_strategy": null
+}
+```
+
+When `flagged: true`:
+```json
+{
+  "toxicity": 0.87,
+  "score": 0.87,
+  "flagged": true,
+  "flag": "TOXIC_RESPONSE",
+  "skipped": false,
+  "long_response_strategy": "max_of_two_passes"
+}
+```
+
+> **Breaking change from v1**: the old `POST /v1/score/toxicity` endpoint with `response_text` field has been replaced by `POST /score` with `text` field (v0.2.0+).
 
 ---
 
 ## Docker Deployment
 
-### Building the Image
-
 ```bash
+# Build
 docker build -t chiefj/toxicity:latest -f build/Dockerfile .
-```
 
-### Running with Docker
-
-Run the container by passing the environment variables:
-
-```bash
+# Run
 docker run -d \
-  -p 8007:8007 \
-  -e PORT=8007 \
+  -p 8008:8008 \
   -e TOXICITY_MODEL_ID=unitary/toxic-bert \
   -e KAFKA_BOOTSTRAP_SERVERS=localhost:9092 \
-  -e OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318/v1/traces \
-  -e SKIP_OTLP_EXPORTER=false \
-  -e SKIP_CONSOLE_EXPORTER=true \
-  --name toxicity-service \
+  -e OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:31418 \
+  --name toxicity \
   chiefj/toxicity:latest
 ```
 
 ---
 
-## API Endpoint Contract
-
-Defined in `contracts/openapi/v1.yaml`.
-
-### POST /v1/score/toxicity
-
-Request:
-```json
-{
-  "trace_id": "string",
-  "span_id": "string",
-  "response_text": "string"
-}
-```
-
-Response:
-```json
-{
-  "trace_id": "string",
-  "span_id": "string",
-  "score": 0.08,
-  "flagged": false,
-  "flag": null,
-  "skipped": false,
-  "skip_reason": null,
-  "scores": {
-    "toxicity": 0.08,
-    "severe_toxicity": 0.001,
-    "obscene": 0.002,
-    "threat": 0.001,
-    "insult": 0.003,
-    "identity_hate": 0.001
-  }
-}
-```
-
 ## Running Tests
-
-Run the test suite using pytest with the following command:
 
 ```bash
 cd packages/python/toxicity
-PYTHONPATH=src python3 -m pytest tests/ -v --tb=short --cov=src --cov-report=term-missing
+SKIP_OTLP_EXPORTER=true SKIP_CONSOLE_EXPORTER=true \
+  python3 -m pytest tests/ -v --tb=short
 ```
+
+Skips `test_detoxify_onnx_adapter.py` in CI (requires torch + model download):
+
+```bash
+python3 -m pytest tests/ -v --ignore=tests/unit/test_detoxify_onnx_adapter.py
+```
+
+---
+
+## Architecture Decision Records
+
+See [`adr/`](./adr/README.md) for the full decision history.
+
+| ADR | Decision |
+|---|---|
+| [0001](./adr/0001-onnx-cpu-inference-and-dual-pass-long-text-strategy.md) | ONNX Runtime CPU + dual-pass for texts > 510 tokens |
+| [0002](./adr/0002-kafka-publisher-for-flagged-toxicity-events.md) | Kafka publishing of flagged events (optional) |
+| [0003](./adr/0003-consolidation-of-toxicity-and-toxicity-worker.md) | Merge of `toxicity` + `toxicity-worker` into one package |
