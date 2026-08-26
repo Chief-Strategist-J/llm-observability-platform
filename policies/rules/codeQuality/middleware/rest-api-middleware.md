@@ -14,35 +14,49 @@ Related references:
 
 The Outbound REST Middleware Engine sits at the boundary between application domain logic and remote HTTP endpoints (internal microservices, 3rd-party APIs, webhooks).
 
-```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                             APPLICATION DOMAIN LAYER                              │
-│         (Services, Sagas, Workflows — zero raw fetch/http client calls)           │
-└─────────────────────────────────────────┬────────────────────────────────────────┘
-                                          │ invoke HTTP Request
-                                          ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                    OUTBOUND REST MIDDLEWARE ENGINE PIPELINE                      │
-│                                                                                  │
-│   ┌──────────────────────┐   ┌──────────────────────┐   ┌────────────────────┐   │
-│   │ withTracingOutbound  │──►│withCircuitBreaker    │──►│ withRetryAndJitter │   │
-│   └──────────────────────┘   └──────────────────────┘   └─────────┬──────────┘   │
-│                                                                   │              │
-│   ┌──────────────────────┐   ┌──────────────────────┐   ┌─────────▼──────────┐   │
-│   │withSchemaValidation  │◄──│withAuthHeaderInject  │◄──│withRequestDedupe   │   │
-│   └──────────┬───────────┘   └──────────────────────┘   └────────────────────┘   │
-└──────────────┼───────────────────────────────────────────────────────────────────┘
-               │ Dispatch Transformed Request
-               ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                              HTTP TRANSPORT ENGINE                               │
-│        (Socket Pool Manager, TLS Handshake, DNS Resolver, HTTP/2 PING)           │
-└─────────────────────────────────────────┬────────────────────────────────────────┘
-                                          │ Wire Protocol (HTTPS)
-                                          ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                           REMOTE REST API ENDPOINTS                              │
-└──────────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Domain ["Application Domain Layer"]
+        App["Services / Sagas / Workflows"]
+    end
+
+    subgraph MiddlewareEngine ["Outbound REST Middleware Pipeline"]
+        MwTrace["1. withTracingOutbound"]
+        MwCB["2. withCircuitBreakerOutbound"]
+        MwRetry["3. withRetryAndJitter"]
+        MwDedupe["4. withRequestDeduplication"]
+        MwCache["5. withResponseCache"]
+        MwAuth["6. withAuthHeaderInjection"]
+        MwSchema["7. withSchemaValidationOutbound"]
+
+        MwTrace --> MwCB
+        MwCB --> MwRetry
+        MwRetry --> MwDedupe
+        MwDedupe --> MwCache
+        MwCache --> MwAuth
+        MwAuth --> MwSchema
+    end
+
+    subgraph TransportPool ["HTTP Transport Layer"]
+        Agent["Connection Pool & Socket Manager"]
+        DNS["Managed DNS Resolver (30s TTL)"]
+        TLS["mTLS / TLS Handshake Engine"]
+        H2["HTTP/2 Frame & PING Handler"]
+        
+        Agent --- DNS
+        Agent --- TLS
+        Agent --- H2
+    end
+
+    subgraph RemoteEndpoints ["Remote REST Targets"]
+        API1["Internal Microservices"]
+        API2["3rd-Party SaaS APIs"]
+        API3["Outbound Webhooks"]
+    end
+
+    App -->|Dispatch HttpClientCtx| MwTrace
+    MwSchema -->|Execute Raw Fetch| Agent
+    Agent -->|HTTPS Protocol| RemoteEndpoints
 ```
 
 ### Key Components & Boundaries
@@ -54,89 +68,119 @@ The Outbound REST Middleware Engine sits at the boundary between application dom
 
 ---
 
-## PART B — Pipeline Diagrams (Mermaid & ASCII)
+## PART B — Pipeline Flow & Sequence Diagrams
 
-### Structural & Control Flow Diagram (Mermaid)
+### 1. High-Level Decision & Execution Flowchart
 
 ```mermaid
-graph TD
-    A[Caller Service] -->|HttpClientCtx| B[withTracingOutbound]
-    B -->|Inject W3C Header & Start Span| C[withCircuitBreakerOutbound]
-    C -->|Check Domain Health| D{Circuit Open?}
-    D -- Yes --> E[Throw UpstreamUnavailableError]
-    D -- No --> F[withRetryAndJitter]
-    F -->|Check Deadline Budget| G[withRequestDeduplication]
-    G -->|Singleflight Key Match?| H{In-Flight Match?}
-    H -- Yes --> I[Await In-Flight Promise]
-    H -- No --> J[withResponseCache]
-    J -->|Cache Hit?| K{Valid Cache?}
-    K -- Yes --> L[Return Cached Response]
-    K -- No --> M[withAuthHeaderInjection]
-    M -->|Fetch Token via Mutex| N[withSchemaValidationOutbound]
-    N -->|Dispatch| O[HTTP Client Transport]
-    O -->|Network Call| P[Remote REST Endpoint]
-    P -->|HTTP Response| O
-    O -->|Raw Payload| N
-    N -->|Zod Validate Data| J
-    J -->|Store Cache| G
-    G -->|Complete Singleflight| F
-    F -->|Evaluate Retry/429| C
-    C -->|Record Success/Failure| B
-    B -->|End Span| A
+flowchart TD
+    Start["Caller Invokes Adapter Method"] --> Tracing["withTracingOutbound: Start OTEL Client Span"]
+    Tracing --> CBCheck["withCircuitBreakerOutbound: Check Upstream Domain Health"]
+    
+    CBCheck --> CBOpen{"Circuit Breaker Open?"}
+    CBOpen -- "Yes" --> ThrowCB["Throw UpstreamUnavailableError"]
+    CBOpen -- "No" --> DeadlineCheck["withRetryAndJitter: Check Deadline Budget"]
+    
+    DeadlineCheck --> DeadlineValid{"Remaining Budget > 0?"}
+    DeadlineValid -- "No" --> ThrowTimeout["Throw UpstreamTimeoutError"]
+    DeadlineValid -- "Yes" --> MethodCheck["Check Request Method"]
+    
+    MethodCheck --> IsGET{"Method == GET?"}
+    IsGET -- "Yes" --> Dedupe["withRequestDeduplication: Check Singleflight Map"]
+    IsGET -- "No" --> AuthInject["withAuthHeaderInjection"]
+    
+    Dedupe --> SingleflightHit{"In-Flight Match?"}
+    SingleflightHit -- "Yes" --> AwaitSingleflight["Await Shared Promise Result"]
+    SingleflightHit -- "No" --> CacheCheck["withResponseCache: Check CacheStore"]
+    
+    CacheCheck --> CacheHit{"Valid Cache Found?"}
+    CacheHit -- "Yes" --> ReturnCached["Return Cached HttpResponse"]
+    CacheHit -- "No" --> AuthInject
+    
+    AuthInject --> SingleflightAuth["Acquire Token Mutex & Inject Bearer Header"]
+    SingleflightAuth --> RawTransport["withSchemaValidationOutbound: Execute Network Transport"]
+    
+    RawTransport --> ResponseStatus{"HTTP Status Code?"}
+    ResponseStatus -- "2xx OK" --> ParseSchema["Validate Response Data via Zod Schema"]
+    ResponseStatus -- "429 Too Many Requests" --> Parse429["Parse Retry-After Header & Backoff"]
+    ResponseStatus -- "5xx / Network Error" --> CheckRetry{"Attempt < Max & Retryable?"}
+    
+    Parse429 --> DeadlineCheck
+    CheckRetry -- "Yes" --> SleepJitter["Calculate Exponential Backoff + Jitter"]
+    SleepJitter --> DeadlineCheck
+    CheckRetry -- "No" --> MapError["Map Error to Platform Taxonomy"]
+    
+    ParseSchema --> StoreCache["Store Response in CacheStore if GET"]
+    StoreCache --> CompleteSingleflight["Resolve Singleflight Waiters"]
+    CompleteSingleflight --> RecordCBSuccess["Record Circuit Breaker Success"]
+    RecordCBSuccess --> EndSpan["End OTEL Span & Return HttpResponse"]
+    
+    MapError --> RecordCBFail["Record Circuit Breaker Failure"]
+    RecordCBFail --> EndSpanError["Record Exception on OTEL Span & Throw"]
 ```
 
-### Detailed Layer Pipeline (ASCII)
+### 2. End-to-End Execution Sequence Diagram
 
-```
-OUTBOUND REST CLIENT PIPELINE (outside → in):
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Caller as Caller Service
+    participant Tracing as withTracingOutbound
+    participant CB as withCircuitBreakerOutbound
+    participant Retry as withRetryAndJitter
+    participant Dedupe as withRequestDeduplication
+    participant Cache as withResponseCache
+    participant Auth as withAuthHeaderInjection
+    participant Schema as withSchemaValidation
+    participant Net as Transport Agent
+    participant Remote as Remote REST API
 
-  [Entry] Caller invokes adapter method
-    │
-    ▼
-  1. withTracingOutbound
-     ├── Extract parent OTEL trace context
-     ├── Create Client Span ("HTTP POST /api/v1/resource")
-     └── Inject W3C `traceparent`, `x-correlation-id`, `x-tenant-id`
-    │
-    ▼
-  2. withCircuitBreakerOutbound
-     ├── Extract domain hostname from request URL
-     ├── Query Circuit Breaker registry for target domain
-     └── IF OPEN -> Short-circuit throw `UpstreamUnavailableError`
-    │
-    ▼
-  3. withRetryAndJitter
-     ├── Calculate remaining deadline budget (`deadline - Date.now()`)
-     ├── IF remaining budget <= 0 -> Throw `UpstreamTimeoutError`
-     ├── Execute inner pipeline
-     ├── ON 429 -> Parse `Retry-After` header & sleep jitter duration
-     └── ON Retryable Error -> Calculate exponential backoff + full jitter & retry
-    │
-    ▼
-  4. withRequestDeduplication (Singleflight)
-     ├── IF Method == GET: Compute key `tenantId:method:url:queryParams`
-     └── IF in-flight -> Wait and share promise result; ELSE execute inner
-    │
-    ▼
-  5. withResponseCache
-     ├── IF Method == GET: Query CacheStore (`http_cache:tenantId:hash`)
-     └── IF Cache Hit -> Return cached HttpResponse; ELSE execute inner
-    │
-    ▼
-  6. withAuthHeaderInjection
-     ├── Acquire singleflight token refresh mutex
-     ├── Obtain valid Bearer token for tenant
-     └── Inject `Authorization: Bearer <token>` header
-    │
-    ▼
-  7. withSchemaValidationOutbound
-     ├── Execute raw HTTP client network transport call
-     ├── Receive raw HTTP response status & body
-     ├── IF Status >= 400 -> Map to platform Error Taxonomy (`mapErrorToTaxonomy`)
-     └── Parse & validate payload via `schema.parse(data)` -> Return validated object
-    │
-    ▼
-  [Exit] Validated HttpResponse returned to caller
+    Caller->>Tracing: execute(HttpClientCtx)
+    Tracing->>Tracing: Start OTEL Client Span & Inject W3C Headers
+    Tracing->>CB: next(ctx)
+    CB->>CB: Check Domain Breaker State
+    alt Circuit Open
+        CB-->>Caller: Throw UpstreamUnavailableError (Fail Fast)
+    else Circuit Closed
+        CB->>Retry: next(ctx)
+        loop Attempt 1..MaxAttempts (within Deadline Budget)
+            Retry->>Dedupe: next(ctx)
+            alt Request is GET & Matching In-Flight Request Exists
+                Dedupe-->>Retry: Return Shared Promise Result (Singleflight)
+            else Execute Request
+                Dedupe->>Cache: next(ctx)
+                alt Cache Hit
+                    Cache-->>Dedupe: Return Cached HttpResponse
+                else Cache Miss
+                    Cache->>Auth: next(ctx)
+                    Auth->>Auth: Acquire Singleflight Token Mutex
+                    Auth->>Schema: next(ctx with Bearer Token)
+                    Schema->>Net: Execute Network Request
+                    Net->>Remote: HTTPS Request
+                    Remote-->>Net: HTTPS Response (Status & Body)
+                    Net-->>Schema: Raw Response
+                    alt Status 2xx OK
+                        Schema->>Schema: z.parse(response.data)
+                        Schema-->>Cache: Validated HttpResponse
+                        Cache->>Cache: Store in CacheStore
+                        Cache-->>Dedupe: HttpResponse
+                        Dedupe-->>Retry: HttpResponse
+                    else Status 429
+                        Schema-->>Retry: 429 Response (Retry-After Header)
+                        Retry->>Retry: Parse Retry-After & Sleep Jitter Duration
+                    else Status 5xx / Network Error
+                        Schema-->>Retry: Upstream Error
+                        Retry->>Retry: Calculate Exponential Backoff + Jitter & Retry
+                    end
+                end
+            end
+        end
+        Retry-->>CB: Final Result / Error
+        CB->>CB: Record Success / Failure
+        CB-->>Tracing: Result
+        Tracing->>Tracing: Set Span Status & End Span
+        Tracing-->>Caller: HttpResponse / AppError
+    end
 ```
 
 ---

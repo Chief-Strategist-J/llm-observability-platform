@@ -14,35 +14,45 @@ Related references:
 
 The Cache & Redis Middleware Engine governs all reads, writes, expirations, singleflight mutex locks, and fallback behaviors between application services and Redis / In-Memory cache clusters.
 
-```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                            APPLICATION SERVICE LAYER                             │
-│       (Query Services, Aggregators — zero raw ioredis/redis-py executions)        │
-└─────────────────────────────────────────┬────────────────────────────────────────┘
-                                          │ dispatch CacheCtx
-                                          ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                     CACHE & REDIS MIDDLEWARE ENGINE PIPELINE                     │
-│                                                                                  │
-│   ┌──────────────────────┐   ┌──────────────────────┐   ┌────────────────────┐   │
-│   │   withCacheTracing   │──►│withCircuitBreaker    │──►│withKeyNamespace    │   │
-│   └──────────────────────┘   └──────────────────────┘   └─────────┬──────────┘   │
-│                                                                   │              │
-│   ┌──────────────────────┐   ┌──────────────────────┐   ┌─────────▼──────────┐   │
-│   │withPayloadCompress   │◄──│ withTTLRandomJitter  │◄──│withSingleflight    │   │
-│   └──────────┬───────────┘   └──────────────────────┘   └────────────────────┘   │
-└──────────────┼───────────────────────────────────────────────────────────────────┘
-               │ Redis RESP Command / Pipeline
-               ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                           REDIS CLIENT DRIVER & CLUSTER                          │
-│     (Cluster Hash Slot Router, Connection Pool, Singleflight In-Memory Map)      │
-└─────────────────────────────────────────┬────────────────────────────────────────┘
-                                          │ Wire Protocol (RESP3)
-                                          ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                        REDIS CLUSTER / MEMCACHED STACK                           │
-└──────────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Services ["Application Service Layer"]
+        AppService["Query Services / Data Aggregators"]
+    end
+
+    subgraph MiddlewareEngine ["Cache & Redis Middleware Pipeline"]
+        MwTrace["1. withCacheTracing"]
+        MwCB["2. withCircuitBreakerFallback"]
+        MwNamespace["3. withKeyNamespaceGuard"]
+        MwSingleflight["4. withSingleflightStampedeProtection"]
+        MwJitter["5. withTTLRandomJitter"]
+        MwCompress["6. withPayloadCompression"]
+
+        MwTrace --> MwCB
+        MwCB --> MwNamespace
+        MwNamespace --> MwSingleflight
+        MwSingleflight --> MwJitter
+        MwJitter --> MwCompress
+    end
+
+    subgraph ClientDriver ["Redis Client Driver & Memory Layer"]
+        SingleflightMap["In-Memory Singleflight Mutex Map"]
+        L1Cache["Local Pod L1 LRU Memory Cache (1s TTL)"]
+        RESPDriver["Redis RESP3 Client Driver"]
+
+        RESPDriver --- SingleflightMap
+        RESPDriver --- L1Cache
+    end
+
+    subgraph RedisCluster ["Redis Infrastructure"]
+        PrimaryNode[("Redis Master Node (Writer)")]
+        ReplicaNode[("Redis Replica Nodes (Readers)")]
+    end
+
+    AppService -->|Dispatch CacheCtx| MwTrace
+    MwCompress -->|Execute RESP Command| RESPDriver
+    RESPDriver -->|TCP RESP3 Protocol| PrimaryNode
+    RESPDriver -->|TCP RESP3 Protocol| ReplicaNode
 ```
 
 ### Key Components & Boundaries
@@ -54,77 +64,115 @@ The Cache & Redis Middleware Engine governs all reads, writes, expirations, sing
 
 ---
 
-## PART B — Pipeline Diagrams (Mermaid & ASCII)
+## PART B — Pipeline Flow & Sequence Diagrams
 
-### Structural & Control Flow Diagram (Mermaid)
+### 1. High-Level Decision & Execution Flowchart
 
 ```mermaid
-graph TD
-    A[Service Call] -->|CacheCtx| B[withCacheTracing]
-    B -->|Start Cache Span| C[withCircuitBreakerFallback]
-    C -->|Breaker Open?| D{Circuit Open?}
-    D -- Yes --> E[Return null & Fail Open to DB]
-    D -- No --> F[withKeyNamespaceGuard]
-    F -->|Enforce tenant prefix| G[withSingleflightStampedeProtection]
-    G -->|Is GET?| H{GET Operation?}
-    H -- Yes --> I{Singleflight Active?}
-    I -- Yes --> J[Wait & Share Promise Result]
-    I -- No --> K[withTTLRandomJitter]
-    H -- No --> K
-    K -->|Jitter TTL +/- 15%| L[withPayloadCompression]
-    L -->|Compress >10KB| M[Raw Redis Client Exec]
-    M -->|RESP Command| N[Redis Cluster]
-    N -->|Command Response| M
-    M -->|Decompress Payload| L
-    L --> K
-    K --> G
-    G -->|Store Singleflight Result| F
-    F --> C
-    C -->|Record Circuit Success/Failure| B
-    B -->|Log Hit/Miss Metric & End Span| A
+flowchart TD
+    Start["Service Invokes Cache Adapter"] --> Tracing["withCacheTracing: Start OTEL Cache Span"]
+    Tracing --> CBCheck["withCircuitBreakerFallback: Check Redis Health"]
+    
+    CBCheck --> CBOpen{"Circuit Breaker Open?"}
+    CBOpen -- "Yes" --> FailOpen["Fail Open: Return null to trigger DB Fallback"]
+    CBOpen -- "No" --> NamespaceCheck["withKeyNamespaceGuard: Validate & Prepend Tenant Prefix"]
+    
+    NamespaceCheck --> TenantValid{"Tenant ID Present?"}
+    TenantValid -- "No" --> ThrowTenantErr["Throw InvariantViolationError"]
+    TenantValid -- "Yes" --> OpCheck["Check Cache Operation"]
+    
+    OpCheck --> IsGET{"Operation == GET?"}
+    IsGET -- "Yes" --> Singleflight["withSingleflightStampedeProtection: Check In-Flight Map"]
+    IsGET -- "No" --> JitterCheck["withTTLRandomJitter"]
+    
+    Singleflight --> InFlightMatch{"Matching Key In-Flight?"}
+    InFlightMatch -- "Yes" --> AwaitSF["Wait & Share Promise Result"]
+    InFlightMatch -- "No" --> JitterCheck
+    
+    JitterCheck --> IsSET{"Operation == SET & ttlMs Present?"}
+    IsSET -- "Yes" --> ApplyJitter["Apply Random Jitter Factor (+/- 15%)"]
+    IsSET -- "No" --> CompressCheck["withPayloadCompression"]
+    ApplyJitter --> CompressCheck
+    
+    CompressCheck --> LargePayload{"SET Value Size > 10KB?"}
+    LargePayload -- "Yes" --> CompressData["Compress Payload via Snappy/Zstd"]
+    LargePayload -- "No" --> RawExec["Execute Raw Redis Client Command"]
+    CompressData --> RawExec
+    
+    RawExec --> RedisExec{"Redis Cluster Command Result"}
+    RedisExec -- "Redis Connection Error" --> RecordCBFail["Record Circuit Breaker Failure"]
+    RecordCBFail --> FailOpen
+    
+    RedisExec -- "Success (Compressed Payload)" --> DecompressData["Decompress Payload via Snappy/Zstd"]
+    RedisExec -- "Success (Raw Value)" --> ReturnVal["Return Value"]
+    DecompressData --> ReturnVal
+    
+    ReturnVal --> ResolveSF["Resolve Singleflight Waiters"]
+    ResolveSF --> CompleteSpan["Record Hit/Miss Metrics & End Span"]
+    FailOpen --> CompleteSpan
+    CompleteSpan --> EndSpan["Return Cache Value or null to Service"]
 ```
 
-### Detailed Layer Pipeline (ASCII)
+### 2. End-to-End Execution Sequence Diagram
 
-```
-CACHE OPERATION PIPELINE (outside → in):
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Service as App Service
+    participant Tracing as withCacheTracing
+    participant CB as withCircuitBreakerFallback
+    participant NS as withKeyNamespaceGuard
+    participant SF as withSingleflight
+    participant Jitter as withTTLRandomJitter
+    participant Comp as withPayloadCompression
+    participant Driver as Redis Driver
+    participant Redis as Redis Server
 
-  [Entry] Service calls Cache Adapter method
-    │
-    ▼
-  1. withCacheTracing
-     ├── Start OTEL Client Span ("Cache GET user:123")
-     └── Attach `db.system=redis`, `cache.key`, `tenant.id`, `correlation.id`
-    │
-    ▼
-  2. withCircuitBreakerFallback
-     ├── Query Circuit Breaker state for Redis Cluster
-     ├── IF Circuit OPEN -> Log warning, return `null` (Fail Open to DB)
-     └── ON Network Error -> Log error, record failure, return `null` (Fail Open to DB)
-    │
-    ▼
-  3. withKeyNamespaceGuard
-     ├── Verify `tenantId` is non-empty
-     └── Prepend mandatory prefix: `{service}:{env}:{tenantId}:{entity}:{id}`
-    │
-    ▼
-  4. withSingleflightStampedeProtection
-     ├── IF Operation == GET: Check in-flight singleflight mutex map
-     └── IF matching key in-flight -> Wait and return shared result; ELSE execute inner
-    │
-    ▼
-  5. withTTLRandomJitter
-     ├── IF Operation == SET and `ttlMs` is present:
-     └── Apply randomized factor (+/- 15%): `ttlMs = floor(ttlMs * random(0.85, 1.15))`
-    │
-    ▼
-  6. withPayloadCompression
-     ├── IF Operation == SET and value size > 10KB -> Compress payload via Snappy/Zstd
-     ├── Execute raw Redis client command (`GET`, `SETEX`, `DEL`)
-     └── IF Operation == GET and response is compressed -> Decompress payload before returning
-    │
-    ▼
-  [Exit] De-serialized payload returned (or `null` on cache miss / fail-open)
+    Service->>Tracing: execute(CacheCtx)
+    Tracing->>Tracing: Start OTEL Cache Span ("Cache GET user:123")
+    Tracing->>CB: next(ctx)
+    alt Circuit Breaker Open
+        CB-->>Tracing: Return null (Fail Open to DB)
+    else Circuit Closed
+        CB->>NS: next(ctx)
+        NS->>NS: Format key: service:env:tenantId:entity:id
+        NS->>SF: next(ctx)
+        alt GET Operation & Matching In-Flight Request Exists
+            SF-->>NS: Return Shared Promise Result (Singleflight)
+        else Singleflight Miss / Non-GET
+            SF->>Jitter: next(ctx)
+            opt Operation == SET & ttlMs present
+                Jitter->>Jitter: Calculate Jitter: ttlMs * random(0.85, 1.15)
+            end
+            Jitter->>Comp: next(ctx)
+            opt Operation == SET & payload > 10KB
+                Comp->>Comp: Compress payload via Snappy/Zstd
+            end
+            Comp->>Driver: Execute RESP3 Command
+            Driver->>Redis: GET / SETEX / DEL Key
+            alt Redis Network Error
+                Redis-->>Driver: Connection Error (ECONNREFUSED)
+                Driver-->>CB: Redis Exception
+                CB->>CB: Record Circuit Failure & Fail Open
+                CB-->>Tracing: Return null
+            else Redis Success
+                Redis-->>Driver: RESP Bulk String / OK
+                Driver-->>Comp: Raw Buffer
+                opt Payload is Compressed
+                    Comp->>Comp: Decompress via Snappy/Zstd
+                end
+                Comp-->>Jitter: De-serialized Value
+                Jitter-->>SF: Value
+                SF->>SF: Resolve In-Flight Singleflight Promise
+                SF-->>NS: Value
+                NS-->>CB: Value
+                CB->>CB: Record Circuit Success
+                CB-->>Tracing: Value
+            end
+        end
+    end
+    Tracing->>Tracing: Record Cache Hit/Miss Metrics & End Span
+    Tracing-->>Service: Cache Value or null (Fail-Open / Miss)
 ```
 
 ---

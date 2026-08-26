@@ -14,35 +14,51 @@ Related references:
 
 The LLM Provider Middleware Engine forms the core observability, cost control, safety, and failover boundary between AI applications and remote LLM provider APIs.
 
-```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                           AI APPLICATION & AGENT LAYER                           │
-│        (Agents, RAG Pipelines, Prompt Chains — zero raw LLM SDK calls)           │
-└─────────────────────────────────────────┬────────────────────────────────────────┘
-                                          │ dispatch LlmCtx
-                                          ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                    LLM PROVIDER MIDDLEWARE ENGINE PIPELINE                       │
-│                                                                                  │
-│   ┌──────────────────────┐   ┌──────────────────────┐   ┌────────────────────┐   │
-│   │    withLlmTracing    │──►│withModelFallback     │──►│ withApiKeyRotation │   │
-│   └──────────────────────┘   └──────────────────────┘   └─────────┬──────────┘   │
-│                                                                   │              │
-│   ┌──────────────────────┐   ┌──────────────────────┐   ┌─────────▼──────────┐   │
-│   │ withOutputGuardrails │◄──│withPromptHashCaching │◄──│withTokenCostMeter  │   │
-│   └──────────┬───────────┘   └──────────────────────┘   └────────────────────┘   │
-└──────────────┼───────────────────────────────────────────────────────────────────┘
-               │ Dispatch Normalized Provider Request
-               ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                      PROVIDER ADAPTER & STREAM INTERCEPTOR                       │
-│      (OpenAI / Anthropic / Bedrock Adapters, SSE Reader, Tokenizer Counter)      │
-└─────────────────────────────────────────┬────────────────────────────────────────┘
-                                          │ Wire Protocol (HTTPS / SSE Stream)
-                                          ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                      REMOTE LLM PROVIDERS & MODEL ENGINES                        │
-└──────────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Agents ["AI Application & Agent Layer"]
+        AppAgent["Agents / RAG Pipelines / Prompt Chains"]
+    end
+
+    subgraph MiddlewareEngine ["LLM Provider Middleware Pipeline"]
+        MwTrace["1. withLlmTracing"]
+        MwFallback["2. withModelFallbackRouting"]
+        MwKeyRot["3. withApiKeyRotation"]
+        MwCost["4. withTokenUsageAndCostCalculation"]
+        MwPII["5. withPiiRedaction"]
+        MwPromptCache["6. withPromptHashCaching"]
+        MwGuardrails["7. withOutputGuardrails"]
+
+        MwTrace --> MwFallback
+        MwFallback --> MwKeyRot
+        MwKeyRot --> MwCost
+        MwCost --> MwPII
+        MwPII --> MwPromptCache
+        MwPromptCache --> MwGuardrails
+    end
+
+    subgraph AdapterLayer ["Provider Adapter & SSE Interceptor"]
+        SDKAdapter["Unified Provider SDK Adapter"]
+        SSEReader["Streaming SSE Reader & Decoder"]
+        BPETokenizer["Local BPE Tokenizer (tiktoken)"]
+
+        SDKAdapter --- SSEReader
+        SDKAdapter --- BPETokenizer
+    end
+
+    subgraph RemoteProviders ["Remote LLM Providers"]
+        OpenAI[("OpenAI API (gpt-4o)")]
+        Anthropic[("Anthropic API (claude-3-5-sonnet)")]
+        Bedrock[("AWS Bedrock (Llama 3.1)")]
+        vLLM[("Local vLLM / Ollama Node")]
+    end
+
+    AppAgent -->|Dispatch LlmCtx| MwTrace
+    MwGuardrails -->|Execute API Request| SDKAdapter
+    SDKAdapter -->|HTTPS / SSE| OpenAI
+    SDKAdapter -->|HTTPS / SSE| Anthropic
+    SDKAdapter -->|HTTPS / SSE| Bedrock
+    SDKAdapter -->|HTTPS / SSE| vLLM
 ```
 
 ### Key Components & Boundaries
@@ -54,86 +70,122 @@ The LLM Provider Middleware Engine forms the core observability, cost control, s
 
 ---
 
-## PART B — Pipeline Diagrams (Mermaid & ASCII)
+## PART B — Pipeline Flow & Sequence Diagrams
 
-### Structural & Control Flow Diagram (Mermaid)
+### 1. High-Level Decision & Execution Flowchart
 
 ```mermaid
-graph TD
-    A[AI Agent / RAG Service] -->|LlmCtx| B[withLlmTracing]
-    B -->|Start OTEL GenAI Span| C[withModelFallbackRouting]
-    C -->|Attempt Call| D[withApiKeyRotation]
-    D -->|Fetch Key from Vault| E[withTokenUsageAndCostCalculation]
-    E -->|Check TPM/RPM Quota| F[withPiiRedaction]
-    F -->|Redact PII in Prompts| G[withPromptHashCaching]
-    G -->|Deterministic & Temp=0?| H{Cache Match?}
-    H -- Yes --> I[Return Cached LlmResponse]
-    H -- No --> J[withOutputGuardrails]
-    J -->|Dispatch to Adapter| K[LLM Provider Adapter]
-    K -->|HTTPS / SSE Stream| L[Remote LLM Provider]
-    L -->|429 / 5xx Error| M{Provider Failed?}
-    M -- Yes --> N[Select Fallback Model]
-    N --> C
-    M -- No --> O[Stream / Text Response]
-    O --> K
-    K -->|Zod Validate Output| J
-    J -->|Store Prompt Hash| G
-    G --> F
-    F -->|Redact PII in Completion| E
-    E -->|Calculate USD Cost| D
-    D --> C
-    C --> B
-    B -->|Log OTEL GenAI Metrics| A
+flowchart TD
+    Start["Agent Invokes LLM Call"] --> Tracing["withLlmTracing: Start OTEL GenAI Span"]
+    Tracing --> FallbackRouter["withModelFallbackRouting: Select Primary Model Target"]
+    
+    FallbackRouter --> KeyRotation["withApiKeyRotation: Fetch API Key from Vault Pool"]
+    KeyRotation --> CostMeter["withTokenUsageAndCostCalculation: Check Tenant TPM/RPM Quotas"]
+    
+    CostMeter --> QuotaExceeded{"Quota Exceeded?"}
+    QuotaExceeded -- "Yes" --> ThrowQuotaErr["Throw RateLimitedError (429)"]
+    QuotaExceeded -- "No" --> PIIRedact["withPiiRedaction: Scan & Mask Prompt PII"]
+    
+    PIIRedact --> PromptCache["withPromptHashCaching: Check Prompt Hash Cache"]
+    PromptCache --> IsTempZero{"temperature == 0?"}
+    IsTempZero -- "Yes" --> CacheHit{"Cache Hit?"}
+    IsTempZero -- "No" --> Guardrails["withOutputGuardrails"]
+    
+    CacheHit -- "Yes" --> ReturnCached["Return Cached LlmResponse"]
+    CacheHit -- "No" --> Guardrails
+    
+    Guardrails --> ProviderCall["Execute Provider SDK Adapter Call"]
+    ProviderCall --> StreamCheck{"stream == true?"}
+    
+    StreamCheck -- "Yes" --> SSERead["Read SSE Chunks & Calculate TTFT Metric"]
+    StreamCheck -- "No" --> SyncCall["Await Full Provider Response"]
+    SSERead --> Reassemble["Re-assemble Text & Calculate Tokens"]
+    SyncCall --> Reassemble
+    
+    Reassemble --> ProviderResult{"Provider Result Status"}
+    ProviderResult -- "429 Rate Limit / 5xx Error" --> CanFallback{"Fallback Model Available?"}
+    CanFallback -- "Yes" --> SelectBackup["Switch Model Target (OpenAI -> Anthropic)"]
+    SelectBackup --> FallbackRouter
+    CanFallback -- "No" --> ThrowProviderErr["Throw UpstreamUnavailableError"]
+    
+    ProviderResult -- "200 Success" --> ZodValidate{"Output Matches Zod Schema?"}
+    ZodValidate -- "No" --> RetryGuardrail{"Guardrail Retries < 2?"}
+    RetryGuardrail -- "Yes" --> RePrompt["Re-prompt Model with Error Diff"]
+    RePrompt --> ProviderCall
+    RetryGuardrail -- "No" --> ThrowSchemaErr["Throw ValidationError"]
+    
+    ZodValidate -- "Yes" --> StorePromptCache["Store Prompt Hash Cache if temp == 0"]
+    StorePromptCache --> RedactOutputPII["Redact PII in Completion Text"]
+    RedactOutputPII --> CalculateCost["Calculate Micro-cent USD Cost"]
+    CalculateCost --> CompleteGenAISpan["Set OTEL GenAI Attributes & End Span"]
+    CompleteGenAISpan --> ReturnResponse["Return Validated LlmResponse to Agent"]
+    ReturnCached --> CompleteGenAISpan
 ```
 
-### Detailed Layer Pipeline (ASCII)
+### 2. End-to-End Execution Sequence Diagram
 
-```
-LLM PROVIDER CALL PIPELINE (outside → in):
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Agent as AI Agent / RAG Service
+    participant Tracing as withLlmTracing
+    participant Fallback as withModelFallbackRouting
+    participant KeyVault as withApiKeyRotation
+    participant Cost as withTokenCostMeter
+    participant PII as withPiiRedaction
+    participant Cache as withPromptHashCaching
+    participant Guard as withOutputGuardrails
+    participant Adapter as Provider Adapter
+    participant LLM as Remote LLM API (OpenAI)
 
-  [Entry] AI Agent invokes LLM Client Adapter
-    │
-    ▼
-  1. withLlmTracing
-     ├── Start OTEL Client Span ("gen_ai.chat gpt-4o")
-     └── Set attributes: `gen_ai.system`, `gen_ai.request.model`, `tenant.id`
-    │
-    ▼
-  2. withModelFallbackRouting
-     ├── Set primary model target (e.g. "gpt-4o")
-     ├── ON 429 Rate Limit OR 5xx Outage -> Reroute to fallback model ("claude-3-5-sonnet")
-     └── Max failover attempts = 2
-    │
-    ▼
-  3. withApiKeyRotation
-     ├── Fetch provider API key pool from secret vault
-     └── Rotate key alias to balance rate limits across accounts
-    │
-    ▼
-  4. withTokenUsageAndCostCalculation
-     ├── Verify tenant TPM (Tokens-Per-Minute) and RPM quotas
-     ├── Calculate prompt and completion token counts
-     └── Compute estimated cost in USD micro-cents
-    │
-    ▼
-  5. withPiiRedaction
-     ├── Scan prompt messages for PII (SSNs, Credit Cards, Emails)
-     └── Replace sensitive strings with `[REDACTED_*]` masks
-    │
-    ▼
-  6. withPromptHashCaching
-     ├── IF temperature == 0: Compute key `llm_cache:tenantId:hash(messages)`
-     └── IF Cache Hit -> Return cached LlmResponse; ELSE execute inner
-    │
-    ▼
-  7. withOutputGuardrails
-     ├── Execute raw provider adapter call (OpenAI / Anthropic SDK)
-     ├── IF stream == true: Intercept SSE chunks, calculate TTFT, re-assemble text
-     ├── ON Output Validation Error -> Re-prompt model with error diff (max 2 retries)
-     └── Validate completion payload against target Zod schema
-    │
-    ▼
-  [Exit] Validated LlmResponse returned to AI Agent caller
+    Agent->>Tracing: execute(LlmCtx)
+    Tracing->>Tracing: Start OTEL GenAI Span ("gen_ai.chat gpt-4o")
+    Tracing->>Fallback: next(ctx)
+    loop Primary & Fallback Models
+        Fallback->>KeyVault: next(ctx)
+        KeyVault->>KeyVault: Fetch & Rotate API Key from Secret Vault
+        KeyVault->>Cost: next(ctx)
+        Cost->>Cost: Verify Tenant TPM / RPM Token Bucket Quota
+        Cost->>PII: next(ctx)
+        PII->>PII: Scan & Mask Prompt PII (SSN, Credit Card)
+        PII->>Cache: next(ctx)
+        alt temperature == 0 & Prompt Cache Hit
+            Cache-->>PII: Return Cached LlmResponse
+        else Cache Miss / Deterministic Off
+            Cache->>Guard: next(ctx)
+            Guard->>Adapter: Execute Provider Request
+            Adapter->>LLM: HTTPS POST /v1/chat/completions
+            alt Provider 429 Rate Limit / 5xx Outage
+                LLM-->>Adapter: 429 Rate Limit Exceeded
+                Adapter-->>Fallback: Provider Error
+                Fallback->>Fallback: Switch Target: gpt-4o -> claude-3-5-sonnet
+            else Provider 200 OK
+                LLM-->>Adapter: Completion Payload / SSE Stream
+                opt Stream == true
+                    Adapter->>Adapter: Parse SSE Chunks, Calculate TTFT & BPE Tokens
+                end
+                Adapter-->>Guard: Raw Completion Text
+                Guard->>Guard: Validate JSON Output against Zod Schema
+                alt Zod Schema Mismatch & Retries < 2
+                    Guard->>Adapter: Re-prompt Model with Zod Error Diff
+                else Validation Passed
+                    Guard-->>Cache: LlmResponse
+                    opt temperature == 0
+                        Cache->>Cache: Store in Prompt Hash Cache
+                    end
+                    Cache-->>PII: LlmResponse
+                    PII->>PII: Redact PII in Completion Text
+                    PII-->>Cost: LlmResponse
+                    Cost->>Cost: Calculate USD Micro-cents & Log Metric
+                    Cost-->>KeyVault: LlmResponse
+                    KeyVault-->>Fallback: LlmResponse
+                    Fallback-->>Tracing: LlmResponse
+                end
+            end
+        end
+    end
+    Tracing->>Tracing: Set OTEL GenAI Attributes (tokens, cost, finish_reason) & End Span
+    Tracing-->>Agent: Validated LlmResponse
 ```
 
 ---

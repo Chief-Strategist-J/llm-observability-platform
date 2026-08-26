@@ -14,35 +14,43 @@ Related references:
 
 The gRPC Interceptor Middleware Engine acts as the unified interceptor layer for unary RPCs and streaming RPC channels (Client, Server, Bidirectional) across internal microservices.
 
-```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                            APPLICATION SERVICE METHOD                            │
-│        (gRPC Stubs, Service Handlers — zero un-intercepted stub execution)       │
-└─────────────────────────────────────────┬────────────────────────────────────────┘
-                                          │ dispatch GrpcCtx
-                                          ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                     gRPC INTERCEPTOR MIDDLEWARE PIPELINE                         │
-│                                                                                  │
-│   ┌──────────────────────┐   ┌──────────────────────┐   ┌────────────────────┐   │
-│   │    withGrpcTracing   │──►│  withStatusMapping   │──►│withDeadlineEnforce │   │
-│   └──────────────────────┘   └──────────────────────┘   └─────────┬──────────┘   │
-│                                                                   │              │
-│                              ┌──────────────────────┐             │              │
-│                              │withMetadataPropagate │◄────────────┘              │
-│                              └──────────┬───────────┘                            │
-└─────────────────────────────────────────┼────────────────────────────────────────┘
-                                          │ Transformed Metadata & Payload
-                                          ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                            HTTP/2 TRANSPORT CHANNEL                              │
-│       (Multiplexed HTTP/2 Streams, Keepalive PINGs, Subchannel Balancer)         │
-└─────────────────────────────────────────┬────────────────────────────────────────┘
-                                          │ Wire Protocol (Protobuf over HTTP/2)
-                                          ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                         REMOTE gRPC SERVICE ENDPOINTS                            │
-└──────────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Stubs ["Application Service Stubs"]
+        GrpcStub["gRPC Stubs / Client Handlers"]
+    end
+
+    subgraph MiddlewareEngine ["gRPC Interceptor Middleware Stack"]
+        MwTrace["1. withGrpcTracing"]
+        MwStatus["2. withStatusMapping"]
+        MwDeadline["3. withDeadlineEnforcement"]
+        MwMetadata["4. withMetadataPropagation"]
+
+        MwTrace --> MwStatus
+        MwStatus --> MwDeadline
+        MwDeadline --> MwMetadata
+    end
+
+    subgraph TransportChannel ["HTTP/2 Transport Engine"]
+        StreamMultiplexer["HTTP/2 Stream Multiplexer"]
+        KeepAlive["Keepalive PING Handler (20s/10s)"]
+        SubchannelBalancer["Subchannel Round-Robin Balancer"]
+        CodecRegistry["Gzip/Snappy Compression Codecs"]
+
+        StreamMultiplexer --- KeepAlive
+        StreamMultiplexer --- SubchannelBalancer
+        StreamMultiplexer --- CodecRegistry
+    end
+
+    subgraph RemoteServices ["Remote gRPC Microservices"]
+        ServiceA[("Auth gRPC Service Node")]
+        ServiceB[("Evaluation gRPC Service Node")]
+    end
+
+    GrpcStub -->|Dispatch GrpcCtx| MwTrace
+    MwMetadata -->|Protobuf over HTTP/2| StreamMultiplexer
+    StreamMultiplexer -->|mTLS Protocol| ServiceA
+    StreamMultiplexer -->|mTLS Protocol| ServiceB
 ```
 
 ### Key Components & Boundaries
@@ -54,65 +62,92 @@ The gRPC Interceptor Middleware Engine acts as the unified interceptor layer for
 
 ---
 
-## PART B — Pipeline Diagrams (Mermaid & ASCII)
+## PART B — Pipeline Flow & Sequence Diagrams
 
-### Structural & Control Flow Diagram (Mermaid)
+### 1. High-Level Decision & Execution Flowchart
 
 ```mermaid
-graph TD
-    A[Caller Service / Stub] -->|GrpcCtx| B[withGrpcTracing]
-    B -->|Start OTEL Client Span| C[withStatusMapping]
-    C -->|Intercept Errors| D[withDeadlineEnforcement]
-    D -->|Remaining Budget <= 0?| E{Deadline Expired?}
-    E -- Yes --> F[Throw DEADLINE_EXCEEDED]
-    E -- No --> G[withMetadataPropagation]
-    G -->|Inject Tenant, Trace & grpc-timeout| H[gRPC Transport Channel]
-    H -->|Protobuf over HTTP/2| I[Remote gRPC Endpoint]
-    I -->|gRPC Status / Response| H
-    H -->|Response Payload| G
-    G --> D
-    D --> C
-    C -->|Translate App Error to gRPC Status| B
-    B -->|Record Status Code & End Span| A
+flowchart TD
+    Start["Service Invokes gRPC Stub"] --> Tracing["withGrpcTracing: Start OTEL Client Span"]
+    Tracing --> StatusMap["withStatusMapping: Intercept Domain Exceptions"]
+    
+    StatusMap --> DeadlineEnforce["withDeadlineEnforcement: Calculate Remaining Budget"]
+    DeadlineEnforce --> BudgetCheck{"Remaining Budget > 0?"}
+    
+    BudgetCheck -- "No" --> ThrowDeadline["Cancel Locally: Throw DEADLINE_EXCEEDED (Code 4)"]
+    BudgetCheck -- "Yes" --> InjectTimeout["Set grpc-timeout Metadata Header"]
+    
+    InjectTimeout --> MetadataProp["withMetadataPropagation: Validate Tenant Scope"]
+    MetadataProp --> TenantValid{"Tenant ID Present?"}
+    TenantValid -- "No" --> ThrowTenantErr["Throw InvariantViolationError"]
+    TenantValid -- "Yes" --> LowercaseHeaders["Force Metadata Keys to Lowercase"]
+    
+    LowercaseHeaders --> InjectHeaders["Inject x-tenant-id, x-correlation-id & traceparent"]
+    InjectHeaders --> ChannelExec["Multiplex Call over HTTP/2 Channel Pool"]
+    
+    ChannelExec --> IsStream{"Call Type?"}
+    IsStream -- "Streaming RPC" --> StreamListen["Monitor stream.Context().Done() Signal"]
+    IsStream -- "Unary RPC" --> RawExec["Execute Protobuf Network Transport"]
+    StreamListen --> RawExec
+    
+    RawExec --> NetworkCall{"Remote gRPC Execution"}
+    NetworkCall -- "Client Stream Cancelled" --> AbortStream["Abort Stream Processing Loop"]
+    NetworkCall -- "gRPC Status Return" --> ResponseStatus{"gRPC Status Code?"}
+    
+    ResponseStatus -- "0 OK" --> CompleteSpan["Set Span Status OK"]
+    ResponseStatus -- "Non-Zero Error" --> TranslateStatus["Map App Error to gRPC Status Code"]
+    
+    TranslateStatus --> CompleteErrorSpan["Record rpc.grpc.status_code & Exception on Span"]
+    CompleteSpan --> EndSpan["End OTEL Span & Return Protobuf Message"]
+    CompleteErrorSpan --> EndSpanError["Throw Mapped gRPC Status Error"]
 ```
 
-### Detailed Layer Pipeline (ASCII)
+### 2. End-to-End Execution Sequence Diagram
 
-```
-gRPC CALL PIPELINE (outside → in):
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Caller as Service Caller / Stub
+    participant Tracing as withGrpcTracing
+    participant Status as withStatusMapping
+    participant Deadline as withDeadlineEnforcement
+    participant Meta as withMetadataPropagation
+    participant Channel as HTTP/2 Channel Pool
+    participant Remote as Remote gRPC Server
 
-  [Entry] Service invokes gRPC stub method
-    │
-    ▼
-  1. withGrpcTracing
-     ├── Start OTEL Client Span ("gRPC /UserService/GetUser")
-     └── Set attributes: `rpc.system=grpc`, `rpc.service`, `rpc.method`, `tenant.id`
-    │
-    ▼
-  2. withStatusMapping
-     ├── Execute inner pipeline
-     └── ON Exception -> Translate error to canonical gRPC Status Code (e.g. ValidationError -> 3 INVALID_ARGUMENT)
-    │
-    ▼
-  3. withDeadlineEnforcement
-     ├── Calculate remaining deadline budget (`deadline - Date.now()`)
-     ├── IF remaining budget <= 0 -> Cancel call locally with `DEADLINE_EXCEEDED` (code 4)
-     └── Inject remaining budget into `grpc-timeout` metadata header
-    │
-    ▼
-  4. withMetadataPropagation
-     ├── Verify `tenantId` is non-empty
-     ├── Force all metadata keys to lowercase (prevent HTTP/2 header syntax errors)
-     └── Inject `x-tenant-id`, `x-correlation-id`, W3C `traceparent` metadata
-    │
-    ▼
-  5. gRPC Transport Channel
-     ├── Serialize Protobuf request payload
-     ├── Multiplex over shared HTTP/2 connection
-     └── Monitor stream cancellation signals (`stream.Context().Done()`)
-    │
-    ▼
-  [Exit] Protobuf response message returned to caller
+    Caller->>Tracing: execute(GrpcCtx)
+    Tracing->>Tracing: Start OTEL Client Span ("gRPC /UserService/GetUser")
+    Tracing->>Status: next(ctx)
+    Status->>Deadline: next(ctx)
+    Deadline->>Deadline: Calculate remainingMs (deadline - Date.now())
+    alt remainingMs <= 0
+        Deadline-->>Caller: Throw UpstreamTimeoutError (DEADLINE_EXCEEDED)
+    else Remaining Budget Valid
+        Deadline->>Deadline: Set metadata["grpc-timeout"] = remainingMs
+        Deadline->>Meta: next(ctx)
+        Meta->>Meta: Verify tenantId & force metadata keys lowercase
+        Meta->>Meta: Inject x-tenant-id, x-correlation-id & traceparent
+        Meta->>Channel: Execute Protobuf Request
+        Channel->>Remote: Protobuf Payload over HTTP/2 Stream
+        opt CallType is Streaming
+            Remote-->>Channel: Stream Response Chunks
+            Channel->>Channel: Monitor stream.Context().Done() for cancels
+        end
+        Remote-->>Channel: Protobuf Response & gRPC Status Code
+        Channel-->>Meta: Protobuf Response
+        Meta-->>Deadline: Protobuf Response
+        Deadline-->>Status: Protobuf Response
+        alt Response Status != 0 OK
+            Status->>Status: Map AppError to gRPC Status Code (e.g. ValidationError -> INVALID_ARGUMENT)
+            Status-->>Tracing: gRPC Status Exception
+            Tracing->>Tracing: Set rpc.grpc.status_code & Record Exception
+            Tracing-->>Caller: Throw gRPC Status Error
+        else Response Status == 0 OK
+            Status-->>Tracing: Protobuf Response Message
+            Tracing->>Tracing: Set Span Status OK & End Span
+            Tracing-->>Caller: Protobuf Response Message
+        end
+    end
 ```
 
 ---

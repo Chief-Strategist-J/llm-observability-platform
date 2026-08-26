@@ -324,32 +324,37 @@ graph TD
     end
 ```
 
-### H.1 Structural Pipeline Overview (ASCII)
+### H.1 Structural Pipeline Overview (Mermaid)
 
-```
-CONSUMER SIDE, top to bottom:
-┌─────────────────────────────────────────────────────────────┐
-│ 1. BROKER CONNECTION LAYER — one pool/process, boot-time     │  K3
-├─────────────────────────────────────────────────────────────┤
-│ 2. CONSUMER GROUP COORDINATION — assignment, rebalance,       │  K1,K7
-│    heartbeat thread independent of processing thread          │
-├─────────────────────────────────────────────────────────────┤
-│ 3. FETCHER / PREFETCH BUFFER — per partition, bounded          │  K4
-├─────────────────────────────────────────────────────────────┤
-│ 4. PARTITIONED WORKER POOL — 1 worker/partition (ordering),   │  K2,K5,K8
-│    bounded global concurrency, CPU-bound work offloaded        │  K1
-├─────────────────────────────────────────────────────────────┤
-│ 5. MIDDLEWARE PIPELINE (Part J)                                │
-├─────────────────────────────────────────────────────────────┤
-│ 6. OFFSET WATERMARK TRACKER — only if parallelizing per-part.  │
-├─────────────────────────────────────────────────────────────┤
-│ 7. ASYNC BATCHED COMMITTER — never per-message                 │  K13
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph ProducerPipeline ["Kafka Producer Pipeline (Top to Bottom)"]
+        P1["1. Application Event Trigger"] --> P2["2. withTracingProducer (W3C Header Inject)"]
+        P2 --> P3["3. withCircuitBreakerProducer (Broker Health Check)"]
+        P3 --> P4["4. withRetryProducer (Deadline Backoff & Jitter)"]
+        P4 --> P5["5. withIdempotenceGuard (App-Level Dedupe Lock)"]
+        P5 --> P6["6. withSchemaValidation (Schema Registry Check)"]
+        P6 --> P7["7. withSerialization (Avro / Protobuf Codec)"]
+        P7 --> P8["8. withPartitionKeySelection (Composite Key Strategy)"]
+        P8 --> P9["9. Batch Accumulator & Compression (linger.ms / batch.size)"]
+        P9 --> P10["10. Broker Connection Transport"]
+    end
 
-PRODUCER SIDE:
-Application call → Middleware pipeline (Part I) → per-partition
-batch accumulator (linger.ms/batch.size) → compression at batch
-level (K10) → bounded in-flight requests to broker (K16)
+    subgraph ConsumerPipeline ["Kafka Consumer Pipeline (Top to Bottom)"]
+        C1["1. Broker Connection Pool (Boot-time Persistent)"] --> C2["2. Consumer Group Coordinator (Rebalance & Heartbeat)"]
+        C2 --> C3["3. Prefetch Fetcher Buffer (Per-Partition Bounded)"]
+        C3 --> C4["4. Partitioned Worker Pool (1 Worker/Partition + Semaphore)"]
+        C4 --> C5["5. withDLQOnFailure (Outermost Catch & Retry Topics)"]
+        C5 --> C6["6. withTracingConsumer (Extract W3C Traceparent)"]
+        C6 --> C7["7. withHeartbeatDuringProcessing (Interval Ping)"]
+        C7 --> C8["8. withConcurrencyLimit (Bounded Semaphore)"]
+        C8 --> C9["9. withTenantContext (Extract tenant_id Header)"]
+        C9 --> C10["10. withRetryCountHeader (Header-persisted Attempt Counter)"]
+        C10 --> C11["11. withDeserialization (Codec Decode & Tombstone Check)"]
+        C11 --> C12["12. Domain Handler Execution"]
+        C12 --> C13["13. Offset Watermark Tracker (Advance Low Watermark)"]
+        C13 --> C14["14. Async Batched Committer"]
+    end
 ```
 
 ### H.2 Edge Case Coverage Mapping Matrix (Kafka L1–L22)

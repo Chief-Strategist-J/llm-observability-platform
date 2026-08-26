@@ -14,35 +14,50 @@ Related references:
 
 The Database Query Middleware Engine acts as the mandatory execution gate between application repositories and lower-level RDBMS / NoSQL database drivers.
 
-```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                            REPOSITORY & DOMAIN LAYER                             │
-│     (Entity Repositories, Query Specifications — zero raw driver execution)      │
-└─────────────────────────────────────────┬────────────────────────────────────────┘
-                                          │ dispatch DbContext
-                                          ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                    DATABASE QUERY MIDDLEWARE ENGINE PIPELINE                     │
-│                                                                                  │
-│   ┌──────────────────────┐   ┌──────────────────────┐   ┌────────────────────┐   │
-│   │    withDbTracing     │──►│  withDeadlockRetry   │──►│withTenantIsolation │   │
-│   └──────────────────────┘   └──────────────────────┘   └─────────┬──────────┘   │
-│                                                                   │              │
-│   ┌──────────────────────┐   ┌──────────────────────┐   ┌─────────▼──────────┐   │
-│   │   withAuditLogging   │◄──│withSoftDeleteFilter  │◄──│withStatementTimeout│   │
-│   └──────────┬───────────┘   └──────────────────────┘   └────────────────────┘   │
-└──────────────┼───────────────────────────────────────────────────────────────────┘
-               │ Execute SQL / Query Parameters
-               ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                           DATABASE CONNECTION POOL MANAGER                       │
-│    (Primary/Replica Connection Pools, RLS Session State, Deadlock Detectors)    │
-└─────────────────────────────────────────┬────────────────────────────────────────┘
-                                          │ Wire Protocol (PostgreSQL / MySQL)
-                                          ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                        PRIMARY & READ-REPLICA DATABASES                          │
-└──────────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Repositories ["Repository & Domain Layer"]
+        Repo["Entity Repositories / Query Specifications"]
+    end
+
+    subgraph MiddlewareEngine ["Database Query Middleware Pipeline"]
+        MwTrace["1. withDbTracing"]
+        MwDeadlock["2. withDeadlockRetry"]
+        MwTenant["3. withTenantIsolationGuard"]
+        MwTimeout["4. withStatementTimeout"]
+        MwReplica["5. withReadReplicaRouting"]
+        MwSoftDelete["6. withSoftDeleteFilter"]
+        MwAudit["7. withAuditLogging"]
+
+        MwTrace --> MwDeadlock
+        MwDeadlock --> MwTenant
+        MwTenant --> MwTimeout
+        MwTimeout --> MwReplica
+        MwReplica --> MwSoftDelete
+        MwSoftDelete --> MwAudit
+    end
+
+    subgraph PoolManager ["Database Connection Pool Manager"]
+        PrimaryPool["Primary DB Connection Pool (Writes & Tx)"]
+        ReplicaPool["Read-Replica Connection Pool (Reads)"]
+        RLSEngine["RLS Session State Injector"]
+        DeadlockMonitor["Deadlock & Serialization Monitor"]
+
+        PrimaryPool --- RLSEngine
+        ReplicaPool --- RLSEngine
+        PrimaryPool --- DeadlockMonitor
+    end
+
+    subgraph DatabaseCluster ["Database Cluster"]
+        PrimaryDB[("Primary Database Server (Writer)")]
+        ReplicaDB[("Read-Replica Database Nodes (Readers)")]
+    end
+
+    Repo -->|Dispatch DbContext| MwTrace
+    MwAudit -->|Execute Query| PrimaryPool
+    MwAudit -->|Execute SELECT| ReplicaPool
+    PrimaryPool -->|SQL Protocol| PrimaryDB
+    ReplicaPool -->|SQL Protocol| ReplicaDB
 ```
 
 ### Key Components & Boundaries
@@ -54,81 +69,107 @@ The Database Query Middleware Engine acts as the mandatory execution gate betwee
 
 ---
 
-## PART B — Pipeline Diagrams (Mermaid & ASCII)
+## PART B — Pipeline Flow & Sequence Diagrams
 
-### Structural & Control Flow Diagram (Mermaid)
+### 1. High-Level Decision & Execution Flowchart
 
 ```mermaid
-graph TD
-    A[Repository Action] -->|DbContext| B[withDbTracing]
-    B -->|Start DB Span| C[withDeadlockRetry]
-    C -->|Attempt Query| D[withTenantIsolationGuard]
-    D -->|Inject RLS & Check tenant_id| E[withStatementTimeout]
-    E -->|SET statement_timeout| F[withReadReplicaRouting]
-    F -->|Route Primary or Replica| G[withSoftDeleteFilter]
-    G -->|Append deleted_at IS NULL| H[withAuditLogging]
-    H -->|Execute Driver Call| I[Database Connection Pool]
-    I -->|Run Query| J[Database Engine]
-    J -->|Deadlock 40P01?| K{Deadlock?}
-    K -- Yes --> L[Rollback & Retry Backoff]
-    L --> C
-    K -- No --> M[Return Row Set]
-    M --> H
-    H -->|Write Audit Record| G
-    G --> F
-    F --> E
-    E --> D
-    D --> C
-    C -->|Complete| B
-    B -->|End Span| A
+flowchart TD
+    Start["Repository Invokes Query Exec"] --> Tracing["withDbTracing: Start OTEL DB Span"]
+    Tracing --> DeadlockLoop["withDeadlockRetry: Set Attempt Loop"]
+    
+    DeadlockLoop --> TenantCheck["withTenantIsolationGuard: Check tenant_id Presence"]
+    TenantCheck --> TenantValid{"Tenant Scope Present?"}
+    TenantValid -- "No" --> ThrowTenantErr["Throw InvariantViolationError"]
+    TenantValid -- "Yes" --> RLSInject["Inject SET LOCAL app.current_tenant_id"]
+    
+    RLSInject --> TimeoutSet["withStatementTimeout: Calculate Remaining Deadline"]
+    TimeoutSet --> BudgetValid{"Remaining Budget > 0?"}
+    BudgetValid -- "No" --> ThrowTimeout["Throw UpstreamTimeoutError"]
+    BudgetValid -- "Yes" --> SetStmtTimeout["Set LOCAL statement_timeout in DB Session"]
+    
+    SetStmtTimeout --> RouteCheck["withReadReplicaRouting: Check Query Operation"]
+    RouteCheck --> IsWriteOrTx{"isWrite OR inTransaction?"}
+    IsWriteOrTx -- "Yes" --> TargetPrimary["Select Primary DB Connection Pool"]
+    IsWriteOrTx -- "No" --> TargetReplica["Select Read-Replica DB Connection Pool"]
+    
+    TargetPrimary --> SoftDelete["withSoftDeleteFilter: Append deleted_at IS NULL"]
+    TargetReplica --> SoftDelete
+    
+    SoftDelete --> ExecQuery["withAuditLogging: Execute Driver SQL Query"]
+    ExecQuery --> DBExec{"DB Engine Execution"}
+    
+    DBExec -- "Deadlock Code (40P01 / 1213)" --> CheckAttempt{"Attempt <= 3?"}
+    CheckAttempt -- "Yes" --> RollbackSleep["Rollback Transaction & Sleep Random Backoff"]
+    RollbackSleep --> DeadlockLoop
+    CheckAttempt -- "No" --> ThrowDeadlock["Throw SerializationFailure Error"]
+    
+    DBExec -- "Query Success" --> WriteAudit{"Is Write Operation?"}
+    WriteAudit -- "Yes" --> EmitAudit["Write Structured Audit Log Record"]
+    WriteAudit -- "No" --> CompleteSpan["Set Span Status OK"]
+    
+    EmitAudit --> CompleteSpan
+    CompleteSpan --> EndSpan["End OTEL DB Span & Return Result"]
 ```
 
-### Detailed Layer Pipeline (ASCII)
+### 2. End-to-End Execution Sequence Diagram
 
-```
-DATABASE QUERY PIPELINE (outside → in):
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Repo as Repository Method
+    participant Tracing as withDbTracing
+    participant Deadlock as withDeadlockRetry
+    participant Tenant as withTenantIsolationGuard
+    participant Timeout as withStatementTimeout
+    participant Replica as withReadReplicaRouting
+    participant SoftDel as withSoftDeleteFilter
+    participant Audit as withAuditLogging
+    participant Pool as Pool Manager
+    participant DB as PostgreSQL DB Engine
 
-  [Entry] Repository method builds DbContext
-    │
-    ▼
-  1. withDbTracing
-     ├── Start OTEL Client Span ("DB SELECT users")
-     └── Attach `db.system`, `db.sql.table`, `tenant.id`, `correlation.id`
-    │
-    ▼
-  2. withDeadlockRetry
-     ├── Set loop attempt counter
-     ├── ON Deadlock Error (40P01 / 1213) -> Roll back attempt, sleep backoff, retry
-     └── Max attempts = 3
-    │
-    ▼
-  3. withTenantIsolationGuard
-     ├── Verify `tenantId` is non-empty
-     ├── IF Transaction Active -> Execute `SET LOCAL app.current_tenant_id = '<tenantId>'`
-     └── Verify query text contains `tenant_id` predicate or throw `InvariantViolationError`
-    │
-    ▼
-  4. withStatementTimeout
-     ├── Calculate remaining deadline budget (`deadline - Date.now()`)
-     └── Execute `SET LOCAL statement_timeout = '<remainingMs>ms'`
-    │
-    ▼
-  5. withReadReplicaRouting
-     ├── IF isWrite OR inTransaction -> Select Primary Connection Pool
-     └── ELSE -> Select Read-Replica Connection Pool
-    │
-    ▼
-  6. withSoftDeleteFilter
-     ├── IF table supports soft deletes & `includeDeleted` is false:
-     └── Automatically append `WHERE deleted_at IS NULL` predicate
-    │
-    ▼
-  7. withAuditLogging
-     ├── Execute raw database driver query
-     └── IF isWrite (INSERT/UPDATE/DELETE) -> Write structured audit log record
-    │
-    ▼
-  [Exit] Query results / rows returned to repository layer
+    Repo->>Tracing: execute(DbContext)
+    Tracing->>Tracing: Start OTEL DB Span ("DB SELECT users")
+    Tracing->>Deadlock: next(ctx)
+    loop Attempt 1..3
+        Deadlock->>Tenant: next(ctx)
+        alt tenant_id Missing
+            Tenant-->>Repo: Throw InvariantViolationError (Security Block)
+        else Tenant Scope Valid
+            Tenant->>Timeout: next(ctx)
+            Timeout->>Timeout: SET LOCAL statement_timeout = remainingMs
+            Timeout->>Replica: next(ctx)
+            alt isWrite == true OR activeTransaction == true
+                Replica->>Replica: Select Primary Pool
+            else isWrite == false
+                Replica->>Replica: Select Read-Replica Pool
+            end
+            Replica->>SoftDel: next(ctx)
+            SoftDel->>SoftDel: Append WHERE deleted_at IS NULL
+            SoftDel->>Audit: next(ctx)
+            Audit->>Pool: Acquire Connection & Exec SQL
+            Pool->>DB: SQL Query + Parameters
+            alt SQL Deadlock Error (40P01 / 1213)
+                DB-->>Pool: Deadlock Error
+                Pool-->>Deadlock: Deadlock Exception
+                Deadlock->>Deadlock: ROLLBACK & Sleep Random Backoff
+            else SQL Success
+                DB-->>Pool: Query Result Rows
+                Pool-->>Audit: Rows & RowsAffected
+                opt isWrite == true
+                    Audit->>Audit: Write Structured Audit Event
+                end
+                Audit-->>SoftDel: Result
+                SoftDel-->>Replica: Result
+                Replica-->>Timeout: Result
+                Timeout-->>Tenant: Result
+                Tenant-->>Deadlock: Result
+            end
+        end
+    end
+    Deadlock-->>Tracing: Result / AppError
+    Tracing->>Tracing: End OTEL DB Span
+    Tracing-->>Repo: Result Rows / Error
 ```
 
 ---
