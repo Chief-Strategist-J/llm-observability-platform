@@ -1,10 +1,10 @@
 import importlib.util
 import functools
 from typing import Any
-from ...ports import PatcherPort
-from .base import execute_external_call_async, execute_external_call_sync
-from ...domain.mappers import ProviderMapper
-from ....manual_instrumentation.service import llm_span
+from ..ports.patcher_port import PatcherPort
+from ..base import execute_external_call_async, execute_external_call_sync
+from ....domain.mappers import ProviderMapper
+from .....manual_instrumentation.service import llm_span
 
 class LiteLLMPatcher(PatcherPort):
     def __init__(self):

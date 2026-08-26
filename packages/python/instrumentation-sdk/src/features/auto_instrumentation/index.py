@@ -1,9 +1,9 @@
 from .service import AutoInstrumentationService
-from .infra.patchers.openai_patcher import OpenAIPatcher
-from .infra.patchers.anthropic_patcher import AnthropicPatcher
-from .infra.patchers.litellm_patcher import LiteLLMPatcher
-from .infra.patchers.langchain_patcher import LangChainPatcher
-from .infra.patchers.http_patcher import HTTPPatcher
+from .infra.patchers.implementations.openai_patcher import OpenAIPatcher
+from .infra.patchers.implementations.anthropic_patcher import AnthropicPatcher
+from .infra.patchers.implementations.litellm_patcher import LiteLLMPatcher
+from .infra.patchers.implementations.langchain_patcher import LangChainPatcher
+from .infra.patchers.implementations.http_patcher import HTTPPatcher
 
 from typing import Dict, Any, Optional
 

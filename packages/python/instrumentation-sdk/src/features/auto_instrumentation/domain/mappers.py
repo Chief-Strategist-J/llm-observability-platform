@@ -1,62 +1,58 @@
 from typing import Any, Dict, Optional
-from ...spans.types import FinishReason
+from src.features.spans.types import FinishReason
 from src.infra.adapters.llm.registry import LlmProviderRegistry
+from src.shared.data_driven.json_map import map_json
+from ..schema.auto_instrumentation_schema import (
+    OPENAI_MAP_OPS,
+    ANTHROPIC_MAP_OPS,
+    GOOGLE_MAP_OPS,
+    LANGCHAIN_MAP_OPS,
+)
 
 class ProviderMapper:
-    @staticmethod
-    def map_openai_response(response: Any) -> Dict[str, Any]:
-        adapter = LlmProviderRegistry.get("openai")
-        if adapter:
-            return adapter.map_response(response)
+    @classmethod
+    def _dispatch_provider(cls, provider_name: str, response: Any, model: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        adapter = LlmProviderRegistry.get(provider_name)
+        return adapter.map_response(response, model=model) if adapter else None
 
+    @classmethod
+    def map_openai_response(cls, response: Any) -> Dict[str, Any]:
+        mapped = cls._dispatch_provider("openai", response)
         usage = getattr(response, "usage", None)
         choices = getattr(response, "choices", [])
-        return {
-            "model": getattr(response, "model", "gpt-4o"),
-            "provider": "openai",
-            "prompt_tokens": usage.prompt_tokens if usage else 1,
-            "completion_tokens": usage.completion_tokens if usage else 0,
+        raw = {
+            "model": getattr(response, "model", None),
+            "prompt_tokens": usage.prompt_tokens if usage else None,
+            "completion_tokens": usage.completion_tokens if usage else None,
             "finish_reason": FinishReason.STOP if choices else FinishReason.UNSPECIFIED,
             "response_content": choices[0].message.content if choices and hasattr(choices[0].message, "content") else None
         }
+        return mapped or map_json(raw, OPENAI_MAP_OPS)
 
-    @staticmethod
-    def map_anthropic_response(response: Any) -> Dict[str, Any]:
-        adapter = LlmProviderRegistry.get("anthropic")
-        if adapter:
-            return adapter.map_response(response)
-
+    @classmethod
+    def map_anthropic_response(cls, response: Any) -> Dict[str, Any]:
+        mapped = cls._dispatch_provider("anthropic", response)
         usage = getattr(response, "usage", None)
-        return {
-            "model": getattr(response, "model", "claude-3-5-sonnet"),
-            "provider": "anthropic",
-            "prompt_tokens": usage.input_tokens if usage else 1,
-            "completion_tokens": usage.output_tokens if usage else 0,
-            "finish_reason": FinishReason.STOP,
-            "response_content": ""
+        raw = {
+            "model": getattr(response, "model", None),
+            "prompt_tokens": usage.input_tokens if usage else None,
+            "completion_tokens": usage.output_tokens if usage else None,
         }
+        return mapped or map_json(raw, ANTHROPIC_MAP_OPS)
 
-    @staticmethod
-    def map_google_response(response: Any, model: Optional[str] = None) -> Dict[str, Any]:
-        adapter = LlmProviderRegistry.get("google")
-        if adapter:
-            return adapter.map_response(response, model=model)
-        return {
-            "model": model or "gemini-1.5-pro",
-            "provider": "google",
-            "prompt_tokens": 1,
-            "completion_tokens": 0,
-            "finish_reason": FinishReason.STOP,
+    @classmethod
+    def map_google_response(cls, response: Any, model: Optional[str] = None) -> Dict[str, Any]:
+        mapped = cls._dispatch_provider("google", response, model=model)
+        raw = {
+            "model": model,
             "response_content": getattr(response, "text", "")
         }
+        return mapped or map_json(raw, GOOGLE_MAP_OPS)
 
     @staticmethod
     def map_langchain_response(response: Any, model: str, provider: str) -> Dict[str, Any]:
-        usage = getattr(response, "usage_metadata", {})
-        if not usage:
-            usage = {}
-            
-        return {
+        usage = getattr(response, "usage_metadata", {}) or {}
+        raw = {
             "model": model,
             "provider": f"langchain:{provider}",
             "prompt_tokens": usage.get("input_tokens", 1),
@@ -64,3 +60,4 @@ class ProviderMapper:
             "finish_reason": FinishReason.STOP if hasattr(response, "content") else FinishReason.UNSPECIFIED,
             "response_content": getattr(response, "content", "")
         }
+        return map_json(raw, LANGCHAIN_MAP_OPS)

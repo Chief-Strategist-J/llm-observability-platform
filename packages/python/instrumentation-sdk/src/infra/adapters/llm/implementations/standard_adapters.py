@@ -1,6 +1,11 @@
 from typing import Any, Dict, Optional
 from src.features.spans.types import FinishReason
-from .port import LlmProviderAdapterPort
+from src.shared.rules_engine.declarative_evaluator import DeclarativeRulesEngine
+from ..ports.adapter_port import LlmProviderAdapterPort
+from ..rules.rules import OPENAI_FINISH_RULE_SPECS, ANTHROPIC_FINISH_RULE_SPECS
+
+openai_rules_engine = DeclarativeRulesEngine(OPENAI_FINISH_RULE_SPECS)
+anthropic_rules_engine = DeclarativeRulesEngine(ANTHROPIC_FINISH_RULE_SPECS)
 
 class OpenAIAdapter(LlmProviderAdapterPort):
     def provider_name(self) -> str:
@@ -10,18 +15,8 @@ class OpenAIAdapter(LlmProviderAdapterPort):
         usage = getattr(response, "usage", None)
         choices = getattr(response, "choices", [])
         
-        finish_reason = FinishReason.UNSPECIFIED
-        if choices:
-            reason = getattr(choices[0], "finish_reason", None)
-            if reason == "stop":
-                finish_reason = FinishReason.STOP
-            elif reason == "length":
-                finish_reason = FinishReason.LENGTH
-            elif reason == "content_filter":
-                finish_reason = FinishReason.CONTENT_FILTER
-            elif reason == "tool_calls":
-                finish_reason = FinishReason.TOOL_CALLS
-
+        reason = getattr(choices[0], "finish_reason", None) if choices else None
+        finish_reason = openai_rules_engine.evaluate(reason, default=FinishReason.UNSPECIFIED)
         content = choices[0].message.content if choices and hasattr(choices[0], "message") and hasattr(choices[0].message, "content") else None
 
         return {
@@ -39,15 +34,8 @@ class AnthropicAdapter(LlmProviderAdapterPort):
 
     def map_response(self, response: Any, model: Optional[str] = None) -> Dict[str, Any]:
         usage = getattr(response, "usage", None)
-        
-        finish_reason = FinishReason.UNSPECIFIED
         stop_reason = getattr(response, "stop_reason", None)
-        if stop_reason in ["end_turn", "stop_sequence"]:
-            finish_reason = FinishReason.STOP
-        elif stop_reason == "max_tokens":
-            finish_reason = FinishReason.LENGTH
-        elif stop_reason == "tool_use":
-            finish_reason = FinishReason.TOOL_CALLS
+        finish_reason = anthropic_rules_engine.evaluate(stop_reason, default=FinishReason.UNSPECIFIED)
 
         content = ""
         if hasattr(response, "content") and response.content:

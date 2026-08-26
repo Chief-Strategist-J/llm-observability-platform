@@ -10,3 +10,4 @@ This directory contains formal Architecture Decision Records (ADRs) for `instrum
 |---|---|---|---|
 | [**0001**](./0001-centralized-kafka-and-api-key-verification.md) | Centralized Kafka Infrastructure & API Key Verification | KafkaBrokerConfig, KafkaClientFactory, ApiKeyDomainService, StandardRequestContextMiddleware, CORS | Accepted |
 | [**0002**](./0002-telemetry-ingestion-and-cost-engine-integration.md) | Telemetry Ingestion Pipeline and Event Cost Engine Integration | Span Ingestion, event-cost, event-cost-worker, SQLite WAL, Micro-USD Costs | Accepted |
+| [**0003**](./0003-declarative-rules-engine-and-genai-conventions.md) | Declarative Rules Engine & OpenTelemetry GenAI Semantic Conventions | DeclarativeRulesEngine, OTEL GenAI Conventions (`gen_ai.*`), Hexagonal Adapters, Data/Logic Separation | Accepted |

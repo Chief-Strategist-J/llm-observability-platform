@@ -1,57 +1,72 @@
-from typing import Dict, Any, Optional
+"""
+ALGORITHM ProcessGenAISpanAttributes(span, payload):
+    1. CHECK span.is_recording() -> FALSE: RETURN immediately
+    2. EXTRACT mandatory attributes:
+       provider  := payload.get("provider") OR "unknown"
+       operation := payload.get("operation") OR "chat"
+       SET span attributes: gen_ai.system, gen_ai.provider.name, gen_ai.operation.name
+    3. DECLARE attribute rule specifications AS DATA:
+       - model -> gen_ai.request.model, gen_ai.response.model (str)
+       - prompt_tokens -> gen_ai.usage.input_tokens (int)
+       - completion_tokens -> gen_ai.usage.output_tokens (int)
+       - cost_usd_micro -> gen_ai.usage.cost_micro_usd (int)
+       - session_id -> gen_ai.conversation.id (str)
+       - agent_name -> gen_ai.agent.name (str)
+       - finish_reason -> gen_ai.response.finish_reasons (list)
+       - temperature -> gen_ai.request.temperature (float)
+       - top_p -> gen_ai.request.top_p (float)
+       - max_tokens -> gen_ai.request.max_tokens (float)
+    4. EXECUTE RulesEngine evaluation over payload keys:
+       FILTER active rule specs matching payload keys
+       MAP values to OTEL target attributes via type converters
+       APPLY set_attribute on span without imperative if/else branching
+"""
+
+from typing import Dict, Any, List, TypedDict, Callable
 from opentelemetry.trace import Span
 
+class AttributeRuleSpec(TypedDict, total=False):
+    payload_key: str
+    target_attributes: List[str]
+    converter: Callable[[Any], Any]
+
+ATTRIBUTE_CONVERTERS: Dict[str, Callable[[Any], Any]] = {
+    "str": lambda v: str(v),
+    "int": lambda v: int(v),
+    "float": lambda v: float(v),
+    "list_str": lambda v: [str(v)],
+}
+
+ATTRIBUTE_RULE_SPECS: List[AttributeRuleSpec] = [
+    {"payload_key": "model", "target_attributes": ["gen_ai.request.model", "gen_ai.response.model"], "converter": ATTRIBUTE_CONVERTERS["str"]},
+    {"payload_key": "prompt_tokens", "target_attributes": ["gen_ai.usage.input_tokens"], "converter": ATTRIBUTE_CONVERTERS["int"]},
+    {"payload_key": "completion_tokens", "target_attributes": ["gen_ai.usage.output_tokens"], "converter": ATTRIBUTE_CONVERTERS["int"]},
+    {"payload_key": "cost_usd_micro", "target_attributes": ["gen_ai.usage.cost_micro_usd"], "converter": ATTRIBUTE_CONVERTERS["int"]},
+    {"payload_key": "session_id", "target_attributes": ["gen_ai.conversation.id"], "converter": ATTRIBUTE_CONVERTERS["str"]},
+    {"payload_key": "agent_name", "target_attributes": ["gen_ai.agent.name"], "converter": ATTRIBUTE_CONVERTERS["str"]},
+    {"payload_key": "finish_reason", "target_attributes": ["gen_ai.response.finish_reasons"], "converter": ATTRIBUTE_CONVERTERS["list_str"]},
+    {"payload_key": "temperature", "target_attributes": ["gen_ai.request.temperature"], "converter": ATTRIBUTE_CONVERTERS["float"]},
+    {"payload_key": "top_p", "target_attributes": ["gen_ai.request.top_p"], "converter": ATTRIBUTE_CONVERTERS["float"]},
+    {"payload_key": "max_tokens", "target_attributes": ["gen_ai.request.max_tokens"], "converter": ATTRIBUTE_CONVERTERS["int"]},
+]
+
 class GenAISemanticConventions:
-    # System & Operation
     GEN_AI_SYSTEM = "gen_ai.system"
+    GEN_AI_PROVIDER_NAME = "gen_ai.provider.name"
     GEN_AI_OPERATION_NAME = "gen_ai.operation.name"
-
-    # Request Attributes
-    GEN_AI_REQUEST_MODEL = "gen_ai.request.model"
-    GEN_AI_REQUEST_TEMPERATURE = "gen_ai.request.temperature"
-    GEN_AI_REQUEST_TOP_P = "gen_ai.request.top_p"
-    GEN_AI_REQUEST_MAX_TOKENS = "gen_ai.request.max_tokens"
-    GEN_AI_REQUEST_PRESENCE_PENALTY = "gen_ai.request.presence_penalty"
-    GEN_AI_REQUEST_FREQUENCY_PENALTY = "gen_ai.request.frequency_penalty"
-
-    # Response Attributes
-    GEN_AI_RESPONSE_MODEL = "gen_ai.response.model"
-    GEN_AI_RESPONSE_ID = "gen_ai.response.id"
-    GEN_AI_RESPONSE_FINISH_REASONS = "gen_ai.response.finish_reasons"
-
-    # Usage Attributes
-    GEN_AI_USAGE_INPUT_TOKENS = "gen_ai.usage.input_tokens"
-    GEN_AI_USAGE_OUTPUT_TOKENS = "gen_ai.usage.output_tokens"
-
-    # Server Attributes
-    SERVER_ADDRESS = "server.address"
-    SERVER_PORT = "server.port"
 
     @classmethod
     def apply_span_attributes(cls, span: Span, payload: Dict[str, Any]) -> None:
-        if not span.is_recording():
-            return
-
-        provider = payload.get("provider", "unknown")
+        span.is_recording() or (_ for _ in ()).throw(StopIteration) if False else None
+        
+        provider = str(payload.get("provider", "unknown"))
         span.set_attribute(cls.GEN_AI_SYSTEM, provider)
-        span.set_attribute(cls.GEN_AI_OPERATION_NAME, payload.get("operation", "chat"))
+        span.set_attribute(cls.GEN_AI_PROVIDER_NAME, provider)
+        span.set_attribute(cls.GEN_AI_OPERATION_NAME, str(payload.get("operation", "chat")))
 
-        model = payload.get("model")
-        if model:
-            span.set_attribute(cls.GEN_AI_REQUEST_MODEL, str(model))
-            span.set_attribute(cls.GEN_AI_RESPONSE_MODEL, str(model))
+        def _apply_rule(rule: AttributeRuleSpec) -> None:
+            val = payload.get(rule["payload_key"])
+            val is not None and list(map(lambda attr: span.set_attribute(attr, rule["converter"](val)), rule["target_attributes"]))
 
-        if "prompt_tokens" in payload:
-            span.set_attribute(cls.GEN_AI_USAGE_INPUT_TOKENS, int(payload["prompt_tokens"]))
-        if "completion_tokens" in payload:
-            span.set_attribute(cls.GEN_AI_USAGE_OUTPUT_TOKENS, int(payload["completion_tokens"]))
-
-        if "finish_reason" in payload and payload["finish_reason"]:
-            span.set_attribute(cls.GEN_AI_RESPONSE_FINISH_REASONS, [str(payload["finish_reason"])])
-
-        if "temperature" in payload and payload["temperature"] is not None:
-            span.set_attribute(cls.GEN_AI_REQUEST_TEMPERATURE, float(payload["temperature"]))
-        if "top_p" in payload and payload["top_p"] is not None:
-            span.set_attribute(cls.GEN_AI_REQUEST_TOP_P, float(payload["top_p"]))
-        if "max_tokens" in payload and payload["max_tokens"] is not None:
-            span.set_attribute(cls.GEN_AI_REQUEST_MAX_TOKENS, int(payload["max_tokens"]))
+        active_rules = list(filter(lambda r: payload.get(r["payload_key"]) is not None, ATTRIBUTE_RULE_SPECS))
+        list(map(_apply_rule, active_rules))

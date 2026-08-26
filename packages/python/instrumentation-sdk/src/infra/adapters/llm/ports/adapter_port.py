@@ -1,5 +1,4 @@
-from typing import Protocol, Any, Dict, List, Optional
-from src.features.spans.types import FinishReason
+from typing import Protocol, Any, Dict, Optional
 
 class LlmProviderAdapterPort(Protocol):
     def provider_name(self) -> str:

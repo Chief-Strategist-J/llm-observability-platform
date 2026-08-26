@@ -3,9 +3,9 @@ import functools
 import json
 import re
 from typing import Any, Dict, Optional, List
-from ...ports import PatcherPort
-from .base import execute_external_call_async, execute_external_call_sync
-from ....manual_instrumentation.service import llm_span
+from ..ports.patcher_port import PatcherPort
+from ..base import execute_external_call_async, execute_external_call_sync
+from .....manual_instrumentation.service import llm_span
 
 # Common LLM provider patterns
 LLM_ENDPOINT_PATTERNS = {

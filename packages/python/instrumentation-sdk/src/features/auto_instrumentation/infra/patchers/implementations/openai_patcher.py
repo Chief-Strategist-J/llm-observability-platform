@@ -1,11 +1,10 @@
 import importlib.util
 import functools
-import time
-from typing import Any, Optional
-from ...ports import PatcherPort
-from .base import execute_external_call_async, execute_external_call_sync
-from ...domain.mappers import ProviderMapper
-from ....manual_instrumentation.service import llm_span
+from typing import Any
+from ..ports.patcher_port import PatcherPort
+from ..base import execute_external_call_async, execute_external_call_sync, apply_metadata_pipe
+from ....domain.mappers import ProviderMapper
+from .....manual_instrumentation.service import llm_span
 
 class OpenAIPatcher(PatcherPort):
     def __init__(self):
@@ -28,22 +27,17 @@ class OpenAIPatcher(PatcherPort):
             model = kwargs.get("model", "unknown")
             async with llm_span(model=model, provider="openai") as span:
                 response = await execute_external_call_async(self._original_async_create, instance, *args, **kwargs)
-                metadata = ProviderMapper.map_openai_response(response)
-                for key, value in metadata.items():
-                    span.set_metadata(key, value)
+                apply_metadata_pipe(span, ProviderMapper.map_openai_response(response))
                 return response
         AsyncCompletions.create = patched_async_create
 
-        # Patch Sync
         self._original_sync_create = Completions.create
         @functools.wraps(self._original_sync_create)
         def patched_sync_create(instance, *args, **kwargs):
             model = kwargs.get("model", "unknown")
             with llm_span(model=model, provider="openai") as span:
                 response = execute_external_call_sync(self._original_sync_create, instance, *args, **kwargs)
-                metadata = ProviderMapper.map_openai_response(response)
-                for key, value in metadata.items():
-                    span.set_metadata(key, value)
+                apply_metadata_pipe(span, ProviderMapper.map_openai_response(response))
                 return response
         Completions.create = patched_sync_create
 
@@ -61,9 +55,7 @@ class OpenAIPatcher(PatcherPort):
                 model = kwargs.get("model", "unknown")
                 async with llm_span(model=model, provider="openai") as span:
                     response = await execute_external_call_async(original_create, *args, **kwargs)
-                    metadata = ProviderMapper.map_openai_response(response)
-                    for key, value in metadata.items():
-                        span.set_metadata(key, value)
+                    apply_metadata_pipe(span, ProviderMapper.map_openai_response(response))
                     return response
         else:
             @functools.wraps(original_create)
@@ -71,9 +63,7 @@ class OpenAIPatcher(PatcherPort):
                 model = kwargs.get("model", "unknown")
                 with llm_span(model=model, provider="openai") as span:
                     response = execute_external_call_sync(original_create, *args, **kwargs)
-                    metadata = ProviderMapper.map_openai_response(response)
-                    for key, value in metadata.items():
-                        span.set_metadata(key, value)
+                    apply_metadata_pipe(span, ProviderMapper.map_openai_response(response))
                     return response
 
         instance.chat.completions.create = types.MethodType(patched_create, instance.chat.completions)

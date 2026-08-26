@@ -1,10 +1,10 @@
 import importlib.util
 import functools
 from typing import Any
-from ...ports import PatcherPort
-from .base import execute_external_call_async, execute_external_call_sync
-from ....manual_instrumentation.service import llm_span
-from ...domain.mappers import ProviderMapper
+from ..ports.patcher_port import PatcherPort
+from ..base import execute_external_call_async, execute_external_call_sync, apply_metadata_pipe
+from .....manual_instrumentation.service import llm_span
+from ....domain.mappers import ProviderMapper
 
 class LangChainPatcher(PatcherPort):
     def __init__(self):
@@ -20,7 +20,6 @@ class LangChainPatcher(PatcherPort):
 
         from langchain_core.language_models.chat_models import BaseChatModel
 
-        # Patch Async
         self._original_ainvoke = BaseChatModel.ainvoke
         @functools.wraps(self._original_ainvoke)
         async def patched_ainvoke(instance, *args, **kwargs):
@@ -29,13 +28,10 @@ class LangChainPatcher(PatcherPort):
             
             async with llm_span(model=model, provider=f"langchain:{provider}") as span:
                 response = await execute_external_call_async(self._original_ainvoke, instance, *args, **kwargs)
-                metadata = ProviderMapper.map_langchain_response(response, model, provider)
-                for key, value in metadata.items():
-                    span.set_metadata(key, value)
+                apply_metadata_pipe(span, ProviderMapper.map_langchain_response(response, model, provider))
                 return response
         BaseChatModel.ainvoke = patched_ainvoke
 
-        # Patch Sync
         self._original_invoke = BaseChatModel.invoke
         @functools.wraps(self._original_invoke)
         def patched_invoke(instance, *args, **kwargs):
@@ -44,9 +40,7 @@ class LangChainPatcher(PatcherPort):
             
             with llm_span(model=model, provider=f"langchain:{provider}") as span:
                 response = execute_external_call_sync(self._original_invoke, instance, *args, **kwargs)
-                metadata = ProviderMapper.map_langchain_response(response, model, provider)
-                for key, value in metadata.items():
-                    span.set_metadata(key, value)
+                apply_metadata_pipe(span, ProviderMapper.map_langchain_response(response, model, provider))
                 return response
         BaseChatModel.invoke = patched_invoke
 
@@ -56,10 +50,9 @@ class LangChainPatcher(PatcherPort):
         import types
         import inspect
         
-        for method_name in ["invoke", "ainvoke"]:
-            if not hasattr(instance, method_name):
-                continue
-                
+        methods_to_patch = list(filter(lambda m: hasattr(instance, m), ["invoke", "ainvoke"]))
+        
+        def _patch_method(method_name: str):
             original_method = getattr(instance, method_name)
             if inspect.iscoroutinefunction(original_method):
                 @functools.wraps(original_method)
@@ -68,9 +61,7 @@ class LangChainPatcher(PatcherPort):
                     provider = instance.__class__.__name__
                     async with llm_span(model=model, provider=f"langchain:{provider}") as span:
                         response = await execute_external_call_async(original_method, *args, **kwargs)
-                        metadata = ProviderMapper.map_langchain_response(response, model, provider)
-                        for key, value in metadata.items():
-                            span.set_metadata(key, value)
+                        apply_metadata_pipe(span, ProviderMapper.map_langchain_response(response, model, provider))
                         return response
             else:
                 @functools.wraps(original_method)
@@ -79,12 +70,12 @@ class LangChainPatcher(PatcherPort):
                     provider = instance.__class__.__name__
                     with llm_span(model=model, provider=f"langchain:{provider}") as span:
                         response = execute_external_call_sync(original_method, *args, **kwargs)
-                        metadata = ProviderMapper.map_langchain_response(response, model, provider)
-                        for key, value in metadata.items():
-                            span.set_metadata(key, value)
+                        apply_metadata_pipe(span, ProviderMapper.map_langchain_response(response, model, provider))
                         return response
             
             setattr(instance, method_name, types.MethodType(patched_method, instance))
+
+        list(map(_patch_method, methods_to_patch))
 
     def unpatch(self) -> None:
         from langchain_core.language_models.chat_models import BaseChatModel
