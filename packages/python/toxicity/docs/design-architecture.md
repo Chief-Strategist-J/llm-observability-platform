@@ -276,8 +276,147 @@ This guarantees that toxic prefixes or toxic suffixes in long generations are ne
 
 ### 2.6 Observability & Metric Telemetry
 
-- **OpenTelemetry Span**: `toxicity.score`
-  - Attributes: `input.length`, `output.score`, `output.flagged`, `output.strategy`, `skipped`, `skip_reason`.
-  - Context Propagation: Extracts W3C `traceparent` or custom header/body IDs.
-- **Prometheus Metrics** (`/metrics` endpoint via `prometheus-client`):
-  - HTTP request duration, status codes, request count.
+---
+
+## 3. Database Design & Persistence Architecture
+
+The Toxicity Service uses a **hybrid polyglot storage architecture** across the platform's database engines:
+1. **ClickHouse (Columnar OLAP)**: High-throughput telemetry and timeseries toxicity aggregates for real-time dashboard analytics.
+2. **AlloyDB / PostgreSQL (Relational OLTP)**: Toxic alert ledger, audit logging, human-in-the-loop review status, and safety violations.
+3. **Kafka (Event Log)**: Immutable stream of raw evaluated spans and flagged incidents.
+
+```mermaid
+flowchart TD
+    ToxicityService["Toxicity Service (:8008)"]
+
+    subgraph KafkaStream["Event Streaming (Kafka)"]
+        RawTopic["Topic: llm.spans.sampled"]
+        FlaggedTopic["Topic: llm.toxicity.flagged"]
+    end
+
+    subgraph ClickHouseStore["OLAP Columnar Store (ClickHouse)"]
+        SpansTable[("spans_analytics\n(Engine: MergeTree)")]
+        HourlyAgg[("toxicity_hourly_mv\n(Engine: SummingMergeTree)")]
+    end
+
+    subgraph AlloyDbStore["Transactional Relational Store (AlloyDB)"]
+        AlertsTable[("toxicity_flagged_alerts\n(Audit & Review Queue)")]
+        OrgRulesTable[("toxicity_policy_rules\n(Tenant Config & Thresholds)")]
+    end
+
+    ToxicityService -->|Emit Flagged| FlaggedTopic
+    FlaggedTopic -->|Kafka Consumer Engine| AlertsTable
+    ToxicityService -->|Bulk Ingest Telemetry| SpansTable
+    SpansTable -->|Materialized View Trigger| HourlyAgg
+```
+
+---
+
+### 3.1 ClickHouse Telemetry Schemas (OLAP Plane)
+
+#### 1. `spans_analytics` (Toxicity Span Attributes)
+```sql
+CREATE TABLE IF NOT EXISTS spans_analytics (
+    trace_id               String,
+    span_id                String,
+    org_id                 LowCardinality(String),
+    service_name           LowCardinality(String),
+    model_id               LowCardinality(String),
+    timestamp              DateTime64(3, 'UTC'),
+    input_length_chars     UInt32,
+    token_count            UInt32,
+    toxicity               Float32,
+    severe_toxicity        Float32,
+    obscene                Float32,
+    threat                 Float32,
+    insult                 Float32,
+    identity_hate          Float32,
+    primary_score          Float32,
+    flagged                UInt8,
+    flag                   LowCardinality(Nullable(String)),
+    strategy               LowCardinality(Nullable(String)),
+    skipped                UInt8,
+    skip_reason            LowCardinality(Nullable(String))
+)
+ENGINE = MergeTree()
+PARTITION BY toYYYYMM(timestamp)
+PRIMARY KEY (org_id, service_name, timestamp)
+ORDER BY (org_id, service_name, timestamp, trace_id, span_id)
+TTL toDateTime(timestamp) + INTERVAL 90 DAY;
+```
+
+#### 2. `toxicity_hourly_mv` (Real-Time Aggregations for Frontend Charts)
+```sql
+CREATE MATERIALIZED VIEW IF NOT EXISTS toxicity_hourly_mv
+ENGINE = SummingMergeTree()
+PRIMARY KEY (org_id, model_id, hour)
+ORDER BY (org_id, model_id, hour)
+AS SELECT
+    org_id,
+    model_id,
+    toStartOfHour(timestamp) AS hour,
+    count()                  AS total_evaluated_count,
+    sum(flagged)             AS total_flagged_count,
+    sum(toxicity)            AS sum_toxicity,
+    sum(severe_toxicity)     AS sum_severe_toxicity,
+    sum(threat)              AS sum_threat
+FROM spans_analytics
+GROUP BY org_id, model_id, hour;
+```
+
+---
+
+### 3.2 AlloyDB / PostgreSQL Schemas (OLTP Plane)
+
+#### 1. `toxicity_flagged_alerts` (Incident Audit & Human Review Queue)
+```sql
+CREATE TABLE IF NOT EXISTS toxicity_flagged_alerts (
+    id                     BIGSERIAL PRIMARY KEY,
+    alert_id               UUID NOT NULL DEFAULT gen_random_uuid(),
+    trace_id               VARCHAR(64) NOT NULL,
+    span_id                VARCHAR(32) NOT NULL,
+    org_id                 VARCHAR(64) NOT NULL,
+    model_id               VARCHAR(128) NOT NULL,
+    primary_score          DOUBLE PRECISION NOT NULL,
+    scores                 JSONB NOT NULL,
+    flag                   VARCHAR(64) NOT NULL DEFAULT 'TOXIC_RESPONSE',
+    review_status          VARCHAR(32) NOT NULL DEFAULT 'pending', -- 'pending', 'confirmed', 'false_positive'
+    reviewed_by            VARCHAR(128) NULL,
+    reviewed_at            TIMESTAMPTZ NULL,
+    created_at             TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_tox_alerts_org_created 
+    ON toxicity_flagged_alerts (org_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_tox_alerts_trace_span 
+    ON toxicity_flagged_alerts (trace_id, span_id);
+
+CREATE INDEX IF NOT EXISTS idx_tox_alerts_review_status 
+    ON toxicity_flagged_alerts (review_status) 
+    WHERE review_status = 'pending';
+```
+
+#### 2. `toxicity_policy_rules` (Tenant-Level Safety Config)
+```sql
+CREATE TABLE IF NOT EXISTS toxicity_policy_rules (
+    id                     SERIAL PRIMARY KEY,
+    org_id                 VARCHAR(64) NOT NULL UNIQUE,
+    custom_threshold       DOUBLE PRECISION NOT NULL DEFAULT 0.50,
+    action_on_flag         VARCHAR(32) NOT NULL DEFAULT 'alert_only', -- 'alert_only', 'block', 'mask'
+    enabled_categories     TEXT[] NOT NULL DEFAULT '{"toxicity", "severe_toxicity", "threat", "identity_hate"}',
+    updated_at             TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+---
+
+### 3.3 Database Query Patterns for Frontend API Routes
+
+| Frontend Route / Widget | Database Target | Query Mechanism | Latency Budget |
+|---|---|---|---|
+| `/traces/[traceId]` Badge & Radar | ClickHouse / Tempo | Single-row lookup on `spans_analytics` by `(trace_id, span_id)` | $< 15\text{ ms}$ |
+| `/quality` Safety Trend Chart | ClickHouse | Aggregate range query over `toxicity_hourly_mv` | $< 25\text{ ms}$ |
+| `/quality` Human Review Queue | AlloyDB | `SELECT ... FROM toxicity_flagged_alerts WHERE org_id = $1 AND review_status = 'pending' ORDER BY created_at DESC LIMIT 50` | $< 10\text{ ms}$ |
+| Active Safety Policy Settings | AlloyDB / Redis | Read from `toxicity_policy_rules` with 5-minute Redis caching | $< 2\text{ ms}$ |
+
