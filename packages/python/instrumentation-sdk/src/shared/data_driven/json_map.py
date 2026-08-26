@@ -1,9 +1,11 @@
 from typing import Any, Dict, List, TypedDict, Callable
+from functools import reduce
 
 class MapOp(TypedDict, total=False):
     op: str  # "rename" | "pick" | "omit" | "coerce" | "default"
     from_key: str
     to_key: str
+    path: str
     keys: List[str]
     target_type: str  # "int" | "float" | "str" | "bool"
     key: str
@@ -16,11 +18,21 @@ TYPE_CONVERTERS: Dict[str, Callable[[Any], Any]] = {
     "bool": lambda v: bool(v),
 }
 
+def _get_nested_val(data: Dict[str, Any], path: str) -> Any:
+    keys = path.split(".")
+    def _step(acc: Any, key: str) -> Any:
+        index_key = int(key) if key.isdigit() and isinstance(acc, list) and int(key) < len(acc) else key
+        return acc[index_key] if isinstance(acc, (dict, list)) and index_key in (range(len(acc)) if isinstance(acc, list) else acc) else None
+    return reduce(_step, keys, data)
+
 def _op_rename(result: Dict[str, Any], op: MapOp) -> Dict[str, Any]:
     from_k = op.get("from_key")
     to_k = op.get("to_key")
-    has_keys = bool(from_k and to_k and from_k in result)
-    return {**result, to_k: result.get(from_k)} if has_keys else result
+    path = op.get("path")
+    
+    val = _get_nested_val(result, path) if path else result.get(from_k) if from_k else None
+    has_val = val is not None
+    return {**result, to_k: val} if (to_k and has_val) else result
 
 def _op_pick(result: Dict[str, Any], op: MapOp) -> Dict[str, Any]:
     keys = set(op.get("keys", []))
@@ -59,5 +71,4 @@ def map_json(data: Dict[str, Any], ops: List[MapOp]) -> Dict[str, Any]:
         transformer = OP_TRANSFORMERS.get(op.get("op", ""), lambda res, _: res)
         return transformer(current, op)
 
-    from functools import reduce
     return reduce(_apply_op, ops, dict(data))

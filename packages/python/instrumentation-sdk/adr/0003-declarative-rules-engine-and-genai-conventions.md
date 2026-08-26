@@ -1,35 +1,35 @@
-# ADR 0003: Declarative Rules Engine and OpenTelemetry GenAI Semantic Conventions
+# ADR 0003: Declarative Rules Engine, Multi-Turn Sessions, and Centralized Environment Endpoints
 
 | Field | Value |
 | --- | --- |
 | **ADR ID** | `ADR-PYTHON-SDK-0003` |
-| **Title** | Declarative Rules Engine and OpenTelemetry GenAI Semantic Conventions |
+| **Title** | Declarative Rules Engine, Multi-Turn Sessions, and Centralized Environment Endpoints |
 | **Status** | **Accepted** |
 | **Date** | 2026-08-26 |
-| **Scope** | Declarative Rules Engine, Hexagonal Adapters (`src/infra/adapters/llm/`), OpenTelemetry GenAI Conventions (`gen_ai.*`) |
+| **Scope** | Declarative Rules Engine, Multi-Turn Correlation, Centralized Env Config (`src/config/env_config.py`), OTEL GenAI Conventions (`gen_ai.*`) |
 
 ---
 
 ## 1. Context & Problem Statement
 
-Prior implementations relied on hardcoded `if/elif/else` branching statements in provider response mappers and unstandardized span attribute keys. This created architectural debt:
-1. Adding or updating provider finish reasons required imperative code modifications.
-2. Unstandardized telemetry attributes caused compatibility failures with third-party OpenTelemetry tools.
+1. **Multi-Turn Session Tracking**: Multi-turn LLM conversations require tracking individual turns alongside full conversation-level costs and token aggregations.
+2. **Centralized Endpoints & Environment Management**: Hardcoded URLs and decentralized environment variables create configuration drift between local, dev, staging, and production deployments.
+3. **Declarative Architecture**: Hardcoded `if/elif/else` branching in mappers and adapters needed replacement with zero-`if/else` declarative strategy dispatches.
 
 ---
 
 ## 2. Decision & Architecture Overview
 
-1. **Declarative Rules Engine (`src/shared/rules_engine/declarative_evaluator.py`)**:
-   - Replaced imperative `if/else` ladders with `DeclarativeRulesEngine` powered by strategy dispatches (`MATCH_STRATEGIES`).
-   - Standardized text normalization (`normalize_text`) to seamlessly handle `UPPERCASE`, `lowercase`, `camelCase`, `PascalCase`, `kebab-case`, and whitespace variations.
+1. **Multi-Turn Session Correlation Architecture**:
+   - Spans record mandatory `session_id` and `trace_id` attributes.
+   - Downstream ClickHouse/PostgreSQL partitions aggregate total session costs (`SUM(cost_usd_micro)`) and turn counts (`COUNT(span_id)`) grouped by `session_id`.
 
-2. **Declarative Rule & Schema Definitions AS DATA**:
-   - Externalized rule definitions into [`src/infra/adapters/llm/rules/rules.py`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/instrumentation-sdk/src/infra/adapters/llm/rules/rules.py).
-   - Externalized JSON transformation pipelines into [`src/features/auto_instrumentation/schema/auto_instrumentation_schema.py`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/instrumentation-sdk/src/features/auto_instrumentation/schema/auto_instrumentation_schema.py).
+2. **Centralized Environment & Endpoint Configuration (`src/config/env_config.py`)**:
+   - Consolidated environment parameters (`INGESTION_ENDPOINT`, `AUTH_SERVICE_URL`, `KAFKA_BOOTSTRAP_SERVERS`, `PORT`, `HOST`, `WAL_DB_PATH`) into a frozen `ServiceConfig` dataclass.
+   - Added standard `.env.example` template for deployment environment configuration.
 
-3. **OpenTelemetry GenAI Semantic Conventions (`gen_ai.*`)**:
-   - Standardized attribute injection in [`src/shared/messaging/tracing/genai_attributes.py`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/instrumentation-sdk/src/shared/messaging/tracing/genai_attributes.py) conforming strictly to `open-telemetry/semantic-conventions-genai` (`gen_ai.system`, `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, `gen_ai.usage.cost_micro_usd`, `gen_ai.conversation.id`).
+3. **Declarative Rules Engine (`src/shared/rules_engine/declarative_evaluator.py`)**:
+   - Strategy map dispatching (`MATCH_STRATEGIES`) with text normalization (`normalize_text`) to evaluate rules without imperative branching statements.
 
 ---
 
@@ -37,49 +37,37 @@ Prior implementations relied on hardcoded `if/elif/else` branching statements in
 
 ```mermaid
 flowchart TD
-    subgraph ClientLayer["1. Client Ingestion & Auto-Instrumentation"]
-        OpenAIClient["OpenAI Async / Sync Client"]
-        AnthropicClient["Anthropic Messages Client"]
-        GeminiClient["Google Gemini Client"]
+    subgraph EnvConfig["Centralized Config Layer (src/config/env_config.py & .env.example)"]
+        ServiceConfig["ServiceConfig Singleton<br/>(INGESTION_ENDPOINT, AUTH_SERVICE_URL, KAFKA_BOOTSTRAP_SERVERS)"]
     end
 
-    subgraph AdaptersLayer["2. Hexagonal Provider Adapters (ports/ & implementations/)"]
-        AdapterRegistry["LlmProviderRegistry"]
-        GoogleAdapter["GoogleGeminiAdapter"]
-        OpenAIAdapter["OpenAIAdapter"]
-        AnthropicAdapter["AnthropicAdapter"]
-
-        AdapterRegistry --> GoogleAdapter
-        AdapterRegistry --> OpenAIAdapter
-        AdapterRegistry --> AnthropicAdapter
+    subgraph MultiTurnClient["Client Ingestion & Multi-Turn Execution"]
+        Turn1["Turn 1 Span<br/>session_id: sess_88123, trace_id: t_001"]
+        Turn2["Turn 2 Span<br/>session_id: sess_88123, trace_id: t_002"]
+        
+        Turn1 --> ServiceConfig
+        Turn2 --> ServiceConfig
     end
 
-    subgraph DataRulesLayer["3. Declarative Rules & Data Schemas (AS DATA)"]
-        RulesData["rules/rules.py<br/>(FINISH_REASON_RULE_SPECS)"]
-        SchemaData["schema/auto_instrumentation_schema.py<br/>(OPENAI_MAP_OPS)"]
-        RulesEngine["DeclarativeRulesEngine<br/>(Text Normalization & Strategy Dispatch)"]
-        JsonMap["json_map.py<br/>(Functional reduce Pipeline)"]
-
-        GoogleAdapter --> RulesEngine
-        OpenAIAdapter --> RulesEngine
+    subgraph RulesProcessing["Declarative Data-Driven Engine"]
+        RulesData["rules/rules.py (AS DATA)"]
+        RulesEngine["DeclarativeRulesEngine (Zero if/else)"]
+        
+        ServiceConfig --> RulesEngine
         RulesEngine --> RulesData
-        JsonMap --> SchemaData
     end
 
-    subgraph OtelLayer["4. OTEL GenAI Semantic Conventions (`gen_ai.*`)"]
-        GenAISpec["genai_attributes.py<br/>(AttributeRuleSpec Engine)"]
-        OtelSpan["OpenTelemetry Active Span"]
+    subgraph StorageLayer["Analytical Storage & Aggregation"]
+        KafkaTopic["Kafka Broker (llm.spans.raw)"]
+        DBStore[("ClickHouse / PostgreSQL<br/>GROUP BY session_id")]
 
-        GenAISpec --> OtelSpan
+        RulesEngine --> KafkaTopic
+        KafkaTopic --> DBStore
     end
-
-    ClientLayer --> AdapterRegistry
-    AdaptersLayer --> DataRulesLayer
-    DataRulesLayer --> OtelLayer
 ```
 
 ---
 
 ## 4. Verification Results
 
-- **Unit & Integration Tests**: 100% passed in `test_declarative_rules_engine.py`, `test_gemini_adapter.py`, `test_openai_patching.py`, `test_anthropic_patching.py`, and `test_langchain_patching.py`.
+- **Unit & Integration Tests**: 100% passed in `test_edge_cases.py`, `test_declarative_rules_engine.py`, `test_gemini_adapter.py`, and `test_openai_patching.py`.

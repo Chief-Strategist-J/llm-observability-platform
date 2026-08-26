@@ -1,5 +1,6 @@
 import re
 from typing import Any, List, TypedDict, Callable, Dict
+from enum import Enum
 
 class DeclarativeRuleSpec(TypedDict, total=False):
     id: str
@@ -9,7 +10,8 @@ class DeclarativeRuleSpec(TypedDict, total=False):
     priority: int
 
 def normalize_text(text: Any) -> str:
-    normalized = str(text or "").strip()
+    raw_val = text.value if isinstance(text, Enum) else (text.name if hasattr(text, 'name') and not callable(getattr(text, 'name')) else text)
+    normalized = str(raw_val or "").strip()
     normalized = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', normalized)
     normalized = re.sub(r'[\s\-]+', '_', normalized)
     return normalized.lower()
