@@ -1,5 +1,5 @@
 from typing import Dict, Any, Callable
-from src.shared.messaging.tracing.messaging_tracer import messaging_tracer
+from src.infra.messaging.tracing.messaging_tracer import messaging_tracer
 
 def tracing_producer_middleware(topic: str, key: Any, value: Any, next_fn: Callable) -> None:
     event_name = value.get("event_name", "LLMSpan") if isinstance(value, dict) else "LLMSpan"
