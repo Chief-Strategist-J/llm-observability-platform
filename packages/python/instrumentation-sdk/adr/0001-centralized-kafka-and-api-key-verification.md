@@ -35,7 +35,7 @@ The `instrumentation-sdk` service ingests high-throughput raw LLM observability 
 
 ```mermaid
 graph TD
-    Client["Client SDK / Python Application"] -->|POST /v1/spans (Header: x-api-key)| IngestionAPI["FastAPI REST Server (Port 8000/8002)"]
+    Client["Client SDK / Python Application"] -->|POST /v1/spans <br/> Header: x-api-key| IngestionAPI["FastAPI REST Server<br/>(Port 8000/8002)"]
     
     subgraph Instrumentation SDK Engine
         IngestionAPI --> Middleware["StandardRequestContextMiddleware"]
@@ -46,8 +46,8 @@ graph TD
         Factory --> ReliableReporter["ReliableKafkaSpanReporter"]
     end
     
-    ReliableReporter -->|Publish Spans| Kafka["Kafka Broker (Port 31414 / 9092)"]
-    ReliableReporter -->|Offline Fallback| WAL["SQLite WAL Storage (/tmp/llm-obs-wal.db)"]
+    ReliableReporter -->|Publish Spans| Kafka["Kafka Broker<br/>(Port 31414 / 9092)"]
+    ReliableReporter -->|Offline Fallback| WAL["SQLite WAL Storage<br/>(/tmp/llm-obs-wal.db)"]
 ```
 
 ---

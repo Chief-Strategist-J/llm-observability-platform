@@ -29,7 +29,7 @@ This ADR defines the High-Level Design (HLD) and Low-Level Design (LLD) for span
 flowchart TD
     subgraph CaptureLayer["1. In-App Capture & SDK Instrumentation"]
         ClientApp["Python / LLM Application"]
-        AutoInst["init_auto_instrumentation()\n(Patches OpenAI, Anthropic, LiteLLM, LangChain)"]
+        AutoInst["init_auto_instrumentation()<br/>(Patches OpenAI, Anthropic, LiteLLM, LangChain)"]
         ContextMgr["llm_span() Context Manager / @llm_observe"]
         
         ClientApp --> AutoInst
@@ -37,10 +37,10 @@ flowchart TD
     end
 
     subgraph SDKCore["2. Instrumentation SDK Core Pipeline"]
-        PIIScanner["Inline PII & Injection Scanner\n(Aho-Corasick Trie)"]
-        Sampler["Deterministic Sampler\n(SHA256(span_id) % 100 == 0)"]
-        CostLookup["event-cost Price Lookup\n(model_prices.yaml)"]
-        ReliableReporter["Reliable Kafka / WAL Reporter\n(In-Memory Queue + Local SQLite WAL Fallback)"]
+        PIIScanner["Inline PII & Injection Scanner<br/>(Aho-Corasick Trie)"]
+        Sampler["Deterministic Sampler<br/>(SHA256(span_id) % 100 == 0)"]
+        CostLookup["event-cost Price Lookup<br/>(model_prices.yaml)"]
+        ReliableReporter["Reliable Kafka / WAL Reporter<br/>(In-Memory Queue + Local SQLite WAL Fallback)"]
 
         AutoInst --> PIIScanner
         ContextMgr --> PIIScanner
@@ -50,10 +50,10 @@ flowchart TD
     end
 
     subgraph DeliveryStorage["3. Delivery & Analytical Storage Layer"]
-        RestAPI["FastAPI Ingestion Server\n(POST /v1/spans, GET /v1/metrics/prices)"]
-        KafkaBroker["Kafka Broker\n(Topic: llm.spans.raw)"]
-        CostWorker["event-cost-worker\n(Consumes spans & computes micro-USD)"]
-        AnalyticsDB[("PostgreSQL / ClickHouse / Redis\n(Spans, Traces, Cost Ledgers)")]
+        RestAPI["FastAPI Ingestion Server<br/>(POST /v1/spans, GET /v1/metrics/prices)"]
+        KafkaBroker["Kafka Broker<br/>(Topic: llm.spans.raw)"]
+        CostWorker["event-cost-worker<br/>(Consumes spans & computes micro-USD)"]
+        AnalyticsDB[("PostgreSQL / ClickHouse / Redis<br/>(Spans, Traces, Cost Ledgers)")]
 
         ReliableReporter -->|Online: HTTP POST /v1/spans| RestAPI
         ReliableReporter -.->|Offline: Write to WAL| ReliableReporter
