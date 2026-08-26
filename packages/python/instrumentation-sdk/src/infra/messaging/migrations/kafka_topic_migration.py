@@ -42,7 +42,9 @@ class KafkaTopicMigrationEngine:
         specs = self.load_contract_topics()
         admin_client = KafkaAdminClient(
             bootstrap_servers=self.bootstrap_servers,
-            client_id=topic_constants.CLIENT_ID
+            client_id=topic_constants.CLIENT_ID,
+            api_version=(3, 7, 0),
+            api_version_auto_timeout_ms=5000
         )
         results = {}
         new_topics = []
@@ -83,7 +85,8 @@ class KafkaTopicMigrationEngine:
     def rollback_migrations(self, topic_names: Optional[List[str]] = None) -> Dict[str, str]:
         admin_client = KafkaAdminClient(
             bootstrap_servers=self.bootstrap_servers,
-            client_id=topic_constants.CLIENT_ID
+            client_id=topic_constants.CLIENT_ID,
+            api_version=(3, 7, 0)
         )
         results = {}
         target_topics = topic_names or [t["name"] for t in self.load_contract_topics()]
