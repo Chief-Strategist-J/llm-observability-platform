@@ -1,5 +1,5 @@
 from typing import Callable, Any, Optional
-from src.infra.messaging.factories.producer_factory import kafka_producer_factory
+from src.infra.messaging.producer.factory.producer_factory import kafka_producer_factory
 
 class KafkaProducerClient:
     def __init__(self) -> None:
