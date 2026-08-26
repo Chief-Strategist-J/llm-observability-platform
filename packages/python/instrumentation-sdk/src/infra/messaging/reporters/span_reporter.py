@@ -1,11 +1,13 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from src.features.spans.reporter import SpanReporter
 from src.infra.messaging.producer.producer_client.kafka_producer_client import kafka_producer_client
+from src.infra.messaging.topics.topic_provisioner import TopicProvisioner
 
 class KafkaSpanReporter(SpanReporter):
-    def __init__(self, topic: str = "llm.spans.raw"):
+    def __init__(self, topic: Optional[str] = None):
         self.producer_client = kafka_producer_client
-        self.topic = topic
+        self.provisioner = TopicProvisioner()
+        self.topic = topic or self.provisioner.resolve_event_topic("LLMSpan") or "llm.spans.raw"
 
     def report(self, span_data: Dict[str, Any]) -> None:
         span_id = str(span_data.get("span_id", ""))

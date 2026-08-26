@@ -2,7 +2,7 @@ import json
 import threading
 from typing import Optional
 from kafka import KafkaProducer
-from ..broker.broker_config import KafkaBrokerConfig, kafka_broker_config
+from src.infra.messaging.broker.broker_config import KafkaBrokerConfig, kafka_broker_config
 
 class KafkaProducerFactory:
     _instance: Optional["KafkaProducerFactory"] = None

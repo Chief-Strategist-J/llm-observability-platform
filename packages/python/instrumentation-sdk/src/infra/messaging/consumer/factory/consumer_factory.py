@@ -1,7 +1,7 @@
 import json
 from typing import Optional
 from kafka import KafkaConsumer
-from ..broker.broker_config import KafkaBrokerConfig, kafka_broker_config
+from src.infra.messaging.broker.broker_config import KafkaBrokerConfig, kafka_broker_config
 
 class KafkaConsumerFactory:
     def __init__(self, config: Optional[KafkaBrokerConfig] = None):

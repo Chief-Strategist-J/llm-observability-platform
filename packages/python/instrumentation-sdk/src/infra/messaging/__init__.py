@@ -1,9 +1,7 @@
-from .broker_config import KafkaBrokerConfig, kafka_broker_config
-from .client_factory import KafkaClientFactory, kafka_client_factory
+from src.infra.messaging.broker.broker_config import KafkaBrokerConfig, kafka_broker_config
 
 __all__ = [
     "KafkaBrokerConfig",
     "kafka_broker_config",
-    "KafkaClientFactory",
-    "kafka_client_factory",
 ]
+

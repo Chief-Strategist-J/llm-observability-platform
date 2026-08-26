@@ -1,5 +1,6 @@
 from typing import Dict, Any, Callable
 from src.infra.messaging.tracing.messaging_tracer import messaging_tracer
+from src.infra.messaging.middleware.pipeline import ProduceCtx, ConsumeCtx
 
 def tracing_producer_middleware(topic: str, key: Any, value: Any, next_fn: Callable) -> None:
     event_name = value.get("event_name", "LLMSpan") if isinstance(value, dict) else "LLMSpan"
@@ -7,8 +8,8 @@ def tracing_producer_middleware(topic: str, key: Any, value: Any, next_fn: Calla
     tenant_id = value.get("org_id") or value.get("tenant_id") if isinstance(value, dict) else None
 
     with messaging_tracer.start_producer_span(topic, event_name, correlation_id, tenant_id) as span:
-        carrier = {}
-        messaging_tracer.inject_context(carrier=carrier, headers={})
+        carrier: Dict[str, str] = {}
+        messaging_tracer.inject_context(headers=carrier)
         next_fn(topic, key, value, carrier)
 
 def tracing_consumer_middleware(message: Any, next_fn: Callable) -> Any:
@@ -18,3 +19,25 @@ def tracing_consumer_middleware(message: Any, next_fn: Callable) -> Any:
 
     with messaging_tracer.start_consumer_span(topic, event_name, headers) as span:
         return next_fn(message)
+
+def with_tracing_producer_ctx(ctx: ProduceCtx, next_fn: Callable[[ProduceCtx], None]) -> None:
+    event_name = ctx.metadata.get("event_name", "LLMSpan")
+    with messaging_tracer.start_producer_span(
+        topic=ctx.topic,
+        event_name=event_name,
+        correlation_id=ctx.correlation_id,
+        tenant_id=ctx.tenant_id,
+    ) as span:
+        messaging_tracer.inject_context(headers=ctx.headers)
+        ctx.headers["x-correlation-id"] = ctx.correlation_id
+        ctx.headers["x-tenant-id"] = ctx.tenant_id
+        next_fn(ctx)
+
+def with_tracing_consumer_ctx(ctx: ConsumeCtx, next_fn: Callable[[ConsumeCtx], Any]) -> Any:
+    event_name = ctx.metadata.get("event_name", "LLMSpan")
+    with messaging_tracer.start_consumer_span(
+        topic=ctx.topic,
+        event_name=event_name,
+        headers=ctx.headers,
+    ) as span:
+        return next_fn(ctx)
