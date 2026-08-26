@@ -60,20 +60,20 @@ flowchart TD
     OtelCol --> TempoTraces
 
     %% Pipeline triggering
-    KafkaBroker -->|C. Batch Stream Spans| ToxicitySvc
-    SDK -.->|D. Direct Synchronous Scoring (Optional)| ToxicitySvc
+    KafkaBroker -->|"C. Batch Stream Spans"| ToxicitySvc
+    SDK -.->|"D. Direct Synchronous Scoring (Optional)"| ToxicitySvc
     
     %% Toxicity actions
-    ToxicitySvc -->|E. Record OTel Span Context| OtelCol
-    ToxicitySvc -->|F. Emit if Flagged (> 0.50)| KafkaAlerts
-    ToxicitySvc -->|G. Persist Evaluated Scores| ClickHouseDB
+    ToxicitySvc -->|"E. Record OTel Span Context"| OtelCol
+    ToxicitySvc -->|"F. Emit if Flagged (> 0.50)"| KafkaAlerts
+    ToxicitySvc -->|"G. Persist Evaluated Scores"| ClickHouseDB
 
     KafkaAlerts --> AlloyDB
 
     %% Frontend queries
-    NextServer -->|Query Trace Waterfall| TempoTraces
-    NextServer -->|Query Aggregated Metrics| ClickHouseDB
-    NextServer -->|Query Active Alerts| AlloyDB
+    NextServer -->|"Query Trace Waterfall"| TempoTraces
+    NextServer -->|"Query Aggregated Metrics"| ClickHouseDB
+    NextServer -->|"Query Active Alerts"| AlloyDB
 
     NextServer --> TraceWaterfallView
     NextServer --> QualityDashboard
