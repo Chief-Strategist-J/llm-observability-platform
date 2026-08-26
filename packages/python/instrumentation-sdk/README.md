@@ -78,6 +78,7 @@ response = await client.chat.completions.create(model="gpt-4o", messages=[...])
 **Supported Providers:**
 - **OpenAI**: `openai.AsyncOpenAI`
 - **Anthropic**: `anthropic.AsyncAnthropic`
+- **Google Gemini**: `google.generativeai` / `GoogleGeminiAdapter`
 - **LiteLLM**: `litellm.acompletion`
 - **LangChain**: Any model inheriting from `BaseChatModel` (via `ainvoke`)
 
