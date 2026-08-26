@@ -2,7 +2,8 @@
 
 Unified, production-ready multi-label toxicity classification service built on Hexagonal Architecture using `unitary/toxic-bert` with ONNX Runtime on CPU.
 
-Merges the former `toxicity` (orchestrator) and `toxicity-worker` (stateless inference) packages into one. See [ADR 0003](./adr/0003-consolidation-of-toxicity-and-toxicity-worker.md).
+- **Architecture Reference**: [High-Level & Low-Level Design (HLD/LLD)](./docs/design-architecture.md)
+- **Decision History**: [Architecture Decision Records (ADRs)](./adr/README.md) — see [ADR 0003](./adr/0003-consolidation-of-toxicity-and-toxicity-worker.md) for package merge details.
 
 ---
 
