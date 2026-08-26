@@ -75,26 +75,26 @@ flowchart TD
     
     CBCheck --> CBOpen{"Circuit Breaker Open?"}
     CBOpen -- "Yes" --> FailOpen["Fail Open: Return null to trigger DB Fallback"]
-    CBOpen -- "No" --> NamespaceCheck["withKeyNamespaceGuard: Validate & Prepend Tenant Prefix"]
+    CBOpen -- "No" --> NamespaceCheck["withKeyNamespaceGuard: Validate and Prepend Tenant Prefix"]
     
     NamespaceCheck --> TenantValid{"Tenant ID Present?"}
     TenantValid -- "No" --> ThrowTenantErr["Throw InvariantViolationError"]
     TenantValid -- "Yes" --> OpCheck["Check Cache Operation"]
     
-    OpCheck --> IsGET{"Operation == GET?"}
+    OpCheck --> IsGET{"Operation is GET?"}
     IsGET -- "Yes" --> Singleflight["withSingleflightStampedeProtection: Check In-Flight Map"]
     IsGET -- "No" --> JitterCheck["withTTLRandomJitter"]
     
     Singleflight --> InFlightMatch{"Matching Key In-Flight?"}
-    InFlightMatch -- "Yes" --> AwaitSF["Wait & Share Promise Result"]
+    InFlightMatch -- "Yes" --> AwaitSF["Wait and Share Promise Result"]
     InFlightMatch -- "No" --> JitterCheck
     
-    JitterCheck --> IsSET{"Operation == SET & ttlMs Present?"}
+    JitterCheck --> IsSET{"Operation is SET and ttlMs Present?"}
     IsSET -- "Yes" --> ApplyJitter["Apply Random Jitter Factor (+/- 15%)"]
     IsSET -- "No" --> CompressCheck["withPayloadCompression"]
     ApplyJitter --> CompressCheck
     
-    CompressCheck --> LargePayload{"SET Value Size > 10KB?"}
+    CompressCheck --> LargePayload{"SET Value Size exceeds 10KB?"}
     LargePayload -- "Yes" --> CompressData["Compress Payload via Snappy/Zstd"]
     LargePayload -- "No" --> RawExec["Execute Raw Redis Client Command"]
     CompressData --> RawExec
@@ -108,7 +108,7 @@ flowchart TD
     DecompressData --> ReturnVal
     
     ReturnVal --> ResolveSF["Resolve Singleflight Waiters"]
-    ResolveSF --> CompleteSpan["Record Hit/Miss Metrics & End Span"]
+    ResolveSF --> CompleteSpan["Record Hit/Miss Metrics and End Span"]
     FailOpen --> CompleteSpan
     CompleteSpan --> EndSpan["Return Cache Value or null to Service"]
 ```
@@ -129,34 +129,34 @@ sequenceDiagram
     participant Redis as Redis Server
 
     Service->>Tracing: execute(CacheCtx)
-    Tracing->>Tracing: Start OTEL Cache Span ("Cache GET user:123")
+    Tracing->>Tracing: Start OTEL Cache Span (Cache GET key)
     Tracing->>CB: next(ctx)
     alt Circuit Breaker Open
         CB-->>Tracing: Return null (Fail Open to DB)
     else Circuit Closed
         CB->>NS: next(ctx)
-        NS->>NS: Format key: service:env:tenantId:entity:id
+        NS->>NS: Format key (service:env:tenantId:entity:id)
         NS->>SF: next(ctx)
-        alt GET Operation & Matching In-Flight Request Exists
+        alt GET Operation and Matching In-Flight Request Exists
             SF-->>NS: Return Shared Promise Result (Singleflight)
-        else Singleflight Miss / Non-GET
+        else Singleflight Miss or Non-GET
             SF->>Jitter: next(ctx)
-            opt Operation == SET & ttlMs present
-                Jitter->>Jitter: Calculate Jitter: ttlMs * random(0.85, 1.15)
+            opt Operation is SET and ttlMs present
+                Jitter->>Jitter: Calculate Jitter (stagger TTL)
             end
             Jitter->>Comp: next(ctx)
-            opt Operation == SET & payload > 10KB
+            opt Operation is SET and payload exceeds 10KB
                 Comp->>Comp: Compress payload via Snappy/Zstd
             end
             Comp->>Driver: Execute RESP3 Command
-            Driver->>Redis: GET / SETEX / DEL Key
+            Driver->>Redis: Execute Redis Command (GET / SETEX / DEL)
             alt Redis Network Error
                 Redis-->>Driver: Connection Error (ECONNREFUSED)
                 Driver-->>CB: Redis Exception
-                CB->>CB: Record Circuit Failure & Fail Open
+                CB->>CB: Record Circuit Failure and Fail Open
                 CB-->>Tracing: Return null
             else Redis Success
-                Redis-->>Driver: RESP Bulk String / OK
+                Redis-->>Driver: RESP Bulk String or OK
                 Driver-->>Comp: Raw Buffer
                 opt Payload is Compressed
                     Comp->>Comp: Decompress via Snappy/Zstd
@@ -171,8 +171,8 @@ sequenceDiagram
             end
         end
     end
-    Tracing->>Tracing: Record Cache Hit/Miss Metrics & End Span
-    Tracing-->>Service: Cache Value or null (Fail-Open / Miss)
+    Tracing->>Tracing: Record Cache Hit/Miss Metrics and End Span
+    Tracing-->>Service: Cache Value or null (Fail-Open or Miss)
 ```
 
 ---

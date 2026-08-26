@@ -81,11 +81,11 @@ flowchart TD
     CBOpen -- "Yes" --> ThrowCB["Throw UpstreamUnavailableError"]
     CBOpen -- "No" --> DeadlineCheck["withRetryAndJitter: Check Deadline Budget"]
     
-    DeadlineCheck --> DeadlineValid{"Remaining Budget > 0?"}
+    DeadlineCheck --> DeadlineValid{"Remaining Budget is positive?"}
     DeadlineValid -- "No" --> ThrowTimeout["Throw UpstreamTimeoutError"]
     DeadlineValid -- "Yes" --> MethodCheck["Check Request Method"]
     
-    MethodCheck --> IsGET{"Method == GET?"}
+    MethodCheck --> IsGET{"Method is GET?"}
     IsGET -- "Yes" --> Dedupe["withRequestDeduplication: Check Singleflight Map"]
     IsGET -- "No" --> AuthInject["withAuthHeaderInjection"]
     
@@ -97,26 +97,26 @@ flowchart TD
     CacheHit -- "Yes" --> ReturnCached["Return Cached HttpResponse"]
     CacheHit -- "No" --> AuthInject
     
-    AuthInject --> SingleflightAuth["Acquire Token Mutex & Inject Bearer Header"]
+    AuthInject --> SingleflightAuth["Acquire Token Mutex and Inject Bearer Header"]
     SingleflightAuth --> RawTransport["withSchemaValidationOutbound: Execute Network Transport"]
     
     RawTransport --> ResponseStatus{"HTTP Status Code?"}
     ResponseStatus -- "2xx OK" --> ParseSchema["Validate Response Data via Zod Schema"]
-    ResponseStatus -- "429 Too Many Requests" --> Parse429["Parse Retry-After Header & Backoff"]
-    ResponseStatus -- "5xx / Network Error" --> CheckRetry{"Attempt < Max & Retryable?"}
+    ResponseStatus -- "429 Too Many Requests" --> Parse429["Parse Retry-After Header and Backoff"]
+    ResponseStatus -- "5xx or Network Error" --> CheckRetry{"Attempt is less than Max and Retryable?"}
     
     Parse429 --> DeadlineCheck
-    CheckRetry -- "Yes" --> SleepJitter["Calculate Exponential Backoff + Jitter"]
+    CheckRetry -- "Yes" --> SleepJitter["Calculate Exponential Backoff and Jitter"]
     SleepJitter --> DeadlineCheck
     CheckRetry -- "No" --> MapError["Map Error to Platform Taxonomy"]
     
     ParseSchema --> StoreCache["Store Response in CacheStore if GET"]
     StoreCache --> CompleteSingleflight["Resolve Singleflight Waiters"]
     CompleteSingleflight --> RecordCBSuccess["Record Circuit Breaker Success"]
-    RecordCBSuccess --> EndSpan["End OTEL Span & Return HttpResponse"]
+    RecordCBSuccess --> EndSpan["End OTEL Span and Return HttpResponse"]
     
     MapError --> RecordCBFail["Record Circuit Breaker Failure"]
-    RecordCBFail --> EndSpanError["Record Exception on OTEL Span & Throw"]
+    RecordCBFail --> EndSpanError["Record Exception on OTEL Span and Throw"]
 ```
 
 ### 2. End-to-End Execution Sequence Diagram
@@ -136,16 +136,16 @@ sequenceDiagram
     participant Remote as Remote REST API
 
     Caller->>Tracing: execute(HttpClientCtx)
-    Tracing->>Tracing: Start OTEL Client Span & Inject W3C Headers
+    Tracing->>Tracing: Start OTEL Client Span and Inject W3C Headers
     Tracing->>CB: next(ctx)
     CB->>CB: Check Domain Breaker State
     alt Circuit Open
         CB-->>Caller: Throw UpstreamUnavailableError (Fail Fast)
     else Circuit Closed
         CB->>Retry: next(ctx)
-        loop Attempt 1..MaxAttempts (within Deadline Budget)
+        loop Attempts within Deadline Budget
             Retry->>Dedupe: next(ctx)
-            alt Request is GET & Matching In-Flight Request Exists
+            alt Request is GET and Matching In-Flight Request Exists
                 Dedupe-->>Retry: Return Shared Promise Result (Singleflight)
             else Execute Request
                 Dedupe->>Cache: next(ctx)
@@ -157,20 +157,20 @@ sequenceDiagram
                     Auth->>Schema: next(ctx with Bearer Token)
                     Schema->>Net: Execute Network Request
                     Net->>Remote: HTTPS Request
-                    Remote-->>Net: HTTPS Response (Status & Body)
+                    Remote-->>Net: HTTPS Response (Status and Body)
                     Net-->>Schema: Raw Response
                     alt Status 2xx OK
-                        Schema->>Schema: z.parse(response.data)
+                        Schema->>Schema: Parse Response Data
                         Schema-->>Cache: Validated HttpResponse
                         Cache->>Cache: Store in CacheStore
                         Cache-->>Dedupe: HttpResponse
                         Dedupe-->>Retry: HttpResponse
                     else Status 429
-                        Schema-->>Retry: 429 Response (Retry-After Header)
-                        Retry->>Retry: Parse Retry-After & Sleep Jitter Duration
-                    else Status 5xx / Network Error
+                        Schema-->>Retry: 429 Response (Retry After Header)
+                        Retry->>Retry: Parse Retry After and Sleep Jitter Duration
+                    else Status 5xx or Network Error
                         Schema-->>Retry: Upstream Error
-                        Retry->>Retry: Calculate Exponential Backoff + Jitter & Retry
+                        Retry->>Retry: Calculate Exponential Backoff and Retry
                     end
                 end
             end

@@ -72,7 +72,7 @@ flowchart TD
     Tracing --> StatusMap["withStatusMapping: Intercept Domain Exceptions"]
     
     StatusMap --> DeadlineEnforce["withDeadlineEnforcement: Calculate Remaining Budget"]
-    DeadlineEnforce --> BudgetCheck{"Remaining Budget > 0?"}
+    DeadlineEnforce --> BudgetCheck{"Remaining Budget is positive?"}
     
     BudgetCheck -- "No" --> ThrowDeadline["Cancel Locally: Throw DEADLINE_EXCEEDED (Code 4)"]
     BudgetCheck -- "Yes" --> InjectTimeout["Set grpc-timeout Metadata Header"]
@@ -82,7 +82,7 @@ flowchart TD
     TenantValid -- "No" --> ThrowTenantErr["Throw InvariantViolationError"]
     TenantValid -- "Yes" --> LowercaseHeaders["Force Metadata Keys to Lowercase"]
     
-    LowercaseHeaders --> InjectHeaders["Inject x-tenant-id, x-correlation-id & traceparent"]
+    LowercaseHeaders --> InjectHeaders["Inject x-tenant-id, x-correlation-id and traceparent"]
     InjectHeaders --> ChannelExec["Multiplex Call over HTTP/2 Channel Pool"]
     
     ChannelExec --> IsStream{"Call Type?"}
@@ -97,8 +97,8 @@ flowchart TD
     ResponseStatus -- "0 OK" --> CompleteSpan["Set Span Status OK"]
     ResponseStatus -- "Non-Zero Error" --> TranslateStatus["Map App Error to gRPC Status Code"]
     
-    TranslateStatus --> CompleteErrorSpan["Record rpc.grpc.status_code & Exception on Span"]
-    CompleteSpan --> EndSpan["End OTEL Span & Return Protobuf Message"]
+    TranslateStatus --> CompleteErrorSpan["Record rpc.grpc.status_code and Exception on Span"]
+    CompleteSpan --> EndSpan["End OTEL Span and Return Protobuf Message"]
     CompleteErrorSpan --> EndSpanError["Throw Mapped gRPC Status Error"]
 ```
 
@@ -107,7 +107,7 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Caller as Service Caller / Stub
+    actor Caller as Service Caller Stub
     participant Tracing as withGrpcTracing
     participant Status as withStatusMapping
     participant Deadline as withDeadlineEnforcement
@@ -116,35 +116,35 @@ sequenceDiagram
     participant Remote as Remote gRPC Server
 
     Caller->>Tracing: execute(GrpcCtx)
-    Tracing->>Tracing: Start OTEL Client Span ("gRPC /UserService/GetUser")
+    Tracing->>Tracing: Start OTEL Client Span
     Tracing->>Status: next(ctx)
     Status->>Deadline: next(ctx)
-    Deadline->>Deadline: Calculate remainingMs (deadline - Date.now())
-    alt remainingMs <= 0
+    Deadline->>Deadline: Calculate remainingMs
+    alt remainingMs is zero or negative
         Deadline-->>Caller: Throw UpstreamTimeoutError (DEADLINE_EXCEEDED)
     else Remaining Budget Valid
-        Deadline->>Deadline: Set metadata["grpc-timeout"] = remainingMs
+        Deadline->>Deadline: Set metadata header
         Deadline->>Meta: next(ctx)
-        Meta->>Meta: Verify tenantId & force metadata keys lowercase
-        Meta->>Meta: Inject x-tenant-id, x-correlation-id & traceparent
+        Meta->>Meta: Verify tenantId and force metadata keys lowercase
+        Meta->>Meta: Inject headers
         Meta->>Channel: Execute Protobuf Request
         Channel->>Remote: Protobuf Payload over HTTP/2 Stream
         opt CallType is Streaming
             Remote-->>Channel: Stream Response Chunks
-            Channel->>Channel: Monitor stream.Context().Done() for cancels
+            Channel->>Channel: Monitor Context Done for cancels
         end
-        Remote-->>Channel: Protobuf Response & gRPC Status Code
+        Remote-->>Channel: Protobuf Response and gRPC Status Code
         Channel-->>Meta: Protobuf Response
         Meta-->>Deadline: Protobuf Response
         Deadline-->>Status: Protobuf Response
-        alt Response Status != 0 OK
-            Status->>Status: Map AppError to gRPC Status Code (e.g. ValidationError -> INVALID_ARGUMENT)
+        alt Response Status is Error
+            Status->>Status: Map AppError to gRPC Status Code
             Status-->>Tracing: gRPC Status Exception
-            Tracing->>Tracing: Set rpc.grpc.status_code & Record Exception
+            Tracing->>Tracing: Set status code and Record Exception
             Tracing-->>Caller: Throw gRPC Status Error
-        else Response Status == 0 OK
+        else Response Status is OK
             Status-->>Tracing: Protobuf Response Message
-            Tracing->>Tracing: Set Span Status OK & End Span
+            Tracing->>Tracing: Set Span Status OK and End Span
             Tracing-->>Caller: Protobuf Response Message
         end
     end

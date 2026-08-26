@@ -84,7 +84,7 @@ flowchart TD
     TenantValid -- "Yes" --> RLSInject["Inject SET LOCAL app.current_tenant_id"]
     
     RLSInject --> TimeoutSet["withStatementTimeout: Calculate Remaining Deadline"]
-    TimeoutSet --> BudgetValid{"Remaining Budget > 0?"}
+    TimeoutSet --> BudgetValid{"Remaining Budget is positive?"}
     BudgetValid -- "No" --> ThrowTimeout["Throw UpstreamTimeoutError"]
     BudgetValid -- "Yes" --> SetStmtTimeout["Set LOCAL statement_timeout in DB Session"]
     
@@ -99,8 +99,8 @@ flowchart TD
     SoftDelete --> ExecQuery["withAuditLogging: Execute Driver SQL Query"]
     ExecQuery --> DBExec{"DB Engine Execution"}
     
-    DBExec -- "Deadlock Code (40P01 / 1213)" --> CheckAttempt{"Attempt <= 3?"}
-    CheckAttempt -- "Yes" --> RollbackSleep["Rollback Transaction & Sleep Random Backoff"]
+    DBExec -- "Deadlock Code 40P01 / 1213" --> CheckAttempt{"Attempt is 3 or less?"}
+    CheckAttempt -- "Yes" --> RollbackSleep["Rollback Transaction and Sleep Random Backoff"]
     RollbackSleep --> DeadlockLoop
     CheckAttempt -- "No" --> ThrowDeadlock["Throw SerializationFailure Error"]
     
@@ -109,7 +109,7 @@ flowchart TD
     WriteAudit -- "No" --> CompleteSpan["Set Span Status OK"]
     
     EmitAudit --> CompleteSpan
-    CompleteSpan --> EndSpan["End OTEL DB Span & Return Result"]
+    CompleteSpan --> EndSpan["End OTEL DB Span and Return Result"]
 ```
 
 ### 2. End-to-End Execution Sequence Diagram
@@ -129,34 +129,34 @@ sequenceDiagram
     participant DB as PostgreSQL DB Engine
 
     Repo->>Tracing: execute(DbContext)
-    Tracing->>Tracing: Start OTEL DB Span ("DB SELECT users")
+    Tracing->>Tracing: Start OTEL DB Span (DB SELECT users)
     Tracing->>Deadlock: next(ctx)
-    loop Attempt 1..3
+    loop Attempt 1 to 3
         Deadlock->>Tenant: next(ctx)
         alt tenant_id Missing
             Tenant-->>Repo: Throw InvariantViolationError (Security Block)
         else Tenant Scope Valid
             Tenant->>Timeout: next(ctx)
-            Timeout->>Timeout: SET LOCAL statement_timeout = remainingMs
+            Timeout->>Timeout: Set session statement timeout
             Timeout->>Replica: next(ctx)
-            alt isWrite == true OR activeTransaction == true
+            alt isWrite or activeTransaction
                 Replica->>Replica: Select Primary Pool
-            else isWrite == false
+            else readOnly
                 Replica->>Replica: Select Read-Replica Pool
             end
             Replica->>SoftDel: next(ctx)
             SoftDel->>SoftDel: Append WHERE deleted_at IS NULL
             SoftDel->>Audit: next(ctx)
-            Audit->>Pool: Acquire Connection & Exec SQL
-            Pool->>DB: SQL Query + Parameters
-            alt SQL Deadlock Error (40P01 / 1213)
+            Audit->>Pool: Acquire Connection and Exec SQL
+            Pool->>DB: SQL Query and Parameters
+            alt SQL Deadlock Error (Code 40P01 or 1213)
                 DB-->>Pool: Deadlock Error
                 Pool-->>Deadlock: Deadlock Exception
-                Deadlock->>Deadlock: ROLLBACK & Sleep Random Backoff
+                Deadlock->>Deadlock: ROLLBACK and Sleep Random Backoff
             else SQL Success
                 DB-->>Pool: Query Result Rows
-                Pool-->>Audit: Rows & RowsAffected
-                opt isWrite == true
+                Pool-->>Audit: Rows and RowsAffected
+                opt isWrite is true
                     Audit->>Audit: Write Structured Audit Event
                 end
                 Audit-->>SoftDel: Result
@@ -167,9 +167,9 @@ sequenceDiagram
             end
         end
     end
-    Deadlock-->>Tracing: Result / AppError
+    Deadlock-->>Tracing: Result or AppError
     Tracing->>Tracing: End OTEL DB Span
-    Tracing-->>Repo: Result Rows / Error
+    Tracing-->>Repo: Result Rows or Error
 ```
 
 ---

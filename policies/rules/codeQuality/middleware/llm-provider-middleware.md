@@ -83,11 +83,11 @@ flowchart TD
     KeyRotation --> CostMeter["withTokenUsageAndCostCalculation: Check Tenant TPM/RPM Quotas"]
     
     CostMeter --> QuotaExceeded{"Quota Exceeded?"}
-    QuotaExceeded -- "Yes" --> ThrowQuotaErr["Throw RateLimitedError (429)"]
-    QuotaExceeded -- "No" --> PIIRedact["withPiiRedaction: Scan & Mask Prompt PII"]
+    QuotaExceeded -- "Yes" --> ThrowQuotaErr["Throw RateLimitedError 429"]
+    QuotaExceeded -- "No" --> PIIRedact["withPiiRedaction: Scan and Mask Prompt PII"]
     
     PIIRedact --> PromptCache["withPromptHashCaching: Check Prompt Hash Cache"]
-    PromptCache --> IsTempZero{"temperature == 0?"}
+    PromptCache --> IsTempZero{"temperature is 0?"}
     IsTempZero -- "Yes" --> CacheHit{"Cache Hit?"}
     IsTempZero -- "No" --> Guardrails["withOutputGuardrails"]
     
@@ -95,29 +95,29 @@ flowchart TD
     CacheHit -- "No" --> Guardrails
     
     Guardrails --> ProviderCall["Execute Provider SDK Adapter Call"]
-    ProviderCall --> StreamCheck{"stream == true?"}
+    ProviderCall --> StreamCheck{"stream is true?"}
     
-    StreamCheck -- "Yes" --> SSERead["Read SSE Chunks & Calculate TTFT Metric"]
+    StreamCheck -- "Yes" --> SSERead["Read SSE Chunks and Calculate TTFT Metric"]
     StreamCheck -- "No" --> SyncCall["Await Full Provider Response"]
-    SSERead --> Reassemble["Re-assemble Text & Calculate Tokens"]
+    SSERead --> Reassemble["Re-assemble Text and Calculate Tokens"]
     SyncCall --> Reassemble
     
     Reassemble --> ProviderResult{"Provider Result Status"}
-    ProviderResult -- "429 Rate Limit / 5xx Error" --> CanFallback{"Fallback Model Available?"}
-    CanFallback -- "Yes" --> SelectBackup["Switch Model Target (OpenAI -> Anthropic)"]
+    ProviderResult -- "429 Rate Limit or 5xx Error" --> CanFallback{"Fallback Model Available?"}
+    CanFallback -- "Yes" --> SelectBackup["Switch Model Target to Secondary Model"]
     SelectBackup --> FallbackRouter
     CanFallback -- "No" --> ThrowProviderErr["Throw UpstreamUnavailableError"]
     
     ProviderResult -- "200 Success" --> ZodValidate{"Output Matches Zod Schema?"}
-    ZodValidate -- "No" --> RetryGuardrail{"Guardrail Retries < 2?"}
+    ZodValidate -- "No" --> RetryGuardrail{"Guardrail Retries less than 2?"}
     RetryGuardrail -- "Yes" --> RePrompt["Re-prompt Model with Error Diff"]
     RePrompt --> ProviderCall
     RetryGuardrail -- "No" --> ThrowSchemaErr["Throw ValidationError"]
     
-    ZodValidate -- "Yes" --> StorePromptCache["Store Prompt Hash Cache if temp == 0"]
+    ZodValidate -- "Yes" --> StorePromptCache["Store Prompt Hash Cache if temp is 0"]
     StorePromptCache --> RedactOutputPII["Redact PII in Completion Text"]
     RedactOutputPII --> CalculateCost["Calculate Micro-cent USD Cost"]
-    CalculateCost --> CompleteGenAISpan["Set OTEL GenAI Attributes & End Span"]
+    CalculateCost --> CompleteGenAISpan["Set OTEL GenAI Attributes and End Span"]
     CompleteGenAISpan --> ReturnResponse["Return Validated LlmResponse to Agent"]
     ReturnCached --> CompleteGenAISpan
 ```
@@ -127,7 +127,7 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Agent as AI Agent / RAG Service
+    actor Agent as AI Agent RAG Service
     participant Tracing as withLlmTracing
     participant Fallback as withModelFallbackRouting
     participant KeyVault as withApiKeyRotation
@@ -136,47 +136,47 @@ sequenceDiagram
     participant Cache as withPromptHashCaching
     participant Guard as withOutputGuardrails
     participant Adapter as Provider Adapter
-    participant LLM as Remote LLM API (OpenAI)
+    participant LLM as Remote LLM API
 
     Agent->>Tracing: execute(LlmCtx)
-    Tracing->>Tracing: Start OTEL GenAI Span ("gen_ai.chat gpt-4o")
+    Tracing->>Tracing: Start OTEL GenAI Span
     Tracing->>Fallback: next(ctx)
-    loop Primary & Fallback Models
+    loop Primary and Fallback Models
         Fallback->>KeyVault: next(ctx)
-        KeyVault->>KeyVault: Fetch & Rotate API Key from Secret Vault
+        KeyVault->>KeyVault: Fetch and Rotate API Key from Secret Vault
         KeyVault->>Cost: next(ctx)
-        Cost->>Cost: Verify Tenant TPM / RPM Token Bucket Quota
+        Cost->>Cost: Verify Tenant TPM RPM Token Bucket Quota
         Cost->>PII: next(ctx)
-        PII->>PII: Scan & Mask Prompt PII (SSN, Credit Card)
+        PII->>PII: Scan and Mask Prompt PII
         PII->>Cache: next(ctx)
-        alt temperature == 0 & Prompt Cache Hit
+        alt temperature is 0 and Prompt Cache Hit
             Cache-->>PII: Return Cached LlmResponse
-        else Cache Miss / Deterministic Off
+        else Cache Miss or Deterministic Off
             Cache->>Guard: next(ctx)
             Guard->>Adapter: Execute Provider Request
-            Adapter->>LLM: HTTPS POST /v1/chat/completions
-            alt Provider 429 Rate Limit / 5xx Outage
+            Adapter->>LLM: HTTPS POST chat completions
+            alt Provider 429 Rate Limit or 5xx Outage
                 LLM-->>Adapter: 429 Rate Limit Exceeded
                 Adapter-->>Fallback: Provider Error
-                Fallback->>Fallback: Switch Target: gpt-4o -> claude-3-5-sonnet
+                Fallback->>Fallback: Switch Model Target
             else Provider 200 OK
-                LLM-->>Adapter: Completion Payload / SSE Stream
-                opt Stream == true
-                    Adapter->>Adapter: Parse SSE Chunks, Calculate TTFT & BPE Tokens
+                LLM-->>Adapter: Completion Payload or SSE Stream
+                opt Stream is true
+                    Adapter->>Adapter: Parse SSE Chunks and Calculate TTFT
                 end
                 Adapter-->>Guard: Raw Completion Text
                 Guard->>Guard: Validate JSON Output against Zod Schema
-                alt Zod Schema Mismatch & Retries < 2
+                alt Zod Schema Mismatch and Retries less than 2
                     Guard->>Adapter: Re-prompt Model with Zod Error Diff
                 else Validation Passed
                     Guard-->>Cache: LlmResponse
-                    opt temperature == 0
+                    opt temperature is 0
                         Cache->>Cache: Store in Prompt Hash Cache
                     end
                     Cache-->>PII: LlmResponse
                     PII->>PII: Redact PII in Completion Text
                     PII-->>Cost: LlmResponse
-                    Cost->>Cost: Calculate USD Micro-cents & Log Metric
+                    Cost->>Cost: Calculate USD Micro-cents and Log Metric
                     Cost-->>KeyVault: LlmResponse
                     KeyVault-->>Fallback: LlmResponse
                     Fallback-->>Tracing: LlmResponse
@@ -184,7 +184,7 @@ sequenceDiagram
             end
         end
     end
-    Tracing->>Tracing: Set OTEL GenAI Attributes (tokens, cost, finish_reason) & End Span
+    Tracing->>Tracing: Set OTEL GenAI Attributes and End Span
     Tracing-->>Agent: Validated LlmResponse
 ```
 
