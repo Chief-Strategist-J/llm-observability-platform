@@ -14,35 +14,35 @@ The central platform infrastructure consolidates all core messaging, caching, wo
 ```mermaid
 flowchart TD
     subgraph Clients["CLIENT APPLICATIONS & INGESTION"]
-        PythonSDK["packages/python/instrumentation-sdk\n(FastAPI Ingestion Server :8000)"]
-        NextJSFrontend["packages/node/web-app\n(Next.js Web Portal :3000)"]
+        PythonSDK["packages/python/instrumentation-sdk<br/>(FastAPI Ingestion Server :8000)"]
+        NextJSFrontend["packages/node/web-app<br/>(Next.js Web Portal :3000)"]
     end
 
     subgraph ControlPlane["1. CONTROL & INGRESS PLANE"]
-        TraefikGateway["llmobs-traefik (Traefik v3.7)\nPorts: 31410 (HTTP), 31411 (Dashboard), 31419 (HTTPS)\nReverse Proxy, TLS Termination & Security Rate Limiting"]
+        TraefikGateway["llmobs-traefik (Traefik v3.7)<br/>Ports: 31410 (HTTP), 31411 (Dashboard), 31419 (HTTPS)<br/>Reverse Proxy, TLS Termination & Security Rate Limiting"]
     end
 
     subgraph MessagingPlane["2. MESSAGING & WORKFLOW PLANE"]
-        KafkaBroker["llmobs-kafka (Apache Kafka KRaft)\nPorts: 31414 (Host), 9092 (Internal)\nReal-time Event Streaming & Topic Partitioning"]
-        TemporalEngine["llmobs-temporal (Temporal v1.24.2)\nPorts: 7233 (gRPC), 8088 (UI)\nDurable Execution & Saga Orchestration"]
+        KafkaBroker["llmobs-kafka (Apache Kafka KRaft)<br/>Ports: 31414 (Host), 9092 (Internal)<br/>Real-time Event Streaming & Topic Partitioning"]
+        TemporalEngine["llmobs-temporal (Temporal v1.24.2)<br/>Ports: 7233 (gRPC), 8088 (UI)<br/>Durable Execution & Saga Orchestration"]
     end
 
     subgraph DataPlane["3. STORAGE & CACHING PLANE"]
-        AlloyDB["llmobs-alloydb (Google AlloyDB Omni 15)\nPorts: 31420 (Host), 5432 (Internal)\nTransactional Metadata & Relational Storage"]
-        ClickHouse["llmobs-clickhouse (ClickHouse v24.8 Alpine)\nPorts: 8123 (HTTP), 9000 (Native Protocol)\nColumnar Span Telemetry & Log Analytics"]
-        RedisLedger["llmobs-redis (Redis v7 Alpine)\nPorts: 31413 (Host), 6379 (Internal)\nMicro-USD Cost Ledger & API Key TTL Cache"]
+        AlloyDB["llmobs-alloydb (Google AlloyDB Omni 15)<br/>Ports: 31420 (Host), 5432 (Internal)<br/>Transactional Metadata & Relational Storage"]
+        ClickHouse["llmobs-clickhouse (ClickHouse v24.8 Alpine)<br/>Ports: 8123 (HTTP), 9000 (Native Protocol)<br/>Columnar Span Telemetry & Log Analytics"]
+        RedisLedger["llmobs-redis (Redis v7 Alpine)<br/>Ports: 31413 (Host), 6379 (Internal)<br/>Micro-USD Cost Ledger & API Key TTL Cache"]
     end
 
     subgraph ObservabilityPlane["4. TELEMETRY & OBSERVABILITY PLANE"]
-        OtelCollector["llmobs-otel-collector (OpenTelemetry Contrib)\nPorts: 31417 (HTTP 4318), 31418 (gRPC 4317)\nOTLP Ingestion & Attribute Enrichment"]
-        TempoTracing["llmobs-tempo (Grafana Tempo)\nPorts: 31416 (Host 3200), 4317 (gRPC)\nDistributed Trace Waterfall Storage"]
-        GrafanaPortal["llmobs-grafana (Grafana Portal)\nPorts: 31415 (Host 3000)\nUnified Dashboards & Data Explorer"]
+        OtelCollector["llmobs-otel-collector (OpenTelemetry Contrib)<br/>Ports: 31417 (HTTP 4318), 31418 (gRPC 4317)<br/>OTLP Ingestion & Attribute Enrichment"]
+        TempoTracing["llmobs-tempo (Grafana Tempo)<br/>Ports: 31416 (Host 3200), 4317 (gRPC)<br/>Distributed Trace Waterfall Storage"]
+        GrafanaPortal["llmobs-grafana (Grafana Portal)<br/>Ports: 31415 (Host 3000)<br/>Unified Dashboards & Data Explorer"]
     end
 
     subgraph MicroserviceWorkers["5. ASYNCHRONOUS WORKER DAEMONS"]
-        CostWorker["packages/python/event-cost-worker\n(Async Financial Spend Consumer)"]
-        NliWorker["packages/python/nli-worker\n(LLM Evaluation & Hallucination Worker)"]
-        QualityWorker["packages/python/quality-baseline-worker\n(Quality Baseline Recomputation Daemon)"]
+        CostWorker["packages/python/event-cost-worker<br/>(Async Financial Spend Consumer)"]
+        NliWorker["packages/python/nli-worker<br/>(LLM Evaluation & Hallucination Worker)"]
+        QualityWorker["packages/python/quality-baseline-worker<br/>(Quality Baseline Recomputation Daemon)"]
     end
 
     PythonSDK -->|Publish Spans| KafkaBroker
