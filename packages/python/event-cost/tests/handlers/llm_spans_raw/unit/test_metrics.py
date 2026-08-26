@@ -1,4 +1,4 @@
-from event_cost.infra.adapters.metrics.prometheus_adapter import PrometheusAdapter
+from infra.adapters.metrics.prometheus_adapter import PrometheusAdapter
 
 def test_prometheus_adapter():
     adapter = PrometheusAdapter()

@@ -4,7 +4,7 @@ import redis as redis_lib
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
-from event_cost.handlers.llm_spans_raw.index import (
+from handlers.llm_spans_raw.index import (
     FENWICK_UPDATE_LUA,
     TOKEN_BUCKET_DEDUCT_LUA,
 )

@@ -3,7 +3,7 @@ import threading
 import urllib.request
 import json
 
-from event_cost.worker.index import _HealthHandler
+from worker.index import _HealthHandler
 
 def test_health_handler():
     server = HTTPServer(("127.0.0.1", 0), _HealthHandler)

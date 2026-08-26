@@ -1,12 +1,12 @@
-# ADR 0001: Asynchronous Kafka Event Cost Worker Processing and Persistence Pipeline
+# ADR 0002: Asynchronous Kafka Event Cost Worker Processing and Persistence Pipeline
 
 | Field | Value |
 | --- | --- |
-| **ADR ID** | `ADR-PYTHON-EVENT-COST-WORKER-0001` |
+| **ADR ID** | `ADR-PYTHON-EVENT-COST-0002` |
 | **Title** | Asynchronous Kafka Event Cost Worker Processing and Persistence Pipeline |
 | **Status** | **Accepted** |
 | **Date** | 2026-08-25 |
-| **Scope** | Asynchronous Worker (`event-cost-worker`), Kafka Consumer (`llm.spans.raw`), Database Writer (`PostgreSQL` / `pgvector`) |
+| **Scope** | Asynchronous Worker (`event_cost.worker`), Kafka Consumer (`llm.spans.raw`), Redis Fenwick & Token Bucket Aggregation (`event_cost.handlers`) |
 
 ---
 
@@ -14,10 +14,10 @@
 
 High-volume production environments process thousands of LLM spans per second. Synchronous database writes during span ingestion introduce severe latency overhead to client application LLM calls. 
 
-`event-cost-worker` decouples telemetry ingestion from database persistence by:
+`event_cost.worker` decouples telemetry ingestion from application runtime by:
 1. Consuming span events asynchronously from Kafka topic `llm.spans.raw` in batch groups.
-2. Evaluating micro-USD costs via `event-cost` ledger integrations.
-3. Persisting batch records into time-partitioned PostgreSQL database tables (`llm_spans`) and Redis spend counters.
+2. Evaluating micro-USD costs and price version compliance via domain handlers (`event_cost.handlers.llm_spans_raw`).
+3. Aggregating spend across 5 dimensions and 4 time windows in Redis Fenwick Trees and executing retroactive token bucket deductions.
 
 ---
 
@@ -35,22 +35,22 @@ flowchart TD
 
     subgraph WorkerService["2. Event Cost Worker Processing Service"]
         KafkaConsumer["KafkaConsumer Group (event-cost-worker-group)"]
-        BatchBuffer["Batch Ingestion Buffer (batch_size=500, max_wait_ms=100)"]
-        CostCalculator["event-cost Ledger Engine"]
-        RetryMechanism["Dead-Letter Queue (DLQ) & Circuit Breaker"]
+        BatchBuffer["Batch Ingestion Buffer (batch_size=500, poll_timeout=1.0s)"]
+        CostCalculator["event_cost.handlers Domain Handler"]
+        RetryMechanism["Dead-Letter Queue (DLQ) & Exponential Retry"]
 
         KafkaTopic --> KafkaConsumer
         KafkaConsumer --> BatchBuffer
         BatchBuffer --> CostCalculator
-        CostCalculator -.->|On Failure| RetryMechanism
+        CostCalculator -.->|On Exception| RetryMechanism
     end
 
     subgraph AnalyticalStores["3. Persistent Analytical Data Stores"]
-        PostgresPartition[("PostgreSQL DB\n(llm_spans time-partitioned)")]
-        RedisCounter[("Redis Key-Value Store\n(org:id:spend counters)")]
+        RedisFenwick[("Redis Fenwick Trees\n(fenwick:{dim}:{win}:{key})")]
+        RedisTokenBucket[("Redis Token Buckets\n(budget:tb:{org}:{proj})")]
 
-        CostCalculator --> PostgresPartition
-        CostCalculator --> RedisCounter
+        CostCalculator --> RedisFenwick
+        CostCalculator --> RedisTokenBucket
     end
 ```
 
@@ -62,24 +62,24 @@ flowchart TD
         WorkerRegistry["worker-registry.yaml"]
         FeatureConfig["feature-registry.yaml"]
         ModelVersionConfig["model_price_versions.yaml"]
-        HealthCheckEndpoint["HTTP Health Probe (:8080/health)"]
+        HealthCheckEndpoint["HTTP Health Probe (:8001/health)"]
     end
 
-    subgraph DataPlane["2. DATA PLANE (Batch Processing & Database Writes)"]
+    subgraph DataPlane["2. DATA PLANE (Batch Processing & Redis Aggregation)"]
         SpanParser["Span JSON Deserializer & Validator"]
-        CostEnricher["event-cost Micro-USD Enricher"]
-        PostgresWriter["Bulk Copy Postgres Writer (COPY llm_spans FROM STDIN)"]
-        RedisWriter["Redis Pipeline Batch HINCRBY Driver"]
+        CostReconciler["Price Version Reconciliation & Anomaly Detection"]
+        FenwickWriter["Redis Pipeline Fenwick Tree Aggregator"]
+        TokenBucketWriter["Token Bucket Deficit Deductor"]
 
-        SpanParser --> CostEnricher
-        CostEnricher --> PostgresWriter
-        CostEnricher --> RedisWriter
+        SpanParser --> CostReconciler
+        CostReconciler --> FenwickWriter
+        CostReconciler --> TokenBucketWriter
     end
 
     subgraph MessagingPlane["3. MESSAGING PLANE (Kafka Consumer Group & Offsets)"]
         ConsumerGroup["Kafka Consumer Group (event-cost-worker-group)"]
         OffsetCommit["Manual Batch Offset Committer (commit_sync)"]
-        DlqTopic["Kafka DLQ Topic (llm.spans.dlq)"]
+        DlqTopic["Kafka DLQ Topic (llm.spans.raw.dlq)"]
 
         ConsumerGroup --> OffsetCommit
         OffsetCommit -.->|Processing Error| DlqTopic
@@ -93,75 +93,58 @@ flowchart TD
 
 ## 3. Low-Level Design (LLD)
 
-### 3.1 Sequence Diagram: Kafka Batch Ingestion & Database Commit
+### 3.1 Sequence Diagram: Kafka Batch Ingestion & Redis Aggregation
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Kafka as Kafka Broker (llm.spans.raw)
-    participant Worker as event-cost-worker Daemon
-    participant CostEngine as event-cost Engine
-    participant Postgres as PostgreSQL (llm_spans)
+    participant Worker as event_cost.worker.index Daemon
+    participant Handler as event_cost.handlers.llm_spans_raw
     participant Redis as Redis Cache
 
     loop Background Consumption Loop
         Kafka->>Worker: Poll batch of messages (e.g. 500 span records)
         activate Worker
         
-        Worker->>Worker: Deserialize JSON & validate schema
+        Worker->>Worker: Deserialize JSON & extract OTel traceparent header
 
         loop Per Span in Batch
-            Worker->>CostEngine: calculate_cost(model, provider, prompt_tokens, comp_tokens)
-            CostEngine-->>Worker: cost_usd_micro
+            Worker->>Handler: process_span(span, fenwick, bucket, ewma, price_lookup, dedup)
+            activate Handler
+            Handler->>Redis: Atomic SADD dedup:cost_engine span_id
+            alt Span is New
+                Handler->>Redis: Pipeline HINCRBY 20 Fenwick tree updates (5 dims x 4 windows)
+                Handler->>Redis: Token bucket deduction for overshoot tokens
+            end
+            deactivate Handler
         end
 
-        par Bulk Insert Postgres
-            Worker->>Postgres: BEGIN TRANSACTION; execute_values(INSERT INTO llm_spans...); COMMIT;
-            Postgres-->>Worker: Batch Insert OK
-        and Bulk Update Redis Counters
-            Worker->>Redis: PIPELINE; HINCRBY org:spends...; EXEC;
-            Redis-->>Worker: Redis Pipeline OK
-        end
-
-        Worker->>Kafka: Commit Kafka Offsets (commit_sync)
+        Worker->>Kafka: Commit Kafka Offsets (asynchronous=False)
         deactivate Worker
     end
 ```
 
-### 3.2 Key Worker Call Contract (`src/event_cost_worker/worker.py`)
+### 3.2 Key Worker Call Contract (`src/event_cost/worker/index.py`)
 
 ```python
 import logging
-from typing import List, Dict, Any
-from event_cost import CostLedger
-from src.database.repository import PostgresSpanRepository
+from event_cost.handlers.llm_spans_raw.index import process_batch
+from event_cost.worker.config import load_config
+from event_cost.worker.registry import build_registry
 
-logger = logging.getLogger("event_cost_worker")
+logger = logging.getLogger(__name__)
 
-class EventCostWorker:
-    def __init__(self, kafka_consumer, postgres_repo: PostgresSpanRepository, ledger: CostLedger):
-        self.consumer = kafka_consumer
-        self.repo = postgres_repo
-        self.ledger = ledger
-
-    def process_batch(self, messages: List[Dict[str, Any]]) -> None:
-        enriched_spans = []
-        for msg in messages:
-            try:
-                cost_micro = self.ledger.record(
-                    model=msg["model"],
-                    provider=msg["provider"],
-                    prompt_tokens=msg["prompt_tokens"],
-                    completion_tokens=msg["completion_tokens"],
-                    org_id=msg.get("org_id", "default_org")
-                )
-                msg["cost_usd_micro"] = cost_micro
-                enriched_spans.append(msg)
-            except Exception as e:
-                logger.error(f"Error enriching span {msg.get('span_id')}: {e}")
-
-        if enriched_spans:
-            self.repo.bulk_insert_spans(enriched_spans)
+def main() -> None:
+    config = load_config()
+    redis_client = redis_lib.from_url(config.redis_url)
+    ...
+    build_registry(
+        batch_handler=lambda spans: process_batch(
+            spans, fenwick, bucket, ewma, price_lookup, dedup, metrics
+        )
+    )
+    ...
 ```
 
 ---
@@ -169,22 +152,22 @@ class EventCostWorker:
 ## 4. End-to-End Call Stack Topology
 
 ```text
-└── [Daemon Startup] event_cost_worker/src/event_cost_worker/main.py :: start_worker()
-    ├── 1. Read configuration from environment & port-registry (.port-registry)
-    ├── 2. Initialize PostgresSpanRepository (db connection pool)
-    ├── 3. Initialize CostLedger(backend=RedisBackend())
+└── [Daemon Startup] event_cost/src/event_cost/worker/index.py :: main()
+    ├── 1. Read configuration via event_cost.worker.config :: load_config()
+    ├── 2. Initialize Redis adapters (RedisFenwickAdapter, RedisTokenBucketAdapter, RedisDedupAdapter)
+    ├── 3. Initialize YamlPriceLookupAdapter(config.price_config_path) & PrometheusAdapter
     │
-    └── 4. [Kafka Loop] event_cost_worker/src/event_cost_worker/worker.py :: run_consumer_loop()
-        ├── 5. consumer.poll(timeout_ms=100, max_records=500)
+    └── 4. [Kafka Loop] event_cost/src/event_cost/worker/index.py :: _run_consumer_loop()
+        ├── 5. consumer.consume(num_messages=500, timeout=1.0)
         │
-        ├── 6. process_kafka_span_batch(records)
-        │   ├── 7. event_cost/src/event_cost/ledger.py :: CostLedger.record(span_input)
-        │   │   └── Calculate micro-USD & update Redis counters
-        │   │
-        │   └── 8. event_cost_worker/src/database/repository.py :: bulk_insert_spans(enriched_spans)
-        │       └── Postgres execute_values("INSERT INTO llm_spans (trace_id, span_id, cost_usd_micro...)")
+        ├── 6. event_cost/src/event_cost/handlers/llm_spans_raw/index.py :: process_batch()
+        │   ├── 7. Check idempotency: dedup.is_new(span_id)
+        │   ├── 8. Build 20 Fenwick updates: handler.build_fenwick_updates(span)
+        │   ├── 9. Pipeline updates to Redis: fenwick.pipeline_update(updates)
+        │   ├── 10. Reconcile price version & log burn ratio against EWMA
+        │   └── 11. Deduct token bucket overshoot if applicable
         │
-        └── 9. consumer.commit_sync() -> Acknowledge Kafka message batch
+        └── 12. consumer.commit(asynchronous=False) -> Acknowledge Kafka message batch
 ```
 
 ---
@@ -193,5 +176,5 @@ class EventCostWorker:
 
 ### Positive Consequences
 - **Asynchronous Execution**: Ingestion latency is $0\text{ms}$ on client application LLM calls since database writes run out-of-band in worker daemons.
-- **Bulk Insert Throughput**: Batching 500 spans per database transaction increases write throughput by over 400% compared to single-row inserts.
-- **Kafka Offset Safety**: `commit_sync()` is only executed after PostgreSQL and Redis writes succeed, guaranteeing at-least-once processing semantics.
+- **Bulk Aggregation Throughput**: Redis pipelines execute 20 Fenwick updates per span concurrently without blocking worker execution.
+- **Kafka Offset Safety**: `consumer.commit(asynchronous=False)` is only executed after Redis writes succeed or failed items are pushed to DLQ.

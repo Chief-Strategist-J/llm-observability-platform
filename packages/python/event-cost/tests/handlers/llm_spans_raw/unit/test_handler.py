@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch, call
 from dataclasses import dataclass
 import pytest
 
-from event_cost.handlers.llm_spans_raw.handler import (
+from handlers.llm_spans_raw.handler import (
     build_fenwick_updates,
     compute_token_bucket_delta,
     reconcile_price,
@@ -12,13 +12,13 @@ from event_cost.handlers.llm_spans_raw.handler import (
     DIMENSIONS,
     WINDOWS,
 )
-from event_cost.handlers.llm_spans_raw.index import (
+from handlers.llm_spans_raw.index import (
     process_span,
     process_batch,
     _hour_of_week,
 )
-from event_cost.handlers.llm_spans_raw.types import RawSpanEvent, HandlerResult
-from event_cost.shared.types.cost_types import PriceEntry
+from handlers.llm_spans_raw.types import RawSpanEvent, HandlerResult
+from shared.types.cost_types import PriceEntry
 
 
 def _make_span(**overrides) -> RawSpanEvent:
@@ -375,28 +375,28 @@ class TestProcessBatch:
 
 class TestRetryUtility:
     def test_succeeds_on_first_try(self) -> None:
-        from event_cost.shared.utils.retry import with_retry
+        from shared.utils.retry import with_retry
         fn = MagicMock(return_value=42)
         assert with_retry(fn) == 42
         fn.assert_called_once()
 
     def test_succeeds_on_second_try(self) -> None:
-        from event_cost.shared.utils.retry import with_retry
+        from shared.utils.retry import with_retry
         fn = MagicMock(side_effect=[RuntimeError("fail"), 42])
         assert with_retry(fn, max_retries=3, base_ms=1) == 42
         assert fn.call_count == 2
 
     def test_raises_after_max_retries(self) -> None:
-        from event_cost.shared.utils.retry import with_retry
-        from event_cost.shared.types.cost_types import ProcessingError
+        from shared.utils.retry import with_retry
+        from shared.types.cost_types import ProcessingError
         fn = MagicMock(side_effect=RuntimeError("always fail"))
         with pytest.raises(ProcessingError, match="Failed after 3 retries"):
             with_retry(fn, max_retries=3, base_ms=1)
         assert fn.call_count == 3
 
     def test_exponential_backoff_timing(self) -> None:
-        from event_cost.shared.utils.retry import with_retry
-        from event_cost.shared.types.cost_types import ProcessingError
+        from shared.utils.retry import with_retry
+        from shared.types.cost_types import ProcessingError
         fn = MagicMock(side_effect=RuntimeError("fail"))
         start = time.monotonic()
         with pytest.raises(ProcessingError):
@@ -407,7 +407,7 @@ class TestRetryUtility:
 
 class TestConfigLoading:
     def test_defaults(self) -> None:
-        from event_cost.worker.config import load_config
+        from worker.config import load_config
         config = load_config(env={})
         assert config.kafka_bootstrap_servers == "localhost:9092"
         assert config.kafka_consumer_group == "event-cost-worker-group"
@@ -418,7 +418,7 @@ class TestConfigLoading:
         assert config.retry_base_ms == 100
 
     def test_overrides(self) -> None:
-        from event_cost.worker.config import load_config
+        from worker.config import load_config
         config = load_config(env={
             "KAFKA_BOOTSTRAP_SERVERS": "broker:9093",
             "BATCH_SIZE": "100",
@@ -431,15 +431,15 @@ class TestConfigLoading:
 
 class TestContractValidator:
     def test_loads_valid_contract(self) -> None:
-        from event_cost.shared.contracts.validator import load_event_contract
+        from shared.contracts.validator import load_event_contract
         result = load_event_contract()
         assert result["event"] == "llm_spans_raw"
         assert result["version"] == 1
         assert result["consumer_group"] == "event-cost-worker-group"
 
     def test_missing_contract_raises(self) -> None:
-        from event_cost.shared.contracts.validator import load_event_contract
-        import event_cost.shared.contracts.validator as v
+        from shared.contracts.validator import load_event_contract
+        import shared.contracts.validator as v
         original = v.CONTRACT_FILE
         try:
             from pathlib import Path

@@ -1,8 +1,8 @@
 import os
 import tempfile
 import pytest
-from event_cost import CostLedger
-from event_cost.backends.sqlite import SQLiteBackend
+from features.cost_ledger.ledger import CostLedger
+from features.cost_ledger.backends.sqlite import SQLiteBackend
 
 def test_sqlite_backend_record_and_query():
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -39,7 +39,7 @@ prices:
 def test_redis_backend_mock(monkeypatch):
     from unittest.mock import MagicMock
     import redis as redis_lib
-    from event_cost.backends.redis import RedisBackend
+    from features.cost_ledger.backends.redis import RedisBackend
 
     mock_client = MagicMock()
     mock_pipeline = MagicMock()

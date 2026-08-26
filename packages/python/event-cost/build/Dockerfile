@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y \
 
 COPY pyproject.toml .
 
-RUN mkdir -p src/event_cost/worker && touch src/event_cost/__init__.py src/event_cost/worker/__init__.py
+RUN mkdir -p src/worker && touch src/__init__.py src/worker/__init__.py
 RUN pip install ".[dev]"
 
 COPY src/ src/
@@ -17,4 +17,4 @@ RUN pip install ".[dev]" --no-deps
 
 EXPOSE 8001
 
-CMD ["python", "src/event_cost/worker/index.py"]
+CMD ["python", "src/worker/index.py"]

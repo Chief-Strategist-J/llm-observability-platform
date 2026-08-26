@@ -4,4 +4,4 @@ PYTHON_EXE=python3
 if [ -d ".venv" ]; then
     PYTHON_EXE="./.venv/bin/python3"
 fi
-PYTHONPATH=src $PYTHON_EXE src/event_cost/worker/index.py
+PYTHONPATH=src $PYTHON_EXE src/worker/index.py
