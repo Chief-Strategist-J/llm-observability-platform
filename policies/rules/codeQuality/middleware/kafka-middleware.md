@@ -288,7 +288,43 @@ A token-based duplication scanner runs in CI across `service/`, `repository/`, `
 
 ---
 
-## PART H — The Full Kafka Pipeline Structure (not just middleware)
+## PART H — The Full Kafka Pipeline Structure (High-Level & Low-Level Design)
+
+### H.0 High-Level Design (HLD) Overview
+The Kafka Middleware Engine manages high-throughput event producing and consuming while guaranteeing partition ordering, fault isolation, automated DLQ routing, and distributed tracing.
+
+```mermaid
+graph TD
+    subgraph Producer Flow
+        P_App[Producer App] -->|ProduceCtx| P_Trace[withTracingProducer]
+        P_Trace --> P_CB[withCircuitBreakerProducer]
+        P_CB --> P_Retry[withRetryProducer]
+        P_Retry --> P_Dedupe[withIdempotenceGuard]
+        P_Dedupe --> P_Schema[withSchemaValidation]
+        P_Schema --> P_Codec[withSerialization]
+        P_Codec --> P_Key[withPartitionKeySelection]
+        P_Key --> P_Broker[Kafka Broker]
+    end
+
+    subgraph Consumer Flow
+        C_Broker[Kafka Broker] --> C_Conn[Broker Connection Pool]
+        C_Conn --> C_Group[Consumer Group Coordinator]
+        C_Group --> C_Buffer[Prefetch Buffer]
+        C_Buffer --> C_Pool[Partitioned Worker Pool]
+        C_Pool --> C_DLQ[withDLQOnFailure]
+        C_DLQ --> C_Trace[withTracingConsumer]
+        C_Trace --> C_Heartbeat[withHeartbeatDuringProcessing]
+        C_Heartbeat --> C_Sem[withConcurrencyLimit]
+        C_Sem --> C_Tenant[withTenantContext]
+        C_Tenant --> C_Header[withRetryCountHeader]
+        C_Header --> C_Codec[withDeserialization]
+        C_Codec --> C_Handler[Domain Handler]
+        C_Handler --> C_Watermark[Offset Watermark Tracker]
+        C_Watermark --> C_Commit[Async Batched Committer]
+    end
+```
+
+### H.1 Structural Pipeline Overview (ASCII)
 
 ```
 CONSUMER SIDE, top to bottom:
@@ -316,7 +352,34 @@ batch accumulator (linger.ms/batch.size) → compression at batch
 level (K10) → bounded in-flight requests to broker (K16)
 ```
 
-### H.1 The Partitioned Worker Pool (the piece almost always skipped)
+### H.2 Edge Case Coverage Mapping Matrix (Kafka L1–L22)
+
+| Edge Case | HLD Module | LLD Function / Component | Pipeline Stage |
+|---|---|---|---|
+| **L1** (Exactly-once) | Domain Isolation | `withIdempotenceGuard` + App Dedupe | Producer Stage 4 (`withIdempotenceGuard`) |
+| **L2** (Rebalance Dupes)| Consumer Group | `onPartitionsRevoked` Drain | Consumer Layer 2 (Group Coordination) |
+| **L3** (Ordering Loss) | Worker Pool | `PartitionedWorkerPool` (1 worker/part) | Consumer Layer 4 (Partitioned Pool) |
+| **L4** (Claim-Check) | Payload Engine | `ClaimCheckBlobUploader` | Producer Stage 6 (`withSerialization`) |
+| **L5** (Tombstones) | Deserializer | `withDeserialization` (null check) | Consumer Stage 7 (`withDeserialization`) |
+| **L6** (Registry Dir) | Schema Engine | `withSchemaValidation` (Forward/Backward) | Producer Stage 5 (`withSchemaValidation`) |
+| **L7** (Lag Skew) | Telemetry Engine | `PartitionLagGaugeMonitor` | Consumer Layer 3 (Prefetch Buffer) |
+| **L8** (Hot Partition)| Partition Keying | `withPartitionKeySelection` (Composite) | Producer Stage 7 (`withPartitionKeySelection`) |
+| **L9** (Buffer Exhaust) | Resilience Layer | `withCircuitBreakerProducer` | Producer Stage 2 (`withCircuitBreakerProducer`) |
+| **L10** (Broker Dedupe) | Domain Isolation | `withIdempotenceGuard` | Producer Stage 4 (`withIdempotenceGuard`) |
+| **L11** (Group Collision)| Consumer Group | Service Namespaced `groupId` | Consumer Layer 2 (Group Coordination) |
+| **L12** (Retry Ordering) | DLQ Engine | `withDLQOnFailure` (Retry Topics) | Consumer Stage 1 (`withDLQOnFailure`) |
+| **L13** (Rebalance Storm)| Heartbeat Engine | `withHeartbeatDuringProcessing` | Consumer Stage 3 (`withHeartbeat`) |
+| **L14** (Cluster Testing)| Testing Suite | `Testcontainers` Suite | Engine-wide Test Layer |
+| **L15** (DR Trace) | Telemetry Engine | W3C Header Injector/Extractor | Producer/Consumer Tracing Stages |
+| **L16** (Header Drift) | Header Schema | `HeaderSchemaValidator` | Producer/Consumer Header Layers |
+| **L17** (Deploy Headers)| Header Schema | Additive Header Evolution Guard | Producer/Consumer Header Layers |
+| **L18** (Worker Starve) | Worker Pool | Inline Format Check | Consumer Layer 4 (Partitioned Pool) |
+| **L19** (Pool Rebalance)| Connection Pool | Connection Burst Throttler | Consumer Layer 1 (Broker Pool) |
+| **L20** (Zero Error Lag)| Telemetry Engine | `QueueDepthGaugeAlert` | Consumer Layer 3 (Prefetch Buffer) |
+| **L21** (Stuck Offset) | Watermark Tracker| `withDLQOnFailure` (`maxAttempts`) | Consumer Stage 1 (`withDLQOnFailure`) |
+| **L22** (Zstd CPU Cost) | Compression Engine| Payload Compression Benchmark | Producer Stage 6 (`withSerialization`) |
+
+### H.3 The Partitioned Worker Pool (the piece almost always skipped)
 
 Wiring the middleware chain directly onto `consumer.on("message", handler)` gives you whatever concurrency model the client library defaults to — usually implicit, usually untested. This stage makes ordering and concurrency an explicit, owned decision.
 
