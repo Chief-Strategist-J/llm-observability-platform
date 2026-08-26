@@ -32,7 +32,7 @@ flowchart TD
         SDK["instrumentation-sdk"]
         WAL["SQLite WAL Local Buffer (/tmp/llm-obs-wal.db)"]
 
-        App -->|@llm_observe / llm_span()| SDK
+        App -->|"@llm_observe / llm_span()"| SDK
         SDK -.->|Network Drop Fallback| WAL
     end
 
