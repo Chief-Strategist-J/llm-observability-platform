@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "name": "llm.spans.raw",
+  "partitions": 3,
+  "replication_factor": 1,
+  "retention_ms": 604800000,
+  "cleanup_policy": "delete",
+  "min_insync_replicas": 1
+}
