@@ -10,12 +10,6 @@ managed:
       value: "LlmObservability\\Platform\\V1"
 
 plugins:
-  # Python: Messages + gRPC
-  - remote: buf.build/protocolbuffers/python:v25.1
-    out: packages/python/instrumentation-sdk/src/infra/clients/v1
-  - remote: buf.build/grpc/python:v1.60.0
-    out: packages/python/instrumentation-sdk/src/infra/clients/v1
-
   # Go: Messages + Connect (gRPC compatible)
   - remote: buf.build/protocolbuffers/go:v1.31.0
     out: packages/go/instrumentation-sdk/src/infra/clients/v1

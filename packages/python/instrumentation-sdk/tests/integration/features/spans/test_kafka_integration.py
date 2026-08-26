@@ -80,10 +80,9 @@ def test_reliable_reporter_real_kafka_integration():
         try:
             val_bytes = msg.value()
             if val_bytes:
-                from src.infra.clients.v1.llm.observability.v1.span_pb2 import LLMSpan
-                proto_span = LLMSpan()
-                proto_span.ParseFromString(val_bytes)
-                if proto_span.span_id == span_id:
+                import json
+                span_obj = json.loads(val_bytes.decode('utf-8'))
+                if span_obj.get("span_id") == span_id:
                     found = True
                     break
         except Exception:
