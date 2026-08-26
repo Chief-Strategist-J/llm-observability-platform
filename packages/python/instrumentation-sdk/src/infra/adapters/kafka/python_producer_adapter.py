@@ -1,10 +1,10 @@
 from typing import Callable, Any, Optional
 from src.shared.ports.kafka import KafkaProducerPort
-from src.infra.messaging.client_factory import kafka_client_factory
+from src.infra.messaging.producer.producer_factory import kafka_producer_factory
 
 class KafkaPythonProducerAdapter(KafkaProducerPort):
     def __init__(self) -> None:
-        self._factory = kafka_client_factory
+        self._factory = kafka_producer_factory
 
     def produce(
         self,

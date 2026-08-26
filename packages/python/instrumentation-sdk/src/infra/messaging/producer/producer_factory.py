@@ -1,11 +1,11 @@
 import json
 import threading
 from typing import Optional
-from kafka import KafkaProducer, KafkaConsumer
-from .broker_config import KafkaBrokerConfig, kafka_broker_config
+from kafka import KafkaProducer
+from ..broker.broker_config import KafkaBrokerConfig, kafka_broker_config
 
-class KafkaClientFactory:
-    _instance: Optional["KafkaClientFactory"] = None
+class KafkaProducerFactory:
+    _instance: Optional["KafkaProducerFactory"] = None
     _lock: threading.Lock = threading.Lock()
 
     def __init__(self, config: Optional[KafkaBrokerConfig] = None):
@@ -13,7 +13,7 @@ class KafkaClientFactory:
         self._producer: Optional[KafkaProducer] = None
 
     @classmethod
-    def get_instance(cls, config: Optional[KafkaBrokerConfig] = None) -> "KafkaClientFactory":
+    def get_instance(cls, config: Optional[KafkaBrokerConfig] = None) -> "KafkaProducerFactory":
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
@@ -44,22 +44,6 @@ class KafkaClientFactory:
                     self._producer = KafkaProducer(**kwargs)
         return self._producer
 
-    def create_consumer(self, topic: str, group_id: str) -> KafkaConsumer:
-        kwargs = {
-            "bootstrap_servers": self.config.bootstrap_servers,
-            "group_id": group_id,
-            "auto_offset_reset": "earliest",
-            "enable_auto_commit": False,
-            "security_protocol": self.config.security_protocol,
-            "value_deserializer": lambda m: json.loads(m.decode("utf-8")),
-        }
-        if self.config.sasl_mechanism:
-            kwargs["sasl_mechanism"] = self.config.sasl_mechanism
-            kwargs["sasl_plain_username"] = self.config.sasl_plain_username
-            kwargs["sasl_plain_password"] = self.config.sasl_plain_password
-
-        return KafkaConsumer(topic, **kwargs)
-
     def close(self):
         with self._lock:
             if self._producer:
@@ -67,4 +51,4 @@ class KafkaClientFactory:
                 self._producer.close()
                 self._producer = None
 
-kafka_client_factory = KafkaClientFactory.get_instance()
+kafka_producer_factory = KafkaProducerFactory.get_instance()
