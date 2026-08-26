@@ -1,0 +1,4 @@
+name: event-cost
+runtime: python
+platform: kafka
+entrypoint: src/event_cost/worker/index.py

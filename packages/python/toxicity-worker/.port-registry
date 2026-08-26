@@ -1,5 +1,0 @@
-ports:
-  - name: toxicity_scorer
-    type: ml-scorer
-    vendor: optimum
-    adapter: src/infra/adapters/detoxify_onnx_adapter.py::DetoxifyOnnxAdapter

@@ -1,7 +1,7 @@
 features:
   - name: cost_aggregation
     status: active
-    contract: packages/python/event-cost-worker/contracts/events/llm_spans_raw.yaml
+    contract: packages/python/event-cost/contracts/events/llm_spans_raw.yaml
     contract_version: v1
     owner: "@data-team"
     added: 2026-05-27
