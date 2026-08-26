@@ -7,6 +7,7 @@ This directory contains the full decision history for `packages/python/toxicity`
 | [0001](./0001-onnx-cpu-inference-and-dual-pass-long-text-strategy.md) | ONNX Runtime CPU Inference with Dual-Pass Long-Text Strategy | Accepted | 2026-05-29 |
 | [0002](./0002-kafka-publisher-for-flagged-toxicity-events.md) | Kafka Publisher for Flagged Toxicity Events | Accepted | 2026-06-02 |
 | [0003](./0003-consolidation-of-toxicity-and-toxicity-worker.md) | Consolidation of `toxicity` and `toxicity-worker` into a Single Package | Accepted | 2026-08-26 |
+| [0004](./0004-integration-with-instrumentation-sdk-and-frontend.md) | End-to-End Integration Architecture with Instrumentation SDK and Next.js Frontend | Accepted | 2026-08-26 |
 
 ---
 

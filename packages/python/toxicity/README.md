@@ -179,3 +179,4 @@ See [`adr/`](./adr/README.md) for the full decision history.
 | [0001](./adr/0001-onnx-cpu-inference-and-dual-pass-long-text-strategy.md) | ONNX Runtime CPU + dual-pass for texts > 510 tokens |
 | [0002](./adr/0002-kafka-publisher-for-flagged-toxicity-events.md) | Kafka publishing of flagged events (optional) |
 | [0003](./adr/0003-consolidation-of-toxicity-and-toxicity-worker.md) | Merge of `toxicity` + `toxicity-worker` into one package |
+| [0004](./adr/0004-integration-with-instrumentation-sdk-and-frontend.md) | Integration with Instrumentation SDK and Next.js Frontend |
