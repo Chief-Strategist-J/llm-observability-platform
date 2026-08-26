@@ -66,6 +66,46 @@ flowchart TD
 4. **Anti-Corruption Schema Adapter**: Enforces `fromApi`/`toApi` transformations, ensuring remote data shapes conform to platform schemas before entering domain logic.
 5. **Managed Transport Pool**: HTTP/1.1 and HTTP/2 socket pool manager handling keep-alive, DNS TTL caps, TLS handshake timeouts, and chunked stream decompression.
 
+### Step-by-Step Pipeline Execution Algorithm (Stage-by-Stage)
+1. **`withTracingOutbound` (Stage 1)**:
+   - Extract incoming W3C trace context (`traceparent`, `tracestate`).
+   - Start OpenTelemetry `CLIENT` span named `HTTP {method} {url}`.
+   - Inject `x-correlation-id`, `x-tenant-id`, and W3C headers into outbound headers.
+   - Forward `HttpClientCtx` to next stage; record HTTP status code and end span on completion.
+2. **`withCircuitBreakerOutbound` (Stage 2)**:
+   - Extract hostname from `ctx.request.url`.
+   - Query `BreakerRegistry` for the target domain breaker state.
+   - If breaker state is `OPEN`, fail fast and raise `UpstreamUnavailableError(retryable=true)`.
+   - If `CLOSED`/`HALF_OPEN`, proceed to next stage; record success (status < 500) or failure (status >= 500) to update breaker state.
+3. **`withRetryAndJitter` (Stage 3)**:
+   - Compute remaining deadline budget: `remaining = deadline - now()`.
+   - If `remaining <= 0`, raise `UpstreamTimeoutError(retryable=false)`.
+   - Execute inner pipeline. If 429 received, parse `Retry-After` header.
+   - If transient error / 429 / 5xx occurs and `attempt < maxAttempts`:
+     - Calculate delay: `backoff = min(baseDelay * 2^(attempt-1), remaining)`.
+     - Apply full jitter: `sleep_duration = random(0, backoff)`.
+     - Sleep and retry attempt loop.
+4. **`withRequestDeduplication` (Stage 4)**:
+   - If method is not `GET`, skip deduplication.
+   - Compute dedupe hash key: `${tenantId}:${method}:${url}:${queryParamsHash}`.
+   - Check singleflight map; if key is active in-flight, await shared promise result.
+   - Otherwise, register singleflight promise, execute next stage, and broadcast result to all waiters.
+5. **`withResponseCache` (Stage 5)**:
+   - If method is not `GET`, skip cache check.
+   - Compute cache key: `http_cache:${tenantId}:${hash(request)}`.
+   - Query cache store; if hit, return cached `HttpResponse`.
+   - On miss, execute next stage; if status is 200 OK, write response to cache store with TTL.
+6. **`withAuthHeaderInjection` (Stage 6)**:
+   - Acquire token refresh singleflight mutex.
+   - Obtain valid Bearer token for `ctx.tenantId`.
+   - Inject `Authorization: Bearer {token}` into `ctx.request.headers`.
+   - Proceed to next stage.
+7. **`withSchemaValidationOutbound` (Stage 7)**:
+   - Execute network transport request.
+   - Validate returned response data against Zod/schema transformer `fromApi`.
+   - If schema validation fails, raise `ValidationError(OUTBOUND_SCHEMA_MISMATCH)`.
+   - Return validated `HttpResponse`.
+
 ---
 
 ## PART B — Pipeline Flow & Sequence Diagrams
