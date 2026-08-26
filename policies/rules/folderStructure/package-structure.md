@@ -3,8 +3,10 @@ Language-Specific Multiple Package Structure
 while generating folder structure add .gitkeep in each folder
 
 
-Core Rule
-Every sub-package is fully isolated. No sub-package imports source from another sub-package, even within the same language. Runtime calls always go through a versioned contract and a generated client.
+Core Rules
+1. Every sub-package is fully isolated. No sub-package imports source from another sub-package, even within the same language. Runtime calls always go through a versioned contract and a generated client.
+2. **DRY Guardrail (Do Not Repeat Code)**: Never duplicate code, broker setup, connection pools, serializers, or middleware pipelines. Every feature and service MUST re-use pre-existing shared components under `src/infra/messaging/` and `src/shared/`.
+3. **Directory Initialization**: Always include `.gitkeep` in empty or newly generated directories.
 
 Language Workspace Layout
 
@@ -99,6 +101,27 @@ Every sub-package in every language follows this structure. Files use the langua
 │   ├── infra/
 │   │   ├── adapters/{vendor}/
 │   │   ├── clients/{upstream-service}/v1/
+│   │   ├── messaging/               <--- messaging infrastructure & broker abstraction
+│   │   │   ├── broker/              <--- broker_config.py, connection pools, and health checks
+│   │   │   ├── producer/            <--- producer pipeline & clients
+│   │   │   │   ├── factory/         <--- producer_factory.py (singleton connection pool)
+│   │   │   │   └── producer_client/ <--- kafka_producer_client.py
+│   │   │   ├── consumer/            <--- consumer pipeline & clients
+│   │   │   │   ├── factory/         <--- consumer_factory.py
+│   │   │   │   ├── consumer_client/ <--- kafka_consumer_client.py
+│   │   │   │   ├── handlers/        <--- span & domain consumer event handlers
+│   │   │   │   └── cqrs/            <--- event-driven queries & projection stores
+│   │   │   │       ├── queries/     <--- query_selectors.py
+│   │   │   │       └── projections/ <--- projection_store.py
+│   │   │   ├── middleware/          <--- producer & consumer pipeline execution engines
+│   │   │   │   ├── pipeline.py      <--- ProduceCtx, ConsumeCtx & compose() utility
+│   │   │   │   ├── producer_middleware.py <--- tracing, circuit breaker, retry, dedupe, schema, serialization, partition key
+│   │   │   │   ├── consumer_middleware.py <--- DLQ, tracing, heartbeat, concurrency, tenant, retry count, deserialization
+│   │   │   │   └── tracing_middleware.py  <--- OTEL span context bridge
+│   │   │   ├── topics/              <--- topic_provisioner.py & topic_manager.py
+│   │   │   ├── migrations/          <--- kafka_topic_migration.py (kafka topic schema migrations)
+│   │   │   ├── reporters/           <--- span_reporter.py (kafka span telemetry exporter)
+│   │   │   └── tracing/             <--- messaging_tracer.py, context_propagation.py & genai_attributes.py
 │   │   └── tracing/
 │   │       ├── tracer
 │   │       └── middleware
@@ -110,9 +133,12 @@ Every sub-package in every language follows this structure. Files use the langua
 │       └── utils/
 │
 ├── database/
-│   ├── migrations/
+│   ├── migrations/                  <--- database SQL schema migrations
 │   │   ├── 0001_init.sql
 │   │   ├── 0001_init.rollback.sql
+│   │   └── {NNNN}_{description}.sql
+│   ├── seeds/
+│   └── schema.lock
 │   │   └── {NNNN}_{description}.sql
 │   ├── seeds/
 │   └── schema.lock
