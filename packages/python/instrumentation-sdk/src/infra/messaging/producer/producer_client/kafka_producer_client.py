@@ -1,11 +1,11 @@
 from typing import Callable, Any, Optional
 from src.infra.messaging.producer.producer_factory import kafka_producer_factory
 
-class KafkaProducerAdapter:
+class KafkaProducerClient:
     def __init__(self) -> None:
         self._factory = kafka_producer_factory
 
-    def produce(
+    def send_event(
         self,
         topic: str,
         key: Any,
@@ -24,9 +24,6 @@ class KafkaProducerAdapter:
 
         future.add_callback(_on_success).add_errback(_on_err)
 
-    def poll(self, timeout: float) -> int:
-        return 0
-
     def flush(self, timeout: float) -> int:
         producer = self._factory.get_producer()
         producer.flush(timeout=timeout)
@@ -38,3 +35,5 @@ class KafkaProducerAdapter:
             return producer.bootstrap_connected()
         except Exception:
             return False
+
+kafka_producer_client = KafkaProducerClient()
