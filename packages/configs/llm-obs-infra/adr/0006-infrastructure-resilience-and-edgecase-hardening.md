@@ -412,3 +412,30 @@ HIPAA requires strict data-in-transit encryption, database access guards, and po
 The EU AI Act mandates transparency, token usage tracking, and auditability of LLM prompts and model executions.
 
 - **Columnar Span & Token Analytics**: ClickHouse server configurations in [custom.xml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/clickhouse/config.d/custom.xml#L1-L28) and Grafana Tempo configurations in [tempo-config.yaml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/tempo/tempo-config.yaml#L1-L26) preserve prompt execution trees, token cost metrics, and latency spans for auditing.
+
+---
+
+### 8.6 Color-Coded Defense-in-Depth Security Architecture Diagram
+
+```mermaid
+graph TD
+    classDef edgeLayer fill:#EC4899,stroke:#BE185D,stroke-width:2px,color:#FFF;
+    classDef networkLayer fill:#3B82F6,stroke:#1D4ED8,stroke-width:2px,color:#FFF;
+    classDef redactionLayer fill:#06B6D4,stroke:#0E7490,stroke-width:2px,color:#FFF;
+    classDef sandboxLayer fill:#8B5CF6,stroke:#6D28D9,stroke-width:2px,color:#FFF;
+    classDef storageLayer fill:#F59E0B,stroke:#B45309,stroke-width:2px,color:#FFF;
+    classDef auditLayer fill:#10B981,stroke:#047857,stroke-width:2px,color:#FFF;
+
+    Ingress["1. Ingress Edge Security Proxy<br/>(TLS 1.2+ & HSTS Headers)"]:::edgeLayer
+    NetworkSig["2. Network Signature Verification<br/>(X-LLMObs-Network-Signature)"]:::networkLayer
+    PIIRedact["3. OpenTelemetry PII Redaction Engine<br/>(Scrubbing sk-... & Credentials)"]:::redactionLayer
+    Sandbox["4. Microservice Sandbox Security<br/>(no-new-privileges:true)"]:::sandboxLayer
+    AuthGuards["5. Storage Access Authentication Guards<br/>(Redis & DB Password Enforcement)"]:::storageLayer
+    AuditLog["6. Relational Security Audit Log<br/>(security_audit_logs)"]:::auditLayer
+
+    Ingress -->|"1. TLS 1.2+ Handshake & Headers"| NetworkSig
+    NetworkSig -->|"2. Verify Network Signature"| PIIRedact
+    PIIRedact -->|"3. Redact PII & Export Spans"| Sandbox
+    Sandbox -->|"4. Authenticated Service Access"| AuthGuards
+    AuthGuards -->|"5. Log Admin/Compliance Action"| AuditLog
+```
