@@ -62,8 +62,8 @@ wait_for_container_health() {
 
 wait_for_clickhouse_http() {
   echo -e "${BLUE}  - Waiting for ClickHouse HTTP & Native TCP socket binding...${NC}"
-  local check_cmd="curl -s http://localhost:31421/ping 2>/dev/null | grep -q 'Ok.' || docker exec -i llmobs-clickhouse-analytics wget -qO- http://localhost:8123/ping 2>/dev/null | grep -q 'Ok.'"
-  if wait_with_exponential_backoff_jitter "$check_cmd" 8 1 12; then
+  local check_cmd="curl -s http://localhost:31421/ping 2>/dev/null | grep -q 'Ok.' || nc -z localhost 31421 2>/dev/null"
+  if wait_with_exponential_backoff_jitter "$check_cmd" 10 1 15; then
     echo -e "${GREEN}✓ ClickHouse HTTP (31421) & Native (31422) endpoints ready.${NC}"
     return 0
   fi
@@ -73,7 +73,7 @@ wait_for_clickhouse_http() {
 wait_for_web_gateways() {
   echo -e "${BLUE}  - Waiting for Grafana UI & Temporal engine socket bindings...${NC}"
   local check_cmd="curl -s http://localhost:31415/api/health 2>/dev/null | grep -q 'ok' && nc -z localhost 31424 2>/dev/null"
-  if wait_with_exponential_backoff_jitter "$check_cmd" 7 1 12; then
+  if wait_with_exponential_backoff_jitter "$check_cmd" 8 1 12; then
     echo -e "${GREEN}✓ Grafana UI (31415) & Temporal gRPC (31424) endpoints ready.${NC}"
     return 0
   fi
@@ -82,8 +82,8 @@ wait_for_web_gateways() {
 
 wait_for_alloydb() {
   echo -e "${BLUE}  - Waiting for AlloyDB database engine consistent recovery state...${NC}"
-  local check_cmd="docker exec -i llmobs-alloydb-db pg_isready -q || docker exec -i llmobs-alloydb-db pg_isready -h 127.0.0.1 -q"
-  if wait_with_exponential_backoff_jitter "$check_cmd" 8 1 12; then
+  local check_cmd="docker exec -i llmobs-alloydb-db pg_isready 2>/dev/null | grep -q 'accepting connections' || nc -z localhost 31420 2>/dev/null"
+  if wait_with_exponential_backoff_jitter "$check_cmd" 10 1 15; then
     echo -e "${GREEN}✓ AlloyDB relational database ready.${NC}"
     return 0
   fi
