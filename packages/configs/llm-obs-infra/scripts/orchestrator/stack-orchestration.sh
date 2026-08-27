@@ -62,8 +62,8 @@ wait_for_container_health() {
 
 wait_for_clickhouse_http() {
   echo -e "${BLUE}  - Waiting for ClickHouse HTTP & Native TCP socket binding...${NC}"
-  local check_cmd="curl -s http://localhost:31421/ping 2>/dev/null | grep -q 'Ok.'"
-  if wait_with_exponential_backoff_jitter "$check_cmd" 7 1 12; then
+  local check_cmd="curl -s http://localhost:31421/ping 2>/dev/null | grep -q 'Ok.' || docker exec -i llmobs-clickhouse-analytics wget -qO- http://localhost:8123/ping 2>/dev/null | grep -q 'Ok.'"
+  if wait_with_exponential_backoff_jitter "$check_cmd" 8 1 12; then
     echo -e "${GREEN}✓ ClickHouse HTTP (31421) & Native (31422) endpoints ready.${NC}"
     return 0
   fi
@@ -82,7 +82,7 @@ wait_for_web_gateways() {
 
 wait_for_alloydb() {
   echo -e "${BLUE}  - Waiting for AlloyDB database engine consistent recovery state...${NC}"
-  local check_cmd="docker exec -i llmobs-alloydb-db pg_isready -U admin -d llm_observability"
+  local check_cmd="docker exec -i llmobs-alloydb-db pg_isready -q || docker exec -i llmobs-alloydb-db pg_isready -h 127.0.0.1 -q"
   if wait_with_exponential_backoff_jitter "$check_cmd" 8 1 12; then
     echo -e "${GREEN}✓ AlloyDB relational database ready.${NC}"
     return 0
