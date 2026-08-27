@@ -369,26 +369,46 @@ sequenceDiagram
 
 ---
 
-## 8. Compliance & Security Hardening Architecture (SOC2 / ISO 27001 / GDPR)
+## 8. Compliance & Security Hardening Architecture (SOC2 / ISO 27001 / GDPR / HIPAA / EU AI Act)
 
-### 8.1 Enterprise Compliance Alignment Matrix
+### 8.1 SOC 2 Type II Security & Trust Services Criteria Architecture
 
-| Compliance Domain | Standard Specification | Infrastructure Safeguard | Primary Configuration |
-|---|---|---|---|
-| **SOC 2 Type II Security** | Privilege Escalation Block & Security Options | `security_opt: ["no-new-privileges:true"]` enforced across all 9 microservices | [docker-compose.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docker-compose.yml#L1-L330) |
-| **GDPR / CCPA Data Protection** | Automatic PII & Sensitive API Key Redaction | `transform/pii_redaction` processor sanitizing `sk-...` keys, Bearer tokens, emails & cards | [otel-collector-config.yaml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/otel-collector/otel-collector-config.yaml#L28-L36) |
-| **ISO 27001 Network Security** | Network Signature Metadata & Ingress Headers | `com.llmobs.network.signature=llmobs-net-sig-v1.0` & `X-LLMObs-Network-Signature` | [stack-orchestration.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/orchestrator/stack-orchestration.sh#L93-L104) & [dynamic.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/traefik/dynamic.yml#L27-L35) |
-| **HIPAA Data Isolation** | Subnet & Port Collision Isolation | Dedicated `172.28.0.0/16` CIDR block and isolated `31410-31425` host ports | [port-manager.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/ports/port-manager.sh#L1-L45) |
+SOC 2 Type II compliance evaluates infrastructure processing integrity, data confidentiality, and privilege boundaries.
 
-### 8.2 GDPR Right-to-Be-Forgotten Automated Data Erasure (`gdpr-erasure.sh`)
-- **Specification**: Compliance utility script located at [gdpr-erasure.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/gdpr-erasure.sh#L1-L75).
-- **Execution**: `./gdpr-erasure.sh --user-id=USR_123`
-- **Actions**:
-  1. Purges matching telemetry records from ClickHouse `llm_telemetry_analytics.telemetry_spans`.
-  2. Purges metadata records from AlloyDB `llm_observability.user_metadata`.
-  3. Inserts an immutable GDPR erasure record into AlloyDB `security_audit_logs`.
+- **Kernel Privilege Escalation Prevention**: Enforces `security_opt: ["no-new-privileges:true"]` across all microservices in [docker-compose.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docker-compose.yml#L10-L290). This prevents compromise of host kernel capabilities even if an application dependency is exploited.
+- **Relational Security Audit Trail Schema**: Creates an immutable database audit log table defined in [security-audit.sql](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/alloydb/security-audit.sql#L1-L12). Tracks `actor_id`, `action`, `resource`, `ip_address`, and `timestamp` for all administrative actions and security events.
+- **TLS 1.2+ Transport Encryption**: Configures Traefik reverse proxy to force TLS 1.2+ (`minVersion: VersionTLS12`) in [dynamic.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/traefik/dynamic.yml#L1-L15) and validates 4096-bit RSA certificate chain expiry in [test-health.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/test-health.sh#L253-L265).
 
-### 8.3 SOC 2 Type II Security Audit Logging Schema (`security-audit.sql`)
-- **Specification**: Relational security audit log schema located at [security-audit.sql](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/alloydb/security-audit.sql#L1-L12).
-- **Fields**: `id`, `timestamp`, `actor_id`, `action`, `resource`, `ip_address`, `status`, `details`.
-- **Indexing**: Indexed on `actor_id` and `timestamp` for fast compliance reporting.
+### 8.2 GDPR & CCPA Data Privacy & Right-to-Be-Forgotten Architecture
+
+GDPR (General Data Protection Regulation) and CCPA (California Consumer Privacy Act) mandate strict protection of Personally Identifiable Information (PII) and automated data erasure capabilities.
+
+- **Automated PII & Sensitive API Key Redaction Pipeline**: OpenTelemetry Collector uses `transform/pii_redaction` in [otel-collector-config.yaml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/otel-collector/otel-collector-config.yaml#L28-L36) to sanitize sensitive LLM data before persistence:
+  - OpenAI / Anthropic API Keys (`sk-...`) → `[REDACTED_API_KEY]`
+  - Authorization Headers (`Bearer ...`) → `Bearer [REDACTED_TOKEN]`
+  - Email Addresses → `[REDACTED_EMAIL]`
+  - Credit Cards → `[REDACTED_CARD]`
+- **Automated Data Erasure Utility (`gdpr-erasure.sh`)**: Compliance utility script located at [gdpr-erasure.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/gdpr-erasure.sh#L1-L75). Execution via `./gdpr-erasure.sh --user-id=USR_123` performs:
+  1. Atomic purging of telemetry spans from ClickHouse `llm_telemetry_analytics.telemetry_spans`.
+  2. Purging of user metadata from AlloyDB `llm_observability.user_metadata`.
+  3. Insertion of an audit log entry in `security_audit_logs`.
+
+### 8.3 ISO 27001 Network Security & Cryptographic Origin Signature Architecture
+
+ISO 27001 mandates asset tagging, network boundary isolation, and cryptographic origin verification.
+
+- **Docker Container Subnet Signature**: Subnets are created with metadata labels (`com.llmobs.network.signature=llmobs-net-sig-v1.0`) during setup in [stack-orchestration.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/orchestrator/stack-orchestration.sh#L93-L104).
+- **Gateway Ingress/Egress Header Signatures**: Traefik API Gateway injects request and response signature headers (`X-LLMObs-Network-Signature: llmobs-net-sig-v1.0`) across all API endpoints in [dynamic.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/traefik/dynamic.yml#L27-L35).
+
+### 8.4 HIPAA Health Data Isolation Architecture
+
+HIPAA requires strict data-in-transit encryption, database access guards, and port isolation for Protected Health Information (PHI).
+
+- **Port Isolation & Conflict Guard**: All microservice ports are isolated in the `31410-31425` range via [port-manager.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/ports/port-manager.sh#L1-L45) to prevent port-listening process hijack attacks.
+- **Unauthenticated Access Protection**: Enforces authentication guards on Redis and relational databases, validated automatically in [test-health.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/test-health.sh#L274-L286).
+
+### 8.5 EU AI Act & ISO 42001 AI System Governance Architecture
+
+The EU AI Act mandates transparency, token usage tracking, and auditability of LLM prompts and model executions.
+
+- **Columnar Span & Token Analytics**: ClickHouse server configurations in [custom.xml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/clickhouse/config.d/custom.xml#L1-L28) and Grafana Tempo configurations in [tempo-config.yaml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/tempo/tempo-config.yaml#L1-L26) preserve prompt execution trees, token cost metrics, and latency spans for auditing.
