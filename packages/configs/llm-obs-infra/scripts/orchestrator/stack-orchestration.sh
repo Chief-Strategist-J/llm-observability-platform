@@ -21,6 +21,25 @@ print_service_endpoints() {
   echo -e "  - OTel Collector gRPC:   localhost:31418"
 }
 
+wait_for_container_health() {
+  local container=$1
+  local max_wait_sec=${2:-15}
+  local elapsed=0
+
+  echo -e "${BLUE}  - Waiting for container ${container} to complete startup...${NC}"
+  while [ $elapsed -lt $max_wait_sec ]; do
+    local status
+    status=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container" 2>/dev/null || echo "starting")
+    if [ "$status" = "healthy" ] || [ "$status" = "running" ]; then
+      echo -e "${GREEN}✓ ${container} is ready (${status}).${NC}"
+      return 0
+    fi
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+  echo -e "${YELLOW}⚠️ ${container} initialization still in progress...${NC}"
+}
+
 wait_for_clickhouse_http() {
   local max_wait_sec=${1:-20}
   local elapsed=0
