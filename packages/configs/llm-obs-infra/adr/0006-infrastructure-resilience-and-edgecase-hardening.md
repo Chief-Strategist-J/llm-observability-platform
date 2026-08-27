@@ -27,56 +27,92 @@ Running enterprise telemetry ingestion platforms (**ClickHouse Analytics**, **Ap
 
 The infrastructure deployment pipeline is structured into a **3-Phase Dependent Ingestion Engine** managed by modular, pure bash utilities and dynamic discovery modules.
 
+## 2. High-Level Architecture (HLA) & System Topology
+
+### 2.1 Complete Infrastructure Deployment Topology
+
 ```mermaid
-graph TD
-    Entry["./manage.sh up"] --> Controller["manage.sh CLI Orchestrator"]
-    
-    subgraph "Phase 1: Dynamic Path Discovery"
-        Controller --> DynamicDiscovery["scripts/discovery/dynamic-discovery.sh"]
-        DynamicDiscovery --> SearchSubtree["1. Search Relative Subtree"]
-        SearchSubtree --> SearchPwd["2. Search Current Working Dir"]
-        SearchPwd --> SearchGitRoot["3. Discover Git Repo Root"]
-        SearchGitRoot --> ResolvePaths["Resolved Script & Config Paths"]
+architecture-beta
+    group host(cloud)["Host Server System (Linux Kernel 5.x+)"]
+    group network(internet_space)["Bridge Network (llmobs-network)"] in host
+    group storage(disk_space)["Persistent Volumes (Docker Storage)"] in host
+
+    service gateway(server)["Traefik Edge Gateway (llmobs-traefik-gateway)"] in network
+    service otel(server)["OTel Collector (llmobs-otel-collector)"] in network
+    service kafka(server)["Kafka Event Broker (llmobs-kafka-broker)"] in network
+    service clickhouse(database)["ClickHouse Analytics (llmobs-clickhouse-analytics)"] in network
+    service tempo(database)["Grafana Tempo Tracing (llmobs-tempo-tracing)"] in network
+    service redis(database)["Redis Spend Ledger (llmobs-redis-ledger)"] in network
+    service alloydb(database)["AlloyDB Omni (llmobs-alloydb-db)"] in network
+    service temporal(server)["Temporal Engine (llmobs-temporal-engine)"] in network
+    service grafana(server)["Grafana Portal (llmobs-grafana-portal)"] in network
+
+    junction net_junction in network
+
+    gateway:R -- L:net_junction
+    otel:L -- R:net_junction
+    kafka:L -- R:net_junction
+    clickhouse:L -- R:net_junction
+    tempo:L -- R:net_junction
+    redis:L -- R:net_junction
+    alloydb:L -- R:net_junction
+    temporal:L -- R:net_junction
+    grafana:L -- R:net_junction
+```
+
+### 2.2 End-to-End Orchestration & Verification Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as DevOps / SRE Operator
+    participant CLI as manage.sh CLI
+    participant Discovery as dynamic-discovery.sh
+    participant Prereq as system-prereqs.sh
+    participant PortMgr as port-manager.sh
+    participant Certs as generate-certs.sh
+    participant Orch as stack-orchestration.sh
+    participant Docker as Docker Daemon / Engine
+    participant Health as test-health.sh
+
+    User->>CLI: ./manage.sh up
+    CLI->>Discovery: discover_script_dir() & discover_file_upward()
+    Discovery-->>CLI: Resolved script tree & docker-compose.yml path
+
+    CLI->>Prereq: Execute system pre-flight verification
+    Note over Prereq: Checks ulimit -n (65536)<br/>vm.max_map_count (262144)<br/>NTP Sync, UFW, Socket & Free RAM
+    Prereq-->>CLI: Pre-flight checks passed
+
+    CLI->>PortMgr: free_all_ports(31410-31425)
+    Note over PortMgr: Executes fuser -k / kill -9<br/>on any process holding stack ports
+    PortMgr-->>CLI: Ports verified free
+
+    CLI->>Certs: generate_certs()
+    Certs-->>CLI: Valid TLS server.pem & ca.pem ready
+
+    CLI->>Orch: start_ordered_stack(bin, compose_file)
+
+    rect rgb(235, 245, 255)
+        Note over Orch,Docker: Stage 1: Core Stateful Databases
+        Orch->>Docker: docker compose up -d (AlloyDB, Redis, ClickHouse)
+        Orch->>Docker: Poll inspect until AlloyDB & ClickHouse report 'healthy'
     end
 
-    subgraph "Phase 2: Host System Pre-Flight Diagnostics"
-        ResolvePaths --> SystemPrereqs["scripts/prereqs/system-prereqs.sh"]
-        SystemPrereqs --> CheckUtils["verify_host_utilities<br>(fuser, lsof, nc)"]
-        SystemPrereqs --> CheckDaemon["verify_docker_daemon<br>(systemctl enable --now docker)"]
-        SystemPrereqs --> CheckFD["verify_file_descriptors<br>(ulimit -n 65536)"]
-        SystemPrereqs --> CheckSysctl["verify_kernel_sysctls<br>(vm.max_map_count=262144)"]
-        SystemPrereqs --> CheckNTP["verify_clock_sync<br>(NTP synchronization)"]
-        SystemPrereqs --> CheckFW["verify_firewall_rules<br>(UFW bridge pass-through)"]
-        SystemPrereqs --> CheckRAM["verify_system_memory<br>(>= 2.5 GB free)"]
+    rect rgb(240, 255, 240)
+        Note over Orch,Docker: Stage 2: Telemetry Ingestion Streams
+        Orch->>Docker: docker compose up -d (Kafka, Tempo, OTel Collector)
     end
 
-    subgraph "Phase 3: Port Isolation & TLS Provisioning"
-        SystemPrereqs --> PortManager["scripts/ports/port-manager.sh"]
-        PortManager --> FreePorts["Free Stack Ports 31410 - 31425<br>(fuser -k / kill -9)"]
-        FreePorts --> CertGen["scripts/generate-certs.sh<br>(TLS OpenSSL verification)"]
+    rect rgb(255, 245, 235)
+        Note over Orch,Docker: Stage 3: Gateways & Orchestration Engines
+        Orch->>Docker: docker compose up -d (Traefik, Grafana, Temporal)
     end
 
-    subgraph "Phase 4: 3-Stage Dependent Container Orchestration"
-        CertGen --> Orchestrator["scripts/orchestrator/stack-orchestration.sh"]
-        
-        Orchestrator --> Step1["Step 1: Core Databases<br>(llmobs-alloydb, llmobs-redis, llmobs-clickhouse)"]
-        Step1 --> PollDbHealth["Poll DB Readiness<br>(pg_isready & clickhouse SELECT 1)"]
-        
-        PollDbHealth --> Step2["Step 2: Telemetry & Event Streams<br>(llmobs-kafka, llmobs-tempo, llmobs-otel-collector)"]
-        Step2 --> Step3["Step 3: Web Gateways & Orchestration<br>(llmobs-traefik, llmobs-grafana, llmobs-temporal)"]
-    end
+    Orch-->>CLI: Container stack creation finished
 
-    subgraph "Phase 5: Diagnostic & Security Verification"
-        Step3 --> HealthCheck["scripts/test-health.sh"]
-        HealthCheck --> Section1["1. Process & Health Status"]
-        HealthCheck --> Section2["2. Port & Endpoint Access"]
-        HealthCheck --> Section3["3. TLS & HTTPS Verification"]
-        HealthCheck --> Section4["4. Security Hardening Checks"]
-        HealthCheck --> Section5["5. Network Isolation Checks"]
-        Section5 --> Result{"41/41 Checks Passed?"}
-        Result -- Yes --> SuccessPass["✓ Infrastructure Ready"]
-        Result -- No --> FailAlert["✖ Diagnostic Fail Alert"]
-    end
+    CLI->>Health: Execute test-health.sh
+    Note over Health: Runs 41 automated checks across<br/>Process Health, TCP Ports, HTTP/TLS & Security Headers
+    Health-->>User: ✓ 41/41 HEALTH & SECURITY CHECKS PASSED
 ```
 
 ---
