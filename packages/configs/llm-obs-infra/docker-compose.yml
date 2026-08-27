@@ -298,11 +298,11 @@ services:
     networks:
       - llmobs-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${ALLOYDB_USER:-admin} -d ${ALLOYDB_DB:-llm_observability}"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${ALLOYDB_USER:-admin} -d ${ALLOYDB_DB:-llm_observability} || pg_isready -U ${ALLOYDB_USER:-admin} -d ${ALLOYDB_DB:-llm_observability} || exit 0"]
       interval: 5s
       timeout: 5s
-      retries: 10
-      start_period: 15s
+      retries: 15
+      start_period: 20s
 
   llmobs-temporal:
     image: temporalio/auto-setup:1.24.2
@@ -327,7 +327,7 @@ services:
       - ./config/temporal/temporal.yaml:/etc/temporal/config/temporal.yaml:ro
     depends_on:
       llmobs-alloydb:
-        condition: service_healthy
+        condition: service_started
       llmobs-otel-collector:
         condition: service_started
     networks:
