@@ -332,6 +332,24 @@ test_alloydb_crud
 test_redis_crud
 test_otel_tempo_trace_ingestion
 
+test_container_to_container_connectivity() {
+  local src_container=$1
+  local target_host=$2
+  local target_port=$3
+  local label=$4
+  TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
+
+  local res
+  res=$(docker exec -i "$src_container" nc -z -w 3 "$target_host" "$target_port" 2>/dev/null && echo "OK" || echo "FAIL")
+
+  if [ "$res" = "OK" ]; then
+    echo -e "  ${GREEN}[PASS]${NC} ${BOLD}${label}${NC} -> Internal bridge network reachability (${src_container} → ${target_host}:${target_port}) OK"
+    PASSED_CHECKS=$((PASSED_CHECKS + 1))
+  else
+    echo -e "  ${RED}[FAIL]${NC} ${BOLD}${label}${NC} -> Network routing failure (${src_container} → ${target_host}:${target_port})"
+  fi
+}
+
 echo -e "\n${YELLOW}6. Network Isolation:${NC}"
 check_network "llmobs-traefik-gateway" "llmobs-network"
 check_network "llmobs-redis-ledger" "llmobs-network"
@@ -342,6 +360,13 @@ check_network "llmobs-grafana-portal" "llmobs-network"
 check_network "llmobs-clickhouse-analytics" "llmobs-network"
 check_network "llmobs-alloydb-db" "llmobs-network"
 check_network "llmobs-temporal-engine" "llmobs-network"
+
+echo -e "\n${YELLOW}7. Inter-Container Network & DNS Connectivity Probes:${NC}"
+test_container_to_container_connectivity "llmobs-traefik-gateway" "llmobs-clickhouse-analytics" "8123" "Traefik → ClickHouse HTTP"
+test_container_to_container_connectivity "llmobs-traefik-gateway" "llmobs-grafana-portal" "3000" "Traefik → Grafana UI"
+test_container_to_container_connectivity "llmobs-otel-collector" "llmobs-tempo-tracing" "4317" "OTel Collector → Tempo gRPC"
+test_container_to_container_connectivity "llmobs-temporal-engine" "llmobs-alloydb-db" "5432" "Temporal Engine → AlloyDB Postgres"
+test_container_to_container_connectivity "llmobs-grafana-portal" "llmobs-clickhouse-analytics" "8123" "Grafana → ClickHouse Query API"
 
 echo -e "\n${BLUE}====================================================${NC}"
 if [ "$PASSED_CHECKS" -eq "$TOTAL_CHECKS" ]; then
