@@ -320,10 +320,10 @@ This section details all 11 critical production edge cases, their underlying roo
 - **Risk**: The Linux OOM killer terminates arbitrary host processes (e.g. Docker daemon or SSH), leading to system instability.
 - **Mitigation**: Defined explicit `cgroup` memory limits (`deploy.resources.limits` and `reservations`) for every service in `docker-compose.yml`.
 
-#### 5. ClickHouse Query Memory Runaway
-- **Root Cause**: Complex analytical aggregation queries can attempt to allocate more RAM than assigned to the container cgroup.
-- **Risk**: Hard container SIGKILL panics during query execution.
-- **Mitigation**: Added `<max_server_memory_usage>3758096384</max_server_memory_usage>` (3.5 GB) and `<max_memory_usage_for_user>2147483648</max_memory_usage_for_user>` (2 GB) in ClickHouse `custom.xml`.
+#### 5. ClickHouse Query Memory Runaway & User Profile Configuration
+- **Root Cause**: In ClickHouse 24.8+, user-level settings (such as `<max_memory_usage_for_user>`) placed at top-level in server `config.d/custom.xml` throw `DB::Exception Code 137` and terminate daemon startup.
+- **Risk**: Hard ClickHouse container startup crashes.
+- **Mitigation**: Separated top-level server limits (`<max_server_memory_usage>`) in [custom.xml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/clickhouse/config.d/custom.xml) from user profile limits (`<max_memory_usage>`) in [users.d/override.xml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/clickhouse/users.d/override.xml).
 
 #### 6. Kafka JVM Heap Over-Growth
 - **Root Cause**: Java virtual machines default to claiming up to 25-50% of total host RAM if unconstrained.
@@ -345,15 +345,15 @@ This section details all 11 critical production edge cases, their underlying roo
 - **Risk**: OpenTelemetry span ingestion timestamps become invalid, causing empty visualization charts in Grafana.
 - **Mitigation**: `verify_clock_sync` validates active NTP synchronization via `systemd-timesyncd`, `chrony`, or `timedatectl`.
 
-#### 10. Firewall Bridge Isolation
-- **Root Cause**: Host UFW or iptables rules blocking inter-container packet routing.
-- **Risk**: Microservices fail to communicate over `llmobs-network`.
-- **Mitigation**: `verify_firewall_rules` detects active UFW rules and automatically adds bridge pass-through permissions for `llmobs-network`.
+#### 10. Firewall Bridge Isolation & Distroless Diagnostic Probing
+- **Root Cause**: Host UFW/iptables rules blocking inter-container packet routing or missing CLI binaries (`nc`/`curl`) inside distroless container images.
+- **Risk**: Inter-container communication failures or false-negative health check failures.
+- **Mitigation**: Implemented native Layer-4 Bash socket streams (`exec 3<>/dev/tcp/${host}/${port}`) in `test-health.sh` to test cross-container reachability without external binary dependencies.
 
-#### 11. Database Initialization Race Conditions
-- **Root Cause**: Downstream services launching before databases finish initializing schemas.
+#### 11. Database Initialization Race Conditions & WAL Recovery Window
+- **Root Cause**: Downstream services launching before databases finish initializing schemas or recovering WAL log state.
 - **Risk**: Temporal workflow engine crash loop during initial setup.
-- **Mitigation**: Implemented 3-stage dependent orchestration in `stack-orchestration.sh` with active container readiness polling (`pg_isready` and `SELECT 1`).
+- **Mitigation**: Implemented 3-stage dependent orchestration in `stack-orchestration.sh` with **Exponential Backoff and Full Jitter** polling ($\text{delay} = \text{random}(1, \min(\text{max\_delay}, \text{base\_delay} \times 2^{\text{attempt}}))$) and `pg_isready` readiness checking.
 
 ---
 
@@ -373,7 +373,7 @@ Executing `./manage.sh up` performs automated system pre-flight checks:
 ```
 
 ### 5.2 Diagnostic Verification Suite
-Post-deployment validation is performed by [test-health.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/test-health.sh), executing 41 checks across 5 sections:
+Post-deployment validation is performed by [test-health.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/test-health.sh), executing 52 checks across 7 sections:
 
 ```bash
 ====================================================
@@ -381,12 +381,14 @@ Post-deployment validation is performed by [test-health.sh](file:///home/btpl-la
 ====================================================
 
 1. Container Process & Docker Health Status (9/9 PASS)
-2. Individual Service Port & Endpoint Access (16/16 PASS)
+2. Individual Service Port & Endpoint Access (14/14 PASS)
 3. TLS Certificate & HTTPS Verification (3/3 PASS)
-4. Security Hardening Checks (7/7 PASS)
-5. Network Isolation (6/6 PASS)
+4. Security Hardening Checks (6/6 PASS)
+5. Service Functional CRUD & Telemetry Tracing Validations (6/6 PASS)
+6. Network Isolation (9/9 PASS)
+7. Inter-Container Network & DNS Connectivity Probes (5/5 PASS)
 
 ====================================================
-✓ ALL 41/41 HEALTH & SECURITY CHECKS PASSED!
+✓ ALL 52/52 HEALTH & SECURITY CHECKS PASSED!
 ====================================================
 ```
