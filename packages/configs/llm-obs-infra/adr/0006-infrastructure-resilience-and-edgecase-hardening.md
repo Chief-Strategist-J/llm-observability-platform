@@ -29,35 +29,106 @@ The infrastructure deployment pipeline is structured into a **3-Phase Dependent 
 
 ## 2. High-Level Architecture (HLA) & System Topology
 
-### 2.1 Complete Infrastructure Deployment Topology
+### 2.1 Color-Coded Modular Deployment & Component Architecture
 
 ```mermaid
-architecture-beta
-    group host(cloud)["Host Server System (Linux Kernel 5.x+)"]
-    group network(internet_space)["Bridge Network (llmobs-network)"] in host
-    group storage(disk_space)["Persistent Volumes (Docker Storage)"] in host
+graph TB
+    %% Styling Classes
+    classDef entrypoint fill:#1E293B,stroke:#0F172A,stroke-width:2px,color:#FFF;
+    classDef discovery fill:#3B82F6,stroke:#1D4ED8,stroke-width:2px,color:#FFF;
+    classDef prereq fill:#F59E0B,stroke:#B45309,stroke-width:2px,color:#FFF;
+    classDef ports fill:#EF4444,stroke:#B91C1C,stroke-width:2px,color:#FFF;
+    classDef certs fill:#8B5CF6,stroke:#6D28D9,stroke-width:2px,color:#FFF;
+    classDef database fill:#059669,stroke:#047857,stroke-width:2px,color:#FFF;
+    classDef stream fill:#06B6D4,stroke:#0E7490,stroke-width:2px,color:#FFF;
+    classDef gateway fill:#EC4899,stroke:#BE185D,stroke-width:2px,color:#FFF;
+    classDef health fill:#10B981,stroke:#047857,stroke-width:2px,color:#FFF;
 
-    service gateway(server)["Traefik Edge Gateway (llmobs-traefik-gateway)"] in network
-    service otel(server)["OTel Collector (llmobs-otel-collector)"] in network
-    service kafka(server)["Kafka Event Broker (llmobs-kafka-broker)"] in network
-    service clickhouse(database)["ClickHouse Analytics (llmobs-clickhouse-analytics)"] in network
-    service tempo(database)["Grafana Tempo Tracing (llmobs-tempo-tracing)"] in network
-    service redis(database)["Redis Spend Ledger (llmobs-redis-ledger)"] in network
-    service alloydb(database)["AlloyDB Omni (llmobs-alloydb-db)"] in network
-    service temporal(server)["Temporal Engine (llmobs-temporal-engine)"] in network
-    service grafana(server)["Grafana Portal (llmobs-grafana-portal)"] in network
+    subgraph CLI ["CLI Command Entrypoint"]
+        Start["./manage.sh up"]:::entrypoint
+    end
 
-    junction net_junction in network
+    subgraph DiscoveryModule ["Phase 1: Dynamic Path Discovery Module"]
+        DynamicDiscovery["scripts/discovery/dynamic-discovery.sh"]:::discovery
+        Stage1["1. Search Relative Subtree (maxdepth 4)"]:::discovery
+        Stage2["2. Search Current Working Dir (pwd)"]:::discovery
+        Stage3["3. Discover Git Repo Root (git rev-parse)"]:::discovery
 
-    gateway:R -- L:net_junction
-    otel:L -- R:net_junction
-    kafka:L -- R:net_junction
-    clickhouse:L -- R:net_junction
-    tempo:L -- R:net_junction
-    redis:L -- R:net_junction
-    alloydb:L -- R:net_junction
-    temporal:L -- R:net_junction
-    grafana:L -- R:net_junction
+        DynamicDiscovery --> Stage1
+        Stage1 --> Stage2
+        Stage2 --> Stage3
+    end
+
+    subgraph PrereqModule ["Phase 2: Host Pre-Flight Verification Module"]
+        Prereqs["scripts/prereqs/system-prereqs.sh"]:::prereq
+        CheckFD["ulimit -n Check (65536)"]:::prereq
+        CheckSysctl["sysctl vm.max_map_count (262144)"]:::prereq
+        CheckNTP["NTP Time Sync Check"]:::prereq
+        CheckFW["UFW Firewall Rule Check"]:::prereq
+        CheckRAM["Available Memory Check (>=2.5GB)"]:::prereq
+
+        Prereqs --> CheckFD
+        Prereqs --> CheckSysctl
+        Prereqs --> CheckNTP
+        Prereqs --> CheckFW
+        Prereqs --> CheckRAM
+    end
+
+    subgraph PortCertModule ["Phase 3: Port Isolation & Security Module"]
+        PortManager["scripts/ports/port-manager.sh"]:::ports
+        FreePorts["Kill Bound Processes (fuser -k / kill -9)<br/>Ports 31410 - 31425"]:::ports
+        CertGen["scripts/generate-certs.sh<br/>OpenSSL TLS Generation"]:::certs
+
+        PortManager --> FreePorts
+        FreePorts --> CertGen
+    end
+
+    subgraph OrchestratorModule ["Phase 4: 3-Stage Container Orchestration"]
+        Orchestration["scripts/orchestrator/stack-orchestration.sh"]:::database
+
+        subgraph Stage1DB ["Stage 1: Stateful Databases"]
+            AlloyDB[("AlloyDB Omni<br/>PostgreSQL 15<br/>Port 31420")]:::database
+            Redis[("Redis Ledger<br/>Port 31413")]:::database
+            ClickHouse[("ClickHouse Analytics<br/>Ports 31421 / 31422")]:::database
+        end
+
+        subgraph Stage2Stream ["Stage 2: Telemetry Streams"]
+            Kafka["Kafka Broker<br/>Port 31414"]:::stream
+            Tempo["Tempo Tracing<br/>Ports 31416 / 31423"]:::stream
+            OTel["OTel Collector<br/>Ports 31417 / 31418"]:::stream
+        end
+
+        subgraph Stage3Gateway ["Stage 3: Gateways & Orchestration"]
+            Traefik["Traefik Edge Gateway<br/>Ports 31410 / 31419"]:::gateway
+            Grafana["Grafana Portal<br/>Port 31415"]:::gateway
+            Temporal["Temporal Workflow Engine<br/>Ports 31424 / 31425"]:::gateway
+        end
+
+        Orchestration --> Stage1DB
+        Stage1DB -- "Health Check Ready" --> Stage2Stream
+        Stage2Stream --> Stage3Gateway
+    end
+
+    subgraph HealthModule ["Phase 5: Automated Diagnostic Verification"]
+        HealthDiagnostic["scripts/test-health.sh"]:::health
+        CheckProcess["Container Process Status"]:::health
+        CheckTCP["TCP & HTTP Endpoint Probes"]:::health
+        CheckTLS["TLS Handshake & Expiry"]:::health
+        CheckSecHeaders["Security Headers Audit"]:::health
+        CheckNetIso["Bridge Network Isolation"]:::health
+
+        HealthDiagnostic --> CheckProcess
+        HealthDiagnostic --> CheckTCP
+        HealthDiagnostic --> CheckTLS
+        HealthDiagnostic --> CheckSecHeaders
+        HealthDiagnostic --> CheckNetIso
+    end
+
+    Start --> DynamicDiscovery
+    DynamicDiscovery --> PrereqModule
+    PrereqModule --> PortCertModule
+    PortCertModule --> OrchestratorModule
+    OrchestratorModule --> HealthModule
 ```
 
 ### 2.2 End-to-End Orchestration & Verification Flow
@@ -92,18 +163,18 @@ sequenceDiagram
 
     CLI->>Orch: start_ordered_stack(bin, compose_file)
 
-    rect rgb(235, 245, 255)
+    rect rgb(220, 252, 231)
         Note over Orch,Docker: Stage 1: Core Stateful Databases
         Orch->>Docker: docker compose up -d (AlloyDB, Redis, ClickHouse)
         Orch->>Docker: Poll inspect until AlloyDB & ClickHouse report 'healthy'
     end
 
-    rect rgb(240, 255, 240)
+    rect rgb(224, 242, 254)
         Note over Orch,Docker: Stage 2: Telemetry Ingestion Streams
         Orch->>Docker: docker compose up -d (Kafka, Tempo, OTel Collector)
     end
 
-    rect rgb(255, 245, 235)
+    rect rgb(252, 231, 243)
         Note over Orch,Docker: Stage 3: Gateways & Orchestration Engines
         Orch->>Docker: docker compose up -d (Traefik, Grafana, Temporal)
     end
