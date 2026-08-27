@@ -246,6 +246,7 @@ All microservices are bound to isolated ports in the **`31410` – `31425` range
 | **11** | **Database Recovery Race Condition** | Downstream services launch while database recovers WAL logs | 3-stage ordered orchestration & Exponential Backoff Jitter | [stack-orchestration.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/orchestrator/stack-orchestration.sh#L24-L60) |
 | **12** | **Zero-Trust Network Signature & Spoofing** | Unauthenticated containers attach to subnet & spoof internal ingress traffic | Network signature label (`llmobs-net-sig-v1.0`) & Traefik signature header (`X-LLMObs-Network-Signature`) | [stack-orchestration.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/orchestrator/stack-orchestration.sh#L93-L104) & [dynamic.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/traefik/dynamic.yml#L27-L35) |
 | **13** | **HTTPS Probe TLS Handshake & Pattern Match** | Self-signed RSA certificates cause `HTTP 000000` & status code regex patterns fail against HTML response bodies | Added `-k` TLS flag to `curl` & evaluated `$code` against status code regex (`200|404|302|301`) | [test-health.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/test-health.sh#L120-L148) |
+| **14** | **Grafana Data Source Exporter Provisioning** | Grafana portal requires automated provisioning for ClickHouse, AlloyDB, Redis, and Tempo | Configured `GF_INSTALL_PLUGINS=grafana-clickhouse-datasource,redis-datasource` & `datasources.yml` | [docker-compose.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docker-compose.yml#L224) & [datasources.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/grafana/provisioning/datasources/datasources.yml#L1-L50) |
 
 ---
 
@@ -263,6 +264,13 @@ All microservices are bound to isolated ports in the **`31410` – `31425` range
 - **Mitigation**:
   1. Added `-k` TLS handshake flag to `curl` in `check_http` (`curl -sk -o /tmp/health_body.tmp ...`).
   2. Updated pattern matching logic to evaluate `$code` directly against regex patterns (`echo "$code" | grep -qE "^(${expected_pattern})$"`).
+
+#### 14. Grafana Automated Database Exporter & Data Source Provisioning
+- **Root Cause**: Grafana dashboard portal required pre-configured plugins (`grafana-clickhouse-datasource`, `redis-datasource`) and automated connection parameters to query ClickHouse analytics, AlloyDB relational tables, Redis spend ledgers, and Tempo trace span waterfalls upon container startup.
+- **Risk**: Unconfigured visualization portal requiring manual database connection configuration after container restarts.
+- **Mitigation**:
+  1. Added `GF_INSTALL_PLUGINS=grafana-clickhouse-datasource,redis-datasource` to Grafana container environment in `docker-compose.yml`.
+  2. Automated provisioning for 4 storage backends (ClickHouse, AlloyDB PostgreSQL, Redis, Tempo) in `datasources.yml`.
 
 ---
 

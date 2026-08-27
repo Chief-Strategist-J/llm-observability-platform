@@ -6,19 +6,45 @@ datasources:
     access: proxy
     url: http://llmobs-tempo:3200
     isDefault: true
-    editable: false
+    editable: true
     jsonData:
       httpMethod: GET
       nodeGraph:
         enabled: true
 
   - name: ClickHouse
-    type: vertamedia-clickhouse-datasource
+    type: grafana-clickhouse-datasource
     access: proxy
-    url: http://llmobs-clickhouse:8123
+    url: llmobs-clickhouse:9000
     isDefault: false
-    editable: false
+    editable: true
     jsonData:
-      addExtraHeaders: false
-      usePOST: true
+      port: 9000
+      server: llmobs-clickhouse
+      username: default
       defaultDatabase: llm_telemetry_analytics
+    secureJsonData:
+      password: llmobs_clickhouse_s3cret_2026
+
+  - name: AlloyDB
+    type: postgres
+    access: proxy
+    url: llmobs-alloydb:5432
+    user: admin
+    database: llm_observability
+    isDefault: false
+    editable: true
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1500
+    secureJsonData:
+      password: llmobs_s3cret_2026
+
+  - name: Redis
+    type: redis-datasource
+    access: proxy
+    url: redis://llmobs-redis:6379
+    isDefault: false
+    editable: true
+    secureJsonData:
+      password: llmobs_redis_s3cret_2024
