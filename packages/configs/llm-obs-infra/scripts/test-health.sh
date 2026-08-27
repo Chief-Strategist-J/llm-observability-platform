@@ -54,7 +54,16 @@ check_tcp() {
   local name=$1
   local port=$2
   TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
-  if nc -z localhost "$port" >/dev/null 2>&1; then
+  local connected=false
+  for i in {1..4}; do
+    if nc -z localhost "$port" >/dev/null 2>&1; then
+      connected=true
+      break
+    fi
+    sleep 2
+  done
+
+  if [ "$connected" = true ]; then
     echo -e "  ${GREEN}[PASS]${NC} ${BOLD}${name}${NC} -> TCP Port ${port} is listening & accepting connections"
     PASSED_CHECKS=$((PASSED_CHECKS + 1))
   else
