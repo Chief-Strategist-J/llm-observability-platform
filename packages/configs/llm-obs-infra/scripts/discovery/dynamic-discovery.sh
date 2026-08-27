@@ -2,17 +2,6 @@
 
 set -e
 
-# ==============================================================================
-# Dynamic File Discovery Pipeline
-# Algorithm Specs:
-#   1. Iterative DFS Stack Traversal (Filesystem Discovery)
-#   2. Associative HashSet (O(1) Visited & Path Cache)
-#   3. Glob & Regex Pattern Matching
-#   4. Multi-Keyword Signature Scanner (Aho-Corasick Token Matcher)
-#   5. Weighted Priority Queue / Heap Candidate Ranking
-#   6. Command Queue Execution
-# ==============================================================================
-
 declare -gA PATH_HASH_SET=()
 
 discover_script_dir() {
@@ -39,12 +28,9 @@ discover_git_repo_root() {
   return 1
 }
 
-# ------------------------------------------------------------------------------
-# 1. Iterative DFS Filesystem Traversal Engine
-# ------------------------------------------------------------------------------
 execute_iterative_dfs() {
   local root_dir=$1
-  local max_depth=${2:-4}
+  local max_depth=${2:-3}
   local target_pattern=$3
 
   [ ! -d "$root_dir" ] && return 0
@@ -60,7 +46,6 @@ execute_iterative_dfs() {
 
     [ "$depth" -gt "$max_depth" ] && continue
 
-    # Hash Set deduplication check
     [ -n "${PATH_HASH_SET["$dir"]:-}" ] && continue
     PATH_HASH_SET["$dir"]=1
 
@@ -80,12 +65,9 @@ execute_iterative_dfs() {
   done
 }
 
-# ------------------------------------------------------------------------------
-# 4. Multi-Keyword Signature Scanner (Aho-Corasick Token Verification)
-# ------------------------------------------------------------------------------
 scan_content_signature() {
   local file_path=$1
-  local required_tokens=$2  # Space-separated list of required signatures
+  local required_tokens=$2
 
   [ ! -r "$file_path" ] && echo "0" && return 0
 
@@ -99,9 +81,6 @@ scan_content_signature() {
   echo "$match_score"
 }
 
-# ------------------------------------------------------------------------------
-# 5. Weighted Candidate Priority Queue / Heap Ranking Engine
-# ------------------------------------------------------------------------------
 rank_candidates() {
   local candidates=("$@")
   local best_candidate=""
@@ -111,15 +90,12 @@ rank_candidates() {
     [ -z "$item" ] && continue
     local score=0
 
-    # Criteria A: Executable permission check
     [ -x "$item" ] && score=$((score + 50))
 
-    # Criteria B: Path depth score (prefer closer relative paths)
     local slash_count
     slash_count=$(tr -dc '/' <<< "$item" | wc -c)
     score=$((score + (100 - (slash_count * 5))))
 
-    # Criteria C: Signature score
     local sig_score
     sig_score=$(scan_content_signature "$item" "main bash set -e")
     score=$((score + sig_score))
@@ -133,9 +109,6 @@ rank_candidates() {
   echo "$best_candidate"
 }
 
-# ------------------------------------------------------------------------------
-# High-Level Interface Pipeline
-# ------------------------------------------------------------------------------
 discover_file_upward() {
   local filename=$1
   local start_dir=${2:-$(pwd)}
@@ -169,27 +142,40 @@ discover_script_file_recursive() {
   local script_name=$1
   local search_root=$2
 
+  if [ -n "$search_root" ] && [ -f "$search_root/scripts/$script_name" ]; then
+    echo "$search_root/scripts/$script_name"
+    return 0
+  fi
+
+  if [ -f "$(pwd)/$script_name" ]; then
+    echo "$(pwd)/$script_name"
+    return 0
+  fi
+
   PATH_HASH_SET=()
 
   local raw_candidates=()
   while IFS= read -r line; do
-    [ -n "$line" ] && raw_candidates+=("$line")
-  done < <(execute_iterative_dfs "$search_root" 4 "$script_name")
+    if [ -n "$line" ]; then
+      raw_candidates+=("$line")
+      break
+    fi
+  done < <(execute_iterative_dfs "$search_root" 3 "$script_name")
 
-  if [ ${#raw_candidates[@]} -eq 0 ]; then
-    while IFS= read -r line; do
-      [ -n "$line" ] && raw_candidates+=("$line")
-    done < <(execute_iterative_dfs "$(pwd)" 4 "$script_name")
+  if [ ${#raw_candidates[@]} -gt 0 ]; then
+    echo "${raw_candidates[0]}"
+    return 0
   fi
 
-  if [ ${#raw_candidates[@]} -eq 0 ]; then
-    local git_root
-    git_root=$(discover_git_repo_root "$(pwd)" || echo "")
-    if [ -n "$git_root" ]; then
-      while IFS= read -r line; do
-        [ -n "$line" ] && raw_candidates+=("$line")
-      done < <(execute_iterative_dfs "$git_root" 6 "$script_name")
-    fi
+  local git_root
+  git_root=$(discover_git_repo_root "$(pwd)" || echo "")
+  if [ -n "$git_root" ]; then
+    while IFS= read -r line; do
+      if [ -n "$line" ]; then
+        raw_candidates+=("$line")
+        break
+      fi
+    done < <(execute_iterative_dfs "$git_root" 4 "$script_name")
   fi
 
   local ranked_best
