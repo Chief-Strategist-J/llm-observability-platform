@@ -21,23 +21,19 @@ print_service_endpoints() {
   echo -e "  - OTel Collector gRPC:   localhost:31418"
 }
 
-wait_for_container_health() {
-  local container=$1
-  local max_wait_sec=${2:-30}
+wait_for_clickhouse_http() {
+  local max_wait_sec=${1:-20}
   local elapsed=0
-
-  echo -e "${BLUE}  - Waiting for container ${container} to complete startup...${NC}"
+  echo -e "${BLUE}  - Waiting for ClickHouse HTTP & Native TCP socket binding...${NC}"
   while [ $elapsed -lt $max_wait_sec ]; do
-    local status
-    status=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container" 2>/dev/null || echo "starting")
-    if [ "$status" = "healthy" ] || [ "$status" = "running" ]; then
-      echo -e "${GREEN}✓ ${container} is ready (${status}).${NC}"
+    if curl -s "http://localhost:31421/ping" 2>/dev/null | grep -q "Ok."; then
+      echo -e "${GREEN}✓ ClickHouse HTTP (31421) & Native (31422) endpoints ready.${NC}"
       return 0
     fi
     sleep 2
     elapsed=$((elapsed + 2))
   done
-  echo -e "${YELLOW}⚠️ ${container} initialization still in progress...${NC}"
+  echo -e "${YELLOW}⚠️ ClickHouse socket binding taking longer than expected...${NC}"
 }
 
 start_ordered_stack() {
@@ -46,8 +42,8 @@ start_ordered_stack() {
 
   echo -e "${BLUE}⚡ Step 1/3: Starting core databases (AlloyDB, Redis, ClickHouse)...${NC}"
   $bin -f "$compose_file" up -d llmobs-alloydb llmobs-redis llmobs-clickhouse || true
-  wait_for_container_health "llmobs-clickhouse-analytics" 10
   wait_for_container_health "llmobs-alloydb-db" 10
+  wait_for_clickhouse_http 20
 
   echo -e "${BLUE}⚡ Step 2/3: Starting telemetry & event streams (Kafka, Tempo, OTel Collector)...${NC}"
   $bin -f "$compose_file" up -d llmobs-kafka llmobs-tempo llmobs-otel-collector || true
