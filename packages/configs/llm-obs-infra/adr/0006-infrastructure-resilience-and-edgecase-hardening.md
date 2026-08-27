@@ -19,13 +19,9 @@ Running enterprise telemetry ingestion platforms (**ClickHouse Analytics**, **Ap
 2. **Unbounded Resource Spikes & OS-Level OOM Cascades**: Without cgroups and application heap limits, ClickHouse queries or Kafka backpressure buffer spikes trigger Linux OOM-killer panics, terminating database daemons and corrupting disk blocks.
 3. **Log Volume Disk Exhaustion**: Un-rotated container logs grow indefinitely on stdout, taking down the host OS disk over long runtime intervals.
 4. **Environment Path Instability**: Hardcoded relative directory paths break script execution whenever code is checked out into non-standard folder hierarchies across different host environments.
-5. **Database Race Conditions**: Rapid container initialization causes downstream orchestration daemons (e.g., Temporal) to crash before primary relational databases complete schema migrations.
+5. **Database Race Conditions & WAL Recovery Window**: Rapid container initialization causes downstream orchestration daemons (e.g., Temporal) to crash before primary relational databases complete schema migrations or WAL recovery.
 
 ---
-
-## 2. High-Level Architecture (HLA) & Logic Flow
-
-The infrastructure deployment pipeline is structured into a **3-Phase Dependent Ingestion Engine** managed by modular, pure bash utilities and dynamic discovery modules.
 
 ## 2. High-Level Architecture (HLA) & System Topology
 
@@ -33,7 +29,6 @@ The infrastructure deployment pipeline is structured into a **3-Phase Dependent 
 
 ```mermaid
 graph TB
-    %% Styling Classes
     classDef entrypoint fill:#1E293B,stroke:#0F172A,stroke-width:2px,color:#FFF;
     classDef discovery fill:#3B82F6,stroke:#1D4ED8,stroke-width:2px,color:#FFF;
     classDef prereq fill:#F59E0B,stroke:#B45309,stroke-width:2px,color:#FFF;
@@ -41,8 +36,6 @@ graph TB
     classDef certs fill:#8B5CF6,stroke:#6D28D9,stroke-width:2px,color:#FFF;
     classDef database fill:#059669,stroke:#047857,stroke-width:2px,color:#FFF;
     classDef stream fill:#06B6D4,stroke:#0E7490,stroke-width:2px,color:#FFF;
-    classDef gateway fill:#EC4899,stroke:#BE185D,stroke-width:2px,color:#FFF;
-    classDef health fill:#10B981,stroke:#047857,stroke-width:2px,color:#FFF;
 
     subgraph CLI ["CLI Command Entrypoint"]
         Start["./manage.sh up"]:::entrypoint
@@ -98,52 +91,28 @@ graph TB
             OTel["OTel Collector<br/>Ports 31417 / 31418"]:::stream
         end
 
-        subgraph Stage3Gateway ["Stage 3: Gateways & Orchestration"]
-            Traefik["Traefik Edge Gateway<br/>Ports 31410 / 31419"]:::gateway
-            Grafana["Grafana Portal<br/>Port 31415"]:::gateway
-            Temporal["Temporal Workflow Engine<br/>Ports 31424 / 31425"]:::gateway
-        end
-
+        Start --> DynamicDiscovery
+        DynamicDiscovery --> Prereqs
+        Prereqs --> PortManager
+        CertGen --> Orchestration
         Orchestration --> Stage1DB
-        Stage1DB -- "Health Check Ready" --> Stage2Stream
-        Stage2Stream --> Stage3Gateway
+        Stage1DB --> Stage2Stream
     end
-
-    subgraph HealthModule ["Phase 5: Automated Diagnostic Verification"]
-        HealthDiagnostic["scripts/test-health.sh"]:::health
-        CheckProcess["Container Process Status"]:::health
-        CheckTCP["TCP & HTTP Endpoint Probes"]:::health
-        CheckTLS["TLS Handshake & Expiry"]:::health
-        CheckSecHeaders["Security Headers Audit"]:::health
-        CheckNetIso["Bridge Network Isolation"]:::health
-
-        HealthDiagnostic --> CheckProcess
-        HealthDiagnostic --> CheckTCP
-        HealthDiagnostic --> CheckTLS
-        HealthDiagnostic --> CheckSecHeaders
-        HealthDiagnostic --> CheckNetIso
-    end
-
-    Start --> DynamicDiscovery
-    DynamicDiscovery --> PrereqModule
-    PrereqModule --> PortCertModule
-    PortCertModule --> OrchestratorModule
-    OrchestratorModule --> HealthModule
 ```
 
-### 2.2 End-to-End Orchestration & Verification Flow
+### 2.2 Sequence & Lifecycle Diagram
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as DevOps / SRE Operator
-    participant CLI as manage.sh CLI
+    actor User
+    participant CLI as manage.sh
     participant Discovery as dynamic-discovery.sh
     participant Prereq as system-prereqs.sh
     participant PortMgr as port-manager.sh
     participant Certs as generate-certs.sh
     participant Orch as stack-orchestration.sh
-    participant Docker as Docker Daemon / Engine
+    participant Docker as Docker Daemon
     participant Health as test-health.sh
 
     User->>CLI: ./manage.sh up
@@ -166,7 +135,7 @@ sequenceDiagram
     rect rgb(220, 252, 231)
         Note over Orch,Docker: Stage 1: Core Stateful Databases
         Orch->>Docker: docker compose up -d (AlloyDB, Redis, ClickHouse)
-        Orch->>Docker: Poll inspect until AlloyDB & ClickHouse report 'healthy'
+        Orch->>Docker: Exponential Backoff & Jitter Polling until AlloyDB & ClickHouse report 'ready'
     end
 
     rect rgb(224, 242, 254)
@@ -177,13 +146,14 @@ sequenceDiagram
     rect rgb(252, 231, 243)
         Note over Orch,Docker: Stage 3: Gateways & Orchestration Engines
         Orch->>Docker: docker compose up -d (Traefik, Grafana, Temporal)
+        Orch->>Docker: Exponential Backoff & Jitter Polling until Grafana & Temporal bind ports
     end
 
     Orch-->>CLI: Container stack creation finished
 
     CLI->>Health: Execute test-health.sh
-    Note over Health: Runs 41 automated checks across<br/>Process Health, TCP Ports, HTTP/TLS & Security Headers
-    Health-->>User: ✓ 41/41 HEALTH & SECURITY CHECKS PASSED
+    Note over Health: Runs 52 automated checks across<br/>Process Health, TCP Ports, HTTP/TLS, Security Headers, & Native Layer-4 Socket Probes
+    Health-->>User: ✓ 52/52 HEALTH & SECURITY CHECKS PASSED
 ```
 
 ### 2.3 Pure Functional Call Stack Tree
@@ -218,18 +188,21 @@ sequenceDiagram
 ├── 4. 3-Stage Dependent Container Deployment
 │   └── bash scripts/orchestrator/stack-orchestration.sh "$bin" "$compose_file"
 │       ├── Stage 1: docker compose up -d llmobs-alloydb llmobs-redis llmobs-clickhouse
-│       │   ├── wait_for_container_health("llmobs-clickhouse-analytics", 15)
-│       │   └── wait_for_container_health("llmobs-alloydb-db", 15)
+│       │   ├── wait_for_alloydb()              ──> Exponential Backoff & Jitter pg_isready
+│       │   └── wait_for_clickhouse_http()      ──> Exponential Backoff & Jitter HTTP /ping
 │       ├── Stage 2: docker compose up -d llmobs-kafka llmobs-tempo llmobs-otel-collector
-│       └── Stage 3: docker compose up -d --force-recreate (Traefik, Grafana, Temporal)
+│       └── Stage 3: docker compose up -d llmobs-traefik llmobs-grafana llmobs-temporal
+│           └── wait_for_web_gateways()         ──> Exponential Backoff & Jitter HTTP /api/health
 │
 └── 5. Post-Deployment Diagnostic Validation
     └── bash scripts/test-health.sh
-        ├── check_container_status()  ──> (9 Microservices Process Check)
-        ├── check_tcp() / check_http()──> (16 Service Endpoint & Health Probes)
-        ├── check_tls()               ──> (TLS Handshake & OpenSSL Expiry Check)
-        ├── check_header()            ──> (X-Content-Type-Options, HSTS, XSS Headers)
-        └── check_network()           ──> (Bridge Network Isolation Assertions)
+        ├── check_container_status()            ──> (9 Microservices Process Check)
+        ├── check_tcp() / check_http()          ──> (14 Service Endpoint & Health Probes)
+        ├── check_tls()                         ──> (TLS Handshake & OpenSSL Expiry Check)
+        ├── check_header()                      ──> (X-Content-Type-Options, HSTS, XSS Headers)
+        ├── test_service_crud()                 ──> (Kafka, ClickHouse, AlloyDB, Redis CRUD)
+        ├── check_network()                     ──> (Bridge Network Isolation Assertions)
+        └── test_container_to_container()       ──> (Layer-4 Native /dev/tcp Socket Probes)
 ```
 
 ---
@@ -252,33 +225,9 @@ All microservices are bound to isolated ports in the **`31410` – `31425` range
 | `llmobs-alloydb-db` | `5432` | `31420` | Relational Metadata Store | 2048MB Limit / 512MB Res |
 | `llmobs-temporal-engine` | `7233` / `8080` | `31424` (gRPC) / `31425` (UI) | Durable Workflow Execution Engine | 1536MB RAM |
 
-### 3.2 Dynamic Path Discovery DSA Architecture ([dynamic-discovery.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/discovery/dynamic-discovery.sh))
-
-To ensure 100% path independence across operating systems and arbitrary directory trees, script resolution implements a **6-Stage Data Structures & Algorithms (DSA) Engine**:
-
-```mermaid
-flowchart TD
-    Command["Command Request<br>(manage.sh up)"] --> PathResolver["1. Path Resolver Engine"]
-    PathResolver --> DFS["2. Filesystem Traversal<br>(Iterative DFS Stack)"]
-    DFS --> HashSet["3. HashSet Caching<br>(O(1) Visited Deduplication)"]
-    HashSet --> Matcher["4. Glob / Regex Matcher<br>(filename glob filter)"]
-    Matcher --> Scanner["5. Content Scanner<br>(Aho-Corasick Token Matcher)"]
-    Scanner --> Ranker["6. Candidate Ranking<br>(Weighted Priority Queue / Heap)"]
-    Ranker --> Execution["7. Command Execution Engine"]
-```
-
-#### DSA Component Specifications
-
-1. **Iterative DFS (`execute_iterative_dfs`)**: Traverses subdirectories using an explicit array stack (`stack=("$root:0")`), preventing recursion call stack exhaustion.
-2. **HashSet Cache (`PATH_HASH_SET`)**: Maintains an in-memory associative hash array (`declare -gA PATH_HASH_SET`) for $O(1)$ constant-time path lookups.
-3. **Multi-Keyword Scanner (`scan_content_signature`)**: Performs Aho-Corasick literal token matching (`main`, `bash`, `set -e`) to score candidate script files.
-4. **Weighted Priority Heap (`rank_candidates`)**: Evaluates candidate matches using a multi-factor scoring function ($Score = ExecutableBonus + PathDepthScore + SignatureScore$) to pick the optimal file target.
-
 ---
 
 ## 4. Comprehensive Edge-Case Protection Specification
-
-This section details all 11 critical production edge cases, their underlying root causes, the multi-million dollar catastrophic failure risks if unhandled, and the exact automated code safeguards implemented across the platform.
 
 ### 4.1 Production Edge Case Summary Matrix
 
@@ -288,91 +237,19 @@ This section details all 11 critical production edge cases, their underlying roo
 | **2** | **Kernel Memory Mapping** | Kafka `mmap` allocation crash (`OutOfMemoryError: Map failed`) | `verify_kernel_sysctls` sets `vm.max_map_count=262144` | [system-prereqs.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/prereqs/system-prereqs.sh#L46-L61) |
 | **3** | **Unbounded Container Logs** | Docker JSON logs fill host filesystem, crashing OS kernel | `json-file` log driver with `max-size: 50m`, `max-file: 3` | [docker-compose.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docker-compose.yml#L1-L5) |
 | **4** | **Host-Wide OOM Cascades** | Heavy analytical query triggers Linux kernel OOM-killer across host | Strict `deploy.resources.limits` & `reservations` | [docker-compose.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docker-compose.yml#L86-L92) |
-| **5** | **ClickHouse Query Memory Runaway** | Single query claims physical RAM beyond cgroup ceiling, crashing daemon | `<max_server_memory_usage>` & user caps set in XML | [custom.xml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/clickhouse/config.d/custom.xml#L19-L21) |
+| **5** | **ClickHouse Query Memory & Profile Config** | User settings at top-level throw `DB::Exception Code 137` and crash daemon | Server limits in `custom.xml` & user profile in `override.xml` | [custom.xml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/clickhouse/config.d/custom.xml#L19-L21) |
 | **6** | **Kafka JVM Heap Over-Growth** | Unconstrained JVM heap triggers Docker `SIGKILL` mid-partition commit | `KAFKA_JVM_PERFORMANCE_OPTS="-Xms512m -Xmx1024m"` | [docker-compose.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docker-compose.yml#L104) |
 | **7** | **Storage Data Loss on Recreate** | Recreating containers purges streaming logs & analytics data | Named volumes `clickhouse_data` & `kafka_data` | [docker-compose.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docker-compose.yml#L285-L290) |
 | **8** | **Host Port Collisions** | Container startup fails due to orphaned or bound processes | `free_all_ports` releases range `31410-31425` | [port-manager.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/ports/port-manager.sh#L23-L30) |
 | **9** | **NTP Clock Desynchronization** | Telemetry timestamps drift, rendering Grafana charts empty | `verify_clock_sync` validates active NTP synchronization | [system-prereqs.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/prereqs/system-prereqs.sh#L63-L75) |
-| **10** | **Firewall Bridge Isolation** | UFW/iptables blocks inter-container bridge routing on `llmobs-network` | `verify_firewall_rules` allows bridge pass-through | [system-prereqs.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/prereqs/system-prereqs.sh#L77-L85) |
-| **11** | **Database Initialization Race** | Temporal UI crashes before relational schema setup finishes | 3-stage ordered pipeline & health readiness polling | [stack-orchestration.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/orchestrator/stack-orchestration.sh#L24-L44) |
-
----
-
-### 4.2 Deep Technical Edge-Case Analysis
-
-#### 1. Open File Descriptors (`ulimit -n`)
-- **Root Cause**: Modern high-throughput databases like ClickHouse and messaging brokers like Kafka keep hundreds of socket connections and database data parts open simultaneously.
-- **Risk**: Default OS limits (`1024`) cause socket starvation under heavy ingestion traffic, dropping OpenTelemetry spans.
-- **Mitigation**: `system-prereqs.sh` checks current file handle allocation limits and dynamically elevates `ulimit -n 65536`.
-
-#### 2. Kernel Memory Mapping (`vm.max_map_count`)
-- **Root Cause**: Apache Kafka (KRaft mode) uses memory-mapped files (`mmap`) to read and write topic log segments directly to kernel space.
-- **Risk**: Default kernel `vm.max_map_count` (`65530`) causes fatal `java.lang.OutOfMemoryError: Map failed` panics when message volume scales up.
-- **Mitigation**: `verify_kernel_sysctls` verifies and configures `sysctl -w vm.max_map_count=262144`.
-
-#### 3. Unbounded Container Log Growth
-- **Root Cause**: By default, Docker writes stdout/stderr logs in JSON format with no size ceiling.
-- **Risk**: Over extended operating windows, container logs grow to tens of gigabytes, consuming 100% of host disk space.
-- **Mitigation**: Applied `json-file` logging driver with `max-size: 50m` and `max-file: 3` across all 9 microservice container blocks in `docker-compose.yml`.
-
-#### 4. Host-Wide OOM Cascades
-- **Root Cause**: Un-capped containers can consume unrestricted host RAM during traffic spikes.
-- **Risk**: The Linux OOM killer terminates arbitrary host processes (e.g. Docker daemon or SSH), leading to system instability.
-- **Mitigation**: Defined explicit `cgroup` memory limits (`deploy.resources.limits` and `reservations`) for every service in `docker-compose.yml`.
-
-#### 5. ClickHouse Query Memory Runaway & User Profile Configuration
-- **Root Cause**: In ClickHouse 24.8+, user-level settings (such as `<max_memory_usage_for_user>`) placed at top-level in server `config.d/custom.xml` throw `DB::Exception Code 137` and terminate daemon startup.
-- **Risk**: Hard ClickHouse container startup crashes.
-- **Mitigation**: Separated top-level server limits (`<max_server_memory_usage>`) in [custom.xml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/clickhouse/config.d/custom.xml) from user profile limits (`<max_memory_usage>`) in [users.d/override.xml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/clickhouse/users.d/override.xml).
-
-#### 6. Kafka JVM Heap Over-Growth
-- **Root Cause**: Java virtual machines default to claiming up to 25-50% of total host RAM if unconstrained.
-- **Risk**: JVM heap expansion triggers container cgroup OOM kills.
-- **Mitigation**: Configured `KAFKA_JVM_PERFORMANCE_OPTS="-Xms512m -Xmx1024m"` to lock heap sizing safely within container cgroup boundaries.
-
-#### 7. Non-Persistent Storage Data Loss
-- **Root Cause**: Storing database files in ephemeral container storage layers.
-- **Risk**: Recreating containers (`docker compose down`) purges streaming logs and telemetry tables.
-- **Mitigation**: Created dedicated named Docker storage volumes `clickhouse_data` (`/var/lib/clickhouse`) and `kafka_data` (`/var/lib/kafka/data`).
-
-#### 8. Host Port Collisions
-- **Root Cause**: Service startup failures caused by stale processes binding ports.
-- **Risk**: Stack startup failure due to `address already in use` errors.
-- **Mitigation**: Re-allocated all service ports to `31410-31425` and added automated process termination via `free_all_ports` using `fuser` and `lsof`.
-
-#### 9. System Clock Drift
-- **Root Cause**: Host system time drifting away from UTC.
-- **Risk**: OpenTelemetry span ingestion timestamps become invalid, causing empty visualization charts in Grafana.
-- **Mitigation**: `verify_clock_sync` validates active NTP synchronization via `systemd-timesyncd`, `chrony`, or `timedatectl`.
-
-#### 10. Firewall Bridge Isolation & Distroless Diagnostic Probing
-- **Root Cause**: Host UFW/iptables rules blocking inter-container packet routing or missing CLI binaries (`nc`/`curl`) inside distroless container images.
-- **Risk**: Inter-container communication failures or false-negative health check failures.
-- **Mitigation**: Implemented native Layer-4 Bash socket streams (`exec 3<>/dev/tcp/${host}/${port}`) in `test-health.sh` to test cross-container reachability without external binary dependencies.
-
-#### 11. Database Initialization Race Conditions & WAL Recovery Window
-- **Root Cause**: Downstream services launching before databases finish initializing schemas or recovering WAL log state.
-- **Risk**: Temporal workflow engine crash loop during initial setup.
-- **Mitigation**: Implemented 3-stage dependent orchestration in `stack-orchestration.sh` with **Exponential Backoff and Full Jitter** polling ($\text{delay} = \text{random}(1, \min(\text{max\_delay}, \text{base\_delay} \times 2^{\text{attempt}}))$) and `pg_isready` readiness checking.
+| **10** | **Distroless Container Probing** | Missing CLI binaries (`nc`/`curl`) inside distroless images cause probe failures | Native Layer-4 Bash socket streams (`exec 3<>/dev/tcp/...`) | [test-health.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/test-health.sh#L365-L385) |
+| **11** | **Database Recovery Race Condition** | Downstream services launch while database recovers WAL logs | 3-stage ordered orchestration & Exponential Backoff Jitter | [stack-orchestration.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/orchestrator/stack-orchestration.sh#L24-L60) |
 
 ---
 
 ## 5. Implementation Validation & Verification
 
-### 5.1 Pre-Flight Diagnostics Output
-Executing `./manage.sh up` performs automated system pre-flight checks:
-
-```bash
-✓ All host utilities (fuser, lsof, nc) are installed.
-✓ Docker daemon is active and running.
-✓ File descriptor limit verified (65536).
-✓ Kernel vm.max_map_count verified (262144).
-✓ System NTP time synchronization active.
-✓ Docker socket permissions verified.
-✓ Available system RAM verified (5560MB free).
-```
-
-### 5.2 Diagnostic Verification Suite
+### 5.1 Diagnostic Verification Suite
 Post-deployment validation is performed by [test-health.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/test-health.sh), executing 52 checks across 7 sections:
 
 ```bash
@@ -392,3 +269,89 @@ Post-deployment validation is performed by [test-health.sh](file:///home/btpl-la
 ✓ ALL 52/52 HEALTH & SECURITY CHECKS PASSED!
 ====================================================
 ```
+
+---
+
+## 6. OpenTelemetry Trace Span Execution Flow & Span Timeline Diagram
+
+### 6.1 Color-Coded Component Communication Architecture
+
+```mermaid
+graph TD
+    classDef client fill:#1E293B,stroke:#0F172A,stroke-width:2px,color:#FFF;
+    classDef gateway fill:#EC4899,stroke:#BE185D,stroke-width:2px,color:#FFF;
+    classDef collector fill:#06B6D4,stroke:#0E7490,stroke-width:2px,color:#FFF;
+    classDef tempo fill:#8B5CF6,stroke:#6D28D9,stroke-width:2px,color:#FFF;
+    classDef clickhouse fill:#F59E0B,stroke:#B45309,stroke-width:2px,color:#FFF;
+    classDef grafana fill:#10B981,stroke:#047857,stroke-width:2px,color:#FFF;
+
+    AppClient["Client Application / SDK<br/>(OTLP Tracing Client)"]:::client
+    Gateway["Traefik Gateway<br/>(TLS Port 31419)"]:::gateway
+    Collector["OTel Collector<br/>(OTLP Ingestion Port 4318)"]:::collector
+    TempoStore["Grafana Tempo<br/>(gRPC Traces Port 4317)"]:::tempo
+    CHStore["ClickHouse Database<br/>(Span Log Port 8123)"]:::clickhouse
+    GrafanaUI["Grafana Dashboard<br/>(Visualization Port 31415)"]:::grafana
+
+    AppClient -->|"1. TLS POST /v1/traces"| Gateway
+    Gateway -->|"2. Forward HTTP"| Collector
+    Collector -->|"3a. gRPC ExportSpans"| TempoStore
+    Collector -->|"3b. HTTP Batch Insert"| CHStore
+    GrafanaUI -->|"4a. Query Trace Spans"| TempoStore
+    GrafanaUI -->|"4b. Query Analytics"| CHStore
+```
+
+### 6.2 Trace Span Timeline & Execution Flow Sequence
+
+```mermaid
+sequenceDiagram
+    autonumber
+    rect rgb(30, 41, 59)
+        note over AppClient,Gateway: Phase 1: Ingestion & Gateway Proxy
+        AppClient->>Gateway: 1. POST /v1/traces (HTTP 443 TLS)<br/>Span: http.post /v1/traces (12ms)
+        Gateway->>Collector: 2. Reverse Proxy HTTP (Port 4318)<br/>Span: otel.receiver.otlp.http (8ms)
+    end
+
+    rect rgb(6, 182, 212)
+        note over Collector: Phase 2: OpenTelemetry Collector Batch Processing
+        Collector->>Collector: 3. Memory Limiter & Attribute Processor<br/>Span: otel.processor.batch (4ms)
+    end
+
+    rect rgb(139, 92, 246)
+        note over Collector,TempoStore: Phase 3: Dual-Write Exporter Pipeline
+        par OTLP gRPC Export to Tempo
+            Collector->>TempoStore: 4a. gRPC ExportSpans (Port 4317)<br/>Span: otel.exporter.otlp.grpc (15ms)
+            TempoStore->>TempoStore: 5a. WAL Append & Local Block Storage<br/>Span: tempo.wal.append (6ms)
+        and OTLP HTTP Export to ClickHouse Log Engine
+            Collector->>CHStore: 4b. HTTP Native Batch Insert (Port 8123)<br/>Span: clickhouse.insert.opentelemetry_span_log (18ms)
+            CHStore->>CHStore: 5b. System Table MergeTree Flush<br/>Span: clickhouse.flush_interval (5ms)
+        end
+    end
+
+    rect rgb(16, 185, 129)
+        note over GrafanaUI,TempoStore: Phase 4: Observability Query & Trace Waterfall Visualization
+        GrafanaUI->>TempoStore: 6. Query Trace ID via gRPC API (Port 3200)<br/>Span: grafana.datasource.tempo.query (14ms)
+        TempoStore-->>GrafanaUI: 7. Return Trace Waterfall Spans JSON
+        GrafanaUI->>CHStore: 8. Query Analytical Metrics (Port 8123)<br/>Span: grafana.datasource.clickhouse.query (9ms)
+        CHStore-->>GrafanaUI: 9. Return Aggregated Telemetry Metrics
+    end
+```
+
+---
+
+## 7. Source Code & Architectural Reference Links Matrix
+
+| Component | File Path | Line Range | Key Responsibility |
+|---|---|---|---|
+| **CLI Deployment Orchestrator** | [manage.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/manage.sh#L1-L60) | [L1-L60](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/manage.sh#L1-L60) | Main deployment entrypoint & dynamic `.env` auto-regeneration |
+| **Dynamic Path Discovery DSA Engine** | [dynamic-discovery.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/discovery/dynamic-discovery.sh#L1-L100) | [L1-L100](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/discovery/dynamic-discovery.sh#L1-L100) | 6-Stage DFS & HashSet path discovery engine |
+| **Pre-Flight System Verification** | [system-prereqs.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/prereqs/system-prereqs.sh#L1-L90) | [L1-L90](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/prereqs/system-prereqs.sh#L1-L90) | Checks `ulimit -n 65536`, `sysctl vm.max_map_count`, NTP, free RAM |
+| **Port Allocation & Conflict Manager** | [port-manager.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/ports/port-manager.sh#L1-L45) | [L1-L45](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/ports/port-manager.sh#L1-L45) | Re-allocates ports 31410-31425 and frees bound processes |
+| **TLS Certificate Generator** | [generate-certs.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/generate-certs.sh#L1-L80) | [L1-L80](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/generate-certs.sh#L1-L80) | RSA 4096-bit OpenSSL SAN certificate chain generation |
+| **3-Stage Container Orchestration Engine** | [stack-orchestration.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/orchestrator/stack-orchestration.sh#L20-L95) | [L20-L95](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/orchestrator/stack-orchestration.sh#L20-L95) | Exponential Backoff with Full Jitter polling & ordered startup |
+| **52-Point Diagnostic Test Suite** | [test-health.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/test-health.sh#L1-L415) | [L1-L415](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/test-health.sh#L1-L415) | Automated process, port, TLS, security, CRUD, & /dev/tcp probes |
+| **Docker Compose Topologies & Limits** | [docker-compose.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docker-compose.yml#L1-L329) | [L1-L329](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docker-compose.yml#L1-L329) | Service definitions, cgroups, healthchecks, networks, volumes |
+| **ClickHouse Server Limits Config** | [custom.xml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/clickhouse/config.d/custom.xml#L1-L28) | [L1-L28](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/clickhouse/config.d/custom.xml#L1-L28) | Server-level `<max_server_memory_usage>` and span logging config |
+| **ClickHouse User Profile Override** | [override.xml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/clickhouse/users.d/override.xml#L1-L8) | [L1-L8](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/clickhouse/users.d/override.xml#L1-L8) | User-level `<max_memory_usage>` profile overrides |
+| **OpenTelemetry Collector Config** | [otel-collector-config.yaml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/otel-collector/otel-collector-config.yaml#L1-L45) | [L1-L45](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/otel-collector/otel-collector-config.yaml#L1-L45) | Receiver, processor, and exporter pipelines for Tempo & ClickHouse |
+| **Tempo Tracing Configuration** | [tempo-config.yaml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/tempo/tempo-config.yaml#L1-L26) | [L1-L26](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/tempo/tempo-config.yaml#L1-L26) | OTLP gRPC receivers, wal, and local block storage paths |
+| **Environment Variable Schema** | [.env.example](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/.env.example#L1-L61) | [L1-L61](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/.env.example#L1-L61) | Canonical template for all environment configurations & ports |
