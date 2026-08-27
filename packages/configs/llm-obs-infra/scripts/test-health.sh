@@ -117,7 +117,7 @@ check_http() {
   local max_delay=8
 
   while [ $attempt -lt $max_attempts ]; do
-    code=$(curl -s -o /tmp/health_body.tmp -w "%{http_code}" "$url" 2>/dev/null || echo "000")
+    code=$(curl -sk -o /tmp/health_body.tmp -w "%{http_code}" "$url" 2>/dev/null || echo "000")
     body=$(cat /tmp/health_body.tmp 2>/dev/null || echo "")
     rm -f /tmp/health_body.tmp
 
