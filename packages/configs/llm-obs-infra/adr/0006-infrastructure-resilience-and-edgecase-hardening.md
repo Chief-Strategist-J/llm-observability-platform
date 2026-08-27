@@ -482,6 +482,103 @@ graph TD
      - `\b(?:4[0-9]{12}...)\b` → Replaced with `[REDACTED_CARD]`
   4. Batch Processor aggregates sanitized spans into 1024-span batches for ClickHouse/Tempo write.
 
+---
+
+### 8.8 Network Topology & Subnet Isolation Architecture
+
+Network isolation is enforced via an isolated Docker bridge network (`llmobs-network`, CIDR `172.28.0.0/16`) managed by setup-time signature tags.
+
+```mermaid
+graph TD
+    classDef client fill:#3B82F6,stroke:#1D4ED8,stroke-width:2px,color:#FFF;
+    classDef gateway fill:#EC4899,stroke:#BE185D,stroke-width:2px,color:#FFF;
+    classDef subnet fill:#10B981,stroke:#047857,stroke-width:2px,color:#FFF;
+    classDef internal fill:#8B5CF6,stroke:#6D28D9,stroke-width:2px,color:#FFF;
+
+    ExternalClient["External HTTP/S Client / User"]:::client
+    TraefikGateway["Traefik API Gateway<br/>Host Ports: 31410 (HTTP) / 31419 (HTTPS)<br/>Injects X-LLMObs-Network-Signature"]:::gateway
+
+    subgraph DockerBridge["Isolated Subnet: llmobs-network (172.28.0.0/16)"]
+        direction TB
+        OTelCollector["llmobs-otel-collector<br/>Ports: 4317 (gRPC) / 4318 (HTTP)"]:::internal
+        ClickHouseDB["llmobs-clickhouse-analytics<br/>Ports: 8123 (HTTP) / 9000 (Native)"]:::internal
+        AlloyDB["llmobs-alloydb-db<br/>Port: 5432 (PostgreSQL)"]:::internal
+        RedisLedger["llmobs-redis-ledger<br/>Port: 6379 (Redis)"]:::internal
+        TempoTracing["llmobs-tempo-tracing<br/>Port: 3200 (Tempo)"]:::internal
+        TemporalEngine["llmobs-temporal-engine<br/>Port: 7233 (gRPC)"]:::internal
+        GrafanaPortal["llmobs-grafana-portal<br/>Port: 3000 (Grafana)"]:::internal
+    end
+
+    ExternalClient -->|"HTTPS / TLS 1.2+"| TraefikGateway
+    TraefikGateway -->|"Routed API Traffic + Signature"| OTelCollector
+    TraefikGateway -->|"Routed Dashboard Traffic"| GrafanaPortal
+    OTelCollector -->|"Ingest Spans"| TempoTracing
+    OTelCollector -->|"Store Metrics & Logs"| ClickHouseDB
+    TemporalEngine -->|"State Persistence"| AlloyDB
+    ClickHouseDB --- RedisLedger
+```
+
+---
+
+### 8.9 End-to-End Distributed Tracing Architecture
+
+Distributed tracing streams OpenTelemetry spans from LLM application SDKs through automated PII redaction and stores trace span trees in Tempo and ClickHouse for Grafana NodeGraph visualization.
+
+```mermaid
+flowchart LR
+    classDef app fill:#3B82F6,stroke:#1D4ED8,stroke-width:2px,color:#FFF;
+    classDef otel fill:#06B6D4,stroke:#0E7490,stroke-width:2px,color:#FFF;
+    classDef store fill:#F59E0B,stroke:#B45309,stroke-width:2px,color:#FFF;
+    classDef view fill:#10B981,stroke:#047857,stroke-width:2px,color:#FFF;
+
+    LLMApp["1. LLM Application SDK<br/>(OpenAI / Anthropic Call)"]:::app
+    OTelReceiver["2. OTel Collector Receiver<br/>(OTLP gRPC :4317 / HTTP :4318)"]:::otel
+    PIIProcessor["3. PII Redaction Engine<br/>(Scrubbing sk-... & Bearer Tokens)"]:::otel
+    TempoEngine["4. Tempo Trace Engine<br/>(Block WAL Storage :3200)"]:::store
+    ClickHouseStore["5. ClickHouse Analytics DB<br/>(telemetry_spans Table :9000)"]:::store
+    GrafanaVisualizer["6. Grafana Explore / NodeGraph<br/>(Span Waterfalls & Latency Trees)"]:::view
+
+    LLMApp -->|"OTLP Traces"| OTelReceiver
+    OTelReceiver --> PIIProcessor
+    PIIProcessor -->|"Batch Write Traces"| TempoEngine
+    PIIProcessor -->|"Batch Write Logs & Metrics"| ClickHouseStore
+    TempoEngine -->|"Query Trace ID"| GrafanaVisualizer
+    ClickHouseStore -->|"Query Span Analytics"| GrafanaVisualizer
+```
+
+---
+
+### 8.10 Pure Data Persistence & Grafana Native Exporter Topology
+
+Grafana connects to 4 native container database exporters via pre-configured datasource drivers in [datasources.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/grafana/provisioning/datasources/datasources.yml#L1-L50).
+
+```mermaid
+graph LR
+    classDef grafana fill:#EC4899,stroke:#BE185D,stroke-width:2px,color:#FFF;
+    classDef driver fill:#3B82F6,stroke:#1D4ED8,stroke-width:2px,color:#FFF;
+    classDef db fill:#F59E0B,stroke:#B45309,stroke-width:2px,color:#FFF;
+    classDef volume fill:#10B981,stroke:#047857,stroke-width:2px,color:#FFF;
+
+    subgraph GrafanaPortal["Grafana Dashboard Portal (llmobs-grafana-portal)"]
+        TempoDS["1. Tempo Datasource<br/>(type: tempo)"]:::driver
+        CHDS["2. ClickHouse Datasource<br/>(type: grafana-clickhouse-datasource)"]:::driver
+        AlloyDS["3. AlloyDB Datasource<br/>(type: postgres)"]:::driver
+        RedisDS["4. Redis Datasource<br/>(type: redis-datasource)"]:::driver
+    end
+
+    subgraph StorageLayer["Container Database Layer & Persistent Volumes"]
+        TempoDB["llmobs-tempo-tracing<br/>Port: 3200"]:::db --> VolTempo[("tempo_data")]:::volume
+        CHDB["llmobs-clickhouse-analytics<br/>Port: 9000"]:::db --> VolCH[("clickhouse_data")]:::volume
+        AlloyDBContainer["llmobs-alloydb-db<br/>Port: 5432"]:::db --> VolAlloy[("alloydb_data")]:::volume
+        RedisContainer["llmobs-redis-ledger<br/>Port: 6379"]:::db --> VolRedis[("In-Memory Spend Ledger")]:::volume
+    end
+
+    TempoDS -->|"HTTP Proxy :3200"| TempoDB
+    CHDS -->|"Native TCP Protocol :9000"| CHDB
+    AlloyDS -->|"PostgreSQL Wire Protocol :5432"| AlloyDBContainer
+    RedisDS -->|"Redis Wire Protocol :6379"| RedisContainer
+```
+
 #### 8.7.3 Container Privilege Escalation Prevention (LLD)
 - **Component**: Docker Engine Cgroup & Kernel Security Subsystem ([docker-compose.yml:L10-L290](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docker-compose.yml#L10-L290)).
 - **Execution Path**:
