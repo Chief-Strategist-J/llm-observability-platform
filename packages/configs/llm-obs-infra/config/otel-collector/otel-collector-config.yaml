@@ -25,6 +25,16 @@ processors:
     limit_mib: 512
     spike_limit_mib: 128
 
+  transform/pii_redaction:
+    error_mode: ignore
+    trace_statements:
+      - context: span
+        statements:
+          - replace_all_patterns(attributes, "value", "sk-[a-zA-Z0-9_-]{20,}", "[REDACTED_API_KEY]")
+          - replace_all_patterns(attributes, "value", "Bearer\\s+[a-zA-Z0-9._\\-]+", "Bearer [REDACTED_TOKEN]")
+          - replace_all_patterns(attributes, "value", "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}", "[REDACTED_EMAIL]")
+          - replace_all_patterns(attributes, "value", "\\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13})\\b", "[REDACTED_CARD]")
+
   attributes:
     actions:
       - key: deployment.environment
@@ -65,5 +75,5 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, attributes, resource, batch]
+      processors: [memory_limiter, transform/pii_redaction, attributes, resource, batch]
       exporters: [otlp/tempo, debug]

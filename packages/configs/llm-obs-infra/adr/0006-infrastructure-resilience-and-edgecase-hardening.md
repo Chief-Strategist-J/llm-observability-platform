@@ -366,3 +366,16 @@ sequenceDiagram
 | **OpenTelemetry Collector Config** | [otel-collector-config.yaml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/otel-collector/otel-collector-config.yaml#L1-L45) | [L1-L45](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/otel-collector/otel-collector-config.yaml#L1-L45) | Receiver, processor, and exporter pipelines for Tempo & ClickHouse |
 | **Tempo Tracing Configuration** | [tempo-config.yaml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/tempo/tempo-config.yaml#L1-L26) | [L1-L26](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/tempo/tempo-config.yaml#L1-L26) | OTLP gRPC receivers, wal, and local block storage paths |
 | **Environment Variable Schema** | [.env.example](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/.env.example#L1-L61) | [L1-L61](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/.env.example#L1-L61) | Canonical template for all environment configurations & ports |
+
+---
+
+## 8. Compliance & Security Hardening Architecture (SOC2 / ISO 27001 / GDPR)
+
+### 8.1 Enterprise Compliance Alignment Matrix
+
+| Compliance Domain | Standard Specification | Infrastructure Safeguard | Primary Configuration |
+|---|---|---|---|
+| **SOC 2 Type II Security** | Privilege Escalation Block & Security Options | `security_opt: ["no-new-privileges:true"]` enforced across all 9 microservices | [docker-compose.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docker-compose.yml#L1-L330) |
+| **GDPR / CCPA Data Protection** | Automatic PII & Sensitive API Key Redaction | `transform/pii_redaction` processor sanitizing `sk-...` keys, Bearer tokens, emails & cards | [otel-collector-config.yaml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/otel-collector/otel-collector-config.yaml#L28-L36) |
+| **ISO 27001 Network Security** | Network Signature Metadata & Ingress Headers | `com.llmobs.network.signature=llmobs-net-sig-v1.0` & `X-LLMObs-Network-Signature` | [stack-orchestration.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/orchestrator/stack-orchestration.sh#L93-L104) & [dynamic.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/traefik/dynamic.yml#L27-L35) |
+| **HIPAA Data Isolation** | Subnet & Port Collision Isolation | Dedicated `172.28.0.0/16` CIDR block and isolated `31410-31425` host ports | [port-manager.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/ports/port-manager.sh#L1-L45) |
