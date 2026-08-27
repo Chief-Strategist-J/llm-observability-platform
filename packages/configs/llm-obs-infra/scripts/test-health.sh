@@ -134,12 +134,15 @@ check_network() {
 }
 
 echo -e "\n${YELLOW}1. Container Process & Docker Health Status:${NC}"
-check_container_status "frontend-traefik-gateway" "Traefik Gateway"
-check_container_status "frontend-redis" "Redis Cache"
-check_container_status "frontend-kafka" "Kafka Event Broker"
-check_container_status "frontend-tempo" "Grafana Tempo"
-check_container_status "frontend-otel-collector" "OpenTelemetry Collector"
-check_container_status "frontend-grafana" "Grafana Dashboard"
+check_container_status "llmobs-traefik-gateway" "Traefik Gateway"
+check_container_status "llmobs-redis-ledger" "Redis Cache"
+check_container_status "llmobs-kafka-broker" "Kafka Event Broker"
+check_container_status "llmobs-tempo-tracing" "Grafana Tempo"
+check_container_status "llmobs-otel-collector" "OpenTelemetry Collector"
+check_container_status "llmobs-grafana-portal" "Grafana Dashboard"
+check_container_status "llmobs-clickhouse-analytics" "ClickHouse Analytics"
+check_container_status "llmobs-alloydb-db" "AlloyDB Relational DB"
+check_container_status "llmobs-temporal-engine" "Temporal Workflow Engine"
 
 echo -e "\n${YELLOW}2. Individual Service Port & Endpoint Access:${NC}"
 check_tcp "Traefik Gateway HTTP" "31410"
@@ -163,6 +166,11 @@ else
 fi
 check_tcp "OTel Collector HTTP" "31417"
 check_tcp "OTel Collector gRPC" "31418"
+check_tcp "AlloyDB Relational DB" "31420"
+check_tcp "ClickHouse HTTP" "31421"
+check_tcp "ClickHouse Native" "31422"
+check_tcp "Temporal gRPC" "31424"
+check_tcp "Temporal UI" "31425"
 
 echo -e "\n${YELLOW}3. TLS Certificate & HTTPS Verification:${NC}"
 check_tls "Traefik Gateway TLS" "localhost" "31419"
@@ -207,12 +215,15 @@ else
 fi
 
 echo -e "\n${YELLOW}5. Network Isolation:${NC}"
-check_network "frontend-traefik-gateway" "llmobs-network"
-check_network "frontend-redis" "llmobs-network"
-check_network "frontend-kafka" "llmobs-network"
-check_network "frontend-tempo" "llmobs-network"
-check_network "frontend-otel-collector" "llmobs-network"
-check_network "frontend-grafana" "llmobs-network"
+check_network "llmobs-traefik-gateway" "llmobs-network"
+check_network "llmobs-redis-ledger" "llmobs-network"
+check_network "llmobs-kafka-broker" "llmobs-network"
+check_network "llmobs-tempo-tracing" "llmobs-network"
+check_network "llmobs-otel-collector" "llmobs-network"
+check_network "llmobs-grafana-portal" "llmobs-network"
+check_network "llmobs-clickhouse-analytics" "llmobs-network"
+check_network "llmobs-alloydb-db" "llmobs-network"
+check_network "llmobs-temporal-engine" "llmobs-network"
 
 echo -e "\n${BLUE}====================================================${NC}"
 if [ "$PASSED_CHECKS" -eq "$TOTAL_CHECKS" ]; then

@@ -16,6 +16,10 @@
         <flush_interval_milliseconds>7500</flush_interval_milliseconds>
     </opentelemetry_span_log>
 
+    <!-- Server Memory Protection to align with Docker cgroups -->
+    <max_server_memory_usage>3758096384</max_server_memory_usage>
+    <max_memory_usage_for_user>2147483648</max_memory_usage_for_user>
+
     <logger>
         <level>information</level>
         <console>true</console>

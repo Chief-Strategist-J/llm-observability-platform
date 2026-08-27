@@ -1,7 +1,15 @@
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "50m"
+    max-file: "3"
+
 services:
   llmobs-traefik:
     image: traefik:v3.7
     container_name: llmobs-traefik-gateway
+    restart: unless-stopped
+    logging: *default-logging
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
@@ -47,6 +55,8 @@ services:
   llmobs-redis:
     image: redis:7-alpine
     container_name: llmobs-redis-ledger
+    restart: unless-stopped
+    logging: *default-logging
     command: >
       redis-server /etc/redis/redis.conf
       --requirepass ${REDIS_PASSWORD:-llmobs_redis_s3cret_2024}
@@ -68,6 +78,18 @@ services:
   llmobs-kafka:
     image: apache/kafka:latest
     container_name: llmobs-kafka-broker
+    restart: unless-stopped
+    logging: *default-logging
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
     ports:
       - "${PORT_KAFKA:-31414}:9092"
     environment:
@@ -83,10 +105,12 @@ services:
       - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
       - KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0
       - KAFKA_NUM_PARTITIONS=3
+      - KAFKA_JVM_PERFORMANCE_OPTS=-Xms512m -Xmx1024m
       - OTEL_SERVICE_NAME=llmobs-kafka-broker
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://llmobs-otel-collector:4318
     volumes:
       - ./config/kafka/server.properties:/etc/kafka/server.properties:ro
+      - kafka_data:/var/lib/kafka/data
     networks:
       - llmobs-network
     healthcheck:
@@ -98,9 +122,21 @@ services:
   llmobs-clickhouse:
     image: clickhouse/clickhouse-server:24.8-alpine
     container_name: llmobs-clickhouse-analytics
+    restart: unless-stopped
+    logging: *default-logging
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    deploy:
+      resources:
+        limits:
+          memory: 4096M
+        reservations:
+          memory: 1024M
     ports:
-      - "${PORT_CLICKHOUSE_HTTP:-8123}:8123"
-      - "${PORT_CLICKHOUSE_NATIVE:-9000}:9000"
+      - "${PORT_CLICKHOUSE_HTTP:-31421}:8123"
+      - "${PORT_CLICKHOUSE_NATIVE:-31422}:9000"
     environment:
       CLICKHOUSE_DB: ${CLICKHOUSE_DB:-llm_telemetry_analytics}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
@@ -109,6 +145,7 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://llmobs-otel-collector:4318
     volumes:
       - ./config/clickhouse/config.d:/etc/clickhouse-server/config.d:ro
+      - clickhouse_data:/var/lib/clickhouse
     networks:
       - llmobs-network
     healthcheck:
@@ -120,6 +157,8 @@ services:
   llmobs-tempo:
     image: grafana/tempo:latest
     container_name: llmobs-tempo-tracing
+    restart: unless-stopped
+    logging: *default-logging
     command: ["-config.file=/etc/tempo/tempo-config.yaml"]
     environment:
       - OTEL_SERVICE_NAME=llmobs-tempo-tracing
@@ -129,7 +168,7 @@ services:
       - tempo_data:/var/tempo
     ports:
       - "${PORT_TEMPO:-31416}:3200"
-      - "4317:4317"
+      - "${PORT_TEMPO_OTLP_GRPC:-31423}:4317"
     networks:
       - llmobs-network
     labels:
@@ -143,6 +182,14 @@ services:
   llmobs-otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     container_name: llmobs-otel-collector
+    restart: unless-stopped
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+        reservations:
+          memory: 256M
     command: ["--config=/etc/otel-collector-config.yaml"]
     environment:
       - OTEL_SERVICE_NAME=llmobs-otel-collector
@@ -166,6 +213,8 @@ services:
   llmobs-grafana:
     image: grafana/grafana:latest
     container_name: llmobs-grafana-portal
+    restart: unless-stopped
+    logging: *default-logging
     ports:
       - "${PORT_GRAFANA:-31415}:3000"
     environment:
@@ -202,6 +251,14 @@ services:
   llmobs-alloydb:
     image: google/alloydbomni:15
     container_name: llmobs-alloydb-db
+    restart: unless-stopped
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
     ports:
       - "${PORT_ALLOYDB:-31420}:5432"
     environment:
@@ -226,9 +283,11 @@ services:
   llmobs-temporal:
     image: temporalio/auto-setup:1.24.2
     container_name: llmobs-temporal-engine
+    restart: unless-stopped
+    logging: *default-logging
     ports:
-      - "7233:7233"
-      - "${PORT_TEMPORAL_UI:-8088}:8080"
+      - "${PORT_TEMPORAL_GRPC:-31424}:7233"
+      - "${PORT_TEMPORAL_UI:-31425}:8080"
     environment:
       - DB=postgres12
       - DB_PORT=5432
@@ -262,3 +321,5 @@ volumes:
   tempo_data:
   grafana_data:
   alloydb_data:
+  clickhouse_data:
+  kafka_data:
