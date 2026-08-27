@@ -379,3 +379,16 @@ sequenceDiagram
 | **GDPR / CCPA Data Protection** | Automatic PII & Sensitive API Key Redaction | `transform/pii_redaction` processor sanitizing `sk-...` keys, Bearer tokens, emails & cards | [otel-collector-config.yaml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/otel-collector/otel-collector-config.yaml#L28-L36) |
 | **ISO 27001 Network Security** | Network Signature Metadata & Ingress Headers | `com.llmobs.network.signature=llmobs-net-sig-v1.0` & `X-LLMObs-Network-Signature` | [stack-orchestration.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/orchestrator/stack-orchestration.sh#L93-L104) & [dynamic.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/traefik/dynamic.yml#L27-L35) |
 | **HIPAA Data Isolation** | Subnet & Port Collision Isolation | Dedicated `172.28.0.0/16` CIDR block and isolated `31410-31425` host ports | [port-manager.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/ports/port-manager.sh#L1-L45) |
+
+### 8.2 GDPR Right-to-Be-Forgotten Automated Data Erasure (`gdpr-erasure.sh`)
+- **Specification**: Compliance utility script located at [gdpr-erasure.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/gdpr-erasure.sh#L1-L75).
+- **Execution**: `./gdpr-erasure.sh --user-id=USR_123`
+- **Actions**:
+  1. Purges matching telemetry records from ClickHouse `llm_telemetry_analytics.telemetry_spans`.
+  2. Purges metadata records from AlloyDB `llm_observability.user_metadata`.
+  3. Inserts an immutable GDPR erasure record into AlloyDB `security_audit_logs`.
+
+### 8.3 SOC 2 Type II Security Audit Logging Schema (`security-audit.sql`)
+- **Specification**: Relational security audit log schema located at [security-audit.sql](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/alloydb/security-audit.sql#L1-L12).
+- **Fields**: `id`, `timestamp`, `actor_id`, `action`, `resource`, `ip_address`, `status`, `details`.
+- **Indexing**: Indexed on `actor_id` and `timestamp` for fast compliance reporting.
