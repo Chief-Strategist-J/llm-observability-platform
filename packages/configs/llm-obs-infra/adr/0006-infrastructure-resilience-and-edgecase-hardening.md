@@ -245,6 +245,7 @@ All microservices are bound to isolated ports in the **`31410` – `31425` range
 | **10** | **Distroless Container Probing** | Missing CLI binaries (`nc`/`curl`) inside distroless images cause probe failures | Native Layer-4 Bash socket streams (`exec 3<>/dev/tcp/...`) | [test-health.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/test-health.sh#L365-L385) |
 | **11** | **Database Recovery Race Condition** | Downstream services launch while database recovers WAL logs | 3-stage ordered orchestration & Exponential Backoff Jitter | [stack-orchestration.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/orchestrator/stack-orchestration.sh#L24-L60) |
 | **12** | **Zero-Trust Network Signature & Spoofing** | Unauthenticated containers attach to subnet & spoof internal ingress traffic | Network signature label (`llmobs-net-sig-v1.0`) & Traefik signature header (`X-LLMObs-Network-Signature`) | [stack-orchestration.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/orchestrator/stack-orchestration.sh#L93-L104) & [dynamic.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/traefik/dynamic.yml#L27-L35) |
+| **13** | **HTTPS Probe TLS Handshake & Pattern Match** | Self-signed RSA certificates cause `HTTP 000000` & status code regex patterns fail against HTML response bodies | Added `-k` TLS flag to `curl` & evaluated `$code` against status code regex (`200|404|302|301`) | [test-health.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/test-health.sh#L120-L148) |
 
 ---
 
@@ -255,6 +256,13 @@ All microservices are bound to isolated ports in the **`31410` – `31425` range
   1. **Docker Subnet Signature**: `com.llmobs.network.signature=llmobs-net-sig-v1.0` embedded on `llmobs-network` bridge (`172.28.0.0/16`) in `stack-orchestration.sh`.
   2. **Gateway Ingress/Egress Signature**: Injected `X-LLMObs-Network-Signature: llmobs-net-sig-v1.0` across all API request and response headers in Traefik `dynamic.yml`.
   3. **Automated Assertion**: Security hardening test in `test-health.sh` verifying `X-LLMObs-Network-Signature` presence on gateway endpoints.
+
+#### 13. HTTPS Gateway Probe & Status Code Pattern Matching
+- **Root Cause**: The diagnostic test function `check_http` in `test-health.sh` invoked `curl` without `-k` (`--insecure`), causing self-signed SAN TLS certificate verification to fail (`HTTP 000000`). Furthermore, `check_http` evaluated regex patterns like `200|404|302|301` against the HTML response body instead of the HTTP status code variable `$code`.
+- **Risk**: False-negative diagnostic probe failures on secure HTTPS endpoints.
+- **Mitigation**:
+  1. Added `-k` TLS handshake flag to `curl` in `check_http` (`curl -sk -o /tmp/health_body.tmp ...`).
+  2. Updated pattern matching logic to evaluate `$code` directly against regex patterns (`echo "$code" | grep -qE "^(${expected_pattern})$"`).
 
 ---
 
