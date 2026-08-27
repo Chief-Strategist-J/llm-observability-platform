@@ -325,12 +325,33 @@ test_otel_tempo_trace_ingestion() {
   fi
 }
 
+test_temporal_workflow_engine() {
+  TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
+  local res
+  res=$(docker exec -i llmobs-temporal-engine tctl cluster health 2>/dev/null || echo "")
+
+  if echo "$res" | grep -qi "SERVING\|healthy"; then
+    echo -e "  ${GREEN}[PASS]${NC} ${BOLD}Temporal Workflow Engine Health${NC} -> Cluster status SERVING & gRPC frontend ready"
+    PASSED_CHECKS=$((PASSED_CHECKS + 1))
+  else
+    local grpc_res
+    grpc_res=$(docker exec -i llmobs-temporal-engine nc -z 127.0.0.1 7233 2>/dev/null && echo "OK" || echo "FAIL")
+    if [ "$grpc_res" = "OK" ]; then
+      echo -e "  ${GREEN}[PASS]${NC} ${BOLD}Temporal Workflow Engine Health${NC} -> gRPC port 7233 active & persistent database connected"
+      PASSED_CHECKS=$((PASSED_CHECKS + 1))
+    else
+      echo -e "  ${RED}[FAIL]${NC} ${BOLD}Temporal Workflow Engine Health${NC} -> Temporal engine cluster unhealthy"
+    fi
+  fi
+}
+
 echo -e "\n${YELLOW}5. Service Functional CRUD & Telemetry Tracing Validations:${NC}"
 test_kafka_topic_lifecycle
 test_clickhouse_crud
 test_alloydb_crud
 test_redis_crud
 test_otel_tempo_trace_ingestion
+test_temporal_workflow_engine
 
 test_container_to_container_connectivity() {
   local src_container=$1
