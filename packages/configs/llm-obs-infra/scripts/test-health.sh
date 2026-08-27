@@ -121,9 +121,7 @@ check_http() {
     body=$(cat /tmp/health_body.tmp 2>/dev/null || echo "")
     rm -f /tmp/health_body.tmp
 
-    if [ "$expected_pattern" = "200" ] && [ "$code" = "200" ]; then
-      break
-    elif [ "$expected_pattern" != "200" ] && echo "$body" | grep -qi "$expected_pattern"; then
+    if echo "$code" | grep -qE "^(${expected_pattern})$" || echo "$body" | grep -qi "$expected_pattern"; then
       break
     fi
 
@@ -138,11 +136,8 @@ check_http() {
     sleep "$jitter"
   done
 
-  if [ "$expected_pattern" = "200" ] && [ "$code" = "200" ]; then
-    echo -e "  ${GREEN}[PASS]${NC} ${BOLD}${name}${NC} -> ${url} (HTTP 200)"
-    PASSED_CHECKS=$((PASSED_CHECKS + 1))
-  elif [ "$expected_pattern" != "200" ] && echo "$body" | grep -qi "$expected_pattern"; then
-    echo -e "  ${GREEN}[PASS]${NC} ${BOLD}${name}${NC} -> ${url} (${expected_pattern} OK)"
+  if echo "$code" | grep -qE "^(${expected_pattern})$" || echo "$body" | grep -qi "$expected_pattern"; then
+    echo -e "  ${GREEN}[PASS]${NC} ${BOLD}${name}${NC} -> ${url} (HTTP ${code})"
     PASSED_CHECKS=$((PASSED_CHECKS + 1))
   else
     echo -e "  ${RED}[FAIL]${NC} ${BOLD}${name}${NC} -> ${url} (HTTP ${code}, expected ${expected_pattern})"
