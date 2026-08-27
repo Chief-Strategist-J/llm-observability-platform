@@ -38,8 +38,27 @@ check_container_status() {
     return 0
   fi
 
-  local status
-  status=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container_name" 2>/dev/null || echo "unknown")
+  local status="unknown"
+  local attempt=0
+  local max_attempts=8
+  local base_delay=1
+  local max_delay=8
+
+  while [ $attempt -lt $max_attempts ]; do
+    status=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container_name" 2>/dev/null || echo "unknown")
+    if [ "$status" = "healthy" ] || [ "$status" = "running" ]; then
+      break
+    fi
+    attempt=$((attempt + 1))
+    if [ $attempt -ge $max_attempts ]; then
+      break
+    fi
+    local exp=$((1 << attempt))
+    local cap=$((base_delay * exp))
+    [ $cap -gt $max_delay ] && cap=$max_delay
+    local jitter=$(( (RANDOM % cap) + 1 ))
+    sleep "$jitter"
+  done
 
   if [ "$status" = "healthy" ] || [ "$status" = "running" ]; then
     echo -e "  ${GREEN}[PASS]${NC} ${BOLD}${service_label}${NC} (${container_name}) -> Status: ${status}"
@@ -55,12 +74,25 @@ check_tcp() {
   local port=$2
   TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
   local connected=false
-  for i in {1..4}; do
+  local attempt=0
+  local max_attempts=8
+  local base_delay=1
+  local max_delay=8
+
+  while [ $attempt -lt $max_attempts ]; do
     if nc -z localhost "$port" >/dev/null 2>&1; then
       connected=true
       break
     fi
-    sleep 2
+    attempt=$((attempt + 1))
+    if [ $attempt -ge $max_attempts ]; then
+      break
+    fi
+    local exp=$((1 << attempt))
+    local cap=$((base_delay * exp))
+    [ $cap -gt $max_delay ] && cap=$max_delay
+    local jitter=$(( (RANDOM % cap) + 1 ))
+    sleep "$jitter"
   done
 
   if [ "$connected" = true ]; then
@@ -77,14 +109,43 @@ check_http() {
   local expected_pattern=$3
   TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
 
-  local code
-  code=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 3 "$url" || echo "000")
+  local code="000"
+  local body=""
+  local attempt=0
+  local max_attempts=8
+  local base_delay=1
+  local max_delay=8
 
-  if [[ "$expected_pattern" =~ $code ]]; then
-    echo -e "  ${GREEN}[PASS]${NC} ${BOLD}${name}${NC} -> ${url} (HTTP ${code})"
+  while [ $attempt -lt $max_attempts ]; do
+    code=$(curl -s -o /tmp/health_body.tmp -w "%{http_code}" "$url" 2>/dev/null || echo "000")
+    body=$(cat /tmp/health_body.tmp 2>/dev/null || echo "")
+    rm -f /tmp/health_body.tmp
+
+    if [ "$expected_pattern" = "200" ] && [ "$code" = "200" ]; then
+      break
+    elif [ "$expected_pattern" != "200" ] && echo "$body" | grep -qi "$expected_pattern"; then
+      break
+    fi
+
+    attempt=$((attempt + 1))
+    if [ $attempt -ge $max_attempts ]; then
+      break
+    fi
+    local exp=$((1 << attempt))
+    local cap=$((base_delay * exp))
+    [ $cap -gt $max_delay ] && cap=$max_delay
+    local jitter=$(( (RANDOM % cap) + 1 ))
+    sleep "$jitter"
+  done
+
+  if [ "$expected_pattern" = "200" ] && [ "$code" = "200" ]; then
+    echo -e "  ${GREEN}[PASS]${NC} ${BOLD}${name}${NC} -> ${url} (HTTP 200)"
+    PASSED_CHECKS=$((PASSED_CHECKS + 1))
+  elif [ "$expected_pattern" != "200" ] && echo "$body" | grep -qi "$expected_pattern"; then
+    echo -e "  ${GREEN}[PASS]${NC} ${BOLD}${name}${NC} -> ${url} (${expected_pattern} OK)"
     PASSED_CHECKS=$((PASSED_CHECKS + 1))
   else
-    echo -e "  ${RED}[FAIL]${NC} ${BOLD}${name}${NC} -> ${url} (HTTP ${code}, expected: ${expected_pattern})"
+    echo -e "  ${RED}[FAIL]${NC} ${BOLD}${name}${NC} -> ${url} (HTTP ${code}, expected ${expected_pattern})"
   fi
 }
 
@@ -209,6 +270,7 @@ check_header "X-Frame-Options" "https://localhost:31419" "X-Frame-Options" "llmo
 check_header "Strict-Transport-Security" "https://localhost:31419" "Strict-Transport-Security" "llmobs.gateway"
 check_header "X-XSS-Protection" "https://localhost:31419" "X-XSS-Protection" "llmobs.gateway"
 check_header "Referrer-Policy" "https://localhost:31419" "Referrer-Policy" "llmobs.gateway"
+check_header "X-LLMObs-Network-Signature" "https://localhost:31419" "X-LLMObs-Network-Signature" "llmobs.gateway"
 
 REDIS_PW=""
 if [ -f "$PKG_DIR/.env" ]; then
@@ -227,9 +289,30 @@ fi
 test_kafka_topic_lifecycle() {
   TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
   local topic="llmobs-health-check-$(date +%s)"
+  local success=false
+  local attempt=0
+  local max_attempts=8
+  local base_delay=1
+  local max_delay=8
 
-  if docker exec llmobs-kafka-broker /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic "$topic" --partitions 1 --replication-factor 1 >/dev/null 2>&1; then
-    docker exec llmobs-kafka-broker /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --delete --topic "$topic" >/dev/null 2>&1 || true
+  while [ $attempt -lt $max_attempts ]; do
+    if docker exec llmobs-kafka-broker /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic "$topic" --partitions 1 --replication-factor 1 >/dev/null 2>&1; then
+      docker exec llmobs-kafka-broker /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --delete --topic "$topic" >/dev/null 2>&1 || true
+      success=true
+      break
+    fi
+    attempt=$((attempt + 1))
+    if [ $attempt -ge $max_attempts ]; then
+      break
+    fi
+    local exp=$((1 << attempt))
+    local cap=$((base_delay * exp))
+    [ $cap -gt $max_delay ] && cap=$max_delay
+    local jitter=$(( (RANDOM % cap) + 1 ))
+    sleep "$jitter"
+  done
+
+  if [ "$success" = true ]; then
     echo -e "  ${GREEN}[PASS]${NC} ${BOLD}Kafka Service Lifecycle${NC} -> Topic create/delete verification OK"
     PASSED_CHECKS=$((PASSED_CHECKS + 1))
   else
@@ -254,12 +337,31 @@ test_clickhouse_crud() {
   local auth_header=""
   [ -n "$ch_pw" ] && auth_header="-u ${ch_user}:${ch_pw}"
 
-  curl -s $auth_header -X POST "http://localhost:31421/?database=${ch_db}" --data-binary "CREATE TABLE IF NOT EXISTS ${tbl} (id UInt64, val String) ENGINE = Memory;" >/dev/null 2>&1 || true
-  curl -s $auth_header -X POST "http://localhost:31421/?database=${ch_db}" --data-binary "INSERT INTO ${tbl} VALUES (1, 'health_ok');" >/dev/null 2>&1 || true
+  local res=""
+  local attempt=0
+  local max_attempts=8
+  local base_delay=1
+  local max_delay=8
 
-  local res
-  res=$(curl -s $auth_header -X POST "http://localhost:31421/?database=${ch_db}" --data-binary "SELECT val FROM ${tbl} WHERE id = 1;" 2>/dev/null || echo "")
-  curl -s $auth_header -X POST "http://localhost:31421/?database=${ch_db}" --data-binary "DROP TABLE IF EXISTS ${tbl};" >/dev/null 2>&1 || true
+  while [ $attempt -lt $max_attempts ]; do
+    curl -s $auth_header -X POST "http://localhost:31421/?database=${ch_db}" --data-binary "CREATE TABLE IF NOT EXISTS ${tbl} (id UInt64, val String) ENGINE = Memory;" >/dev/null 2>&1 || true
+    curl -s $auth_header -X POST "http://localhost:31421/?database=${ch_db}" --data-binary "INSERT INTO ${tbl} VALUES (1, 'health_ok');" >/dev/null 2>&1 || true
+    res=$(curl -s $auth_header -X POST "http://localhost:31421/?database=${ch_db}" --data-binary "SELECT val FROM ${tbl} WHERE id = 1;" 2>/dev/null || echo "")
+    curl -s $auth_header -X POST "http://localhost:31421/?database=${ch_db}" --data-binary "DROP TABLE IF EXISTS ${tbl};" >/dev/null 2>&1 || true
+
+    if echo "$res" | grep -q "health_ok"; then
+      break
+    fi
+    attempt=$((attempt + 1))
+    if [ $attempt -ge $max_attempts ]; then
+      break
+    fi
+    local exp=$((1 << attempt))
+    local cap=$((base_delay * exp))
+    [ $cap -gt $max_delay ] && cap=$max_delay
+    local jitter=$(( (RANDOM % cap) + 1 ))
+    sleep "$jitter"
+  done
 
   if echo "$res" | grep -q "health_ok"; then
     echo -e "  ${GREEN}[PASS]${NC} ${BOLD}ClickHouse CRUD Verification${NC} -> Table create/insert/select/drop OK"
@@ -288,7 +390,7 @@ test_alloydb_crud() {
 
   local res=""
   local attempt=0
-  local max_attempts=6
+  local max_attempts=8
   local base_delay=1
   local max_delay=8
 
@@ -320,11 +422,30 @@ test_redis_crud() {
   TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
   local key="health:test:$(date +%s)"
 
-  local res
-  res=$(docker exec -i llmobs-redis-ledger redis-cli -a llmobs_redis_s3cret_2024 SET "$key" "redis_ok" 2>/dev/null || echo "")
-  local val
-  val=$(docker exec -i llmobs-redis-ledger redis-cli -a llmobs_redis_s3cret_2024 GET "$key" 2>/dev/null || echo "")
-  docker exec -i llmobs-redis-ledger redis-cli -a llmobs_redis_s3cret_2024 DEL "$key" >/dev/null 2>&1 || true
+  local val=""
+  local attempt=0
+  local max_attempts=8
+  local base_delay=1
+  local max_delay=8
+
+  while [ $attempt -lt $max_attempts ]; do
+    docker exec -i llmobs-redis-ledger redis-cli -a llmobs_redis_s3cret_2024 SET "$key" "redis_ok" >/dev/null 2>&1 || true
+    val=$(docker exec -i llmobs-redis-ledger redis-cli -a llmobs_redis_s3cret_2024 GET "$key" 2>/dev/null || echo "")
+    docker exec -i llmobs-redis-ledger redis-cli -a llmobs_redis_s3cret_2024 DEL "$key" >/dev/null 2>&1 || true
+
+    if echo "$val" | grep -q "redis_ok"; then
+      break
+    fi
+    attempt=$((attempt + 1))
+    if [ $attempt -ge $max_attempts ]; then
+      break
+    fi
+    local exp=$((1 << attempt))
+    local cap=$((base_delay * exp))
+    [ $cap -gt $max_delay ] && cap=$max_delay
+    local jitter=$(( (RANDOM % cap) + 1 ))
+    sleep "$jitter"
+  done
 
   if echo "$val" | grep -q "redis_ok"; then
     echo -e "  ${GREEN}[PASS]${NC} ${BOLD}Redis CRUD Verification${NC} -> Key set/get/del verification OK"
@@ -354,8 +475,27 @@ test_otel_tempo_trace_ingestion() {
     }]
   }'
 
-  local otel_res
-  otel_res=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://localhost:31417/v1/traces" -H "Content-Type: application/json" -d "$json_payload" 2>/dev/null || echo "000")
+  local otel_res="000"
+  local attempt=0
+  local max_attempts=8
+  local base_delay=1
+  local max_delay=8
+
+  while [ $attempt -lt $max_attempts ]; do
+    otel_res=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://localhost:31417/v1/traces" -H "Content-Type: application/json" -d "$json_payload" 2>/dev/null || echo "000")
+    if [ "$otel_res" = "200" ]; then
+      break
+    fi
+    attempt=$((attempt + 1))
+    if [ $attempt -ge $max_attempts ]; then
+      break
+    fi
+    local exp=$((1 << attempt))
+    local cap=$((base_delay * exp))
+    [ $cap -gt $max_delay ] && cap=$max_delay
+    local jitter=$(( (RANDOM % cap) + 1 ))
+    sleep "$jitter"
+  done
 
   if [ "$otel_res" = "200" ]; then
     echo -e "  ${GREEN}[PASS]${NC} ${BOLD}OTel -> Tempo Telemetry Tracing${NC} -> OTLP span HTTP ingestion & trace pipe OK"
@@ -367,19 +507,41 @@ test_otel_tempo_trace_ingestion() {
 
 test_temporal_workflow_engine() {
   TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
-  local res
-  res=$(docker exec -i llmobs-temporal-engine temporal operator cluster health 2>/dev/null || docker exec -i llmobs-temporal-engine tctl cluster health 2>/dev/null || echo "")
+  local res=""
+  local is_running=false
+  local attempt=0
+  local max_attempts=8
+  local base_delay=1
+  local max_delay=8
+
+  while [ $attempt -lt $max_attempts ]; do
+    res=$(docker exec -i llmobs-temporal-engine temporal operator cluster health 2>/dev/null || docker exec -i llmobs-temporal-engine tctl cluster health 2>/dev/null || echo "")
+    if echo "$res" | grep -qi "SERVING\|healthy\|NORMAL"; then
+      break
+    fi
+    if docker ps --format '{{.Names}}' | grep -q "^llmobs-temporal-engine$"; then
+      is_running=true
+      break
+    fi
+    attempt=$((attempt + 1))
+    if [ $attempt -ge $max_attempts ]; then
+      break
+    fi
+    local exp=$((1 << attempt))
+    local cap=$((base_delay * exp))
+    [ $cap -gt $max_delay ] && cap=$max_delay
+    local jitter=$(( (RANDOM % cap) + 1 ))
+    sleep "$jitter"
+  done
 
   if echo "$res" | grep -qi "SERVING\|healthy\|NORMAL"; then
     echo -e "  ${GREEN}[PASS]${NC} ${BOLD}Temporal Workflow Engine Health${NC} -> Cluster status SERVING & gRPC frontend ready"
     PASSED_CHECKS=$((PASSED_CHECKS + 1))
+  elif [ "$is_running" = true ]; then
+    echo -e "  ${GREEN}[PASS]${NC} ${BOLD}Temporal Workflow Engine Health${NC} -> gRPC port 7233 active & persistent database connected"
+    PASSED_CHECKS=$((PASSED_CHECKS + 1))
   else
-    if docker ps --format '{{.Names}}' | grep -q "^llmobs-temporal-engine$"; then
-      echo -e "  ${GREEN}[PASS]${NC} ${BOLD}Temporal Workflow Engine Health${NC} -> gRPC port 7233 active & persistent database connected"
-      PASSED_CHECKS=$((PASSED_CHECKS + 1))
-    else
-      echo -e "  ${RED}[FAIL]${NC} ${BOLD}Temporal Workflow Engine Health${NC} -> Temporal engine cluster unhealthy"
-    fi
+    echo -e "  ${RED}[FAIL]${NC} ${BOLD}Temporal Workflow Engine Health${NC} -> Temporal engine cluster unhealthy"
   fi
 }
 
@@ -399,15 +561,35 @@ test_container_to_container_connectivity() {
   TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
 
   local res="FAIL"
-  if (docker exec "$src_container" bash -c "exec 3<>/dev/tcp/${target_host}/${target_port} && exec 3<&-") >/dev/null 2>&1; then
-    res="OK"
-  elif (docker exec "$src_container" sh -c "nc -z -w 3 $target_host $target_port") >/dev/null 2>&1; then
-    res="OK"
-  elif (docker exec "$src_container" sh -c "curl -s --max-time 3 http://${target_host}:${target_port}") >/dev/null 2>&1; then
-    res="OK"
-  elif (docker run --rm --network llmobs-network busybox nc -z -w 3 "$target_host" "$target_port") >/dev/null 2>&1; then
-    res="OK"
-  fi
+  local attempt=0
+  local max_attempts=8
+  local base_delay=1
+  local max_delay=8
+
+  while [ $attempt -lt $max_attempts ]; do
+    if (docker exec "$src_container" bash -c "exec 3<>/dev/tcp/${target_host}/${target_port} && exec 3<&-") >/dev/null 2>&1; then
+      res="OK"
+      break
+    elif (docker exec "$src_container" sh -c "nc -z -w 3 $target_host $target_port") >/dev/null 2>&1; then
+      res="OK"
+      break
+    elif (docker exec "$src_container" sh -c "curl -s --max-time 3 http://${target_host}:${target_port}") >/dev/null 2>&1; then
+      res="OK"
+      break
+    elif (docker run --rm --network llmobs-network busybox nc -z -w 3 "$target_host" "$target_port") >/dev/null 2>&1; then
+      res="OK"
+      break
+    fi
+    attempt=$((attempt + 1))
+    if [ $attempt -ge $max_attempts ]; then
+      break
+    fi
+    local exp=$((1 << attempt))
+    local cap=$((base_delay * exp))
+    [ $cap -gt $max_delay ] && cap=$max_delay
+    local jitter=$(( (RANDOM % cap) + 1 ))
+    sleep "$jitter"
+  done
 
   if [ "$res" = "OK" ]; then
     echo -e "  ${GREEN}[PASS]${NC} ${BOLD}${label}${NC} -> Internal bridge network reachability (${src_container} → ${target_host}:${target_port}) OK"

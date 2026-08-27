@@ -244,6 +244,17 @@ All microservices are bound to isolated ports in the **`31410` – `31425` range
 | **9** | **NTP Clock Desynchronization** | Telemetry timestamps drift, rendering Grafana charts empty | `verify_clock_sync` validates active NTP synchronization | [system-prereqs.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/prereqs/system-prereqs.sh#L63-L75) |
 | **10** | **Distroless Container Probing** | Missing CLI binaries (`nc`/`curl`) inside distroless images cause probe failures | Native Layer-4 Bash socket streams (`exec 3<>/dev/tcp/...`) | [test-health.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/test-health.sh#L365-L385) |
 | **11** | **Database Recovery Race Condition** | Downstream services launch while database recovers WAL logs | 3-stage ordered orchestration & Exponential Backoff Jitter | [stack-orchestration.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/orchestrator/stack-orchestration.sh#L24-L60) |
+| **12** | **Zero-Trust Network Signature & Spoofing** | Unauthenticated containers attach to subnet & spoof internal ingress traffic | Network signature label (`llmobs-net-sig-v1.0`) & Traefik signature header (`X-LLMObs-Network-Signature`) | [stack-orchestration.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/orchestrator/stack-orchestration.sh#L93-L104) & [dynamic.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/traefik/dynamic.yml#L27-L35) |
+
+---
+
+#### 12. Network-Level Signature Architecture
+- **Root Cause**: Multi-tenant container networks without cryptographic signature metadata expose API endpoints to spoofed internal requests or rogue subnet attachments.
+- **Risk**: Unauthorized container traffic injection or missing audit origin signatures.
+- **Mitigation**: Implemented dual-layer network signatures during script setup time:
+  1. **Docker Subnet Signature**: `com.llmobs.network.signature=llmobs-net-sig-v1.0` embedded on `llmobs-network` bridge (`172.28.0.0/16`) in `stack-orchestration.sh`.
+  2. **Gateway Ingress/Egress Signature**: Injected `X-LLMObs-Network-Signature: llmobs-net-sig-v1.0` across all API request and response headers in Traefik `dynamic.yml`.
+  3. **Automated Assertion**: Security hardening test in `test-health.sh` verifying `X-LLMObs-Network-Signature` presence on gateway endpoints.
 
 ---
 

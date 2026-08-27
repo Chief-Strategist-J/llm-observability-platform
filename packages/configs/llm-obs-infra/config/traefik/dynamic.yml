@@ -24,9 +24,12 @@ http:
         stsIncludeSubdomains: true
         stsPreload: true
         stsSeconds: 31536000
+        customRequestHeaders:
+          X-LLMObs-Network-Signature: "llmobs-net-sig-v1.0"
         customResponseHeaders:
           X-Powered-By: ""
-          Server: ""
+          Server: "LLMObs-Gateway/1.0"
+          X-LLMObs-Network-Signature: "llmobs-net-sig-v1.0"
           Referrer-Policy: "strict-origin-when-cross-origin"
           Permissions-Policy: "camera=(), microphone=(), geolocation=()"
           X-Content-Type-Options: "nosniff"

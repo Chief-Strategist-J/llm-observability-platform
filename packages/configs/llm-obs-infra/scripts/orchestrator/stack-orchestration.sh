@@ -90,9 +90,26 @@ wait_for_alloydb() {
   echo -e "${YELLOW}⚠️ AlloyDB database recovery taking longer than expected...${NC}"
 }
 
+ensure_external_network() {
+  local net_name="llmobs-network"
+  if ! docker network inspect "$net_name" >/dev/null 2>&1; then
+    echo -e "${BLUE}⚡ Creating external Docker network '${net_name}' with platform network signature...${NC}"
+    docker network create \
+      --driver bridge \
+      --subnet 172.28.0.0/16 \
+      --gateway 172.28.0.1 \
+      --label "com.llmobs.network.signature=llmobs-net-sig-v1.0" \
+      --label "com.llmobs.network.security=isolated-bridge" \
+      --label "com.llmobs.network.managed-by=llmobs-infra" \
+      "$net_name" >/dev/null 2>&1 || true
+  fi
+}
+
 start_ordered_stack() {
   local bin=$1
   local compose_file=$2
+
+  ensure_external_network
 
   echo -e "${BLUE}⚡ Step 1/3: Starting core databases (AlloyDB, Redis, ClickHouse)...${NC}"
   $bin -f "$compose_file" up -d llmobs-alloydb llmobs-redis llmobs-clickhouse || true
