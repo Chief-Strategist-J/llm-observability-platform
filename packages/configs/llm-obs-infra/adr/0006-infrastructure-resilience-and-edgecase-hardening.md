@@ -317,14 +317,16 @@ graph TD
 sequenceDiagram
     autonumber
     rect rgb(30, 41, 59)
-        note over AppClient,Gateway: Phase 1: Ingestion & Gateway Proxy
+        note over AppClient,Gateway: Phase 1: Ingestion, Gateway Proxy & Security Verification
         AppClient->>Gateway: 1. POST /v1/traces (HTTP 443 TLS)<br/>Span: http.post /v1/traces (12ms)
-        Gateway->>Collector: 2. Reverse Proxy HTTP (Port 4318)<br/>Span: otel.receiver.otlp.http (8ms)
+        Gateway->>Gateway: 2a. Verify TLS 1.2+ & Inject X-LLMObs-Network-Signature Header<br/>Span: gateway.security.verify (2ms)
+        Gateway->>Collector: 2b. Reverse Proxy HTTP (Port 4318)<br/>Span: otel.receiver.otlp.http (8ms)
     end
 
     rect rgb(6, 182, 212)
-        note over Collector: Phase 2: OpenTelemetry Collector Batch Processing
-        Collector->>Collector: 3. Memory Limiter & Attribute Processor<br/>Span: otel.processor.batch (4ms)
+        note over Collector: Phase 2: OpenTelemetry Collector Batch & PII Redaction Processing
+        Collector->>Collector: 3a. Memory Limiter & Attribute Processor<br/>Span: otel.processor.batch (4ms)
+        Collector->>Collector: 3b. transform/pii_redaction (Scrubbing sk-... & Credentials)<br/>Span: otel.processor.transform.redact (3ms)
     end
 
     rect rgb(139, 92, 246)
@@ -439,3 +441,42 @@ graph TD
     Sandbox -->|"4. Authenticated Service Access"| AuthGuards
     AuthGuards -->|"5. Log Admin/Compliance Action"| AuditLog
 ```
+
+---
+
+### 8.7 Low-Level Security Component Design (LLD)
+
+#### 8.7.1 Traefik Network Signature & Header Interceptor (LLD)
+- **Component**: Traefik Dynamic Middleware Handler ([config/traefik/dynamic.yml:L19-L35](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/traefik/dynamic.yml#L19-L35)).
+- **Execution Path**:
+  1. Ingress Packet Arrives on TCP Port 443.
+  2. TLS Termination Engine evaluates Certificate SAN & Cipher Suite (`TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`).
+  3. Header Modification Middleware injects `X-LLMObs-Network-Signature: llmobs-net-sig-v1.0` into request context.
+  4. Response Header Middleware appends HSTS, `nosniff`, `SAMEORIGIN`, and `X-LLMObs-Network-Signature` to egress packet.
+
+#### 8.7.2 OpenTelemetry Collector PII Redaction Pipeline (LLD)
+- **Component**: `transform/pii_redaction` Processor ([config/otel-collector/otel-collector-config.yaml:L28-L36](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/otel-collector/otel-collector-config.yaml#L28-L36)).
+- **Execution Path**:
+  1. OTLP Receiver decodes Protobuf payload over HTTP/gRPC (Ports 4318/4317).
+  2. Memory Limiter Processor (`limit_mib: 512`) checks heap allocation.
+  3. Redaction Engine iterates over Span Attribute Map (`attributes` context):
+     - `sk-[a-zA-Z0-9_-]{20,}` → Replaced with `[REDACTED_API_KEY]`
+     - `Bearer\s+[a-zA-Z0-9._\-]+` → Replaced with `Bearer [REDACTED_TOKEN]`
+     - `[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}` → Replaced with `[REDACTED_EMAIL]`
+     - `\b(?:4[0-9]{12}...)\b` → Replaced with `[REDACTED_CARD]`
+  4. Batch Processor aggregates sanitized spans into 1024-span batches for ClickHouse/Tempo write.
+
+#### 8.7.3 Container Privilege Escalation Prevention (LLD)
+- **Component**: Docker Engine Cgroup & Kernel Security Subsystem ([docker-compose.yml:L10-L290](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docker-compose.yml#L10-L290)).
+- **Execution Path**:
+  1. Container process initializes via `execve`.
+  2. Kernel sets `prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)`.
+  3. Disables `setuid` / `setgid` binary capability escalation inside container runtime.
+
+#### 8.7.4 Automated Data Erasure Purging Pipeline (LLD)
+- **Component**: GDPR Purging Script ([scripts/gdpr-erasure.sh:L1-L75](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/gdpr-erasure.sh#L1-L75)).
+- **Execution Path**:
+  1. Parses `--user-id` argument.
+  2. Issues HTTP POST to ClickHouse Query Endpoint: `ALTER TABLE telemetry_spans DELETE WHERE user_id = '...'`.
+  3. Issues SQL query to AlloyDB PostgreSQL Engine: `DELETE FROM user_metadata WHERE user_id = '...'`.
+  4. Inserts audit trail row into AlloyDB `security_audit_logs`.
