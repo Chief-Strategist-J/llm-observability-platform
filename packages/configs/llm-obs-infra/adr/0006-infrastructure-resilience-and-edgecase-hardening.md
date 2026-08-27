@@ -252,22 +252,27 @@ All microservices are bound to isolated ports in the **`31410` – `31425` range
 | `llmobs-alloydb-db` | `5432` | `31420` | Relational Metadata Store | 2048MB Limit / 512MB Res |
 | `llmobs-temporal-engine` | `7233` / `8080` | `31424` (gRPC) / `31425` (UI) | Durable Workflow Execution Engine | 1536MB RAM |
 
-### 3.2 Dynamic Path Discovery Mechanism ([dynamic-discovery.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/discovery/dynamic-discovery.sh))
+### 3.2 Dynamic Path Discovery DSA Architecture ([dynamic-discovery.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/discovery/dynamic-discovery.sh))
 
-To ensure 100% path independence across different operating systems and checkout root locations, target script paths are dynamically resolved via a 3-tier fallback algorithm:
+To ensure 100% path independence across operating systems and arbitrary directory trees, script resolution implements a **6-Stage Data Structures & Algorithms (DSA) Engine**:
 
 ```mermaid
-flowchart LR
-    Start(["Call find_required_script('target.sh')"]) --> Stage1{"Stage 1: Search $search_root/scripts/*<br>(maxdepth 4)"}
-    Stage1 -- Found --> ReturnPath["Return Absolute File Path"]
-    Stage1 -- Not Found --> Stage2{"Stage 2: Search $(pwd)/*<br>(maxdepth 4)"}
-    Stage2 -- Found --> ReturnPath
-    Stage2 -- Not Found --> Stage3{"Stage 3: Discover Git Root<br>(git rev-parse --show-toplevel)"}
-    Stage3 -- Found --> SearchGit["Search entire Git Repo"]
-    SearchGit -- Found --> ReturnPath
-    SearchGit -- Not Found --> FatalError["Emit Error & Exit 1"]
-    Stage3 -- Not Found --> FatalError
+flowchart TD
+    Command["Command Request<br>(manage.sh up)"] --> PathResolver["1. Path Resolver Engine"]
+    PathResolver --> DFS["2. Filesystem Traversal<br>(Iterative DFS Stack)"]
+    DFS --> HashSet["3. HashSet Caching<br>(O(1) Visited Deduplication)"]
+    HashSet --> Matcher["4. Glob / Regex Matcher<br>(filename glob filter)"]
+    Matcher --> Scanner["5. Content Scanner<br>(Aho-Corasick Token Matcher)"]
+    Scanner --> Ranker["6. Candidate Ranking<br>(Weighted Priority Queue / Heap)"]
+    Ranker --> Execution["7. Command Execution Engine"]
 ```
+
+#### DSA Component Specifications
+
+1. **Iterative DFS (`execute_iterative_dfs`)**: Traverses subdirectories using an explicit array stack (`stack=("$root:0")`), preventing recursion call stack exhaustion.
+2. **HashSet Cache (`PATH_HASH_SET`)**: Maintains an in-memory associative hash array (`declare -gA PATH_HASH_SET`) for $O(1)$ constant-time path lookups.
+3. **Multi-Keyword Scanner (`scan_content_signature`)**: Performs Aho-Corasick literal token matching (`main`, `bash`, `set -e`) to score candidate script files.
+4. **Weighted Priority Heap (`rank_candidates`)**: Evaluates candidate matches using a multi-factor scoring function ($Score = ExecutableBonus + PathDepthScore + SignatureScore$) to pick the optimal file target.
 
 ---
 
