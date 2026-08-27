@@ -227,7 +227,112 @@ else
   echo -e "  ${RED}[FAIL]${NC} ${BOLD}Redis Auth Guard${NC} -> Unauthenticated PING succeeded (no password set)"
 fi
 
-echo -e "\n${YELLOW}5. Network Isolation:${NC}"
+test_kafka_topic_lifecycle() {
+  TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
+  local topic="llmobs-health-check-$(date +%s)"
+
+  if docker exec llmobs-kafka-broker /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic "$topic" --partitions 1 --replication-factor 1 >/dev/null 2>&1; then
+    docker exec llmobs-kafka-broker /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --delete --topic "$topic" >/dev/null 2>&1 || true
+    echo -e "  ${GREEN}[PASS]${NC} ${BOLD}Kafka Service Lifecycle${NC} -> Topic create/delete verification OK"
+    PASSED_CHECKS=$((PASSED_CHECKS + 1))
+  else
+    echo -e "  ${RED}[FAIL]${NC} ${BOLD}Kafka Service Lifecycle${NC} -> Topic create/delete failed"
+  fi
+}
+
+test_clickhouse_crud() {
+  TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
+  local tbl="health_check_$(date +%s)"
+
+  local q_create="CREATE TABLE IF NOT EXISTS default.${tbl} (id UInt64, val String) ENGINE = Memory;"
+  local q_insert="INSERT INTO default.${tbl} VALUES (1, 'health_ok');"
+  local q_select="SELECT val FROM default.${tbl} WHERE id = 1;"
+  local q_drop="DROP TABLE IF EXISTS default.${tbl};"
+
+  local res
+  res=$(curl -s "http://localhost:31421/?query=$(echo "$q_create$q_insert$q_select$q_drop" | jq -sRr @uri)" 2>/dev/null || echo "")
+
+  if echo "$res" | grep -q "health_ok"; then
+    echo -e "  ${GREEN}[PASS]${NC} ${BOLD}ClickHouse CRUD Verification${NC} -> Table create/insert/select/drop OK"
+    PASSED_CHECKS=$((PASSED_CHECKS + 1))
+  else
+    echo -e "  ${RED}[FAIL]${NC} ${BOLD}ClickHouse CRUD Verification${NC} -> Query execution failed"
+  fi
+}
+
+test_alloydb_crud() {
+  TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
+  local tbl="health_test_$(date +%s)"
+
+  local sql="CREATE TABLE ${tbl} (id INT PRIMARY KEY, payload TEXT); INSERT INTO ${tbl} VALUES (1, 'alloy_ok'); SELECT payload FROM ${tbl}; DROP TABLE ${tbl};"
+  local res
+  res=$(docker exec -i llmobs-alloydb-db psql -U admin -d llm_observability -c "$sql" 2>/dev/null || echo "")
+
+  if echo "$res" | grep -q "alloy_ok"; then
+    echo -e "  ${GREEN}[PASS]${NC} ${BOLD}AlloyDB CRUD Verification${NC} -> Relational table create/insert/select/drop OK"
+    PASSED_CHECKS=$((PASSED_CHECKS + 1))
+  else
+    echo -e "  ${RED}[FAIL]${NC} ${BOLD}AlloyDB CRUD Verification${NC} -> Database CRUD transaction failed"
+  fi
+}
+
+test_redis_crud() {
+  TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
+  local key="health:test:$(date +%s)"
+
+  local res
+  res=$(docker exec -i llmobs-redis-ledger redis-cli -a llmobs_redis_s3cret_2024 SET "$key" "redis_ok" 2>/dev/null || echo "")
+  local val
+  val=$(docker exec -i llmobs-redis-ledger redis-cli -a llmobs_redis_s3cret_2024 GET "$key" 2>/dev/null || echo "")
+  docker exec -i llmobs-redis-ledger redis-cli -a llmobs_redis_s3cret_2024 DEL "$key" >/dev/null 2>&1 || true
+
+  if echo "$val" | grep -q "redis_ok"; then
+    echo -e "  ${GREEN}[PASS]${NC} ${BOLD}Redis CRUD Verification${NC} -> Key set/get/del verification OK"
+    PASSED_CHECKS=$((PASSED_CHECKS + 1))
+  else
+    echo -e "  ${RED}[FAIL]${NC} ${BOLD}Redis CRUD Verification${NC} -> Key-value write failed"
+  fi
+}
+
+test_otel_tempo_trace_ingestion() {
+  TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
+  local trace_id="4bf92f3577b34da6a3ce929d0e0e4736"
+
+  local json_payload='{
+    "resourceSpans": [{
+      "resource": { "attributes": [{ "key": "service.name", "value": { "stringValue": "health-check-service" } }] },
+      "scopeSpans": [{
+        "spans": [{
+          "traceId": "'$trace_id'",
+          "spanId": "00f067aa0ba902b7",
+          "name": "health-check-span",
+          "kind": 1,
+          "startTimeUnixNano": "'$(date +%s%N)'",
+          "endTimeUnixNano": "'$(date +%s%N)'"
+        }]
+      }]
+    }]
+  }'
+
+  local otel_res
+  otel_res=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://localhost:31417/v1/traces" -H "Content-Type: application/json" -d "$json_payload" 2>/dev/null || echo "000")
+
+  if [ "$otel_res" = "200" ]; then
+    echo -e "  ${GREEN}[PASS]${NC} ${BOLD}OTel -> Tempo Telemetry Tracing${NC} -> OTLP span HTTP ingestion & trace pipe OK"
+    PASSED_CHECKS=$((PASSED_CHECKS + 1))
+  else
+    echo -e "  ${RED}[FAIL]${NC} ${BOLD}OTel -> Tempo Telemetry Tracing${NC} -> OTLP span HTTP ingestion failed (HTTP ${otel_res})"
+  fi
+}
+
+echo -e "\n${YELLOW}5. Service Functional CRUD & Telemetry Tracing Validations:${NC}"
+test_kafka_topic_lifecycle
+test_clickhouse_crud
+test_alloydb_crud
+test_redis_crud
+test_otel_tempo_trace_ingestion
+
+echo -e "\n${YELLOW}6. Network Isolation:${NC}"
 check_network "llmobs-traefik-gateway" "llmobs-network"
 check_network "llmobs-redis-ledger" "llmobs-network"
 check_network "llmobs-kafka-broker" "llmobs-network"

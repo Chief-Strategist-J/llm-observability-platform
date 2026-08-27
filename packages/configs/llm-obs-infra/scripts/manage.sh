@@ -60,7 +60,7 @@ execute_up_pipeline() {
 
   local cert_script
   cert_script=$(find_required_script "generate-certs.sh" "$scripts_root")
-  bash "$cert_script"
+  bash "$cert_script" --force
 
   local port_script
   port_script=$(find_required_script "port-manager.sh" "$scripts_root")
