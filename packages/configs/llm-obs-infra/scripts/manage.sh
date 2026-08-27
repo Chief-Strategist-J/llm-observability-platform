@@ -39,9 +39,9 @@ find_required_script() {
 
 ensure_env_file() {
   local pkg_dir=$1
-  if [ ! -f "$pkg_dir/.env" ] && [ -f "$pkg_dir/.env.example" ]; then
-    echo -e "${BLUE}⚡ Generating default .env file from .env.example...${NC}"
-    cp "$pkg_dir/.env.example" "$pkg_dir/.env"
+  if [ -f "$pkg_dir/.env.example" ]; then
+    echo -e "${BLUE}⚡ Regenerating fresh .env file from .env.example...${NC}"
+    cp -f "$pkg_dir/.env.example" "$pkg_dir/.env"
   fi
 }
 

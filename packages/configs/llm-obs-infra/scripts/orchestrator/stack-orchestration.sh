@@ -21,38 +21,73 @@ print_service_endpoints() {
   echo -e "  - OTel Collector gRPC:   localhost:31418"
 }
 
-wait_for_container_health() {
-  local container=$1
-  local max_wait_sec=${2:-15}
-  local elapsed=0
+wait_with_exponential_backoff_jitter() {
+  local check_cmd=$1
+  local max_attempts=${2:-6}
+  local base_delay=${3:-1}
+  local max_delay=${4:-12}
+  local attempt=0
 
-  echo -e "${BLUE}  - Waiting for container ${container} to complete startup...${NC}"
-  while [ $elapsed -lt $max_wait_sec ]; do
-    local status
-    status=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container" 2>/dev/null || echo "starting")
-    if [ "$status" = "healthy" ] || [ "$status" = "running" ]; then
-      echo -e "${GREEN}✓ ${container} is ready (${status}).${NC}"
+  while [ $attempt -lt $max_attempts ]; do
+    if eval "$check_cmd" >/dev/null 2>&1; then
       return 0
     fi
-    sleep 1
-    elapsed=$((elapsed + 1))
+    attempt=$((attempt + 1))
+    if [ $attempt -ge $max_attempts ]; then
+      break
+    fi
+
+    local exp=$((1 << attempt))
+    local cap=$((base_delay * exp))
+    if [ $cap -gt $max_delay ]; then
+      cap=$max_delay
+    fi
+
+    local jitter=$(( (RANDOM % cap) + 1 ))
+    sleep "$jitter"
   done
+  return 1
+}
+
+wait_for_container_health() {
+  local container=$1
+  echo -e "${BLUE}  - Waiting for container ${container} to complete startup...${NC}"
+  local check_cmd="docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' '$container' 2>/dev/null | grep -q 'healthy\|running'"
+  if wait_with_exponential_backoff_jitter "$check_cmd" 6 1 8; then
+    echo -e "${GREEN}✓ ${container} is ready.${NC}"
+    return 0
+  fi
   echo -e "${YELLOW}⚠️ ${container} initialization still in progress...${NC}"
 }
 
 wait_for_clickhouse_http() {
-  local max_wait_sec=${1:-20}
-  local elapsed=0
   echo -e "${BLUE}  - Waiting for ClickHouse HTTP & Native TCP socket binding...${NC}"
-  while [ $elapsed -lt $max_wait_sec ]; do
-    if curl -s "http://localhost:31421/ping" 2>/dev/null | grep -q "Ok."; then
-      echo -e "${GREEN}✓ ClickHouse HTTP (31421) & Native (31422) endpoints ready.${NC}"
-      return 0
-    fi
-    sleep 2
-    elapsed=$((elapsed + 2))
-  done
+  local check_cmd="curl -s http://localhost:31421/ping 2>/dev/null | grep -q 'Ok.'"
+  if wait_with_exponential_backoff_jitter "$check_cmd" 7 1 12; then
+    echo -e "${GREEN}✓ ClickHouse HTTP (31421) & Native (31422) endpoints ready.${NC}"
+    return 0
+  fi
   echo -e "${YELLOW}⚠️ ClickHouse socket binding taking longer than expected...${NC}"
+}
+
+wait_for_web_gateways() {
+  echo -e "${BLUE}  - Waiting for Grafana UI & Temporal engine socket bindings...${NC}"
+  local check_cmd="curl -s http://localhost:31415/api/health 2>/dev/null | grep -q 'ok' && nc -z localhost 31424 2>/dev/null"
+  if wait_with_exponential_backoff_jitter "$check_cmd" 7 1 12; then
+    echo -e "${GREEN}✓ Grafana UI (31415) & Temporal gRPC (31424) endpoints ready.${NC}"
+    return 0
+  fi
+  echo -e "${YELLOW}⚠️ Gateway initialization still in progress...${NC}"
+}
+
+wait_for_alloydb() {
+  echo -e "${BLUE}  - Waiting for AlloyDB database engine consistent recovery state...${NC}"
+  local check_cmd="docker exec -i llmobs-alloydb-db pg_isready -U admin -d llm_observability"
+  if wait_with_exponential_backoff_jitter "$check_cmd" 8 1 12; then
+    echo -e "${GREEN}✓ AlloyDB relational database ready.${NC}"
+    return 0
+  fi
+  echo -e "${YELLOW}⚠️ AlloyDB database recovery taking longer than expected...${NC}"
 }
 
 start_ordered_stack() {
@@ -61,7 +96,7 @@ start_ordered_stack() {
 
   echo -e "${BLUE}⚡ Step 1/3: Starting core databases (AlloyDB, Redis, ClickHouse)...${NC}"
   $bin -f "$compose_file" up -d llmobs-alloydb llmobs-redis llmobs-clickhouse || true
-  wait_for_container_health "llmobs-alloydb-db" 10
+  wait_for_alloydb
   wait_for_clickhouse_http 20
 
   echo -e "${BLUE}⚡ Step 2/3: Starting telemetry & event streams (Kafka, Tempo, OTel Collector)...${NC}"
@@ -69,6 +104,7 @@ start_ordered_stack() {
 
   echo -e "${BLUE}⚡ Step 3/3: Starting web gateways & orchestration engines (Traefik, Grafana, Temporal)...${NC}"
   $bin -f "$compose_file" up -d llmobs-traefik llmobs-grafana llmobs-temporal || true
+  wait_for_web_gateways 20
 
   print_service_endpoints
 }

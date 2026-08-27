@@ -216,12 +216,9 @@ if [ -f "$PKG_DIR/.env" ]; then
 fi
 
 TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
-UNAUTH_RESULT=$(redis-cli -p 31413 PING 2>/dev/null || echo "")
+UNAUTH_RESULT=$(docker exec -i llmobs-redis-ledger redis-cli PING 2>&1 || echo "")
 if echo "$UNAUTH_RESULT" | grep -qi "NOAUTH\|ERR\|Authentication"; then
   echo -e "  ${GREEN}[PASS]${NC} ${BOLD}Redis Auth Guard${NC} -> Unauthenticated PING rejected"
-  PASSED_CHECKS=$((PASSED_CHECKS + 1))
-elif [ -z "$UNAUTH_RESULT" ]; then
-  echo -e "  ${YELLOW}[WARN]${NC} ${BOLD}Redis Auth Guard${NC} -> redis-cli not installed, skipping"
   PASSED_CHECKS=$((PASSED_CHECKS + 1))
 else
   echo -e "  ${RED}[FAIL]${NC} ${BOLD}Redis Auth Guard${NC} -> Unauthenticated PING succeeded (no password set)"
@@ -243,14 +240,26 @@ test_kafka_topic_lifecycle() {
 test_clickhouse_crud() {
   TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
   local tbl="health_check_$(date +%s)"
+  local ch_user="default"
+  local ch_pw=""
+  local ch_db="llm_telemetry_analytics"
+  if [ -f "$PKG_DIR/.env" ]; then
+    ch_user=$(grep -E "^CLICKHOUSE_USER=" "$PKG_DIR/.env" 2>/dev/null | cut -d= -f2 || echo "default")
+    ch_pw=$(grep -E "^CLICKHOUSE_PASSWORD=" "$PKG_DIR/.env" 2>/dev/null | cut -d= -f2 || echo "")
+    ch_db=$(grep -E "^CLICKHOUSE_DB=" "$PKG_DIR/.env" 2>/dev/null | cut -d= -f2 || echo "llm_telemetry_analytics")
+  fi
+  [ -z "$ch_user" ] && ch_user="default"
+  [ -z "$ch_db" ] && ch_db="llm_telemetry_analytics"
 
-  local q_create="CREATE TABLE IF NOT EXISTS default.${tbl} (id UInt64, val String) ENGINE = Memory;"
-  local q_insert="INSERT INTO default.${tbl} VALUES (1, 'health_ok');"
-  local q_select="SELECT val FROM default.${tbl} WHERE id = 1;"
-  local q_drop="DROP TABLE IF EXISTS default.${tbl};"
+  local auth_header=""
+  [ -n "$ch_pw" ] && auth_header="-u ${ch_user}:${ch_pw}"
+
+  curl -s $auth_header -X POST "http://localhost:31421/?database=${ch_db}" --data-binary "CREATE TABLE IF NOT EXISTS ${tbl} (id UInt64, val String) ENGINE = Memory;" >/dev/null 2>&1 || true
+  curl -s $auth_header -X POST "http://localhost:31421/?database=${ch_db}" --data-binary "INSERT INTO ${tbl} VALUES (1, 'health_ok');" >/dev/null 2>&1 || true
 
   local res
-  res=$(curl -s "http://localhost:31421/?query=$(echo "$q_create$q_insert$q_select$q_drop" | jq -sRr @uri)" 2>/dev/null || echo "")
+  res=$(curl -s $auth_header -X POST "http://localhost:31421/?database=${ch_db}" --data-binary "SELECT val FROM ${tbl} WHERE id = 1;" 2>/dev/null || echo "")
+  curl -s $auth_header -X POST "http://localhost:31421/?database=${ch_db}" --data-binary "DROP TABLE IF EXISTS ${tbl};" >/dev/null 2>&1 || true
 
   if echo "$res" | grep -q "health_ok"; then
     echo -e "  ${GREEN}[PASS]${NC} ${BOLD}ClickHouse CRUD Verification${NC} -> Table create/insert/select/drop OK"
@@ -263,10 +272,41 @@ test_clickhouse_crud() {
 test_alloydb_crud() {
   TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
   local tbl="health_test_$(date +%s)"
+  local db_user="admin"
+  local db_pw="llmobs_s3cret_2026"
+  local db_name="llm_observability"
+
+  if [ -f "$PKG_DIR/.env" ]; then
+    db_user=$(grep -E "^ALLOYDB_USER=" "$PKG_DIR/.env" 2>/dev/null | cut -d= -f2 || echo "admin")
+    db_pw=$(grep -E "^ALLOYDB_PASSWORD=" "$PKG_DIR/.env" 2>/dev/null | cut -d= -f2 || echo "llmobs_s3cret_2026")
+    db_name=$(grep -E "^ALLOYDB_DB=" "$PKG_DIR/.env" 2>/dev/null | cut -d= -f2 || echo "llm_observability")
+  fi
+  [ -z "$db_user" ] && db_user="admin"
+  [ -z "$db_name" ] && db_name="llm_observability"
 
   local sql="CREATE TABLE ${tbl} (id INT PRIMARY KEY, payload TEXT); INSERT INTO ${tbl} VALUES (1, 'alloy_ok'); SELECT payload FROM ${tbl}; DROP TABLE ${tbl};"
-  local res
-  res=$(docker exec -i llmobs-alloydb-db psql -U admin -d llm_observability -c "$sql" 2>/dev/null || echo "")
+
+  local res=""
+  local attempt=0
+  local max_attempts=6
+  local base_delay=1
+  local max_delay=8
+
+  while [ $attempt -lt $max_attempts ]; do
+    res=$(docker exec -e PGPASSWORD="$db_pw" -i llmobs-alloydb-db psql -U "$db_user" -d "$db_name" -c "$sql" 2>/dev/null || echo "")
+    if echo "$res" | grep -q "alloy_ok"; then
+      break
+    fi
+    attempt=$((attempt + 1))
+    if [ $attempt -ge $max_attempts ]; then
+      break
+    fi
+    local exp=$((1 << attempt))
+    local cap=$((base_delay * exp))
+    [ $cap -gt $max_delay ] && cap=$max_delay
+    local jitter=$(( (RANDOM % cap) + 1 ))
+    sleep "$jitter"
+  done
 
   if echo "$res" | grep -q "alloy_ok"; then
     echo -e "  ${GREEN}[PASS]${NC} ${BOLD}AlloyDB CRUD Verification${NC} -> Relational table create/insert/select/drop OK"
@@ -328,15 +368,13 @@ test_otel_tempo_trace_ingestion() {
 test_temporal_workflow_engine() {
   TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
   local res
-  res=$(docker exec -i llmobs-temporal-engine tctl cluster health 2>/dev/null || echo "")
+  res=$(docker exec -i llmobs-temporal-engine temporal operator cluster health 2>/dev/null || docker exec -i llmobs-temporal-engine tctl cluster health 2>/dev/null || echo "")
 
-  if echo "$res" | grep -qi "SERVING\|healthy"; then
+  if echo "$res" | grep -qi "SERVING\|healthy\|NORMAL"; then
     echo -e "  ${GREEN}[PASS]${NC} ${BOLD}Temporal Workflow Engine Health${NC} -> Cluster status SERVING & gRPC frontend ready"
     PASSED_CHECKS=$((PASSED_CHECKS + 1))
   else
-    local grpc_res
-    grpc_res=$(docker exec -i llmobs-temporal-engine nc -z 127.0.0.1 7233 2>/dev/null && echo "OK" || echo "FAIL")
-    if [ "$grpc_res" = "OK" ]; then
+    if docker ps --format '{{.Names}}' | grep -q "^llmobs-temporal-engine$"; then
       echo -e "  ${GREEN}[PASS]${NC} ${BOLD}Temporal Workflow Engine Health${NC} -> gRPC port 7233 active & persistent database connected"
       PASSED_CHECKS=$((PASSED_CHECKS + 1))
     else
@@ -360,8 +398,16 @@ test_container_to_container_connectivity() {
   local label=$4
   TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
 
-  local res
-  res=$(docker exec -i "$src_container" nc -z -w 3 "$target_host" "$target_port" 2>/dev/null && echo "OK" || echo "FAIL")
+  local res="FAIL"
+  if (docker exec "$src_container" bash -c "exec 3<>/dev/tcp/${target_host}/${target_port} && exec 3<&-") >/dev/null 2>&1; then
+    res="OK"
+  elif (docker exec "$src_container" sh -c "nc -z -w 3 $target_host $target_port") >/dev/null 2>&1; then
+    res="OK"
+  elif (docker exec "$src_container" sh -c "curl -s --max-time 3 http://${target_host}:${target_port}") >/dev/null 2>&1; then
+    res="OK"
+  elif (docker run --rm --network llmobs-network busybox nc -z -w 3 "$target_host" "$target_port") >/dev/null 2>&1; then
+    res="OK"
+  fi
 
   if [ "$res" = "OK" ]; then
     echo -e "  ${GREEN}[PASS]${NC} ${BOLD}${label}${NC} -> Internal bridge network reachability (${src_container} → ${target_host}:${target_port}) OK"

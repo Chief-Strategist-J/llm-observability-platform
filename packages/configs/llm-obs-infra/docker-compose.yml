@@ -120,7 +120,7 @@ services:
       retries: 5
 
   llmobs-clickhouse:
-    image: clickhouse/clickhouse-server:24.8-alpine
+    image: clickhouse/clickhouse-server:latest
     container_name: llmobs-clickhouse-analytics
     restart: unless-stopped
     logging: *default-logging
@@ -140,19 +140,22 @@ services:
     environment:
       CLICKHOUSE_DB: ${CLICKHOUSE_DB:-llm_telemetry_analytics}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
-      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-llmobs_clickhouse_s3cret_2026}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
       OTEL_SERVICE_NAME: llmobs-clickhouse-analytics
       OTEL_EXPORTER_OTLP_ENDPOINT: http://llmobs-otel-collector:4318
     volumes:
       - ./config/clickhouse/config.d:/etc/clickhouse-server/config.d:ro
+      - ./config/clickhouse/users.d:/etc/clickhouse-server/users.d
       - clickhouse_data:/var/lib/clickhouse
     networks:
       - llmobs-network
     healthcheck:
-      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --spider http://localhost:8123/ping || exit 1"]
       interval: 5s
-      timeout: 3s
-      retries: 5
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   llmobs-tempo:
     image: grafana/tempo:latest
@@ -277,8 +280,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${ALLOYDB_USER:-admin} -d ${ALLOYDB_DB:-llm_observability}"]
       interval: 5s
-      timeout: 3s
-      retries: 5
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
   llmobs-temporal:
     image: temporalio/auto-setup:1.24.2
@@ -314,8 +318,8 @@ services:
 
 networks:
   llmobs-network:
-    driver: bridge
     name: llmobs-network
+    external: true
 
 volumes:
   tempo_data:
