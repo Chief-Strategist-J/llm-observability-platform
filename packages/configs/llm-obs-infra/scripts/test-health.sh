@@ -153,11 +153,15 @@ check_tcp "Kafka Event Broker" "31414"
 check_http "Grafana Tempo" "http://localhost:31416/ready" "200"
 
 TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
-GRAFANA_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "http://localhost:31415/api/health" || echo "000")
-if [ "$GRAFANA_CODE" != "200" ]; then
-  sleep 3
-  GRAFANA_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "http://localhost:31415/api/health" || echo "000")
-fi
+GRAFANA_CODE="000"
+for i in {1..5}; do
+  GRAFANA_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 "http://localhost:31415/api/health" 2>/dev/null || echo "000")
+  if [ "$GRAFANA_CODE" = "200" ]; then
+    break
+  fi
+  sleep 2
+done
+
 if [ "$GRAFANA_CODE" = "200" ]; then
   echo -e "  ${GREEN}[PASS]${NC} ${BOLD}Grafana UI${NC} -> http://localhost:31415/api/health (HTTP ${GRAFANA_CODE})"
   PASSED_CHECKS=$((PASSED_CHECKS + 1))

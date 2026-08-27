@@ -186,6 +186,52 @@ sequenceDiagram
     Health-->>User: ✓ 41/41 HEALTH & SECURITY CHECKS PASSED
 ```
 
+### 2.3 Pure Functional Call Stack Tree
+
+```text
+./packages/configs/llm-obs-infra/scripts/manage.sh up
+│
+├── 1. Entrypoint & Discovery Phase
+│   ├── main "$@"
+│   ├── discover_script_dir()
+│   ├── discover_file_upward("docker-compose.yml")
+│   └── discover_dir_upward_containing("manage.sh")
+│
+├── 2. Host System Pre-Flight Diagnostics
+│   └── execute_up_pipeline(bin, compose_file, scripts_root, ports)
+│       └── bash scripts/prereqs/system-prereqs.sh
+│           ├── verify_host_utilities()         ──> (fuser, lsof, nc)
+│           ├── verify_docker_daemon()          ──> (systemctl enable --now docker)
+│           ├── verify_file_descriptors(65536)  ──> (ulimit -n 65536)
+│           ├── verify_kernel_sysctls()         ──> (sysctl -w vm.max_map_count=262144)
+│           ├── verify_clock_sync()             ──> (systemd-timesyncd / chrony)
+│           ├── verify_firewall_rules()         ──> (ufw allow in on llmobs-network)
+│           ├── verify_docker_socket()          ──> (Check /var/run/docker.sock)
+│           └── verify_system_memory(2500)      ──> (free -m >= 2500MB)
+│
+├── 3. Port Allocation & TLS Provisioning
+│   ├── bash scripts/ports/port-manager.sh "$ports"
+│   │   └── free_all_ports("31410 ... 31425")
+│   │       └── free_single_port(port)          ──> (fuser -k / kill -9)
+│   └── bash scripts/generate-certs.sh
+│
+├── 4. 3-Stage Dependent Container Deployment
+│   └── bash scripts/orchestrator/stack-orchestration.sh "$bin" "$compose_file"
+│       ├── Stage 1: docker compose up -d llmobs-alloydb llmobs-redis llmobs-clickhouse
+│       │   ├── wait_for_container_health("llmobs-clickhouse-analytics", 15)
+│       │   └── wait_for_container_health("llmobs-alloydb-db", 15)
+│       ├── Stage 2: docker compose up -d llmobs-kafka llmobs-tempo llmobs-otel-collector
+│       └── Stage 3: docker compose up -d --force-recreate (Traefik, Grafana, Temporal)
+│
+└── 5. Post-Deployment Diagnostic Validation
+    └── bash scripts/test-health.sh
+        ├── check_container_status()  ──> (9 Microservices Process Check)
+        ├── check_tcp() / check_http()──> (16 Service Endpoint & Health Probes)
+        ├── check_tls()               ──> (TLS Handshake & OpenSSL Expiry Check)
+        ├── check_header()            ──> (X-Content-Type-Options, HSTS, XSS Headers)
+        └── check_network()           ──> (Bridge Network Isolation Assertions)
+```
+
 ---
 
 ## 3. Low-Level Design (LLD) & Microservice Specifications
