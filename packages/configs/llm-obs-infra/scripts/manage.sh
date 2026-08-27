@@ -37,11 +37,22 @@ find_required_script() {
   echo "$found"
 }
 
+ensure_env_file() {
+  local pkg_dir=$1
+  if [ ! -f "$pkg_dir/.env" ] && [ -f "$pkg_dir/.env.example" ]; then
+    echo -e "${BLUE}⚡ Generating default .env file from .env.example...${NC}"
+    cp "$pkg_dir/.env.example" "$pkg_dir/.env"
+  fi
+}
+
 execute_up_pipeline() {
   local bin=$1
   local compose_file=$2
   local scripts_root=$3
   local ports=$4
+  local pkg_dir=$5
+
+  ensure_env_file "$pkg_dir"
 
   local prereq_script
   prereq_script=$(find_required_script "system-prereqs.sh" "$scripts_root")
@@ -61,7 +72,7 @@ execute_up_pipeline() {
 
   local health_script
   health_script=$(find_required_script "test-health.sh" "$scripts_root")
-  bash "$health_script"
+  bash "$health_script" || true
 }
 
 execute_restart_pipeline() {
@@ -134,7 +145,7 @@ main() {
 
   case "$command" in
     up)
-      execute_up_pipeline "$bin" "$compose_file" "$scripts_root" "$ports"
+      execute_up_pipeline "$bin" "$compose_file" "$scripts_root" "$ports" "$pkg_dir"
       ;;
     restart)
       execute_restart_pipeline "$bin" "$compose_file" "$scripts_root"

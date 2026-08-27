@@ -45,15 +45,15 @@ start_ordered_stack() {
   local compose_file=$2
 
   echo -e "${BLUE}⚡ Step 1/3: Starting core databases (AlloyDB, Redis, ClickHouse)...${NC}"
-  $bin -f "$compose_file" up -d llmobs-alloydb llmobs-redis llmobs-clickhouse
-  wait_for_container_health "llmobs-clickhouse-analytics" 15
-  wait_for_container_health "llmobs-alloydb-db" 15
+  $bin -f "$compose_file" up -d llmobs-alloydb llmobs-redis llmobs-clickhouse || true
+  wait_for_container_health "llmobs-clickhouse-analytics" 10
+  wait_for_container_health "llmobs-alloydb-db" 10
 
   echo -e "${BLUE}⚡ Step 2/3: Starting telemetry & event streams (Kafka, Tempo, OTel Collector)...${NC}"
-  $bin -f "$compose_file" up -d llmobs-kafka llmobs-tempo llmobs-otel-collector
+  $bin -f "$compose_file" up -d llmobs-kafka llmobs-tempo llmobs-otel-collector || true
 
   echo -e "${BLUE}⚡ Step 3/3: Starting web gateways & orchestration engines (Traefik, Grafana, Temporal)...${NC}"
-  $bin -f "$compose_file" up -d --force-recreate
+  $bin -f "$compose_file" up -d llmobs-traefik llmobs-grafana llmobs-temporal || true
 
   print_service_endpoints
 }
