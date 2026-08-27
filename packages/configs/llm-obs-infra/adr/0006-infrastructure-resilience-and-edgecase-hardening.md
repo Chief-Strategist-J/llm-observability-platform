@@ -377,7 +377,7 @@ sequenceDiagram
 
 SOC 2 Type II compliance evaluates infrastructure processing integrity, data confidentiality, and privilege boundaries.
 
-- **Kernel Privilege Escalation Prevention**: Enforces `security_opt: ["no-new-privileges:true"]` across all microservices in [docker-compose.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docker-compose.yml#L10-L290). This prevents compromise of host kernel capabilities even if an application dependency is exploited.
+- **Process Isolation & Privilege Reduction Model**: Microservice containers operate in containerized Linux cgroups with log rotation caps and resource limits, while database services (AlloyDB, ClickHouse, Redis, Kafka) execute official entrypoint scripts that automatically drop runtime privileges to unprivileged service users (`postgres`, `clickhouse`, `redis`, `kafka`).
 - **Relational Security Audit Trail Schema**: Creates an immutable database audit log table defined in [security-audit.sql](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/alloydb/security-audit.sql#L1-L12). Tracks `actor_id`, `action`, `resource`, `ip_address`, and `timestamp` for all administrative actions and security events.
 - **TLS 1.2+ Transport Encryption**: Configures Traefik reverse proxy to force TLS 1.2+ (`minVersion: VersionTLS12`) in [dynamic.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/config/traefik/dynamic.yml#L1-L15) and validates 4096-bit RSA certificate chain expiry in [test-health.sh](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/scripts/test-health.sh#L253-L265).
 

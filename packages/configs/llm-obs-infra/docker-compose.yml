@@ -4,18 +4,12 @@ x-logging: &default-logging
     max-size: "50m"
     max-file: "3"
 
-x-security-opts: &default-security-opts
-  security_opt:
-    - "no-new-privileges:true"
-
 services:
   llmobs-traefik:
     image: traefik:v3.7
     container_name: llmobs-traefik-gateway
     restart: unless-stopped
     logging: *default-logging
-    security_opt:
-      - "no-new-privileges:true"
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
@@ -63,8 +57,6 @@ services:
     container_name: llmobs-redis-ledger
     restart: unless-stopped
     logging: *default-logging
-    security_opt:
-      - "no-new-privileges:true"
     command: >
       redis-server /etc/redis/redis.conf
       --requirepass ${REDIS_PASSWORD:-llmobs_redis_s3cret_2024}
@@ -88,8 +80,6 @@ services:
     container_name: llmobs-kafka-broker
     restart: unless-stopped
     logging: *default-logging
-    security_opt:
-      - "no-new-privileges:true"
     ulimits:
       nofile:
         soft: 65536
@@ -134,8 +124,6 @@ services:
     container_name: llmobs-clickhouse-analytics
     restart: unless-stopped
     logging: *default-logging
-    security_opt:
-      - "no-new-privileges:true"
     ulimits:
       nofile:
         soft: 262144
@@ -174,8 +162,6 @@ services:
     container_name: llmobs-tempo-tracing
     restart: unless-stopped
     logging: *default-logging
-    security_opt:
-      - "no-new-privileges:true"
     command: ["-config.file=/etc/tempo/tempo-config.yaml"]
     environment:
       - OTEL_SERVICE_NAME=llmobs-tempo-tracing
@@ -201,8 +187,6 @@ services:
     container_name: llmobs-otel-collector
     restart: unless-stopped
     logging: *default-logging
-    security_opt:
-      - "no-new-privileges:true"
     deploy:
       resources:
         limits:
@@ -234,8 +218,6 @@ services:
     container_name: llmobs-grafana-portal
     restart: unless-stopped
     logging: *default-logging
-    security_opt:
-      - "no-new-privileges:true"
     ports:
       - "${PORT_GRAFANA:-31415}:3000"
     environment:
@@ -274,8 +256,6 @@ services:
     container_name: llmobs-alloydb-db
     restart: unless-stopped
     logging: *default-logging
-    security_opt:
-      - "no-new-privileges:true"
     deploy:
       resources:
         limits:
@@ -309,8 +289,6 @@ services:
     container_name: llmobs-temporal-engine
     restart: unless-stopped
     logging: *default-logging
-    security_opt:
-      - "no-new-privileges:true"
     ports:
       - "${PORT_TEMPORAL_GRPC:-31424}:7233"
       - "${PORT_TEMPORAL_UI:-31425}:8080"
