@@ -24,7 +24,7 @@ services:
       - "--accesslog=true"
       - "--accesslog.format=json"
       - "--accesslog.fields.headers.defaultmode=keep"
-      - "--metrics.prometheus=true"
+      - "--serversTransport.insecureSkipVerify=true"
       - "--tracing.otlp=true"
       - "--tracing.otlp.grpc.endpoint=llmobs-otel-collector:4317"
       - "--tracing.otlp.grpc.insecure=true"
@@ -198,6 +198,7 @@ services:
       - OTEL_SERVICE_NAME=llmobs-otel-collector
     volumes:
       - ./config/otel-collector/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+      - ./config/certs:/etc/otel-collector/certs:ro
     ports:
       - "${PORT_OTEL_HTTP:-31417}:4318"
       - "${PORT_OTEL_GRPC:-31418}:4317"
@@ -210,6 +211,7 @@ services:
       - "traefik.http.routers.otel.tls=true"
       - "traefik.http.routers.otel.middlewares=security-headers@file,rate-limit-ingest@file,payload-limit@file"
       - "traefik.http.services.otel.loadbalancer.server.port=4318"
+      - "traefik.http.services.otel.loadbalancer.server.scheme=https"
     depends_on:
       - llmobs-tempo
 

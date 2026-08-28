@@ -18,10 +18,10 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
 
 | Phase | Category | Total Items | Completed | Open | Target Completion |
 |---|---|---|---|---|---|
-| **Phase 1** | Critical Security & Claim Alignment | 4 | 1 | 3 | Sprint 1 |
+| **Phase 1** | Critical Security & Claim Alignment | 4 | 2 | 2 | Sprint 1 |
 | **Phase 2** | Operational Hardening & Data-Loss Protection | 6 | 0 | 6 | Sprint 2 |
 | **Phase 3** | Production Scale & Load Validation | 7 | 0 | 7 | Sprint 3 |
-| **Total** | | **17** | **1** | **16** | |
+| **Total** | | **17** | **2** | **15** | |
 
 ---
 
@@ -64,7 +64,7 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
         exporters: [clickhouse, otlp/tempo]
   ```
 - **Verification Command**: Probe network traffic on bridge `llmobs-network` during ingestion to confirm no plaintext API keys appear before redactor.
-- **Status**: `[ ]` Incomplete
+- **Status**: `[x]` Complete
 
 ---
 

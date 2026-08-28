@@ -142,6 +142,10 @@ http:
         - "circuit-breaker"
         - "retry-middleware"
 
+  serversTransports:
+    insecure-transport:
+      insecureSkipVerify: true
+
   services:
     grafana-service:
       loadBalancer:
@@ -156,7 +160,8 @@ http:
     otel-service:
       loadBalancer:
         servers:
-          - url: "http://llmobs-otel-collector:4318"
+          - url: "https://llmobs-otel-collector:4318"
+        serversTransport: insecure-transport
 
     auth-service:
       loadBalancer:
