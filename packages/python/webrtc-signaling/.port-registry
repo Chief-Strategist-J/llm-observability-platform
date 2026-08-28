@@ -1,5 +1,0 @@
-infra:
-  - type: memory
-    adapter: MemorySessionStoreAdapter
-    port: SessionStorePort
-    path: src/infra/adapters/memory/session_store_adapter.py
