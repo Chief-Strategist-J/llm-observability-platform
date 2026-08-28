@@ -34,7 +34,7 @@ services:
       ALLOYDB_PASSWORD: postgres
       ALLOYDB_DB: toxicity_worker_db
     ports:
-      - "${PORT_TOXICITY_WORKER_ALLOYDB:-31435}:5432"
+      - "${PORT_TOXICITY_WORKER_ALLOYDB:-31437}:5432"
     networks:
       - llmobs-network
     healthcheck:

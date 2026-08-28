@@ -39,7 +39,7 @@ services:
       ALLOYDB_PASSWORD: postgres
       ALLOYDB_DB: ewma_db
     ports:
-      - "${PORT_EWMA_ALLOYDB:-31433}:5432"
+      - "${PORT_EWMA_ALLOYDB:-31436}:5432"
     networks:
       - llmobs-network
     healthcheck:

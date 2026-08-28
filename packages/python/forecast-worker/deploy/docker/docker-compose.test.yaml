@@ -42,7 +42,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: forecast_test_db
     ports:
-      - "${PORT_FORECAST_TEST_ALLOYDB:-31426}:5432"
+      - "${PORT_FORECAST_TEST_ALLOYDB:-31431}:5432"
     networks:
       - llmobs-network
     healthcheck:

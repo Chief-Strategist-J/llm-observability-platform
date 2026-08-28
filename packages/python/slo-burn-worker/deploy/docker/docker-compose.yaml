@@ -43,7 +43,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: slo_db
     ports:
-      - "${PORT_SLO_ALLOYDB:-31422}:5432"
+      - "${PORT_SLO_ALLOYDB:-31427}:5432"
     networks:
       - llmobs-network
     healthcheck:

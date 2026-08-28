@@ -40,7 +40,7 @@ services:
       ALLOYDB_PASSWORD: postgres
       ALLOYDB_DB: quality_engine_db
     ports:
-      - "${PORT_QUALITY_ALLOYDB:-31428}:5432"
+      - "${PORT_QUALITY_ALLOYDB:-31432}:5432"
     networks:
       - llmobs-network
     healthcheck:

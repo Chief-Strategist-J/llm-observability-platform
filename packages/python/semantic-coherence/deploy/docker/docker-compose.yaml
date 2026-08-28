@@ -46,7 +46,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: semantic_coherence_db
     ports:
-      - "${PORT_SEMANTIC_ALLOYDB:-31431}:5432"
+      - "${PORT_SEMANTIC_ALLOYDB:-31434}:5432"
     networks:
       - llmobs-network
     healthcheck:
