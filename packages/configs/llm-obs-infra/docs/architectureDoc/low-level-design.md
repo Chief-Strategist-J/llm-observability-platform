@@ -533,7 +533,7 @@ flowchart TD
     ReadKey --> GetTime[Get Current Timestamp T in Milliseconds]
     GetTime --> TrimOld[Execute ZREMRANGEBYSCORE rate:tenant_id:window 0 T-60000]
     TrimOld --> CountReqs[Execute ZCARD rate:tenant_id:window]
-    CountReqs --> CheckLimit{Current Count < Allowed Limit?}
+    CountReqs --> CheckLimit{"Current Count Under Allowed Limit?"}
 
     CheckLimit -- Yes --> AddCurrent[Execute ZADD rate:tenant_id:window T request_uuid]
     AddCurrent --> SetTTL[Execute EXPIRE rate:tenant_id:window 60]
@@ -604,10 +604,10 @@ stateDiagram-v2
     state Processing {
         PENDING_ACTIVITY --> ACTIVITY_RUNNING : Worker Picks Up Task
         ACTIVITY_RUNNING --> ACTIVITY_COMPLETED : Task Executed Successfully
-        ACTIVITY_RUNNING --> ACTIVITY_FAILED : Task Error / Timeout
+        ACTIVITY_RUNNING --> ACTIVITY_FAILED : Task Error or Timeout
     }
 
-    ACTIVITY_FAILED --> PENDING_ACTIVITY : Retry Policy Active (Attempt < 3)
+    ACTIVITY_FAILED --> PENDING_ACTIVITY : Retry Policy Active Attempt Under 3
     ACTIVITY_FAILED --> REVERTING : Max Retries Exceeded
 
     REVERTING --> COMPENSATED : Execute Compensation Activities

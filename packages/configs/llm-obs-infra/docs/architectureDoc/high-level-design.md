@@ -73,7 +73,7 @@ graph LR
     NextWeb -->|"2. REST / HTTPS (Query Analytics & Traces)"| CoreInfra
     AdminUser -->|"3. HTTPS (Traefik & Grafana Portals)"| CoreInfra
 
-    PythonSDK -.->"Proxy Model Calls"| LLMProviders
+    PythonSDK -.->|"Proxy Model Calls"| LLMProviders
     CoreInfra -->|"4. HTTPS Webhooks (Trigger Alerts)"| AlertSinks
 ```
 
