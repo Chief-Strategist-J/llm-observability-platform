@@ -466,9 +466,9 @@ test_redis_crud() {
   local max_delay=8
 
   while [ $attempt -lt $max_attempts ]; do
-    docker exec -i llmobs-redis-ledger redis-cli -a llmobs_redis_s3cret_2024 SET "$key" "redis_ok" >/dev/null 2>&1 || true
-    val=$(docker exec -i llmobs-redis-ledger redis-cli -a llmobs_redis_s3cret_2024 GET "$key" 2>/dev/null || echo "")
-    docker exec -i llmobs-redis-ledger redis-cli -a llmobs_redis_s3cret_2024 DEL "$key" >/dev/null 2>&1 || true
+    docker exec -i llmobs-redis-ledger redis-cli --user admin_user -a llmobs_redis_ledger_pass_2026 SET "$key" "redis_ok" >/dev/null 2>&1 || docker exec -i llmobs-redis-ledger redis-cli -a llmobs_redis_s3cret_2024 SET "$key" "redis_ok" >/dev/null 2>&1 || true
+    val=$(docker exec -i llmobs-redis-ledger redis-cli --user admin_user -a llmobs_redis_ledger_pass_2026 GET "$key" 2>/dev/null || docker exec -i llmobs-redis-ledger redis-cli -a llmobs_redis_s3cret_2024 GET "$key" 2>/dev/null || echo "")
+    docker exec -i llmobs-redis-ledger redis-cli --user admin_user -a llmobs_redis_ledger_pass_2026 DEL "$key" >/dev/null 2>&1 || docker exec -i llmobs-redis-ledger redis-cli -a llmobs_redis_s3cret_2024 DEL "$key" >/dev/null 2>&1 || true
 
     if echo "$val" | grep -q "redis_ok"; then
       break
