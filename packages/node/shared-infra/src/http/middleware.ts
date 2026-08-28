@@ -28,7 +28,7 @@ export function compose<Ctx, Result>(...middlewares: HttpMiddleware<Ctx, Result>
   return (finalNext: HttpNext<Ctx, Result>) => middlewares.reduceRight((next, mw) => mw(next), finalNext);
 }
 
-const PUBLIC_ROUTES = ['/auth/sign-in', '/auth/sign-up', '/auth/callback'];
+const PUBLIC_ROUTES = ['/', '/auth/sign-in', '/auth/sign-up', '/auth/callback'];
 
 export function isPublicRoute(pathname: string, publicRoutes: string[] = PUBLIC_ROUTES): boolean {
   if (
