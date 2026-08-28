@@ -102,13 +102,17 @@ verify_docker_socket() {
 }
 
 verify_system_memory() {
-  local min_mb=${1:-2500}
+  local min_mb=${1:-6000}
+  local warn_mb=${2:-12000}
   if command -v free >/dev/null 2>&1; then
     local avail_mem_mb
     avail_mem_mb=$(free -m | awk '/^Mem:/{print $7}')
     if [ -n "$avail_mem_mb" ] && [ "$avail_mem_mb" -lt "$min_mb" ]; then
-      echo -e "${YELLOW}⚠️ Warning: Low available memory (${avail_mem_mb}MB free). Min required: ${min_mb}MB.${NC}"
+      echo -e "${RED}✖ ERROR: Insufficient free memory (${avail_mem_mb}MB available). Floor required: ${min_mb}MB.${NC}"
       return 1
+    elif [ -n "$avail_mem_mb" ] && [ "$avail_mem_mb" -lt "$warn_mb" ]; then
+      echo -e "${YELLOW}⚠️ Warning: Available memory (${avail_mem_mb}MB) is below optimal 12GB ceiling for peak analytical bursts.${NC}"
+      return 0
     else
       echo -e "${GREEN}✓ Available system RAM verified (${avail_mem_mb}MB free).${NC}"
       return 0
@@ -138,7 +142,7 @@ main() {
   verify_clock_sync
   verify_firewall_rules
   verify_docker_socket "/var/run/docker.sock" || true
-  verify_system_memory 2500 || true
+  verify_system_memory 6000 || true
   reconcile_network_conflict "llmobs-network" "llm-obs-infra"
 }
 

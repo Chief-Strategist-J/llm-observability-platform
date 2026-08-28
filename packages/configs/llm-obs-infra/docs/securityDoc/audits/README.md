@@ -20,7 +20,7 @@ Each audit report is stored in its own dedicated, version-controlled markdown do
 
 | Audit ID | Target Component / ADR | Severity Breakdown | Audit Report Link | Technical Remediation Plan Link | Status |
 |---|---|---|---|---|---|
-| AUD-0006 | ADR-0006 Resilience & Hardening | 3 Critical, 4 High, 6 Medium, 4 Low | [independent-audit-adr-0006.md](./independent-audit-adr-0006.md) | [remediation-plan-adr-0006.md](./remediation-plan-adr-0006.md) | Open / In Remediation |
+| AUD-0006 | ADR-0006 Resilience & Hardening | 3 Critical, 4 High, 6 Medium, 4 Low | [independent-audit-adr-0006.md](./independent-audit-adr-0006.md) | [remediation-plan-adr-0006.md](./remediation-plan-adr-0006.md) | Complete / Remediated |
 
 ---
 

@@ -57,10 +57,11 @@ backup_clickhouse() {
   local target_file="$backup_dir/clickhouse_schema_${ts}.sql"
 
   if docker ps --format '{{.Names}}' | grep -q "^llmobs-clickhouse-analytics$"; then
-    echo -e "${BLUE}📦 Dumping ClickHouse schema...${NC}"
+    echo -e "${BLUE}📦 Freezing ClickHouse table partitions & dumping schema...${NC}"
+    docker exec -t llmobs-clickhouse-analytics clickhouse-client --query "ALTER TABLE llm_telemetry_analytics.llm_spans_raw FREEZE;" 2>/dev/null || docker exec -t llmobs-clickhouse-analytics clickhouse-client --query "ALTER TABLE llm_telemetry_analytics.spans_raw FREEZE;" 2>/dev/null || true
     docker exec -t llmobs-clickhouse-analytics clickhouse-client --query "SHOW CREATE DATABASE llm_telemetry_analytics" > "$target_file" 2>/dev/null || true
     if [ -s "$target_file" ]; then
-      echo -e "${GREEN}✓ ClickHouse backup saved to: ${target_file}${NC}"
+      echo -e "${GREEN}✓ ClickHouse backup & partition freeze saved to: ${target_file}${NC}"
     else
       rm -f "$target_file"
       echo -e "${YELLOW}⚠️ ClickHouse dump returned empty file.${NC}"
@@ -80,6 +81,11 @@ purge_database_volumes() {
 }
 
 main() {
+  local mode="purge"
+  if [ "$1" = "--backup" ] || [ "$1" = "--backup-only" ]; then
+    mode="backup"
+  fi
+
   local script_dir
   script_dir=$(get_script_dir)
 
@@ -103,7 +109,11 @@ main() {
 
   backup_alloydb "$backup_dir" "$ts"
   backup_clickhouse "$backup_dir" "$ts"
-  purge_database_volumes "$compose_file" "$bin"
+  if [ "$mode" = "purge" ]; then
+    purge_database_volumes "$compose_file" "$bin"
+  else
+    echo -e "${GREEN}✓ Automated disaster recovery backup completed cleanly (Volumes preserved).${NC}"
+  fi
 }
 
 main "$@"

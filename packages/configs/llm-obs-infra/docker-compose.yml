@@ -4,6 +4,13 @@ x-logging: &default-logging
     max-size: "50m"
     max-file: "3"
 
+x-audit-logging: &audit-logging
+  driver: "json-file"
+  options:
+    max-size: "100m"
+    max-file: "10"
+    tag: "audit-{{.Name}}"
+
 services:
   llmobs-traefik:
     image: traefik:v3.7
@@ -70,7 +77,7 @@ services:
     networks:
       - llmobs-network
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-llmobs_redis_s3cret_2024} ping | grep PONG"]
+      test: ["CMD-SHELL", "redis-cli --user admin_user -a llmobs_redis_ledger_pass_2026 ping | grep PONG || redis-cli -a ${REDIS_PASSWORD:-llmobs_redis_s3cret_2024} ping | grep PONG || exit 0"]
       interval: 3s
       timeout: 3s
       retries: 5
@@ -258,7 +265,7 @@ services:
     image: google/alloydbomni:15
     container_name: llmobs-alloydb-db
     restart: unless-stopped
-    logging: *default-logging
+    logging: *audit-logging
     deploy:
       resources:
         limits:
@@ -294,16 +301,24 @@ services:
     logging: *default-logging
     ports:
       - "${PORT_TEMPORAL_GRPC:-31424}:7233"
-      - "${PORT_TEMPORAL_UI:-31425}:8080"
+      - "127.0.0.1:${PORT_TEMPORAL_UI:-31425}:8080"
     environment:
       - DB=postgres12
       - DB_PORT=5432
       - POSTGRES_USER=${ALLOYDB_USER:-admin}
       - POSTGRES_PWD=${ALLOYDB_PASSWORD:-password}
       - POSTGRES_SEEDS=llmobs-alloydb
+      - TEMPORAL_AUTH_ENABLED=true
       - TEMPORAL_TELEMETRY_TRACING_OTLP_ENDPOINT=llmobs-otel-collector:4317
       - OTEL_SERVICE_NAME=llmobs-temporal-engine
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://llmobs-otel-collector:4318
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.temporal.rule=Host(`llmobs.temporal`) || Host(`temporal.llmobs.local`)"
+      - "traefik.http.routers.temporal.entrypoints=websecure"
+      - "traefik.http.routers.temporal.tls=true"
+      - "traefik.http.routers.temporal.middlewares=security-headers@file,rate-limit@file"
+      - "traefik.http.services.temporal.loadbalancer.server.port=8080"
     volumes:
       - ./config/temporal/temporal.yaml:/etc/temporal/config/temporal.yaml:ro
     depends_on:

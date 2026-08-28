@@ -9,15 +9,21 @@ NC='\033[0m'
 
 free_single_port() {
   local port=$1
-  if command -v fuser >/dev/null 2>&1; then
-    fuser -k "${port}/tcp" >/dev/null 2>&1 || true
-  elif command -v lsof >/dev/null 2>&1; then
+  if command -v lsof >/dev/null 2>&1; then
     local pids
     pids=$(lsof -t -i:"${port}" 2>/dev/null || true)
     if [ -n "$pids" ]; then
-      echo -e "${YELLOW}  - Terminating process(es) on port ${port}: ${pids}${NC}"
-      kill -9 $pids 2>/dev/null || true
+      for pid in $pids; do
+        if grep -qE "docker|containerd|llmobs" "/proc/${pid}/cgroup" 2>/dev/null || grep -qE "docker|containerd|llmobs" "/proc/${pid}/cmdline" 2>/dev/null; then
+          echo -e "${YELLOW}  - Terminating stale container process ${pid} on port ${port}${NC}"
+          kill -9 "$pid" 2>/dev/null || true
+        else
+          echo -e "${YELLOW}⚠️ Warning: Port ${port} occupied by host process ${pid}. Skipping termination.${NC}"
+        fi
+      done
     fi
+  elif command -v fuser >/dev/null 2>&1; then
+    fuser -k "${port}/tcp" >/dev/null 2>&1 || true
   fi
 }
 
