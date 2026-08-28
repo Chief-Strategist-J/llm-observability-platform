@@ -31,52 +31,52 @@ Think of this infrastructure as a **high-security building designed to store and
 
 ---
 
-## 2. In-Depth Security Architecture Diagrams
+## 2. In-Depth Security Architecture Diagrams (Red Team Analysis)
 
-### 2.1 Reality vs. Claim: The Vulnerability Attack Surface (Current State)
-The diagram below illustrates how an attacker bypasses the Traefik security perimeter due to raw datastore port publications (`0.0.0.0`), unencrypted internal transport, and exposed management interfaces.
+### 2.1 Threat Landscape & Exposed Attack Surface (Current State)
+The diagram below illustrates how an unauthenticated external attacker bypasses the Traefik edge perimeter due to raw datastore port bindings on `0.0.0.0`, unencrypted internal transport, and exposed management endpoints.
 
 ```mermaid
 flowchart TB
-    subgraph External_Untrusted["External Network / Attacker Boundary"]
-        Attacker["🚨 Malicious Actor / External Attacker"]
-        ClientApp["📱 Client Application (Sends LLM Telemetry)"]
+    subgraph External_Untrusted["External Network / Attacker Ingress"]
+        Attacker["Threat Actor / Red Team Ingress"]
+        ClientApp["Client Application (Telemetry Egress)"]
     end
 
-    subgraph Host_Perimeter["Docker Host: 0.0.0.0 (Public Interfaces)"]
-        subgraph Gateway_Layer["Gateway Layer (Edge)"]
-            Traefik["🛡️ Traefik Reverse Proxy<br/>Port 31410 (TLS)"]
-            TraefikAPI["❌ Insecure Dashboard API<br/>Port 31411 (Unauthenticated)"]
-            DockerSock[("🐳 /var/run/docker.sock<br/>Mounted to Traefik")]
+    subgraph Host_Perimeter["Docker Host: 0.0.0.0 (Unfiltered Public Interfaces)"]
+        subgraph Gateway_Layer["Edge Gateway Layer"]
+            Traefik["Traefik Reverse Proxy<br/>Port 31410 (TLS Termination)"]
+            TraefikAPI["Exposed Traefik API/Dashboard<br/>Port 31411 (Unauthenticated)"]
+            DockerSock[("Host UNIX Socket: /var/run/docker.sock<br/>Mounted Read-Write")]
         end
 
         subgraph Ingestion_Layer["Ingestion Pipeline"]
-            OTel["OTel Collector<br/>Port 4317 / 4318 (Published)<br/>❌ Wildcard CORS & No Auth"]
+            OTel["OTel Collector<br/>Port 4317 / 4318 (Published)<br/>Wildcard CORS and Missing Ingest Auth"]
         end
 
         subgraph Exposed_Datastores["Exposed Internal Datastores (Direct Port Access)"]
-            Kafka["❌ Kafka Stream (Port 9092)<br/>PLAINTEXT - No SASL/Auth"]
-            Redis["❌ Redis Cache (Port 6379)<br/>No ACLs - FLUSHALL Allowed"]
-            ClickHouse["❌ ClickHouse DB (Port 8123/9000)<br/>Default User Full Access"]
-            AlloyDB["❌ AlloyDB / Postgres (Port 5432)<br/>Default 'password' in Git"]
-            Temporal["❌ Temporal UI / Engine (Port 31424/31425)<br/>Unauthenticated Orchestration"]
-            Tempo["❌ Tempo Tracing (Port 3200)<br/>Unauthenticated Trace Access"]
+            Kafka["Kafka Broker (Port 9092)<br/>PLAINTEXT Protocol - No SASL/Auth"]
+            Redis["Redis Instance (Port 6379)<br/>No ACLs - FLUSHALL/CONFIG Enabled"]
+            ClickHouse["ClickHouse DB (Port 8123/9000)<br/>Default User Full Access"]
+            AlloyDB["AlloyDB / Postgres (Port 5432)<br/>Committed Password in Git"]
+            Temporal["Temporal Web & gRPC (Port 31424/31425)<br/>Unauthenticated Workflow Engine"]
+            Tempo["Tempo Trace Engine (Port 3200)<br/>Unauthenticated Trace Queries"]
         end
     end
 
-    %% Normal Flow
+    %% Standard Flow
     ClientApp -->|"1. Ingest Span (TLS)"| Traefik
-    Traefik -->|"2. Plaintext HTTP Proxy"| OTel
+    Traefik -->|"2. Plaintext HTTP Hop"| OTel
     OTel -->|"3. Unredacted Hop"| Kafka
     Kafka -->|"4. Telemetry Stream"| ClickHouse
 
     %% Exploit Vectors
-    Attacker -.->|"VULN 1: Bypass Gateway Direct to DB"| AlloyDB
-    Attacker -.->|"VULN 2: Read / Inject Fake Spans"| Kafka
-    Attacker -.->|"VULN 3: Erase Memory / Tamper Ledger"| Redis
-    Attacker -.->|"VULN 4: Takeover Host via Docker Socket"| TraefikAPI
+    Attacker -.->|"Vector 1: Direct Port DB Connection"| AlloyDB
+    Attacker -.->|"Vector 2: Ingest Fabricated Spans / Sniff Topics"| Kafka
+    Attacker -.->|"Vector 3: State Erasure / Cache Poisoning"| Redis
+    Attacker -.->|"Vector 4: Host Escape via Docker Socket"| TraefikAPI
     TraefikAPI -.-> DockerSock
-    Attacker -.->|"VULN 5: Sniff Plaintext Traffic & API Keys"| OTel
+    Attacker -.->|"Vector 5: Network Sniffing & Key Theft"| OTel
 
     classDef vuln fill:#ff4d4f,stroke:#820014,stroke-width:2px,color:#fff;
     classDef edge fill:#1890ff,stroke:#002766,stroke-width:2px,color:#fff;
@@ -88,52 +88,52 @@ flowchart TB
 
 ---
 
-### 2.2 Concrete Attack Chains: Step-by-Step Exploit Flow
-This diagram details the exact multi-stage sequence an adversary or automated crawler executes to achieve full infrastructure takeover without zero-days.
+### 2.2 Attack Chains: Multi-Stage Exploit Execution Flow
+This diagram details three verified, zero-day-free exploit chains providing arbitrary remote code execution, telemetry interception, and total audit repudiation.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Attacker as 🚨 Adversary / Script
-    participant Traefik as Traefik (:31411)
+    actor Attacker as Threat Actor / Red Team
+    participant Traefik as Traefik API (:31411)
     participant Socket as /var/run/docker.sock
-    participant Kafka as Kafka (:9092)
+    participant Kafka as Kafka Stream (:9092)
     participant OTel as OTel Collector (:4318)
     participant DB as AlloyDB / Postgres (:5432)
 
-    Note over Attacker,DB: Attack Chain A: Host Takeover via Docker Socket
+    Note over Attacker,DB: Attack Chain A: Host Escape & Container Takeover
     Attacker->>Traefik: GET /api/rawdata (Unauthenticated)
-    Traefik-->>Attacker: 200 OK (Full container topology & labels)
-    Attacker->>Traefik: POST Docker API call via mounted socket
-    Traefik->>Socket: Escalate to host root container creation
-    Socket-->>Attacker: Root shell on host acquired 💥
+    Traefik-->>Attacker: 200 OK (Full host topology & container metadata)
+    Attacker->>Traefik: POST Docker daemon API via mounted UNIX socket
+    Traefik->>Socket: Request privileged container creation with host root mount
+    Socket-->>Attacker: Root shell on underlying Linux host established
 
-    Note over Attacker,DB: Attack Chain B: Telemetry & API Key Interception
-    Attacker->>OTel: Direct HTTP POST /v1/traces (Wildcard CORS, No Auth)
-    Attacker->>Kafka: Connect to 0.0.0.0:9092 (PLAINTEXT, No SASL)
-    Kafka-->>Attacker: Dump all unredacted prompt spans & OpenAI/Anthropic API keys 🔓
+    Note over Attacker,DB: Attack Chain B: Unredacted PII & API Key Exfiltration
+    Attacker->>OTel: Unauthenticated HTTP POST /v1/traces (Wildcard CORS allowed)
+    Attacker->>Kafka: TCP connect to 0.0.0.0:9092 (PLAINTEXT, no SASL)
+    Kafka-->>Attacker: Full telemetry stream dumped (Contains API keys and prompts)
 
-    Note over Attacker,DB: Attack Chain C: Data Deletion & Audit Trail Destruction
-    Attacker->>DB: Connect to 0.0.0.0:5432 with published credentials
-    Attacker->>DB: Exfiltrate proprietary customer data
-    Attacker->>DB: DROP TABLE security_audit_logs; (No separation of privileges)
-    DB-->>Attacker: Query OK (Incident erased, 0 audit trail remains) 🛑
+    Note over Attacker,DB: Attack Chain C: Forensic Log Destruction (Total Repudiation)
+    Attacker->>DB: PostgreSQL connect to 0.0.0.0:5432 using committed git credentials
+    Attacker->>DB: Execute exfiltration of relational metadata
+    Attacker->>DB: Execute: DROP TABLE security_audit_logs;
+    DB-->>Attacker: Query OK (Zero audit trace remaining on system)
 ```
 
 ---
 
-### 2.3 End-to-End PII, Secret & Telemetry Lifecycle (Flawed vs. Hardened)
-A side-by-side comparison of how sensitive data (API keys, customer prompts, tokens) travels through the system.
+### 2.3 PII and Sensitive Credential Transit (Current vs. Remediated)
+Side-by-side technical trace comparing telemetry transit states across system boundaries.
 
 ```mermaid
 flowchart TB
-    subgraph Current_Flawed["Current Flow: Unprotected Internal Transit"]
-        InRaw["Raw Prompt + API Key<br/>(sk-..., bearer, credit card)"]
-        EdgeTls["Traefik (TLS Term)"]
-        AccessLog["❌ Traefik Access Log<br/>(Logs Authorization Header Plaintext)"]
-        PlainHop["❌ Plaintext Internal Hop<br/>(Sniffable by any container)"]
-        LateRedact["OTel Collector Redaction<br/>(Only redacts attributes, ignores events & logs)"]
-        PlainStore[("❌ Datastores Unencrypted<br/>No retention TTL / No real GDPR wipe")]
+    subgraph Current_Flawed["Current Pipeline: High-Exposure Path"]
+        InRaw["Raw Prompt and API Key<br/>(OpenAI/Anthropic Keys, Bearer Tokens)"]
+        EdgeTls["Traefik Edge (TLS 1.2/1.3 Termination)"]
+        AccessLog["Traefik Access Log<br/>(Plaintext Authorization Header Captured)"]
+        PlainHop["Plaintext Internal HTTP Hop<br/>(Bridge Network Sniffing Vulnerability)"]
+        LateRedact["OTel Collector Redaction<br/>(Attributes only; Span Events/Logs bypassed)"]
+        PlainStore[("Unencrypted Backend Datastores<br/>(No automated TTL retention enforcement)")]
 
         InRaw --> EdgeTls
         EdgeTls --> AccessLog
@@ -142,12 +142,12 @@ flowchart TB
         LateRedact --> PlainStore
     end
 
-    subgraph Hardened_Target["Hardened Flow: Zero-Exposure Pipeline"]
-        SecInRaw["Raw Prompt + API Key"]
-        SecEdge["Traefik Gateway<br/>- Strict TLS 1.3<br/>- Headers Dropped from Logs"]
-        SecHop["🔒 mTLS Internal Transport<br/>(Internal CA Encrypted)"]
-        SecRedact["🔒 Receiver-Side Redaction Engine<br/>- Attributes, Events, Log Bodies, Names<br/>- Propagates Errors (Fail-Closed)"]
-        SecStore[("🔒 AES-256 Encrypted Datastores<br/>- ACL Scoped Access<br/>- Automated TTL Retention<br/>- Synchronous GDPR Deletion")]
+    subgraph Hardened_Target["Remediated Pipeline: Zero-Exposure Path"]
+        SecInRaw["Raw Prompt and API Key"]
+        SecEdge["Traefik Gateway<br/>(Strict TLS 1.3, Headers dropped from logs)"]
+        SecHop["Internal Encrypted Transport<br/>(Mutual TLS with Private CA)"]
+        SecRedact["Receiver-Side Redaction Engine<br/>(Attributes, Events, Log Bodies; Fail-Closed)"]
+        SecStore[("Encrypted Datastores<br/>(AES-256, ACL Scoped, Automated TTL Purge)")]
 
         SecInRaw --> SecEdge
         SecEdge --> SecHop
@@ -163,35 +163,35 @@ flowchart TB
 
 ---
 
-### 2.4 Authentication & Network Access Boundary Matrix
-Comparison of service trust boundaries between the current implementation and the hardened target model.
+### 2.4 Service Authentication & Trust Boundary Matrix
+Architectural boundary transition from flat, perimeter-bypassed networking to multi-tier segmented security domains.
 
 ```mermaid
 flowchart LR
-    subgraph Current_Trust_Model["Current Trust Model: Flat & Perimeter-Bypassed"]
+    subgraph Current_Trust_Model["Current Trust Model: Flat Perimeter"]
         direction TB
-        ExtNet["Internet / 0.0.0.0"]
+        ExtNet["Public Ingress (0.0.0.0)"]
         
         ExtNet -->|No Auth| TraefikDash["Traefik Dashboard :31411"]
-        ExtNet -->|No Auth| OTelRecv["OTel OTLP :4317/:4318"]
+        ExtNet -->|No Auth| OTelRecv["OTel Ingestion :4317/:4318"]
         ExtNet -->|No Auth / PLAINTEXT| KafkaNode["Kafka :9092"]
         ExtNet -->|No Auth| TemporalUI["Temporal UI :31425"]
-        ExtNet -->|Shared Default Pass| RedisNode["Redis :6379"]
-        ExtNet -->|Shared Default Pass| PgNode["AlloyDB :5432"]
-        ExtNet -->|Shared Default Pass| CHNode["ClickHouse :8123"]
+        ExtNet -->|Shared Password| RedisNode["Redis :6379"]
+        ExtNet -->|Shared Password| PgNode["AlloyDB :5432"]
+        ExtNet -->|Shared Password| CHNode["ClickHouse :8123"]
     end
 
-    subgraph Hardened_Trust_Model["Hardened Trust Model: Multi-Tier Isolation & Real Auth"]
+    subgraph Hardened_Trust_Model["Hardened Trust Model: Tiered Zero-Trust"]
         direction TB
-        ExtSafe["Internet / Clients"]
+        ExtSafe["Public Ingress"]
         EdgeAuth["Edge Gateway (Traefik 3.x)<br/>OIDC / ForwardAuth / TLS 1.3"]
         
-        subgraph Data_VPC["Private Network (internal: true, NO Host Ports)"]
-            OTelAuth["OTel Collector (mTLS + Token)"]
-            KafkaAuth["Kafka (SASL_SSL + SCRAM)"]
-            RedisAuth["Redis 7 (ACL Service Users)"]
-            PgAuth["PostgreSQL (Vault Credentials)"]
-            CHAuth["ClickHouse (Role Quotas)"]
+        subgraph Data_VPC["Private Network (internal: true, No Host Port Bindings)"]
+            OTelAuth["OTel Collector (mTLS + Ingestion Token)"]
+            KafkaAuth["Kafka (SASL_SSL + SCRAM-SHA-512)"]
+            RedisAuth["Redis 7 (ACL Service Principals)"]
+            PgAuth["PostgreSQL (Vault Secret Injection)"]
+            CHAuth["ClickHouse (Role-Based Quotas)"]
         end
 
         ExtSafe --> EdgeAuth
@@ -210,30 +210,30 @@ flowchart LR
 
 ---
 
-### 2.5 Test Suite Falsification vs. Real CI/CD Security Gating
-Diagram showing why the 52-check test suite was non-falsifiable and how the remediation mandates strict CI failure gates.
+### 2.5 Validation Assurance: Health Suite Defect vs. Strict CI Gate
+Comparison demonstrating the mathematical failure modes of the 52-check test suite versus required negative-testing verification.
 
 ```mermaid
 flowchart TB
-    subgraph Flawed_Health_Suite["Current Health Suite: False Assurance Design"]
-        Check1["Run Check"] --> IsWarn{"Result is [WARN]?"}
-        IsWarn -->|Yes| CountPass1["Mark as PASS ✅ (Bug)"]
-        Check1 --> IsTls{"Test TLS?"}
-        IsTls -->|Bare TCP Connect| CountPass2["Mark as PASS ✅ (No Cert Checked)"]
-        Check1 --> IsRedis{"Redis Exists?"}
-        IsRedis -->|Container Missing| CountPass3["Mark as PASS ✅ (Docker error ignored)"]
-        CountPass1 & CountPass2 & CountPass3 --> ScriptEnd["manage.sh runs: bash test-health.sh || true"]
-        ScriptEnd --> FalseGreen["Result: 52/52 PASSED (False Positive Green)"]
+    subgraph Flawed_Health_Suite["Current Health Suite: False-Positive Model"]
+        Check1["Run Assertion Script"] --> IsWarn{"Status Code == WARN?"}
+        IsWarn -->|True| CountPass1["Increment Passed Counter (Logic Error)"]
+        Check1 --> IsTls{"Execute TLS Probe"}
+        IsTls -->|Raw TCP Connect Succeeds| CountPass2["Increment Passed Counter (Cert Unchecked)"]
+        Check1 --> IsRedis{"Execute Redis Check"}
+        IsRedis -->|Docker Daemon Error| CountPass3["Increment Passed Counter (Error Ignored)"]
+        CountPass1 & CountPass2 & CountPass3 --> ScriptEnd["manage.sh: bash test-health.sh || true"]
+        ScriptEnd --> FalseGreen["Output: 52/52 Passed (False Assurance)"]
     end
 
-    subgraph Hardened_CI_Gate["Mandated Definition of Done & CI Gate"]
-        NewCheck["Run Strict Assertion"] --> NegTest{"Negative Test:<br/>Does removal of control fail build?"}
-        NegTest -->|No| BlockCI["❌ Block CI Merge"]
-        NegTest -->|Yes| CertVerify{"Assert Real TLS Chain<br/>via --cacert"}
-        CertVerify -->|Failed| BlockCI
-        CertVerify -->|Passed| AssertHeaders{"Assert Exact Security Headers<br/>& Content"}
+    subgraph Hardened_CI_Gate["Mandated Remediation: Strict Negative Testing"]
+        NewCheck["Execute Security Assertion"] --> NegTest{"Negative Test:<br/>Does removal of control fail build?"}
+        NegTest -->|False| BlockCI["Block CI Pipeline (Exit Code 1)"]
+        NegTest -->|True| CertVerify{"Validate Certificate Authority<br/>via --cacert verification"}
+        CertVerify -->|Invalid Chain| BlockCI
+        CertVerify -->|Valid Chain| AssertHeaders{"Assert Security Header Values"}
         AssertHeaders -->|Mismatch| BlockCI
-        AssertHeaders -->|Match| PassCI["✅ Strict Green Build Verified"]
+        AssertHeaders -->|Exact Match| PassCI["Verified Secure (Merge Permitted)"]
     end
 
     classDef flawed fill:#fff2e8,stroke:#fa541c,stroke-width:1px;
@@ -254,11 +254,11 @@ flowchart TB
     end
 
     subgraph DMZ_Network["Docker Network: llmobs-edge (Isolated Bridge)"]
-        TraefikSecure["🛡️ Traefik 3.x Gateway<br/>- Strict TLS 1.3 Termination<br/>- mTLS / ForwardAuth (OIDC)<br/>- API Socket Isolated (Read-Only)<br/>- Access Log Header Redaction"]
+        TraefikSecure["Traefik 3.x Gateway<br/>- Strict TLS 1.3 Termination<br/>- mTLS / ForwardAuth (OIDC)<br/>- API Socket Isolated (Read-Only)<br/>- Access Log Header Redaction"]
     end
 
-    subgraph Internal_Network["Docker Network: llmobs-data (internal: true, NO Host Ports)"]
-        OTelSecure["🔒 OTel Collector<br/>- Inbound Token / mTLS Auth<br/>- Receiver-Side PII Redaction<br/>- Non-Root Container User"]
+    subgraph Internal_Network["Docker Network: llmobs-data (internal: true, No Host Port Bindings)"]
+        OTelSecure["OTel Collector<br/>- Inbound Token / mTLS Auth<br/>- Receiver-Side PII Redaction<br/>- Non-Root Container User"]
 
         subgraph Secure_Datastores["Encrypted & Authenticated Datastores"]
             KafkaSecure["Kafka (SASL_SSL + SCRAM)<br/>Per-service ACLs & RF>=2"]
