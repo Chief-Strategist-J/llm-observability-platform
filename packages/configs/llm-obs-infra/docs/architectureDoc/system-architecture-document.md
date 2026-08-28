@@ -93,6 +93,45 @@ The Central Platform Infrastructure (`llm-obs-infra`) consolidates core messagin
 - **Key Architectural Decisions:** Kafka KRaft mode for messaging, AlloyDB Omni 15 for transactional metadata, ClickHouse v24.8 for columnar span analytics, Traefik v3.7 for TLS ingress.
 - **Estimated Cost/Timeline Impact:** Zero-cost open-source container footprint, production deployable in < 10 minutes via `./manage.sh up`.
 
+```mermaid
+graph TD
+    classDef control fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef msg fill:#fff3e0,stroke:#f57c00,stroke-width:2px;
+    classDef data fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
+    classDef obs fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
+
+    subgraph ControlPlane["1. CONTROL & INGRESS PLANE"]
+        TraefikGateway["llmobs-traefik (Traefik v3.7)<br/>Ports: 31410 (HTTP), 31411 (UI), 31419 (HTTPS)"]:::control
+    end
+
+    subgraph MessagingPlane["2. MESSAGING & WORKFLOW PLANE"]
+        KafkaBroker["llmobs-kafka (Apache Kafka KRaft)<br/>Ports: 31414 (Host), 9092 (Internal)"]:::msg
+        TemporalEngine["llmobs-temporal (Temporal v1.24.2)<br/>Ports: 7233 (gRPC), 8088 (UI)"]:::msg
+    end
+
+    subgraph DataPlane["3. STORAGE & CACHING PLANE"]
+        AlloyDB["llmobs-alloydb (Google AlloyDB Omni 15)<br/>Ports: 31420 (Host), 5432 (Internal)"]:::data
+        ClickHouse["llmobs-clickhouse (ClickHouse v24.8)<br/>Ports: 8123 (HTTP), 9000 (Native)"]:::data
+        RedisLedger["llmobs-redis (Redis v7 Alpine)<br/>Ports: 31413 (Host), 6379 (Internal)"]:::data
+    end
+
+    subgraph ObservabilityPlane["4. TELEMETRY & OBSERVABILITY PLANE"]
+        OtelCollector["llmobs-otel-collector (OTel Contrib)<br/>Ports: 31417 (HTTP), 31418 (gRPC)"]:::obs
+        TempoTracing["llmobs-tempo (Grafana Tempo)<br/>Ports: 31416 (Host), 4317 (gRPC)"]:::obs
+        GrafanaPortal["llmobs-grafana (Grafana Portal)<br/>Ports: 31415 (Host 3000)"]:::obs
+    end
+
+    TraefikGateway --> OtelCollector
+    TraefikGateway --> GrafanaPortal
+    TraefikGateway --> TempoTracing
+    KafkaBroker --> ClickHouse
+    KafkaBroker --> RedisLedger
+    TemporalEngine --> AlloyDB
+    OtelCollector --> TempoTracing
+    GrafanaPortal --> ClickHouse
+    GrafanaPortal --> TempoTracing
+```
+
 ---
 
 ## 2. Business Context & Requirements
@@ -210,5 +249,6 @@ The Central Platform Infrastructure (`llm-obs-infra`) consolidates core messagin
 ## 12. Appendix
 
 - **A. Master Architecture Index Diagrams**
-- **B. Related ADRs:** ADR-0006, ADR-0007
-- **C. Sign-off:** Lead Architect, Infrastructure Lead, SecOps Lead
+- **B. Related ADRs:** [infrastructure-resilience-and-edge-case-hardening.md](./infrastructure-resilience-and-edge-case-hardening.md), [critical-security-remediation-mandate.md](../securityDoc/critical-security-remediation-mandate.md)
+- **C. Related Designs:** [high-level-design.md](./high-level-design.md), [low-level-design.md](./low-level-design.md)
+- **D. Sign-off:** Lead Architect, Infrastructure Lead, SecOps Lead
