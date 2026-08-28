@@ -1,47 +1,52 @@
 import { trace, context, type Tracer, SpanKind, SpanStatusCode, type Span } from '@opentelemetry/api';
-import { NodeTracerProvider, SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { Resource } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
-import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
 
 export { SpanKind, SpanStatusCode, trace, context, ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION, type Span, type Tracer };
-
-process.env.OTEL_EXPORTER_OTLP_PROTOCOL = 'http/json';
 
 let providerInitialized = false;
 
 export function initNodeTracing(serviceName = 'observability-service', serviceVersion = '1.0.0'): void {
-  if (providerInitialized) return;
+  if (providerInitialized || typeof window !== 'undefined') return;
 
-  const contextManager = new AsyncLocalStorageContextManager();
-  contextManager.enable();
-  context.setGlobalContextManager(contextManager);
+  try {
+    const { NodeTracerProvider, SimpleSpanProcessor } = require('@opentelemetry/sdk-trace-node');
+    const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http');
+    const { AsyncLocalStorageContextManager } = require('@opentelemetry/context-async-hooks');
 
-  const resource = new Resource({
-    [ATTR_SERVICE_NAME]: serviceName,
-    [ATTR_SERVICE_VERSION]: serviceVersion,
-  });
+    process.env.OTEL_EXPORTER_OTLP_PROTOCOL = 'http/json';
 
-  const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:31417/v1/traces';
+    const contextManager = new AsyncLocalStorageContextManager();
+    contextManager.enable();
+    context.setGlobalContextManager(contextManager);
 
-  const exporter = new OTLPTraceExporter({
-    url: otlpEndpoint,
-  });
+    const resource = new Resource({
+      [ATTR_SERVICE_NAME]: serviceName,
+      [ATTR_SERVICE_VERSION]: serviceVersion,
+    });
 
-  const provider = new NodeTracerProvider({
-    resource,
-    spanProcessors: [
-      new SimpleSpanProcessor(exporter),
-    ],
-  });
+    const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:31417/v1/traces';
 
-  provider.register();
-  providerInitialized = true;
+    const exporter = new OTLPTraceExporter({
+      url: otlpEndpoint,
+    });
+
+    const provider = new NodeTracerProvider({
+      resource,
+      spanProcessors: [
+        new SimpleSpanProcessor(exporter),
+      ],
+    });
+
+    provider.register();
+    providerInitialized = true;
+  } catch (err) {
+    providerInitialized = true;
+  }
 }
 
 export function getTracer(serviceName = 'observability-service', serviceVersion = '1.0.0'): Tracer {
-  if (!providerInitialized) {
+  if (!providerInitialized && typeof window === 'undefined') {
     initNodeTracing(serviceName, serviceVersion);
   }
   return trace.getTracer(serviceName, serviceVersion);
