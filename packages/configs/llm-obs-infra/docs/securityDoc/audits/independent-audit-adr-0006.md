@@ -7,6 +7,7 @@
 | Audit Scope | Topology, Low-Level Design, Edge-Case Matrix, & Compliance Claims |
 | Classification | Confidential / Internal |
 | Date | 2026-08-28 |
+| Remediation Plan | [remediation-plan-adr-0006.md](./remediation-plan-adr-0006.md) |
 
 ---
 

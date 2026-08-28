@@ -97,7 +97,7 @@ graph TD
 | [threat-model-report.md](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docs/securityDoc/threat-model-report.md) | Comprehensive STRIDE threat model evaluating span tampering and API key abuse. | Security Leads & System Designers |
 | [vulnerability-assessment-report.md](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docs/securityDoc/vulnerability-assessment-report.md) | Container image vulnerability scan audit and dependency CVE tracking. | SecOps & Infrastructure Engineers |
 | [critical-security-remediation-mandate.md](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docs/securityDoc/critical-security-remediation-mandate.md) | ADR 0007 — Critical security remediation mandate & adversarial review. | Security Engineers & CISOs |
-| [independent-audit-adr-0006.md](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docs/securityDoc/independent-audit-adr-0006.md) | Independent Architecture, Security & Performance Audit Report for ADR-0006. | Security Auditors, Architects & CISOs |
+| [audits/README.md](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docs/securityDoc/audits/README.md) | Master Audit & Remediation Registry cataloging all independent security & resilience audits. | Security Auditors, Architects & CISOs |
 
 ---
 
