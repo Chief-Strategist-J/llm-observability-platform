@@ -56,8 +56,13 @@ export class RawAuthApiClient {
     const json = await response.json();
     if (!response.ok || json.status === "error" || json.error) {
       const err = new Error(json.error?.details || json.message || `HTTP ${response.status}`);
-      (err as any).code = json.error?.code || "HTTP_ERROR";
+      (err as any).code = json.error?.code || (response.status === 401 ? "UNAUTHORIZED" : "HTTP_ERROR");
       (err as any).status = response.status;
+      if (typeof window !== "undefined" && (response.status === 401 || json.message?.includes("expired"))) {
+        if (!window.location.pathname.startsWith("/auth/")) {
+          window.location.href = `/auth/sign-in?callbackUrl=${encodeURIComponent(window.location.pathname)}`;
+        }
+      }
       throw err;
     }
 
