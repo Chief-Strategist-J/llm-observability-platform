@@ -51,6 +51,13 @@ export interface RouteRule {
 
 export const ROUTE_RULES: RouteRule[] = [
   {
+    name: 'root_check',
+    method: HTTP_METHODS.GET,
+    pattern: '/',
+    successMessage: 'Auth Service API v1 is live',
+    handler: async () => ({ service: 'auth-service', version: '1.0.0', status: 'healthy' }),
+  },
+  {
     name: 'health_check',
     method: HTTP_METHODS.GET,
     pattern: '/health',
