@@ -13,7 +13,36 @@
 
 ---
 
-## 1. Executive Summary & Plain-Language Overview (Non-Technical Brief)
+---
+
+## 1. Decision / Verdict
+
+### Status: NOT PRODUCTION READY
+
+ADR-0006 is an *availability and ergonomics* document wearing the vocabulary of a *security* document. It is competent at what it actually does — port allocation, cgroup limits, log rotation, startup ordering — and it is materially misleading everywhere it claims SOC 2, ISO 27001, GDPR, HIPAA, or EU AI Act posture.
+
+Three structural problems make the ADR worse than no document at all:
+
+1. **It documents controls that are not implemented.** `no-new-privileges:true` is named twice in ADR-0006 (§8.6 diagram, §8.7.3 LLD, complete with a fabricated `prctl(PR_SET_NO_NEW_PRIVS, ...)` execution path). It appears **zero times** in `docker-compose.yml`. The "immutable audit log table" is a plain heap table in a `.sql` file that is **never mounted and never executed**. The "dual-write to ClickHouse" pipeline drawn in three separate diagrams **has no ClickHouse exporter in the collector config**.
+2. **It presents the disabling of a security control as hardening.** Edge Case 13 records, as an achievement, that `curl` was given `-k` to stop certificate verification from failing. The recorded root cause — "self-signed RSA certificates cause `HTTP 000000`" — is the platform's TLS trust chain correctly reporting that it is untrustworthy. The fix silenced the alarm.
+3. **Its evidence is a test suite engineered to pass.** The headline "✓ ALL 52/52 HEALTH & SECURITY CHECKS PASSED" is not falsifiable. Container checks count `[WARN]` as a pass. The TLS check passes on a bare TCP connect. Header checks never inspect a header's value. The Redis auth check passes when the Redis container does not exist. Compose healthchecks end in `|| exit 0`. And `manage.sh` invokes the whole suite as `bash "$health_script" || true`. A green run is compatible with a completely broken, wide-open stack.
+
+A reviewer, auditor, or customer reading ADR-0006 would reasonably conclude this platform enforces authenticated, encrypted, isolated, PII-redacted telemetry handling. It does not. **Every backend datastore in this stack — Redis, Kafka, ClickHouse, AlloyDB, Tempo, Temporal, and the OTLP receivers — is published on `0.0.0.0` with either no authentication or a password published in this git repository, and the gateway that ADR-0006 presents as the security boundary can be bypassed entirely by connecting to the port directly.**
+
+This ADR enumerates what must be fixed, ranked by exploitability, with evidence.
+
+---
+
+1. **ADR-0006 is amended, not superseded.** Its resilience content stands. Its §8 compliance content — SOC 2, ISO 27001, GDPR/CCPA, HIPAA, EU AI Act — is **withdrawn** pending remediation, along with §8.6, §8.7.1, §8.7.3, and the §5.1 check-count claim. Section 7's table above enumerates exactly what must be struck or rewritten.
+2. **This stack is classified as a local development environment.** It must not be deployed to any host reachable by another person, must not process real customer telemetry, and must not process personal data, until Phase 1 and Phase 2 below are complete and independently verified.
+3. **All credentials in `.env.example`, `datasources.yml`, `default-user.xml`, `gdpr-erasure.sh`, and `test-health.sh` are treated as public** as of this ADR's date. Rotation is mandatory and is not sufficient on its own — git history retains them.
+4. **No ADR in this repository may describe a control as implemented without a file-and-line reference to its implementation and a negative test that fails when the control is removed.** This is the process defect that produced fourteen documented-but-absent controls; every finding in §7 traces back to it.
+
+---
+
+---
+
+## 2. Executive Summary
 
 ### What Is Happening in Plain Terms?
 Think of this infrastructure as a **high-security building designed to store and monitor sensitive enterprise AI conversations and proprietary data**. 
@@ -31,7 +60,9 @@ Think of this infrastructure as a **high-security building designed to store and
 
 ---
 
-## 2. In-Depth Security Architecture Diagrams (Red Team Analysis)
+---
+
+## 3. Current Architecture
 
 ### 2.1 Threat Landscape & Exposed Attack Surface (Current State)
 The diagram below illustrates how an unauthenticated external attacker bypasses the Traefik edge perimeter due to raw datastore port bindings on `0.0.0.0`, unencrypted internal transport, and exposed management endpoints.
@@ -88,221 +119,11 @@ flowchart TB
 
 ---
 
-### 2.2 Attack Chains: Multi-Stage Exploit Execution Flow
-This diagram details three verified, zero-day-free exploit chains providing arbitrary remote code execution, telemetry interception, and total audit repudiation.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Attacker as Threat Actor / Red Team
-    participant Traefik as Traefik API (:31411)
-    participant Socket as /var/run/docker.sock
-    participant Kafka as Kafka Stream (:9092)
-    participant OTel as OTel Collector (:4318)
-    participant DB as AlloyDB / Postgres (:5432)
-
-    Note over Attacker,DB: Attack Chain A: Host Escape & Container Takeover
-    Attacker->>Traefik: GET /api/rawdata (Unauthenticated)
-    Traefik-->>Attacker: 200 OK (Full host topology & container metadata)
-    Attacker->>Traefik: POST Docker daemon API via mounted UNIX socket
-    Traefik->>Socket: Request privileged container creation with host root mount
-    Socket-->>Attacker: Root shell on underlying Linux host established
-
-    Note over Attacker,DB: Attack Chain B: Unredacted PII & API Key Exfiltration
-    Attacker->>OTel: Unauthenticated HTTP POST /v1/traces (Wildcard CORS allowed)
-    Attacker->>Kafka: TCP connect to 0.0.0.0:9092 (PLAINTEXT, no SASL)
-    Kafka-->>Attacker: Full telemetry stream dumped (Contains API keys and prompts)
-
-    Note over Attacker,DB: Attack Chain C: Forensic Log Destruction (Total Repudiation)
-    Attacker->>DB: PostgreSQL connect to 0.0.0.0:5432 using committed git credentials
-    Attacker->>DB: Execute exfiltration of relational metadata
-    Attacker->>DB: Execute: DROP TABLE security_audit_logs;
-    DB-->>Attacker: Query OK (Zero audit trace remaining on system)
-```
-
 ---
 
-### 2.3 PII and Sensitive Credential Transit (Current vs. Remediated)
-Side-by-side technical trace comparing telemetry transit states across system boundaries.
+## 4. Critical Findings (P0)
 
-```mermaid
-flowchart TB
-    subgraph Current_Flawed["Current Pipeline: High-Exposure Path"]
-        InRaw["Raw Prompt and API Key<br/>(OpenAI/Anthropic Keys, Bearer Tokens)"]
-        EdgeTls["Traefik Edge (TLS 1.2/1.3 Termination)"]
-        AccessLog["Traefik Access Log<br/>(Plaintext Authorization Header Captured)"]
-        PlainHop["Plaintext Internal HTTP Hop<br/>(Bridge Network Sniffing Vulnerability)"]
-        LateRedact["OTel Collector Redaction<br/>(Attributes only; Span Events/Logs bypassed)"]
-        PlainStore[("Unencrypted Backend Datastores<br/>(No automated TTL retention enforcement)")]
-
-        InRaw --> EdgeTls
-        EdgeTls --> AccessLog
-        EdgeTls --> PlainHop
-        PlainHop --> LateRedact
-        LateRedact --> PlainStore
-    end
-
-    subgraph Hardened_Target["Remediated Pipeline: Zero-Exposure Path"]
-        SecInRaw["Raw Prompt and API Key"]
-        SecEdge["Traefik Gateway<br/>(Strict TLS 1.3, Headers dropped from logs)"]
-        SecHop["Internal Encrypted Transport<br/>(Mutual TLS with Private CA)"]
-        SecRedact["Receiver-Side Redaction Engine<br/>(Attributes, Events, Log Bodies; Fail-Closed)"]
-        SecStore[("Encrypted Datastores<br/>(AES-256, ACL Scoped, Automated TTL Purge)")]
-
-        SecInRaw --> SecEdge
-        SecEdge --> SecHop
-        SecHop --> SecRedact
-        SecRedact --> SecStore
-    end
-
-    classDef redBox fill:#fff1f0,stroke:#ff4d4f,stroke-width:1px;
-    classDef greenBox fill:#f6ffed,stroke:#52c41a,stroke-width:1px;
-    class Current_Flawed redBox;
-    class Hardened_Target greenBox;
-```
-
----
-
-### 2.4 Service Authentication & Trust Boundary Matrix
-Architectural boundary transition from flat, perimeter-bypassed networking to multi-tier segmented security domains.
-
-```mermaid
-flowchart LR
-    subgraph Current_Trust_Model["Current Trust Model: Flat Perimeter"]
-        direction TB
-        ExtNet["Public Ingress (0.0.0.0)"]
-        
-        ExtNet -->|No Auth| TraefikDash["Traefik Dashboard :31411"]
-        ExtNet -->|No Auth| OTelRecv["OTel Ingestion :4317/:4318"]
-        ExtNet -->|No Auth / PLAINTEXT| KafkaNode["Kafka :9092"]
-        ExtNet -->|No Auth| TemporalUI["Temporal UI :31425"]
-        ExtNet -->|Shared Password| RedisNode["Redis :6379"]
-        ExtNet -->|Shared Password| PgNode["AlloyDB :5432"]
-        ExtNet -->|Shared Password| CHNode["ClickHouse :8123"]
-    end
-
-    subgraph Hardened_Trust_Model["Hardened Trust Model: Tiered Zero-Trust"]
-        direction TB
-        ExtSafe["Public Ingress"]
-        EdgeAuth["Edge Gateway (Traefik 3.x)<br/>OIDC / ForwardAuth / TLS 1.3"]
-        
-        subgraph Data_VPC["Private Network (internal: true, No Host Port Bindings)"]
-            OTelAuth["OTel Collector (mTLS + Ingestion Token)"]
-            KafkaAuth["Kafka (SASL_SSL + SCRAM-SHA-512)"]
-            RedisAuth["Redis 7 (ACL Service Principals)"]
-            PgAuth["PostgreSQL (Vault Secret Injection)"]
-            CHAuth["ClickHouse (Role-Based Quotas)"]
-        end
-
-        ExtSafe --> EdgeAuth
-        EdgeAuth -->|mTLS| OTelAuth
-        OTelAuth -->|SASL_SSL| KafkaAuth
-        OTelAuth -->|mTLS + Scoped Creds| CHAuth
-        EdgeAuth -->|RBAC ForwardAuth| PgAuth
-        OTelAuth -->|ACL Auth| RedisAuth
-    end
-
-    classDef warn fill:#ffccc7,stroke:#ff4d4f,color:#000;
-    classDef ok fill:#d9f7be,stroke:#52c41a,color:#000;
-    class Current_Trust_Model warn;
-    class Hardened_Trust_Model ok;
-```
-
----
-
-### 2.5 Validation Assurance: Health Suite Defect vs. Strict CI Gate
-Comparison demonstrating the mathematical failure modes of the 52-check test suite versus required negative-testing verification.
-
-```mermaid
-flowchart TB
-    subgraph Flawed_Health_Suite["Current Health Suite: False-Positive Model"]
-        Check1["Run Assertion Script"] --> IsWarn{"Status Code == WARN?"}
-        IsWarn -->|True| CountPass1["Increment Passed Counter (Logic Error)"]
-        Check1 --> IsTls{"Execute TLS Probe"}
-        IsTls -->|Raw TCP Connect Succeeds| CountPass2["Increment Passed Counter (Cert Unchecked)"]
-        Check1 --> IsRedis{"Execute Redis Check"}
-        IsRedis -->|Docker Daemon Error| CountPass3["Increment Passed Counter (Error Ignored)"]
-        CountPass1 & CountPass2 & CountPass3 --> ScriptEnd["manage.sh: bash test-health.sh || true"]
-        ScriptEnd --> FalseGreen["Output: 52/52 Passed (False Assurance)"]
-    end
-
-    subgraph Hardened_CI_Gate["Mandated Remediation: Strict Negative Testing"]
-        NewCheck["Execute Security Assertion"] --> NegTest{"Negative Test:<br/>Does removal of control fail build?"}
-        NegTest -->|False| BlockCI["Block CI Pipeline (Exit Code 1)"]
-        NegTest -->|True| CertVerify{"Validate Certificate Authority<br/>via --cacert verification"}
-        CertVerify -->|Invalid Chain| BlockCI
-        CertVerify -->|Valid Chain| AssertHeaders{"Assert Security Header Values"}
-        AssertHeaders -->|Mismatch| BlockCI
-        AssertHeaders -->|Exact Match| PassCI["Verified Secure (Merge Permitted)"]
-    end
-
-    classDef flawed fill:#fff2e8,stroke:#fa541c,stroke-width:1px;
-    classDef solid fill:#f6ffed,stroke:#52c41a,stroke-width:1px;
-    class Flawed_Health_Suite flawed;
-    class Hardened_CI_Gate solid;
-```
-
----
-
-### 2.6 Hardened Target Architecture (Post-Remediation Blueprint)
-The target architecture strictly isolates the internal network, enforces edge mTLS/forward-auth, seals all database ports, and guarantees receiver-side redaction.
-
-```mermaid
-flowchart TB
-    subgraph Public_Internet["Public Ingress (Zero-Trust Edge)"]
-        User["Client SDK / Gateway Ingress"]
-    end
-
-    subgraph DMZ_Network["Docker Network: llmobs-edge (Isolated Bridge)"]
-        TraefikSecure["Traefik 3.x Gateway<br/>- Strict TLS 1.3 Termination<br/>- mTLS / ForwardAuth (OIDC)<br/>- API Socket Isolated (Read-Only)<br/>- Access Log Header Redaction"]
-    end
-
-    subgraph Internal_Network["Docker Network: llmobs-data (internal: true, No Host Port Bindings)"]
-        OTelSecure["OTel Collector<br/>- Inbound Token / mTLS Auth<br/>- Receiver-Side PII Redaction<br/>- Non-Root Container User"]
-
-        subgraph Secure_Datastores["Encrypted & Authenticated Datastores"]
-            KafkaSecure["Kafka (SASL_SSL + SCRAM)<br/>Per-service ACLs & RF>=2"]
-            RedisSecure["Redis 7 (ACL-Scoped Users)<br/>Dangerous Commands Disabled"]
-            ClickHouseSecure["ClickHouse (Scoped Users & Quotas)<br/>Read-Only Analytics Profiles"]
-            AlloyDBSecure["AlloyDB / Postgres (mTLS + Vault Secrets)<br/>Append-Only Immutable Audit Log"]
-            TemporalSecure["Temporal Engine (mTLS Interceptor)"]
-        end
-    end
-
-    User -->|"HTTPS (Port 443 / 31410)"| TraefikSecure
-    TraefikSecure -->|"Mutual TLS (Internal CA)"| OTelSecure
-    OTelSecure -->|"SASL_SSL"| KafkaSecure
-    KafkaSecure -->|"Authenticated Write"| ClickHouseSecure
-    OTelSecure -->|"Authenticated Stream"| AlloyDBSecure
-
-    classDef edgeGate fill:#1890ff,stroke:#002766,stroke-width:2px,color:#fff;
-    classDef innerSafe fill:#52c41a,stroke:#135200,stroke-width:2px,color:#fff;
-    classDef storeSafe fill:#13c2c2,stroke:#00474f,stroke-width:2px,color:#fff;
-
-    class TraefikSecure edgeGate;
-    class OTelSecure innerSafe;
-    class KafkaSecure,RedisSecure,ClickHouseSecure,AlloyDBSecure,TemporalSecure storeSafe;
-```
-
----
-
-## 3. Executive Verdict
-
-ADR-0006 is an *availability and ergonomics* document wearing the vocabulary of a *security* document. It is competent at what it actually does — port allocation, cgroup limits, log rotation, startup ordering — and it is materially misleading everywhere it claims SOC 2, ISO 27001, GDPR, HIPAA, or EU AI Act posture.
-
-Three structural problems make the ADR worse than no document at all:
-
-1. **It documents controls that are not implemented.** `no-new-privileges:true` is named twice in ADR-0006 (§8.6 diagram, §8.7.3 LLD, complete with a fabricated `prctl(PR_SET_NO_NEW_PRIVS, ...)` execution path). It appears **zero times** in `docker-compose.yml`. The "immutable audit log table" is a plain heap table in a `.sql` file that is **never mounted and never executed**. The "dual-write to ClickHouse" pipeline drawn in three separate diagrams **has no ClickHouse exporter in the collector config**.
-2. **It presents the disabling of a security control as hardening.** Edge Case 13 records, as an achievement, that `curl` was given `-k` to stop certificate verification from failing. The recorded root cause — "self-signed RSA certificates cause `HTTP 000000`" — is the platform's TLS trust chain correctly reporting that it is untrustworthy. The fix silenced the alarm.
-3. **Its evidence is a test suite engineered to pass.** The headline "✓ ALL 52/52 HEALTH & SECURITY CHECKS PASSED" is not falsifiable. Container checks count `[WARN]` as a pass. The TLS check passes on a bare TCP connect. Header checks never inspect a header's value. The Redis auth check passes when the Redis container does not exist. Compose healthchecks end in `|| exit 0`. And `manage.sh` invokes the whole suite as `bash "$health_script" || true`. A green run is compatible with a completely broken, wide-open stack.
-
-A reviewer, auditor, or customer reading ADR-0006 would reasonably conclude this platform enforces authenticated, encrypted, isolated, PII-redacted telemetry handling. It does not. **Every backend datastore in this stack — Redis, Kafka, ClickHouse, AlloyDB, Tempo, Temporal, and the OTLP receivers — is published on `0.0.0.0` with either no authentication or a password published in this git repository, and the gateway that ADR-0006 presents as the security boundary can be bypassed entirely by connecting to the port directly.**
-
-This ADR enumerates what must be fixed, ranked by exploitability, with evidence.
-
----
-
-## 2. Review Method & Severity Model
+### 4.0 Review Method & Severity Model
 
 Every finding below was verified by reading the checked-in artifact, not inferred from the ADR. Each carries a file and line reference. No finding is speculative; where a claim depends on runtime conditions, those conditions are stated.
 
@@ -316,8 +137,6 @@ Every finding below was verified by reading the checked-in artifact, not inferre
 **Threat model applied:** an unauthenticated attacker on the same L2/L3 network as the Docker host (office LAN, cloud VPC, shared CI runner); a developer with a checkout of this repository; and a low-privilege local user on the Docker host. Not modelled: a root-level host compromise, which is out of scope for infrastructure config.
 
 ---
-
-## 3. P0 — Critical Findings (Blocking)
 
 ### P0-1 — Every credential in this system is published in the repository, and `manage.sh` reinstalls the published values on every deploy
 
@@ -766,7 +585,9 @@ There is no integrity checksum, no restore test, no offsite copy, and no retenti
 
 ---
 
-## 4. P1 — High Findings
+---
+
+## 5. High Findings (P1)
 
 ### P1-1 — OTLP receivers accept unauthenticated telemetry from any origin, with wildcard CORS
 
@@ -1080,7 +901,9 @@ grafana/grafana:latest
 
 ---
 
-## 5. P2 — Medium Findings
+---
+
+### 5.2 P2 — Medium Findings
 
 ### P2-1 — The "Zero-Trust Network Signature" is security theatre
 
@@ -1227,7 +1050,9 @@ Also at L117 and L124, the calls pass an argument (`wait_for_clickhouse_http 20`
 
 ---
 
-## 6. P3 — Low Findings
+---
+
+### 5.3 P3 — Low Findings
 
 | ID | Finding | Evidence |
 | --- | --- | --- |
@@ -1244,31 +1069,179 @@ Also at L117 and L124, the calls pass an argument (`wait_for_clickhouse_http 20`
 
 ---
 
-## 7. ADR-0006 Claims That Are Not Implemented
+---
 
-This table is the deliverable an auditor will ask for. Every row is a statement in ADR-0006 that the code contradicts.
+## 6. Root-Cause Summary
 
-| ADR-0006 location | Claim | Reality | Finding |
-| --- | --- | --- | --- |
-| §8.6 layer 4; §8.7.3 | "Microservice Sandbox Security (`no-new-privileges:true`)", with `prctl(PR_SET_NO_NEW_PRIVS, ...)` execution path | The string appears nowhere in the repository. No `cap_drop`, `read_only`, or `user:` either. | P1-4 |
-| §8.1 | "Creates an **immutable** database audit log table" | Plain heap table, no DML restrictions, no trigger, no hash chain — **and the DDL is never executed**. | P2-3, P0-4 |
-| §6.1, §6.2, §8.9, §8.10 | Dual-write pipeline exporting spans to ClickHouse `telemetry_spans` / `opentelemetry_span_log` | No ClickHouse exporter exists in the collector config. `telemetry_spans` is never created. | P1-2 |
-| §8.2 | PII redaction "sanitizes sensitive LLM data before persistence" | `error_mode: ignore` fails open; covers span attributes only, not span events where prompts live; and Traefik logs raw `Authorization` headers upstream of it. | P1-2, P0-10 |
-| §8.2 | GDPR erasure "performs atomic purging" | Errors suppressed, success printed unconditionally, target tables do not exist, 5 of 7 data stores untouched. | P0-4 |
-| §8.3; §4.1 row 12 | "Cryptographic Origin Signature" preventing spoofed internal requests | A Docker label plus a constant header that Traefik injects and nobody verifies. Value is public. | P2-1 |
-| §8.4 | HIPAA "Port Isolation ... prevents port-listening process hijack attacks" | Every datastore published on `0.0.0.0`; the port manager itself SIGKILLs whatever holds those ports. | P0-5, P1-7 |
-| §8.4 | "Enforces authentication guards on Redis and relational databases, validated automatically" | The validating check passes when the Redis container does not exist. Kafka, Tempo, Temporal, and the OTLP receivers have no authentication at all. | P1-3e, P0-9, P1-8 |
-| §8.1 | "TLS 1.2+ Transport Encryption ... validates 4096-bit RSA certificate chain" | The chain check passes on a bare TCP connect; the HTTPS probes use `curl -k`. Internal hops are plaintext. | P1-3b, P2-2 |
-| §2.3; §4.1 rows 1, 9 | Pre-flight "checks" for file descriptors, NTP, firewall | `ulimit` call is a no-op for containers; NTP check tests only for a binary's existence; UFW rule targets a non-existent interface and would not filter published ports anyway. | P1-6, P0-5 |
-| §4.1 row 11; §2.2 | "Exponential Backoff & Jitter polling until AlloyDB & ClickHouse report 'ready'" | Waits return success on timeout; `nc -z` fallback succeeds at container creation, inside the WAL window the control targets. | P2-7 |
-| §5.1 | "✓ ALL 52/52 HEALTH & SECURITY CHECKS PASSED" | Suite cannot fail: WARN counts as PASS, TLS check passes on TCP connect, headers unvalidated, and `manage.sh` runs it with `\|\| true`. | P1-3 |
-| §3.1 | Resource limits tabulated for Traefik, Redis, Tempo, Grafana | Those four services have no `deploy.resources` block. | P3-8 |
-| §4.1 row 13 | Edge Case 13 recorded as HTTPS probe hardening | The change disabled certificate verification. | P2-2 |
-| §8.5 | EU AI Act "auditability of LLM prompts and model executions" | Trace store is unauthenticated and world-readable; spans can be forged by any unauthenticated client; there is no retention policy and no tamper evidence. | P1-1, P1-8, P2-5 |
+The 40 identified findings across the stack trace back to **7 systemic architectural root causes**:
+
+1. **Perimeter-Only Fallacy (Flat Trust Assumption):** The architecture assumed that placing Traefik at the edge was sufficient, while leaving all 7 internal backend datastores published on `0.0.0.0` with no internal network segmentation or mutual authentication.
+2. **Hardcoded Git-Tracked Credentials & Reverting Deployment Tools:** Master database credentials were committed into version control, and `manage.sh` was written to overwrite live `.env` with `.env.example` on every `up` invocation, actively reversing credential rotations.
+3. **Upstream Ingestion Exposure & Late Redaction:** Sensitive LLM headers and bearer tokens are logged in cleartext at Traefik's access log and transit internal hops unencrypted before the OTel redaction processor ever executes.
+4. **Superuser Execution with Unsanitized Inputs:** The privacy/erasure pipeline connects as database superuser (`admin` / `default`) while interpolating unescaped inputs directly into raw SQL strings.
+5. **Non-Falsifiable Testing Suite (Silent Failure Anti-Pattern):** The test suite was engineered to never fail (`|| true`, `|| exit 0`, counting `WARN` as `PASS`, treating bare TCP connects as valid TLS), creating dangerous false assurance.
+6. **Destructive Automated Operations Without State Verification:** Data maintenance tools execute catastrophic operations (such as `down -v` in `db-backup-and-purge.sh`) without validating backup file contents or exit status.
+7. **Documented-Yet-Unimplemented Controls:** Compliance assertions were published without backing code, missing configuration mounts, or corresponding failing negative tests.
+
+### 6.1 Attack Sequences & Structural Failure Patterns
+
+### 2.2 Attack Chains: Multi-Stage Exploit Execution Flow
+This diagram details three verified, zero-day-free exploit chains providing arbitrary remote code execution, telemetry interception, and total audit repudiation.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Attacker as Threat Actor / Red Team
+    participant Traefik as Traefik API (:31411)
+    participant Socket as /var/run/docker.sock
+    participant Kafka as Kafka Stream (:9092)
+    participant OTel as OTel Collector (:4318)
+    participant DB as AlloyDB / Postgres (:5432)
+
+    Note over Attacker,DB: Attack Chain A: Host Escape & Container Takeover
+    Attacker->>Traefik: GET /api/rawdata (Unauthenticated)
+    Traefik-->>Attacker: 200 OK (Full host topology & container metadata)
+    Attacker->>Traefik: POST Docker daemon API via mounted UNIX socket
+    Traefik->>Socket: Request privileged container creation with host root mount
+    Socket-->>Attacker: Root shell on underlying Linux host established
+
+    Note over Attacker,DB: Attack Chain B: Unredacted PII & API Key Exfiltration
+    Attacker->>OTel: Unauthenticated HTTP POST /v1/traces (Wildcard CORS allowed)
+    Attacker->>Kafka: TCP connect to 0.0.0.0:9092 (PLAINTEXT, no SASL)
+    Kafka-->>Attacker: Full telemetry stream dumped (Contains API keys and prompts)
+
+    Note over Attacker,DB: Attack Chain C: Forensic Log Destruction (Total Repudiation)
+    Attacker->>DB: PostgreSQL connect to 0.0.0.0:5432 using committed git credentials
+    Attacker->>DB: Execute exfiltration of relational metadata
+    Attacker->>DB: Execute: DROP TABLE security_audit_logs;
+    DB-->>Attacker: Query OK (Zero audit trace remaining on system)
+```
 
 ---
 
-## 8. Attack Chains
+### 2.3 PII and Sensitive Credential Transit (Current vs. Remediated)
+Side-by-side technical trace comparing telemetry transit states across system boundaries.
+
+```mermaid
+flowchart TB
+    subgraph Current_Flawed["Current Pipeline: High-Exposure Path"]
+        InRaw["Raw Prompt and API Key<br/>(OpenAI/Anthropic Keys, Bearer Tokens)"]
+        EdgeTls["Traefik Edge (TLS 1.2/1.3 Termination)"]
+        AccessLog["Traefik Access Log<br/>(Plaintext Authorization Header Captured)"]
+        PlainHop["Plaintext Internal HTTP Hop<br/>(Bridge Network Sniffing Vulnerability)"]
+        LateRedact["OTel Collector Redaction<br/>(Attributes only; Span Events/Logs bypassed)"]
+        PlainStore[("Unencrypted Backend Datastores<br/>(No automated TTL retention enforcement)")]
+
+        InRaw --> EdgeTls
+        EdgeTls --> AccessLog
+        EdgeTls --> PlainHop
+        PlainHop --> LateRedact
+        LateRedact --> PlainStore
+    end
+
+    subgraph Hardened_Target["Remediated Pipeline: Zero-Exposure Path"]
+        SecInRaw["Raw Prompt and API Key"]
+        SecEdge["Traefik Gateway<br/>(Strict TLS 1.3, Headers dropped from logs)"]
+        SecHop["Internal Encrypted Transport<br/>(Mutual TLS with Private CA)"]
+        SecRedact["Receiver-Side Redaction Engine<br/>(Attributes, Events, Log Bodies; Fail-Closed)"]
+        SecStore[("Encrypted Datastores<br/>(AES-256, ACL Scoped, Automated TTL Purge)")]
+
+        SecInRaw --> SecEdge
+        SecEdge --> SecHop
+        SecHop --> SecRedact
+        SecRedact --> SecStore
+    end
+
+    classDef redBox fill:#fff1f0,stroke:#ff4d4f,stroke-width:1px;
+    classDef greenBox fill:#f6ffed,stroke:#52c41a,stroke-width:1px;
+    class Current_Flawed redBox;
+    class Hardened_Target greenBox;
+```
+
+---
+
+### 2.4 Service Authentication & Trust Boundary Matrix
+Architectural boundary transition from flat, perimeter-bypassed networking to multi-tier segmented security domains.
+
+```mermaid
+flowchart LR
+    subgraph Current_Trust_Model["Current Trust Model: Flat Perimeter"]
+        direction TB
+        ExtNet["Public Ingress (0.0.0.0)"]
+        
+        ExtNet -->|No Auth| TraefikDash["Traefik Dashboard :31411"]
+        ExtNet -->|No Auth| OTelRecv["OTel Ingestion :4317/:4318"]
+        ExtNet -->|No Auth / PLAINTEXT| KafkaNode["Kafka :9092"]
+        ExtNet -->|No Auth| TemporalUI["Temporal UI :31425"]
+        ExtNet -->|Shared Password| RedisNode["Redis :6379"]
+        ExtNet -->|Shared Password| PgNode["AlloyDB :5432"]
+        ExtNet -->|Shared Password| CHNode["ClickHouse :8123"]
+    end
+
+    subgraph Hardened_Trust_Model["Hardened Trust Model: Tiered Zero-Trust"]
+        direction TB
+        ExtSafe["Public Ingress"]
+        EdgeAuth["Edge Gateway (Traefik 3.x)<br/>OIDC / ForwardAuth / TLS 1.3"]
+        
+        subgraph Data_VPC["Private Network (internal: true, No Host Port Bindings)"]
+            OTelAuth["OTel Collector (mTLS + Ingestion Token)"]
+            KafkaAuth["Kafka (SASL_SSL + SCRAM-SHA-512)"]
+            RedisAuth["Redis 7 (ACL Service Principals)"]
+            PgAuth["PostgreSQL (Vault Secret Injection)"]
+            CHAuth["ClickHouse (Role-Based Quotas)"]
+        end
+
+        ExtSafe --> EdgeAuth
+        EdgeAuth -->|mTLS| OTelAuth
+        OTelAuth -->|SASL_SSL| KafkaAuth
+        OTelAuth -->|mTLS + Scoped Creds| CHAuth
+        EdgeAuth -->|RBAC ForwardAuth| PgAuth
+        OTelAuth -->|ACL Auth| RedisAuth
+    end
+
+    classDef warn fill:#ffccc7,stroke:#ff4d4f,color:#000;
+    classDef ok fill:#d9f7be,stroke:#52c41a,color:#000;
+    class Current_Trust_Model warn;
+    class Hardened_Trust_Model ok;
+```
+
+---
+
+### 2.5 Validation Assurance: Health Suite Defect vs. Strict CI Gate
+Comparison demonstrating the mathematical failure modes of the 52-check test suite versus required negative-testing verification.
+
+```mermaid
+flowchart TB
+    subgraph Flawed_Health_Suite["Current Health Suite: False-Positive Model"]
+        Check1["Run Assertion Script"] --> IsWarn{"Status Code == WARN?"}
+        IsWarn -->|True| CountPass1["Increment Passed Counter (Logic Error)"]
+        Check1 --> IsTls{"Execute TLS Probe"}
+        IsTls -->|Raw TCP Connect Succeeds| CountPass2["Increment Passed Counter (Cert Unchecked)"]
+        Check1 --> IsRedis{"Execute Redis Check"}
+        IsRedis -->|Docker Daemon Error| CountPass3["Increment Passed Counter (Error Ignored)"]
+        CountPass1 & CountPass2 & CountPass3 --> ScriptEnd["manage.sh: bash test-health.sh || true"]
+        ScriptEnd --> FalseGreen["Output: 52/52 Passed (False Assurance)"]
+    end
+
+    subgraph Hardened_CI_Gate["Mandated Remediation: Strict Negative Testing"]
+        NewCheck["Execute Security Assertion"] --> NegTest{"Negative Test:<br/>Does removal of control fail build?"}
+        NegTest -->|False| BlockCI["Block CI Pipeline (Exit Code 1)"]
+        NegTest -->|True| CertVerify{"Validate Certificate Authority<br/>via --cacert verification"}
+        CertVerify -->|Invalid Chain| BlockCI
+        CertVerify -->|Valid Chain| AssertHeaders{"Assert Security Header Values"}
+        AssertHeaders -->|Mismatch| BlockCI
+        AssertHeaders -->|Exact Match| PassCI["Verified Secure (Merge Permitted)"]
+    end
+
+    classDef flawed fill:#fff2e8,stroke:#fa541c,stroke-width:1px;
+    classDef solid fill:#f6ffed,stroke:#52c41a,stroke-width:1px;
+    class Flawed_Health_Suite flawed;
+    class Hardened_CI_Gate solid;
+```
+
+---
+
+### 6.2 Verified Attack Chains
 
 These are compositions of the findings above, not new findings. They exist to show that the individual issues are not independent.
 
@@ -1306,16 +1279,9 @@ graph TD
 
 ---
 
-## 9. Decision
-
-1. **ADR-0006 is amended, not superseded.** Its resilience content stands. Its §8 compliance content — SOC 2, ISO 27001, GDPR/CCPA, HIPAA, EU AI Act — is **withdrawn** pending remediation, along with §8.6, §8.7.1, §8.7.3, and the §5.1 check-count claim. Section 7's table above enumerates exactly what must be struck or rewritten.
-2. **This stack is classified as a local development environment.** It must not be deployed to any host reachable by another person, must not process real customer telemetry, and must not process personal data, until Phase 1 and Phase 2 below are complete and independently verified.
-3. **All credentials in `.env.example`, `datasources.yml`, `default-user.xml`, `gdpr-erasure.sh`, and `test-health.sh` are treated as public** as of this ADR's date. Rotation is mandatory and is not sufficient on its own — git history retains them.
-4. **No ADR in this repository may describe a control as implemented without a file-and-line reference to its implementation and a negative test that fails when the control is removed.** This is the process defect that produced fourteen documented-but-absent controls; every finding in §7 traces back to it.
-
 ---
 
-## 10. Remediation Plan
+## 7. Required Remediation
 
 ### Phase 1 — Stop the bleeding (target: 48 hours; blocks all non-laptop use)
 
@@ -1364,7 +1330,55 @@ graph TD
 
 ---
 
-## 11. Definition of Done
+---
+
+## 8. Target Architecture
+
+### 2.6 Hardened Target Architecture (Post-Remediation Blueprint)
+The target architecture strictly isolates the internal network, enforces edge mTLS/forward-auth, seals all database ports, and guarantees receiver-side redaction.
+
+```mermaid
+flowchart TB
+    subgraph Public_Internet["Public Ingress (Zero-Trust Edge)"]
+        User["Client SDK / Gateway Ingress"]
+    end
+
+    subgraph DMZ_Network["Docker Network: llmobs-edge (Isolated Bridge)"]
+        TraefikSecure["Traefik 3.x Gateway<br/>- Strict TLS 1.3 Termination<br/>- mTLS / ForwardAuth (OIDC)<br/>- API Socket Isolated (Read-Only)<br/>- Access Log Header Redaction"]
+    end
+
+    subgraph Internal_Network["Docker Network: llmobs-data (internal: true, No Host Port Bindings)"]
+        OTelSecure["OTel Collector<br/>- Inbound Token / mTLS Auth<br/>- Receiver-Side PII Redaction<br/>- Non-Root Container User"]
+
+        subgraph Secure_Datastores["Encrypted & Authenticated Datastores"]
+            KafkaSecure["Kafka (SASL_SSL + SCRAM)<br/>Per-service ACLs & RF>=2"]
+            RedisSecure["Redis 7 (ACL-Scoped Users)<br/>Dangerous Commands Disabled"]
+            ClickHouseSecure["ClickHouse (Scoped Users & Quotas)<br/>Read-Only Analytics Profiles"]
+            AlloyDBSecure["AlloyDB / Postgres (mTLS + Vault Secrets)<br/>Append-Only Immutable Audit Log"]
+            TemporalSecure["Temporal Engine (mTLS Interceptor)"]
+        end
+    end
+
+    User -->|"HTTPS (Port 443 / 31410)"| TraefikSecure
+    TraefikSecure -->|"Mutual TLS (Internal CA)"| OTelSecure
+    OTelSecure -->|"SASL_SSL"| KafkaSecure
+    KafkaSecure -->|"Authenticated Write"| ClickHouseSecure
+    OTelSecure -->|"Authenticated Stream"| AlloyDBSecure
+
+    classDef edgeGate fill:#1890ff,stroke:#002766,stroke-width:2px,color:#fff;
+    classDef innerSafe fill:#52c41a,stroke:#135200,stroke-width:2px,color:#fff;
+    classDef storeSafe fill:#13c2c2,stroke:#00474f,stroke-width:2px,color:#fff;
+
+    class TraefikSecure edgeGate;
+    class OTelSecure innerSafe;
+    class KafkaSecure,RedisSecure,ClickHouseSecure,AlloyDBSecure,TemporalSecure storeSafe;
+```
+
+---
+
+---
+
+## 9. Validation / CI Gates
 
 A control may be described as implemented in any ADR in this repository only when all four of the following hold:
 
@@ -1377,7 +1391,33 @@ Applying rule 2 alone to ADR-0006 as it stands would invalidate every row in §7
 
 ---
 
-## 12. Consequences
+---
+
+## 10. Compliance Position
+
+### 10.1 What Can and Cannot Currently Be Claimed
+
+| Framework | ADR-0006 Claim | Implemented Reality & Reason for Invalidation | Audit Finding |
+|---|---|---|---|
+| §8.6 layer 4; §8.7.3 | "Microservice Sandbox Security (`no-new-privileges:true`)", with `prctl(PR_SET_NO_NEW_PRIVS, ...)` execution path | The string appears nowhere in the repository. No `cap_drop`, `read_only`, or `user:` either. | P1-4 |
+| §8.1 | "Creates an **immutable** database audit log table" | Plain heap table, no DML restrictions, no trigger, no hash chain — **and the DDL is never executed**. | P2-3, P0-4 |
+| §6.1, §6.2, §8.9, §8.10 | Dual-write pipeline exporting spans to ClickHouse `telemetry_spans` / `opentelemetry_span_log` | No ClickHouse exporter exists in the collector config. `telemetry_spans` is never created. | P1-2 |
+| §8.2 | PII redaction "sanitizes sensitive LLM data before persistence" | `error_mode: ignore` fails open; covers span attributes only, not span events where prompts live; and Traefik logs raw `Authorization` headers upstream of it. | P1-2, P0-10 |
+| §8.2 | GDPR erasure "performs atomic purging" | Errors suppressed, success printed unconditionally, target tables do not exist, 5 of 7 data stores untouched. | P0-4 |
+| §8.3; §4.1 row 12 | "Cryptographic Origin Signature" preventing spoofed internal requests | A Docker label plus a constant header that Traefik injects and nobody verifies. Value is public. | P2-1 |
+| §8.4 | HIPAA "Port Isolation ... prevents port-listening process hijack attacks" | Every datastore published on `0.0.0.0`; the port manager itself SIGKILLs whatever holds those ports. | P0-5, P1-7 |
+| §8.4 | "Enforces authentication guards on Redis and relational databases, validated automatically" | The validating check passes when the Redis container does not exist. Kafka, Tempo, Temporal, and the OTLP receivers have no authentication at all. | P1-3e, P0-9, P1-8 |
+| §8.1 | "TLS 1.2+ Transport Encryption ... validates 4096-bit RSA certificate chain" | The chain check passes on a bare TCP connect; the HTTPS probes use `curl -k`. Internal hops are plaintext. | P1-3b, P2-2 |
+| §2.3; §4.1 rows 1, 9 | Pre-flight "checks" for file descriptors, NTP, firewall | `ulimit` call is a no-op for containers; NTP check tests only for a binary's existence; UFW rule targets a non-existent interface and would not filter published ports anyway. | P1-6, P0-5 |
+| §4.1 row 11; §2.2 | "Exponential Backoff & Jitter polling until AlloyDB & ClickHouse report 'ready'" | Waits return success on timeout; `nc -z` fallback succeeds at container creation, inside the WAL window the control targets. | P2-7 |
+| §5.1 | "✓ ALL 52/52 HEALTH & SECURITY CHECKS PASSED" | Suite cannot fail: WARN counts as PASS, TLS check passes on TCP connect, headers unvalidated, and `manage.sh` runs it with `\|\| true`. | P1-3 |
+| §3.1 | Resource limits tabulated for Traefik, Redis, Tempo, Grafana | Those four services have no `deploy.resources` block. | P3-8 |
+| §4.1 row 13 | Edge Case 13 recorded as HTTPS probe hardening | The change disabled certificate verification. | P2-2 |
+| §8.5 | EU AI Act "auditability of LLM prompts and model executions" | Trace store is unauthenticated and world-readable; spans can be forged by any unauthenticated client; there is no retention policy and no tamper evidence. | P1-1, P1-8, P2-5 |
+
+---
+
+### 10.2 Consequences & Operational Status
 
 **Accepted.** Substantial rework across compose, gateway, datastore configuration, and all seven scripts. Phase 1 alone will make the stack harder to poke at from a second machine, and the health suite will start failing — correctly — where it currently reports green. The convenience that `ensure_env_file`, `curl -k`, `|| true`, and blind port-killing purchased is the same convenience that produced every P0 in this document.
 
@@ -1387,7 +1427,7 @@ Applying rule 2 alone to ADR-0006 as it stands would invalidate every row in §7
 
 ---
 
-## 13. Finding Index
+### 10.3 Complete Finding Index
 
 | ID | Severity | Title |
 | --- | --- | --- |
