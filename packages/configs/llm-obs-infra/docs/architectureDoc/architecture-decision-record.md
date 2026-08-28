@@ -26,6 +26,7 @@ This document provides the consolidated index of key Architectural Decision Reco
 | [ADR-0004](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docs/architectureDoc/architecture-decision-record.md#adr-0004-traefik-v37-ingress-gateway) | Traefik v3.7 Ingress Gateway | Accepted | Deploy Traefik v3.7 with dynamic security middleware for TLS termination and rate limiting. |
 | [ADR-0006](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docs/architectureDoc/infrastructure-resilience-and-edge-case-hardening.md) | Infrastructure Resilience & Edge Case Hardening | Accepted | Implement deterministic system pre-flight verification and active container health polling. |
 | [ADR-0007](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docs/securityDoc/critical-security-remediation-mandate.md) | Critical Security Remediation Mandate | Proposed (Blocking) | Mandatory container bridge isolation, non-root user contexts, and read-only docker socket mounts. |
+| [ADR-0008](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docs/securityDoc/audits/remediation-plan-adr-0006.md) | Ingestion Path TLS Encryption & Dynamic HMAC Verification | Accepted | Enforce TLS encryption between Traefik and OTel Collector, place PII redaction at receiver entrypoint, and require dynamic HMAC signatures. |
 
 ---
 
@@ -46,9 +47,15 @@ This document provides the consolidated index of key Architectural Decision Reco
 - **Decision**: Deploy ClickHouse v24.8 with `SummingMergeTree` aggregate tables.
 - **Consequences**: 87% reduction in disk storage, zero ingest slowdowns, sub-100ms aggregation queries across 50M rows.
 
+### ADR-0008: Ingestion Path TLS Encryption & Dynamic HMAC Verification
+- **Context**: Static network signature claims overclaimed Zero-Trust posture, and plaintext HTTP internal hops exposed unredacted API keys before collector processing.
+- **Decision**: (1) Require TLS encryption between Traefik and OTel Collector receivers (`https://llmobs-otel-collector:4318`), (2) move `transform/pii_redaction` to the receiver entrypoint processor stage, and (3) replace static header claims with dynamic SHA-256 HMAC verification (`timestamp:request_id` context).
+- **Consequences**: Eliminates cleartext API key exposure across internal bridge hops and prevents spoofed static header claims.
+
 ---
 
 ## 3. Related Documents
 
 - [Infrastructure Resilience and Edge Case Hardening](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docs/architectureDoc/infrastructure-resilience-and-edge-case-hardening.md)
 - [Critical Security Remediation Mandate](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docs/securityDoc/critical-security-remediation-mandate.md)
+- [ADR-0006 Audit Remediation Plan](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docs/securityDoc/audits/remediation-plan-adr-0006.md)
