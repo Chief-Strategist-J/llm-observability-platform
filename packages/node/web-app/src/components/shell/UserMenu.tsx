@@ -17,8 +17,8 @@ interface UserMenuProps {
 
 export function UserMenu({ user: propUser, impersonating = false }: UserMenuProps) {
   const authUser = useSelector((state: any) => state?.auth?.user);
-  const name = propUser?.name ?? authUser?.name ?? 'Admin User';
-  const email = propUser?.email ?? authUser?.email ?? 'admin@observability.io';
+  const name = propUser?.name ?? authUser?.name ?? (authUser?.email ? authUser.email.split('@')[0] : 'Workspace Member');
+  const email = propUser?.email ?? authUser?.email ?? 'signed-in@workspace';
 
   const dispatch = useDispatch();
 

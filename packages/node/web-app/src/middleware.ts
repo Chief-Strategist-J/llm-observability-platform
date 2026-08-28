@@ -17,11 +17,15 @@ function isPublicPath(pathname: string): boolean {
 }
 
 function getSessionToken(req: NextRequest): string | undefined {
-  return (
+  const val = (
     req.cookies.get('authjs.session-token')?.value ||
     req.cookies.get('__Secure-authjs.session-token')?.value ||
     req.cookies.get('next-auth.session-token')?.value
   );
+  if (!val || val.trim() === '' || val === 'null' || val === 'undefined') {
+    return undefined;
+  }
+  return val;
 }
 
 function generateW3CTraceparent(): string {
