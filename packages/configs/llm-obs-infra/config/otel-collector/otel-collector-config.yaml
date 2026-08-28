@@ -3,8 +3,14 @@ receivers:
     protocols:
       grpc:
         endpoint: 0.0.0.0:4317
+        tls:
+          cert_file: /etc/otel-collector/certs/server.pem
+          key_file: /etc/otel-collector/certs/server-key.pem
       http:
         endpoint: 0.0.0.0:4318
+        tls:
+          cert_file: /etc/otel-collector/certs/server.pem
+          key_file: /etc/otel-collector/certs/server-key.pem
         cors:
           allowed_origins:
             - "http://localhost:31400"
@@ -75,5 +81,5 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, transform/pii_redaction, attributes, resource, batch]
+      processors: [memory_limiter, transform/pii_redaction, batch]
       exporters: [otlp/tempo, debug]

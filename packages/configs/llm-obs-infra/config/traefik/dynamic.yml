@@ -156,7 +156,7 @@ http:
     otel-service:
       loadBalancer:
         servers:
-          - url: "http://llmobs-otel-collector:4318"
+          - url: "https://llmobs-otel-collector:4318"
 
     auth-service:
       loadBalancer:
