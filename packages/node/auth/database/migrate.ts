@@ -12,8 +12,22 @@ const connectionString =
 
 const pool = new pg.Pool({ connectionString });
 
+async function connectWithRetry(maxRetries = 10, delayMs = 1500) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const client = await pool.connect();
+      return client;
+    } catch (err) {
+      if (attempt === maxRetries) throw err;
+      console.log(`[db-migrate] Waiting for database readiness (attempt ${attempt}/${maxRetries})...`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+  throw new Error('[db-migrate] Unable to connect to database after maximum retries');
+}
+
 async function runMigrations() {
-  const client = await pool.connect();
+  const client = await connectWithRetry();
   try {
     await client.query(`
       CREATE TABLE IF NOT EXISTS schema_migrations (

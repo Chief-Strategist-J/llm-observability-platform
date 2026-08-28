@@ -217,8 +217,16 @@ cmd_db_migrate() {
 cmd_db_setup() {
   echo -e "${BLUE}[db] Setting up database containers and executing migrations [ENV=${APP_ENV}]...${NC}"
   cmd_db_up
-  echo -e "${YELLOW}[db] Waiting for database health check...${NC}"
-  sleep 4
+  echo -e "${YELLOW}[db] Waiting for Auth DB container readiness...${NC}"
+  local retries=30
+  while [ $retries -gt 0 ]; do
+    if docker exec auth-service-db pg_isready -U postgres -d observability_auth >/dev/null 2>&1; then
+      echo -e "${GREEN}✓ Auth DB container is ready.${NC}"
+      break
+    fi
+    sleep 1
+    retries=$((retries - 1))
+  done
   cmd_db_migrate
 }
 
