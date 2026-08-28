@@ -209,6 +209,50 @@ flowchart TD
 
 ---
 
+## 6. Quick Operations & Service Management Commands
+
+Run all commands directly from the root workspace directory (`/home/btpl-lap-22/live/llm-observability-platform`):
+
+### A. Using `manage.sh` Orchestrator Script
+
+```bash
+# Check current status of all 9 infrastructure services
+./packages/configs/llm-obs-infra/scripts/manage.sh status
+
+# Run 41-point comprehensive health checks across containers
+./packages/configs/llm-obs-infra/scripts/manage.sh health
+
+# Start infrastructure stack with environment & cert pre-flight checks
+./packages/configs/llm-obs-infra/scripts/manage.sh up
+
+# Restart all infrastructure services
+./packages/configs/llm-obs-infra/scripts/manage.sh restart
+
+# Follow real-time container logs
+./packages/configs/llm-obs-infra/scripts/manage.sh logs
+
+# Stop all infrastructure services
+./packages/configs/llm-obs-infra/scripts/manage.sh down
+```
+
+### B. Direct Docker Compose Commands
+
+```bash
+# Check status of running docker compose containers
+docker compose -f packages/configs/llm-obs-infra/docker-compose.yml ps
+
+# Start containers in detached mode
+docker compose -f packages/configs/llm-obs-infra/docker-compose.yml up -d
+
+# Tail container log output
+docker compose -f packages/configs/llm-obs-infra/docker-compose.yml logs -f
+
+# Stop containers
+docker compose -f packages/configs/llm-obs-infra/docker-compose.yml down
+```
+
+---
+
 ## 7. Business Rationale & Technical Deliverables Summary
 
 ### A. What Was Implemented

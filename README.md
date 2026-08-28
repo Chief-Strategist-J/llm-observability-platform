@@ -26,20 +26,58 @@ Choose the hardware allocation matching your operations load:
 
 ---
 
-## ⚡ 1-Click Launch (Docker Compose)
+## ⚡ 1-Click Launch & Infrastructure Management
 
-Instantly spin up all **13 microservices and datastores** locally. The orchestrator script installs database migrations and backup scripts automatically:
+Manage all infrastructure services directly from the project root (`/home/btpl-lap-22/live/llm-observability-platform`):
+
+### 🛠️ Infrastructure Management Commands (`manage.sh`)
 
 ```bash
-# Start the interactive orchestration CLI
-./packages/configs/observability-deploy/scripts/deploy.sh
+# Start all infrastructure services (runs pre-flight verification & cert generation)
+./packages/configs/llm-obs-infra/scripts/manage.sh up
+
+# Check status of all infrastructure services
+./packages/configs/llm-obs-infra/scripts/manage.sh status
+
+# Run comprehensive 41-point health check suite across all services
+./packages/configs/llm-obs-infra/scripts/manage.sh health
+
+# Follow live container logs across all services
+./packages/configs/llm-obs-infra/scripts/manage.sh logs
+
+# Restart all infrastructure services
+./packages/configs/llm-obs-infra/scripts/manage.sh restart
+
+# Stop all infrastructure services
+./packages/configs/llm-obs-infra/scripts/manage.sh down
 ```
 
-Choose **Option 2** from the interactive menu. Once launched, access your self-hosted panels:
-- 📥 **FastAPI Ingest API**: Port `8000` — High-performance ingestion endpoint.
-- 📊 **Grafana Dashboard Console**: Port `3000` — Deep trace visualization graphs (Default: `admin` / `admin`).
-- 📈 **Prometheus Metrics Engine**: Port `9090` — Scraping host and target health.
-- ⏱️ **Temporal Web Interface**: Port `8080` — Tracking workflow cron states.
+### 🐳 Direct Docker Compose Commands
+
+```bash
+# Check status of running containers
+docker compose -f packages/configs/llm-obs-infra/docker-compose.yml ps
+
+# Start all containers in background
+docker compose -f packages/configs/llm-obs-infra/docker-compose.yml up -d
+
+# View live container logs
+docker compose -f packages/configs/llm-obs-infra/docker-compose.yml logs -f
+
+# Stop containers
+docker compose -f packages/configs/llm-obs-infra/docker-compose.yml down
+```
+
+### 🖥️ Self-Hosted Admin Consoles & Endpoints
+
+Once launched, access your self-hosted panels:
+- 📊 **Grafana Dashboard Console**: Port `31415` (`http://localhost:31415`) — Default: `admin` / `admin`
+- ⏱️ **Temporal Web Interface**: Port `31425` (`http://localhost:31425`)
+- 🌐 **Traefik Gateway Dashboard**: Port `31411` (`http://localhost:31411`)
+- 🔍 **ClickHouse HTTP API**: Port `31421` (Host) / `8123` (Internal)
+- 📡 **OpenTelemetry Collector**: Port `31417` (HTTP 4318) / `31418` (gRPC 4317)
+- ⚡ **AlloyDB Omni (PostgreSQL)**: Port `31420` (Internal `5432`)
+- 🔑 **Redis Spend Ledger**: Port `31413` (Internal `6379`)
 
 ---
 
