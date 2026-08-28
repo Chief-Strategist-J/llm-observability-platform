@@ -18,10 +18,10 @@ Each audit report is stored in its own dedicated, version-controlled markdown do
 
 ## Audit Catalog
 
-| Audit ID | Target Component / ADR | Severity Breakdown | Audit Report Link | Technical Remediation Plan Link | Status |
-|---|---|---|---|---|---|
-| AUD-0006 | ADR-0006 Resilience & Hardening | 3 Critical, 4 High, 6 Medium, 4 Low | [independent-audit-adr-0006.md](./independent-audit-adr-0006.md) | [remediation-plan-adr-0006.md](./remediation-plan-adr-0006.md) | Complete / Remediated |
-| AUD-0007 | `llm-obs-infra` Deployment Configuration (compose, service configs, operational scripts) | 12 Critical, 12 High, 10 Medium, 5 Low | [independent-audit-infra-deployment-config.md](./independent-audit-infra-deployment-config.md) | [remediation-plan-infra-deployment-config.md](./remediation-plan-infra-deployment-config.md) | **Open — Deployment Blocked** |
+| Audit ID | Target Component / ADR | Severity Breakdown | Audit Report Link | Technical Remediation Plan Link | Status | Folder |
+|---|---|---|---|---|---|---|
+| AUD-0006 | ADR-0006 Resilience & Hardening | 3 Critical, 4 High, 6 Medium, 4 Low | [independent-audit-adr-0006.md](./complete/independent-audit-adr-0006.md) | [remediation-plan-adr-0006.md](./complete/remediation-plan-adr-0006.md) | Complete / Remediated | `complete/` |
+| AUD-0007 | `llm-obs-infra` Deployment Configuration (compose, service configs, operational scripts) | 12 Critical, 12 High, 10 Medium, 5 Low | [independent-audit-infra-deployment-config.md](./pending/independent-audit-infra-deployment-config.md) | [remediation-plan-infra-deployment-config.md](./pending/remediation-plan-infra-deployment-config.md) | **Open — Deployment Blocked** | `pending/` |
 
 ---
 
