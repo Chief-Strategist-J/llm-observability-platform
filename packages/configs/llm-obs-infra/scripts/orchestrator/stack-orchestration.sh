@@ -67,7 +67,8 @@ wait_for_clickhouse_http() {
     echo -e "${GREEN}✓ ClickHouse HTTP (31421) & Native (31422) endpoints ready.${NC}"
     return 0
   fi
-  echo -e "${YELLOW}⚠️ ClickHouse socket binding taking longer than expected...${NC}"
+  echo -e "${RED}✖ ERROR: ClickHouse socket binding timeout exceeded (30s hard ceiling).${NC}"
+  return 1
 }
 
 wait_for_web_gateways() {
@@ -77,7 +78,8 @@ wait_for_web_gateways() {
     echo -e "${GREEN}✓ Grafana UI (31415) & Temporal gRPC (31424) endpoints ready.${NC}"
     return 0
   fi
-  echo -e "${YELLOW}⚠️ Gateway initialization still in progress...${NC}"
+  echo -e "${RED}✖ ERROR: Gateway initialization timeout exceeded (30s hard ceiling).${NC}"
+  return 1
 }
 
 wait_for_alloydb() {
@@ -87,7 +89,8 @@ wait_for_alloydb() {
     echo -e "${GREEN}✓ AlloyDB relational database ready.${NC}"
     return 0
   fi
-  echo -e "${YELLOW}⚠️ AlloyDB database recovery taking longer than expected...${NC}"
+  echo -e "${RED}✖ ERROR: AlloyDB database recovery timeout exceeded (30s hard ceiling).${NC}"
+  return 1
 }
 
 ensure_external_network() {

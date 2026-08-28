@@ -2,6 +2,7 @@
     <profiles>
         <default>
             <max_memory_usage>2147483648</max_memory_usage>
+            <max_memory_usage_for_all_queries>3221225472</max_memory_usage_for_all_queries>
         </default>
     </profiles>
 </clickhouse>

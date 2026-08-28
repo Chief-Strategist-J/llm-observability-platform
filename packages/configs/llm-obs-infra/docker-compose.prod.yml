@@ -1,0 +1,29 @@
+# High-Availability Production Override for llm-obs-infra Stack
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  llmobs-kafka:
+    environment:
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=2
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=2
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=2
+      - KAFKA_DEFAULT_REPLICATION_FACTOR=2
+      - KAFKA_MIN_INSYNC_REPLICAS=2
+      - KAFKA_JVM_PERFORMANCE_OPTS=-Xms1024m -Xmx2048m
+
+  llmobs-otel-collector:
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
+
+  llmobs-clickhouse:
+    deploy:
+      resources:
+        limits:
+          memory: 8192M
+        reservations:
+          memory: 2048M

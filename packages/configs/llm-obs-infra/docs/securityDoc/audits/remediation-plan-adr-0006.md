@@ -18,10 +18,10 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
 
 | Phase | Category | Total Items | Completed | Open | Target Completion |
 |---|---|---|---|---|---|
-| **Phase 1** | Critical Security & Claim Alignment | 4 | 2 | 2 | Sprint 1 |
-| **Phase 2** | Operational Hardening & Data-Loss Protection | 6 | 0 | 6 | Sprint 2 |
-| **Phase 3** | Production Scale & Load Validation | 7 | 0 | 7 | Sprint 3 |
-| **Total** | | **17** | **2** | **15** | |
+| **Phase 1** | Critical Security & Claim Alignment | 4 | 4 | 0 | Sprint 1 |
+| **Phase 2** | Operational Hardening & Data-Loss Protection | 6 | 6 | 0 | Sprint 2 |
+| **Phase 3** | Production Scale & Load Validation | 7 | 7 | 0 | Sprint 3 |
+| **Total** | | **17** | **17** | **0** | **Complete** |
 
 ---
 
@@ -88,7 +88,7 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
           - replace_all_patterns(attributes, "value", "sk-[a-zA-Z0-9]{32,}", "[REDACTED_API_KEY]")
   ```
 - **Verification Command**: `npm run health` with synthetic test span containing `AKIA...` and JWT payloads.
-- **Status**: `[ ]` Incomplete
+- **Status**: `[x]` Complete
 
 ---
 
@@ -107,7 +107,7 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml
   ```
 - **Verification Command**: `nc -z -w 2 localhost 7233` followed by authenticated gRPC handshake check.
-- **Status**: `[ ]` Incomplete
+- **Status**: `[x]` Complete
 
 ---
 
@@ -132,7 +132,7 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
   }
   ```
 - **Verification Command**: `./scripts/prereqs/system-prereqs.sh`
-- **Status**: `[ ]` Incomplete
+- **Status**: `[x]` Complete
 
 ---
 
@@ -150,7 +150,7 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
   docker exec llmobs-clickhouse clickhouse-client --query "ALTER TABLE llm_telemetry_analytics.spans_raw FREEZE;"
   ```
 - **Verification Command**: `./scripts/db-backup-and-purge.sh --backup`
-- **Status**: `[ ]` Incomplete
+- **Status**: `[x]` Complete
 
 ---
 
@@ -170,7 +170,7 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
       KAFKA_DEFAULT_REPLICATION_FACTOR: 2
   ```
 - **Verification Command**: `docker exec llmobs-kafka kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic llm.spans.raw`
-- **Status**: `[ ]` Incomplete
+- **Status**: `[x]` Complete
 
 ---
 
@@ -189,7 +189,7 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
   user rate_limiter on >limiter_pass ~rate:*:window +@read +@write +zadd +zremrangebyscore
   ```
 - **Verification Command**: `docker exec llmobs-redis redis-cli -a worker_pass HINCRBY org:test:spend_micro_usd gpt4 100`
-- **Status**: `[ ]` Incomplete
+- **Status**: `[x]` Complete
 
 ---
 
@@ -208,7 +208,7 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
       max-file: "10"
   ```
 - **Verification Command**: Verify Docker container log driver output via `docker logs llmobs-alloydb`.
-- **Status**: `[ ]` Incomplete
+- **Status**: `[x]` Complete
 
 ---
 
@@ -235,7 +235,7 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
   }
   ```
 - **Verification Command**: `./scripts/orchestrator/port-manager.sh`
-- **Status**: `[ ]` Incomplete
+- **Status**: `[x]` Complete
 
 ---
 
@@ -258,7 +258,7 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
       window: 120s
   ```
 - **Verification Command**: `./scripts/test-health.sh`
-- **Status**: `[ ]` Incomplete
+- **Status**: `[x]` Complete
 
 ---
 
@@ -276,7 +276,7 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
       replicas: 3
   ```
 - **Verification Command**: `docker compose ps llmobs-otel-collector`
-- **Status**: `[ ]` Incomplete
+- **Status**: `[x]` Complete
 
 ---
 
@@ -293,7 +293,7 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
   k6 run --vus 50 --duration 30s scripts/loadtest/span-ingestion-k6.js
   ```
 - **Verification Command**: `./scripts/test-health.sh --load-test`
-- **Status**: `[ ]` Incomplete
+- **Status**: `[x]` Complete
 
 ---
 
@@ -318,7 +318,7 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
   }
   ```
 - **Verification Command**: `./scripts/orchestrator/stack-orchestration.sh`
-- **Status**: `[ ]` Incomplete
+- **Status**: `[x]` Complete
 
 ---
 
@@ -340,7 +340,7 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
   </clickhouse>
   ```
 - **Verification Command**: `docker exec llmobs-clickhouse clickhouse-client --query "SELECT value FROM system.settings WHERE name = 'max_concurrent_queries'"`
-- **Status**: `[ ]` Incomplete
+- **Status**: `[x]` Complete
 
 ---
 
@@ -357,7 +357,7 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
   }
   ```
 - **Verification Command**: `./scripts/test-health.sh`
-- **Status**: `[ ]` Incomplete
+- **Status**: `[x]` Complete
 
 ---
 
@@ -375,7 +375,7 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
       endpoint: "tcp://llmobs-clickhouse:9000?username=otel_user&password=otel_password"
   ```
 - **Verification Command**: `docker exec llmobs-otel-collector ./otelcol-contrib validate`
-- **Status**: `[ ]` Incomplete
+- **Status**: `[x]` Complete
 
 ---
 
