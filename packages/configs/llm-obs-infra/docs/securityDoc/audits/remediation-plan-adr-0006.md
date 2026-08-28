@@ -18,10 +18,10 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
 
 | Phase | Category | Total Items | Completed | Open | Target Completion |
 |---|---|---|---|---|---|
-| **Phase 1** | Critical Security & Claim Alignment | 4 | 0 | 4 | Sprint 1 |
+| **Phase 1** | Critical Security & Claim Alignment | 4 | 1 | 3 | Sprint 1 |
 | **Phase 2** | Operational Hardening & Data-Loss Protection | 6 | 0 | 6 | Sprint 2 |
 | **Phase 3** | Production Scale & Load Validation | 7 | 0 | 7 | Sprint 3 |
-| **Total** | | **17** | **0** | **17** | |
+| **Total** | | **17** | **1** | **16** | |
 
 ---
 
@@ -42,7 +42,7 @@ This document converts the 17 findings from the **Independent Audit of ADR-0006*
   HMAC_SIG=$(echo -n "${TIMESTAMP}:${REQUEST_ID}" | openssl dgst -sha256 -hmac "${SECRET_KEY}" | cut -d' ' -f2)
   ```
 - **Verification Command**: `curl -I -k https://localhost:31419`
-- **Status**: `[ ]` Incomplete
+- **Status**: `[x]` Complete
 
 ---
 
