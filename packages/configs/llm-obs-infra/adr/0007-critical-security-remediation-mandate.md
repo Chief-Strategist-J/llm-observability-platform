@@ -89,7 +89,7 @@ flowchart TB
 ---
 
 ### 2.2 Concrete Attack Chains: Step-by-Step Exploit Flow
-This diagram details the exact 3-chain sequence an adversary or automated crawler can execute to achieve full infrastructure takeover without zero-days.
+This diagram details the exact multi-stage sequence an adversary or automated crawler executes to achieve full infrastructure takeover without zero-days.
 
 ```mermaid
 sequenceDiagram
@@ -122,7 +122,129 @@ sequenceDiagram
 
 ---
 
-### 2.3 Hardened Target Architecture (Post-Remediation Blueprint)
+### 2.3 End-to-End PII, Secret & Telemetry Lifecycle (Flawed vs. Hardened)
+A side-by-side comparison of how sensitive data (API keys, customer prompts, tokens) travels through the system.
+
+```mermaid
+flowchart TB
+    subgraph Current_Flawed["Current Flow: Unprotected Internal Transit"]
+        InRaw["Raw Prompt + API Key<br/>(sk-..., bearer, credit card)"]
+        EdgeTls["Traefik (TLS Term)"]
+        AccessLog["❌ Traefik Access Log<br/>(Logs Authorization Header Plaintext)"]
+        PlainHop["❌ Plaintext Internal Hop<br/>(Sniffable by any container)"]
+        LateRedact["OTel Collector Redaction<br/>(Only redacts attributes, ignores events & logs)"]
+        PlainStore[("❌ Datastores Unencrypted<br/>No retention TTL / No real GDPR wipe")]
+
+        InRaw --> EdgeTls
+        EdgeTls --> AccessLog
+        EdgeTls --> PlainHop
+        PlainHop --> LateRedact
+        LateRedact --> PlainStore
+    end
+
+    subgraph Hardened_Target["Hardened Flow: Zero-Exposure Pipeline"]
+        SecInRaw["Raw Prompt + API Key"]
+        SecEdge["Traefik Gateway<br/>- Strict TLS 1.3<br/>- Headers Dropped from Logs"]
+        SecHop["🔒 mTLS Internal Transport<br/>(Internal CA Encrypted)"]
+        SecRedact["🔒 Receiver-Side Redaction Engine<br/>- Attributes, Events, Log Bodies, Names<br/>- Propagates Errors (Fail-Closed)"]
+        SecStore[("🔒 AES-256 Encrypted Datastores<br/>- ACL Scoped Access<br/>- Automated TTL Retention<br/>- Synchronous GDPR Deletion")]
+
+        SecInRaw --> SecEdge
+        SecEdge --> SecHop
+        SecHop --> SecRedact
+        SecRedact --> SecStore
+    end
+
+    classDef redBox fill:#fff1f0,stroke:#ff4d4f,stroke-width:1px;
+    classDef greenBox fill:#f6ffed,stroke:#52c41a,stroke-width:1px;
+    class Current_Flawed redBox;
+    class Hardened_Target greenBox;
+```
+
+---
+
+### 2.4 Authentication & Network Access Boundary Matrix
+Comparison of service trust boundaries between the current implementation and the hardened target model.
+
+```mermaid
+flowchart LR
+    subgraph Current_Trust_Model["Current Trust Model: Flat & Perimeter-Bypassed"]
+        direction TB
+        ExtNet["Internet / 0.0.0.0"]
+        
+        ExtNet -->|No Auth| TraefikDash["Traefik Dashboard :31411"]
+        ExtNet -->|No Auth| OTelRecv["OTel OTLP :4317/:4318"]
+        ExtNet -->|No Auth / PLAINTEXT| KafkaNode["Kafka :9092"]
+        ExtNet -->|No Auth| TemporalUI["Temporal UI :31425"]
+        ExtNet -->|Shared Default Pass| RedisNode["Redis :6379"]
+        ExtNet -->|Shared Default Pass| PgNode["AlloyDB :5432"]
+        ExtNet -->|Shared Default Pass| CHNode["ClickHouse :8123"]
+    end
+
+    subgraph Hardened_Trust_Model["Hardened Trust Model: Multi-Tier Isolation & Real Auth"]
+        direction TB
+        ExtSafe["Internet / Clients"]
+        EdgeAuth["Edge Gateway (Traefik 3.x)<br/>OIDC / ForwardAuth / TLS 1.3"]
+        
+        subgraph Data_VPC["Private Network (internal: true, NO Host Ports)"]
+            OTelAuth["OTel Collector (mTLS + Token)"]
+            KafkaAuth["Kafka (SASL_SSL + SCRAM)"]
+            RedisAuth["Redis 7 (ACL Service Users)"]
+            PgAuth["PostgreSQL (Vault Credentials)"]
+            CHAuth["ClickHouse (Role Quotas)"]
+        end
+
+        ExtSafe --> EdgeAuth
+        EdgeAuth -->|mTLS| OTelAuth
+        OTelAuth -->|SASL_SSL| KafkaAuth
+        OTelAuth -->|mTLS + Scoped Creds| CHAuth
+        EdgeAuth -->|RBAC ForwardAuth| PgAuth
+        OTelAuth -->|ACL Auth| RedisAuth
+    end
+
+    classDef warn fill:#ffccc7,stroke:#ff4d4f,color:#000;
+    classDef ok fill:#d9f7be,stroke:#52c41a,color:#000;
+    class Current_Trust_Model warn;
+    class Hardened_Trust_Model ok;
+```
+
+---
+
+### 2.5 Test Suite Falsification vs. Real CI/CD Security Gating
+Diagram showing why the 52-check test suite was non-falsifiable and how the remediation mandates strict CI failure gates.
+
+```mermaid
+flowchart TB
+    subgraph Flawed_Health_Suite["Current Health Suite: False Assurance Design"]
+        Check1["Run Check"] --> IsWarn{"Result is [WARN]?"}
+        IsWarn -->|Yes| CountPass1["Mark as PASS ✅ (Bug)"]
+        Check1 --> IsTls{"Test TLS?"}
+        IsTls -->|Bare TCP Connect| CountPass2["Mark as PASS ✅ (No Cert Checked)"]
+        Check1 --> IsRedis{"Redis Exists?"}
+        IsRedis -->|Container Missing| CountPass3["Mark as PASS ✅ (Docker error ignored)"]
+        CountPass1 & CountPass2 & CountPass3 --> ScriptEnd["manage.sh runs: bash test-health.sh || true"]
+        ScriptEnd --> FalseGreen["Result: 52/52 PASSED (False Positive Green)"]
+    end
+
+    subgraph Hardened_CI_Gate["Mandated Definition of Done & CI Gate"]
+        NewCheck["Run Strict Assertion"] --> NegTest{"Negative Test:<br/>Does removal of control fail build?"}
+        NegTest -->|No| BlockCI["❌ Block CI Merge"]
+        NegTest -->|Yes| CertVerify{"Assert Real TLS Chain<br/>via --cacert"}
+        CertVerify -->|Failed| BlockCI
+        CertVerify -->|Passed| AssertHeaders{"Assert Exact Security Headers<br/>& Content"}
+        AssertHeaders -->|Mismatch| BlockCI
+        AssertHeaders -->|Match| PassCI["✅ Strict Green Build Verified"]
+    end
+
+    classDef flawed fill:#fff2e8,stroke:#fa541c,stroke-width:1px;
+    classDef solid fill:#f6ffed,stroke:#52c41a,stroke-width:1px;
+    class Flawed_Health_Suite flawed;
+    class Hardened_CI_Gate solid;
+```
+
+---
+
+### 2.6 Hardened Target Architecture (Post-Remediation Blueprint)
 The target architecture strictly isolates the internal network, enforces edge mTLS/forward-auth, seals all database ports, and guarantees receiver-side redaction.
 
 ```mermaid
