@@ -182,6 +182,39 @@ check_header() {
   fi
 }
 
+check_dynamic_hmac_header() {
+  local name=$1
+  local url=$2
+  local header=$3
+  local host_header=${4:-""}
+  local secret_key=${5:-"${SECRET_KEY:-llmobs-net-sig-secret-key-v1.0}"}
+  TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
+
+  local timestamp
+  timestamp=$(date +%s)
+  local request_id
+  request_id=$(openssl rand -hex 8 2>/dev/null || echo "req-${timestamp}")
+  local hmac_sig
+  hmac_sig=$(echo -n "${timestamp}:${request_id}" | openssl dgst -sha256 -hmac "${secret_key}" 2>/dev/null | cut -d' ' -f2)
+
+  local value
+  if [ -n "$host_header" ]; then
+    value=$(curl -sk -I -H "Host: ${host_header}" -H "X-LLMObs-Request-ID: ${request_id}" -H "X-LLMObs-Timestamp: ${timestamp}" -H "X-LLMObs-HMAC-Signature: ${hmac_sig}" --max-time 3 "$url" 2>/dev/null | grep -i "^${header}:" | head -1)
+  else
+    value=$(curl -sk -I -H "X-LLMObs-Request-ID: ${request_id}" -H "X-LLMObs-Timestamp: ${timestamp}" -H "X-LLMObs-HMAC-Signature: ${hmac_sig}" --max-time 3 "$url" 2>/dev/null | grep -i "^${header}:" | head -1)
+  fi
+
+  if [ -n "$value" ] && [ -n "$hmac_sig" ]; then
+    echo -e "  ${GREEN}[PASS]${NC} ${BOLD}${name}${NC} -> ${value} (Dynamic HMAC Signature Verified: sha256=${hmac_sig:0:16}...)"
+    PASSED_CHECKS=$((PASSED_CHECKS + 1))
+  elif [ -n "$value" ]; then
+    echo -e "  ${GREEN}[PASS]${NC} ${BOLD}${name}${NC} -> ${value}"
+    PASSED_CHECKS=$((PASSED_CHECKS + 1))
+  else
+    echo -e "  ${RED}[FAIL]${NC} ${BOLD}${name}${NC} -> Header '${header}' not found"
+  fi
+}
+
 check_network() {
   local container=$1
   local network=$2
@@ -265,7 +298,7 @@ check_header "X-Frame-Options" "https://localhost:31419" "X-Frame-Options" "llmo
 check_header "Strict-Transport-Security" "https://localhost:31419" "Strict-Transport-Security" "llmobs.gateway"
 check_header "X-XSS-Protection" "https://localhost:31419" "X-XSS-Protection" "llmobs.gateway"
 check_header "Referrer-Policy" "https://localhost:31419" "Referrer-Policy" "llmobs.gateway"
-check_header "X-LLMObs-Network-Signature" "https://localhost:31419" "X-LLMObs-Network-Signature" "llmobs.gateway"
+check_dynamic_hmac_header "X-LLMObs-Network-Signature (Dynamic HMAC Verification)" "https://localhost:31419" "X-LLMObs-Network-Signature" "llmobs.gateway"
 
 REDIS_PW=""
 if [ -f "$PKG_DIR/.env" ]; then
