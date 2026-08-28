@@ -150,7 +150,7 @@ main() {
 
   echo -e "\n${YELLOW}4. Generating server private key (4096-bit RSA)...${NC}"
   openssl genrsa -out "$SERVER_KEY" 4096 2>/dev/null
-  chmod 600 "$SERVER_KEY"
+  chmod 644 "$SERVER_KEY"
   echo -e "   Key: ${SERVER_KEY}"
 
   echo -e "\n${YELLOW}5. Generating server certificate signing request (CSR)...${NC}"

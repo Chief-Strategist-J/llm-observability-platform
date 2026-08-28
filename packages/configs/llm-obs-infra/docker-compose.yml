@@ -24,7 +24,7 @@ services:
       - "--accesslog=true"
       - "--accesslog.format=json"
       - "--accesslog.fields.headers.defaultmode=keep"
-      - "--metrics.prometheus=true"
+      - "--serversTransport.insecureSkipVerify=true"
       - "--tracing.otlp=true"
       - "--tracing.otlp.grpc.endpoint=llmobs-otel-collector:4317"
       - "--tracing.otlp.grpc.insecure=true"
