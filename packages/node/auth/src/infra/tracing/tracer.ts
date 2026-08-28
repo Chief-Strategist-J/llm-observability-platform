@@ -1,4 +1,4 @@
-import { initNodeTracing, getTracer as getCoreTracer, withSpan as withCoreSpan } from '@observability/core/tracing';
+import { initNodeTracing, getTracer as getCoreTracer, withSpan as withCoreSpan } from '@observability/shared-infra/tracing';
 import { AUTH_CONSTANTS } from '../../shared/constants/auth.constants';
 
 export function initAuthTracing(): void {

@@ -33,8 +33,8 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@observability/core": ["../core/src/index.ts"],
-      "@observability/core/*": ["../core/src/*"],
+      "@observability/shared-infra": ["../shared-infra/src/index.ts"],
+      "@observability/shared-infra/*": ["../shared-infra/src/*"],
       "@observability/auth": ["../auth/src/index.ts"],
       "@observability/auth/*": ["../auth/src/*"]
     }

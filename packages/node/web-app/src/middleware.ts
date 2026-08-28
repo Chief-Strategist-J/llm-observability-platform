@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { withSpan } from '@observability/core/tracing';
+import { withSpan } from '@observability/shared-infra/tracing';
 import { SpanKind } from '@opentelemetry/api';
 
 const PUBLIC_ROUTES = [

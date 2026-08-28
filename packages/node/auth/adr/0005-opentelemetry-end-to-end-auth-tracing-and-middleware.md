@@ -3,7 +3,7 @@
 - **Status**: Accepted
 - **Date**: 2026-08-23
 - **Author**: @Chief-Strategist-J
-- **Scope**: `@observability/core/tracing` centralized engine, `@observability/auth` tracing infrastructure, HTTP middleware, AsyncLocalStorage context propagation, W3C trace propagation, CORS wildcard handling, and Grafana Tempo ingestion
+- **Scope**: `@observability/shared-infra/tracing` centralized engine, `@observability/auth` tracing infrastructure, HTTP middleware, AsyncLocalStorage context propagation, W3C trace propagation, CORS wildcard handling, and Grafana Tempo ingestion
 
 ---
 
@@ -19,8 +19,8 @@ The `@observability/auth` service executes critical authentication operations in
 
 ## 2. Decision & Architecture Overview
 
-1. **Centralized Engine in `@observability/core/tracing`**:
-   - Extracted all OpenTelemetry provider initialization (`initNodeTracing`), tracer factory (`getTracer`), span execution wrappers (`withSpan`), HTTP server middleware (`runWithHttpTracing`), messaging tracer (`CentralMessagingTracer`), and base handler abstractions (`BaseTracedKafkaHandler`) into `@observability/core/tracing`.
+1. **Centralized Engine in `@observability/shared-infra/tracing`**:
+   - Extracted all OpenTelemetry provider initialization (`initNodeTracing`), tracer factory (`getTracer`), span execution wrappers (`withSpan`), HTTP server middleware (`runWithHttpTracing`), messaging tracer (`CentralMessagingTracer`), and base handler abstractions (`BaseTracedKafkaHandler`) into `@observability/shared-infra/tracing`.
    - Separated server-only tracing exports from the isomorphic browser bundle in `packages/node/core/package.json` (`"./tracing": "./src/tracing/index.ts"`).
 
 2. **AsyncLocalStorage Context Propagation**:
@@ -121,43 +121,43 @@ User Clicks "Sign In" / Executes API Request
         ├── [HTTP Network Boundary: POST http://localhost:3001/api/v1/auth/sign-in] ──>
         │
         └── 2. server.ts :: http.createServer handler [packages/node/auth/src/server.ts]
-            └── 3. runWithHttpTracing(req, res) [@observability/core/tracing/http-middleware.ts]
+            └── 3. runWithHttpTracing(req, res) [@observability/shared-infra/tracing/http-middleware.ts]
                 ├── Extract incoming `traceparent` via propagation.extract(ROOT_CONTEXT, headers)
                 └── Start Active SERVER Span: `HTTP POST /api/v1/auth/sign-in`
                     │
                     └── 4. router.ts :: AuthRestV1Router.route("POST", "/api/v1/auth/sign-in") [packages/node/auth/src/api/rest/v1/router.ts]
-                        └── withSpan("REST POST /api/v1/auth/sign-in") [@observability/core/tracing/tracer.ts]
+                        └── withSpan("REST POST /api/v1/auth/sign-in") [@observability/shared-infra/tracing/tracer.ts]
                             ├── Tag Attribute: `user.email = jaydeep@gmail.com`
                             ├── Tag Attribute: `x-request-id = req-full-consumer-100`
                             ├── Tag Attribute: `x-correlation-id = corr-full-consumer-100`
                             │
                             └── 5. user-auth.service.ts :: UserAuthDomainService.signIn(input) [packages/node/auth/src/features/auth/services/user-auth.service.ts]
                                 ├── 6. real-postgres-auth.adapter.ts :: findUserByEmail(email) [packages/node/auth/src/infra/adapters/postgres/real-postgres-auth.adapter.ts]
-                                │   └── withSpan("DB SELECT findUserByEmail", kind: CLIENT) [@observability/core/tracing/tracer.ts]
+                                │   └── withSpan("DB SELECT findUserByEmail", kind: CLIENT) [@observability/shared-infra/tracing/tracer.ts]
                                 │       └── Execute PostgreSQL SQL Query (Port 31412)
                                 │
                                 ├── 7. argon2.util.ts :: verifyPassword(password, hash) [packages/node/auth/src/shared/utils/argon2.util.ts]
-                                │   └── withSpan("Argon2id Password Check") [@observability/core/tracing/tracer.ts]
+                                │   └── withSpan("Argon2id Password Check") [@observability/shared-infra/tracing/tracer.ts]
                                 │
                                 ├── 8. real-postgres-auth.adapter.ts :: recordAuditLog(logRecord) [packages/node/auth/src/infra/adapters/postgres/real-postgres-auth.adapter.ts]
-                                │   └── withSpan("DB INSERT recordAuditLog", kind: CLIENT) [@observability/core/tracing/tracer.ts]
+                                │   └── withSpan("DB INSERT recordAuditLog", kind: CLIENT) [@observability/shared-infra/tracing/tracer.ts]
                                 │       └── Execute PostgreSQL SQL Insert (Port 31412)
                                 │
                                 └── 9. auth-event.producer.ts :: publishUserSignedIn(payload) [packages/node/auth/src/shared/messaging/producers/auth-event.producer.ts]
-                                    └── CentralMessagingTracer.createProducerSpan("auth.events.v1", "USER_SIGNED_IN") [@observability/core/tracing/messaging-tracer.ts]
+                                    └── CentralMessagingTracer.createProducerSpan("auth.events.v1", "USER_SIGNED_IN") [@observability/shared-infra/tracing/messaging-tracer.ts]
                                         ├── Start PRODUCER Span: `Kafka PRODUCE USER_SIGNED_IN`
                                         ├── Inject traceparent into Kafka message headers
                                         └── Publish to Kafka Topic `auth.events.v1` (Port 31414)
                                             │
                                             └── 10. auth-event.consumer.ts :: subscribeToTopic('auth.events.v1') [packages/node/auth/src/shared/messaging/consumers/auth-event.consumer.ts]
-                                                ├── CentralMessagingTracer.createConsumerSpan(event) [@observability/core/tracing/messaging-tracer.ts]
+                                                ├── CentralMessagingTracer.createConsumerSpan(event) [@observability/shared-infra/tracing/messaging-tracer.ts]
                                                 │   └── Start CONSUMER Span: `Kafka CONSUMER USER_SIGNED_IN`
                                                 │
-                                                └── 11. UserSignedInHandler extends BaseTracedKafkaHandler [@observability/core/tracing/traced-handler.ts]
+                                                └── 11. UserSignedInHandler extends BaseTracedKafkaHandler [@observability/shared-infra/tracing/traced-handler.ts]
                                                     ├── Start INTERNAL Span: `Handler USER_SIGNED_IN`
                                                     └── AuthReadProjectionStore.getInstance().applyUserSignedIn() [packages/node/auth/src/shared/messaging/cqrs/projection.store.ts]
 
-    └── 12. SimpleSpanProcessor -> OTLPTraceExporter [@observability/core/tracing/tracer.ts]
+    └── 12. SimpleSpanProcessor -> OTLPTraceExporter [@observability/shared-infra/tracing/tracer.ts]
         ├── POST http://localhost:31417/v1/traces (frontend-otel-collector)
         └── Export gRPC -> frontend-tempo:3200 (Queryable via TraceQL)
 ```

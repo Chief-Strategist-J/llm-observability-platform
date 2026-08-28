@@ -1,4 +1,4 @@
-import { createKafkaClient, CentralizedKafkaClient, KafkaEvent } from '@observability/core';
+import { createKafkaClient, CentralizedKafkaClient, KafkaEvent } from '@observability/shared-infra';
 import { AUTH_KAFKA_TOPICS } from '../topics/auth-topics';
 import { AuthEventHandlerRegistry } from '../handlers/auth-event.handlers';
 import {

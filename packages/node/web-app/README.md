@@ -36,7 +36,7 @@ Run all commands from within the `packages/node/web-app` directory (or use `npm 
 
 1. **Centralized Tracing Initialization (`src/core/tracing/tracer.ts`)**:
    - Client-side: `WebTracerProvider` with `BatchSpanProcessor(OTLPTraceExporter)` pushing OTLP traces directly to OpenTelemetry Collector (`http://localhost:31417/v1/traces`).
-   - Server-side: Dynamically loads `@observability/core/tracing` Node.js OpenTelemetry provider for React Server Components (RSC) and Server Side Rendering (SSR).
+   - Server-side: Dynamically loads `@observability/shared-infra/tracing` Node.js OpenTelemetry provider for React Server Components (RSC) and Server Side Rendering (SSR).
 
 2. **Next.js W3C Context Propagation (`src/middleware.ts`)**:
    - Next.js middleware extracts or generates W3C `traceparent`, `x-request-id`, `x-correlation-id`, and `tracestate` headers.

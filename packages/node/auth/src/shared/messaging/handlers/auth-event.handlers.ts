@@ -1,4 +1,4 @@
-import { KafkaEvent } from '@observability/core';
+import { KafkaEvent } from '@observability/shared-infra';
 import { BaseTracedKafkaHandler } from './base-traced-handler';
 import { AuthReadProjectionStore } from '../cqrs/projection.store';
 

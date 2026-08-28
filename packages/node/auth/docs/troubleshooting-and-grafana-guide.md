@@ -148,7 +148,7 @@ This guide provides end-to-end instructions for running Grafana, searching trace
 - **Symptom**: Requests to `http://localhost:31400/costs` execute successfully, but no server spans appear in Tempo.
 - **Root Cause**: `typeof window === 'undefined'` guard blocked Node.js OpenTelemetry initialization on Next.js server boot.
 - **Solution / Fix**:
-  1. Ensure `initOpenTelemetryTracer()` in `web-app/src/core/tracing/tracer.ts` dynamically imports `@observability/core/tracing` for Node.js server side.
+  1. Ensure `initOpenTelemetryTracer()` in `web-app/src/core/tracing/tracer.ts` dynamically imports `@observability/shared-infra/tracing` for Node.js server side.
   2. Verify Next.js `middleware.ts` extracts or generates `traceparent` and `x-request-id` headers on both request and response pipelines.
 
 ---

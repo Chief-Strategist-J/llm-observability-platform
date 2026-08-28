@@ -23,8 +23,8 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@observability/core": ["../core/src/index.ts"],
-      "@observability/core/*": ["../core/src/*"]
+      "@observability/shared-infra": ["../shared-infra/src/index.ts"],
+      "@observability/shared-infra/*": ["../shared-infra/src/*"]
     },
     "noEmit": true
   },

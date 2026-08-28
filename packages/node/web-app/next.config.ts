@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     instrumentationHook: true,
   },
   transpilePackages: [
-    '@observability/core',
+    '@observability/shared-infra',
     '@observability/design-tokens',
     '@observability/api-types',
     '@observability/realtime-sdk',

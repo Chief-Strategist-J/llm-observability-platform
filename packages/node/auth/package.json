@@ -19,7 +19,7 @@
     "test:curl": "./tests/e2e/test-curl-endpoints.sh"
   },
   "dependencies": {
-    "@observability/core": "file:../core",
+    "@observability/shared-infra": "file:../shared-infra",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.221.0",
     "@opentelemetry/resources": "^2.10.0",

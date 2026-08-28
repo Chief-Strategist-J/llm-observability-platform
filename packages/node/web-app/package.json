@@ -34,7 +34,7 @@
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
     "@observability/api-types": "file:../api-types",
-    "@observability/core": "file:../core",
+    "@observability/shared-infra": "file:../shared-infra",
     "@observability/design-tokens": "file:../design-tokens",
     "@observability/realtime-sdk": "file:../realtime-sdk",
     "@opentelemetry/api": "^1.9.1",

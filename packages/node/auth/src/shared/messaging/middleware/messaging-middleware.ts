@@ -1,4 +1,4 @@
-import { KafkaEvent, KafkaHeaders, CentralizedKafkaClient } from '@observability/core';
+import { KafkaEvent, KafkaHeaders, CentralizedKafkaClient } from '@observability/shared-infra';
 import { MessagingTracer } from '../tracing/messaging-tracer';
 
 export type ProducerNextFn<T = unknown> = (

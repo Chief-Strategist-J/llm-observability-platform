@@ -1,4 +1,4 @@
-import { createKafkaClient, CentralizedKafkaClient, KafkaHeaders, KafkaEvent } from '@observability/core';
+import { createKafkaClient, CentralizedKafkaClient, KafkaHeaders, KafkaEvent } from '@observability/shared-infra';
 import { AUTH_KAFKA_TOPICS } from '../topics/auth-topics';
 import {
   ProducerMiddlewarePipeline,

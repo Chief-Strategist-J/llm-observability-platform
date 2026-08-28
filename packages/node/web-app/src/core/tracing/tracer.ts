@@ -10,7 +10,7 @@ export function initOpenTelemetryTracer(): void {
   if (providerInitialized) return;
 
   if (typeof window === 'undefined') {
-    import('@observability/core/tracing').then(({ initNodeTracing }) => {
+    import('@observability/shared-infra/tracing').then(({ initNodeTracing }) => {
       initNodeTracing('web-app', '0.1.0');
     }).catch(() => {});
     providerInitialized = true;

@@ -21,7 +21,7 @@ Prior implementations suffered from imperative loops, duplicated state handling 
 2. **Functional Pipeline (Zero Loops)**: Use `reduce` (fold), `map`, and `filter` array transformations instead of imperative loops.
 3. **Isomorphic OpenTelemetry Tracing**: Consolidated OpenTelemetry initialization inside `packages/node/web-app/src/core/tracing/tracer.ts`.
    - Client-side: WebTracerProvider pushing via `OTLPTraceExporter` to `http://localhost:31417/v1/traces`.
-   - Server-side: Dynamically loads `@observability/core/tracing` Node.js provider for Next.js Server Components and Server Side Rendering (SSR).
+   - Server-side: Dynamically loads `@observability/shared-infra/tracing` Node.js provider for Next.js Server Components and Server Side Rendering (SSR).
 4. **W3C Next.js Middleware Context Propagation**: Next.js `middleware.ts` extracts or generates W3C `traceparent`, `x-request-id`, `x-correlation-id`, and `tracestate`, setting headers on both incoming request and outgoing response pipelines.
 5. **CORS & Preflight Compliance**: OpenTelemetry Collector configured with `cors.allowed_origins` to allow cross-origin span ingestion from Next.js dashboard origins (`http://localhost:31400`).
 6. **Next.js 15 RSC & Suspense Safety**: Wrap `useSearchParams()` consumption inside `<Suspense>` boundaries to ensure server-side rendering (RSC) and client navigation stability.

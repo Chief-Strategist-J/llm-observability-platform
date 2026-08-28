@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { Provider } from 'react-redux';
-import { createApplicationStore } from '@observability/core';
+import { createApplicationStore } from '@observability/shared-infra';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink } from '@trpc/client';
 import superjson from 'superjson';
