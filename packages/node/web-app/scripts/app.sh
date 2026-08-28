@@ -284,6 +284,12 @@ cmd_run_service() {
     if [ "$key" = "$target_key" ]; then
       found=true
       load_env_variant "$dir" "$APP_ENV"
+      if [ "$key" = "auth" ]; then
+        if ! nc -z localhost 31412 >/dev/null 2>&1; then
+          echo -e "${YELLOW}[service-runner] Auth DB (port 31412) is offline. Automatically starting DB and running migrations...${NC}"
+          cmd_db_setup
+        fi
+      fi
       if [ "$key" != "kafka" ]; then
         free_port "$port"
       fi
@@ -313,6 +319,15 @@ cmd_dev() {
   if [ ! -f ".env.local" ] && [ -f ".env.local.example" ]; then
     cp .env.local.example .env.local
   fi
+
+  for service_key in "${target_services[@]}"; do
+    if [ "$service_key" = "auth" ]; then
+      if ! nc -z localhost 31412 >/dev/null 2>&1; then
+        echo -e "${YELLOW}[dev-orchestrator] Auth DB (port 31412) is offline. Automatically starting DB and running migrations...${NC}"
+        cmd_db_setup
+      fi
+    fi
+  done
 
   clean_build_artifacts
 
