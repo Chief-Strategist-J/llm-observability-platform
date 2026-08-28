@@ -13,7 +13,158 @@
 
 ---
 
-## 1. Executive Verdict
+## 1. Executive Summary & Plain-Language Overview (Non-Technical Brief)
+
+### What Is Happening in Plain Terms?
+Think of this infrastructure as a **high-security building designed to store and monitor sensitive enterprise AI conversations and proprietary data**. 
+- **The Intended Design (ADR-0006):** Described an impenetrable bank vault with an armed front gate, security guards scanning every document for private information (credit cards, passwords, API keys), encrypted storage lockers, and an unforgeable visitor log.
+- **The Actual Reality in Code (ADR-0007 Findings):** 
+  1. **All Backdoors Left Wide Open:** While there is a front gate (Traefik gateway), every single internal storage room (databases, message queues, caches) has its own external door left unlocked and facing the public street (`0.0.0.0`), completely bypassing the security guard.
+  2. **Keys Stored on the Bulletin Board:** The master keys and passwords to all databases are written down in public project files, and every time the system starts, it resets all locks back to these default public keys.
+  3. **Fake Redaction & Shredding:** Private data is transported in clear view before it ever reaches the redaction filter, and the automated "data deletion/erasure" tool doesn't actually delete data—it silently ignores errors and claims success.
+  4. **The Smoke Alarm Was Turned Off:** The automated testing suite was coded in a way where warning alarms and broken encryption checks are automatically marked as "PASSED", giving false peace of mind.
+
+### Why This Matters (Business & Compliance Impact)
+- **Data Breach Risk:** Any external bad actor or compromised internal service can immediately steal unencrypted AI prompt/response logs, live API keys, and database records.
+- **Regulatory Penalties (GDPR / HIPAA / SOC 2):** Claiming full compliance when data erasure, encryption-at-rest, and tamper-proof audit trails are non-functional creates severe legal and liability exposure.
+- **Immediate Action Required:** All systems must be bound to internal-only networks, passwords rotated, true encryption and authentication implemented, and compliance claims temporarily retracted until remediation is complete.
+
+---
+
+## 2. In-Depth Security Architecture Diagrams
+
+### 2.1 Reality vs. Claim: The Vulnerability Attack Surface (Current State)
+The diagram below illustrates how an attacker bypasses the Traefik security perimeter due to raw datastore port publications (`0.0.0.0`), unencrypted internal transport, and exposed management interfaces.
+
+```mermaid
+flowchart TB
+    subgraph External_Untrusted["External Network / Attacker Boundary"]
+        Attacker["🚨 Malicious Actor / External Attacker"]
+        ClientApp["📱 Client Application (Sends LLM Telemetry)"]
+    end
+
+    subgraph Host_Perimeter["Docker Host: 0.0.0.0 (Public Interfaces)"]
+        subgraph Gateway_Layer["Gateway Layer (Edge)"]
+            Traefik["🛡️ Traefik Reverse Proxy<br/>Port 31410 (TLS)"]
+            TraefikAPI["❌ Insecure Dashboard API<br/>Port 31411 (Unauthenticated)"]
+            DockerSock[("🐳 /var/run/docker.sock<br/>Mounted to Traefik")]
+        end
+
+        subgraph Ingestion_Layer["Ingestion Pipeline"]
+            OTel["OTel Collector<br/>Port 4317 / 4318 (Published)<br/>❌ Wildcard CORS & No Auth"]
+        end
+
+        subgraph Exposed_Datastores["Exposed Internal Datastores (Direct Port Access)"]
+            Kafka["❌ Kafka Stream (Port 9092)<br/>PLAINTEXT - No SASL/Auth"]
+            Redis["❌ Redis Cache (Port 6379)<br/>No ACLs - FLUSHALL Allowed"]
+            ClickHouse["❌ ClickHouse DB (Port 8123/9000)<br/>Default User Full Access"]
+            AlloyDB["❌ AlloyDB / Postgres (Port 5432)<br/>Default 'password' in Git"]
+            Temporal["❌ Temporal UI / Engine (Port 31424/31425)<br/>Unauthenticated Orchestration"]
+            Tempo["❌ Tempo Tracing (Port 3200)<br/>Unauthenticated Trace Access"]
+        end
+    end
+
+    %% Normal Flow
+    ClientApp -->|"1. Ingest Span (TLS)"| Traefik
+    Traefik -->|"2. Plaintext HTTP Proxy"| OTel
+    OTel -->|"3. Unredacted Hop"| Kafka
+    Kafka -->|"4. Telemetry Stream"| ClickHouse
+
+    %% Exploit Vectors
+    Attacker -.->|"VULN 1: Bypass Gateway Direct to DB"| AlloyDB
+    Attacker -.->|"VULN 2: Read / Inject Fake Spans"| Kafka
+    Attacker -.->|"VULN 3: Erase Memory / Tamper Ledger"| Redis
+    Attacker -.->|"VULN 4: Takeover Host via Docker Socket"| TraefikAPI
+    TraefikAPI -.-> DockerSock
+    Attacker -.->|"VULN 5: Sniff Plaintext Traffic & API Keys"| OTel
+
+    classDef vuln fill:#ff4d4f,stroke:#820014,stroke-width:2px,color:#fff;
+    classDef edge fill:#1890ff,stroke:#002766,stroke-width:2px,color:#fff;
+    classDef safe fill:#52c41a,stroke:#135200,stroke-width:2px,color:#fff;
+
+    class TraefikAPI,Kafka,Redis,ClickHouse,AlloyDB,Temporal,Tempo vuln;
+    class Traefik,OTel edge;
+```
+
+---
+
+### 2.2 Concrete Attack Chains: Step-by-Step Exploit Flow
+This diagram details the exact 3-chain sequence an adversary or automated crawler can execute to achieve full infrastructure takeover without zero-days.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Attacker as 🚨 Adversary / Script
+    participant Traefik as Traefik (:31411)
+    participant Socket as /var/run/docker.sock
+    participant Kafka as Kafka (:9092)
+    participant OTel as OTel Collector (:4318)
+    participant DB as AlloyDB / Postgres (:5432)
+
+    Note over Attacker,DB: Attack Chain A: Host Takeover via Docker Socket
+    Attacker->>Traefik: GET /api/rawdata (Unauthenticated)
+    Traefik-->>Attacker: 200 OK (Full container topology & labels)
+    Attacker->>Traefik: POST Docker API call via mounted socket
+    Traefik->>Socket: Escalate to host root container creation
+    Socket-->>Attacker: Root shell on host acquired 💥
+
+    Note over Attacker,DB: Attack Chain B: Telemetry & API Key Interception
+    Attacker->>OTel: Direct HTTP POST /v1/traces (Wildcard CORS, No Auth)
+    Attacker->>Kafka: Connect to 0.0.0.0:9092 (PLAINTEXT, No SASL)
+    Kafka-->>Attacker: Dump all unredacted prompt spans & OpenAI/Anthropic API keys 🔓
+
+    Note over Attacker,DB: Attack Chain C: Data Deletion & Audit Trail Destruction
+    Attacker->>DB: Connect to 0.0.0.0:5432 with published credentials
+    Attacker->>DB: Exfiltrate proprietary customer data
+    Attacker->>DB: DROP TABLE security_audit_logs; (No separation of privileges)
+    DB-->>Attacker: Query OK (Incident erased, 0 audit trail remains) 🛑
+```
+
+---
+
+### 2.3 Hardened Target Architecture (Post-Remediation Blueprint)
+The target architecture strictly isolates the internal network, enforces edge mTLS/forward-auth, seals all database ports, and guarantees receiver-side redaction.
+
+```mermaid
+flowchart TB
+    subgraph Public_Internet["Public Ingress (Zero-Trust Edge)"]
+        User["Client SDK / Gateway Ingress"]
+    end
+
+    subgraph DMZ_Network["Docker Network: llmobs-edge (Isolated Bridge)"]
+        TraefikSecure["🛡️ Traefik 3.x Gateway<br/>- Strict TLS 1.3 Termination<br/>- mTLS / ForwardAuth (OIDC)<br/>- API Socket Isolated (Read-Only)<br/>- Access Log Header Redaction"]
+    end
+
+    subgraph Internal_Network["Docker Network: llmobs-data (internal: true, NO Host Ports)"]
+        OTelSecure["🔒 OTel Collector<br/>- Inbound Token / mTLS Auth<br/>- Receiver-Side PII Redaction<br/>- Non-Root Container User"]
+
+        subgraph Secure_Datastores["Encrypted & Authenticated Datastores"]
+            KafkaSecure["Kafka (SASL_SSL + SCRAM)<br/>Per-service ACLs & RF>=2"]
+            RedisSecure["Redis 7 (ACL-Scoped Users)<br/>Dangerous Commands Disabled"]
+            ClickHouseSecure["ClickHouse (Scoped Users & Quotas)<br/>Read-Only Analytics Profiles"]
+            AlloyDBSecure["AlloyDB / Postgres (mTLS + Vault Secrets)<br/>Append-Only Immutable Audit Log"]
+            TemporalSecure["Temporal Engine (mTLS Interceptor)"]
+        end
+    end
+
+    User -->|"HTTPS (Port 443 / 31410)"| TraefikSecure
+    TraefikSecure -->|"Mutual TLS (Internal CA)"| OTelSecure
+    OTelSecure -->|"SASL_SSL"| KafkaSecure
+    KafkaSecure -->|"Authenticated Write"| ClickHouseSecure
+    OTelSecure -->|"Authenticated Stream"| AlloyDBSecure
+
+    classDef edgeGate fill:#1890ff,stroke:#002766,stroke-width:2px,color:#fff;
+    classDef innerSafe fill:#52c41a,stroke:#135200,stroke-width:2px,color:#fff;
+    classDef storeSafe fill:#13c2c2,stroke:#00474f,stroke-width:2px,color:#fff;
+
+    class TraefikSecure edgeGate;
+    class OTelSecure innerSafe;
+    class KafkaSecure,RedisSecure,ClickHouseSecure,AlloyDBSecure,TemporalSecure storeSafe;
+```
+
+---
+
+## 3. Executive Verdict
 
 ADR-0006 is an *availability and ergonomics* document wearing the vocabulary of a *security* document. It is competent at what it actually does — port allocation, cgroup limits, log rotation, startup ordering — and it is materially misleading everywhere it claims SOC 2, ISO 27001, GDPR, HIPAA, or EU AI Act posture.
 
