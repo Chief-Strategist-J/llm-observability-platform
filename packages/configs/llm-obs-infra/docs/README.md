@@ -109,3 +109,4 @@ graph TD
 - **Package Root**: `packages/configs/llm-obs-infra/`
 - **Main Specifications**: [README.md](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/README.md) & [REQUIREMENTS.md](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/REQUIREMENTS.md)
 - **Original ADR Directory**: [adr/](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/adr) (Preserved intact)
+- **Cloudflare Tunnel Override**: [docker-compose.cloudflare.yml](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docker-compose.cloudflare.yml) — Optional 1-click Cloudflare Tunnel extension for Zero-Trust public ingress without open firewall ports (`./scripts/setup-cloudflare.sh` or `./scripts/manage.sh cloudflare`).

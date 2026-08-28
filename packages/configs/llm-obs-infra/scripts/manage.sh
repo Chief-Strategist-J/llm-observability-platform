@@ -184,8 +184,13 @@ main() {
       setup_script=$(find_required_script "setup.sh" "$scripts_root")
       bash "$setup_script"
       ;;
+    cloudflare)
+      local cf_script
+      cf_script=$(find_required_script "setup-cloudflare.sh" "$scripts_root")
+      bash "$cf_script" "$@"
+      ;;
     *)
-      echo "Usage: $0 {up|restart|down|status|logs|free-ports|health|certs|backup-purge|setup}"
+      echo "Usage: $0 {up|restart|down|status|logs|free-ports|health|certs|backup-purge|setup|cloudflare}"
       exit 1
       ;;
   esac
