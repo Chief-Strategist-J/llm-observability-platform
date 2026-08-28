@@ -337,7 +337,8 @@ cmd_dev() {
     fi
   done
 
-  clean_build_artifacts
+  clean_deep_artifacts
+  cmd_install_deps
 
   echo -e "${GREEN}====================================================${NC}"
   echo -e "${GREEN} FIXED SERVICE ENDPOINTS [ENV=${APP_ENV}]:${NC}"
