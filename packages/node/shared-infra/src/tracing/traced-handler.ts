@@ -10,6 +10,9 @@ export abstract class BaseTracedKafkaHandler<T = unknown> {
     await withSpan(spanName, async (span: Span) => {
       span.setAttribute('cqrs.event_name', event.eventName);
       span.setAttribute('cqrs.event_id', event.id);
+      if (topic) {
+        span.setAttribute('cqrs.topic', topic);
+      }
       if (event.headers?.tenantId) {
         span.setAttribute('cqrs.tenant_id', event.headers.tenantId);
       }

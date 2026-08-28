@@ -5,6 +5,8 @@ import { Resource } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
 
+export { SpanKind, SpanStatusCode, trace, context, ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION, type Span, type Tracer };
+
 process.env.OTEL_EXPORTER_OTLP_PROTOCOL = 'http/json';
 
 let providerInitialized = false;

@@ -1,30 +1,17 @@
-import { createKafkaClient, CentralizedKafkaClient, KafkaEvent } from '@observability/shared-infra';
+import { createKafkaClient, CentralizedKafkaClient, TypedEventConsumer } from '@observability/shared-infra';
 import { AUTH_KAFKA_TOPICS } from '../topics/auth-topics';
 import { AuthEventHandlerRegistry } from '../handlers/auth-event.handlers';
-import {
-  ConsumerMiddlewarePipeline,
-  tracingConsumerMiddleware,
-  loggingConsumerMiddleware,
-  dlqConsumerMiddleware,
-  idempotencyConsumerMiddleware,
-  retryConsumerMiddleware,
-} from '../middleware/messaging-middleware';
 
 export class AuthEventConsumer {
   private client: CentralizedKafkaClient;
+  private consumer: TypedEventConsumer;
   private registry: AuthEventHandlerRegistry;
-  private pipeline: ConsumerMiddlewarePipeline;
   private unsubscribeFns: Array<() => void> = [];
 
   constructor(registry?: AuthEventHandlerRegistry) {
     this.client = createKafkaClient('auth-service-consumer');
     this.registry = registry || new AuthEventHandlerRegistry();
-    this.pipeline = new ConsumerMiddlewarePipeline()
-      .use(tracingConsumerMiddleware)
-      .use(loggingConsumerMiddleware)
-      .use(idempotencyConsumerMiddleware)
-      .use(dlqConsumerMiddleware(this.client))
-      .use(retryConsumerMiddleware(3, 50));
+    this.consumer = new TypedEventConsumer(this.client);
   }
 
   public async init(): Promise<void> {
@@ -34,8 +21,8 @@ export class AuthEventConsumer {
 
   private subscribe(): void {
     const topic = AUTH_KAFKA_TOPICS.AUTH_EVENTS;
-    const unsub = this.client.subscribeToTopic(topic, (event: KafkaEvent<any>) =>
-      this.pipeline.execute(event, topic, (ev, top) => this.registry.dispatch(ev, top)),
+    const unsub = this.consumer.subscribe(topic, (event) =>
+      this.registry.dispatch(event, topic),
     );
     this.unsubscribeFns.push(unsub);
   }
