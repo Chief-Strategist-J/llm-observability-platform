@@ -3,3 +3,33 @@ ports:
     type: event-publisher
     vendor: alert_logger
     adapter: src/infra/adapters/alerts/logger_alert_adapter.py::LoggerAlertAdapter
+
+  - name: baseline_cache
+    type: cache
+    vendor: redis
+    adapter: src/infra/adapters/redis/redis_adapter.py::RedisBaselineCacheAdapter
+
+  - name: quality_score_repo
+    type: database
+    vendor: postgres
+    adapter: src/infra/adapters/postgres/postgres_adapter.py::PostgresQualityScoreAdapter
+
+  - name: clickhouse_analytics
+    type: database
+    vendor: clickhouse
+    adapter: src/infra/adapters/clickhouse/clickhouse_adapter.py::ClickHouseAdapter
+
+  - name: temporal_trigger
+    type: workflow
+    vendor: temporal
+    adapter: src/infra/adapters/temporal/temporal_client_adapter.py::TemporalClientAdapter
+
+  - name: embedding_client
+    type: http
+    vendor: embedding-worker
+    adapter: src/infra/adapters/embedding/http_embedding_adapter.py::HttpEmbeddingClientAdapter
+
+  - name: scorer_client
+    type: http
+    vendor: scorer-services
+    adapter: src/infra/adapters/scorers/http_scorer_client_adapter.py::HttpScorerClientAdapter

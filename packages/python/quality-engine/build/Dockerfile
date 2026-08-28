@@ -2,7 +2,6 @@ FROM python:3.11-slim AS base
 
 WORKDIR /app
 
-# Install build dependencies if needed (e.g. for confluent-kafka or psycopg compiles)
 RUN apt-get update && apt-get install -y \
     build-essential \
     postgresql-client \
@@ -10,21 +9,19 @@ RUN apt-get update && apt-get install -y \
 
 COPY pyproject.toml ./
 
-# Create dummy source layout so setuptools egg_info / editable install check passes
+# Dummy source layout so egg_info / editable install passes
 RUN touch README.md && mkdir -p src && touch src/__init__.py
 
-# Install dependencies and cache this layer
+# Install all dependencies
 RUN pip install --no-cache-dir ".[dev]"
 
-# Copy actual source files
+# Copy actual source
 COPY src/ ./src/
 COPY database/ ./database/
 COPY scripts/ ./scripts/
 COPY contracts/ ./contracts/
 
-# Install the actual package code
 RUN pip install --no-cache-dir ".[dev]" --no-deps
-
 RUN chmod +x scripts/*.sh
 
 ENV PYTHONPATH=/app/src

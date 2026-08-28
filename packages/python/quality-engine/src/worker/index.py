@@ -8,6 +8,8 @@ from confluent_kafka import Consumer, KafkaError  # type: ignore[import-untyped]
 from opentelemetry import trace
 from opentelemetry.propagate import extract as otel_extract
 from temporalio.client import Client
+from temporalio.worker import Worker
+from temporalio.contrib.opentelemetry import TracingInterceptor
 
 from worker.config import load_config
 from handlers.span_quality.handler import SpanQualityHandler
@@ -16,6 +18,13 @@ from infra.adapters.redis.redis_adapter import RedisBaselineCacheAdapter
 from infra.adapters.embedding.http_embedding_adapter import HttpEmbeddingClientAdapter
 from infra.adapters.kafka.confluent_producer_adapter import ConfluentKafkaProducerAdapter
 from infra.adapters.temporal.temporal_client_adapter import TemporalClientAdapter
+from infra.adapters.clickhouse.clickhouse_adapter import ClickHouseAdapter
+from infra.adapters.metrics.prometheus_adapter import PrometheusAdapter
+from infra.adapters.scorers.http_scorer_client_adapter import HttpScorerClientAdapter
+from worker.activities import QualityBaselineActivities
+from worker.workflows import RecomputeQualityBaseline, RollupQualityTrend, QualityScoreWorkflow
+
+
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer("quality-engine.worker")
@@ -31,19 +40,68 @@ async def run() -> None:
 
     cfg = load_config()
 
-
-    # Wire adapters (dependency injection)
+    # ── Shared adapters ───────────────────────────────────────────────────────
     repo     = PostgresQualityScoreAdapter(dsn=cfg.postgres_dsn)
     cache    = RedisBaselineCacheAdapter(url=cfg.redis_url)
     embedder = HttpEmbeddingClientAdapter(base_url=cfg.embedding_worker_url)
     producer = ConfluentKafkaProducerAdapter(bootstrap_servers=cfg.kafka_bootstrap_servers)
 
     if cfg.temporal_host:
-        temporal_client = await Client.connect(cfg.temporal_host, namespace=cfg.temporal_namespace)
-        temporal        = TemporalClientAdapter(client=temporal_client, task_queue=cfg.temporal_task_queue)
+        temporal_client = await Client.connect(
+            cfg.temporal_host,
+            namespace=cfg.temporal_namespace,
+            interceptors=[TracingInterceptor()],
+        )
+        temporal = TemporalClientAdapter(client=temporal_client, task_queue=cfg.temporal_task_queue)
     else:
         logger.warning("TEMPORAL_HOST is not set — running without Temporal (local/dev mode)")
+        temporal_client = None
         temporal = TemporalClientAdapter(client=None, task_queue=cfg.temporal_task_queue)  # type: ignore[arg-type]
+
+    # ── Baseline scheduler adapters (merged from quality-baseline-worker) ─────
+    clickhouse = ClickHouseAdapter(
+        host=cfg.clickhouse_host,
+        port=cfg.clickhouse_port,
+        username=cfg.clickhouse_username,
+        password=cfg.clickhouse_password,
+        database=cfg.clickhouse_database,
+    )
+    metrics = PrometheusAdapter()
+    scorer_client = HttpScorerClientAdapter()
+    baseline_activities = QualityBaselineActivities(
+        clickhouse=clickhouse,
+        redis=cache,
+        postgres=repo,
+        metrics=metrics,
+        scorer_client=scorer_client,
+        kafka_producer=producer,
+    )
+
+    async def run_temporal_worker() -> None:
+        """Runs the Temporal scheduled-workflow worker (baseline recompute + trend rollup)."""
+        if temporal_client is None:
+            logger.warning("Temporal unavailable — baseline scheduler will not start.")
+            return
+        worker = Worker(
+            temporal_client,
+            task_queue=cfg.temporal_baseline_task_queue,
+            workflows=[RecomputeQualityBaseline, RollupQualityTrend, QualityScoreWorkflow],
+            activities=[
+                baseline_activities.recompute_baseline_scores,
+                baseline_activities.write_redis_baselines,
+                baseline_activities.rollup_quality_trend,
+                baseline_activities.detect_language,
+                baseline_activities.detect_prompt_type,
+                baseline_activities.compute_coherence,
+                baseline_activities.compute_toxicity,
+                baseline_activities.compute_faithfulness,
+                baseline_activities.compute_perplexity,
+                baseline_activities.aggregate_composite,
+            ],
+            interceptors=[TracingInterceptor()],
+        )
+        logger.info("quality-engine temporal baseline worker started queue=%s", cfg.temporal_baseline_task_queue)
+        await worker.run()
 
     handler = SpanQualityHandler(
         repo=repo,
@@ -179,6 +237,7 @@ async def run() -> None:
 
     await asyncio.gather(
         consume(),
+        run_temporal_worker(),
         server.serve(),
     )
 

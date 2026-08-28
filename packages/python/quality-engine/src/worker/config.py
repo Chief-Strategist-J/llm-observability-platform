@@ -5,18 +5,39 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class QualityEngineConfig:
+    # Kafka consumer
     kafka_bootstrap_servers: str
     kafka_consumer_group: str
     kafka_topic_input: str
     kafka_topic_scores: str
     kafka_topic_toxicity: str
     kafka_topic_alerts: str
+
+    # PostgreSQL (shared)
     postgres_dsn: str
+
+    # Redis (shared)
     redis_url: str
+
+    # Temporal — event trigger (quality_score_workflow)
     temporal_host: str
     temporal_namespace: str
     temporal_task_queue: str
+
+    # Temporal — baseline scheduler (separate task queue)
+    temporal_baseline_task_queue: str
+
+    # ClickHouse (quality_trend rollup)
+    clickhouse_host: str
+    clickhouse_port: int
+    clickhouse_username: str
+    clickhouse_password: str
+    clickhouse_database: str
+
+    # Embedding worker
     embedding_worker_url: str
+
+    # Consumer concurrency
     consumer_concurrency: int
 
 
@@ -45,6 +66,12 @@ def load_config(env: dict[str, str] | None = None) -> QualityEngineConfig:
         temporal_host           = source.get("TEMPORAL_HOST", "localhost:7233"),
         temporal_namespace      = source.get("TEMPORAL_NAMESPACE", "default"),
         temporal_task_queue     = source.get("TEMPORAL_TASK_QUEUE", "quality-engine-tasks"),
+        temporal_baseline_task_queue = source.get("TEMPORAL_BASELINE_TASK_QUEUE", "quality-baseline-tasks"),
+        clickhouse_host         = source.get("CLICKHOUSE_HOST", "localhost"),
+        clickhouse_port         = int(source.get("CLICKHOUSE_PORT", "8123")),
+        clickhouse_username     = source.get("CLICKHOUSE_USERNAME", "default"),
+        clickhouse_password     = source.get("CLICKHOUSE_PASSWORD", ""),
+        clickhouse_database     = source.get("CLICKHOUSE_DATABASE", "default"),
         embedding_worker_url    = source.get("EMBEDDING_WORKER_URL", "http://localhost:8001"),
         consumer_concurrency    = int(source.get("CONSUMER_CONCURRENCY", "4")),
     )

@@ -3,14 +3,46 @@ services:
     build:
       context: ../..
       dockerfile: build/Dockerfile
+    container_name: quality-engine
     ports:
-      - "8008:8008"
+      - "8080:8080"
     environment:
-      - SKIP_CONSOLE_EXPORTER=false
-      - SKIP_OTLP_EXPORTER=true
-      - DEPLOYMENT_ENV=dev
-      - COHERENCE_SERVICE_URL=http://semantic-coherence:8005
-      - FAITHFULNESS_SERVICE_URL=http://faithfulness:8006
-      - TOXICITY_SERVICE_URL=http://toxicity:8007
-      - PERPLEXITY_SERVICE_URL=http://perplexity:8007
+      # Kafka
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-llmobs-kafka:9092}
+      - KAFKA_CONSUMER_GROUP=${KAFKA_CONSUMER_GROUP:-quality-engine-group}
+      - KAFKA_TOPIC_INPUT=${KAFKA_TOPIC_INPUT:-llm.spans.sampled}
+      - KAFKA_TOPIC_SCORES=${KAFKA_TOPIC_SCORES:-llm.quality.scores}
+      - KAFKA_TOPIC_TOXICITY=${KAFKA_TOPIC_TOXICITY:-llm.toxicity.flagged}
+      - KAFKA_TOPIC_ALERTS=${KAFKA_TOPIC_ALERTS:-alerts.quality.degradation}
+      # PostgreSQL
+      - POSTGRES_HOST=${POSTGRES_HOST:-llmobs-alloydb}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-quality_engine_db}
+      # Redis
+      - REDIS_URL=${REDIS_URL:-redis://llmobs-redis:6379/0}
+      # Temporal
+      - TEMPORAL_HOST=${TEMPORAL_HOST:-llmobs-temporal:7233}
+      - TEMPORAL_NAMESPACE=${TEMPORAL_NAMESPACE:-default}
+      - TEMPORAL_TASK_QUEUE=${TEMPORAL_TASK_QUEUE:-quality-engine-tasks}
+      - TEMPORAL_BASELINE_TASK_QUEUE=${TEMPORAL_BASELINE_TASK_QUEUE:-quality-baseline-tasks}
+      # ClickHouse
+      - CLICKHOUSE_HOST=${CLICKHOUSE_HOST:-llmobs-clickhouse}
+      - CLICKHOUSE_PORT=${CLICKHOUSE_PORT:-8123}
+      - CLICKHOUSE_USERNAME=${CLICKHOUSE_USERNAME:-default}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-}
+      - CLICKHOUSE_DATABASE=${CLICKHOUSE_DATABASE:-default}
+      # Embedding worker
+      - EMBEDDING_WORKER_URL=${EMBEDDING_WORKER_URL:-http://embedding-worker:8001}
+      # OTEL
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://llmobs-otel-collector:4317}
+      - DEPLOYMENT_ENV=${DEPLOYMENT_ENV:-dev}
+      - SKIP_CONSOLE_EXPORTER=true
     restart: unless-stopped
+    networks:
+      - llmobs-network
+
+networks:
+  llmobs-network:
+    external: true

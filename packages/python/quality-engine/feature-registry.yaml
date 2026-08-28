@@ -11,7 +11,6 @@ features:
     depends_on_features: []
     depends_on_packages:
       - embedding-worker
-      - quality-baseline-worker
 
   - name: prompt_type_detection
     status: active
@@ -52,3 +51,27 @@ features:
     flags: []
     migrations: []
     depends_on_features: [quality_baseline_update]
+
+  - name: quality_baseline_recompute
+    status: active
+    contract: contracts/workflows/recompute_quality_baseline.yaml
+    contract_version: v1
+    owner: "@llm-observability-platform-team"
+    added: "2026-06-04"
+    flags: []
+    migrations:
+      - 0001_init
+    depends_on_features: []
+    depends_on_packages: []
+
+  - name: quality_trend_rollup
+    status: active
+    contract: contracts/workflows/rollup_quality_trend.yaml
+    contract_version: v1
+    owner: "@llm-observability-platform-team"
+    added: "2026-06-04"
+    flags: []
+    migrations:
+      - 0001_init
+    depends_on_features: []
+    depends_on_packages: []

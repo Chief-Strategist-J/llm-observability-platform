@@ -1,6 +1,7 @@
 name: quality-engine
 language: python
-type: event
-version: "0.2.0"
+type: hybrid
+version: "0.3.0"
 owner: "@llm-observability-platform-team"
 stage: 2
+description: "Kafka consumer + Temporal scheduled-workflow worker for LLM quality scoring and baseline management"

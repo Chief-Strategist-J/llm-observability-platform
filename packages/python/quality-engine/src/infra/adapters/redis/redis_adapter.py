@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+import datetime
 import redis as redis_lib
 
 from shared.ports.baseline_cache_port import BaselineCachePort
@@ -10,13 +11,17 @@ _ALERT_RATE_LIMIT_KEY = "rate_limit:quality_alert:{model}:{endpoint}"
 
 class RedisBaselineCacheAdapter(BaselineCachePort):
     """
-    F-Q-07 / F-Q-08 Redis adapter.
+    Unified Redis adapter for baseline cache reads/writes and alert rate-limiting.
+    Covers both quality-engine (F-Q-07/F-Q-08 degradation checks) and
+    quality-baseline-worker (F-Q-09 hourly baseline recompute writes).
     Baseline values stored as JSON envelopes for schema-safe reads.
     TTL default: 8 days (691200 seconds) per F-Q-07 spec.
     """
 
     def __init__(self, url: str) -> None:
         self._client = redis_lib.from_url(url, decode_responses=True)
+
+    # ── BaselineCachePort ────────────────────────────────────────────────────
 
     def get_baseline(self, model: str, endpoint: str, prompt_type: str) -> float | None:
         key = _BASELINE_KEY.format(model=model, endpoint=endpoint, prompt_type=prompt_type)
@@ -38,7 +43,6 @@ class RedisBaselineCacheAdapter(BaselineCachePort):
         ttl_seconds: int = 691200,
     ) -> None:
         key = _BASELINE_KEY.format(model=model, endpoint=endpoint, prompt_type=prompt_type)
-        import datetime
         envelope = json.dumps({
             "value": value,
             "schema_version": 1,
@@ -53,3 +57,15 @@ class RedisBaselineCacheAdapter(BaselineCachePort):
     def set_alert_rate_limit(self, model: str, endpoint: str, ttl_seconds: int = 3600) -> None:
         key = _ALERT_RATE_LIMIT_KEY.format(model=model, endpoint=endpoint)
         self._client.set(key, "1", ex=ttl_seconds)
+
+    # ── Alias used by quality-baseline-worker activities ────────────────────
+
+    def set_baseline_quality(
+        self,
+        model: str,
+        endpoint: str,
+        prompt_type: str,
+        score: float,
+    ) -> None:
+        """Alias for set_baseline — used by QualityBaselineActivities."""
+        self.set_baseline(model=model, endpoint=endpoint, prompt_type=prompt_type, value=score)

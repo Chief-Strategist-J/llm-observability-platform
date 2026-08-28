@@ -1,10 +1,12 @@
 from __future__ import annotations
 import json
 from datetime import datetime
+from typing import List
 import psycopg
 
 from shared.types.quality_score_row import QualityScoreRow
 from shared.ports.quality_score_repo_port import QualityScoreRepositoryPort
+from features.quality_baseline.types import BaselineRecomputeResult, DailyRollupRecord
 
 
 class PostgresQualityScoreAdapter(QualityScoreRepositoryPort):
@@ -126,3 +128,58 @@ class PostgresQualityScoreAdapter(QualityScoreRepositoryPort):
                 rowcount = cur.rowcount
             conn.commit()
         return rowcount > 0
+
+    # ── Baseline scheduler queries (merged from quality-baseline-worker) ─────
+
+    def get_rolling_baselines(self) -> List[BaselineRecomputeResult]:
+        """Returns 7-day rolling average scores grouped by model/endpoint/prompt_type for Redis baseline writes."""
+        query = """
+        SELECT model, endpoint, COALESCE(prompt_type, 'none') AS prompt_type,
+               AVG(composite_score), COUNT(*)
+        FROM quality_scores
+        WHERE scored_at > NOW() - INTERVAL '7 days'
+          AND composite_score IS NOT NULL
+        GROUP BY model, endpoint, prompt_type
+        """
+        results: List[BaselineRecomputeResult] = []
+        with psycopg.connect(self._dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute(query)
+                for row in cur.fetchall():
+                    results.append(BaselineRecomputeResult(
+                        model=str(row[0]),
+                        endpoint=str(row[1]),
+                        prompt_type=str(row[2]),
+                        avg_score=float(row[3]) if row[3] is not None else 0.0,
+                        sample_count=int(row[4]),
+                    ))
+        return results
+
+    def get_daily_rollup_data(self, start_time: datetime, end_time: datetime) -> List[DailyRollupRecord]:
+        """Returns aggregated daily rollup rows for ClickHouse trend insertion."""
+        query = """
+        SELECT model, endpoint, COALESCE(prompt_type, 'none') AS prompt_type,
+               AVG(composite_score) AS avg_score,
+               COALESCE(SUM(COALESCE(cardinality(quality_flags), 0)), 0) AS flag_count,
+               COUNT(*) AS sample_count
+        FROM quality_scores
+        WHERE scored_at >= %s AND scored_at <= %s
+          AND composite_score IS NOT NULL
+        GROUP BY model, endpoint, prompt_type
+        """
+        results: List[DailyRollupRecord] = []
+        rollup_date = start_time.date()
+        with psycopg.connect(self._dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (start_time, end_time))
+                for row in cur.fetchall():
+                    results.append(DailyRollupRecord(
+                        rollup_date=rollup_date,
+                        model=str(row[0]),
+                        endpoint=str(row[1]),
+                        prompt_type=str(row[2]),
+                        avg_composite_score=float(row[3]) if row[3] is not None else 0.0,
+                        flag_count=int(row[4]),
+                        sample_count=int(row[5]),
+                    ))
+        return results
