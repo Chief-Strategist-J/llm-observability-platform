@@ -382,9 +382,9 @@ cmd_install_deps() {
   if [ "$1" = "--clean" ] || [ "$1" = "-c" ]; then
     clean_deep_artifacts
   fi
-  echo -e "${BLUE}[web-app] Installing dependencies...${NC}"
-  npm install
-  echo -e "${GREEN}✓ Dependencies installed successfully.${NC}"
+  echo -e "${BLUE}[web-app] Installing and updating dependencies...${NC}"
+  npm install && npm update
+  echo -e "${GREEN}✓ Dependencies installed and updated successfully.${NC}"
 }
 
 cmd_build_verify() {
