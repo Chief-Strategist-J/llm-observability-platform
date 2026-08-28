@@ -1,13 +1,30 @@
 ports:
-  - name: kafka_consumer
-    type: messaging
-    vendor: confluent-kafka
-    adapter: src/worker/index.py::Consumer
-  - name: redis_cache
+  - name: latency_clickhouse
+    type: database
+    vendor: clickhouse
+    adapter: src/infra/adapters/clickhouse/latency_clickhouse_adapter.py::LatencyClickHouseAdapter
+
+  - name: latency_baseline_clickhouse
+    type: database
+    vendor: clickhouse
+    adapter: src/infra/adapters/clickhouse/clickhouse_adapter.py::ClickHouseAdapter
+
+  - name: latency_redis
     type: cache
     vendor: redis
-    adapter: src/handlers/latency_handler.py::LatencyHandler
-  - name: health_server
-    type: http
-    vendor: standard-http
-    adapter: src/worker/index.py::_HealthHandler
+    adapter: src/infra/adapters/redis/latency_redis_adapter.py::LatencyRedisAdapter
+
+  - name: latency_baseline_redis
+    type: cache
+    vendor: redis
+    adapter: src/infra/adapters/redis/redis_adapter.py::RedisAdapter
+
+  - name: kafka_producer
+    type: event-publisher
+    vendor: kafka
+    adapter: src/infra/adapters/kafka/confluent_producer_adapter.py::ConfluentKafkaProducerAdapter
+
+  - name: temporal_baseline_worker
+    type: workflow
+    vendor: temporal
+    adapter: src/worker/workflows.py::LatencyBaselineWorkflow

@@ -4,5 +4,19 @@ workers:
     language: python
     topics:
       - llm.spans.raw
+    consumer_group: latency-engine-cg
     owner: "@latency-team"
     stage: 1
+    handlers:
+      - LatencyHandler
+
+  - name: latency-baseline-scheduler
+    type: temporal
+    language: python
+    task_queue: latency-baseline-tasks
+    owner: "@latency-team"
+    stage: 1
+    workflows:
+      - LatencyBaselineWorkflow
+    activities:
+      - hourly_checkpoint

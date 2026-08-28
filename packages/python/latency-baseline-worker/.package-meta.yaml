@@ -1,5 +1,0 @@
-package:
-  name: latency-baseline-worker
-  type: worker
-  language: python
-  owner: "@latency-team"
