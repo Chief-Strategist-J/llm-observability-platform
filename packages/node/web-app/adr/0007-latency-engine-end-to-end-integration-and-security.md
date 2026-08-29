@@ -1,261 +1,406 @@
-# ADR-NODE-WEB-APP-0007: End-to-End Latency Engine Integration, Security Architecture, and Call Stack Topology
+# ADR-NODE-WEB-APP-0007: Master Architecture — End-to-End Latency Engine Integration, Security Verification, Database DDL Schemas, Kafka Topics, and W3C Tracing Topology
 
 | Field | Value |
 | --- | --- |
 | **ADR ID** | `ADR-NODE-WEB-APP-0007` |
-| **Title** | End-to-End Latency Engine Integration, Security Architecture, Data Schemas, Kafka Messaging, and Call Stack Topology |
+| **Title** | End-to-End Latency Integration, Dual Auth Verification, Database DDL Schemas, Kafka Topics, and W3C OpenTelemetry Tracing |
 | **Status** | **Accepted** |
 | **Date** | 2026-08-29 |
-| **Scope** | Next.js Web App (`packages/node/web-app`), Auth Microservice (`packages/node/auth`), Instrumentation SDK (`packages/python/instrumentation-sdk`), Latency Engine (`packages/python/latency-engine`) |
+| **Scope** | Next.js Web App (`packages/node/web-app`), Auth Service (`packages/node/auth`), Instrumentation SDK (`packages/python/instrumentation-sdk`), Latency Engine (`packages/python/latency-engine`) |
 
 ---
 
 ## 1. Context & Problem Statement
 
-The platform requires a complete end-to-end telemetry and observability loop. High-frequency LLM execution spans (Time-to-First-Token [TTFT], total latency, token throughput [TPOT], model parameters) captured in user applications must flow seamlessly into streaming message queues, undergo logarithmic sketch aggregation (DDSketch) and SLO burn-rate evaluation, persist into columnar databases for historical baselines, and surface securely in real time on the Next.js Web App dashboard.
+The platform operates as a multi-tier microservice architecture. Observability spans, latency distributions, cost analytics, and user security permissions must flow across microservices reliably, securely, and with full distributed trace context propagation.
 
-This ADR provides the definitive High-Level Design (HLD), Low-Level Design (LLD), Security Architecture Specification, Data Schema Catalog, Kafka Messaging Topology, and Line-by-Line Call Stack Specification connecting `instrumentation-sdk`, `auth`, `latency-engine`, and `web-app`.
+This ADR details:
+1. **Database Table DDL Schemas** (AlloyDB/Postgres, ClickHouse, and Redis key structures).
+2. **Kafka Messaging Catalog** (Topics, Consumer Groups, Partitioning, and Message Contracts).
+3. **Step-by-Step Security Authentication Verification** (Platform session tokens vs S2S HMAC-SHA256 Bearer JWTs).
+4. **W3C OpenTelemetry Tracing & Context Propagation** (`traceparent` header injection/extraction and Tempo waterfall rendering).
 
 ---
 
-## 2. High-Level Architecture (HLD)
+## 2. High-Level Architecture & End-to-End Flow (HLD)
 
 ```mermaid
 flowchart TD
-    subgraph Layer1["1. APPLICATION & INSTRUMENTATION LAYER"]
-        ClientApp["User LLM Application (Python / Node)"]
+    subgraph ClientAppPlane["1. CLIENT & INSTRUMENTATION PLANE"]
+        UserApp["Python / Node Client Application"]
         SDKDecorator["@llm_observe Decorator / Span Context"]
-        ConsoleReporter["ConsoleSpanReporter (Local Fallback)"]
-        ClientApp --> SDKDecorator
-        SDKDecorator -.-> ConsoleReporter
+        TracingContext["W3C TraceContext (traceparent Header)"]
+
+        UserApp --> SDKDecorator
+        SDKDecorator --> TracingContext
     end
 
-    subgraph Layer2["2. MESSAGING & BUFFERING PLANE"]
+    subgraph KafkaPlane["2. KAFKA MESSAGING BUS (Port 31414)"]
         KafkaProducer["ConfluentProducerAdapter / KafkaProducerClient"]
-        KafkaBroker["Apache Kafka KRaft Broker (:31414)\nTopic: llm.spans.raw"]
-        SDKDecorator --> KafkaProducer
-        KafkaProducer --> KafkaBroker
+        TopicRaw["Kafka Topic: llm.spans.raw (3 Partitions)"]
+        TopicAuth["Kafka Topic: auth.events.v1 (3 Partitions)"]
+        TopicDLQ["Kafka Topic: llm.spans.dlq (Dead Letter Queue)"]
+
+        TracingContext --> KafkaProducer
+        KafkaProducer --> TopicRaw
+        KafkaProducer --> TopicAuth
     end
 
-    subgraph Layer3["3. PROCESSING & TELEMETRY ENGINE"]
-        KafkaConsumer["KafkaConsumerClient / Consumer Group: latency-engine-cg"]
-        SpanHandler["SpanConsumerHandler (Batch Validator)"]
-        RedisCache[("Redis Cache & DDSketch Ledger (:31413)\nredis://:llmobs_redis_s3cret_2024@localhost:31413/0")]
-        ClickHouseDB[("ClickHouse Analytics DB (:31421)\nTable: latency_checkpoints")]
-        TemporalWorker["Temporal Baseline Worker (:31424)\nQueue: latency-baseline-tasks"]
+    subgraph IngestionEnginePlane["3. LATENCY ENGINE INGESTION & STORAGE (Port 8003)"]
+        KafkaConsumer["KafkaConsumerClient / Group: latency-engine-cg"]
+        SpanHandler["SpanConsumerHandler (Batch Schema Validator)"]
+        DDSketchEngine["DDSketch Logarithmic Aggregator"]
+        RedisStore[("Redis Cache & DDSketch Ledger (:31413)\nsketch:total:{model}:{hour}\nslo:{model}:{endpoint}:{window}:total")]
+        ClickHouseDB[("ClickHouse Columnar Store (:31421)\nTable: default.latency_checkpoints\nTable: default.spans_raw")]
+        AlloyDB[("Google AlloyDB Omni 15 (:31412)\nDb: observability_auth")]
 
-        KafkaBroker --> KafkaConsumer
+        TopicRaw --> KafkaConsumer
         KafkaConsumer --> SpanHandler
-        SpanHandler -->|DDSketch Log-buckets & SLO Counters| RedisCache
-        SpanHandler -->|Batch Insert Baseline Checkpoints| ClickHouseDB
-        TemporalWorker -->|Daily Baseline Aggregation| ClickHouseDB
+        SpanHandler --> DDSketchEngine
+        DDSketchEngine --> RedisStore
+        SpanHandler --> ClickHouseDB
+        SpanHandler -.->|Malformed Spans| TopicDLQ
     end
 
-    subgraph Layer4["4. SECURITY & API QUERY PLANE"]
-        FastAPIServer["FastAPI REST Server (:8003)"]
+    subgraph SecurityAPIPlane["4. SECURITY GUARD & FASTAPI QUERY API"]
+        FastAPI["FastAPI REST Router (/v1/latency/*)"]
         JWTGuard["FastAPI verify_jwt_token Guard"]
-        JWTVerifier["shared.auth.jwt_verifier (Dual Token Verifier)"]
-        QueryService["LatencyQueryService (Pure Domain Logic)"]
+        JWTVerifier["shared.auth.jwt_verifier (Dual Mode Engine)"]
+        QueryService["LatencyQueryService (Pure Domain Engine)"]
 
-        FastAPIServer --> JWTGuard
+        FastAPI --> JWTGuard
         JWTGuard --> JWTVerifier
         JWTGuard --> QueryService
-        QueryService --> RedisCache
+        QueryService --> RedisStore
         QueryService --> ClickHouseDB
     end
 
-    subgraph Layer5["5. NEXT.JS WEB APP DASHBOARD PLANE"]
-        ReactUI["LatencyDashboardUI.tsx (:31400)"]
+    subgraph WebAppPlane["5. NEXT.JS DASHBOARD & TRACING PLANE (:31400)"]
+        ReactUI["LatencyDashboardUI.tsx Component"]
         ReduxSaga["latency.saga.ts (handleFetchLatency)"]
-        ReduxSlice["latency.slice.ts (latencySuccess/latencyFailed)"]
         ClientAdapter["latencyClientService (RawLatencyClientAdapter)"]
-        ResilienceChain["Resilience Decorators\n(withTracing -> withCircuitBreaker -> withCache -> withRetry)"]
-        QueryPipeline["executeQuery Pipeline"]
-        CryptoSigner["Node.js Crypto HMAC-SHA256 Signer"]
+        ResilienceChain["withTracing -> withCircuitBreaker -> withCache -> withRetry"]
+        S2SSigner["Node.js Crypto HMAC-SHA256 S2S JWT Generator"]
+        TempoExporter["OTLP Web Exporter -> Tempo (:31416 / :31418)"]
 
         ReactUI --> ReduxSaga
         ReduxSaga --> ClientAdapter
         ClientAdapter --> ResilienceChain
-        ResilienceChain --> QueryPipeline
-        QueryPipeline --> CryptoSigner
-        CryptoSigner -->|Authorization: Bearer <S2S_JWT>| FastAPIServer
-        ReduxSaga --> ReduxSlice
-        ReduxSlice --> ReactUI
+        ResilienceChain --> S2SSigner
+        S2SSigner -->|Authorization: Bearer <S2S_JWT>| FastAPI
+        ResilienceChain --> TempoExporter
     end
 ```
 
 ---
 
-## 3. Security Architecture & Securities Mechanisms (How Security Works)
+## 3. Database DDL Schemas & Key Catalogs
 
-### 3.1 Authentication & Token Hierarchy
-Security across the platform operates on a **Dual-Mode Zero-Trust Authentication Architecture**:
+### 3.1 PostgreSQL / Google AlloyDB Omni (`observability_auth` on Port `31412`)
+
+#### Table: `users`
+```sql
+CREATE TABLE IF NOT EXISTS users (
+    id VARCHAR(64) PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    org_id VARCHAR(64) NOT NULL,
+    role VARCHAR(32) NOT NULL DEFAULT 'member',
+    blocked BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### Table: `organizations`
+```sql
+CREATE TABLE IF NOT EXISTS organizations (
+    org_id VARCHAR(64) PRIMARY KEY,
+    org_name VARCHAR(255) NOT NULL,
+    plan VARCHAR(32) NOT NULL DEFAULT 'free',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### Table: `tenants`
+```sql
+CREATE TABLE IF NOT EXISTS tenants (
+    tenant_id VARCHAR(64) PRIMARY KEY,
+    org_id VARCHAR(64) REFERENCES organizations(org_id) ON DELETE CASCADE,
+    environment VARCHAR(32) NOT NULL DEFAULT 'production',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### Table: `api_keys`
+```sql
+CREATE TABLE IF NOT EXISTS api_keys (
+    key_hash VARCHAR(255) PRIMARY KEY,
+    tenant_id VARCHAR(64) REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+    scopes TEXT[] NOT NULL DEFAULT ARRAY['read', 'write'],
+    expires_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### Table: `password_reset_tokens`
+```sql
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    token_hash VARCHAR(255) PRIMARY KEY,
+    user_id VARCHAR(64) REFERENCES users(id) ON DELETE CASCADE,
+    expires_at_ms BIGINT NOT NULL,
+    used BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+---
+
+### 3.2 ClickHouse Columnar Analytics Database (`default` on Port `31421`)
+
+#### Table: `latency_checkpoints`
+```sql
+CREATE TABLE IF NOT EXISTS default.latency_checkpoints (
+    model String,
+    hour_of_day UInt8,
+    checkpoint_date Date,
+    p99_ttft_ms Float64,
+    p99_total_ms Float64,
+    sample_count UInt32,
+    created_at DateTime DEFAULT now()
+) ENGINE = MergeTree()
+ORDER BY (model, hour_of_day, checkpoint_date);
+```
+
+#### Table: `spans_raw`
+```sql
+CREATE TABLE IF NOT EXISTS default.spans_raw (
+    span_id String,
+    trace_id String,
+    model String,
+    latency_ms_total Float64,
+    latency_ms_ttft Float64,
+    tokens_input UInt32,
+    tokens_output UInt32,
+    finish_reason String,
+    timestamp_utc DateTime,
+    created_at DateTime DEFAULT now()
+) ENGINE = MergeTree()
+ORDER BY (timestamp_utc, model, trace_id);
+```
+
+---
+
+### 3.3 Redis Real-Time Key Catalog (`redis://:llmobs_redis_s3cret_2024@localhost:31413/0`)
+
+| Redis Key Structure | Type | Purpose | TTL / Expiry |
+| :--- | :--- | :--- | :--- |
+| `sketch:total:{model}:{hour_of_day}` | String (Protobuf Bytes) | Stores compressed logarithmic total latency DDSketch | 86400s (24h) |
+| `sketch:ttft:{model}:{hour_of_day}` | String (Protobuf Bytes) | Stores compressed Time-to-First-Token DDSketch | 86400s (24h) |
+| `slo:{model}:{endpoint}:{window}:total` | String (Integer) | Total request counter for SLO error budget | 259200s (3d) |
+| `slo:{model}:{endpoint}:{window}:error` | String (Integer) | Violation error counter for SLO error budget | 259200s (3d) |
+| `tokenDenylist:{token}` | String (Timestamp) | Revoked session token denylist | Match token `exp` |
+| `rate_limit:{tenant_id}:{window}` | Sorted Set (ZSET) | Sliding window rate limiting requests | 60s |
+
+---
+
+## 4. Kafka Topics & Messaging Architecture
+
+### 4.1 Topic Catalog
+
+```mermaid
+flowchart LR
+    subgraph KafkaCluster["Apache Kafka KRaft Broker (:31414)"]
+        TopicSpans["Topic: llm.spans.raw\nPartitions: 3 | Key: model"]
+        TopicAuthEvents["Topic: auth.events.v1\nPartitions: 3 | Key: org_id"]
+        TopicDLQ["Topic: llm.spans.dlq\nPartitions: 1 | Key: span_id"]
+    end
+
+    ProducerSDK["instrumentation-sdk Producer"] --> TopicSpans
+    ProducerAuth["auth-service Producer"] --> TopicAuthEvents
+
+    TopicSpans --> ConsumerLatency["latency-engine-cg Consumer"]
+    TopicSpans --> ConsumerCost["event-cost-worker-cg Consumer"]
+    TopicSpans -.->|Validation Failure| TopicDLQ
+```
+
+### 4.2 Raw Span Message Schema (`llm.spans.raw`)
+```json
+{
+  "span_id": "sp-98421a7c",
+  "trace_id": "tr-4bf92f3577b34da6a3ce929d0e0e4736",
+  "model": "gpt-4o",
+  "latency_ms_total": 1250.5,
+  "latency_ms_ttft": 180.2,
+  "tokens_input": 512,
+  "tokens_output": 128,
+  "finish_reason": "stop",
+  "timestamp_utc": "2026-08-29T14:00:00Z",
+  "attributes": {
+    "dns_ms": 15.5,
+    "tcp_ms": 25.0,
+    "queue_ms": 100.0,
+    "inference_ms": 800.0
+  }
+}
+```
+
+---
+
+## 5. Security & Authentication Verification Step-by-Step (How Auth Works)
+
+### 5.1 Verification Logic in `shared.auth.jwt_verifier`
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as Client Browser
-    participant Auth as Auth Service (:3001)
-    participant WebApp as Next.js Web App (:3000)
-    participant Crypto as Node.js Crypto Module
-    participant FastAPI as FastAPI Latency Engine (:8003)
-    participant Verifier as JWT Verifier Engine
+    actor Client as Calling Service / Web App
+    participant Guard as FastAPI verify_jwt_token Guard
+    participant Verifier as verify_service_jwt(token)
+    participant Redis as Redis Denylist (:31413)
 
-    Note over User, Auth: Phase 1: User Session Authentication
-    User->>Auth: POST /api/v1/auth/sign-in { email: "jaydeep@gmail.com", password: "Password12345!" }
-    activate Auth
-    Auth->>Auth: Verify password hash against Postgres (observability_auth)
-    Auth-->>User: 200 OK { token: "<payload.signature>" }
-    deactivate Auth
+    Client->>Guard: HTTP Request [Authorization: Bearer <token>]
+    activate Guard
 
-    Note over User, Verifier: Phase 2: Service-to-Service (S2S) Authenticated Query
-    User->>WebApp: View /latency Dashboard
-    activate WebApp
-    WebApp->>Crypto: Compute HMAC-SHA256 signature over (headerB64.payloadB64) using JWT_SECRET
-    Crypto-->>WebApp: Return signatureB64
-    Note over WebApp: Construct Authorization: Bearer header.payload.signature
-
-    WebApp->>FastAPI: GET /v1/latency/percentiles?model=all&hour_of_day=14<br/>[Authorization: Bearer <S2S_JWT>]
-    activate FastAPI
-
-    FastAPI->>Verifier: verify_jwt_token(authorization)
+    Guard->>Guard: Extract Authorization header<br/>Strip "Bearer " prefix
+    Guard->>Verifier: Call verify_service_jwt(token)
     activate Verifier
 
-    alt Header Missing or Incorrect Prefix
-        Verifier-->>FastAPI: Raise HTTPException 401 (Missing/Invalid Header)
+    Verifier->>Verifier: Split token by "." delimiter -> parts
+
+    alt len(parts) == 2 (Platform Session Token)
+        Verifier->>Verifier: Base64url decode parts[0] -> payload JSON
+        Verifier->>Verifier: Parse sub, iat, exp claims
+        Verifier->>Verifier: Check timestamp: now <= exp + 30s leeway
+        Verifier->>Redis: Check isTokenDenylisted(token)
+        alt Token Denylisted
+            Redis-->>Verifier: True (Token Revoked)
+            Verifier-->>Guard: Raise JWTVerificationError("Session Revoked")
+        end
+    else len(parts) == 3 (Standard HS256 S2S JWT)
+        Verifier->>Verifier: Base64url decode parts[0] -> header JSON
+        Verifier->>Verifier: Assert header["alg"] == "HS256"
+        Verifier->>Verifier: Compute signingInput = `${headerB64}.${payloadB64}`
+        Verifier->>Verifier: Compute expected_sig = HMAC-SHA256(secret, signingInput)
+        Verifier->>Verifier: Compare hmac.compare_digest(expected_sig, received_sig)
+        alt Signature Mismatch
+            Verifier-->>Guard: Raise JWTVerificationError("Signature Verification Failed")
+        end
+        Verifier->>Verifier: Parse sub, iat, exp claims
+        Verifier->>Verifier: Check timestamp: now <= exp + 30s leeway
+    else Invalid Segment Count
+        Verifier-->>Guard: Raise JWTVerificationError("Malformed JWT")
     end
 
-    alt Token has 2 Segments (Platform Session Token)
-        Verifier->>Verifier: Decode payload JSON<br/>Validate sub, iat, exp claims & 30s leeway clock skew
-    else Token has 3 Segments (Standard HS256 S2S JWT)
-        Verifier->>Verifier: Validate header alg == "HS256"<br/>Recompute HMAC-SHA256 signature<br/>Compare expected vs received via hmac.compare_digest
-    end
-
-    alt Invalid Signature or Expired
-        Verifier-->>FastAPI: Raise JWTVerificationError
-        FastAPI-->>WebApp: 401 Unauthorized { error: "UNAUTHORIZED" }
-    else Valid Token Claims
-        Verifier-->>FastAPI: Return JWTClaims(sub, iat, exp)
-        FastAPI->>FastAPI: Execute LatencyQueryService.get_percentiles()
-        FastAPI-->>WebApp: 200 OK { percentiles payload }
-    end
+    Verifier-->>Guard: Return JWTClaims(sub, iat, exp)
     deactivate Verifier
+
+    Guard-->>Client: Proceed to FastAPI Handler (200 OK)
+    deactivate Guard
+```
+
+---
+
+## 6. What is Tracing & How Tracing Actually Works
+
+### 6.1 OpenTelemetry W3C TraceContext Standard
+Distributed tracing provides end-to-end visibility into a request's journey across multiple microservices. Every transaction is assigned a single **Global Trace ID** (128-bit hex), while each individual operation within the trace creates a **Span ID** (64-bit hex).
+
+Context propagation between services uses the standard W3C `traceparent` HTTP and Kafka header format:
+```text
+traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+              │  │                                │                │
+              │  └── Trace ID (32 hex chars)      └── Span ID      └── Trace Flags (01 = Sampled)
+              └── Version (00)                       (16 hex chars)
+```
+
+### 6.2 End-to-End Tracing Context Propagation Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Dashboard User
+    participant WebApp as Next.js Web App (:31400)
+    participant OtelWeb as OTLP Web Tracing Exporter
+    participant ApiRoute as Next.js API Route (/api/v1/latency/percentiles)
+    participant ClientSvc as latencyClientService (withTracing)
+    participant FastAPI as FastAPI Latency Engine (:8003)
+    participant Tempo as OpenTelemetry Tempo & Grafana (:31416 / :31415)
+
+    User->>WebApp: Click /latency Page
+    activate WebApp
+    Note over WebApp: Generate Trace ID: 4bf92f3577b34da6a3ce929d0e0e4736<br/>Create Parent Span: "ui_latency_dashboard_load"
+
+    WebApp->>ApiRoute: GET /api/v1/latency/percentiles<br/>[Header: traceparent: 00-4bf92f35...-span1-01]
+    activate ApiRoute
+
+    ApiRoute->>ClientSvc: latencyClientService.getPercentiles("all", 14)
+    activate ClientSvc
+    Note over ClientSvc: withTracing Decorator creates child span "get_percentiles_adapter"<br/>Injects traceparent header into fetch options
+
+    ClientSvc->>FastAPI: HTTP GET http://localhost:8003/v1/latency/percentiles<br/>[Header: traceparent: 00-4bf92f35...-span2-01]
+    activate FastAPI
+
+    Note over FastAPI: api_span("get_percentiles") extracts parent context<br/>Creates child span "get_percentiles_fastapi"
+
+    FastAPI-->>ClientSvc: 200 OK { percentiles payload }
     deactivate FastAPI
+
+    ClientSvc-->>ApiRoute: PercentilesResult Object
+    deactivate ClientSvc
+
+    ApiRoute-->>WebApp: NextResponse.json(data)
+    deactivate ApiRoute
+
+    par Async Trace Export
+        OtelWeb->>Tempo: Push Span Batch via OTLP gRPC/HTTP (:31418 / :31417)
+        FastAPI->>Tempo: Push Backend Spans via OTLP Exporter
+    end
+
+    Note over Tempo: Tempo merges spans into unified Trace Waterfall<br/>Searchable in Grafana Dashboard (:31415)
     deactivate WebApp
 ```
 
-### 3.2 Security Parameter Matrix
-
-| Parameter | Configuration / Specification | Purpose / Guarantee |
-| :--- | :--- | :--- |
-| **S2S Signing Algorithm** | `HS256` (HMAC-SHA256) | Standard cryptographic signature for inter-service communication |
-| **Shared Secret** | `JWT_SECRET` (`dev-secret-key-change-in-production`) | Prevents forged requests from external callers |
-| **S2S Token Subject (`sub`)** | `nextjs-web-app` | Identifies caller identity in microservice audit logs |
-| **Token Expiry (`exp`)** | `iat + 3600` seconds | Restricts token lifespan to 1 hour |
-| **Clock Skew Leeway** | `30` seconds (`_LEEWAY_SECONDS`) | Prevents transient wall-clock drift errors across containers |
-| **Session Denylist** | Redis Key `tokenDenylist:{token}` | Enables instantaneous session revocation upon user sign-out |
-
 ---
 
-## 4. Complete Data Schema, Database, and Kafka Catalog
+## 7. End-to-End Line-by-Line Call Stack Topology
 
-### 4.1 Apache Kafka Messaging Catalog
-* **Broker Endpoint**: `localhost:31414` (`llmobs-kafka-broker`)
-* **Primary Telemetry Topic**: `llm.spans.raw`
-  - *Partitions*: 3
-  - *Replication Factor*: 1
-  - *Producer Client*: `ConfluentProducerAdapter` (`confluent_kafka.Producer`)
-  - *Consumer Group*: `latency-engine-cg`
-  - *Payload Schema (`RawSpanPayload`)*:
-    ```json
-    {
-      "span_id": "sp-98421",
-      "trace_id": "tr-10293",
-      "model": "gpt-4o",
-      "latency_ms_total": 1250.5,
-      "latency_ms_ttft": 180.2,
-      "tokens_input": 512,
-      "tokens_output": 128,
-      "finish_reason": "stop",
-      "timestamp_utc": "2026-08-29T14:00:00Z",
-      "attributes": {
-        "dns_ms": 15.5,
-        "tcp_ms": 25.0,
-        "queue_ms": 100.0,
-        "inference_ms": 800.0
-      }
-    }
-    ```
-* **Auth Events Topic**: `auth.events.v1` (User registration, sign-in, organization switch events)
-
-### 4.2 Redis Real-Time Cache & Ledger Catalog
-* **Redis Connection**: `redis://:llmobs_redis_s3cret_2024@localhost:31413/0`
-* **DDSketch Logarithmic Buckets**:
-  - Key: `sketch:total:{model}:{hour_of_day}` -> Base64 encoded serialized Protobuf `DDSketch` (Total latency distribution)
-  - Key: `sketch:ttft:{model}:{hour_of_day}` -> Base64 encoded serialized Protobuf `DDSketch` (Time-to-First-Token distribution)
-* **SLO Rolling Counters**:
-  - Key: `slo:{model}:{endpoint}:1h:total` -> Integer total request counter
-  - Key: `slo:{model}:{endpoint}:1h:error` -> Integer error violation counter
-* **Session Denylist**:
-  - Key: `tokenDenylist:{token}` -> Expiration timestamp
-
-### 4.3 ClickHouse Columnar Analytics Store
-* **Endpoint**: `localhost:31421` (Password `llmobs_clickhouse_s3cret_2026`)
-* **Database**: `default`
-* **Table**: `latency_checkpoints`
-  ```sql
-  CREATE TABLE IF NOT EXISTS latency_checkpoints (
-      model String,
-      hour_of_day UInt8,
-      checkpoint_date Date,
-      p99_ttft_ms Float64,
-      p99_total_ms Float64,
-      sample_count UInt32,
-      created_at DateTime DEFAULT now()
-  ) ENGINE = MergeTree()
-  ORDER BY (model, hour_of_day, checkpoint_date);
-  ```
-
-### 4.4 PostgreSQL / AlloyDB Transactional Database
-* **Endpoint**: `localhost:31412` (Database `observability_auth`, User `postgres`)
-* **Tables**: `users`, `organizations`, `tenants`, `api_keys`, `password_reset_tokens`
-
----
-
-## 5. Line-by-Line Call Stack Topology
-
-### 5.1 Ingestion Write Path Call Stack (SDK -> Kafka -> Redis -> ClickHouse)
+### 7.1 Write Path Call Stack (Instrumentation SDK -> Kafka -> Redis -> ClickHouse)
 
 ```text
-1. User Application
+1. User Application Code
    └── @llm_observe(model="gpt-4o") [packages/python/instrumentation-sdk/src/features/spans/decorator.py]
-       ├── 2. trace_span() [packages/python/instrumentation-sdk/src/shared/tracing/tracer.py]
-       ├── 3. Calculate TTFT (time_to_first_token) and total latency_ms
-       └── 4. ConfluentProducerAdapter.produce_span(raw_payload) [packages/python/latency-engine/src/infra/adapters/kafka/confluent_producer_adapter.py]
-           └── 5. confluent_kafka.Producer.produce(topic="llm.spans.raw", value=json_bytes)
+       ├── 2. trace_span(name="llm_inference") [packages/python/instrumentation-sdk/src/shared/tracing/tracer.py]
+       │   └── Start OpenTelemetry span & capture start timestamp
+       ├── 3. Execute LLM completion call (chat.completions.create)
+       ├── 4. Capture TTFT (time_to_first_token) and total latency_ms
+       └── 5. ConfluentProducerAdapter.produce_span(raw_payload) [packages/python/latency-engine/src/infra/adapters/kafka/confluent_producer_adapter.py]
+           ├── Inject traceparent header into Kafka message headers
+           └── confluent_kafka.Producer.produce(topic="llm.spans.raw", key="gpt-4o", value=json_bytes)
                │
-               ▼ [Network Transit via Kafka Protocol to localhost:31414]
+               ▼ [Kafka Wire Protocol to Broker localhost:31414]
                │
-6. Latency Engine Ingestion Daemon [packages/python/latency-engine/src/worker/index.py]
+6. Latency Engine Worker Process [packages/python/latency-engine/src/worker/index.py]
    ├── 7. KafkaConsumerClient.poll_spans() [packages/python/latency-engine/src/infra/messaging/consumer/consumer_client/kafka_consumer_client.py]
    │   └── confluent_kafka.Consumer.poll(timeout=1.0) -> Returns List[Message]
    ├── 8. SpanConsumerHandler.handle_batch(messages) [packages/python/latency-engine/src/infra/messaging/consumer/handlers/span_consumer_handler.py]
    │   ├── 9. Validate span schema & parse timestamp_utc
-   │   ├── 10. LatencyQueryRepository.update_sketches(model, hour_of_day, latency_ms) [packages/python/latency-engine/src/features/latency_query/repository.py]
+   │   ├── 10. Extract traceparent header via messaging_tracer.py
+   │   ├── 11. LatencyQueryRepository.update_sketches(model, hour_of_day, latency_ms) [packages/python/latency-engine/src/features/latency_query/repository.py]
    │   │   ├── Deserialize existing DDSketch from Redis key "sketch:total:gpt-4o:14"
    │   │   ├── sketch.add(latency_ms)
    │   │   ├── DDSketchProto.to_proto(sketch).SerializeToString()
    │   │   └── redis_client.set("sketch:total:gpt-4o:14", base64_str)
-   │   ├── 11. LatencyQueryRepository.increment_slo_counters(model, endpoint, is_error)
+   │   ├── 12. LatencyQueryRepository.increment_slo_counters(model, endpoint, is_error)
    │   │   └── redis_client.incr("slo:gpt-4o:/v1/chat/completions:1h:total")
-   │   └── 12. LatencyClickHouseAdapter.insert_checkpoint_batch(records) [packages/python/latency-engine/src/infra/adapters/clickhouse/clickhouse_adapter.py]
+   │   └── 13. LatencyClickHouseAdapter.insert_checkpoint_batch(records) [packages/python/latency-engine/src/infra/adapters/clickhouse/clickhouse_adapter.py]
    │       └── INSERT INTO latency_checkpoints (model, hour_of_day, checkpoint_date, p99_ttft_ms, p99_total_ms, sample_count)
 ```
 
-### 5.2 Read & Query Path Call Stack (React UI -> Redux Saga -> Next.js Service -> FastAPI -> Redis)
+### 7.2 Read Path Call Stack (React UI -> Redux Saga -> Next.js Service -> FastAPI -> Redis)
 
 ```text
-1. User opens http://localhost:31400/latency
+1. Dashboard User opens http://localhost:31400/latency
    └── 2. LatencyDashboardUI.tsx [packages/node/web-app/src/features/latency/ui/LatencyDashboardUI.tsx]
        └── 3. useLatencyDashboardData() hook [packages/node/web-app/src/features/latency/hooks/useLatencyDashboardData.ts]
            └── 4. dispatch(latencyActions.fetchLatencySubmitted({ model: "all", hourOfDay: 14 }))
@@ -291,15 +436,16 @@ sequenceDiagram
 
 ---
 
-## 6. End-to-End Verification Test Results
+## 8. Verification Summary Matrix
 
 ```text
-✅ Auth Microservice Sign-in     HTTP POST http://localhost:3001/api/v1/auth/sign-in -> 200 OK (Token Issued)
-✅ S2S Bearer Token Signer        HMAC-SHA256 Crypto Generator -> Valid 3-part HS256 JWT
-✅ FastAPI verify_jwt_token Guard  Python JWT Verifier -> Claims Verified (200 OK)
-✅ Latency Engine Percentiles    HTTP GET http://localhost:8003/v1/latency/percentiles -> 200 OK
-✅ Latency Engine SLO            HTTP GET http://localhost:8003/v1/latency/slo -> 200 OK
-✅ Latency Engine Attribution    HTTP GET http://localhost:8003/v1/latency/attribution -> 200 OK
-✅ Latency Engine Baseline       HTTP GET http://localhost:8003/v1/latency/baseline -> 200 OK
-✅ Next.js Dashboard Page        HTTP GET http://localhost:31400/latency -> 200 OK
+✅ AlloyDB Omni PostgreSQL DB    Postgres Port 31412 -> Tables users, organizations, tenants verified
+✅ ClickHouse Analytics DB       ClickHouse Port 31421 -> Tables latency_checkpoints, spans_raw verified
+✅ Redis Cache & Ledger         Redis Port 31413 -> DDSketches & SLO rolling counters verified
+✅ Kafka Message Bus            Kafka Port 31414 -> Topics llm.spans.raw, auth.events.v1 verified
+✅ Auth Service Sign-in         HTTP POST http://localhost:3001/api/v1/auth/sign-in -> 200 OK
+✅ S2S HMAC-SHA256 Signer       Node.js Crypto Generator -> Valid 3-part HS256 JWT
+✅ FastAPI verify_jwt_token      Python JWT Verifier -> Claims Verified (200 OK)
+✅ OpenTelemetry W3C Tracing    traceparent Header Propagation -> Tempo Exporter Verified
+✅ Next.js Dashboard UI         HTTP GET http://localhost:31400/latency -> 200 OK
 ```
