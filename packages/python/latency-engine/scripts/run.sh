@@ -8,6 +8,11 @@ cd "$PACKAGE_DIR"
 
 export HEALTH_PORT="${HEALTH_PORT:-8003}"
 export PROMETHEUS_PORT="${PROMETHEUS_PORT:-9093}"
+export KAFKA_BOOTSTRAP_SERVERS="${KAFKA_BOOTSTRAP_SERVERS:-localhost:31414}"
+export REDIS_URL="${REDIS_URL:-redis://:llmobs_redis_s3cret_2024@localhost:31413/0}"
+export CLICKHOUSE_HOST="${CLICKHOUSE_HOST:-localhost}"
+export CLICKHOUSE_PORT="${CLICKHOUSE_PORT:-31421}"
+export TEMPORAL_HOST="${TEMPORAL_HOST:-localhost:31424}"
 export PYTHONPATH="src"
 
 free_port() {
