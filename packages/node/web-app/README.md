@@ -11,9 +11,12 @@ Run all commands from within the `packages/node/web-app` directory (or use `npm 
 ### Development & Build
 | Command | Description |
 | :--- | :--- |
-| `npm run dev` | Automatically frees ports `31400` & `31406`, clears `.next` cache, and launches Next.js (`http://localhost:31400`) and Storybook (`http://localhost:31406`) concurrently |
+| `npm run dev` | Automatically frees ports `31400` & `31406`, clears `.next` cache, and launches Next.js (`http://localhost:31400`), Auth service, and Storybook (`http://localhost:31406`) concurrently |
+| `npm run latency` / `npm run latency-engine` | Launches the Python Latency Engine worker service and REST query API (`http://localhost:8003`) |
+| `npm run dev:latency` | Launches Next.js (`http://localhost:31400`) and Latency Engine (`http://localhost:8003`) concurrently |
+| `npm run dev:all` | Launches Next.js (`http://localhost:31400`), Auth service (`http://localhost:3001`), Storybook (`http://localhost:31406`), and Latency Engine (`http://localhost:8003`) concurrently |
 | `npm run clean` | Removes the `.next` cache directory |
-| `npm run free-ports` | Kills any processes currently bound to ports `31400` or `31406` |
+| `npm run free-ports` | Kills any processes currently bound to registered service ports (`31400`, `3001`, `31406`, `8003`) |
 | `npm run build` | Compiles and builds production bundle |
 | `npm run start` | Starts production server on port `31400` after build |
 

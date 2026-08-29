@@ -44,6 +44,14 @@ class CompositeSpanReporter(instrumentation_sdk.SpanReporter):
             except Exception as err:
                 print(f"[CompositeSpanReporter Async Error]: {err}")
 
+    def flush(self, timeout: float = 5.0) -> None:
+        for reporter in self.reporters:
+            if hasattr(reporter, "flush"):
+                try:
+                    reporter.flush(timeout)
+                except Exception as err:
+                    print(f"[CompositeSpanReporter Flush Error]: {err}")
+
 init_tracer(service_config.default_service_name, service_config.app_env)
 
 kafka_reporter = None
@@ -57,7 +65,7 @@ if kafka_reporter:
 else:
     instrumentation_sdk.set_reporter(ConsoleSpanReporter())
 
-@instrumentation_sdk.llm_observe(service=service_config.default_service_name, endpoint=service_config.chat_endpoint)
+@instrumentation_sdk.llm_observe(service=service_config.default_service_name, endpoint=service_config.chat_endpoint, model=service_config.default_model)
 def sync_chat_completion(prompt: str) -> str:
     tracer = get_tracer()
     with tracer.start_as_current_span(service_config.span_name_prompt_tok) as span1:
@@ -75,7 +83,7 @@ def sync_chat_completion(prompt: str) -> str:
 
     return f"Response to: {prompt}"
 
-@instrumentation_sdk.llm_observe(service=service_config.default_service_name, endpoint=service_config.embeddings_endpoint)
+@instrumentation_sdk.llm_observe(service=service_config.default_service_name, endpoint=service_config.embeddings_endpoint, model="text-embedding-3-small")
 async def async_embedding_generation(text: str) -> list[float]:
     tracer = get_tracer()
     with tracer.start_as_current_span(service_config.span_name_text_chunk) as span1:
@@ -97,6 +105,11 @@ def main():
     print("2. Running async @llm_observe function...")
     res_async = asyncio.run(async_embedding_generation("Sample text for vector embedding"))
     print(f"   Function output: vector length {len(res_async)}\n")
+
+    reporter = instrumentation_sdk.get_reporter()
+    if hasattr(reporter, "flush"):
+        print("[SDK] Flushing captured span events to Kafka...")
+        reporter.flush(5.0)
 
     try:
         provider = trace.get_tracer_provider()

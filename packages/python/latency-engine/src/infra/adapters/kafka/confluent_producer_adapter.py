@@ -24,7 +24,6 @@ def is_kafka_alias_resolvable(bootstrap_servers: str) -> bool:
     try:
         host = bootstrap_servers.split(",")[0].strip().split(":")[0]
         socket.gethostbyname(host)
-        host in kafka_constants.LOCAL_HOSTNAMES and socket.gethostbyname(kafka_constants.KAFKA_BROKER_ALIAS)
         return True
     except Exception:
         return False

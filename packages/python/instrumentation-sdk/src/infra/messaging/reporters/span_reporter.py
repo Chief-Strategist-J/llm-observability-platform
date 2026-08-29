@@ -33,3 +33,7 @@ class KafkaSpanReporter(SpanReporter):
 
     async def report_async(self, span_data: Dict[str, Any]) -> None:
         self.report(span_data)
+
+    def flush(self, timeout: float = 5.0) -> None:
+        if hasattr(self.producer_client, "flush"):
+            self.producer_client.flush(timeout=timeout)

@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  instrumentation-sdk:
+    build:
+      context: ../../
+      dockerfile: build/Dockerfile.dev
+    container_name: instrumentation-sdk
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../../src:/app/src
+      - ../../examples:/app/examples
+      - ../../scripts:/app/scripts
+      - ../../config:/app/config
+    environment:
+      - PYTHONPATH=/app
+      - KAFKA_BOOTSTRAP_SERVERS=llmobs-kafka-broker:9092
+      - KAFKA_DEFAULT_TOPIC=llm.spans.raw
+      - OTEL_EXPORTER_ENDPOINT=http://llmobs-otel-collector:4318
+    networks:
+      - llmobs-network
+
+networks:
+  llmobs-network:
+    name: llmobs-network
+    external: true

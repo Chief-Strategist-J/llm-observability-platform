@@ -39,8 +39,6 @@ def is_kafka_alias_resolvable(bootstrap_servers: str) -> bool:
         parts = bootstrap_servers.split(",")[0].strip().split(":")
         host = parts[0]
         socket.gethostbyname(host)
-        if host in ("localhost", "127.0.0.1"):
-            socket.gethostbyname("llmobs-kafka-broker")
         return True
     except Exception:
         return False

@@ -8,11 +8,20 @@ services:
     container_name: latency-engine
     ports:
       - "8003:8003"
+    command: ["python", "scripts/dev_watcher.py"]
+    volumes:
+      - ../../src:/app/src
+      - ../../scripts:/app/scripts
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-llmobs-kafka:9092}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-llmobs-kafka-broker:9092}
       KAFKA_CONSUMER_GROUP: ${KAFKA_CONSUMER_GROUP:-latency-engine-cg}
       KAFKA_TOPIC_INPUT: ${KAFKA_TOPIC_INPUT:-llm.spans.raw}
-      REDIS_URL: ${REDIS_URL:-redis://:llmobs_redis_s3cret_2024@llmobs-redis:6379/0}
+      REDIS_URL: ${REDIS_URL:-redis://:llmobs_redis_s3cret_2024@llmobs-redis-ledger:6379/0}
+      CLICKHOUSE_HOST: ${CLICKHOUSE_HOST:-llmobs-clickhouse-analytics}
+      CLICKHOUSE_PORT: ${CLICKHOUSE_PORT:-8123}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-llmobs_clickhouse_s3cret_2026}
+      TEMPORAL_HOST: ${TEMPORAL_HOST:-llmobs-temporal-engine:7233}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://llmobs-otel-collector:4317
       SLO_CONFIG_PATH: src/slo_config.yaml
       HEALTH_PORT: 8003
     networks:
@@ -20,4 +29,5 @@ services:
 
 networks:
   llmobs-network:
+    name: llmobs-network
     external: true

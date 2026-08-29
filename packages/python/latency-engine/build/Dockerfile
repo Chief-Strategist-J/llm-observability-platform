@@ -11,12 +11,13 @@ RUN mkdir -p src/worker && touch src/worker/__init__.py
 RUN pip install --no-cache-dir ".[dev]"
 
 COPY src/ src/
+COPY scripts/ scripts/
 COPY tests/ tests/
 COPY contracts/ contracts/
 
 RUN pip install --no-cache-dir ".[dev]" --no-deps
 
-RUN SKIP_CONSOLE_EXPORTER=true SKIP_OTLP_EXPORTER=true \
+RUN PYTHONPATH=src SKIP_CONSOLE_EXPORTER=true SKIP_OTLP_EXPORTER=true \
     pytest tests/ --tb=short -q
 
 FROM python:3.12-slim AS runtime
@@ -30,6 +31,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /app/src /app/src
+COPY --from=builder /app/scripts /app/scripts
 COPY --from=builder /app/pyproject.toml /app/pyproject.toml
 COPY --from=builder /app/contracts /app/contracts
 

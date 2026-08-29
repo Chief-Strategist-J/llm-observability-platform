@@ -6,6 +6,15 @@ PACKAGE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$PACKAGE_DIR"
 
+COMPOSE_FILE="$PACKAGE_DIR/deploy/docker/docker-compose.yaml"
+
+if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1 && [ -f "$COMPOSE_FILE" ]; then
+    echo -e "\033[0;34m[latency-engine] Cleaning up previous specific image...\033[0m"
+    docker image rm docker-latency-engine latency-engine-latency-engine --force >/dev/null 2>&1 || true
+    echo -e "\033[0;34m[latency-engine] Starting Docker container (llmobs-network) with file-watcher auto-restart...\033[0m"
+    exec docker compose -f "$COMPOSE_FILE" up --build
+fi
+
 export HEALTH_PORT="${HEALTH_PORT:-8003}"
 export PROMETHEUS_PORT="${PROMETHEUS_PORT:-9093}"
 export KAFKA_BOOTSTRAP_SERVERS="${KAFKA_BOOTSTRAP_SERVERS:-localhost:31414}"
@@ -50,6 +59,15 @@ if [ -f "$PACKAGE_DIR/.venv/bin/python" ]; then
     PYTHON_EXE="$PACKAGE_DIR/.venv/bin/python"
 elif [ -f "$PACKAGE_DIR/venv/bin/python" ]; then
     PYTHON_EXE="$PACKAGE_DIR/venv/bin/python"
+fi
+
+COMPOSE_FILE="$PACKAGE_DIR/deploy/docker/docker-compose.yaml"
+
+if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1 && [ -f "$COMPOSE_FILE" ]; then
+    echo -e "\033[0;34m[latency-engine] Cleaning up previous specific image...\033[0m"
+    docker image rm docker-latency-engine latency-engine-latency-engine --force >/dev/null 2>&1 || true
+    echo -e "\033[0;34m[latency-engine] Starting Docker container (llmobs-network) with file-watcher auto-restart...\033[0m"
+    exec docker compose -f "$COMPOSE_FILE" up --build
 fi
 
 "$PACKAGE_DIR/scripts/migrate.sh" || true

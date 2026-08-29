@@ -1,11 +1,11 @@
 import pytest
-from worker.config import load_config
+from config import load_config
 from shared.errors.base import ValidationError
 
 def test_load_config_default() -> None:
     cfg = load_config({})
-    assert cfg.temporal_host == "localhost:7239"
-    assert cfg.clickhouse_port == 8129
+    assert cfg.temporal_host == "localhost:31424"
+    assert cfg.clickhouse_port == 31421
 
 def test_load_config_env() -> None:
     cfg = load_config({

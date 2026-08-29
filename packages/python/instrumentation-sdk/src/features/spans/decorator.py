@@ -1,3 +1,4 @@
+import os
 import functools
 import time
 import uuid
@@ -10,8 +11,9 @@ from ..metrics.index import record_span_metrics, get_current_prices_ref
 from ..deterministic_sampling.index import should_sample
 from ...infra.tracing.tracer import get_tracer, init_tracer
 
-def llm_observe(service: str, endpoint: str):
+def llm_observe(service: str, endpoint: str, model: Optional[str] = None):
     def decorator(func: Callable):
+        model_name = model or os.getenv("DEFAULT_MODEL", "gpt-4")
         if asyncio.iscoroutinefunction(func):
             @functools.wraps(func)
             async def async_wrapper(*args, **kwargs):
@@ -23,9 +25,10 @@ def llm_observe(service: str, endpoint: str):
                 with tracer.start_as_current_span(f"{service}:{endpoint}") as otel_span:
                     sc = otel_span.get_span_context()
                     trace_id_str = f"{sc.trace_id:032x}" if sc and sc.trace_id else str(uuid.uuid4()).replace("-", "")
-                    span_id_str = f"{sc.span_id:016x}" if sc and sc.span_id else str(uuid.uuid4())[:16]
+                    span_id_str = f"{sc.span_id:016x}" if sc and sc.span_id else str(uuid.uuid4())
                     otel_span.set_attribute("service.name", service)
                     otel_span.set_attribute("endpoint", endpoint)
+                    otel_span.set_attribute("llm.model", model_name)
                     try:
                         result = await func(*args, **kwargs)
                         status = "success"
@@ -42,6 +45,7 @@ def llm_observe(service: str, endpoint: str):
                             "traceparent": f"00-{trace_id_str}-{span_id_str}-01",
                             "service_name": service,
                             "endpoint": endpoint,
+                            "model": model_name,
                             "latency_ms_total": latency_ms,
                             "timestamp_utc": start_timestamp,
                             "status": status,
@@ -62,9 +66,10 @@ def llm_observe(service: str, endpoint: str):
                 with tracer.start_as_current_span(f"{service}:{endpoint}") as otel_span:
                     sc = otel_span.get_span_context()
                     trace_id_str = f"{sc.trace_id:032x}" if sc and sc.trace_id else str(uuid.uuid4()).replace("-", "")
-                    span_id_str = f"{sc.span_id:016x}" if sc and sc.span_id else str(uuid.uuid4())[:16]
+                    span_id_str = f"{sc.span_id:016x}" if sc and sc.span_id else str(uuid.uuid4())
                     otel_span.set_attribute("service.name", service)
                     otel_span.set_attribute("endpoint", endpoint)
+                    otel_span.set_attribute("llm.model", model_name)
                     try:
                         result = func(*args, **kwargs)
                         status = "success"
@@ -81,6 +86,7 @@ def llm_observe(service: str, endpoint: str):
                             "traceparent": f"00-{trace_id_str}-{span_id_str}-01",
                             "service_name": service,
                             "endpoint": endpoint,
+                            "model": model_name,
                             "latency_ms_total": latency_ms,
                             "timestamp_utc": start_timestamp,
                             "status": status,

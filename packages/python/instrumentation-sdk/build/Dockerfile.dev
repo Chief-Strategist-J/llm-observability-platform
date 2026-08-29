@@ -17,6 +17,7 @@ RUN pip install -e . uvicorn
 
 # Now copy the real source code (this layer will be invalidated on every source change)
 COPY src/ src/
+COPY config/ config/
 RUN pip install -e . --no-deps
 
 

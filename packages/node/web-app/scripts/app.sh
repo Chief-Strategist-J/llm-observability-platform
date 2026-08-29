@@ -15,10 +15,12 @@ PORT_UNIT="${PORT_UNIT:-${PORT:-31400}}"
 PORT_AUTH="${PORT_AUTH:-3001}"
 PORT_STORYBOOK="${PORT_STORYBOOK:-31406}"
 PORT_KAFKA="${PORT_KAFKA:-31414}"
+PORT_LATENCY="${PORT_LATENCY:-8003}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(dirname "$SCRIPT_DIR")"
 AUTH_DIR="$(dirname "$APP_DIR")/auth"
+LATENCY_DIR="$(cd "$APP_DIR/../../python/latency-engine" 2>/dev/null && pwd || echo "$(dirname "$(dirname "$APP_DIR")")/python/latency-engine")"
 DEPLOYMENT_DIR="$(dirname "$APP_DIR")/frontend-deployment"
 AUTH_COMPOSE_FILE="$DEPLOYMENT_DIR/docker-compose.yml"
 AUTH_DB_COMPOSE_FILE="$AUTH_DIR/docker-compose.yml"
@@ -27,6 +29,8 @@ SERVICE_REGISTRY=(
   "web-app:Next.js Web Application:${PORT_UNIT}:${APP_DIR}:PORT=${PORT_UNIT} npx next dev -p ${PORT_UNIT}"
   "auth:Auth HTTP Service:${PORT_AUTH}:${AUTH_DIR}:PORT=${PORT_AUTH} npx tsx src/server.ts"
   "storybook:Storybook Server:${PORT_STORYBOOK}:${APP_DIR}:npx storybook dev -p ${PORT_STORYBOOK}"
+  "latency-engine:Latency Engine Worker & API:${PORT_LATENCY}:${LATENCY_DIR}:${LATENCY_DIR}/scripts/run.sh"
+  "latency:Latency Engine Worker & API:${PORT_LATENCY}:${LATENCY_DIR}:${LATENCY_DIR}/scripts/run.sh"
 )
 
 BUILD_TARGETS=(
@@ -321,6 +325,16 @@ cmd_dev() {
 
   if [ "${#target_services[@]}" -eq 0 ]; then
     target_services=("web-app" "auth" "storybook")
+  elif [ "${#target_services[@]}" -eq 1 ] && [ "${target_services[0]}" = "all" ]; then
+    target_services=("web-app" "auth" "storybook" "latency-engine")
+  fi
+
+  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1 && [ -f "docker-compose.yaml" ]; then
+    echo -e "${BLUE}[dev-orchestrator] Cleaning up previous web-app image...${NC}"
+    docker image rm web-app-web-app --force >/dev/null 2>&1 || true
+    echo -e "${BLUE}[dev-orchestrator] Freeing port 31400 and starting Next.js Web App in Docker Compose (Hot Reload Enabled)...${NC}"
+    free_port 31400
+    exec docker compose up --build
   fi
 
   echo -e "${BLUE}[dev-orchestrator] Preparing development environment [ENV=${APP_ENV}]...${NC}"
@@ -453,6 +467,9 @@ case "$COMMAND" in
   storybook)
     cmd_run_service "storybook"
     ;;
+  latency|latency-engine)
+    cmd_run_service "latency-engine"
+    ;;
   kafka)
     cmd_run_service "kafka"
     ;;
@@ -487,7 +504,7 @@ case "$COMMAND" in
     cmd_install_deps "$@"
     ;;
   *)
-    echo "Usage: $0 {list|run <service>|dev [services...]|auth|web-app|storybook|kafka|db:migrate|db:setup|clean|free-ports|health|docker-up|docker-down|docker-status|docker-logs}"
+    echo "Usage: $0 {list|run <service>|dev [services...]|auth|web-app|storybook|latency-engine|kafka|db:migrate|db:setup|clean|free-ports|health|docker-up|docker-down|docker-status|docker-logs}"
     exit 1
     ;;
 esac

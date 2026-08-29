@@ -1,7 +1,14 @@
 import json
 import threading
 from typing import Optional
-from kafka import KafkaProducer
+try:
+    from kafka import KafkaProducer
+except ImportError:
+    try:
+        from confluent_kafka import Producer as KafkaProducer
+    except ImportError:
+        KafkaProducer = None
+
 from src.infra.messaging.broker.broker_config import KafkaBrokerConfig, kafka_broker_config
 
 class KafkaProducerFactory:

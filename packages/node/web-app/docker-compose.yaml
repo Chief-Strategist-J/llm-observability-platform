@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  web-app:
+    build:
+      context: ..
+      dockerfile: web-app/Dockerfile.dev
+    container_name: web-app
+    ports:
+      - "31400:31400"
+    volumes:
+      - ..:/app/packages/node
+      - /app/packages/node/web-app/node_modules
+      - /app/packages/node/web-app/.next
+    environment:
+      - NODE_ENV=development
+      - PORT=31400
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+      - LATENCY_ENGINE_URL=${LATENCY_ENGINE_URL:-http://latency-engine:8003}
+    networks:
+      - llmobs-network
+
+networks:
+  llmobs-network:
+    name: llmobs-network
+    external: true

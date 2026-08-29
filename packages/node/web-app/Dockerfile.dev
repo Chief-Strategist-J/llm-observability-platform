@@ -1,0 +1,24 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache bash
+
+COPY api-types /app/packages/node/api-types
+COPY design-tokens /app/packages/node/design-tokens
+COPY realtime-sdk /app/packages/node/realtime-sdk
+COPY shared-infra /app/packages/node/shared-infra
+COPY web-app /app/packages/node/web-app
+
+WORKDIR /app/packages/node/web-app
+
+RUN npm install
+
+ENV NODE_ENV=development
+ENV PORT=31400
+ENV WATCHPACK_POLLING=true
+ENV CHOKIDAR_USEPOLLING=true
+
+EXPOSE 31400
+
+CMD ["npx", "next", "dev", "-p", "31400"]
