@@ -1,32 +1,11 @@
-# Automation Feature & Edge-Case Coverage Registry
+# Automation Sequential Journeys & Feature Coverage Registry
 
-> Single source of truth for Category A–K test coverage across endpoints, features, and user journeys.
+> Single source of truth for End-to-End Sequential User Journeys across microservices, authentication, and workspace telemetry.
 
-## Feature-Level Coverage (Categories A–K)
+## End-to-End (E2E) Sequential Journeys Registry
 
-| Endpoint / Feature | Category | Tag | Status | Scenario File / Path | Last Updated |
+| Journey | Microservices & Routes Involved | Tag | Status | Scenario File / Path | Last Updated |
 |---|---|---|---|---|---|
-| `/auth/sign-up` | A (Happy Path) | `@happy-path` | Covered | `tests/automation/auth/sign-up/sign-up-valid.spec.ts` | 2026-08-29 |
-| `/auth/sign-up` | B (Duplicate User) | `@duplicate` | Covered | `tests/automation/auth/sign-up/sign-up-duplicate-user.spec.ts` | 2026-08-29 |
-| `/auth/sign-up` | C (Invalid Email) | `@invalid-rejected` | Covered | `tests/automation/auth/sign-up/sign-up-invalid-email.spec.ts` | 2026-08-29 |
-| `/auth/sign-up` | F (Contract Boundary) | `@contract-boundary` | Covered | `tests/automation/auth/sign-up/sign-up-contract-boundary.spec.ts` | 2026-08-29 |
-| `/auth/sign-up` | I (Concurrency) | `@concurrency` | Covered | `tests/automation/auth/sign-up/sign-up-concurrency.spec.ts` | 2026-08-29 |
-| `/auth/sign-in` | A (Happy Path) | `@happy-path` | Covered | `tests/automation/auth/sign-in/sign-in-valid.spec.ts` | 2026-08-29 |
-| `/auth/sign-in` | C (Invalid Password) | `@invalid-rejected` | Covered | `tests/automation/auth/sign-in/sign-in-invalid-pass.spec.ts` | 2026-08-29 |
-| `/auth/sign-in` | G (Blocked User) | `@authz-boundary` | Covered | `tests/automation/auth/sign-in/sign-in-blocked-user.spec.ts` | 2026-08-29 |
-| `/admin/*` | G (RBAC & IDOR Boundary) | `@authz-boundary` | Covered | `tests/automation/auth/rbac/authz-boundary-idor.spec.ts` | 2026-08-29 |
-| HTTP Executor | H (Dependency Failure) | `@dependency-failure` | Covered | `tests/automation/api/dependency-failure.spec.ts` | 2026-08-29 |
-| HTTP Executor | J (Resource Limits) | `@resource-limit` | Covered | `tests/automation/api/resource-limits.spec.ts` | 2026-08-29 |
-| HTTP Executor | K (Observability Trace) | `@observability` | Covered | `tests/automation/api/observability-trace.spec.ts` | 2026-08-29 |
-| `/` (Dashboard) | A (Filter Pipeline) | `@happy-path` | Covered | `tests/automation/dashboard/filters/filter-selection.spec.ts` | 2026-08-29 |
-| `/` (Dashboard) | C (Corrupted Query Fallback) | `@invalid-rejected` | Covered | `tests/automation/dashboard/filters/filter-corrupted-url.spec.ts` | 2026-08-29 |
-| `/` (Dashboard) | E (Empty State Result) | `@silent-failure-check` | Covered | `tests/automation/dashboard/telemetry/empty-state.spec.ts` | 2026-08-29 |
-
----
-
-## End-to-End (E2E) Cross-Service Journeys Registry
-
-| Journey | Services Involved | Tag | Status | Scenario File / Path | Last Updated |
-|---|---|---|---|---|---|
-| Registration -> Login -> Dashboard Sequential Flow | Registration Service, Auth Service, Org Dashboard | `@e2e @sequential-journey @critical` | Covered | `tests/automation/e2e/sequential-user-flow.journey.spec.ts` | 2026-08-29 |
-| Admin User Suspension Flow | Admin API, User Management, Auth Guard | `@e2e @suspension-journey @critical` | Covered | `tests/automation/e2e/journeys/admin-user-suspension-flow.feature` | 2026-08-29 |
+| Production Sequential User Journey (Registration -> Duplicate Protection -> Sign-In -> Workspace -> Team Invite) | Registration Service, Auth Guard, Dashboard Telemetry, Org Team Settings | `@e2e @sequential-journey @critical` | Covered | `tests/automation/e2e/sequential-user-flow.journey.spec.ts` | 2026-08-29 |
+| New User Onboarding Cross-Service Flow | Sign-Up API, Auth Token Issuance, Database Verification | `@e2e @onboarding-journey @critical` | Covered | `tests/automation/e2e/new-user-onboarding.journey.spec.ts` | 2026-08-29 |
+| Admin User Suspension Flow | Admin API, User Management, Auth Guard Revocation | `@e2e @suspension-journey @critical` | Covered | `tests/automation/e2e/journeys/admin-user-suspension-flow.feature` | 2026-08-29 |
