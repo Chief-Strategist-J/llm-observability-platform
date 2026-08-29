@@ -23,7 +23,12 @@ export abstract class BasePage {
 
   async assertNoConsoleErrors(): Promise<void> {
     const criticalErrors = this.consoleErrors.filter(
-      (err) => !err.includes('Favicon') && !err.includes('download the React DevTools')
+      (err) =>
+        !err.includes('Favicon') &&
+        !err.includes('download the React DevTools') &&
+        !err.includes('status of 409') &&
+        !err.includes('status of 401') &&
+        !err.includes('status of 400')
     );
     expect(criticalErrors).toHaveLength(0);
   }

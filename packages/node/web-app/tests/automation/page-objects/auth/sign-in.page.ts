@@ -5,7 +5,7 @@ export class SignInPage extends BasePage {
   readonly emailInput = this.page.locator('#email');
   readonly passwordInput = this.page.locator('#password');
   readonly submitButton = this.page.locator('button[type="submit"]');
-  readonly errorMessage = this.page.locator('[data-testid="error-alert"], .error-message, .text-red-500');
+  readonly errorMessage = this.page.locator('.auth-error-alert, [data-testid="error-alert"], .error-message');
 
   constructor(page: Page) {
     super(page);

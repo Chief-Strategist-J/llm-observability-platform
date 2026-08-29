@@ -3,8 +3,7 @@
     "argv": [
       "/home/btpl-lap-22/.nvm/versions/node/v20.20.0/bin/node",
       "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/node_modules/.bin/playwright",
-      "test",
-      "tests/automation/e2e/new-user-onboarding.journey.spec.ts"
+      "test"
     ],
     "configFile": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/playwright.config.ts",
     "rootDir": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation",
@@ -18,7 +17,7 @@
     "grepInvert": null,
     "maxFailures": 0,
     "metadata": {
-      "actualWorkers": 1
+      "actualWorkers": 2
     },
     "preserveOutput": "always",
     "projects": [
@@ -27,7 +26,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 1
+          "actualWorkers": 2
         },
         "id": "chromium",
         "name": "chromium",
@@ -78,6 +77,1189 @@
   },
   "suites": [
     {
+      "title": "api/dependency-failure.spec.ts",
+      "file": "api/dependency-failure.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Category H — Downstream Dependency Failure Injection Automation Suite",
+          "file": "api/dependency-failure.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "H-01: Should handle downstream HTTP service timeout or 500 error gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 111,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:20:06.967Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5708935006f62623da02-07b8f4604667273483ed",
+              "file": "api/dependency-failure.spec.ts",
+              "line": 6,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "api/observability-trace.spec.ts",
+      "file": "api/observability-trace.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Category K — Observability Under Failure Automation Suite",
+          "file": "api/observability-trace.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "K-01: Should inject x-request-id and x-correlation-id header tokens into outbound HTTP requests",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 46,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:20:06.814Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "40fe79e8456054e6ccc3-df2315dcbc0ce4eb297e",
+              "file": "api/observability-trace.spec.ts",
+              "line": 6,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "api/resource-limits.spec.ts",
+      "file": "api/resource-limits.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Category J — Resource & Payload Limits Automation Suite",
+          "file": "api/resource-limits.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "J-01: Should handle payload size boundary constraints gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 163,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:20:07.321Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e116fe48a1b0690eb8b6-41e18f5186e570c0f6b4",
+              "file": "api/resource-limits.spec.ts",
+              "line": 6,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/rbac/authz-boundary-idor.spec.ts",
+      "file": "auth/rbac/authz-boundary-idor.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Category G — Authentication & Authorization Boundary (IDOR Isolation)",
+          "file": "auth/rbac/authz-boundary-idor.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "G-01: Should block unauthenticated token access with 401 Unauthorized",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 79,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:20:07.482Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db1a0e8ec11c7610dbba-786005742e2f8646563c",
+              "file": "auth/rbac/authz-boundary-idor.spec.ts",
+              "line": 6,
+              "column": 7
+            },
+            {
+              "title": "G-02: Cross-tenant resource access should be forbidden across tenant boundaries",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 36,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:20:07.601Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db1a0e8ec11c7610dbba-6d5537e1ade4b8f2ffd9",
+              "file": "auth/rbac/authz-boundary-idor.spec.ts",
+              "line": 11,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/rbac/route-access.spec.ts",
+      "file": "auth/rbac/route-access.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Auth RBAC - Route Security Access Automation",
+          "file": "auth/rbac/route-access.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should validate access rules for unauthenticated, member, and admin roles",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 39,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:20:07.776Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "891a08ca8609457d57cb-ca7a34d65463944a7169",
+              "file": "auth/rbac/route-access.spec.ts",
+              "line": 5,
+              "column": 7
+            },
+            {
+              "title": "should enforce route access rules for unauthenticated users",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 17591,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:20:07.999Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "891a08ca8609457d57cb-1904de5df4c5e612c3d3",
+              "file": "auth/rbac/route-access.spec.ts",
+              "line": 12,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/sign-in/sign-in-blocked-user.spec.ts",
+      "file": "auth/sign-in/sign-in-blocked-user.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Auth Sign In - Blocked User Edgecase Automation",
+          "file": "auth/sign-in/sign-in-blocked-user.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should reject authentication attempt for suspended user",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 21512,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:20:08.037Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "85e5ecb1c276b870f13c-b5a3df9caf61217ea7b4",
+              "file": "auth/sign-in/sign-in-blocked-user.spec.ts",
+              "line": 4,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/sign-in/sign-in-invalid-pass.spec.ts",
+      "file": "auth/sign-in/sign-in-invalid-pass.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Category C — Sign-In Incorrect Password Automation",
+          "file": "auth/sign-in/sign-in-invalid-pass.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should validate form and block sign-in on wrong password",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "failed",
+                      "duration": 13583,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-alert\"], .error-message, .text-red-500').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-alert\"], .error-message, .text-red-500').first()\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-alert\"], .error-message, .text-red-500').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-alert\"], .error-message, .text-red-500').first()\u001b[22m\n\n    at SignInPage.assertErrorMessageVisible (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-in.page.ts:30:45)\n    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/sign-in/sign-in-invalid-pass.spec.ts:15:22",
+                        "location": {
+                          "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-in.page.ts",
+                          "column": 45,
+                          "line": 30
+                        },
+                        "snippet": "\u001b[90m   at \u001b[39mpage-objects/auth/sign-in.page.ts:30\n\n  28 |\n  29 |   async assertErrorMessageVisible(expectedTextPattern?: RegExp | string): Promise<void> {\n> 30 |     await expect(this.errorMessage.first()).toBeVisible();\n     |                                             ^\n  31 |     if (expectedTextPattern) {\n  32 |       await expect(this.errorMessage.first()).toContainText(expectedTextPattern);\n  33 |     }"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-in.page.ts",
+                            "column": 45,
+                            "line": 30
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-alert\"], .error-message, .text-red-500').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-alert\"], .error-message, .text-red-500').first()\u001b[22m\n\n\n\u001b[90m   at \u001b[39mpage-objects/auth/sign-in.page.ts:30\n\n  28 |\n  29 |   async assertErrorMessageVisible(expectedTextPattern?: RegExp | string): Promise<void> {\n> 30 |     await expect(this.errorMessage.first()).toBeVisible();\n     |                                             ^\n  31 |     if (expectedTextPattern) {\n  32 |       await expect(this.errorMessage.first()).toContainText(expectedTextPattern);\n  33 |     }\n\u001b[2m    at SignInPage.assertErrorMessageVisible (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-in.page.ts:30:45)\u001b[22m\n\u001b[2m    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/sign-in/sign-in-invalid-pass.spec.ts:15:22\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:20:26.082Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-in-sign-in-inval-cfa89-k-sign-in-on-wrong-password-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-in-sign-in-inval-cfa89-k-sign-in-on-wrong-password-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-in-sign-in-inval-cfa89-k-sign-in-on-wrong-password-chromium/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-in-sign-in-inval-cfa89-k-sign-in-on-wrong-password-chromium/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-in.page.ts",
+                        "column": 45,
+                        "line": 30
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "215d32853115997730a6-aea322a4a72cbf0a961d",
+              "file": "auth/sign-in/sign-in-invalid-pass.spec.ts",
+              "line": 5,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/sign-in/sign-in-valid.spec.ts",
+      "file": "auth/sign-in/sign-in-valid.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Category A — Sign-In Valid User Automation",
+          "file": "auth/sign-in/sign-in-valid.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should render sign-in form and execute valid user sign-in",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6344,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:20:29.963Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "7802242814f704243a11-39bd85dac9220938bdb4",
+              "file": "auth/sign-in/sign-in-valid.spec.ts",
+              "line": 5,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/sign-up/sign-up-concurrency.spec.ts",
+      "file": "auth/sign-up/sign-up-concurrency.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Category I — Concurrency & Idempotency Automation Suite",
+          "file": "auth/sign-up/sign-up-concurrency.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "I-01: Concurrent identical sign-up requests should evaluate without unhandled exceptions",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 83,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:20:36.346Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2e588d0492770ad510fa-bb0c46c4ff11d42087e2",
+              "file": "auth/sign-up/sign-up-concurrency.spec.ts",
+              "line": 6,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/sign-up/sign-up-contract-boundary.spec.ts",
+      "file": "auth/sign-up/sign-up-contract-boundary.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Category F — Contract & Schema Boundary Automation Suite",
+          "file": "auth/sign-up/sign-up-contract-boundary.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "F-01: Should reject payload missing required name field",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 13,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:20:36.470Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "78ed66570241ebb0f351-cf23e868d8e5fd40c6e8",
+              "file": "auth/sign-up/sign-up-contract-boundary.spec.ts",
+              "line": 6,
+              "column": 7
+            },
+            {
+              "title": "F-02: Should validate maximum length boundary on organization name field",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 10,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:20:36.512Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "78ed66570241ebb0f351-d55580febdf24267cfcb",
+              "file": "auth/sign-up/sign-up-contract-boundary.spec.ts",
+              "line": 17,
+              "column": 7
+            },
+            {
+              "title": "F-03: Should safely ignore or sanitize unexpected extra request properties",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:20:36.545Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "78ed66570241ebb0f351-ef641a67ab36b60a6dcf",
+              "file": "auth/sign-up/sign-up-contract-boundary.spec.ts",
+              "line": 30,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/sign-up/sign-up-duplicate-user.spec.ts",
+      "file": "auth/sign-up/sign-up-duplicate-user.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Category B — Duplicate User Registration Automation",
+          "file": "auth/sign-up/sign-up-duplicate-user.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should handle duplicate user registration error gracefully",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 12483,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-alert\"], .error-message, .text-red-500').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-alert\"], .error-message, .text-red-500').first()\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-alert\"], .error-message, .text-red-500').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-alert\"], .error-message, .text-red-500').first()\u001b[22m\n\n    at SignUpPage.assertErrorMessageVisible (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-up.page.ts:35:45)\n    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/sign-up/sign-up-duplicate-user.spec.ts:17:22",
+                        "location": {
+                          "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-up.page.ts",
+                          "column": 45,
+                          "line": 35
+                        },
+                        "snippet": "\u001b[90m   at \u001b[39mpage-objects/auth/sign-up.page.ts:35\n\n  33 |\n  34 |   async assertErrorMessageVisible(expectedTextPattern?: RegExp | string): Promise<void> {\n> 35 |     await expect(this.errorMessage.first()).toBeVisible();\n     |                                             ^\n  36 |     if (expectedTextPattern) {\n  37 |       await expect(this.errorMessage.first()).toContainText(expectedTextPattern);\n  38 |     }"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-up.page.ts",
+                            "column": 45,
+                            "line": 35
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-alert\"], .error-message, .text-red-500').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-alert\"], .error-message, .text-red-500').first()\u001b[22m\n\n\n\u001b[90m   at \u001b[39mpage-objects/auth/sign-up.page.ts:35\n\n  33 |\n  34 |   async assertErrorMessageVisible(expectedTextPattern?: RegExp | string): Promise<void> {\n> 35 |     await expect(this.errorMessage.first()).toBeVisible();\n     |                                             ^\n  36 |     if (expectedTextPattern) {\n  37 |       await expect(this.errorMessage.first()).toContainText(expectedTextPattern);\n  38 |     }\n\u001b[2m    at SignUpPage.assertErrorMessageVisible (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-up.page.ts:35:45)\u001b[22m\n\u001b[2m    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/sign-up/sign-up-duplicate-user.spec.ts:17:22\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:20:36.584Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-dupli-4bd8a-gistration-error-gracefully-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-dupli-4bd8a-gistration-error-gracefully-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-dupli-4bd8a-gistration-error-gracefully-chromium/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-dupli-4bd8a-gistration-error-gracefully-chromium/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-up.page.ts",
+                        "column": 45,
+                        "line": 35
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "b1bd98849655739db462-b63745b781e2d2ded110",
+              "file": "auth/sign-up/sign-up-duplicate-user.spec.ts",
+              "line": 5,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/sign-up/sign-up-invalid-email.spec.ts",
+      "file": "auth/sign-up/sign-up-invalid-email.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Category C / D — Invalid Email Validation Automation",
+          "file": "auth/sign-up/sign-up-invalid-email.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should trigger native HTML5 validation on malformed email format",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 7948,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:20:42.632Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d65323e937051a3f3c4a-c0c48c7a2097dc539221",
+              "file": "auth/sign-up/sign-up-invalid-email.spec.ts",
+              "line": 5,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/sign-up/sign-up-valid.spec.ts",
+      "file": "auth/sign-up/sign-up-valid.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Category A — Happy Path Registration Automation",
+          "file": "auth/sign-up/sign-up-valid.spec.ts",
+          "line": 5,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should successfully register new organization and admin user",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 11659,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoHaveLength\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected length: \u001b[32m0\u001b[39m\nReceived length: \u001b[31m1\u001b[39m\nReceived array:  \u001b[31m[\"Failed to load resource: the server responded with a status of 409 (Conflict)\"]\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoHaveLength\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected length: \u001b[32m0\u001b[39m\nReceived length: \u001b[31m1\u001b[39m\nReceived array:  \u001b[31m[\"Failed to load resource: the server responded with a status of 409 (Conflict)\"]\u001b[39m\n    at SignUpPage.assertNoConsoleErrors (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/base.page.ts:28:28)\n    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/sign-up/sign-up-valid.spec.ts:19:22",
+                        "location": {
+                          "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/base.page.ts",
+                          "column": 28,
+                          "line": 28
+                        },
+                        "snippet": "\u001b[90m   at \u001b[39mpage-objects/base.page.ts:28\n\n  26 |       (err) => !err.includes('Favicon') && !err.includes('download the React DevTools')\n  27 |     );\n> 28 |     expect(criticalErrors).toHaveLength(0);\n     |                            ^\n  29 |   }\n  30 |\n  31 |   async waitForPageTransition(expectedUrlPattern: RegExp | string): Promise<void> {"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/base.page.ts",
+                            "column": 28,
+                            "line": 28
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoHaveLength\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected length: \u001b[32m0\u001b[39m\nReceived length: \u001b[31m1\u001b[39m\nReceived array:  \u001b[31m[\"Failed to load resource: the server responded with a status of 409 (Conflict)\"]\u001b[39m\n\n\u001b[90m   at \u001b[39mpage-objects/base.page.ts:28\n\n  26 |       (err) => !err.includes('Favicon') && !err.includes('download the React DevTools')\n  27 |     );\n> 28 |     expect(criticalErrors).toHaveLength(0);\n     |                            ^\n  29 |   }\n  30 |\n  31 |   async waitForPageTransition(expectedUrlPattern: RegExp | string): Promise<void> {\n\u001b[2m    at SignUpPage.assertNoConsoleErrors (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/base.page.ts:28:28)\u001b[22m\n\u001b[2m    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/sign-up/sign-up-valid.spec.ts:19:22\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:20:51.296Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-valid-bfc93-organization-and-admin-user-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-valid-bfc93-organization-and-admin-user-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-valid-bfc93-organization-and-admin-user-chromium/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-valid-bfc93-organization-and-admin-user-chromium/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/base.page.ts",
+                        "column": 28,
+                        "line": 28
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "870c77f9c29230658b95-493e4a8e56f1bbada440",
+              "file": "auth/sign-up/sign-up-valid.spec.ts",
+              "line": 6,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/sign-up/sign-up-weak-password.spec.ts",
+      "file": "auth/sign-up/sign-up-weak-password.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Category C / F — Weak Password Contract Boundary Automation",
+          "file": "auth/sign-up/sign-up-weak-password.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should display weak password meter warning when entering short password",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 1,
+                      "status": "failed",
+                      "duration": 12535,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"password-meter-warning\"], .password-weak-label').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"password-meter-warning\"], .password-weak-label').first()\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"password-meter-warning\"], .password-weak-label').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"password-meter-warning\"], .password-weak-label').first()\u001b[22m\n\n    at SignUpPage.assertWeakPasswordWarningVisible (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-up.page.ts:42:52)\n    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/sign-up/sign-up-weak-password.spec.ts:10:22",
+                        "location": {
+                          "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-up.page.ts",
+                          "column": 52,
+                          "line": 42
+                        },
+                        "snippet": "\u001b[90m   at \u001b[39mpage-objects/auth/sign-up.page.ts:42\n\n  40 |\n  41 |   async assertWeakPasswordWarningVisible(): Promise<void> {\n> 42 |     await expect(this.weakPasswordWarning.first()).toBeVisible();\n     |                                                    ^\n  43 |   }\n  44 |\n  45 |   async isEmailFieldValid(): Promise<boolean> {"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-up.page.ts",
+                            "column": 52,
+                            "line": 42
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"password-meter-warning\"], .password-weak-label').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"password-meter-warning\"], .password-weak-label').first()\u001b[22m\n\n\n\u001b[90m   at \u001b[39mpage-objects/auth/sign-up.page.ts:42\n\n  40 |\n  41 |   async assertWeakPasswordWarningVisible(): Promise<void> {\n> 42 |     await expect(this.weakPasswordWarning.first()).toBeVisible();\n     |                                                    ^\n  43 |   }\n  44 |\n  45 |   async isEmailFieldValid(): Promise<boolean> {\n\u001b[2m    at SignUpPage.assertWeakPasswordWarningVisible (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-up.page.ts:42:52)\u001b[22m\n\u001b[2m    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/sign-up/sign-up-weak-password.spec.ts:10:22\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:20:51.311Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-weak--b6a1b-hen-entering-short-password-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-weak--b6a1b-hen-entering-short-password-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-weak--b6a1b-hen-entering-short-password-chromium/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-weak--b6a1b-hen-entering-short-password-chromium/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-up.page.ts",
+                        "column": 52,
+                        "line": 42
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "0b32159a8580ba832aac-1ccf06efd093d51a13ca",
+              "file": "auth/sign-up/sign-up-weak-password.spec.ts",
+              "line": 5,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "dashboard/filters/filter-corrupted-url.spec.ts",
+      "file": "dashboard/filters/filter-corrupted-url.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Dashboard Filters - Corrupted URL Graceful Fallback Edgecase",
+          "file": "dashboard/filters/filter-corrupted-url.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should handle corrupted URL search params gracefully without crashing UI",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 18996,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:21:05.609Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "fcd5ce13fd67be86232e-1629650668e000b7708d",
+              "file": "dashboard/filters/filter-corrupted-url.spec.ts",
+              "line": 4,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "dashboard/filters/filter-selection.spec.ts",
+      "file": "dashboard/filters/filter-selection.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Dashboard Filters - Selection & Pipeline Automation",
+          "file": "dashboard/filters/filter-selection.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should execute filter pipeline over search params",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 37,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:21:07.191Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "dee99ac20a62b3f978d3-5cf962cd29ee18025dfe",
+              "file": "dashboard/filters/filter-selection.spec.ts",
+              "line": 5,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "dashboard/telemetry/empty-state.spec.ts",
+      "file": "dashboard/telemetry/empty-state.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Dashboard Telemetry - Non-Existent Filter Empty State Edgecase",
+          "file": "dashboard/telemetry/empty-state.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should render empty telemetry dataset state without throwing exceptions",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 15009,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:21:07.381Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5ce9e4e732a47d3ced5-19353fcdf331fbe3d382",
+              "file": "dashboard/telemetry/empty-state.spec.ts",
+              "line": 4,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
       "title": "e2e/new-user-onboarding.journey.spec.ts",
       "file": "e2e/new-user-onboarding.journey.spec.ts",
       "column": 0,
@@ -103,15 +1285,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 5,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 6679,
+                      "duration": 15688,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:07:16.794Z",
+                      "startTime": "2026-08-29T05:21:22.913Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -131,11 +1313,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-08-29T05:07:14.391Z",
-    "duration": 9476.647,
-    "expected": 1,
+    "startTime": "2026-08-29T05:20:03.529Z",
+    "duration": 95574.30399999999,
+    "expected": 18,
     "skipped": 0,
-    "unexpected": 0,
+    "unexpected": 4,
     "flaky": 0
   }
 }
