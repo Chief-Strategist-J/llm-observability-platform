@@ -13,6 +13,13 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor, ConsoleSpanExpor
 _PROVIDER_INITIALIZED = False
 _SERVICE_NAME = "latency-engine"
 
+def _is_otel_reachable(host: str = "localhost", port: int = 31418) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=0.5):
+            return True
+    except Exception:
+        return False
+
 def init_tracer(service_name: str = _SERVICE_NAME) -> None:
     global _PROVIDER_INITIALIZED
     if _PROVIDER_INITIALIZED:
@@ -28,7 +35,7 @@ def init_tracer(service_name: str = _SERVICE_NAME) -> None:
     if os.getenv("SKIP_CONSOLE_EXPORTER", "true") == "false":
         provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
         
-    if os.getenv("SKIP_OTLP_EXPORTER", "false") != "true":
+    if os.getenv("SKIP_OTLP_EXPORTER", "false") != "true" and _is_otel_reachable():
         endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:31418")
         try:
             from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter

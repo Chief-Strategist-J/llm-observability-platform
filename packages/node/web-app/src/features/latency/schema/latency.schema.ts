@@ -1,10 +1,11 @@
 import { z } from "zod";
 import type { JsonMapOp } from "@/core/data-driven/transform.types";
+import { LATENCY_CONFIG_DEFAULTS } from "../constants";
 
 export const PercentilesQuerySchema = z.object({
   model: z.string().min(1),
   hour_of_day: z.coerce.number().int().min(0).max(23),
-  quantiles: z.string().optional().default("0.50,0.95,0.99"),
+  quantiles: z.string().optional().default(LATENCY_CONFIG_DEFAULTS.DEFAULT_QUANTILES),
 });
 
 export const SLOQuerySchema = z.object({
@@ -15,7 +16,7 @@ export const SLOQuerySchema = z.object({
 export const BaselineQuerySchema = z.object({
   model: z.string().min(1),
   hour_of_day: z.coerce.number().int().min(0).max(23),
-  days: z.coerce.number().int().min(1).max(90).optional().default(7),
+  days: z.coerce.number().int().min(1).max(90).optional().default(LATENCY_CONFIG_DEFAULTS.DEFAULT_LOOKBACK_DAYS),
 });
 
 export const AttributionQuerySchema = z.object({

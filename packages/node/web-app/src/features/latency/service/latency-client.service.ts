@@ -18,6 +18,7 @@ import {
   SLOFromApiOps,
 } from "../schema";
 import { LATENCY_QUERIES } from "../queries";
+import { LATENCY_CONFIG_DEFAULTS } from "../constants";
 
 export interface LatencyClientAdapter {
   getPercentiles(model: string, hourOfDay: number, quantiles?: string): Promise<PercentilesResult>;
@@ -30,14 +31,18 @@ class RawLatencyClientAdapter implements LatencyClientAdapter {
   private readonly baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.LATENCY_ENGINE_URL || "http://localhost:8003";
+    this.baseUrl = process.env.LATENCY_ENGINE_URL || LATENCY_CONFIG_DEFAULTS.DEFAULT_ENGINE_URL;
   }
 
   private getAuthHeaders(): Record<string, string> {
-    const secret = process.env.JWT_SECRET || "dev-secret-key-change-in-production";
+    const secret = process.env.JWT_SECRET || LATENCY_CONFIG_DEFAULTS.DEFAULT_JWT_SECRET;
     const header = { alg: "HS256", typ: "JWT" };
     const now = Math.floor(Date.now() / 1000);
-    const payload = { sub: "nextjs-web-app", iat: now, exp: now + 3600 };
+    const payload = {
+      sub: LATENCY_CONFIG_DEFAULTS.DEFAULT_SERVICE_SUB,
+      iat: now,
+      exp: now + LATENCY_CONFIG_DEFAULTS.DEFAULT_JWT_EXPIRY_SECONDS,
+    };
 
     const headerB64 = Buffer.from(JSON.stringify(header)).toString("base64url");
     const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
@@ -75,7 +80,11 @@ class RawLatencyClientAdapter implements LatencyClientAdapter {
     return transformOps ? (mapJson(raw, transformOps) as unknown as T) : (raw as T);
   }
 
-  async getPercentiles(model: string, hourOfDay: number, quantiles = "0.50,0.95,0.99"): Promise<PercentilesResult> {
+  async getPercentiles(
+    model: string,
+    hourOfDay: number,
+    quantiles = LATENCY_CONFIG_DEFAULTS.DEFAULT_QUANTILES
+  ): Promise<PercentilesResult> {
     return this.executeQuery<PercentilesResult>(
       LATENCY_QUERIES.FLOW_QUERY_PERCENTILES.endpoint,
       { model, hour_of_day: hourOfDay, quantiles },
@@ -91,7 +100,11 @@ class RawLatencyClientAdapter implements LatencyClientAdapter {
     );
   }
 
-  async getBaseline(model: string, hourOfDay: number, days = 7): Promise<BaselinePoint[]> {
+  async getBaseline(
+    model: string,
+    hourOfDay: number,
+    days = LATENCY_CONFIG_DEFAULTS.DEFAULT_LOOKBACK_DAYS
+  ): Promise<BaselinePoint[]> {
     return this.executeQuery<BaselinePoint[]>(
       LATENCY_QUERIES.FLOW_QUERY_BASELINE.endpoint,
       { model, hour_of_day: hourOfDay, days }
