@@ -1,15 +1,17 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
+import { SignInPage } from '../../page-objects/auth/sign-in.page';
 
-test.describe('Auth Sign In - Invalid Password Edgecase Automation', () => {
+test.describe('Category C — Sign-In Incorrect Password Automation', () => {
   test('should validate form and block sign-in on wrong password', async ({ page }) => {
-    await page.goto('/auth/sign-in');
-    await page.waitForLoadState('networkidle');
+    const signInPage = new SignInPage(page);
+    await signInPage.goto();
 
-    await page.locator('input[type="email"]').fill('admin@scaibu.io');
-    await page.locator('input[type="password"]').fill('WrongPassword999');
+    await signInPage.fillForm({
+      email: 'admin@scaibu.io',
+      password: 'WrongPassword999!',
+    });
 
-    const submitBtn = page.locator('button[type="submit"]');
-    await submitBtn.click();
-    await expect(page).toHaveURL(/auth\/sign-in/);
+    await signInPage.submit();
+    await signInPage.assertErrorMessageVisible();
   });
 });

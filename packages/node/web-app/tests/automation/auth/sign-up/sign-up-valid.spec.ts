@@ -1,17 +1,21 @@
 import { test, expect } from '@playwright/test';
+import { SignUpPage } from '../../page-objects/auth/sign-up.page';
+import { generateUniqueEmail } from '../../fixtures/generators/unique-email';
 
-test.describe('Auth Registration - Valid User Registration Automation', () => {
+test.describe('Category A — Happy Path Registration Automation', () => {
   test('should successfully register new organization and admin user', async ({ page }) => {
-    await page.goto('/auth/sign-up');
-    await page.waitForLoadState('networkidle');
+    const signUpPage = new SignUpPage(page);
+    await signUpPage.goto();
 
-    await page.locator('#name').fill('Jaydeep Engineer');
-    await page.locator('#orgName').fill('Scaibu Platform');
-    await page.locator('#email').fill(`jaydeep.${Date.now()}@scaibu.io`);
-    await page.locator('#password').fill('SecurePassword123!');
+    const uniqueEmail = generateUniqueEmail('signup.valid');
+    await signUpPage.fillForm({
+      name: 'Valid Admin User',
+      orgName: 'Scaibu Enterprise',
+      email: uniqueEmail,
+      password: 'SecurePassword123!',
+    });
 
-    const submitBtn = page.locator('button[type="submit"]');
-    await expect(submitBtn).toBeEnabled();
-    await submitBtn.click();
+    await signUpPage.submit();
+    await signUpPage.assertNoConsoleErrors();
   });
 });

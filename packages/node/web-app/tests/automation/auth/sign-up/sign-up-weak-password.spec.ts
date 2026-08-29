@@ -1,15 +1,12 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
+import { SignUpPage } from '../../page-objects/auth/sign-up.page';
 
-test.describe('Auth Registration - Weak Password Edgecase Automation', () => {
+test.describe('Category C / F — Weak Password Contract Boundary Automation', () => {
   test('should display weak password meter warning when entering short password', async ({ page }) => {
-    await page.goto('/auth/sign-up');
-    await page.waitForLoadState('networkidle');
+    const signUpPage = new SignUpPage(page);
+    await signUpPage.goto();
 
-    const passwordInput = page.locator('#password');
-    await passwordInput.fill('123');
-
-    const strengthLabel = page.locator('.auth-strength-label');
-    await expect(strengthLabel).toBeVisible();
-    await expect(strengthLabel).toContainText(/Weak|Strength/i);
+    await signUpPage.fillForm({ password: '123' });
+    await signUpPage.assertWeakPasswordWarningVisible();
   });
 });

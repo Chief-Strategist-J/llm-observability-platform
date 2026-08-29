@@ -1,15 +1,20 @@
 import { Given, When, Then } from '@cucumber/cucumber';
 import { expect } from '@playwright/test';
 import { journeyContext } from '../support/journey-context';
-import { RawAuthApiClient } from '../../../../src/lib/api/auth-client';
 import type { CustomWorld } from '../../support/hooks';
+import { SignUpPage } from '../../page-objects/auth/sign-up.page';
+import { SignInPage } from '../../page-objects/auth/sign-in.page';
+import { DashboardPage } from '../../page-objects/dashboard/dashboard.page';
 
-const client = new RawAuthApiClient('http://localhost:3001');
+let signUpPage: SignUpPage;
+let signInPage: SignInPage;
+let dashboardPage: DashboardPage;
 
 Given('a new user begins the onboarding journey on the sign-up page {string}', async function (this: CustomWorld, url: string) {
   try {
     if (this.page) {
-      await this.page.goto(url);
+      signUpPage = new SignUpPage(this.page);
+      await signUpPage.goto();
     }
   } catch (err: any) {
     journeyContext.recordStepFailure('Navigate to sign-up', 'Frontend Web App Service', err);
@@ -22,11 +27,13 @@ When('the user registers organization {string} with admin email {string}', async
     journeyContext.set('orgName', orgName);
     journeyContext.set('userEmail', email);
 
-    if (this.page) {
-      await this.page.fill('#name', 'Onboarding Admin');
-      await this.page.fill('#orgName', orgName);
-      await this.page.fill('#email', email);
-      await this.page.fill('#password', 'SecurePassword123!');
+    if (signUpPage) {
+      await signUpPage.fillForm({
+        name: 'Onboarding Admin',
+        orgName,
+        email,
+        password: 'SecurePassword123!',
+      });
     }
   } catch (err: any) {
     journeyContext.recordStepFailure('Register organization', 'Registration Service', err);
@@ -34,7 +41,7 @@ When('the user registers organization {string} with admin email {string}', async
   }
 });
 
-When('the user acquires an active JWT session token from the Auth service', async function (this: CustomWorld) {
+When('the user acquires an active JWT session token from the Auth service', async function () {
   try {
     const token = 'mock-jwt-onboarding-token-123';
     journeyContext.set('authToken', token);
@@ -48,7 +55,8 @@ When('the user acquires an active JWT session token from the Auth service', asyn
 Then('the user should navigate to the active organization workspace {string}', async function (this: CustomWorld, expectedUrl: string) {
   try {
     if (this.page) {
-      await expect(this.page).toHaveURL(new RegExp(expectedUrl));
+      dashboardPage = new DashboardPage(this.page);
+      await dashboardPage.waitForPageTransition(new RegExp(expectedUrl));
     }
   } catch (err: any) {
     journeyContext.recordStepFailure('Navigate to active workspace', 'Dashboard Service', err);
@@ -56,7 +64,7 @@ Then('the user should navigate to the active organization workspace {string}', a
   }
 });
 
-Then('independently verify that the organization record {string} exists in the database', async function (this: CustomWorld, orgName: string) {
+Then('independently verify that the organization record {string} exists in the database', async function (orgName: string) {
   try {
     expect(orgName).toBe(journeyContext.get('orgName'));
   } catch (err: any) {
@@ -65,11 +73,11 @@ Then('independently verify that the organization record {string} exists in the d
   }
 });
 
-Given('an Admin user is authenticated with token {string}', async function (this: CustomWorld, token: string) {
+Given('an Admin user is authenticated with token {string}', async function (token: string) {
   journeyContext.set('authToken', token);
 });
 
-When('the Admin user blocks target member user {string} via user management endpoint', async function (this: CustomWorld, userId: string) {
+When('the Admin user blocks target member user {string} via user management endpoint', async function (userId: string) {
   try {
     journeyContext.set('userId', userId);
     expect(userId).toBeDefined();
@@ -79,7 +87,7 @@ When('the Admin user blocks target member user {string} via user management endp
   }
 });
 
-Then('subsequent authentication attempts for {string} should be rejected with 401 Unauthorized', async function (this: CustomWorld, userId: string) {
+Then('subsequent authentication attempts for {string} should be rejected with 401 Unauthorized', async function (userId: string) {
   try {
     expect(userId).toBe(journeyContext.get('userId'));
   } catch (err: any) {
@@ -88,7 +96,7 @@ Then('subsequent authentication attempts for {string} should be rejected with 40
   }
 });
 
-Then('independently verify that the user status in the User Directory is set to {string}', async function (this: CustomWorld, status: string) {
+Then('independently verify that the user status in the User Directory is set to {string}', async function (status: string) {
   try {
     expect(status).toBe('blocked');
   } catch (err: any) {

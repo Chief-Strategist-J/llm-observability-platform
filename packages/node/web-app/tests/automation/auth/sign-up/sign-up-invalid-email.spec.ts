@@ -1,17 +1,13 @@
 import { test, expect } from '@playwright/test';
+import { SignUpPage } from '../../page-objects/auth/sign-up.page';
 
-test.describe('Auth Registration - Invalid Email Edgecase Automation', () => {
+test.describe('Category C / D — Invalid Email Validation Automation', () => {
   test('should trigger native HTML5 validation on malformed email format', async ({ page }) => {
-    await page.goto('/auth/sign-up');
-    await page.waitForLoadState('networkidle');
+    const signUpPage = new SignUpPage(page);
+    await signUpPage.goto();
 
-    const emailInput = page.locator('#email');
-    await emailInput.fill('invalid-email-format-no-at-symbol');
-
-    const submitBtn = page.locator('button[type="submit"]');
-    await submitBtn.click();
-
-    const isValid = await emailInput.evaluate((el: HTMLInputElement) => el.checkValidity());
+    await signUpPage.fillForm({ email: 'not-a-valid-email' });
+    const isValid = await signUpPage.isEmailFieldValid();
     expect(isValid).toBe(false);
   });
 });

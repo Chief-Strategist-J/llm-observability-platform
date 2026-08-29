@@ -1,22 +1,19 @@
-import { test, expect } from '@playwright/test';
-import { RawAuthApiClient } from '../../../../src/lib/api/auth-client';
+import { test } from '@playwright/test';
+import { SignUpPage } from '../../page-objects/auth/sign-up.page';
 
-test.describe('Auth Registration - Duplicate User Edgecase Automation', () => {
+test.describe('Category B — Duplicate User Registration Automation', () => {
   test('should handle duplicate user registration error gracefully', async ({ page }) => {
-    await page.goto('/auth/sign-up');
-    await page.waitForLoadState('networkidle');
+    const signUpPage = new SignUpPage(page);
+    await signUpPage.goto();
 
-    // Attempting to re-register existing email
-    await page.locator('#name').fill('Existing User');
-    await page.locator('#orgName').fill('Existing Org');
-    await page.locator('#email').fill('existing.user@scaibu.io');
-    await page.locator('#password').fill('SecurePassword123!');
+    await signUpPage.fillForm({
+      name: 'Duplicate Admin User',
+      orgName: 'Scaibu Enterprise',
+      email: 'admin@scaibu.io',
+      password: 'SecurePassword123!',
+    });
 
-    const client = new RawAuthApiClient('http://localhost:3001');
-    expect(client).toBeDefined();
-
-    // Verify error boundary prevents registration
-    const emailInput = page.locator('#email');
-    await expect(emailInput).toHaveValue('existing.user@scaibu.io');
+    await signUpPage.submit();
+    await signUpPage.assertErrorMessageVisible();
   });
 });
