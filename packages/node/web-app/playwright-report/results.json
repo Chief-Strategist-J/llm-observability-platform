@@ -4,9 +4,12 @@
       "/home/btpl-lap-22/.nvm/versions/node/v20.20.0/bin/node",
       "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/node_modules/.bin/playwright",
       "test",
-      "--headed",
-      "--project=chromium",
-      "tests/automation/auth/sign-up/sign-up-duplicate-user.spec.ts"
+      "tests/automation/auth/sign-up/sign-up-contract-boundary.spec.ts",
+      "tests/automation/auth/sign-up/sign-up-concurrency.spec.ts",
+      "tests/automation/auth/rbac/authz-boundary-idor.spec.ts",
+      "tests/automation/api/dependency-failure.spec.ts",
+      "tests/automation/api/resource-limits.spec.ts",
+      "tests/automation/api/observability-trace.spec.ts"
     ],
     "configFile": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/playwright.config.ts",
     "rootDir": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation",
@@ -20,7 +23,7 @@
     "grepInvert": null,
     "maxFailures": 0,
     "metadata": {
-      "actualWorkers": 1
+      "actualWorkers": 2
     },
     "preserveOutput": "always",
     "projects": [
@@ -29,7 +32,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 1
+          "actualWorkers": 2
         },
         "id": "chromium",
         "name": "chromium",
@@ -70,7 +73,7 @@
     "updateSnapshots": "missing",
     "updateSourceMethod": "patch",
     "version": "1.62.1",
-    "workers": 1,
+    "workers": 2,
     "webServer": {
       "command": "./scripts/app.sh web-app",
       "url": "http://localhost:31400",
@@ -80,20 +83,20 @@
   },
   "suites": [
     {
-      "title": "auth/sign-up/sign-up-duplicate-user.spec.ts",
-      "file": "auth/sign-up/sign-up-duplicate-user.spec.ts",
+      "title": "api/dependency-failure.spec.ts",
+      "file": "api/dependency-failure.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "Auth Registration - Duplicate User Edgecase Automation",
-          "file": "auth/sign-up/sign-up-duplicate-user.spec.ts",
+          "title": "Category H — Downstream Dependency Failure Injection Automation Suite",
+          "file": "api/dependency-failure.spec.ts",
           "line": 4,
           "column": 6,
           "specs": [
             {
-              "title": "should handle duplicate user registration error gracefully",
+              "title": "H-01: Should handle downstream HTTP service timeout or 500 error gracefully",
               "ok": true,
               "tags": [],
               "tests": [
@@ -108,12 +111,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 10383,
+                      "duration": 76,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T04:25:52.061Z",
+                      "startTime": "2026-08-29T05:04:03.377Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -121,9 +124,401 @@
                   "status": "expected"
                 }
               ],
-              "id": "b1bd98849655739db462-a531299854a569c6b76a",
-              "file": "auth/sign-up/sign-up-duplicate-user.spec.ts",
-              "line": 5,
+              "id": "5708935006f62623da02-07b8f4604667273483ed",
+              "file": "api/dependency-failure.spec.ts",
+              "line": 6,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "api/observability-trace.spec.ts",
+      "file": "api/observability-trace.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Category K — Observability Under Failure Automation Suite",
+          "file": "api/observability-trace.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "K-01: Should inject x-request-id and x-correlation-id header tokens into outbound HTTP requests",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 90,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:04:03.122Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "40fe79e8456054e6ccc3-df2315dcbc0ce4eb297e",
+              "file": "api/observability-trace.spec.ts",
+              "line": 6,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "api/resource-limits.spec.ts",
+      "file": "api/resource-limits.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Category J — Resource & Payload Limits Automation Suite",
+          "file": "api/resource-limits.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "J-01: Should handle pagination query limit parameters gracefully",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "failed",
+                      "duration": 158,
+                      "error": {
+                        "message": "Error: Route not found: GET /api/v1/auth/audit-logs?event_type=login",
+                        "stack": "Error: Route not found: GET /api/v1/auth/audit-logs?event_type=login\n    at executeHttpRequest (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/src/lib/api/executor.ts:84:17)\n    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/api/resource-limits.spec.ts:8:18",
+                        "location": {
+                          "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/src/lib/api/executor.ts",
+                          "column": 17,
+                          "line": 84
+                        },
+                        "snippet": "\u001b[90m   at \u001b[39m../../src/lib/api/executor.ts:84\n\n  82 |\n  83 |   if (!response.ok || json.status === \"error\" || json.error) {\n> 84 |     const err = new Error(json.error?.details || json.message || `HTTP ${response.status}`);\n     |                 ^\n  85 |     (err as any).code = json.error?.code || (response.status === 401 ? \"UNAUTHORIZED\" : \"HTTP_ERROR\");\n  86 |     (err as any).status = response.status;\n  87 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/src/lib/api/executor.ts",
+                            "column": 17,
+                            "line": 84
+                          },
+                          "message": "Error: Route not found: GET /api/v1/auth/audit-logs?event_type=login\n\n\u001b[90m   at \u001b[39m../../src/lib/api/executor.ts:84\n\n  82 |\n  83 |   if (!response.ok || json.status === \"error\" || json.error) {\n> 84 |     const err = new Error(json.error?.details || json.message || `HTTP ${response.status}`);\n     |                 ^\n  85 |     (err as any).code = json.error?.code || (response.status === 401 ? \"UNAUTHORIZED\" : \"HTTP_ERROR\");\n  86 |     (err as any).status = response.status;\n  87 |\n\u001b[2m    at executeHttpRequest (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/src/lib/api/executor.ts:84:17)\u001b[22m\n\u001b[2m    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/api/resource-limits.spec.ts:8:18\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:04:03.936Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/api-resource-limits-Catego-13b51-limit-parameters-gracefully-chromium/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/api-resource-limits-Catego-13b51-limit-parameters-gracefully-chromium/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/src/lib/api/executor.ts",
+                        "column": 17,
+                        "line": 84
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "e116fe48a1b0690eb8b6-4f16eba37f3de377fb95",
+              "file": "api/resource-limits.spec.ts",
+              "line": 6,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/rbac/authz-boundary-idor.spec.ts",
+      "file": "auth/rbac/authz-boundary-idor.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Category G — Authentication & Authorization Boundary (IDOR Isolation)",
+          "file": "auth/rbac/authz-boundary-idor.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "G-01: Should block unauthenticated token access with 401 Unauthorized",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 74,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:04:03.894Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db1a0e8ec11c7610dbba-786005742e2f8646563c",
+              "file": "auth/rbac/authz-boundary-idor.spec.ts",
+              "line": 6,
+              "column": 7
+            },
+            {
+              "title": "G-02: Cross-tenant resource access should be forbidden across tenant boundaries",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 122,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:04:04.096Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db1a0e8ec11c7610dbba-6d5537e1ade4b8f2ffd9",
+              "file": "auth/rbac/authz-boundary-idor.spec.ts",
+              "line": 11,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/sign-up/sign-up-concurrency.spec.ts",
+      "file": "auth/sign-up/sign-up-concurrency.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Category I — Concurrency & Idempotency Automation Suite",
+          "file": "auth/sign-up/sign-up-concurrency.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "I-01: Concurrent identical sign-up requests should not duplicate account creation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 103,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:04:04.374Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2e588d0492770ad510fa-b8e7008210fe44cb92bc",
+              "file": "auth/sign-up/sign-up-concurrency.spec.ts",
+              "line": 6,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/sign-up/sign-up-contract-boundary.spec.ts",
+      "file": "auth/sign-up/sign-up-contract-boundary.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Category F — Contract & Schema Boundary Automation Suite",
+          "file": "auth/sign-up/sign-up-contract-boundary.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "F-01: Should reject payload missing required name field",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 91,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:04:06.141Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "78ed66570241ebb0f351-cf23e868d8e5fd40c6e8",
+              "file": "auth/sign-up/sign-up-contract-boundary.spec.ts",
+              "line": 6,
+              "column": 7
+            },
+            {
+              "title": "F-02: Should validate maximum length boundary on organization name field",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 38,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:04:04.560Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "78ed66570241ebb0f351-d55580febdf24267cfcb",
+              "file": "auth/sign-up/sign-up-contract-boundary.spec.ts",
+              "line": 17,
+              "column": 7
+            },
+            {
+              "title": "F-03: Should safely ignore or sanitize unexpected extra request properties",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 8,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:04:04.664Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "78ed66570241ebb0f351-ef641a67ab36b60a6dcf",
+              "file": "auth/sign-up/sign-up-contract-boundary.spec.ts",
+              "line": 30,
               "column": 7
             }
           ]
@@ -133,11 +528,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-08-29T04:25:48.431Z",
-    "duration": 16038.637999999999,
-    "expected": 1,
+    "startTime": "2026-08-29T05:03:57.887Z",
+    "duration": 8681.971,
+    "expected": 8,
     "skipped": 0,
-    "unexpected": 0,
+    "unexpected": 1,
     "flaky": 0
   }
 }
