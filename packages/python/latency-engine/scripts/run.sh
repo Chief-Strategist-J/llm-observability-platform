@@ -13,6 +13,9 @@ export REDIS_URL="${REDIS_URL:-redis://:llmobs_redis_s3cret_2024@localhost:31413
 export CLICKHOUSE_HOST="${CLICKHOUSE_HOST:-localhost}"
 export CLICKHOUSE_PORT="${CLICKHOUSE_PORT:-31421}"
 export TEMPORAL_HOST="${TEMPORAL_HOST:-localhost:31424}"
+export OTEL_EXPORTER_OTLP_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:31418}"
+export SKIP_OTLP_EXPORTER="${SKIP_OTLP_EXPORTER:-false}"
+export SKIP_CONSOLE_EXPORTER="${SKIP_CONSOLE_EXPORTER:-true}"
 export PYTHONPATH="src"
 
 free_port() {

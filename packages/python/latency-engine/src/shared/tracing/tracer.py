@@ -13,9 +13,7 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor, ConsoleSpanExpor
 _PROVIDER_INITIALIZED = False
 _SERVICE_NAME = "latency-engine"
 
-
 def init_tracer(service_name: str = _SERVICE_NAME) -> None:
-    """Initialize OTEL TracerProvider (idempotent). Supports console + OTLP exporters."""
     global _PROVIDER_INITIALIZED
     if _PROVIDER_INITIALIZED:
         return
@@ -26,23 +24,24 @@ def init_tracer(service_name: str = _SERVICE_NAME) -> None:
         "host.name": socket.gethostname(),
     })
     provider = TracerProvider(resource=res)
-    if os.getenv("SKIP_CONSOLE_EXPORTER") != "true":
+    
+    if os.getenv("SKIP_CONSOLE_EXPORTER", "true") == "false":
         provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
-    if os.getenv("SKIP_OTLP_EXPORTER") != "true":
+        
+    if os.getenv("SKIP_OTLP_EXPORTER", "false") != "true":
+        endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:31418")
         try:
             from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-            endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
             provider.add_span_processor(SimpleSpanProcessor(OTLPSpanExporter(endpoint=endpoint, insecure=True)))
-        except ImportError:
+        except Exception:
             try:
                 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-                endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318/v1/traces")
                 provider.add_span_processor(SimpleSpanProcessor(OTLPSpanExporter(endpoint=endpoint)))
-            except ImportError:
+            except Exception:
                 pass
+
     trace.set_tracer_provider(provider)
     _PROVIDER_INITIALIZED = True
-
 
 @contextmanager
 def trace_span(
@@ -51,10 +50,6 @@ def trace_span(
     span_id: str | None = None,
     attributes: dict[str, str | int | float | bool | None] | None = None,
 ) -> Generator[Span, None, None]:
-    """
-    Context manager for a named OTEL span. Supports optional parent context
-    via trace_id/span_id. Used by baseline-worker Redis/ClickHouse adapters.
-    """
     init_tracer()
     t = trace.get_tracer(_SERVICE_NAME)
     parent_ctx = None
@@ -84,17 +79,11 @@ def trace_span(
             span.set_status(trace.Status(trace.StatusCode.ERROR, str(err)))
             raise
 
-
 @contextmanager
 def api_span(
     name: str,
     attributes: dict[str, str | int | float | bool] | None = None,
 ) -> Generator[Span, None, None]:
-    """
-    Context manager for API-layer OTEL spans. Always includes standard
-    service.name, api.version, deployment.env attributes.
-    Used by latency-engine REST handlers.
-    """
     init_tracer()
     tracer = trace.get_tracer(_SERVICE_NAME)
     base_attrs: dict[str, str | int | float | bool] = {
