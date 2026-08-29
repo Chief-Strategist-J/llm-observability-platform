@@ -4,12 +4,7 @@
       "/home/btpl-lap-22/.nvm/versions/node/v20.20.0/bin/node",
       "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/node_modules/.bin/playwright",
       "test",
-      "tests/automation/auth/sign-up/sign-up-contract-boundary.spec.ts",
-      "tests/automation/auth/sign-up/sign-up-concurrency.spec.ts",
-      "tests/automation/auth/rbac/authz-boundary-idor.spec.ts",
-      "tests/automation/api/dependency-failure.spec.ts",
-      "tests/automation/api/resource-limits.spec.ts",
-      "tests/automation/api/observability-trace.spec.ts"
+      "tests/automation/e2e/new-user-onboarding.journey.spec.ts"
     ],
     "configFile": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/playwright.config.ts",
     "rootDir": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation",
@@ -23,7 +18,7 @@
     "grepInvert": null,
     "maxFailures": 0,
     "metadata": {
-      "actualWorkers": 2
+      "actualWorkers": 1
     },
     "preserveOutput": "always",
     "projects": [
@@ -32,7 +27,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 2
+          "actualWorkers": 1
         },
         "id": "chromium",
         "name": "chromium",
@@ -83,20 +78,20 @@
   },
   "suites": [
     {
-      "title": "api/dependency-failure.spec.ts",
-      "file": "api/dependency-failure.spec.ts",
+      "title": "e2e/new-user-onboarding.journey.spec.ts",
+      "file": "e2e/new-user-onboarding.journey.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "Category H — Downstream Dependency Failure Injection Automation Suite",
-          "file": "api/dependency-failure.spec.ts",
+          "title": "E2E Cross-Service Journey — New User Onboarding Flow",
+          "file": "e2e/new-user-onboarding.journey.spec.ts",
           "line": 4,
           "column": 6,
           "specs": [
             {
-              "title": "H-01: Should handle downstream HTTP service timeout or 500 error gracefully",
+              "title": "E2E-01: Cross-service user registration, auth token issuance, and org dashboard verification",
               "ok": true,
               "tags": [],
               "tests": [
@@ -111,12 +106,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 70,
+                      "duration": 6679,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:04:56.516Z",
+                      "startTime": "2026-08-29T05:07:16.794Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -124,366 +119,9 @@
                   "status": "expected"
                 }
               ],
-              "id": "5708935006f62623da02-07b8f4604667273483ed",
-              "file": "api/dependency-failure.spec.ts",
-              "line": 6,
-              "column": 7
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "api/observability-trace.spec.ts",
-      "file": "api/observability-trace.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Category K — Observability Under Failure Automation Suite",
-          "file": "api/observability-trace.spec.ts",
-          "line": 4,
-          "column": 6,
-          "specs": [
-            {
-              "title": "K-01: Should inject x-request-id and x-correlation-id header tokens into outbound HTTP requests",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 34,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-08-29T05:04:56.541Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "40fe79e8456054e6ccc3-df2315dcbc0ce4eb297e",
-              "file": "api/observability-trace.spec.ts",
-              "line": 6,
-              "column": 7
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "api/resource-limits.spec.ts",
-      "file": "api/resource-limits.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Category J — Resource & Payload Limits Automation Suite",
-          "file": "api/resource-limits.spec.ts",
-          "line": 4,
-          "column": 6,
-          "specs": [
-            {
-              "title": "J-01: Should handle payload size boundary constraints gracefully",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 156,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-08-29T05:04:56.972Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "e116fe48a1b0690eb8b6-41e18f5186e570c0f6b4",
-              "file": "api/resource-limits.spec.ts",
-              "line": 6,
-              "column": 7
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "auth/rbac/authz-boundary-idor.spec.ts",
-      "file": "auth/rbac/authz-boundary-idor.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Category G — Authentication & Authorization Boundary (IDOR Isolation)",
-          "file": "auth/rbac/authz-boundary-idor.spec.ts",
-          "line": 4,
-          "column": 6,
-          "specs": [
-            {
-              "title": "G-01: Should block unauthenticated token access with 401 Unauthorized",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 49,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-08-29T05:04:56.950Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "db1a0e8ec11c7610dbba-786005742e2f8646563c",
-              "file": "auth/rbac/authz-boundary-idor.spec.ts",
-              "line": 6,
-              "column": 7
-            },
-            {
-              "title": "G-02: Cross-tenant resource access should be forbidden across tenant boundaries",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 70,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-08-29T05:04:57.072Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "db1a0e8ec11c7610dbba-6d5537e1ade4b8f2ffd9",
-              "file": "auth/rbac/authz-boundary-idor.spec.ts",
-              "line": 11,
-              "column": 7
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "auth/sign-up/sign-up-concurrency.spec.ts",
-      "file": "auth/sign-up/sign-up-concurrency.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Category I — Concurrency & Idempotency Automation Suite",
-          "file": "auth/sign-up/sign-up-concurrency.spec.ts",
-          "line": 4,
-          "column": 6,
-          "specs": [
-            {
-              "title": "I-01: Concurrent identical sign-up requests should evaluate without unhandled exceptions",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 60,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-08-29T05:04:57.204Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "2e588d0492770ad510fa-bb0c46c4ff11d42087e2",
-              "file": "auth/sign-up/sign-up-concurrency.spec.ts",
-              "line": 6,
-              "column": 7
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "auth/sign-up/sign-up-contract-boundary.spec.ts",
-      "file": "auth/sign-up/sign-up-contract-boundary.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Category F — Contract & Schema Boundary Automation Suite",
-          "file": "auth/sign-up/sign-up-contract-boundary.spec.ts",
-          "line": 4,
-          "column": 6,
-          "specs": [
-            {
-              "title": "F-01: Should reject payload missing required name field",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 134,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-08-29T05:04:57.276Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "78ed66570241ebb0f351-cf23e868d8e5fd40c6e8",
-              "file": "auth/sign-up/sign-up-contract-boundary.spec.ts",
-              "line": 6,
-              "column": 7
-            },
-            {
-              "title": "F-02: Should validate maximum length boundary on organization name field",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 135,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-08-29T05:04:57.466Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "78ed66570241ebb0f351-d55580febdf24267cfcb",
-              "file": "auth/sign-up/sign-up-contract-boundary.spec.ts",
-              "line": 17,
-              "column": 7
-            },
-            {
-              "title": "F-03: Should safely ignore or sanitize unexpected extra request properties",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 15,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-08-29T05:04:57.568Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "78ed66570241ebb0f351-ef641a67ab36b60a6dcf",
-              "file": "auth/sign-up/sign-up-contract-boundary.spec.ts",
-              "line": 30,
+              "id": "c4c49b9b3b6d3601312c-4445c16e7735f6b15ae0",
+              "file": "e2e/new-user-onboarding.journey.spec.ts",
+              "line": 10,
               "column": 7
             }
           ]
@@ -493,9 +131,9 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-08-29T05:04:53.209Z",
-    "duration": 4656.385,
-    "expected": 9,
+    "startTime": "2026-08-29T05:07:14.391Z",
+    "duration": 9476.647,
+    "expected": 1,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0

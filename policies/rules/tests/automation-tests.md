@@ -298,7 +298,92 @@ auth/tenant combinations are needed). The top-level structure itself never chang
 
 ---
 
-## 8. Required Configuration Rules (Microservice Additions)
+## 7.5 End-to-End (E2E) Test Flow — the Missing Layer
+
+Everything in Categories A–K is **feature-level**: one endpoint, tested in isolation. None of them prove
+that a real user journey works *across* features and *across* microservices. That's a separate layer,
+with its own folder, its own tagging, and its own rules — it does not replace A–K, it sits on top of them.
+
+### Where it lives (additive folder)
+
+```
+tests/
+└── automation/
+    ├── features/            # feature-level (A–K), one endpoint per file — unchanged
+    ├── e2e/                 # NEW — top-level, sibling to features/
+    │   ├── journeys/
+    │   │   ├── new-user-onboarding.feature
+    │   │   ├── purchase-checkout-flow.feature
+    │   │   └── admin-user-suspension-flow.feature
+    │   ├── step-definitions/
+    │   │   └── journeys.steps.ts
+    │   └── support/
+    │       └── journey-context.ts     # carries state between steps that cross multiple services
+    └── FEATURE_REGISTRY.md
+```
+
+### What makes something an E2E journey (not just another feature scenario)
+
+A scenario belongs in `e2e/journeys/`, not in `features/`, when it satisfies **all** of:
+1. It crosses **more than one microservice/endpoint** in sequence (e.g. registration service → auth
+   service → dashboard service).
+2. It represents something a **real user or business process actually does end to end**, not an
+   artificial combination invented for test convenience.
+3. Its pass/fail meaning is "the whole journey works," not "this one endpoint's contract is correct" —
+   individual endpoint correctness is already covered by A–K; E2E exists to catch **integration** gaps
+   that per-endpoint tests structurally cannot see (e.g. service A's success writes data in a shape
+   service B doesn't actually expect).
+
+### Rules specific to E2E
+
+- **Tag:** `@e2e`, plus a journey-name tag (`@onboarding-journey`), plus severity. E2E critical-path
+  journeys are almost always `@critical`.
+- **Fewer, not more:** E2E suites are deliberately small in count and slow to run (real service calls,
+  real sequencing) — do not generate an E2E journey for every possible path. Cover the handful of
+  journeys that represent actual core business value or the highest-risk cross-service handoffs.
+- **Real service state carries forward within one scenario.** Unlike feature-level tests (isolated,
+  disposable data per scenario), an E2E scenario's `Given`/`When` steps build on the *actual result* of
+  the previous step (the real account just created, the real token just issued) — this is intentional
+  and is what makes it "end to end."
+- **Independent verification still applies (Category E logic, but across services).** At the end of the
+  journey, verify the final state through a path different from the one the journey itself used — e.g.
+  after "checkout flow" completes, independently query the order service and the inventory service, not
+  just trust the UI's "order confirmed" screen.
+- **Run separately in CI** from the feature-level suite: feature-level (A–K) runs on every commit/PR
+  (fast, mocked dependencies per Category H); E2E runs on a slower cadence (pre-merge to main, nightly,
+  or pre-release) against a real integrated environment, because it's inherently slower and more
+  expensive to run.
+- **Failure diagnosis:** because an E2E scenario spans services, its failure-artifact capture
+  (screenshot/video/trace) must also capture **which service in the chain failed** — log/tag which step
+  and which underlying service call failed, not just "the journey failed at step 4," so triage doesn't
+  require re-running the whole chain to find the break point.
+
+### Generic E2E Template (placeholder form)
+
+```gherkin
+Feature: [Journey Name] — cross-service flow
+
+  @e2e @[journey-tag] @critical
+  Scenario: [Describe the real business flow in one sentence]
+    Given [starting state / actor]
+    When [step 1 — call to Service A]
+    And [step 2 — resulting call to Service B, using real output from step 1]
+    And [step 3 — resulting call to Service C, using real output from step 2]
+    Then [the end-user-visible outcome should be correct]
+    And [independently verify the final state via a path different from the journey itself,
+         e.g. query Service C's data store directly, or check Service A's audit log]
+```
+
+### Registry addition for E2E
+
+Add a separate table (or section) in `FEATURE_REGISTRY.md` for journeys, since they aren't per-endpoint:
+
+| Journey | Services involved | Tag | Status | Scenario file | Last updated |
+|---|---|---|---|---|---|
+
+---
+
+
 
 These are additions to the configuration rules already stated in `generic-test-flow-rules.md` Section 1.
 State them as requirements to whoever owns the config files — do not treat any of these as optional:
