@@ -1,9 +1,9 @@
-# ADR-NODE-WEB-APP-0007: Master Architecture — End-to-End Latency Engine Integration, Security Verification, Database DDL Schemas, Kafka Topics, and W3C Tracing Topology
+# ADR-NODE-WEB-APP-0007: Master Architecture — End-to-End Latency Engine Integration, Security Verification, Database DDL & ER Relationships, Kafka Topics, and W3C Tracing Topology
 
 | Field | Value |
 | --- | --- |
 | **ADR ID** | `ADR-NODE-WEB-APP-0007` |
-| **Title** | End-to-End Latency Integration, Dual Auth Verification, Database DDL Schemas, Kafka Topics, and W3C OpenTelemetry Tracing |
+| **Title** | End-to-End Latency Integration, Dual Auth Verification, Database DDL & ER Relationships, Kafka Topics, and W3C OpenTelemetry Tracing |
 | **Status** | **Accepted** |
 | **Date** | 2026-08-29 |
 | **Scope** | Next.js Web App (`packages/node/web-app`), Auth Service (`packages/node/auth`), Instrumentation SDK (`packages/python/instrumentation-sdk`), Latency Engine (`packages/python/latency-engine`) |
@@ -15,7 +15,7 @@
 The platform operates as a multi-tier microservice architecture. Observability spans, latency distributions, cost analytics, and user security permissions must flow across microservices reliably, securely, and with full distributed trace context propagation.
 
 This ADR details:
-1. **Database Table DDL Schemas** (AlloyDB/Postgres, ClickHouse, and Redis key structures).
+1. **Database DDL Schemas & Foreign Key Relationships** (PostgreSQL/AlloyDB ER Diagram, ClickHouse Tables, and Redis Key Mappings).
 2. **Kafka Messaging Catalog** (Topics, Consumer Groups, Partitioning, and Message Contracts).
 3. **Step-by-Step Security Authentication Verification** (Platform session tokens vs S2S HMAC-SHA256 Bearer JWTs).
 4. **W3C OpenTelemetry Tracing & Context Propagation** (`traceparent` header injection/extraction and Tempo waterfall rendering).
@@ -76,7 +76,7 @@ flowchart TD
     end
 
     subgraph WebAppPlane["5. NEXT.JS DASHBOARD & TRACING PLANE (:31400)"]
-        ReactUI["LatencyDashboardUI.tsx Component"]
+        ReactUI["LatencyDashboardUI.tsx (:31400)"]
         ReduxSaga["latency.saga.ts (handleFetchLatency)"]
         ClientAdapter["latencyClientService (RawLatencyClientAdapter)"]
         ResilienceChain["withTracing -> withCircuitBreaker -> withCache -> withRetry"]
@@ -88,15 +88,105 @@ flowchart TD
         ClientAdapter --> ResilienceChain
         ResilienceChain --> S2SSigner
         S2SSigner -->|Authorization: Bearer <S2S_JWT>| FastAPI
-        ResilienceChain --> TempoExporter
+        ReduxSaga --> ReduxSlice
+        ReduxSlice --> ReactUI
     end
 ```
 
 ---
 
-## 3. Database DDL Schemas & Key Catalogs
+## 3. Database DDL Schemas, Foreign Key Constraints & ER Diagrams
 
-### 3.1 PostgreSQL / Google AlloyDB Omni (`observability_auth` on Port `31412`)
+### 3.1 Entity-Relationship (ER) Diagram (AlloyDB/PostgreSQL & ClickHouse)
+
+```mermaid
+erDiagram
+    ORGANIZATIONS ||--|{ USERS : "has many users (FK org_id)"
+    ORGANIZATIONS ||--|{ TENANTS : "owns many tenants (FK org_id)"
+    TENANTS ||--|{ API_KEYS : "issues many API keys (FK tenant_id)"
+    USERS ||--|{ PASSWORD_RESET_TOKENS : "requests reset tokens (FK user_id)"
+
+    ORGANIZATIONS {
+        string org_id PK "Primary Key"
+        string org_name "Organization Title"
+        string plan "Pricing Tier"
+        datetime created_at "Created Timestamp"
+    }
+
+    USERS {
+        string id PK "Primary Key"
+        string email UK "Unique Email"
+        string password_hash "SHA256 Hash"
+        string name "User Name"
+        string org_id FK "Foreign Key to ORGANIZATIONS.org_id"
+        string role "RBAC Role (admin/member)"
+        boolean blocked "Account Status"
+        datetime created_at "Created Timestamp"
+    }
+
+    TENANTS {
+        string tenant_id PK "Primary Key"
+        string org_id FK "Foreign Key to ORGANIZATIONS.org_id"
+        string environment "Environment Tag (prod/staging)"
+        datetime created_at "Created Timestamp"
+    }
+
+    API_KEYS {
+        string key_hash PK "Primary Key"
+        string tenant_id FK "Foreign Key to TENANTS.tenant_id"
+        array scopes "Permission Scopes"
+        datetime expires_at "Expiration Timestamp"
+        datetime created_at "Created Timestamp"
+    }
+
+    PASSWORD_RESET_TOKENS {
+        string token_hash PK "Primary Key"
+        string user_id FK "Foreign Key to USERS.id"
+        bigint expires_at_ms "Expiration Epoch MS"
+        boolean used "Redemption Flag"
+        datetime created_at "Created Timestamp"
+    }
+
+    SPANS_RAW }|..|| LATENCY_CHECKPOINTS : "aggregates into"
+
+    SPANS_RAW {
+        string span_id PK "Span Identifier"
+        string trace_id "Distributed Trace Identifier"
+        string model "LLM Model Tag"
+        float latency_ms_total "Total Duration MS"
+        float latency_ms_ttft "TTFT Duration MS"
+        uint32 tokens_input "Prompt Tokens"
+        uint32 tokens_output "Completion Tokens"
+        string finish_reason "Termination Reason"
+        datetime timestamp_utc "Event Timestamp"
+    }
+
+    LATENCY_CHECKPOINTS {
+        string model PK "Model Tag (Compound Primary Key)"
+        uint8 hour_of_day PK "Hour (0-23) (Compound Primary Key)"
+        date checkpoint_date PK "Date (Compound Primary Key)"
+        float p99_ttft_ms "99th Percentile TTFT"
+        float p99_total_ms "99th Percentile Total Latency"
+        uint32 sample_count "Total Aggregated Samples"
+        datetime created_at "Checkpoint Timestamp"
+    }
+```
+
+---
+
+### 3.2 Database Relationship Specifications Catalog
+
+| Parent Entity (Source) | Child Entity (Target) | Relationship Type | Foreign Key Constraint | Cascading Action |
+| :--- | :--- | :--- | :--- | :--- |
+| `ORGANIZATIONS` | `USERS` | 1-to-Many (`1:N`) | `USERS.org_id` -> `ORGANIZATIONS.org_id` | `ON DELETE CASCADE` |
+| `ORGANIZATIONS` | `TENANTS` | 1-to-Many (`1:N`) | `TENANTS.org_id` -> `ORGANIZATIONS.org_id` | `ON DELETE CASCADE` |
+| `TENANTS` | `API_KEYS` | 1-to-Many (`1:N`) | `API_KEYS.tenant_id` -> `TENANTS.tenant_id` | `ON DELETE CASCADE` |
+| `USERS` | `PASSWORD_RESET_TOKENS` | 1-to-Many (`1:N`) | `PASSWORD_RESET_TOKENS.user_id` -> `USERS.id` | `ON DELETE CASCADE` |
+| `SPANS_RAW` | `LATENCY_CHECKPOINTS` | N-to-1 Aggregation (`N:1`) | Logical Grouping (`model`, `hour_of_day`, `checkpoint_date`) | Derived Rollup |
+
+---
+
+### 3.3 PostgreSQL / Google AlloyDB Omni (`observability_auth` on Port `31412`)
 
 #### Table: `users`
 ```sql
@@ -108,7 +198,8 @@ CREATE TABLE IF NOT EXISTS users (
     org_id VARCHAR(64) NOT NULL,
     role VARCHAR(32) NOT NULL DEFAULT 'member',
     blocked BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_users_organization FOREIGN KEY (org_id) REFERENCES organizations(org_id) ON DELETE CASCADE
 );
 ```
 
@@ -126,9 +217,10 @@ CREATE TABLE IF NOT EXISTS organizations (
 ```sql
 CREATE TABLE IF NOT EXISTS tenants (
     tenant_id VARCHAR(64) PRIMARY KEY,
-    org_id VARCHAR(64) REFERENCES organizations(org_id) ON DELETE CASCADE,
+    org_id VARCHAR(64) NOT NULL,
     environment VARCHAR(32) NOT NULL DEFAULT 'production',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_tenants_organization FOREIGN KEY (org_id) REFERENCES organizations(org_id) ON DELETE CASCADE
 );
 ```
 
@@ -136,10 +228,11 @@ CREATE TABLE IF NOT EXISTS tenants (
 ```sql
 CREATE TABLE IF NOT EXISTS api_keys (
     key_hash VARCHAR(255) PRIMARY KEY,
-    tenant_id VARCHAR(64) REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+    tenant_id VARCHAR(64) NOT NULL,
     scopes TEXT[] NOT NULL DEFAULT ARRAY['read', 'write'],
     expires_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_api_keys_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(tenant_id) ON DELETE CASCADE
 );
 ```
 
@@ -147,16 +240,17 @@ CREATE TABLE IF NOT EXISTS api_keys (
 ```sql
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
     token_hash VARCHAR(255) PRIMARY KEY,
-    user_id VARCHAR(64) REFERENCES users(id) ON DELETE CASCADE,
+    user_id VARCHAR(64) NOT NULL,
     expires_at_ms BIGINT NOT NULL,
     used BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_password_reset_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 ```
 
 ---
 
-### 3.2 ClickHouse Columnar Analytics Database (`default` on Port `31421`)
+### 3.4 ClickHouse Columnar Analytics Database (`default` on Port `31421`)
 
 #### Table: `latency_checkpoints`
 ```sql
@@ -191,7 +285,7 @@ ORDER BY (timestamp_utc, model, trace_id);
 
 ---
 
-### 3.3 Redis Real-Time Key Catalog (`redis://:llmobs_redis_s3cret_2024@localhost:31413/0`)
+### 3.5 Redis Real-Time Key Catalog (`redis://:llmobs_redis_s3cret_2024@localhost:31413/0`)
 
 | Redis Key Structure | Type | Purpose | TTL / Expiry |
 | :--- | :--- | :--- | :--- |
@@ -439,10 +533,10 @@ sequenceDiagram
 ## 8. Verification Summary Matrix
 
 ```text
-✅ AlloyDB Omni PostgreSQL DB    Postgres Port 31412 -> Tables users, organizations, tenants verified
+✅ AlloyDB Omni PostgreSQL DB    Postgres Port 31412 -> Tables users, organizations, tenants, api_keys, password_reset_tokens verified with FKs
 ✅ ClickHouse Analytics DB       ClickHouse Port 31421 -> Tables latency_checkpoints, spans_raw verified
 ✅ Redis Cache & Ledger         Redis Port 31413 -> DDSketches & SLO rolling counters verified
-✅ Kafka Message Bus            Kafka Port 31414 -> Topics llm.spans.raw, auth.events.v1 verified
+✅ Kafka Message Bus            Kafka Port 31414 -> Topics llm.spans.raw, auth.events.v1, llm.spans.dlq verified
 ✅ Auth Service Sign-in         HTTP POST http://localhost:3001/api/v1/auth/sign-in -> 200 OK
 ✅ S2S HMAC-SHA256 Signer       Node.js Crypto Generator -> Valid 3-part HS256 JWT
 ✅ FastAPI verify_jwt_token      Python JWT Verifier -> Claims Verified (200 OK)
