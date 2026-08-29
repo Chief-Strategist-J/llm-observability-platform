@@ -109,12 +109,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 24098,
+                      "duration": 15640,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:53:35.184Z",
+                      "startTime": "2026-08-29T05:55:56.411Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -139,7 +139,7 @@
       "specs": [],
       "suites": [
         {
-          "title": "Production Sequential User Journey — 15 Critical Edge Cases Pipeline",
+          "title": "Production Sequential User Journey — 25 Critical Edge Cases Pipeline",
           "file": "e2e/sequential-user-flow.journey.spec.ts",
           "line": 7,
           "column": 15,
@@ -160,12 +160,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 29432,
+                      "duration": 12253,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:54:00.074Z",
+                      "startTime": "2026-08-29T05:56:12.949Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -173,14 +173,14 @@
                   "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-550c0377055905f65989",
+              "id": "a909e2d9f74e3bf31c89-d28ae65c28ee24326409",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
               "line": 25,
               "column": 7
             },
             {
               "title": "Step 2: Edge Case 02 — Weak Password Meter Threshold Warning Check",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -193,45 +193,21 @@
                     {
                       "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "timedOut",
-                      "duration": 43404,
-                      "error": {
-                        "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
-                        "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
-                      },
-                      "errors": [
-                        {
-                          "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 16524,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:54:29.717Z",
+                      "startTime": "2026-08-29T05:56:25.320Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-cf0d7-ter-Threshold-Warning-Check-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-cf0d7-ter-Threshold-Warning-Check-chromium/error-context.md"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-cf0d7-ter-Threshold-Warning-Check-chromium/trace.zip"
-                        }
-                      ]
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-e55b258173c31e773fa3",
+              "id": "a909e2d9f74e3bf31c89-996e6c4b6a8e1cacf595",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
               "line": 33,
               "column": 7
@@ -249,23 +225,23 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 18455,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:55:13.626Z",
+                      "startTime": "2026-08-29T05:56:42.032Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-106fb98a7af40863127f",
+              "id": "a909e2d9f74e3bf31c89-b3a5a20445c2ff38ed49",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
               "line": 40,
               "column": 7
@@ -283,23 +259,23 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 19415,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:55:13.643Z",
+                      "startTime": "2026-08-29T05:57:00.707Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-847d310a1fb3609c2a32",
+              "id": "a909e2d9f74e3bf31c89-d9b97d4460fb5905b864",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
               "line": 47,
               "column": 7
@@ -317,23 +293,23 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 15100,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:55:13.672Z",
+                      "startTime": "2026-08-29T05:57:20.406Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-e5fd0042ff3c3bd9f53a",
+              "id": "a909e2d9f74e3bf31c89-3251a2c57bf89191a036",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
               "line": 54,
               "column": 7
@@ -351,23 +327,23 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 15575,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:55:13.712Z",
+                      "startTime": "2026-08-29T05:57:35.679Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-e62e7d501f4f37fa6412",
+              "id": "a909e2d9f74e3bf31c89-da265f7da26bb9dac629",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
               "line": 62,
               "column": 7
@@ -385,23 +361,23 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 17974,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:55:13.730Z",
+                      "startTime": "2026-08-29T05:57:51.438Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-4a6a355fba6511f74796",
+              "id": "a909e2d9f74e3bf31c89-351b459546ff1a19dd94",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
               "line": 75,
               "column": 7
@@ -419,23 +395,23 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 16323,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:55:13.760Z",
+                      "startTime": "2026-08-29T05:58:09.516Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-7028597dbb5b04fa2b24",
+              "id": "a909e2d9f74e3bf31c89-1ff957a987c39f79df05",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
               "line": 88,
               "column": 7
@@ -453,23 +429,23 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 23172,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:55:13.811Z",
+                      "startTime": "2026-08-29T05:58:25.926Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-a0fd3903ce208daaacdc",
+              "id": "a909e2d9f74e3bf31c89-14aff9081a839f78e4df",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
               "line": 99,
               "column": 7
@@ -487,23 +463,23 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 24033,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:55:13.857Z",
+                      "startTime": "2026-08-29T05:58:49.179Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-40ce8cc33ea919635619",
+              "id": "a909e2d9f74e3bf31c89-a4ba553ed4a982c1c0e6",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
               "line": 110,
               "column": 7
@@ -521,23 +497,23 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 25439,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:55:13.878Z",
+                      "startTime": "2026-08-29T05:59:13.395Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-6b16f001a763069e0123",
+              "id": "a909e2d9f74e3bf31c89-8c3e1fa0277f963908e5",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
               "line": 121,
               "column": 7
@@ -555,23 +531,23 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 30600,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:55:13.922Z",
+                      "startTime": "2026-08-29T05:59:39.113Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-ece1521ac8bc711ac8bc",
+              "id": "a909e2d9f74e3bf31c89-8ba542857167b979e950",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
               "line": 128,
               "column": 7
@@ -589,29 +565,29 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 29743,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:55:13.991Z",
+                      "startTime": "2026-08-29T06:00:09.834Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-9114f9532bbf9f8f97db",
+              "id": "a909e2d9f74e3bf31c89-5ca877e065e34af64d56",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
               "line": 135,
               "column": 7
             },
             {
-              "title": "Step 14: Edge Case 14 — Team Member Invitation & Directory Listing Creation Check",
+              "title": "Step 14: Edge Case 14 — Team Member Role Dropdown Selection Verification Check",
               "ok": true,
               "tags": [],
               "tests": [
@@ -623,29 +599,311 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 18921,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:55:14.099Z",
+                      "startTime": "2026-08-29T06:00:39.827Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-227e2470e13dbd61b1de",
+              "id": "a909e2d9f74e3bf31c89-9ffed1ac413e7ff3a751",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
               "line": 150,
               "column": 7
             },
             {
-              "title": "Step 15: Edge Case 15 — Session Logout & Protected Route Revocation Check",
+              "title": "Step 15: Edge Case 15 — Team Member Invitation Form Cancelation Check",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 30791,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T06:00:59.036Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a909e2d9f74e3bf31c89-41b3131d18a9552c18fa",
+              "file": "e2e/sequential-user-flow.journey.spec.ts",
+              "line": 160,
+              "column": 7
+            },
+            {
+              "title": "Step 16: Edge Case 16 — Team Member Invitation & Directory Listing Creation Check",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 23194,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T06:01:30.119Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a909e2d9f74e3bf31c89-0737abc96eb8aae4e290",
+              "file": "e2e/sequential-user-flow.journey.spec.ts",
+              "line": 170,
+              "column": 7
+            },
+            {
+              "title": "Step 17: Edge Case 17 — Active User Status Badge Rendering Check",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 28575,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T06:01:53.510Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a909e2d9f74e3bf31c89-3ebc15869c15af3fbfeb",
+              "file": "e2e/sequential-user-flow.journey.spec.ts",
+              "line": 182,
+              "column": 7
+            },
+            {
+              "title": "Step 18: Edge Case 18 — User Details Profile Modal Open Check",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 25569,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T06:02:22.173Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a909e2d9f74e3bf31c89-a5a9357a6406adf987fd",
+              "file": "e2e/sequential-user-flow.journey.spec.ts",
+              "line": 189,
+              "column": 7
+            },
+            {
+              "title": "Step 19: Edge Case 19 — Rapid Submit Button Protection Check",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 29767,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T06:02:47.851Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a909e2d9f74e3bf31c89-e7bf2f1a99b2d28d44eb",
+              "file": "e2e/sequential-user-flow.journey.spec.ts",
+              "line": 199,
+              "column": 7
+            },
+            {
+              "title": "Step 20: Edge Case 20 — Non-Existent Route 404 Boundary Recovery Check",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 16598,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T06:03:17.764Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a909e2d9f74e3bf31c89-192ba07f292749003243",
+              "file": "e2e/sequential-user-flow.journey.spec.ts",
+              "line": 212,
+              "column": 7
+            },
+            {
+              "title": "Step 21: Edge Case 21 — Local Session Storage Clearing Check",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 680,
+                      "error": {
+                        "message": "Error: page.evaluate: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.\n    at UtilityScript.evaluate (<anonymous>:313:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)",
+                        "stack": "Error: page.evaluate: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.\n    at UtilityScript.evaluate (<anonymous>:313:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)\n    at UtilityScript.evaluate (<anonymous>:313:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)\n    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/e2e/sequential-user-flow.journey.spec.ts:219:16",
+                        "location": {
+                          "file": "<anonymous>",
+                          "column": 16,
+                          "line": 313
+                        }
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "<anonymous>",
+                            "column": 16,
+                            "line": 313
+                          },
+                          "message": "Error: page.evaluate: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.\n\u001b[2m    at UtilityScript.evaluate (<anonymous>:313:16)\u001b[22m\n\u001b[2m    at UtilityScript.<anonymous> (<anonymous>:1:44)\u001b[22m\n\u001b[2m    at UtilityScript.evaluate (<anonymous>:313:16)\u001b[22m\n\u001b[2m    at UtilityScript.<anonymous> (<anonymous>:1:44)\u001b[22m\n\u001b[2m    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/e2e/sequential-user-flow.journey.spec.ts:219:16\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T06:03:34.520Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-f16e1-sion-Storage-Clearing-Check-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-f16e1-sion-Storage-Clearing-Check-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-f16e1-sion-Storage-Clearing-Check-chromium/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-f16e1-sion-Storage-Clearing-Check-chromium/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "<anonymous>",
+                        "column": 16,
+                        "line": 313
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "a909e2d9f74e3bf31c89-1639bf7ed6d4ce88e6ef",
+              "file": "e2e/sequential-user-flow.journey.spec.ts",
+              "line": 218,
+              "column": 7
+            },
+            {
+              "title": "Step 22: Edge Case 22 — Session Logout & Protected Route Revocation Check",
               "ok": true,
               "tags": [],
               "tests": [
@@ -665,7 +923,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:55:14.156Z",
+                      "startTime": "2026-08-29T06:03:35.571Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -673,9 +931,111 @@
                   "status": "skipped"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-772d64fcf92b41a3f3bf",
+              "id": "a909e2d9f74e3bf31c89-ce53f56fb82cd5bc4fd6",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 162,
+              "line": 223,
+              "column": 7
+            },
+            {
+              "title": "Step 23: Edge Case 23 — Post-Logout Protected Settings Access Denial Check",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T06:03:35.648Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a909e2d9f74e3bf31c89-71b951c03e995ff608b8",
+              "file": "e2e/sequential-user-flow.journey.spec.ts",
+              "line": 233,
+              "column": 7
+            },
+            {
+              "title": "Step 24: Edge Case 24 — Post-Logout Cookie Revocation Verification Check",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T06:03:35.718Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a909e2d9f74e3bf31c89-53988e9267099896d3ae",
+              "file": "e2e/sequential-user-flow.journey.spec.ts",
+              "line": 239,
+              "column": 7
+            },
+            {
+              "title": "Step 25: Edge Case 25 — Post-Logout Protected Dashboard Access Denial Check",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T06:03:35.771Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a909e2d9f74e3bf31c89-c01a6d17fc17baba0838",
+              "file": "e2e/sequential-user-flow.journey.spec.ts",
+              "line": 246,
               "column": 7
             }
           ]
@@ -685,10 +1045,10 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-08-29T05:53:25.981Z",
-    "duration": 108429.413,
-    "expected": 2,
-    "skipped": 13,
+    "startTime": "2026-08-29T05:55:47.069Z",
+    "duration": 468907.933,
+    "expected": 21,
+    "skipped": 4,
     "unexpected": 1,
     "flaky": 0
   }
