@@ -1,8 +1,8 @@
 """
 Algorithm Summary: Confluent Kafka Producer Adapter.
-Provides direct Kafka message delivery via confluent_kafka Producer driver.
-Checks host resolution using central Kafka constants without hardcoded strings or static host names.
-Applies @traced_adapter to capture trace_id, span context, and delivery telemetry automatically.
+Provides direct Kafka message delivery via confluent_kafka Producer driver through the master Kafka producer
+middleware pipeline composed of tracing_producer_middleware, serialization_middleware, and partition_key_middleware.
+Automatically injects W3C traceparent headers, handles JSON serialization, and performs partition key selection without inline comments or hardcoded strings.
 """
 from __future__ import annotations
 import logging
@@ -11,7 +11,12 @@ from typing import Any
 from confluent_kafka import Producer  # type: ignore[import-untyped]
 from shared.ports.kafka_producer_port import KafkaProducerPort
 from shared.constants.kafka_constants import kafka_constants
-from shared.tracing.tracer import traced_adapter
+from infra.messaging.middleware.pipeline import ProduceCtx, compose
+from infra.messaging.middleware.producer_middleware import (
+    tracing_producer_middleware,
+    serialization_middleware,
+    partition_key_middleware,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +49,21 @@ class ConfluentKafkaProducerAdapter(KafkaProducerPort):
     def __init__(self, bootstrap_servers: str) -> None:
         self._producer = None
         is_kafka_alias_resolvable(bootstrap_servers) and self._init_producer(bootstrap_servers)
+        
+        def _raw_target(ctx: ProduceCtx) -> None:
+            self._producer and self._producer.produce(
+                topic=ctx.topic,
+                key=ctx.key.encode() if isinstance(ctx.key, str) else ctx.key,
+                value=ctx.value,
+                headers=ctx.headers,
+                on_delivery=_delivery_report,
+            )
+
+        self._pipeline = compose(
+            tracing_producer_middleware,
+            serialization_middleware,
+            partition_key_middleware,
+        )(_raw_target)
 
     def _init_producer(self, bootstrap_servers: str) -> None:
         try:
@@ -51,22 +71,20 @@ class ConfluentKafkaProducerAdapter(KafkaProducerPort):
         except Exception as exc:
             logger.warning("Confluent Kafka Producer initialization failed: %s", exc)
 
-    @traced_adapter("kafka")
     def produce(
         self,
         topic: str,
         key: str,
-        value: bytes,
+        value: bytes | dict | str,
         headers: dict[str, str] | None = None,
     ) -> None:
-        self._producer and self._producer.produce(
+        ctx = ProduceCtx(
             topic=topic,
-            key=key.encode(),
+            key=key,
             value=value,
             headers=headers or {},
-            on_delivery=_delivery_report,
         )
+        self._pipeline(ctx)
 
-    @traced_adapter("kafka")
     def flush(self, timeout: float = kafka_constants.DEFAULT_FLUSH_TIMEOUT_SEC) -> None:
         self._producer and self._producer.flush(timeout=timeout)
