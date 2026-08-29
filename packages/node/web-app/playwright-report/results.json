@@ -88,13 +88,13 @@
       "specs": [],
       "suites": [
         {
-          "title": "Sequential User Journey: Registration -> Login -> Dashboard",
+          "title": "Production Sequential User Journey: Registration -> Duplicate Check -> Login -> Workspace -> Team Invite",
           "file": "e2e/sequential-user-flow.journey.spec.ts",
           "line": 7,
           "column": 15,
           "specs": [
             {
-              "title": "Step 1: Registration Phase — Validate Edge Cases & Register New Account",
+              "title": "Step 1: Registration Phase — Validate Input Edgecases & Register Admin Account",
               "ok": true,
               "tags": [],
               "tests": [
@@ -109,12 +109,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 7294,
+                      "duration": 9035,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:30:01.982Z",
+                      "startTime": "2026-08-29T05:31:09.247Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -122,13 +122,13 @@
                   "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-c14f174911c3abb429f8",
+              "id": "a909e2d9f74e3bf31c89-8122e66f51aa085a2a71",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 19,
+              "line": 25,
               "column": 7
             },
             {
-              "title": "Step 2: Sign-In Phase — Validate Auth Guards & Authenticate Account",
+              "title": "Step 2: Duplicate Registration Protection Phase — Re-attempt Registering Same Email",
               "ok": true,
               "tags": [],
               "tests": [
@@ -143,12 +143,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 6886,
+                      "duration": 8183,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:30:10.272Z",
+                      "startTime": "2026-08-29T05:31:19.069Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -156,13 +156,47 @@
                   "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-56e8ff702ae43490dbda",
+              "id": "a909e2d9f74e3bf31c89-31ff431d2c953fae444e",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 46,
+              "line": 52,
               "column": 7
             },
             {
-              "title": "Step 3: Dashboard Phase — Workspace Filters & Telemetry Visualizations",
+              "title": "Step 3: Authentication Phase — Validate Wrong Password Block & Execute Valid Sign-In",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6604,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:31:27.311Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a909e2d9f74e3bf31c89-8e58e11fd82810c86f0d",
+              "file": "e2e/sequential-user-flow.journey.spec.ts",
+              "line": 70,
+              "column": 7
+            },
+            {
+              "title": "Step 4: Workspace Dashboard Phase — Telemetry Filters & Search Pipeline",
               "ok": false,
               "tags": [],
               "tests": [
@@ -177,62 +211,101 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "failed",
-                      "duration": 29094,
+                      "duration": 7015,
                       "error": {
-                        "message": "Error: locator.fill: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for locator('input[placeholder*=\"Search\"]')\u001b[22m\n",
-                        "stack": "Error: locator.fill: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for locator('input[placeholder*=\"Search\"]')\u001b[22m\n\n    at DashboardPage.applySearchFilter (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/dashboard/dashboard.page.ts:18:28)\n    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/e2e/sequential-user-flow.journey.spec.ts:76:25",
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoHaveLength\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected length: \u001b[32m0\u001b[39m\nReceived length: \u001b[31m1\u001b[39m\nReceived array:  \u001b[31m[\"Failed to fetch organizations: TypeError: Failed to fetch\u001b[39m\n\u001b[31m    at executeHttpRequest (webpack-internal:///(app-pages-browser)/./src/lib/api/executor.ts:62:28)\u001b[39m\n\u001b[31m    at RawAuthApiClient.execute (webpack-internal:///(app-pages-browser)/./src/lib/api/auth-client.ts:34:77)\u001b[39m\n\u001b[31m    at RawAuthApiClient.listOrganizations (webpack-internal:///(app-pages-browser)/./src/lib/api/auth-client.ts:57:21)\u001b[39m\n\u001b[31m    at wrapped.<computed> [as listOrganizations] (webpack-internal:///(app-pages-browser)/./src/core/data-driven/adapter-decorators.ts:38:41)\u001b[39m\n\u001b[31m    at async wrapped.<computed> [as listOrganizations] (webpack-internal:///(app-pages-browser)/./src/core/data-driven/adapter-decorators.ts:72:29)\u001b[39m\n\u001b[31m    at async wrapped.<computed> [as listOrganizations] (webpack-internal:///(app-pages-browser)/./src/core/data-driven/adapter-decorators.ts:102:33)\"]\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoHaveLength\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected length: \u001b[32m0\u001b[39m\nReceived length: \u001b[31m1\u001b[39m\nReceived array:  \u001b[31m[\"Failed to fetch organizations: TypeError: Failed to fetch\u001b[39m\n\u001b[31m    at executeHttpRequest (webpack-internal:///(app-pages-browser)/./src/lib/api/executor.ts:62:28)\u001b[39m\n\u001b[31m    at RawAuthApiClient.execute (webpack-internal:///(app-pages-browser)/./src/lib/api/auth-client.ts:34:77)\u001b[39m\n\u001b[31m    at RawAuthApiClient.listOrganizations (webpack-internal:///(app-pages-browser)/./src/lib/api/auth-client.ts:57:21)\u001b[39m\n\u001b[31m    at wrapped.<computed> [as listOrganizations] (webpack-internal:///(app-pages-browser)/./src/core/data-driven/adapter-decorators.ts:38:41)\u001b[39m\n\u001b[31m    at async wrapped.<computed> [as listOrganizations] (webpack-internal:///(app-pages-browser)/./src/core/data-driven/adapter-decorators.ts:72:29)\u001b[39m\n\u001b[31m    at async wrapped.<computed> [as listOrganizations] (webpack-internal:///(app-pages-browser)/./src/core/data-driven/adapter-decorators.ts:102:33)\"]\u001b[39m\n    at DashboardPage.assertNoConsoleErrors (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/base.page.ts:36:28)\n    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/e2e/sequential-user-flow.journey.spec.ts:101:25",
                         "location": {
-                          "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/dashboard/dashboard.page.ts",
+                          "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/base.page.ts",
                           "column": 28,
-                          "line": 18
+                          "line": 36
                         },
-                        "snippet": "\u001b[90m   at \u001b[39mpage-objects/dashboard/dashboard.page.ts:18\n\n  16 |\n  17 |   async applySearchFilter(query: string): Promise<void> {\n> 18 |     await this.searchInput.fill(query);\n     |                            ^\n  19 |     await this.page.waitForLoadState('networkidle');\n  20 |   }\n  21 |"
+                        "snippet": "\u001b[90m   at \u001b[39mpage-objects/base.page.ts:36\n\n  34 |         !err.includes('net::')\n  35 |     );\n> 36 |     expect(criticalErrors).toHaveLength(0);\n     |                            ^\n  37 |   }\n  38 |\n  39 |   async waitForPageTransition(expectedUrlPattern: RegExp | string): Promise<void> {"
                       },
                       "errors": [
                         {
                           "location": {
-                            "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/dashboard/dashboard.page.ts",
+                            "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/base.page.ts",
                             "column": 28,
-                            "line": 18
+                            "line": 36
                           },
-                          "message": "Error: locator.fill: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for locator('input[placeholder*=\"Search\"]')\u001b[22m\n\n\n\u001b[90m   at \u001b[39mpage-objects/dashboard/dashboard.page.ts:18\n\n  16 |\n  17 |   async applySearchFilter(query: string): Promise<void> {\n> 18 |     await this.searchInput.fill(query);\n     |                            ^\n  19 |     await this.page.waitForLoadState('networkidle');\n  20 |   }\n  21 |\n\u001b[2m    at DashboardPage.applySearchFilter (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/dashboard/dashboard.page.ts:18:28)\u001b[22m\n\u001b[2m    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/e2e/sequential-user-flow.journey.spec.ts:76:25\u001b[22m"
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoHaveLength\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected length: \u001b[32m0\u001b[39m\nReceived length: \u001b[31m1\u001b[39m\nReceived array:  \u001b[31m[\"Failed to fetch organizations: TypeError: Failed to fetch\u001b[39m\n\u001b[31m    at executeHttpRequest (webpack-internal:///(app-pages-browser)/./src/lib/api/executor.ts:62:28)\u001b[39m\n\u001b[31m    at RawAuthApiClient.execute (webpack-internal:///(app-pages-browser)/./src/lib/api/auth-client.ts:34:77)\u001b[39m\n\u001b[31m    at RawAuthApiClient.listOrganizations (webpack-internal:///(app-pages-browser)/./src/lib/api/auth-client.ts:57:21)\u001b[39m\n\u001b[31m    at wrapped.<computed> [as listOrganizations] (webpack-internal:///(app-pages-browser)/./src/core/data-driven/adapter-decorators.ts:38:41)\u001b[39m\n\u001b[31m    at async wrapped.<computed> [as listOrganizations] (webpack-internal:///(app-pages-browser)/./src/core/data-driven/adapter-decorators.ts:72:29)\u001b[39m\n\u001b[31m    at async wrapped.<computed> [as listOrganizations] (webpack-internal:///(app-pages-browser)/./src/core/data-driven/adapter-decorators.ts:102:33)\"]\u001b[39m\n\n\u001b[90m   at \u001b[39mpage-objects/base.page.ts:36\n\n  34 |         !err.includes('net::')\n  35 |     );\n> 36 |     expect(criticalErrors).toHaveLength(0);\n     |                            ^\n  37 |   }\n  38 |\n  39 |   async waitForPageTransition(expectedUrlPattern: RegExp | string): Promise<void> {\n\u001b[2m    at DashboardPage.assertNoConsoleErrors (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/base.page.ts:36:28)\u001b[22m\n\u001b[2m    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/e2e/sequential-user-flow.journey.spec.ts:101:25\u001b[22m"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:30:17.221Z",
+                      "startTime": "2026-08-29T05:31:33.994Z",
                       "annotations": [],
                       "attachments": [
                         {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-91715-try-Filters-Search-Pipeline-chromium/test-failed-1.png"
+                        },
+                        {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-adf79-rs-Telemetry-Visualizations-chromium/video.webm"
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-91715-try-Filters-Search-Pipeline-chromium/video.webm"
                         },
                         {
                           "name": "error-context",
                           "contentType": "text/markdown",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-adf79-rs-Telemetry-Visualizations-chromium/error-context.md"
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-91715-try-Filters-Search-Pipeline-chromium/error-context.md"
                         },
                         {
                           "name": "trace",
                           "contentType": "application/zip",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-adf79-rs-Telemetry-Visualizations-chromium/trace.zip"
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-91715-try-Filters-Search-Pipeline-chromium/trace.zip"
                         }
                       ],
                       "errorLocation": {
-                        "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/dashboard/dashboard.page.ts",
+                        "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/base.page.ts",
                         "column": 28,
-                        "line": 18
+                        "line": 36
                       }
                     }
                   ],
                   "status": "unexpected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-74590dba8e1c7c49429f",
+              "id": "a909e2d9f74e3bf31c89-d66381ca5fdb997d61d5",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 69,
+              "line": 93,
+              "column": 7
+            },
+            {
+              "title": "Step 5: Team Member Invitation Phase — Add Secondary User to Organization",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:31:41.723Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a909e2d9f74e3bf31c89-627e810945971d34999e",
+              "file": "e2e/sequential-user-flow.journey.spec.ts",
+              "line": 107,
               "column": 7
             }
           ]
@@ -242,10 +315,10 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-08-29T05:29:58.593Z",
-    "duration": 49029.485,
-    "expected": 2,
-    "skipped": 0,
+    "startTime": "2026-08-29T05:31:06.527Z",
+    "duration": 35253.386999999995,
+    "expected": 3,
+    "skipped": 1,
     "unexpected": 1,
     "flaky": 0
   }
