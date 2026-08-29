@@ -4,8 +4,8 @@
       "/home/btpl-lap-22/.nvm/versions/node/v20.20.0/bin/node",
       "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/node_modules/.bin/playwright",
       "test",
-      "tests/automation/e2e/new-user-onboarding.journey.spec.ts",
       "tests/automation/e2e/sequential-user-flow.journey.spec.ts",
+      "--headed",
       "--workers=1",
       "--project=chromium"
     ],
@@ -81,57 +81,6 @@
   },
   "suites": [
     {
-      "title": "e2e/new-user-onboarding.journey.spec.ts",
-      "file": "e2e/new-user-onboarding.journey.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "E2E Cross-Service Journey — New User Onboarding Flow",
-          "file": "e2e/new-user-onboarding.journey.spec.ts",
-          "line": 4,
-          "column": 6,
-          "specs": [
-            {
-              "title": "E2E-01: Cross-service user registration, auth token issuance, and org dashboard verification",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 9360,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-08-29T05:35:07.378Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "c4c49b9b3b6d3601312c-4445c16e7735f6b15ae0",
-              "file": "e2e/new-user-onboarding.journey.spec.ts",
-              "line": 10,
-              "column": 7
-            }
-          ]
-        }
-      ]
-    },
-    {
       "title": "e2e/sequential-user-flow.journey.spec.ts",
       "file": "e2e/sequential-user-flow.journey.spec.ts",
       "column": 0,
@@ -160,12 +109,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 7738,
+                      "duration": 23136,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:35:17.179Z",
+                      "startTime": "2026-08-29T05:36:54.113Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -194,12 +143,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 7245,
+                      "duration": 11226,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:35:24.996Z",
+                      "startTime": "2026-08-29T05:37:18.910Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -228,12 +177,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 5732,
+                      "duration": 7965,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:35:32.276Z",
+                      "startTime": "2026-08-29T05:37:30.231Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -262,12 +211,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 6015,
+                      "duration": 6976,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:35:38.036Z",
+                      "startTime": "2026-08-29T05:37:38.267Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -296,12 +245,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 6125,
+                      "duration": 7563,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:35:44.079Z",
+                      "startTime": "2026-08-29T05:37:45.358Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -321,9 +270,9 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-08-29T05:35:02.586Z",
-    "duration": 47757.983,
-    "expected": 6,
+    "startTime": "2026-08-29T05:36:49.361Z",
+    "duration": 64030.263000000006,
+    "expected": 5,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0
