@@ -18,7 +18,7 @@ This ADR details:
 1. **Database DDL Schemas & Foreign Key Relationships** (PostgreSQL/AlloyDB ER Diagram, ClickHouse Tables, and Redis Key Mappings).
 2. **Kafka Messaging Catalog** (Topics, Consumer Groups, Partitioning, and Message Contracts).
 3. **Step-by-Step Security Authentication Verification** (Platform session tokens vs S2S HMAC-SHA256 Bearer JWTs).
-4. **W3C OpenTelemetry Tracing & Context Propagation** (`traceparent` header injection/extraction, Instrumentation SDK reporting, and Tempo/Grafana trace rendering).
+4. **W3C OpenTelemetry Tracing & Context Propagation** (`traceparent` header injection/extraction, Instrumentation SDK reporting, Centralized Configuration Registry, and Tempo/Grafana trace rendering).
 
 ---
 
@@ -31,8 +31,10 @@ flowchart TD
         SDKDecorator["@llm_observe Decorator / Span Context"]
         TracingContext["W3C TraceContext (traceparent Header)"]
         CompositeReporter["CompositeSpanReporter (ConsoleSpanReporter + KafkaSpanReporter)"]
+        ConfigRegistry["Centralized ServiceConfig (config/infra/env_config.py)"]
 
         UserApp --> SDKDecorator
+        ConfigRegistry --> SDKDecorator
         SDKDecorator --> TracingContext
         SDKDecorator --> CompositeReporter
     end
@@ -458,11 +460,10 @@ sequenceDiagram
     deactivate WebApp
 ```
 
-### 6.3 Verification of Instrumentation SDK Spans in Grafana Tempo
-When running `run_real_span_instrumentation.py`:
-1. `CompositeSpanReporter` forwards spans to `KafkaSpanReporter` (publishing to Kafka broker `localhost:31414` topic `llm.spans.raw`).
-2. `init_tracer("llm-observability-platform")` exports W3C traces via `OTLPSpanExporter` to `http://localhost:31418`.
-3. Open Grafana Dashboard at [http://localhost:31415](http://localhost:31415) -> Navigate to **Explore** -> Select Data Source **Tempo** -> Search Service Name `llm-observability-platform` to view end-to-end trace waterfalls.
+### 6.3 Centralized Configuration & Trace Verification
+* **Config Registry**: All static endpoints, port assignments, default topics, and exporter flags are centralized in `config/infra/env_config.py` (`ServiceConfig`) and `config/infra/infra_constants.py` (`PlatformInfrastructureConstants`).
+* **Zero Hardcoded Strings**: Instrumentation SDK components (`run_real_span_instrumentation.py`, `tracer.py`) consume `service_config.kafka_bootstrap_servers` (`localhost:31414`), `service_config.otel_exporter_endpoint` (`http://localhost:31418`), and `service_config.kafka_default_topic` (`llm.spans.raw`).
+* **Grafana Tempo Trace Verification**: Open Grafana at [http://localhost:31415](http://localhost:31415) -> Navigate to **Explore** -> Select Data Source **Tempo** -> Search Service Name `llm-observability-platform` to view real-time trace waterfalls.
 
 ---
 
@@ -481,7 +482,7 @@ When running `run_real_span_instrumentation.py`:
            ├── ConsoleSpanReporter.report() -> Print to STDOUT console
            └── KafkaSpanReporter.report() [packages/python/instrumentation-sdk/src/infra/messaging/reporters/span_reporter.py]
                ├── Inject traceparent header into Kafka message headers
-               └── kafka_producer_client.send_event(topic="llm.spans.raw", key=span_id, value=span_data)
+               └── kafka_producer_client.send_event(topic=service_config.kafka_default_topic, key=span_id, value=span_data)
                    │
                    ▼ [Kafka Wire Protocol to Broker localhost:31414]
                    │
@@ -544,6 +545,7 @@ When running `run_real_span_instrumentation.py`:
 ## 8. Verification Summary Matrix
 
 ```text
+✅ Centralized Config Registry    config/infra/env_config.py (Zero Hardcoded Endpoint Strings)
 ✅ AlloyDB Omni PostgreSQL DB    Postgres Port 31412 -> Tables users, organizations, tenants, api_keys, password_reset_tokens verified with FKs
 ✅ ClickHouse Analytics DB       ClickHouse Port 31421 -> Tables latency_checkpoints, spans_raw verified
 ✅ Redis Cache & Ledger         Redis Port 31413 -> DDSketches & SLO rolling counters verified
@@ -552,6 +554,6 @@ When running `run_real_span_instrumentation.py`:
 ✅ S2S HMAC-SHA256 Signer       Node.js Crypto Generator -> Valid 3-part HS256 JWT
 ✅ FastAPI verify_jwt_token      Python JWT Verifier -> Claims Verified (200 OK)
 ✅ OpenTelemetry W3C Tracing    traceparent Header Propagation -> Tempo & Grafana Exporter Verified (:31415 / :31418)
-✅ Real Span Instrumentation    run_real_span_instrumentation.py -> CompositeSpanReporter (Kafka + OTEL + Console)
+✅ Real Span Instrumentation    run_real_span_instrumentation.py -> CompositeSpanReporter + Centralized Config
 ✅ Next.js Dashboard UI         HTTP GET http://localhost:31400/latency -> 200 OK
 ```

@@ -1,27 +1,38 @@
+import os
+import sys
+from pathlib import Path
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource
-import os
 
-def init_tracer(service_name: str, env: str = "dev"):
+sdk_root = Path(__file__).resolve().parents[3]
+if str(sdk_root) not in sys.path:
+    sys.path.insert(0, str(sdk_root))
+
+from config.infra.env_config import service_config
+
+def init_tracer(service_name: str | None = None, env: str | None = None) -> None:
+    svc_name = service_name or service_config.default_service_name
+    deployment_env = env or service_config.app_env
+    
     resource = Resource.create({
-        "service.name": service_name,
-        "deployment.env": env,
-        "service.version": "0.1.0",
+        "service.name": svc_name,
+        "deployment.env": deployment_env,
+        "service.version": service_config.service_version,
         "language.package-name": "instrumentation-sdk"
     })
     
     provider = TracerProvider(resource=resource)
     
-    if os.getenv("SKIP_CONSOLE_EXPORTER") != "true":
+    if service_config.skip_console_exporter.lower() != "true":
         processor = BatchSpanProcessor(ConsoleSpanExporter())
         provider.add_span_processor(processor)
         
-    if os.getenv("SKIP_OTLP_EXPORTER") != "true":
+    if service_config.skip_otlp_exporter.lower() != "true":
         try:
-            otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+            otlp_endpoint = service_config.otel_exporter_endpoint
             otlp_exporter = OTLPSpanExporter(endpoint=otlp_endpoint, insecure=True)
             otlp_processor = BatchSpanProcessor(otlp_exporter)
             provider.add_span_processor(otlp_processor)
@@ -29,7 +40,6 @@ def init_tracer(service_name: str, env: str = "dev"):
             pass
         
     trace.set_tracer_provider(provider)
-
 
 def get_tracer():
     return trace.get_tracer("instrumentation-sdk")

@@ -2,15 +2,13 @@ import sys
 import os
 import asyncio
 import time
+from pathlib import Path
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.insert(0, PACKAGE_DIR)
 
-os.environ["KAFKA_BOOTSTRAP_SERVERS"] = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:31414")
-os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:31418")
-os.environ["SKIP_OTLP_EXPORTER"] = os.getenv("SKIP_OTLP_EXPORTER", "false")
-
+from config.infra.env_config import service_config
 import src as instrumentation_sdk
 from src.infra.messaging.reporters.span_reporter import KafkaSpanReporter
 from src.infra.tracing.tracer import init_tracer
@@ -45,11 +43,11 @@ class CompositeSpanReporter(instrumentation_sdk.SpanReporter):
             except Exception as err:
                 print(f"[CompositeSpanReporter Async Error]: {err}")
 
-init_tracer("llm-observability-platform", os.getenv("DEPLOYMENT_ENV", "dev"))
+init_tracer(service_config.default_service_name, service_config.app_env)
 
 kafka_reporter = None
 try:
-    kafka_reporter = KafkaSpanReporter(topic="llm.spans.raw")
+    kafka_reporter = KafkaSpanReporter(topic=service_config.kafka_default_topic)
 except Exception as exc:
     print(f"[Kafka Warning] Could not initialize Kafka reporter: {exc}")
 
@@ -58,12 +56,12 @@ if kafka_reporter:
 else:
     instrumentation_sdk.set_reporter(ConsoleSpanReporter())
 
-@instrumentation_sdk.llm_observe(service="llm-observability-platform", endpoint="/v1/chat/completions")
+@instrumentation_sdk.llm_observe(service=service_config.default_service_name, endpoint="/v1/chat/completions")
 def sync_chat_completion(prompt: str) -> str:
     time.sleep(0.125)
     return f"Response to: {prompt}"
 
-@instrumentation_sdk.llm_observe(service="llm-observability-platform", endpoint="/v1/embeddings")
+@instrumentation_sdk.llm_observe(service=service_config.default_service_name, endpoint="/v1/embeddings")
 async def async_embedding_generation(text: str) -> list[float]:
     await asyncio.sleep(0.080)
     return [0.1, 0.2, 0.3, 0.4, 0.5]
@@ -78,7 +76,7 @@ def main():
     res_async = asyncio.run(async_embedding_generation("Sample text for vector embedding"))
     print(f"   Function output: vector length {len(res_async)}\n")
 
-    print("Done! Both real instrumentation SDK spans were captured, sent to Kafka (localhost:31414 topic llm.spans.raw), and exported to OpenTelemetry/Tempo/Grafana (localhost:31418).")
+    print(f"Done! Both real instrumentation SDK spans were captured, sent to Kafka ({service_config.kafka_bootstrap_servers} topic {service_config.kafka_default_topic}), and exported to OpenTelemetry/Tempo/Grafana ({service_config.otel_exporter_endpoint}).")
 
 if __name__ == "__main__":
     main()
