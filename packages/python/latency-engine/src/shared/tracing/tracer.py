@@ -1,6 +1,7 @@
 from __future__ import annotations
 import os
 import socket
+import logging
 from contextlib import contextmanager
 from typing import Generator
 
@@ -9,6 +10,9 @@ from opentelemetry.trace import Span, SpanContext, TraceFlags, Status, StatusCod
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor, ConsoleSpanExporter
+
+logging.getLogger("opentelemetry.exporter.otlp.proto.grpc.exporter").setLevel(logging.CRITICAL)
+logging.getLogger("opentelemetry.sdk.trace").setLevel(logging.CRITICAL)
 
 _PROVIDER_INITIALIZED = False
 _SERVICE_NAME = "latency-engine"
@@ -35,7 +39,7 @@ def init_tracer(service_name: str = _SERVICE_NAME) -> None:
     if os.getenv("SKIP_CONSOLE_EXPORTER", "true") == "false":
         provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
         
-    if os.getenv("SKIP_OTLP_EXPORTER", "false") != "true" and _is_otel_reachable():
+    if os.getenv("SKIP_OTLP_EXPORTER", "true") != "true" and _is_otel_reachable():
         endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:31418")
         try:
             from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
