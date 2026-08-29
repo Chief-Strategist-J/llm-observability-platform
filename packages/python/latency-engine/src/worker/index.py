@@ -28,8 +28,20 @@ def is_socket_reachable(host_port: str, timeout: float = 0.2) -> bool:
         parts = host_port.split(",")[0].strip().split(":")
         host = parts[0]
         port = int(parts[1]) if len(parts) > 1 else 9092
+        socket.gethostbyname(host)
         with socket.create_connection((host, port), timeout=timeout):
             return True
+    except Exception:
+        return False
+
+def is_kafka_alias_resolvable(bootstrap_servers: str) -> bool:
+    try:
+        parts = bootstrap_servers.split(",")[0].strip().split(":")
+        host = parts[0]
+        socket.gethostbyname(host)
+        if host in ("localhost", "127.0.0.1"):
+            socket.gethostbyname("llmobs-kafka-broker")
+        return True
     except Exception:
         return False
 
@@ -52,7 +64,7 @@ async def run() -> None:
     handler = LatencyHandler(redis_client, cfg.slo_config_path, metrics=metrics_adapter) if redis_client else None
 
     consumer = None
-    if is_socket_reachable(cfg.kafka_bootstrap_servers):
+    if is_socket_reachable(cfg.kafka_bootstrap_servers) and is_kafka_alias_resolvable(cfg.kafka_bootstrap_servers):
         try:
             consumer = Consumer({
                 "bootstrap.servers": cfg.kafka_bootstrap_servers,
@@ -69,7 +81,7 @@ async def run() -> None:
         except Exception as exc:
             logger.warning("Could not start Kafka consumer (%s)", exc)
     else:
-        logger.warning("Kafka broker unreachable at %s — skipping consumer thread to prevent log spam.", cfg.kafka_bootstrap_servers)
+        logger.info("Kafka broker unreachable or host alias unresolvable — skipping consumer thread.")
 
     baseline_activities = None
     ch_host_port = f"{cfg.clickhouse_host}:{cfg.clickhouse_port}"
@@ -83,11 +95,9 @@ async def run() -> None:
                 database=cfg.clickhouse_database,
             )
             redis_adapter = RedisAdapter(url=cfg.redis_url)
-            kafka_producer = None
-            if is_socket_reachable(cfg.kafka_bootstrap_servers):
-                kafka_producer = ConfluentKafkaProducerAdapter(
-                    bootstrap_servers=cfg.kafka_bootstrap_servers
-                )
+            kafka_producer = ConfluentKafkaProducerAdapter(
+                bootstrap_servers=cfg.kafka_bootstrap_servers
+            )
             baseline_activities = LatencyBaselineActivities(
                 clickhouse=clickhouse,
                 redis=redis_adapter,
