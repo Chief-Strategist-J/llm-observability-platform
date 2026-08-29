@@ -32,7 +32,7 @@ export const LoadedWithMetrics: Story = {
   },
 };
 
-export const LoadingState: Story = {
+export const SkeletonLoading: Story = {
   args: {
     percentiles: null,
     slo: null,
