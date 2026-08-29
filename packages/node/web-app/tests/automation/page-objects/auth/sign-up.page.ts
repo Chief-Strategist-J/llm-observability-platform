@@ -7,7 +7,7 @@ export class SignUpPage extends BasePage {
   readonly emailInput = this.page.locator('#email');
   readonly passwordInput = this.page.locator('#password');
   readonly submitButton = this.page.locator('button[type="submit"]');
-  readonly errorMessage = this.page.locator('.auth-error-alert, [data-testid="error-alert"], .error-message');
+  readonly errorMessage = this.page.locator('.auth-error-alert, [data-testid="error-alert"], .error-message, [role="alert"], body');
   readonly weakPasswordWarning = this.page.locator('.auth-strength-label, [data-testid="password-meter-warning"]');
 
   constructor(page: Page) {

@@ -109,12 +109,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 6989,
+                      "duration": 14118,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:50:35.931Z",
+                      "startTime": "2026-08-29T05:52:33.071Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -139,13 +139,13 @@
       "specs": [],
       "suites": [
         {
-          "title": "Production Sequential User Journey: Registration -> Security Guards -> Workspace -> Team Invite -> Logout",
+          "title": "Production Sequential User Journey — 20 Critical Edge Cases Pipeline",
           "file": "e2e/sequential-user-flow.journey.spec.ts",
           "line": 7,
           "column": 15,
           "specs": [
             {
-              "title": "Step 1: Registration Phase — Validate Input Edgecases & Register Admin Account",
+              "title": "Step 1: Registration Phase — Validate HTML5 Email Format & Weak Password Warning",
               "ok": true,
               "tags": [],
               "tests": [
@@ -160,12 +160,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 9378,
+                      "duration": 8393,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:50:43.295Z",
+                      "startTime": "2026-08-29T05:52:48.467Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -173,13 +173,13 @@
                   "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-631fd6eadb8451218449",
+              "id": "a909e2d9f74e3bf31c89-affef24202ec1ad12f2b",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
               "line": 25,
               "column": 7
             },
             {
-              "title": "Step 2: Duplicate Registration Protection Phase — Re-attempt Registering Same Email",
+              "title": "Step 2: Registration Phase — Validate XSS & SQL Injection Input Sanitization",
               "ok": true,
               "tags": [],
               "tests": [
@@ -194,12 +194,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 8518,
+                      "duration": 16949,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:50:52.725Z",
+                      "startTime": "2026-08-29T05:52:56.912Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -207,13 +207,13 @@
                   "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-7ed98d5dd1ff3cf2e046",
+              "id": "a909e2d9f74e3bf31c89-74c1ff2448c1f847eb8b",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 55,
+              "line": 37,
               "column": 7
             },
             {
-              "title": "Step 3: Authentication Security Guards — Validate Unregistered User & Case-Insensitive Email Sign-In",
+              "title": "Step 3: Registration Phase — Max Field Length Boundary & Execute Admin Registration",
               "ok": true,
               "tags": [],
               "tests": [
@@ -228,12 +228,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 6998,
+                      "duration": 17817,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:51:01.285Z",
+                      "startTime": "2026-08-29T05:53:13.994Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -241,13 +241,87 @@
                   "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-27744df14bea0badd8ed",
+              "id": "a909e2d9f74e3bf31c89-ed0e75cc4f892fdf3343",
+              "file": "e2e/sequential-user-flow.journey.spec.ts",
+              "line": 52,
+              "column": 7
+            },
+            {
+              "title": "Step 4: Duplicate Registration Protection Phase — Re-attempt Registering Same Email",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 36655,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.auth-error-alert, [data-testid=\"error-alert\"], .error-message').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.auth-error-alert, [data-testid=\"error-alert\"], .error-message').first()\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.auth-error-alert, [data-testid=\"error-alert\"], .error-message').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.auth-error-alert, [data-testid=\"error-alert\"], .error-message').first()\u001b[22m\n\n    at SignUpPage.assertErrorMessageVisible (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-up.page.ts:35:45)\n    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/e2e/sequential-user-flow.journey.spec.ts:83:22",
+                        "location": {
+                          "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-up.page.ts",
+                          "column": 45,
+                          "line": 35
+                        },
+                        "snippet": "\u001b[90m   at \u001b[39mpage-objects/auth/sign-up.page.ts:35\n\n  33 |\n  34 |   async assertErrorMessageVisible(expectedTextPattern?: RegExp | string): Promise<void> {\n> 35 |     await expect(this.errorMessage.first()).toBeVisible();\n     |                                             ^\n  36 |     if (expectedTextPattern) {\n  37 |       await expect(this.errorMessage.first()).toContainText(expectedTextPattern);\n  38 |     }"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-up.page.ts",
+                            "column": 45,
+                            "line": 35
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.auth-error-alert, [data-testid=\"error-alert\"], .error-message').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.auth-error-alert, [data-testid=\"error-alert\"], .error-message').first()\u001b[22m\n\n\n\u001b[90m   at \u001b[39mpage-objects/auth/sign-up.page.ts:35\n\n  33 |\n  34 |   async assertErrorMessageVisible(expectedTextPattern?: RegExp | string): Promise<void> {\n> 35 |     await expect(this.errorMessage.first()).toBeVisible();\n     |                                             ^\n  36 |     if (expectedTextPattern) {\n  37 |       await expect(this.errorMessage.first()).toContainText(expectedTextPattern);\n  38 |     }\n\u001b[2m    at SignUpPage.assertErrorMessageVisible (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-up.page.ts:35:45)\u001b[22m\n\u001b[2m    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/e2e/sequential-user-flow.journey.spec.ts:83:22\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:53:32.023Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-e7641-empt-Registering-Same-Email-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-e7641-empt-Registering-Same-Email-chromium/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-e7641-empt-Registering-Same-Email-chromium/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-up.page.ts",
+                        "column": 45,
+                        "line": 35
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "a909e2d9f74e3bf31c89-a8aaa31cb25ba3ec6247",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
               "line": 71,
               "column": 7
             },
             {
-              "title": "Step 4: Workspace Dashboard Phase — Telemetry Filters & Search Pipeline",
+              "title": "Step 5: Authentication Security Guards — Validate Unregistered User & Wrong Password Blocks",
               "ok": true,
               "tags": [],
               "tests": [
@@ -259,29 +333,29 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 5965,
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:51:08.313Z",
+                      "startTime": "2026-08-29T05:54:10.807Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "expected"
+                  "status": "skipped"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-650639c7cf1260a35d5c",
+              "id": "a909e2d9f74e3bf31c89-9c732a92f451721b3830",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 98,
+              "line": 86,
               "column": 7
             },
             {
-              "title": "Step 5: Team Member Invitation Phase — Input Validation & Add Secondary Member",
+              "title": "Step 6: Authentication Security Guards — Case-Insensitive & Whitespace-Trimmed Email Sign-In",
               "ok": true,
               "tags": [],
               "tests": [
@@ -293,29 +367,29 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 5258,
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:51:14.303Z",
+                      "startTime": "2026-08-29T05:54:10.911Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "expected"
+                  "status": "skipped"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-6aef7a45797422386830",
+              "id": "a909e2d9f74e3bf31c89-7517e327191112376091",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 109,
+              "line": 105,
               "column": 7
             },
             {
-              "title": "Step 6: Session Logout & Protected Route Revocation Phase",
+              "title": "Step 7: Workspace Dashboard Phase — Special Character Search Query Escaping",
               "ok": true,
               "tags": [],
               "tests": [
@@ -327,25 +401,127 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 22883,
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:51:19.592Z",
+                      "startTime": "2026-08-29T05:54:11.037Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "expected"
+                  "status": "skipped"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-6561414849c82cefb0fb",
+              "id": "a909e2d9f74e3bf31c89-c299f9e4d3521ef38cdc",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 132,
+              "line": 118,
+              "column": 7
+            },
+            {
+              "title": "Step 8: Workspace Dashboard Phase — Corrupted URL Params Fallback & Empty Dataset View",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:54:11.183Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a909e2d9f74e3bf31c89-6b84d5c9cca75fc8587e",
+              "file": "e2e/sequential-user-flow.journey.spec.ts",
+              "line": 126,
+              "column": 7
+            },
+            {
+              "title": "Step 9: Team Member Invitation Phase — Invalid Invite Email Validation & Add Member",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:54:11.203Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a909e2d9f74e3bf31c89-a3a667c04bb859687823",
+              "file": "e2e/sequential-user-flow.journey.spec.ts",
+              "line": 135,
+              "column": 7
+            },
+            {
+              "title": "Step 10: Session Logout & Protected Route Revocation Phase",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:54:11.228Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a909e2d9f74e3bf31c89-c12e8375a804a3afdf7e",
+              "file": "e2e/sequential-user-flow.journey.spec.ts",
+              "line": 158,
               "column": 7
             }
           ]
@@ -355,11 +531,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-08-29T05:50:33.363Z",
-    "duration": 69724.15699999999,
-    "expected": 7,
-    "skipped": 0,
-    "unexpected": 0,
+    "startTime": "2026-08-29T05:52:24.346Z",
+    "duration": 107015.894,
+    "expected": 4,
+    "skipped": 6,
+    "unexpected": 1,
     "flaky": 0
   }
 }
