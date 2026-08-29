@@ -1,61 +1,37 @@
-import { propagation, context } from "@opentelemetry/api";
+/**
+ * ============================================================================
+ * ALGORITHM: AUTHENTICATION API CLIENT & RESILIENCY WRAPPER ARCHITECTURE
+ * ============================================================================
+ * 1. DELEGATED EXECUTION ENGINE:
+ *    RawAuthApiClient encapsulates domain-specific API methods (`signUp`, `signIn`, `listUsers`, etc.)
+ *    and delegates low-level HTTP transport, tracing, and error handling to `executeHttpRequest`.
+ *
+ * 2. SEPARATE DTO CONTRACTS:
+ *    All return types (`AuthResponse`, `Organization`, `UserMember`, `ApiKeyItem`, `AuditLogItem`)
+ *    are housed separately under `./responses/` to preserve high modularity and single-responsibility.
+ *
+ * 3. RESILIENCY DECORATOR COMPOSITION:
+ *    The raw client instance is composed with enterprise decorators:
+ *    - `withCircuitBreaker`: Prevents cascading service failures under backend stress.
+ *    - `withCache`: Caches idempotently read GET requests.
+ *    - `withRetry`: Retries transient network failures automatically.
+ * ============================================================================
+ */
+
 import { withRetry, withCache, withCircuitBreaker } from "../../core/data-driven/adapter-decorators";
-import { AUTH_ENDPOINTS } from "./auth-endpoints";
+import { executeHttpRequest, type ExecuteParams } from "./executor";
+import type {
+  AuthResponse,
+  Organization,
+  UserMember,
+  ApiKeyItem,
+  AuditLogItem,
+  GenericStatusResponse,
+} from "./responses";
+
+export * from "./responses";
 
 const AUTH_SERVICE_URL = process.env.NEXT_PUBLIC_AUTH_SERVICE_URL || process.env.AUTH_SERVICE_URL || "http://localhost:3001";
-
-export interface AuthUser {
-  id: string;
-  email: string;
-  name: string;
-  org_id: string;
-  org_name?: string;
-  role?: string;
-  permissions?: string[];
-}
-
-export interface AuthResponse {
-  user?: AuthUser;
-  token?: string;
-  status?: string;
-  message?: string;
-  payload?: any;
-}
-
-export interface Organization {
-  id: string;
-  name: string;
-  slug?: string;
-  role?: string;
-  created_at?: string;
-}
-
-export interface UserMember {
-  id: string;
-  name: string;
-  email: string;
-  org_id: string;
-  role: 'owner' | 'admin' | 'member' | 'viewer';
-  blocked: boolean;
-  permissions?: string[];
-}
-
-export interface ApiKeyItem {
-  id: string;
-  name: string;
-  key_type?: string;
-  org_id: string;
-  permissions?: string[];
-  created_at?: string;
-}
-
-export interface AuditLogItem {
-  id: string;
-  event_type: string;
-  actor_id?: string;
-  details?: Record<string, unknown>;
-  created_at: string;
-}
 
 export class RawAuthApiClient {
   private baseUrl: string;
@@ -64,65 +40,8 @@ export class RawAuthApiClient {
     this.baseUrl = baseUrl;
   }
 
-  async execute<T = any>(
-    actionKey: keyof typeof AUTH_ENDPOINTS,
-    params?: { body?: any; pathParams?: Record<string, string>; token?: string; queryParams?: Record<string, string> }
-  ): Promise<T> {
-    const meta = AUTH_ENDPOINTS[actionKey];
-    if (!meta) {
-      throw new Error(`Endpoint key "${String(actionKey)}" not defined in AUTH_ENDPOINTS registry`);
-    }
-
-    let urlPath = meta.path;
-    if (params?.pathParams) {
-      Object.entries(params.pathParams).forEach(([k, v]) => {
-        urlPath = urlPath.replace(`:${k}`, encodeURIComponent(v));
-      });
-    }
-
-    if (params?.queryParams) {
-      const search = new URLSearchParams(params.queryParams).toString();
-      if (search) urlPath += `?${search}`;
-    }
-
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-
-    const carrier: Record<string, string> = {};
-    propagation.inject(context.active(), carrier);
-    if (carrier.traceparent) {
-      headers["traceparent"] = carrier.traceparent;
-    }
-
-    const reqId = `req-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-    headers["x-request-id"] = reqId;
-    headers["x-correlation-id"] = reqId;
-
-    if (params?.token) {
-      headers["Authorization"] = `Bearer ${params.token}`;
-    }
-
-    const response = await fetch(`${this.baseUrl}${urlPath}`, {
-      method: meta.method,
-      headers,
-      body: params?.body ? JSON.stringify(params.body) : undefined,
-    });
-
-    const json = await response.json();
-    if (!response.ok || json.status === "error" || json.error) {
-      const err = new Error(json.error?.details || json.message || `HTTP ${response.status}`);
-      (err as any).code = json.error?.code || (response.status === 401 ? "UNAUTHORIZED" : "HTTP_ERROR");
-      (err as any).status = response.status;
-      if (typeof window !== "undefined" && (response.status === 401 || json.message?.includes("expired"))) {
-        if (!window.location.pathname.startsWith("/auth/")) {
-          window.location.href = `/auth/sign-in?callbackUrl=${encodeURIComponent(window.location.pathname)}`;
-        }
-      }
-      throw err;
-    }
-
-    return json.data as T;
+  execute<T = any>(actionKey: Parameters<typeof executeHttpRequest>[1], params?: ExecuteParams): Promise<T> {
+    return executeHttpRequest<T>(this.baseUrl, actionKey, params);
   }
 
   signUp(payload: { email: string; password?: string; name: string; organization_name: string; role?: string }): Promise<AuthResponse> {
@@ -133,8 +52,8 @@ export class RawAuthApiClient {
     return this.execute<AuthResponse>("signIn", { body: payload });
   }
 
-  signOut(token?: string): Promise<{ success: boolean }> {
-    return this.execute<{ success: boolean }>("signOut", { token });
+  signOut(token?: string): Promise<GenericStatusResponse> {
+    return this.execute<GenericStatusResponse>("signOut", { token });
   }
 
   getSession(token: string): Promise<AuthResponse> {
@@ -157,8 +76,8 @@ export class RawAuthApiClient {
     return this.execute<Organization>("updateOrganization", { pathParams: { id: orgId }, body: payload, token });
   }
 
-  deleteOrganization(orgId: string, token?: string): Promise<{ success: boolean }> {
-    return this.execute<{ success: boolean }>("deleteOrganization", { pathParams: { id: orgId }, token });
+  deleteOrganization(orgId: string, token?: string): Promise<GenericStatusResponse> {
+    return this.execute<GenericStatusResponse>("deleteOrganization", { pathParams: { id: orgId }, token });
   }
 
   switchOrganization(orgId: string, token?: string): Promise<AuthResponse> {
@@ -189,16 +108,16 @@ export class RawAuthApiClient {
     return this.execute<UserMember>("getUser", { pathParams: { id: userId }, token });
   }
 
-  blockUser(userId: string, token?: string): Promise<{ success: boolean }> {
-    return this.execute<{ success: boolean }>("blockUser", { pathParams: { id: userId }, token });
+  blockUser(userId: string, token?: string): Promise<GenericStatusResponse> {
+    return this.execute<GenericStatusResponse>("blockUser", { pathParams: { id: userId }, token });
   }
 
-  unblockUser(userId: string, token?: string): Promise<{ success: boolean }> {
-    return this.execute<{ success: boolean }>("unblockUser", { pathParams: { id: userId }, token });
+  unblockUser(userId: string, token?: string): Promise<GenericStatusResponse> {
+    return this.execute<GenericStatusResponse>("unblockUser", { pathParams: { id: userId }, token });
   }
 
-  deleteUser(userId: string, token?: string): Promise<{ success: boolean }> {
-    return this.execute<{ success: boolean }>("deleteUser", { pathParams: { id: userId }, token });
+  deleteUser(userId: string, token?: string): Promise<GenericStatusResponse> {
+    return this.execute<GenericStatusResponse>("deleteUser", { pathParams: { id: userId }, token });
   }
 
   updateUserRole(userId: string, role: string, token?: string): Promise<UserMember> {
@@ -225,8 +144,8 @@ export class RawAuthApiClient {
     return this.execute<{ valid: boolean; key?: ApiKeyItem }>("verifyApiKey", { body: { key, required_permission } });
   }
 
-  revokeApiKey(keyId: string, token?: string): Promise<{ success: boolean }> {
-    return this.execute<{ success: boolean }>("revokeApiKey", { pathParams: { id: keyId }, token });
+  revokeApiKey(keyId: string, token?: string): Promise<GenericStatusResponse> {
+    return this.execute<GenericStatusResponse>("revokeApiKey", { pathParams: { id: keyId }, token });
   }
 
   listPermissions(): Promise<string[]> {
@@ -237,16 +156,16 @@ export class RawAuthApiClient {
     return this.execute<AuditLogItem[]>("fetchAuditLogs", { queryParams: filters, token });
   }
 
-  forgotPassword(email: string): Promise<{ success: boolean; message?: string }> {
-    return this.execute<{ success: boolean; message?: string }>("forgotPassword", { body: { email } });
+  forgotPassword(email: string): Promise<GenericStatusResponse> {
+    return this.execute<GenericStatusResponse>("forgotPassword", { body: { email } });
   }
 
-  resetPassword(token: string, new_password?: string): Promise<{ success: boolean; message?: string }> {
-    return this.execute<{ success: boolean; message?: string }>("resetPassword", { body: { token, new_password } });
+  resetPassword(token: string, new_password?: string): Promise<GenericStatusResponse> {
+    return this.execute<GenericStatusResponse>("resetPassword", { body: { token, new_password } });
   }
 
-  changePassword(current_password?: string, new_password?: string, token?: string): Promise<{ success: boolean; message?: string }> {
-    return this.execute<{ success: boolean; message?: string }>("changePassword", { body: { current_password, new_password }, token });
+  changePassword(current_password?: string, new_password?: string, token?: string): Promise<GenericStatusResponse> {
+    return this.execute<GenericStatusResponse>("changePassword", { body: { current_password, new_password }, token });
   }
 }
 
