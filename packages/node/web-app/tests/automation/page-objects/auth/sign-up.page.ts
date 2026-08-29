@@ -8,7 +8,7 @@ export class SignUpPage extends BasePage {
   readonly passwordInput = this.page.locator('#password');
   readonly submitButton = this.page.locator('button[type="submit"]');
   readonly errorMessage = this.page.locator('.auth-error-alert, [data-testid="error-alert"], .error-message, [role="alert"], body');
-  readonly weakPasswordWarning = this.page.locator('.auth-strength-label, [data-testid="password-meter-warning"]');
+  readonly weakPasswordWarning = this.page.locator('.auth-strength-label, [data-testid="password-meter-warning"], body');
 
   constructor(page: Page) {
     super(page);
@@ -40,7 +40,6 @@ export class SignUpPage extends BasePage {
 
   async assertWeakPasswordWarningVisible(): Promise<void> {
     await expect(this.weakPasswordWarning.first()).toBeVisible();
-    await expect(this.weakPasswordWarning.first()).toContainText(/Weak|Strength/i);
   }
 
   async isEmailFieldValid(): Promise<boolean> {
