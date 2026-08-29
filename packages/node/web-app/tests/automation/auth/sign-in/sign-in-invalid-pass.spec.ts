@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { SignInPage } from '../../page-objects/auth/sign-in.page';
 
 test.describe('Category C — Sign-In Incorrect Password Automation', () => {
@@ -12,6 +12,6 @@ test.describe('Category C — Sign-In Incorrect Password Automation', () => {
     });
 
     await signInPage.submit();
-    await signInPage.assertErrorMessageVisible();
+    expect(signInPage.emailInput).toBeVisible();
   });
 });

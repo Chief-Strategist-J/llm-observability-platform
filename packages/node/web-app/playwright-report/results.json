@@ -4,6 +4,7 @@
       "/home/btpl-lap-22/.nvm/versions/node/v20.20.0/bin/node",
       "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/node_modules/.bin/playwright",
       "test",
+      "--headed",
       "--project=chromium"
     ],
     "configFile": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/playwright.config.ts",
@@ -18,7 +19,7 @@
     "grepInvert": null,
     "maxFailures": 0,
     "metadata": {
-      "actualWorkers": 2
+      "actualWorkers": 1
     },
     "preserveOutput": "always",
     "projects": [
@@ -27,7 +28,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 2
+          "actualWorkers": 1
         },
         "id": "chromium",
         "name": "chromium",
@@ -68,7 +69,7 @@
     "updateSnapshots": "missing",
     "updateSourceMethod": "patch",
     "version": "1.62.1",
-    "workers": 2,
+    "workers": 1,
     "webServer": {
       "command": "./scripts/app.sh web-app",
       "url": "http://localhost:31400",
@@ -106,12 +107,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 284,
+                      "duration": 183,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:22:45.813Z",
+                      "startTime": "2026-08-29T05:24:16.963Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -154,15 +155,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 51,
+                      "duration": 142,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:22:46.932Z",
+                      "startTime": "2026-08-29T05:24:17.444Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -208,12 +209,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 420,
+                      "duration": 29,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:22:46.843Z",
+                      "startTime": "2026-08-29T05:24:18.084Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -256,15 +257,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 108,
+                      "duration": 20,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:22:47.588Z",
+                      "startTime": "2026-08-29T05:24:18.200Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -293,12 +294,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 146,
+                      "duration": 31,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:22:47.532Z",
+                      "startTime": "2026-08-29T05:24:18.372Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -341,15 +342,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 92,
+                      "duration": 29,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:22:47.832Z",
+                      "startTime": "2026-08-29T05:24:18.532Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -378,12 +379,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 28722,
+                      "duration": 23682,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:22:47.990Z",
+                      "startTime": "2026-08-29T05:24:18.707Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -426,15 +427,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 31992,
+                      "duration": 12868,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:22:48.155Z",
+                      "startTime": "2026-08-29T05:24:44.799Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -466,7 +467,7 @@
           "specs": [
             {
               "title": "should validate form and block sign-in on wrong password",
-              "ok": true,
+              "ok": false,
               "tags": [],
               "tests": [
                 {
@@ -479,18 +480,63 @@
                     {
                       "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 20813,
-                      "errors": [],
+                      "status": "failed",
+                      "duration": 26482,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.auth-error-alert, [data-testid=\"error-alert\"], .error-message').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.auth-error-alert, [data-testid=\"error-alert\"], .error-message').first()\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.auth-error-alert, [data-testid=\"error-alert\"], .error-message').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.auth-error-alert, [data-testid=\"error-alert\"], .error-message').first()\u001b[22m\n\n    at SignInPage.assertErrorMessageVisible (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-in.page.ts:30:45)\n    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/sign-in/sign-in-invalid-pass.spec.ts:15:22",
+                        "location": {
+                          "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-in.page.ts",
+                          "column": 45,
+                          "line": 30
+                        },
+                        "snippet": "\u001b[90m   at \u001b[39mpage-objects/auth/sign-in.page.ts:30\n\n  28 |\n  29 |   async assertErrorMessageVisible(expectedTextPattern?: RegExp | string): Promise<void> {\n> 30 |     await expect(this.errorMessage.first()).toBeVisible();\n     |                                             ^\n  31 |     if (expectedTextPattern) {\n  32 |       await expect(this.errorMessage.first()).toContainText(expectedTextPattern);\n  33 |     }"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-in.page.ts",
+                            "column": 45,
+                            "line": 30
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.auth-error-alert, [data-testid=\"error-alert\"], .error-message').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.auth-error-alert, [data-testid=\"error-alert\"], .error-message').first()\u001b[22m\n\n\n\u001b[90m   at \u001b[39mpage-objects/auth/sign-in.page.ts:30\n\n  28 |\n  29 |   async assertErrorMessageVisible(expectedTextPattern?: RegExp | string): Promise<void> {\n> 30 |     await expect(this.errorMessage.first()).toBeVisible();\n     |                                             ^\n  31 |     if (expectedTextPattern) {\n  32 |       await expect(this.errorMessage.first()).toContainText(expectedTextPattern);\n  33 |     }\n\u001b[2m    at SignInPage.assertErrorMessageVisible (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-in.page.ts:30:45)\u001b[22m\n\u001b[2m    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/sign-in/sign-in-invalid-pass.spec.ts:15:22\u001b[22m"
+                        }
+                      ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:23:17.434Z",
+                      "startTime": "2026-08-29T05:24:57.836Z",
                       "annotations": [],
-                      "attachments": []
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-in-sign-in-inval-cfa89-k-sign-in-on-wrong-password-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-in-sign-in-inval-cfa89-k-sign-in-on-wrong-password-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-in-sign-in-inval-cfa89-k-sign-in-on-wrong-password-chromium/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-in-sign-in-inval-cfa89-k-sign-in-on-wrong-password-chromium/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/auth/sign-in.page.ts",
+                        "column": 45,
+                        "line": 30
+                      }
                     }
                   ],
-                  "status": "expected"
+                  "status": "unexpected"
                 }
               ],
               "id": "215d32853115997730a6-aea322a4a72cbf0a961d",
@@ -529,9 +575,9 @@
                   "results": [
                     {
                       "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "failed",
-                      "duration": 29541,
+                      "duration": 6482,
                       "error": {
                         "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoHaveLength\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected length: \u001b[32m0\u001b[39m\nReceived length: \u001b[31m1\u001b[39m\nReceived array:  \u001b[31m[\"Failed to load resource: net::ERR_CONNECTION_REFUSED\"]\u001b[39m",
                         "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoHaveLength\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected length: \u001b[32m0\u001b[39m\nReceived length: \u001b[31m1\u001b[39m\nReceived array:  \u001b[31m[\"Failed to load resource: net::ERR_CONNECTION_REFUSED\"]\u001b[39m\n    at SignInPage.assertNoConsoleErrors (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/base.page.ts:33:28)\n    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/sign-in/sign-in-valid.spec.ts:15:22",
@@ -540,7 +586,7 @@
                           "column": 28,
                           "line": 33
                         },
-                        "snippet": "\u001b[90m   at \u001b[39mpage-objects/base.page.ts:33\n\n  31 |         !err.includes('status of 400')\n  32 |     );\n> 33 |     expect(criticalErrors).toHaveLength(0);\n     |                            ^\n  34 |   }\n  35 |\n  36 |   async waitForPageTransition(expectedUrlPattern: RegExp | string): Promise<void> {"
+                        "snippet": "\u001b[90m   at \u001b[39mpage-objects/base.page.ts:33\n\n  31 |         !err.includes('status of 400') &&\n  32 |         !err.includes('ERR_CONNECTION_REFUSED') &&\n> 33 |         !err.includes('Failed to load resource')\n     |                            ^\n  34 |     );\n  35 |     expect(criticalErrors).toHaveLength(0);\n  36 |   }"
                       },
                       "errors": [
                         {
@@ -549,13 +595,13 @@
                             "column": 28,
                             "line": 33
                           },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoHaveLength\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected length: \u001b[32m0\u001b[39m\nReceived length: \u001b[31m1\u001b[39m\nReceived array:  \u001b[31m[\"Failed to load resource: net::ERR_CONNECTION_REFUSED\"]\u001b[39m\n\n\u001b[90m   at \u001b[39mpage-objects/base.page.ts:33\n\n  31 |         !err.includes('status of 400')\n  32 |     );\n> 33 |     expect(criticalErrors).toHaveLength(0);\n     |                            ^\n  34 |   }\n  35 |\n  36 |   async waitForPageTransition(expectedUrlPattern: RegExp | string): Promise<void> {\n\u001b[2m    at SignInPage.assertNoConsoleErrors (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/base.page.ts:33:28)\u001b[22m\n\u001b[2m    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/sign-in/sign-in-valid.spec.ts:15:22\u001b[22m"
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoHaveLength\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected length: \u001b[32m0\u001b[39m\nReceived length: \u001b[31m1\u001b[39m\nReceived array:  \u001b[31m[\"Failed to load resource: net::ERR_CONNECTION_REFUSED\"]\u001b[39m\n\n\u001b[90m   at \u001b[39mpage-objects/base.page.ts:33\n\n  31 |         !err.includes('status of 400') &&\n  32 |         !err.includes('ERR_CONNECTION_REFUSED') &&\n> 33 |         !err.includes('Failed to load resource')\n     |                            ^\n  34 |     );\n  35 |     expect(criticalErrors).toHaveLength(0);\n  36 |   }\n\u001b[2m    at SignInPage.assertNoConsoleErrors (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/base.page.ts:33:28)\u001b[22m\n\u001b[2m    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/sign-in/sign-in-valid.spec.ts:15:22\u001b[22m"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:23:20.873Z",
+                      "startTime": "2026-08-29T05:25:26.520Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -624,15 +670,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 2,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 110,
+                      "duration": 48,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:23:38.467Z",
+                      "startTime": "2026-08-29T05:25:35.477Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -675,15 +721,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 2,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 45,
+                      "duration": 15,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:23:38.813Z",
+                      "startTime": "2026-08-29T05:25:35.642Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -709,15 +755,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 2,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 78,
+                      "duration": 8,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:23:39.036Z",
+                      "startTime": "2026-08-29T05:25:35.706Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -743,15 +789,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 2,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 37,
+                      "duration": 4,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:23:39.293Z",
+                      "startTime": "2026-08-29T05:25:35.756Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -794,15 +840,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 2,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 21323,
+                      "duration": 6836,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:23:39.514Z",
+                      "startTime": "2026-08-29T05:25:35.794Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -846,14 +892,14 @@
                   "results": [
                     {
                       "workerIndex": 2,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 22793,
+                      "duration": 5587,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:23:57.877Z",
+                      "startTime": "2026-08-29T05:25:43.133Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -896,10 +942,10 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 2,
                       "parallelIndex": 0,
                       "status": "failed",
-                      "duration": 21001,
+                      "duration": 6235,
                       "error": {
                         "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoHaveLength\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected length: \u001b[32m0\u001b[39m\nReceived length: \u001b[31m1\u001b[39m\nReceived array:  \u001b[31m[\"Failed to load resource: net::ERR_CONNECTION_REFUSED\"]\u001b[39m",
                         "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoHaveLength\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected length: \u001b[32m0\u001b[39m\nReceived length: \u001b[31m1\u001b[39m\nReceived array:  \u001b[31m[\"Failed to load resource: net::ERR_CONNECTION_REFUSED\"]\u001b[39m\n    at SignUpPage.assertNoConsoleErrors (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/base.page.ts:33:28)\n    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/sign-up/sign-up-valid.spec.ts:19:22",
@@ -908,7 +954,7 @@
                           "column": 28,
                           "line": 33
                         },
-                        "snippet": "\u001b[90m   at \u001b[39mpage-objects/base.page.ts:33\n\n  31 |         !err.includes('status of 400')\n  32 |     );\n> 33 |     expect(criticalErrors).toHaveLength(0);\n     |                            ^\n  34 |   }\n  35 |\n  36 |   async waitForPageTransition(expectedUrlPattern: RegExp | string): Promise<void> {"
+                        "snippet": "\u001b[90m   at \u001b[39mpage-objects/base.page.ts:33\n\n  31 |         !err.includes('status of 400') &&\n  32 |         !err.includes('ERR_CONNECTION_REFUSED') &&\n> 33 |         !err.includes('Failed to load resource')\n     |                            ^\n  34 |     );\n  35 |     expect(criticalErrors).toHaveLength(0);\n  36 |   }"
                       },
                       "errors": [
                         {
@@ -917,19 +963,24 @@
                             "column": 28,
                             "line": 33
                           },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoHaveLength\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected length: \u001b[32m0\u001b[39m\nReceived length: \u001b[31m1\u001b[39m\nReceived array:  \u001b[31m[\"Failed to load resource: net::ERR_CONNECTION_REFUSED\"]\u001b[39m\n\n\u001b[90m   at \u001b[39mpage-objects/base.page.ts:33\n\n  31 |         !err.includes('status of 400')\n  32 |     );\n> 33 |     expect(criticalErrors).toHaveLength(0);\n     |                            ^\n  34 |   }\n  35 |\n  36 |   async waitForPageTransition(expectedUrlPattern: RegExp | string): Promise<void> {\n\u001b[2m    at SignUpPage.assertNoConsoleErrors (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/base.page.ts:33:28)\u001b[22m\n\u001b[2m    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/sign-up/sign-up-valid.spec.ts:19:22\u001b[22m"
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoHaveLength\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected length: \u001b[32m0\u001b[39m\nReceived length: \u001b[31m1\u001b[39m\nReceived array:  \u001b[31m[\"Failed to load resource: net::ERR_CONNECTION_REFUSED\"]\u001b[39m\n\n\u001b[90m   at \u001b[39mpage-objects/base.page.ts:33\n\n  31 |         !err.includes('status of 400') &&\n  32 |         !err.includes('ERR_CONNECTION_REFUSED') &&\n> 33 |         !err.includes('Failed to load resource')\n     |                            ^\n  34 |     );\n  35 |     expect(criticalErrors).toHaveLength(0);\n  36 |   }\n\u001b[2m    at SignUpPage.assertNoConsoleErrors (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/page-objects/base.page.ts:33:28)\u001b[22m\n\u001b[2m    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/sign-up/sign-up-valid.spec.ts:19:22\u001b[22m"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:24:01.103Z",
+                      "startTime": "2026-08-29T05:25:48.837Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "screenshot",
                           "contentType": "image/png",
                           "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-valid-bfc93-organization-and-admin-user-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-valid-bfc93-organization-and-admin-user-chromium/video.webm"
                         },
                         {
                           "name": "error-context",
@@ -987,15 +1038,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 1,
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 20927,
+                      "duration": 5231,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:24:22.687Z",
+                      "startTime": "2026-08-29T05:25:56.798Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1041,12 +1092,12 @@
                       "workerIndex": 3,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 17317,
+                      "duration": 9313,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:24:26.808Z",
+                      "startTime": "2026-08-29T05:26:02.577Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1089,15 +1140,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 1,
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 12,
+                      "duration": 10,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:24:44.154Z",
+                      "startTime": "2026-08-29T05:26:12.316Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1140,15 +1191,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 1,
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 11325,
+                      "duration": 6489,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:24:44.209Z",
+                      "startTime": "2026-08-29T05:26:12.360Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1194,12 +1245,12 @@
                       "workerIndex": 3,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 13393,
+                      "duration": 5606,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:24:45.236Z",
+                      "startTime": "2026-08-29T05:26:18.939Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1219,11 +1270,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-08-29T05:22:35.342Z",
-    "duration": 143717.80299999999,
-    "expected": 20,
+    "startTime": "2026-08-29T05:24:11.200Z",
+    "duration": 134486.13700000002,
+    "expected": 19,
     "skipped": 0,
-    "unexpected": 2,
+    "unexpected": 3,
     "flaky": 0
   }
 }
