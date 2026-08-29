@@ -8,7 +8,7 @@ import {
   FIXTURE_LATENCY_P50,
   FIXTURE_LATENCY_P95,
   FIXTURE_LATENCY_P99,
-} from '../../../lib/fixtures';
+} from '../../../lib/fixtures/fixtures';
 
 const meta = {
   title: 'Data Display/Charts/PercentileBandChart',

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Search, Check } from 'lucide-react';
-import { cn } from '../../lib/cn';
+import { cn } from '../../lib/utils/cn';
 
 export interface DropdownItem {
   id: string | number;

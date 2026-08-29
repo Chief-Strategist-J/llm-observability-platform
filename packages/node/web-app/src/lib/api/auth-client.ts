@@ -1,5 +1,5 @@
 import { propagation, context } from "@opentelemetry/api";
-import { withRetry, withCache, withCircuitBreaker } from "../core/data-driven/adapter-decorators";
+import { withRetry, withCache, withCircuitBreaker } from "../../core/data-driven/adapter-decorators";
 import { AUTH_ENDPOINTS } from "./auth-endpoints";
 
 const AUTH_SERVICE_URL = process.env.NEXT_PUBLIC_AUTH_SERVICE_URL || process.env.AUTH_SERVICE_URL || "http://localhost:3001";

@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { DataForm, type SchemaConfig } from "../../../components/ui/data-driven/DataForm";
 import { DataTable, type ColumnConfig } from "../../../components/ui/data-driven/DataTable";
 import { Button } from "../../../components/primitives/Button";
-import { authApiClient } from "../../../lib/auth-client";
+import { authApiClient } from "../../../lib/api/auth-client";
 import { authActions } from "../../../features/auth/auth.slice";
 import { Key, Copy, Check, ShieldAlert, CheckCircle2, AlertCircle, Trash2, ShieldCheck, Sparkles } from "lucide-react";
 

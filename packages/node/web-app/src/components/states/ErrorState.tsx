@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
-import { cn } from '../../lib/cn';
+import { cn } from '../../lib/utils/cn';
 
 interface ErrorStateProps {
   /** Error heading */

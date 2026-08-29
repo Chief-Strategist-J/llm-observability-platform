@@ -3,7 +3,7 @@
 import React from 'react';
 import { useFormContext, type FieldPath, type FieldValues } from 'react-hook-form';
 import { Input } from '../primitives/Input';
-import { cn } from '../../lib/cn';
+import { cn } from '../../lib/utils/cn';
 
 interface TextFieldProps<T extends FieldValues> {
   readonly name: FieldPath<T>;

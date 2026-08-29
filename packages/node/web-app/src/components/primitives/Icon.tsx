@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { icons, type LucideIcon } from 'lucide-react';
-import { cn } from '../../lib/cn';
+import { cn } from '../../lib/utils/cn';
 
 /** All valid icon names from the lucide-react set. */
 export type IconName = keyof typeof icons;

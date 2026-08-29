@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { tokens } from '@observability/design-tokens';
-import { cn } from '../../../lib/cn';
+import { cn } from '../../../lib/utils/cn';
 
 export type SeverityMetricType = 'latency' | 'cost' | 'quality';
 export type SeverityLevel = 'good' | 'warn' | 'bad';

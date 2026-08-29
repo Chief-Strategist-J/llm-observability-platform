@@ -3,10 +3,10 @@ import type { ColumnDef } from '@tanstack/react-table';
 import type { Span } from '@observability/api-types';
 import { DataTable, columnFormatters } from './DataTable';
 import { SeverityBadge } from '../SeverityBadge/SeverityBadge';
-import { FIXTURE_SPANS } from '../../../lib/fixtures';
+import { FIXTURE_SPANS } from '../../../lib/fixtures/fixtures';
 import { SkeletonState } from '../../states/SkeletonState';
 import { ErrorState } from '../../states/ErrorState';
-import { cn } from '../../../lib/cn';
+import { cn } from '../../../lib/utils/cn';
 
 const spanColumns: ColumnDef<Span, unknown>[] = [
   { accessorKey: 'name', header: 'Span Name', size: 180, meta: { align: 'left' } },

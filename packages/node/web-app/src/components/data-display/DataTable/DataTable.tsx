@@ -11,8 +11,8 @@ import {
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
-import { cn } from '../../../lib/cn';
-import { formatCostUsdMicro, formatLatencyMs, formatTokens } from '../../../lib/formatters';
+import { cn } from '../../../lib/utils/cn';
+import { formatCostUsdMicro, formatLatencyMs, formatTokens } from '../../../lib/utils/formatters';
 
 export const columnFormatters = {
   cost_usd_micro: (value: number) => formatCostUsdMicro(value).compact,

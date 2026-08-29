@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useFormContext, type FieldPath, type FieldValues } from 'react-hook-form';
-import { cn } from '../../lib/cn';
+import { cn } from '../../lib/utils/cn';
 
 type UnitSuffix = '$' | 'ms' | 'tokens' | '%' | string;
 

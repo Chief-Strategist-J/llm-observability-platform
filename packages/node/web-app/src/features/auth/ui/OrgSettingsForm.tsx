@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Building2, ShieldCheck, Trash2 } from 'lucide-react';
-import { authApiClient } from '../../../lib/auth-client';
+import { authApiClient } from '../../../lib/api/auth-client';
 import { Button } from '../../../components/primitives/Button';
 
 interface OrgSettingsFormProps {

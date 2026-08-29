@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { router, publicProcedure, protectedProcedure } from "../trpc";
-import { authApiClient } from "../../../lib/auth-client";
+import { authApiClient } from "../../../lib/api/auth-client";
 
 export const authRouter = router({
   createOrganization: publicProcedure

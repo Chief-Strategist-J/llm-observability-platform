@@ -3,7 +3,7 @@
 import { useMemo, useCallback } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import type { FilterState } from '@observability/api-types';
-import { encodeFilters, decodeFilters } from './url-state';
+import { encodeFilters, decodeFilters } from '../lib/utils/url-state';
 
 export function useFilterState(): readonly [FilterState, (newFilters: FilterState) => void] {
   const searchParams = useSearchParams();

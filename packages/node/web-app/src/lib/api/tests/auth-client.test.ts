@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { RawAuthApiClient } from "./auth-client";
-import { AUTH_ENDPOINTS } from "./auth-endpoints";
+import { RawAuthApiClient } from "../auth-client";
+import { AUTH_ENDPOINTS } from "../auth-endpoints";
 
 describe("RawAuthApiClient & AUTH_ENDPOINTS Registry", () => {
   let client: RawAuthApiClient;

@@ -2,7 +2,7 @@
 
 import React, { useCallback } from 'react';
 import { useFormContext, useWatch, type FieldPath, type FieldValues } from 'react-hook-form';
-import { cn } from '../../lib/cn';
+import { cn } from '../../lib/utils/cn';
 
 interface ThresholdSliderProps<T extends FieldValues> {
   readonly name: FieldPath<T>;

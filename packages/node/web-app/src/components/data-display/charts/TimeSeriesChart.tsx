@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
-import { cn } from '../../../lib/cn';
+import { cn } from '../../../lib/utils/cn';
 
 export interface TimeSeriesChartRef {
   /** Append a data point without triggering a full remount (TEST-FE1-06). */

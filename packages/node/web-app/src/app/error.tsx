@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { ErrorState } from '../components/states/ErrorState';
-import { captureExceptionWithTrace } from '../lib/sentry';
+import { captureExceptionWithTrace } from '../lib/monitoring/sentry';
 
 export default function GlobalError({
   error,

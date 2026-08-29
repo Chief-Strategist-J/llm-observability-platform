@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { MetricCard, MetricCardLoading, MetricCardEmpty, MetricCardError } from './MetricCard';
-import { FIXTURE_SPARKLINE_LATENCY, FIXTURE_SPARKLINE_COST } from '../../../lib/fixtures';
-import { formatCostUsdMicro, formatLatencyMs } from '../../../lib/formatters';
+import { FIXTURE_SPARKLINE_LATENCY, FIXTURE_SPARKLINE_COST } from '../../../lib/fixtures/fixtures';
+import { formatCostUsdMicro, formatLatencyMs } from '../../../lib/utils/formatters';
 
 const meta = {
   title: 'Data Display/MetricCard',

@@ -8,9 +8,9 @@ import { httpBatchLink } from '@trpc/client';
 import superjson from 'superjson';
 import { ThemeProvider } from '../theme/ThemeProvider';
 import { NotificationProvider } from '../components/primitives/NotificationProvider';
-import { FeatureFlagProvider } from '../lib/feature-flags';
-import { trpc } from '../lib/trpc-client';
-import { createQueryClient } from '../lib/query-client';
+import { FeatureFlagProvider } from '../lib/feature-flags/feature-flags';
+import { trpc } from '../lib/api/trpc-client';
+import { createQueryClient } from '../lib/api/query-client';
 import { initOpenTelemetryTracer } from '../core/tracing/tracer';
 import '../features/auth';
 

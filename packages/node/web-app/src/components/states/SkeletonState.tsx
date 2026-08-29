@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { cn } from '../../lib/cn';
+import { cn } from '../../lib/utils/cn';
 
 interface SkeletonStateProps {
   /** Number of skeleton lines to render */

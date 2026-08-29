@@ -3,8 +3,8 @@
 import React, { useEffect, useRef } from 'react';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
-import { cn } from '../../../lib/cn';
-import { formatLatencyMs } from '../../../lib/formatters';
+import { cn } from '../../../lib/utils/cn';
+import { formatLatencyMs } from '../../../lib/utils/formatters';
 
 interface PercentileBandChartProps {
   readonly data: [number[], number[], number[], number[]];

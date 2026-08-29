@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import { cn } from '../../../lib/cn';
+import { cn } from '../../../lib/utils/cn';
 import { SkeletonState } from '../../states/SkeletonState';
 import { EmptyState } from '../../states/EmptyState';
 import { ErrorState } from '../../states/ErrorState';

@@ -1,6 +1,6 @@
 import { call, put, takeEvery } from "redux-saga/effects";
 import { authActions } from "./auth.slice";
-import { authApiClient } from "../../lib/auth-client";
+import { authApiClient } from "../../lib/api/auth-client";
 import { eventBus } from "../../core/event-bus/event-bus";
 import { AUTH_MESSAGES, AUTH_EVENTS, AUTH_ROLES } from "./auth.constants";
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { cn } from '../../lib/cn';
+import { cn } from '../../lib/utils/cn';
 
 interface TiltCardProps extends React.HTMLAttributes<HTMLDivElement> {
   readonly children: React.ReactNode;

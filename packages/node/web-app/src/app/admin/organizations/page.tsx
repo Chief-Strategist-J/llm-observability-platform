@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { DataForm, type SchemaConfig } from "../../../components/ui/data-driven/DataForm";
 import { DataTable, type ColumnConfig } from "../../../components/ui/data-driven/DataTable";
 import { Button } from "../../../components/primitives/Button";
-import { authApiClient } from "../../../lib/auth-client";
+import { authApiClient } from "../../../lib/api/auth-client";
 
 export default function OrganizationsAdminPage() {
   const [orgs, setOrgs] = useState<Array<{ id: string; name: string; slug: string; soft_deleted?: boolean }>>([]);

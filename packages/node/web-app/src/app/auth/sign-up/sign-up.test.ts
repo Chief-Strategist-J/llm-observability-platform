@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { RawAuthApiClient } from "../../../lib/auth-client";
+import { RawAuthApiClient } from "../../../lib/api/auth-client";
 
 describe("Register Organization & Sign Up Integration Test", () => {
   let client: RawAuthApiClient;

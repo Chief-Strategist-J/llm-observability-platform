@@ -3,7 +3,7 @@ import { TimeSeriesChart } from './TimeSeriesChart';
 import { SkeletonState } from '../../states/SkeletonState';
 import { EmptyState } from '../../states/EmptyState';
 import { ErrorState } from '../../states/ErrorState';
-import { FIXTURE_TIMESERIES_TIMESTAMPS, FIXTURE_LATENCY_P50 } from '../../../lib/fixtures';
+import { FIXTURE_TIMESERIES_TIMESTAMPS, FIXTURE_LATENCY_P50 } from '../../../lib/fixtures/fixtures';
 
 const meta = {
   title: 'Data Display/Charts/TimeSeriesChart',
