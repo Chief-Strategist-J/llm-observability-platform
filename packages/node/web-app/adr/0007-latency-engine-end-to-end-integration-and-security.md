@@ -18,7 +18,7 @@ This ADR details:
 1. **Database DDL Schemas & Foreign Key Relationships** (PostgreSQL/AlloyDB ER Diagram, ClickHouse Tables, and Redis Key Mappings).
 2. **Kafka Messaging Catalog** (Topics, Consumer Groups, Partitioning, and Message Contracts).
 3. **Step-by-Step Security Authentication Verification** (Platform session tokens vs S2S HMAC-SHA256 Bearer JWTs).
-4. **W3C OpenTelemetry Tracing & Context Propagation** (`traceparent` header injection/extraction, Instrumentation SDK reporting, Centralized Configuration Registry, and Tempo/Grafana trace rendering).
+4. **W3C OpenTelemetry Tracing & Nested Span Context Propagation** (`traceparent` header injection/extraction, Instrumentation SDK reporting, Centralized Configuration Registry, Consumer Span Hierarchy, Error Tracing, and Tempo/Grafana trace rendering).
 
 ---
 
@@ -28,7 +28,7 @@ This ADR details:
 flowchart TD
     subgraph ClientAppPlane["1. CLIENT & INSTRUMENTATION PLANE"]
         UserApp["Python / Node Client Application"]
-        SDKDecorator["@llm_observe Decorator / Span Context"]
+        SDKDecorator["@llm_observe Decorator / OpenTelemetry Tracer"]
         TracingContext["W3C TraceContext (traceparent Header)"]
         CompositeReporter["CompositeSpanReporter (ConsoleSpanReporter + KafkaSpanReporter)"]
         ConfigRegistry["Centralized ServiceConfig (config/infra/env_config.py)"]
@@ -45,14 +45,14 @@ flowchart TD
         TopicAuth["Kafka Topic: auth.events.v1 (3 Partitions)"]
         TopicDLQ["Kafka Topic: llm.spans.dlq (Dead Letter Queue)"]
 
-        CompositeReporter --> KafkaProducer
+        CompositeReporter -->|Header: traceparent| KafkaProducer
         KafkaProducer --> TopicRaw
         KafkaProducer --> TopicAuth
     end
 
     subgraph IngestionEnginePlane["3. LATENCY ENGINE INGESTION & STORAGE (Port 8003)"]
         KafkaConsumer["KafkaConsumerClient / Group: latency-engine-cg"]
-        SpanHandler["SpanConsumerHandler (Batch Schema Validator)"]
+        SpanHandler["SpanConsumerHandler (trace_span Context Wrapper)"]
         DDSketchEngine["DDSketch Logarithmic Aggregator"]
         RedisStore[("Redis Cache & DDSketch Ledger (:31413)\nsketch:total:{model}:{hour}\nslo:{model}:{endpoint}:{window}:total")]
         ClickHouseDB[("ClickHouse Columnar Store (:31421)\nTable: default.latency_checkpoints\nTable: default.spans_raw")]
@@ -63,7 +63,7 @@ flowchart TD
         SpanHandler --> DDSketchEngine
         DDSketchEngine --> RedisStore
         SpanHandler --> ClickHouseDB
-        SpanHandler -.->|Malformed Spans| TopicDLQ
+        SpanHandler -.->|Malformed Spans / Errors| TopicDLQ
     end
 
     subgraph SecurityAPIPlane["4. SECURITY GUARD & FASTAPI QUERY API"]
@@ -85,7 +85,7 @@ flowchart TD
         ClientAdapter["latencyClientService (RawLatencyClientAdapter)"]
         ResilienceChain["withTracing -> withCircuitBreaker -> withCache -> withRetry"]
         S2SSigner["Node.js Crypto HMAC-SHA256 S2S JWT Generator"]
-        GrafanaTempo["Grafana & Tempo Dashboard (:31415 / :31416 / :31423)\nView Trace Waterfalls & Spans"]
+        GrafanaTempo["Grafana & Tempo Dashboard (:31415 / :31416 / :31423)\nView Trace Waterfalls & Error Spans"]
 
         ReactUI --> ReduxSaga
         ReduxSaga --> ClientAdapter
@@ -328,6 +328,7 @@ flowchart LR
 {
   "span_id": "sp-98421a7c",
   "trace_id": "tr-4bf92f3577b34da6a3ce929d0e0e4736",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
   "model": "gpt-4o",
   "latency_ms_total": 1250.5,
   "latency_ms_ttft": 180.2,
@@ -400,7 +401,7 @@ sequenceDiagram
 
 ---
 
-## 6. What is Tracing & How Tracing Actually Works
+## 6. What is Tracing, Error Tracing & How Tracing Actually Works
 
 ### 6.1 OpenTelemetry W3C TraceContext Standard
 Distributed tracing provides end-to-end visibility into a request's journey across multiple microservices. Every transaction is assigned a single **Global Trace ID** (128-bit hex), while each individual operation within the trace creates a **Span ID** (64-bit hex).
@@ -413,57 +414,50 @@ traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
               └── Version (00)                       (16 hex chars)
 ```
 
-### 6.2 End-to-End Tracing Context Propagation Flow
+### 6.2 End-to-End Tracing Context Propagation Flow & Error Tracing
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as Dashboard User
-    participant WebApp as Next.js Web App (:31400)
-    participant OtelWeb as OTLP Web Tracing Exporter
-    participant ApiRoute as Next.js API Route (/api/v1/latency/percentiles)
-    participant ClientSvc as latencyClientService (withTracing)
-    participant FastAPI as FastAPI Latency Engine (:8003)
-    participant Tempo as OpenTelemetry Tempo & Grafana (:31416 / :31423 / :31415)
+    actor User as Dashboard User / LLM Application
+    participant App as User Application (@llm_observe)
+    participant Kafka as Apache Kafka (:31414 Topic: llm.spans.raw)
+    participant Consumer as SpanConsumerHandler (latency-engine)
+    participant Redis as Redis DDSketch Store (:31413)
+    participant ClickHouse as ClickHouse DB (:31421)
+    participant Tempo as OpenTelemetry Tempo & Grafana (:31423 / :31415)
 
-    User->>WebApp: Click /latency Page
-    activate WebApp
-    Note over WebApp: Generate Trace ID: 4bf92f3577b34da6a3ce929d0e0e4736<br/>Create Parent Span: "ui_latency_dashboard_load"
+    User->>App: Execute sync_chat_completion()
+    activate App
+    Note over App: OpenTelemetry creates parent span "llm-observability-platform:/v1/chat/completions"<br/>Trace ID: 4bf92f3577b34da6a3ce929d0e0e4736<br/>Span ID: b3320ec3a8ad0a07
 
-    WebApp->>ApiRoute: GET /api/v1/latency/percentiles<br/>[Header: traceparent: 00-4bf92f35...-span1-01]
-    activate ApiRoute
+    alt Execution Success
+        App->>Kafka: KafkaSpanReporter.report(span_data)<br/>[Headers: traceparent=00-4bf92f35...-b3320ec3...-01]
+    else Exception / Error Raised
+        Note over App: otel_span.record_exception(err)<br/>otel_span.set_status(STATUS.ERROR)
+        App->>Kafka: KafkaSpanReporter.report(span_data with status=error)
+    end
+    deactivate App
 
-    ApiRoute->>ClientSvc: latencyClientService.getPercentiles("all", 14)
-    activate ClientSvc
-    Note over ClientSvc: withTracing Decorator creates child span "get_percentiles_adapter"<br/>Injects traceparent header into fetch options
+    Kafka->>Consumer: SpanConsumerHandler.__call__(message)
+    activate Consumer
+    Note over Consumer: Extract traceparent header from Kafka message<br/>Start child span "span_consumer_handle_batch" under Trace ID 4bf92f35...
 
-    ClientSvc->>FastAPI: HTTP GET http://localhost:8003/v1/latency/percentiles<br/>[Header: traceparent: 00-4bf92f35...-span2-01]
-    activate FastAPI
+    alt Database Update Success
+        Consumer->>Redis: LatencyQueryRepository.update_sketches()
+        Consumer->>ClickHouse: LatencyClickHouseAdapter.insert_checkpoint_batch()
+    else Consumer Exception / Failure
+        Note over Consumer: span.record_exception(exc)<br/>span.set_status(Status(StatusCode.ERROR, str(exc)))<br/>Log error with trace_id correlation
+    end
+    deactivate Consumer
 
-    Note over FastAPI: api_span("get_percentiles") extracts parent context<br/>Creates child span "get_percentiles_fastapi"
-
-    FastAPI-->>ClientSvc: 200 OK { percentiles payload }
-    deactivate FastAPI
-
-    ClientSvc-->>ApiRoute: PercentilesResult Object
-    deactivate ClientSvc
-
-    ApiRoute-->>WebApp: NextResponse.json(data)
-    deactivate ApiRoute
-
-    par Async Trace Export
-        OtelWeb->>Tempo: Push Span Batch via OTLP gRPC (:31423)
-        FastAPI->>Tempo: Push Backend Spans via OTLP Exporter (:31423)
+    par Async Trace Export to Tempo
+        App->>Tempo: Export Producer Spans via OTLPSpanExporter (:31423)
+        Consumer->>Tempo: Export Consumer Spans via OTLPSpanExporter (:31423)
     end
 
-    Note over Tempo: Tempo merges spans into unified Trace Waterfall<br/>Searchable in Grafana Dashboard (:31415)
-    deactivate WebApp
+    Note over Tempo: Tempo merges producer + consumer spans into unified Trace Waterfall<br/>Errors highlighted in RED in Grafana Dashboard (:31415)
 ```
-
-### 6.3 Centralized Configuration & Trace Verification
-* **Config Registry**: All static endpoints, port assignments, default topics, and exporter flags are centralized in `config/infra/env_config.py` (`ServiceConfig`) and `config/infra/infra_constants.py` (`PlatformInfrastructureConstants`).
-* **Zero Hardcoded Strings**: Instrumentation SDK components (`run_real_span_instrumentation.py`, `tracer.py`) consume `service_config.kafka_bootstrap_servers` (`localhost:31414`), `service_config.otel_exporter_endpoint` (`localhost:31423`), and `service_config.kafka_default_topic` (`llm.spans.raw`).
-* **Grafana Tempo Trace Verification**: Open Grafana at [http://localhost:31415](http://localhost:31415) -> Navigate to **Explore** -> Select Data Source **Tempo** -> Search Service Name `llm-observability-platform` (or run TraceQL query `{ resource.service.name = "llm-observability-platform" }`) to view real-time trace waterfalls.
 
 ---
 
@@ -474,24 +468,24 @@ sequenceDiagram
 ```text
 1. User Application Code
    └── @llm_observe(model="gpt-4o") [packages/python/instrumentation-sdk/src/features/spans/decorator.py]
-       ├── 2. trace_span(name="llm_inference") [packages/python/instrumentation-sdk/src/shared/tracing/tracer.py]
-       │   └── Start OpenTelemetry span & capture start timestamp
+       ├── 2. init_tracer(service) -> get_tracer() [packages/python/instrumentation-sdk/src/infra/tracing/tracer.py]
+       │   └── Start OpenTelemetry span & capture trace_id (32 hex) and span_id (16 hex)
        ├── 3. Execute LLM completion call (chat.completions.create)
        ├── 4. Capture TTFT (time_to_first_token) and total latency_ms
        └── 5. CompositeSpanReporter.report(span_data) [packages/python/instrumentation-sdk/examples/run_real_span_instrumentation.py]
            ├── ConsoleSpanReporter.report() -> Print to STDOUT console
            └── KafkaSpanReporter.report() [packages/python/instrumentation-sdk/src/infra/messaging/reporters/span_reporter.py]
                ├── Inject traceparent header into Kafka message headers
-               └── kafka_producer_client.send_event(topic=service_config.kafka_default_topic, key=span_id, value=span_data)
+               └── kafka_producer_client.produce(topic=service_config.kafka_default_topic, key=span_id, value=span_data, headers=headers)
                    │
                    ▼ [Kafka Wire Protocol to Broker localhost:31414]
                    │
 6. Latency Engine Worker Process [packages/python/latency-engine/src/worker/index.py]
    ├── 7. KafkaConsumerClient.poll_spans() [packages/python/latency-engine/src/infra/messaging/consumer/consumer_client/kafka_consumer_client.py]
    │   └── confluent_kafka.Consumer.poll(timeout=1.0) -> Returns List[Message]
-   ├── 8. SpanConsumerHandler.handle_batch(messages) [packages/python/latency-engine/src/infra/messaging/consumer/handlers/span_consumer_handler.py]
+   ├── 8. SpanConsumerHandler.__call__(message) [packages/python/latency-engine/src/infra/messaging/consumer/handlers/span_consumer_handler.py]
    │   ├── 9. Validate span schema & parse timestamp_utc
-   │   ├── 10. Extract traceparent header via messaging_tracer.py
+   │   ├── 10. Extract traceparent header and wrap in trace_span("span_consumer_handle_batch", trace_id, span_id)
    │   ├── 11. LatencyQueryRepository.update_sketches(model, hour_of_day, latency_ms) [packages/python/latency-engine/src/features/latency_query/repository.py]
    │   │   ├── Deserialize existing DDSketch from Redis key "sketch:total:gpt-4o:14"
    │   │   ├── sketch.add(latency_ms)
@@ -546,6 +540,7 @@ sequenceDiagram
 
 ```text
 ✅ Centralized Config Registry    config/infra/env_config.py (Zero Hardcoded Endpoint Strings)
+✅ W3C Trace Context Propagation  traceparent Header Forwarding (Producer -> Kafka -> Consumer)
 ✅ Tempo Direct OTLP Receiver   Tempo Port 31423 -> Direct gRPC Trace Ingestion Verified
 ✅ AlloyDB Omni PostgreSQL DB    Postgres Port 31412 -> Tables users, organizations, tenants, api_keys, password_reset_tokens verified with FKs
 ✅ ClickHouse Analytics DB       ClickHouse Port 31421 -> Tables latency_checkpoints, spans_raw verified

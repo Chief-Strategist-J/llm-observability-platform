@@ -11,7 +11,16 @@ class KafkaSpanReporter(SpanReporter):
 
     def report(self, span_data: Dict[str, Any]) -> None:
         span_id = str(span_data.get("span_id", ""))
-        self.producer_client.send_event(self.topic, key=span_id, value=span_data)
+        traceparent = span_data.get("traceparent", "")
+        headers = {}
+        if traceparent:
+            headers["traceparent"] = traceparent
+        if span_data.get("trace_id"):
+            headers["trace_id"] = str(span_data.get("trace_id"))
+        if hasattr(self.producer_client, "produce"):
+            self.producer_client.produce(self.topic, key=span_id, value=span_data, headers=headers)
+        elif hasattr(self.producer_client, "send_event"):
+            self.producer_client.send_event(self.topic, key=span_id, value=span_data)
 
     async def report_async(self, span_data: Dict[str, Any]) -> None:
         self.report(span_data)

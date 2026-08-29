@@ -9,7 +9,7 @@ from opentelemetry import trace
 from opentelemetry.trace import Span, SpanContext, TraceFlags, Status, StatusCode
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor, ConsoleSpanExporter
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 
 logging.getLogger("opentelemetry.exporter.otlp.proto.grpc.exporter").setLevel(logging.CRITICAL)
 logging.getLogger("opentelemetry.sdk.trace").setLevel(logging.CRITICAL)
@@ -17,7 +17,7 @@ logging.getLogger("opentelemetry.sdk.trace").setLevel(logging.CRITICAL)
 _PROVIDER_INITIALIZED = False
 _SERVICE_NAME = "latency-engine"
 
-def _is_otel_reachable(host: str = "localhost", port: int = 31418) -> bool:
+def _is_otel_reachable(host: str = "localhost", port: int = 31423) -> bool:
     try:
         with socket.create_connection((host, port), timeout=0.5):
             return True
@@ -37,19 +37,16 @@ def init_tracer(service_name: str = _SERVICE_NAME) -> None:
     provider = TracerProvider(resource=res)
     
     if os.getenv("SKIP_CONSOLE_EXPORTER", "true") == "false":
-        provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
+        provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
         
     if os.getenv("SKIP_OTLP_EXPORTER", "true") != "true" and _is_otel_reachable():
-        endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:31418")
+        endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:31423")
+        grpc_target = endpoint.replace("http://", "").replace("https://", "")
         try:
             from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-            provider.add_span_processor(SimpleSpanProcessor(OTLPSpanExporter(endpoint=endpoint, insecure=True)))
+            provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=grpc_target, insecure=True)))
         except Exception:
-            try:
-                from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-                provider.add_span_processor(SimpleSpanProcessor(OTLPSpanExporter(endpoint=endpoint)))
-            except Exception:
-                pass
+            pass
 
     trace.set_tracer_provider(provider)
     _PROVIDER_INITIALIZED = True
