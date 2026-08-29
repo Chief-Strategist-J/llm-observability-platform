@@ -1,7 +1,7 @@
 from __future__ import annotations
 import logging
 from typing import Any
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 
 from features.latency_query.service import LatencyQueryService
 from shared.auth.jwt_verifier import verify_service_jwt, JWTVerificationError
@@ -17,6 +17,17 @@ from shared.tracing.tracer import api_span
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+def _extract_trace_context(request: Request | None) -> tuple[str | None, str | None]:
+    if not request:
+        return None, None
+    traceparent = request.headers.get("traceparent")
+    if traceparent:
+        parts = traceparent.split("-")
+        if len(parts) >= 3:
+            return parts[1], parts[2]
+    trace_id = request.headers.get("x-trace-id")
+    return trace_id, None
 
 def verify_jwt_token(authorization: str | None = Header(None)) -> None:
     if not authorization:
@@ -50,13 +61,17 @@ def get_query_service(request: Request) -> LatencyQueryService:
     },
 )
 def get_percentiles(
+    request: Request,
+    response: Response,
     model: str = Query(..., min_length=1),
     hour_of_day: int = Query(..., ge=0, le=23),
     quantiles: str = Query("0.50,0.95,0.99"),
-    request: Request = None,
     service: LatencyQueryService = Depends(get_query_service),
 ) -> dict[str, Any]:
-    with api_span("get_percentiles", {"model": model, "hour_of_day": hour_of_day}):
+    tid, sid = _extract_trace_context(request)
+    if tid:
+        response.headers["x-trace-id"] = tid
+    with api_span("get_percentiles", {"model": model, "hour_of_day": hour_of_day}, trace_id=tid, span_id=sid):
         try:
             q_list = [float(q.strip()) for q in quantiles.split(",")]
             for q in q_list:
@@ -86,13 +101,17 @@ def get_percentiles(
     },
 )
 def get_slo_compliance(
+    request: Request,
+    response: Response,
     model: str = Query(..., min_length=1),
     endpoint: str = Query(..., min_length=1),
     time_window: str = Query("1h"),
-    request: Request = None,
     service: LatencyQueryService = Depends(get_query_service),
 ) -> dict[str, Any]:
-    with api_span("get_slo_compliance", {"model": model, "endpoint": endpoint}):
+    tid, sid = _extract_trace_context(request)
+    if tid:
+        response.headers["x-trace-id"] = tid
+    with api_span("get_slo_compliance", {"model": model, "endpoint": endpoint}, trace_id=tid, span_id=sid):
         try:
             compliance = service.get_slo(model, endpoint)
             return {
@@ -123,12 +142,16 @@ def get_slo_compliance(
     },
 )
 def get_attribution(
+    request: Request,
+    response: Response,
     model: str = Query(..., min_length=1),
     hour: str = Query(..., min_length=10, max_length=10),
-    request: Request = None,
     service: LatencyQueryService = Depends(get_query_service),
 ) -> dict[str, Any]:
-    with api_span("get_attribution", {"model": model, "hour": hour}):
+    tid, sid = _extract_trace_context(request)
+    if tid:
+        response.headers["x-trace-id"] = tid
+    with api_span("get_attribution", {"model": model, "hour": hour}, trace_id=tid, span_id=sid):
         try:
             attr = service.get_attribution(model, hour)
             return {
@@ -157,13 +180,17 @@ def get_attribution(
     },
 )
 def get_baseline(
+    request: Request,
+    response: Response,
     model: str = Query(..., min_length=1),
     hour_of_day: int = Query(..., ge=0, le=23),
     days: int = Query(7, ge=1, le=30),
-    request: Request = None,
     service: LatencyQueryService = Depends(get_query_service),
 ) -> list[dict[str, Any]]:
-    with api_span("get_baseline", {"model": model, "hour_of_day": hour_of_day}):
+    tid, sid = _extract_trace_context(request)
+    if tid:
+        response.headers["x-trace-id"] = tid
+    with api_span("get_baseline", {"model": model, "hour_of_day": hour_of_day}, trace_id=tid, span_id=sid):
         try:
             baseline_points = service.get_baseline(model, hour_of_day, days)
             return [

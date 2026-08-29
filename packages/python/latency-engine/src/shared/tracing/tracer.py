@@ -91,9 +91,26 @@ def trace_span(
 def api_span(
     name: str,
     attributes: dict[str, str | int | float | bool] | None = None,
+    trace_id: str | None = None,
+    span_id: str | None = None,
 ) -> Generator[Span, None, None]:
     init_tracer()
     tracer = trace.get_tracer(_SERVICE_NAME)
+    parent_ctx = None
+    if trace_id and span_id:
+        try:
+            tid_val = int(trace_id, 16)
+            sid_val = int(span_id, 16)
+            sc = SpanContext(
+                trace_id=tid_val,
+                span_id=sid_val,
+                is_remote=True,
+                trace_flags=TraceFlags(0x01),
+            )
+            parent_ctx = trace.set_span_in_context(trace.NonRecordingSpan(sc))
+        except ValueError:
+            pass
+
     base_attrs: dict[str, str | int | float | bool] = {
         "service.name": _SERVICE_NAME,
         "api.version": "v1",
@@ -102,7 +119,7 @@ def api_span(
     if attributes:
         base_attrs.update(attributes)
 
-    with tracer.start_as_current_span(name, attributes=base_attrs) as span:
+    with tracer.start_as_current_span(name, context=parent_ctx, attributes=base_attrs) as span:
         try:
             yield span
         except Exception as exc:

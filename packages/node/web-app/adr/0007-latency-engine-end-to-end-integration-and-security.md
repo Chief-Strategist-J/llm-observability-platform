@@ -18,7 +18,7 @@ This ADR details:
 1. **Database DDL Schemas & Foreign Key Relationships** (PostgreSQL/AlloyDB ER Diagram, ClickHouse Tables, and Redis Key Mappings).
 2. **Kafka Messaging Catalog** (Topics, Consumer Groups, Partitioning, and Message Contracts).
 3. **Step-by-Step Security Authentication Verification** (Platform session tokens vs S2S HMAC-SHA256 Bearer JWTs).
-4. **W3C OpenTelemetry Tracing & Nested Span Context Propagation** (`traceparent` header injection/extraction, Instrumentation SDK reporting, Data-Driven Configuration Registry, Consumer Span Hierarchy, Error Tracing, and Tempo/Grafana trace rendering).
+4. **W3C OpenTelemetry Tracing & Single Trace ID Correlation** (`traceparent` header injection/extraction, Next.js Web App propagation, FastAPI extraction, Consumer Span Hierarchy, Error Tracing, and Tempo/Grafana trace rendering).
 
 ---
 
@@ -91,7 +91,7 @@ flowchart TD
         ReduxSaga --> ClientAdapter
         ClientAdapter --> ResilienceChain
         ResilienceChain --> S2SSigner
-        S2SSigner -->|Authorization: Bearer <S2S_JWT>| FastAPI
+        S2SSigner -->|Authorization: Bearer <S2S_JWT>\ntraceparent: 00-traceId-spanId-01| FastAPI
         CompositeReporter -->|OTLP gRPC Export :31423| GrafanaTempo
         ReduxSaga --> ReduxSlice
         ReduxSlice --> ReactUI
@@ -421,12 +421,20 @@ sequenceDiagram
     autonumber
     actor User as Dashboard User / LLM Application
     participant App as User Application (@llm_observe)
+    participant WebApp as Next.js Web App (latencyClientService)
     participant Kafka as Apache Kafka (:31414 Topic: llm.spans.raw)
+    participant FastAPI as FastAPI REST Handler (:8003)
     participant Consumer as SpanConsumerHandler (latency-engine)
-    participant Redis as Redis DDSketch Store (:31413)
-    participant ClickHouse as ClickHouse DB (:31421)
     participant Tempo as OpenTelemetry Tempo & Grafana (:31423 / :31415)
 
+    Note over WebApp, FastAPI: Read Path: Single Trace ID Propagation
+    WebApp->>FastAPI: HTTP GET /v1/latency/percentiles<br/>[Headers: traceparent=00-4bf92f35...-span1-01, x-trace-id=4bf92f35...]
+    activate FastAPI
+    FastAPI->>FastAPI: api_span(trace_id=4bf92f35...) creates child span
+    FastAPI-->>WebApp: 200 OK [Header: x-trace-id=4bf92f35...]
+    deactivate FastAPI
+
+    Note over App, Consumer: Write Path: Single Trace ID Propagation
     User->>App: Execute sync_chat_completion()
     activate App
     Note over App: OpenTelemetry creates parent span "llm-observability-platform:/v1/chat/completions"<br/>Child Spans: prompt_tokenization, model_inference_generation, response_formatting, kafka_produce_span
@@ -444,19 +452,21 @@ sequenceDiagram
     Note over Consumer: Extract traceparent header from Kafka message<br/>Start child span "span_consumer_handle_batch" under Trace ID 4bf92f35...
 
     alt Database Update Success
-        Consumer->>Redis: LatencyQueryRepository.update_sketches()
-        Consumer->>ClickHouse: LatencyClickHouseAdapter.insert_checkpoint_batch()
+        Consumer->>Consumer: LatencyQueryRepository.update_sketches()
+        Consumer->>Consumer: LatencyClickHouseAdapter.insert_checkpoint_batch()
     else Consumer Exception / Failure
         Note over Consumer: span.record_exception(exc)<br/>span.set_status(Status(StatusCode.ERROR, str(exc)))<br/>Log error with trace_id correlation
     end
     deactivate Consumer
 
     par Async Trace Export to Tempo
-        App->>Tempo: Export Producer Spans via OTLPSpanExporter (:31423)
+        WebApp->>Tempo: Export Next.js Web App Spans (:31423)
+        FastAPI->>Tempo: Export FastAPI Backend Spans (:31423)
+        App->>Tempo: Export SDK Producer Spans via OTLPSpanExporter (:31423)
         Consumer->>Tempo: Export Consumer Spans via OTLPSpanExporter (:31423)
     end
 
-    Note over Tempo: Tempo merges producer + consumer spans into unified Trace Waterfall<br/>Errors highlighted in RED in Grafana Dashboard (:31415)
+    Note over Tempo: Tempo merges producer, consumer, web app, and backend spans under the EXACT SAME Trace ID<br/>Errors highlighted in RED in Grafana Dashboard (:31415)
 ```
 
 ### 6.3 Centralized Configuration Registry (Zero Hardcoded Strings)
@@ -529,10 +539,10 @@ sequenceDiagram
            ├── 8. latencyClientService.getPercentiles("all", 14) [packages/node/web-app/src/features/latency/service/latency-client.service.ts]
            │   ├── 9. Decorator Chain: withTracing -> withCircuitBreaker -> withCache -> withRetry
            │   ├── 10. executeQuery<PercentilesResult>(LATENCY_QUERIES.FLOW_QUERY_PERCENTILES.endpoint, { model: "all", hour_of_day: 14 })
-           │   ├── 11. getAuthHeaders() -> Generate HMAC-SHA256 S2S Bearer JWT via crypto.createHmac("sha256", secret)
+           │   ├── 11. getAuthHeaders() -> Generate traceparent & x-trace-id + HMAC-SHA256 S2S Bearer JWT via crypto.createHmac("sha256", secret)
            │   └── 12. fetch("http://localhost:8003/v1/latency/percentiles?model=all&hour_of_day=14", headers)
            │       │
-           │       ▼ [HTTP GET Request to FastAPI Port 8003]
+           │       ▼ [HTTP GET Request to FastAPI Port 8003 with traceparent & x-trace-id]
            │       │
            ├── 13. FastAPI REST Route Handler [packages/python/latency-engine/src/api/rest/v1/handlers/latency.py]
            │   ├── 14. verify_jwt_token() dependency guard
@@ -540,16 +550,18 @@ sequenceDiagram
            │   │       ├── Validate alg == "HS256"
            │   │       ├── hmac.compare_digest(expected_sig, received_sig)
            │   │       └── Return JWTClaims(sub="nextjs-web-app", iat=..., exp=...)
-           │   ├── 15. LatencyQueryService.get_percentiles("all", 14, [0.50, 0.95, 0.99]) [packages/python/latency-engine/src/features/latency_query/service.py]
+           │   ├── 15. _extract_trace_context(request) -> Extract trace_id and span_id from traceparent
+           │   ├── 16. api_span("get_percentiles", trace_id=trace_id, span_id=span_id)
+           │   ├── 17. LatencyQueryService.get_percentiles("all", 14, [0.50, 0.95, 0.99]) [packages/python/latency-engine/src/features/latency_query/service.py]
            │   │   └── LatencyRedisAdapter.get_sketch_b64("all", 14)
            │   │       └── Catch SketchNotFoundError -> Return Zero-State Fallback { p50: 0.0, p95: 0.0, p99: 0.0, sample_count: 0 }
-           │   └── 16. Return HTTP 200 OK JSON payload
+           │   └── 18. Return HTTP 200 OK JSON payload [Header: x-trace-id]
            │       │
            │       ▼ [HTTP 200 OK Response]
            │       │
-           ├── 17. mapJson(raw, PercentilesFromApiOps) -> Transform JSON
-           ├── 18. yield put(latencyActions.latencySuccess({ percentiles, slo, attribution, baseline }))
-           └── 19. LatencyDashboardUI re-renders with fresh percentiles & zero-state indicators
+           ├── 19. mapJson(raw, PercentilesFromApiOps) -> Transform JSON
+           ├── 20. yield put(latencyActions.latencySuccess({ percentiles, slo, attribution, baseline }))
+           └── 21. LatencyDashboardUI re-renders with fresh percentiles & zero-state indicators
 ```
 
 ---
@@ -558,7 +570,8 @@ sequenceDiagram
 
 ```text
 ✅ Centralized Config Registry    config/infra/env_config.py (Zero Hardcoded Endpoint Strings or Span Names)
-✅ W3C Trace Context Propagation  traceparent Header Forwarding (Producer -> Kafka -> Consumer)
+✅ W3C Trace Context Propagation  traceparent Header Forwarding (Web App -> Next.js -> FastAPI -> Kafka -> Consumer)
+✅ Single Trace ID Preservation   x-trace-id & traceparent preserved across all HTTP & Kafka hops
 ✅ Multi-Span Tree Hierarchy     Parent Span + Child Spans (prompt_tokenization, model_inference, kafka_produce)
 ✅ Tempo Direct OTLP Receiver   Tempo Port 31423 -> Direct gRPC Trace Ingestion Verified
 ✅ AlloyDB Omni PostgreSQL DB    Postgres Port 31412 -> Tables users, organizations, tenants, api_keys, password_reset_tokens verified with FKs

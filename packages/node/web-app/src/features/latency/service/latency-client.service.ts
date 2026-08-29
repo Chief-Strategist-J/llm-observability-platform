@@ -53,9 +53,14 @@ class RawLatencyClientAdapter implements LatencyClientAdapter {
       .update(signingInput)
       .digest("base64url");
 
+    const traceId = crypto.randomBytes(16).toString("hex");
+    const spanId = crypto.randomBytes(8).toString("hex");
+
     return {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${signingInput}.${signatureB64}`,
+      "traceparent": `00-${traceId}-${spanId}-01`,
+      "x-trace-id": traceId,
     };
   }
 
