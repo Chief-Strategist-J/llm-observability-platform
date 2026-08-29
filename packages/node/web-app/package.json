@@ -39,9 +39,9 @@
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
     "@observability/api-types": "file:../api-types",
-    "@observability/shared-infra": "file:../shared-infra",
     "@observability/design-tokens": "file:../design-tokens",
     "@observability/realtime-sdk": "file:../realtime-sdk",
+    "@observability/shared-infra": "file:../shared-infra",
     "@opentelemetry/exporter-trace-otlp-http": "^0.57.0",
     "@opentelemetry/resources": "^1.30.0",
     "@opentelemetry/sdk-trace-web": "^1.30.0",
@@ -78,6 +78,7 @@
   "devDependencies": {
     "@chromatic-com/storybook": "^5.2.1",
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.62.1",
     "@storybook/addon-a11y": "^10.5.6",
     "@storybook/addon-docs": "^10.5.6",
     "@storybook/addon-mcp": "^0.7.0",
