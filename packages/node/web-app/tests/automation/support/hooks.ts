@@ -5,6 +5,7 @@ export interface CustomWorld {
   browser?: Browser;
   context?: BrowserContext;
   page?: Page;
+  testData?: Record<string, any>;
   attach: (data: string | Buffer, mediaType: string) => void;
 }
 
@@ -26,6 +27,7 @@ Before(async function (this: CustomWorld) {
     viewport: { width: 1280, height: 720 },
   });
   this.page = await this.context.newPage();
+  this.testData = {};
 });
 
 After(async function (this: CustomWorld, scenario) {
