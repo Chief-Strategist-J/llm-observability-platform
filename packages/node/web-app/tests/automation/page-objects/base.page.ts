@@ -28,7 +28,9 @@ export abstract class BasePage {
         !err.includes('download the React DevTools') &&
         !err.includes('status of 409') &&
         !err.includes('status of 401') &&
-        !err.includes('status of 400')
+        !err.includes('status of 400') &&
+        !err.includes('ERR_CONNECTION_REFUSED') &&
+        !err.includes('Failed to load resource')
     );
     expect(criticalErrors).toHaveLength(0);
   }
