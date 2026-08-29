@@ -15,10 +15,15 @@ export CLICKHOUSE_PORT="${CLICKHOUSE_PORT:-31421}"
 export CLICKHOUSE_PASSWORD="${CLICKHOUSE_PASSWORD:-llmobs_clickhouse_s3cret_2026}"
 export TEMPORAL_HOST="${TEMPORAL_HOST:-localhost:31424}"
 export OTEL_EXPORTER_OTLP_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:31418}"
-export SKIP_OTLP_EXPORTER="${SKIP_OTLP_EXPORTER:-false}"
 export SKIP_CONSOLE_EXPORTER="${SKIP_CONSOLE_EXPORTER:-true}"
 export JWT_SECRET="${JWT_SECRET:-dev-secret-key-change-in-production}"
 export PYTHONPATH="src"
+
+if ! command -v nc >/dev/null 2>&1 || ! nc -z localhost 31418 >/dev/null 2>&1; then
+    export SKIP_OTLP_EXPORTER="true"
+else
+    export SKIP_OTLP_EXPORTER="${SKIP_OTLP_EXPORTER:-false}"
+fi
 
 free_port() {
     local port="$1"
