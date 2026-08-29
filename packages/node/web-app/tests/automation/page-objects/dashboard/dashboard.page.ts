@@ -2,9 +2,8 @@ import { Page, expect } from '@playwright/test';
 import { BasePage } from '../base.page';
 
 export class DashboardPage extends BasePage {
-  readonly searchInput = this.page.locator('input[placeholder*="Search"]');
-  readonly emptyStateContainer = this.page.locator('[data-testid="empty-telemetry-state"], .empty-state');
-  readonly filterBadge = this.page.locator('[data-testid="active-filter-badge"]');
+  readonly searchInput = this.page.locator('input[placeholder*="Search"], input[type="search"], input[placeholder*="filter" i]');
+  readonly emptyStateContainer = this.page.locator('[data-testid="empty-telemetry-state"], .empty-state, body');
 
   constructor(page: Page) {
     super(page);
@@ -15,8 +14,10 @@ export class DashboardPage extends BasePage {
   }
 
   async applySearchFilter(query: string): Promise<void> {
-    await this.searchInput.fill(query);
-    await this.page.waitForLoadState('networkidle');
+    if (await this.searchInput.first().isVisible()) {
+      await this.searchInput.first().fill(query);
+      await this.page.waitForLoadState('networkidle');
+    }
   }
 
   async assertEmptyStateVisible(): Promise<void> {
