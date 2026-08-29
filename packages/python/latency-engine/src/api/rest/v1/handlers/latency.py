@@ -1,6 +1,5 @@
 from __future__ import annotations
 import logging
-import os
 from typing import Any
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 
@@ -20,8 +19,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 def verify_jwt_token(authorization: str | None = Header(None)) -> None:
-    if os.getenv("SKIP_JWT_VERIFICATION", "true").lower() == "true":
-        return
     if not authorization:
         raise HTTPException(
             status_code=401,

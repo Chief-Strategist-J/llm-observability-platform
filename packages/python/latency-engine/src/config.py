@@ -19,6 +19,7 @@ class LatencyEngineConfig:
     temporal_namespace: str
     temporal_task_queue: str
     health_port: int
+    jwt_secret: str
 
 def _int_val(raw: str, key: str) -> int:
     try:
@@ -43,4 +44,5 @@ def load_config(env: dict[str, str] | None = None) -> LatencyEngineConfig:
         temporal_namespace      = source.get("TEMPORAL_NAMESPACE", "default"),
         temporal_task_queue     = source.get("TEMPORAL_TASK_QUEUE", "latency-baseline-tasks"),
         health_port             = _int_val(source.get("HEALTH_PORT", "8003"), "HEALTH_PORT"),
+        jwt_secret              = source.get("JWT_SECRET", "dev-secret-key-change-in-production"),
     )
