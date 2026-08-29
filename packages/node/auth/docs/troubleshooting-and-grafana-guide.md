@@ -199,7 +199,7 @@ curl -s -X POST http://localhost:3001/api/v1/auth/sign-in \
 
 ### Step 2: Query Grafana Tempo Direct Trace ID
 ```bash
-curl -s -u admin:admin 'http://localhost:31415/api/datasources/proxy/uid/P214B5B846CF3925F/api/traces/cfa926f3d5688f652da89e6ef4deee18'
+curl -s -u admin:llmobs_admin_password 'http://localhost:31415/api/datasources/proxy/uid/P214B5B846CF3925F/api/traces/cfa926f3d5688f652da89e6ef4deee18'
 ```
 
 ---

@@ -21,8 +21,50 @@ export function LatencyDashboardUI({
   loading = false,
   error = null,
 }: LatencyDashboardUIProps) {
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6" role="status" aria-label="Loading latency metrics">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="p-4 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-sm flex flex-col gap-3 animate-pulse"
+            >
+              <div className="h-3 w-1/2 rounded bg-[hsl(var(--muted))]" />
+              <div className="h-8 w-3/4 rounded bg-[hsl(var(--muted))]" />
+              <div className="h-3 w-1/3 rounded bg-[hsl(var(--muted))]" />
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-5 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-sm flex flex-col gap-4 animate-pulse">
+            <div className="h-4 w-1/3 rounded bg-[hsl(var(--muted))]" />
+            <div className="grid grid-cols-2 gap-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="p-4 rounded-lg bg-[hsl(var(--muted)/0.3)] border border-[hsl(var(--border))] space-y-2">
+                  <div className="h-3 w-1/2 rounded bg-[hsl(var(--muted))]" />
+                  <div className="h-6 w-2/3 rounded bg-[hsl(var(--muted))]" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="p-5 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-sm flex flex-col gap-4 animate-pulse">
+            <div className="h-4 w-1/3 rounded bg-[hsl(var(--muted))]" />
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-8 w-full rounded bg-[hsl(var(--muted)/0.3)]" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-6 p-4">
+    <div className="flex flex-col gap-6">
       {error && (
         <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-medium">
           {error}
@@ -35,7 +77,7 @@ export function LatencyDashboardUI({
             <span>P50 Latency (Median)</span>
             <Clock className="w-4 h-4 text-blue-500" />
           </div>
-          <div className="text-2xl font-bold">{loading ? "..." : percentiles ? `${percentiles.p50} ms` : "-"}</div>
+          <div className="text-2xl font-bold">{percentiles ? `${percentiles.p50} ms` : "-"}</div>
         </div>
 
         <div className="p-4 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-sm flex flex-col gap-2">
@@ -43,7 +85,7 @@ export function LatencyDashboardUI({
             <span>P95 Latency Ribbon</span>
             <Zap className="w-4 h-4 text-amber-500" />
           </div>
-          <div className="text-2xl font-bold">{loading ? "..." : percentiles ? `${percentiles.p95} ms` : "-"}</div>
+          <div className="text-2xl font-bold">{percentiles ? `${percentiles.p95} ms` : "-"}</div>
         </div>
 
         <div className="p-4 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-sm flex flex-col gap-2">
@@ -51,7 +93,7 @@ export function LatencyDashboardUI({
             <span>P99 Tail Latency</span>
             <AlertTriangle className="w-4 h-4 text-rose-500" />
           </div>
-          <div className="text-2xl font-bold">{loading ? "..." : percentiles ? `${percentiles.p99} ms` : "-"}</div>
+          <div className="text-2xl font-bold">{percentiles ? `${percentiles.p99} ms` : "-"}</div>
           <div className="text-xs text-[hsl(var(--muted-foreground))]">
             Samples: {percentiles ? percentiles.sample_count : 0}
           </div>
@@ -62,7 +104,7 @@ export function LatencyDashboardUI({
             <span>SLO Budget Remaining</span>
             <Activity className="w-4 h-4 text-emerald-500" />
           </div>
-          <div className="text-2xl font-bold">{loading ? "..." : slo ? `${slo.budget_remaining_pct}%` : "-"}</div>
+          <div className="text-2xl font-bold">{slo ? `${slo.budget_remaining_pct}%` : "-"}</div>
           {slo && <div className="text-xs text-emerald-500">Threshold: {slo.slo_threshold_ms} ms</div>}
         </div>
       </div>

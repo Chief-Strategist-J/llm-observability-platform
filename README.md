@@ -71,7 +71,7 @@ docker compose -f packages/configs/llm-obs-infra/docker-compose.yml down
 ### 🖥️ Self-Hosted Admin Consoles & Endpoints
 
 Once launched, access your self-hosted panels:
-- 📊 **Grafana Dashboard Console**: Port `31415` (`http://localhost:31415`) — Default: `admin` / `admin`
+- 📊 **Grafana Dashboard Console**: Port `31415` (`http://localhost:31415`) — Default: `admin` / `llmobs_admin_password`
 - ⏱️ **Temporal Web Interface**: Port `31425` (`http://localhost:31425`)
 - 🌐 **Traefik Gateway Dashboard**: Port `31411` (`http://localhost:31411`)
 - 🔍 **ClickHouse HTTP API**: Port `31421` (Host) / `8123` (Internal)
