@@ -28,5 +28,5 @@
 
 | Journey | Services Involved | Tag | Status | Scenario File / Path | Last Updated |
 |---|---|---|---|---|---|
-| New User Onboarding Flow | Registration Service, Auth Service, Org Dashboard | `@e2e @onboarding-journey @critical` | Covered | `tests/automation/e2e/new-user-onboarding.journey.spec.ts` | 2026-08-29 |
+| Registration -> Login -> Dashboard Sequential Flow | Registration Service, Auth Service, Org Dashboard | `@e2e @sequential-journey @critical` | Covered | `tests/automation/e2e/sequential-user-flow.journey.spec.ts` | 2026-08-29 |
 | Admin User Suspension Flow | Admin API, User Management, Auth Guard | `@e2e @suspension-journey @critical` | Covered | `tests/automation/e2e/journeys/admin-user-suspension-flow.feature` | 2026-08-29 |
