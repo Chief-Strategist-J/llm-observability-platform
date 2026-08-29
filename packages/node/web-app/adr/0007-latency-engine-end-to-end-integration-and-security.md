@@ -18,7 +18,7 @@ This ADR details:
 1. **Database DDL Schemas & Foreign Key Relationships** (PostgreSQL/AlloyDB ER Diagram, ClickHouse Tables, and Redis Key Mappings).
 2. **Kafka Messaging Catalog** (Topics, Consumer Groups, Partitioning, and Message Contracts).
 3. **Step-by-Step Security Authentication Verification** (Platform session tokens vs S2S HMAC-SHA256 Bearer JWTs).
-4. **W3C OpenTelemetry Tracing & Context Propagation** (`traceparent` header injection/extraction and Tempo waterfall rendering).
+4. **W3C OpenTelemetry Tracing & Context Propagation** (`traceparent` header injection/extraction, Instrumentation SDK reporting, and Tempo/Grafana trace rendering).
 
 ---
 
@@ -30,9 +30,11 @@ flowchart TD
         UserApp["Python / Node Client Application"]
         SDKDecorator["@llm_observe Decorator / Span Context"]
         TracingContext["W3C TraceContext (traceparent Header)"]
+        CompositeReporter["CompositeSpanReporter (ConsoleSpanReporter + KafkaSpanReporter)"]
 
         UserApp --> SDKDecorator
         SDKDecorator --> TracingContext
+        SDKDecorator --> CompositeReporter
     end
 
     subgraph KafkaPlane["2. KAFKA MESSAGING BUS (Port 31414)"]
@@ -41,7 +43,7 @@ flowchart TD
         TopicAuth["Kafka Topic: auth.events.v1 (3 Partitions)"]
         TopicDLQ["Kafka Topic: llm.spans.dlq (Dead Letter Queue)"]
 
-        TracingContext --> KafkaProducer
+        CompositeReporter --> KafkaProducer
         KafkaProducer --> TopicRaw
         KafkaProducer --> TopicAuth
     end
@@ -75,19 +77,20 @@ flowchart TD
         QueryService --> ClickHouseDB
     end
 
-    subgraph WebAppPlane["5. NEXT.JS DASHBOARD & TRACING PLANE (:31400)"]
+    subgraph WebAppPlane["5. NEXT.JS DASHBOARD & TRACING PLANE (:31400 / :31415)"]
         ReactUI["LatencyDashboardUI.tsx (:31400)"]
         ReduxSaga["latency.saga.ts (handleFetchLatency)"]
         ClientAdapter["latencyClientService (RawLatencyClientAdapter)"]
         ResilienceChain["withTracing -> withCircuitBreaker -> withCache -> withRetry"]
         S2SSigner["Node.js Crypto HMAC-SHA256 S2S JWT Generator"]
-        TempoExporter["OTLP Web Exporter -> Tempo (:31416 / :31418)"]
+        GrafanaTempo["Grafana & Tempo Dashboard (:31415 / :31416)\nView Trace Waterfalls & Spans"]
 
         ReactUI --> ReduxSaga
         ReduxSaga --> ClientAdapter
         ClientAdapter --> ResilienceChain
         ResilienceChain --> S2SSigner
         S2SSigner -->|Authorization: Bearer <S2S_JWT>| FastAPI
+        CompositeReporter -->|OTLP gRPC Export :31418| GrafanaTempo
         ReduxSaga --> ReduxSlice
         ReduxSlice --> ReactUI
     end
@@ -455,6 +458,12 @@ sequenceDiagram
     deactivate WebApp
 ```
 
+### 6.3 Verification of Instrumentation SDK Spans in Grafana Tempo
+When running `run_real_span_instrumentation.py`:
+1. `CompositeSpanReporter` forwards spans to `KafkaSpanReporter` (publishing to Kafka broker `localhost:31414` topic `llm.spans.raw`).
+2. `init_tracer("llm-observability-platform")` exports W3C traces via `OTLPSpanExporter` to `http://localhost:31418`.
+3. Open Grafana Dashboard at [http://localhost:31415](http://localhost:31415) -> Navigate to **Explore** -> Select Data Source **Tempo** -> Search Service Name `llm-observability-platform` to view end-to-end trace waterfalls.
+
 ---
 
 ## 7. End-to-End Line-by-Line Call Stack Topology
@@ -468,12 +477,14 @@ sequenceDiagram
        │   └── Start OpenTelemetry span & capture start timestamp
        ├── 3. Execute LLM completion call (chat.completions.create)
        ├── 4. Capture TTFT (time_to_first_token) and total latency_ms
-       └── 5. ConfluentProducerAdapter.produce_span(raw_payload) [packages/python/latency-engine/src/infra/adapters/kafka/confluent_producer_adapter.py]
-           ├── Inject traceparent header into Kafka message headers
-           └── confluent_kafka.Producer.produce(topic="llm.spans.raw", key="gpt-4o", value=json_bytes)
-               │
-               ▼ [Kafka Wire Protocol to Broker localhost:31414]
-               │
+       └── 5. CompositeSpanReporter.report(span_data) [packages/python/instrumentation-sdk/examples/run_real_span_instrumentation.py]
+           ├── ConsoleSpanReporter.report() -> Print to STDOUT console
+           └── KafkaSpanReporter.report() [packages/python/instrumentation-sdk/src/infra/messaging/reporters/span_reporter.py]
+               ├── Inject traceparent header into Kafka message headers
+               └── kafka_producer_client.send_event(topic="llm.spans.raw", key=span_id, value=span_data)
+                   │
+                   ▼ [Kafka Wire Protocol to Broker localhost:31414]
+                   │
 6. Latency Engine Worker Process [packages/python/latency-engine/src/worker/index.py]
    ├── 7. KafkaConsumerClient.poll_spans() [packages/python/latency-engine/src/infra/messaging/consumer/consumer_client/kafka_consumer_client.py]
    │   └── confluent_kafka.Consumer.poll(timeout=1.0) -> Returns List[Message]
@@ -540,6 +551,7 @@ sequenceDiagram
 ✅ Auth Service Sign-in         HTTP POST http://localhost:3001/api/v1/auth/sign-in -> 200 OK
 ✅ S2S HMAC-SHA256 Signer       Node.js Crypto Generator -> Valid 3-part HS256 JWT
 ✅ FastAPI verify_jwt_token      Python JWT Verifier -> Claims Verified (200 OK)
-✅ OpenTelemetry W3C Tracing    traceparent Header Propagation -> Tempo Exporter Verified
+✅ OpenTelemetry W3C Tracing    traceparent Header Propagation -> Tempo & Grafana Exporter Verified (:31415 / :31418)
+✅ Real Span Instrumentation    run_real_span_instrumentation.py -> CompositeSpanReporter (Kafka + OTEL + Console)
 ✅ Next.js Dashboard UI         HTTP GET http://localhost:31400/latency -> 200 OK
 ```
