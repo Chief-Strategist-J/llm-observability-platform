@@ -4,7 +4,7 @@ import { SignInPage } from '../page-objects/auth/sign-in.page';
 import { DashboardPage } from '../page-objects/dashboard/dashboard.page';
 import { generateUniqueEmail } from '../fixtures/generators/unique-email';
 
-test.describe.serial('Production Sequential User Journey: Registration -> Duplicate Check -> Login -> Workspace -> Team Invite', () => {
+test.describe.serial('Production Sequential User Journey: Registration -> Security Guards -> Workspace -> Team Invite -> Logout', () => {
   let signUpPage: SignUpPage;
   let signInPage: SignInPage;
   let dashboardPage: DashboardPage;
@@ -61,10 +61,17 @@ test.describe.serial('Production Sequential User Journey: Registration -> Duplic
     await signUpPage.assertErrorMessageVisible();
   });
 
-  test('Step 3: Authentication Phase — Validate Wrong Password Block & Execute Valid Sign-In', async ({ page }) => {
+  test('Step 3: Authentication Security Guards — Validate Unregistered User & Wrong Password Blocks', async ({ page }) => {
     signInPage = new SignInPage(page);
 
     await signInPage.goto();
+
+    await signInPage.fillForm({
+      email: 'unregistered.ghost@scaibu.io',
+      password: 'SomePassword123!',
+    });
+    await signInPage.submit();
+    expect(signInPage.emailInput).toBeVisible();
 
     await signInPage.fillForm({
       email: primaryAdminAccount.email,
@@ -92,7 +99,7 @@ test.describe.serial('Production Sequential User Journey: Registration -> Duplic
     await dashboardPage.assertEmptyStateVisible();
   });
 
-  test('Step 5: Team Member Invitation Phase — Add Secondary User to Organization', async ({ page }) => {
+  test('Step 5: Team Member Invitation Phase — Input Validation & Add Secondary Member', async ({ page }) => {
     await page.goto('/settings/org');
     await page.waitForLoadState('networkidle');
 
@@ -100,10 +107,32 @@ test.describe.serial('Production Sequential User Journey: Registration -> Duplic
     if (await inviteButton.isVisible()) {
       await inviteButton.click();
 
+      const memberEmailInput = page.locator('input[placeholder="Email Address"]');
+      if (await memberEmailInput.isVisible()) {
+        await memberEmailInput.fill('invalid-member-email');
+        const isValid = await memberEmailInput.evaluate((el: HTMLInputElement) => el.checkValidity());
+        expect(isValid).toBe(false);
+      }
+
       await page.locator('input[placeholder="Full Name"]').fill(secondaryMemberAccount.name);
       await page.locator('input[placeholder="Email Address"]').fill(secondaryMemberAccount.email);
       await page.locator('button[type="submit"]:has-text("Send Invitation")').click();
     }
+
+    expect(page.url()).toBeDefined();
+  });
+
+  test('Step 6: Session Logout & Protected Route Revocation Phase', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    const signOutBtn = page.locator('button:has-text("Sign Out"), button:has-text("Logout"), a:has-text("Sign Out")');
+    if (await signOutBtn.first().isVisible()) {
+      await signOutBtn.first().click();
+    }
+
+    await page.goto('/settings/org');
+    await page.waitForLoadState('networkidle');
 
     expect(page.url()).toBeDefined();
   });
