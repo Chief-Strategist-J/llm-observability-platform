@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { mapJson } from "@/core/data-driven/json-map";
 import {
   withRetry,
@@ -32,11 +33,21 @@ class RawLatencyClientAdapter implements LatencyClientAdapter {
   }
 
   private getAuthHeaders(): Record<string, string> {
+    const secret = process.env.JWT_SECRET || "dev-secret-key-change-in-production";
+    const header = { alg: "HS256", typ: "JWT" };
     const now = Math.floor(Date.now() / 1000);
     const payload = { sub: "nextjs-web-app", iat: now, exp: now + 3600 };
-    const encodedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
-    const signature = Buffer.from(`sig_nextjs_${now}`).toString("base64url");
-    const jwtToken = `${encodedPayload}.${signature}`;
+
+    const headerB64 = Buffer.from(JSON.stringify(header)).toString("base64url");
+    const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
+    const signingInput = `${headerB64}.${payloadB64}`;
+
+    const signatureB64 = crypto
+      .createHmac("sha256", secret)
+      .update(signingInput)
+      .digest("base64url");
+
+    const jwtToken = `${signingInput}.${signatureB64}`;
 
     return {
       "Content-Type": "application/json",
