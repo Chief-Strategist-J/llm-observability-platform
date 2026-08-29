@@ -4,8 +4,8 @@
       "/home/btpl-lap-22/.nvm/versions/node/v20.20.0/bin/node",
       "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/node_modules/.bin/playwright",
       "test",
-      "tests/automation/e2e/new-user-onboarding.journey.spec.ts",
       "tests/automation/e2e/sequential-user-flow.journey.spec.ts",
+      "--headed",
       "--workers=1",
       "--project=chromium"
     ],
@@ -81,57 +81,6 @@
   },
   "suites": [
     {
-      "title": "e2e/new-user-onboarding.journey.spec.ts",
-      "file": "e2e/new-user-onboarding.journey.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "E2E Cross-Service Journey — New User Onboarding Flow",
-          "file": "e2e/new-user-onboarding.journey.spec.ts",
-          "line": 4,
-          "column": 6,
-          "specs": [
-            {
-              "title": "E2E-01: Cross-service user registration, auth token issuance, and org dashboard verification",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 15640,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-08-29T05:55:56.411Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "c4c49b9b3b6d3601312c-4445c16e7735f6b15ae0",
-              "file": "e2e/new-user-onboarding.journey.spec.ts",
-              "line": 9,
-              "column": 7
-            }
-          ]
-        }
-      ]
-    },
-    {
       "title": "e2e/sequential-user-flow.journey.spec.ts",
       "file": "e2e/sequential-user-flow.journey.spec.ts",
       "column": 0,
@@ -160,12 +109,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 12253,
+                      "duration": 8531,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:56:12.949Z",
+                      "startTime": "2026-08-29T06:06:49.758Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -194,12 +143,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 16524,
+                      "duration": 7379,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:56:25.320Z",
+                      "startTime": "2026-08-29T06:06:59.044Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -228,12 +177,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 18455,
+                      "duration": 5255,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:56:42.032Z",
+                      "startTime": "2026-08-29T06:07:06.552Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -262,12 +211,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 19415,
+                      "duration": 5408,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:57:00.707Z",
+                      "startTime": "2026-08-29T06:07:11.918Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -296,12 +245,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 15100,
+                      "duration": 5172,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:57:20.406Z",
+                      "startTime": "2026-08-29T06:07:17.422Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -330,12 +279,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 15575,
+                      "duration": 5630,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:57:35.679Z",
+                      "startTime": "2026-08-29T06:07:22.648Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -364,12 +313,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 17974,
+                      "duration": 5907,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:57:51.438Z",
+                      "startTime": "2026-08-29T06:07:28.356Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -398,12 +347,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 16323,
+                      "duration": 8786,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:58:09.516Z",
+                      "startTime": "2026-08-29T06:07:34.341Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -432,12 +381,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 23172,
+                      "duration": 5625,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:58:25.926Z",
+                      "startTime": "2026-08-29T06:07:43.190Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -466,12 +415,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 24033,
+                      "duration": 6021,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:58:49.179Z",
+                      "startTime": "2026-08-29T06:07:48.879Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -500,12 +449,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 25439,
+                      "duration": 6689,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:59:13.395Z",
+                      "startTime": "2026-08-29T06:07:54.972Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -534,12 +483,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 30600,
+                      "duration": 6663,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:59:39.113Z",
+                      "startTime": "2026-08-29T06:08:01.766Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -568,12 +517,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 29743,
+                      "duration": 6100,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T06:00:09.834Z",
+                      "startTime": "2026-08-29T06:08:08.529Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -602,12 +551,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 18921,
+                      "duration": 6227,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T06:00:39.827Z",
+                      "startTime": "2026-08-29T06:08:14.732Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -617,7 +566,7 @@
               ],
               "id": "a909e2d9f74e3bf31c89-9ffed1ac413e7ff3a751",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 150,
+              "line": 149,
               "column": 7
             },
             {
@@ -636,12 +585,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 30791,
+                      "duration": 6477,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T06:00:59.036Z",
+                      "startTime": "2026-08-29T06:08:21.027Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -651,7 +600,7 @@
               ],
               "id": "a909e2d9f74e3bf31c89-41b3131d18a9552c18fa",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 160,
+              "line": 158,
               "column": 7
             },
             {
@@ -670,12 +619,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 23194,
+                      "duration": 7772,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T06:01:30.119Z",
+                      "startTime": "2026-08-29T06:08:27.553Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -685,7 +634,7 @@
               ],
               "id": "a909e2d9f74e3bf31c89-0737abc96eb8aae4e290",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 170,
+              "line": 167,
               "column": 7
             },
             {
@@ -704,12 +653,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 28575,
+                      "duration": 5770,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T06:01:53.510Z",
+                      "startTime": "2026-08-29T06:08:35.363Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -719,7 +668,7 @@
               ],
               "id": "a909e2d9f74e3bf31c89-3ebc15869c15af3fbfeb",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 182,
+              "line": 178,
               "column": 7
             },
             {
@@ -738,12 +687,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 25569,
+                      "duration": 6120,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T06:02:22.173Z",
+                      "startTime": "2026-08-29T06:08:41.196Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -753,7 +702,7 @@
               ],
               "id": "a909e2d9f74e3bf31c89-a5a9357a6406adf987fd",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 189,
+              "line": 184,
               "column": 7
             },
             {
@@ -772,12 +721,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 29767,
+                      "duration": 4982,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T06:02:47.851Z",
+                      "startTime": "2026-08-29T06:08:47.349Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -787,7 +736,7 @@
               ],
               "id": "a909e2d9f74e3bf31c89-e7bf2f1a99b2d28d44eb",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 199,
+              "line": 193,
               "column": 7
             },
             {
@@ -806,12 +755,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 16598,
+                      "duration": 1551,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T06:03:17.764Z",
+                      "startTime": "2026-08-29T06:08:52.451Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -821,12 +770,12 @@
               ],
               "id": "a909e2d9f74e3bf31c89-192ba07f292749003243",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 212,
+              "line": 200,
               "column": 7
             },
             {
               "title": "Step 21: Edge Case 21 — Local Session Storage Clearing Check",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -839,67 +788,23 @@
                     {
                       "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 680,
-                      "error": {
-                        "message": "Error: page.evaluate: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.\n    at UtilityScript.evaluate (<anonymous>:313:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)",
-                        "stack": "Error: page.evaluate: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.\n    at UtilityScript.evaluate (<anonymous>:313:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)\n    at UtilityScript.evaluate (<anonymous>:313:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)\n    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/e2e/sequential-user-flow.journey.spec.ts:219:16",
-                        "location": {
-                          "file": "<anonymous>",
-                          "column": 16,
-                          "line": 313
-                        }
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "<anonymous>",
-                            "column": 16,
-                            "line": 313
-                          },
-                          "message": "Error: page.evaluate: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.\n\u001b[2m    at UtilityScript.evaluate (<anonymous>:313:16)\u001b[22m\n\u001b[2m    at UtilityScript.<anonymous> (<anonymous>:1:44)\u001b[22m\n\u001b[2m    at UtilityScript.evaluate (<anonymous>:313:16)\u001b[22m\n\u001b[2m    at UtilityScript.<anonymous> (<anonymous>:1:44)\u001b[22m\n\u001b[2m    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/e2e/sequential-user-flow.journey.spec.ts:219:16\u001b[22m"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 1844,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T06:03:34.520Z",
+                      "startTime": "2026-08-29T06:08:54.085Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-f16e1-sion-Storage-Clearing-Check-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-f16e1-sion-Storage-Clearing-Check-chromium/video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-f16e1-sion-Storage-Clearing-Check-chromium/error-context.md"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/e2e-sequential-user-flow.j-f16e1-sion-Storage-Clearing-Check-chromium/trace.zip"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "<anonymous>",
-                        "column": 16,
-                        "line": 313
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "a909e2d9f74e3bf31c89-1639bf7ed6d4ce88e6ef",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 218,
+              "line": 205,
               "column": 7
             },
             {
@@ -915,25 +820,25 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3440,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T06:03:35.571Z",
+                      "startTime": "2026-08-29T06:08:56.012Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
                 }
               ],
               "id": "a909e2d9f74e3bf31c89-ce53f56fb82cd5bc4fd6",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 223,
+              "line": 215,
               "column": 7
             },
             {
@@ -949,25 +854,25 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1960,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T06:03:35.648Z",
+                      "startTime": "2026-08-29T06:08:59.492Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
                 }
               ],
               "id": "a909e2d9f74e3bf31c89-71b951c03e995ff608b8",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 233,
+              "line": 224,
               "column": 7
             },
             {
@@ -983,25 +888,25 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4524,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T06:03:35.718Z",
+                      "startTime": "2026-08-29T06:09:01.512Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
                 }
               ],
               "id": "a909e2d9f74e3bf31c89-53988e9267099896d3ae",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 239,
+              "line": 229,
               "column": 7
             },
             {
@@ -1017,25 +922,25 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2068,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T06:03:35.771Z",
+                      "startTime": "2026-08-29T06:09:06.126Z",
                       "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
                 }
               ],
               "id": "a909e2d9f74e3bf31c89-c01a6d17fc17baba0838",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 246,
+              "line": 235,
               "column": 7
             }
           ]
@@ -1045,11 +950,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-08-29T05:55:47.069Z",
-    "duration": 468907.933,
-    "expected": 21,
-    "skipped": 4,
-    "unexpected": 1,
+    "startTime": "2026-08-29T06:06:45.804Z",
+    "duration": 143462.019,
+    "expected": 25,
+    "skipped": 0,
+    "unexpected": 0,
     "flaky": 0
   }
 }
