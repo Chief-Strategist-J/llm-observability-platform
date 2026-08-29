@@ -20,9 +20,12 @@
    - 5.3 [Security Specialist Data & Vulnerability Test Payloads](#53-security-specialist-data--vulnerability-test-payloads)
    - 5.4 [Master 20 Critical Edge Cases Matrix](#54-master-20-critical-edge-cases-matrix)
    - 5.5 [Master Data Validation Edge Cases Taxonomy (OWASP & Industry Standards)](#55-master-data-validation-edge-cases-taxonomy-owasp--industry-standards)
-6. [Master Production Lifecycle Phase Matrix](#6-master-production-lifecycle-phase-matrix)
+6. [Domain-Agnostic Production Lifecycle Phase Matrix](#6-domain-agnostic-production-lifecycle-phase-matrix)
 7. [Anti-Patterns & Automatic Rejection Rules](#7-anti-patterns--automatic-rejection-rules)
-8. [Page Objects & Screen Abstraction Rules](#8-page-objects--screen-abstraction-rules)
+8. [Universal Page & Component Object Abstraction Rules](#8-universal-page--component-object-abstraction-rules)
+   - 8.1 [Universal Page Object Architectural Blueprint](#81-universal-page-object-architectural-blueprint)
+   - 8.2 [Component Objects for Reusable Complex UI Widgets](#82-component-objects-for-reusable-complex-ui-widgets)
+   - 8.3 [Page Object Scoping & Design Rules](#83-page-object-scoping--design-rules)
 9. [State Preservation & Diagnostic Logging](#9-state-preservation--diagnostic-logging)
 10. [Language-Agnostic Code Patterns & Generic Templates](#10-language-agnostic-code-patterns--generic-templates)
 11. [Multi-Stack CLI Command Registry & Execution References](#11-multi-stack-cli-command-registry--execution-references)
@@ -31,12 +34,13 @@
 
 ## 1. Purpose & Core Philosophy
 
-Isolated unit, integration, or single-endpoint tests verify individual API routes or components in isolation. They **do not prove** that a real enterprise user can navigate a multi-screen flow, interact with dynamic UI controls (buttons, dropdowns, dialogs, radio groups), trigger background pipelines, encounter validation guards, authenticate, view telemetry, and manage organization settings in sequence.
+Isolated unit, integration, or single-endpoint tests verify individual API routes or components in isolation. They **do not prove** that a real user can navigate a multi-screen flow, interact with dynamic UI controls (buttons, dropdowns, dialogs, radio groups), trigger background pipelines, encounter validation guards, authenticate, view telemetry, and manage organization settings in sequence.
 
-A **Sequential User Journey** tests the cumulative, end-to-end lifecycle of a production user across multiple services, UI routes, dynamic modal transitions, and persistent backend state changes.
+A **Sequential User Journey** tests the cumulative, end-to-end lifecycle of a user across multiple services, UI routes, dynamic modal transitions, and persistent backend state changes in any software application domain.
 
 ### Key Principles:
-- **Language-Agnostic & Tool-Agnostic**: These rules apply identically whether your test automation harness is built in Node.js/TypeScript, Python, Java/Kotlin, Go, C#, or uses engines like Playwright, Cypress, Selenium, Appium, PyTest, or Cucumber BDD.
+- **Language-Agnostic & Stack-Agnostic**: These rules apply identically whether your test automation harness is built in Node.js/TypeScript, Python, Java/Kotlin, Go, C#, or uses engines like Playwright, Cypress, Selenium, Appium, PyTest, or Cucumber BDD.
+- **Generic & Extensible Design**: All architecture rules, page objects, and test phases MUST be fully generic so they can be implemented for ANY application domain (SaaS, E-Commerce, Healthcare, AI Agents, Financial, Analytics, Workflow Automation).
 - **Robust UI Locating & Finding**: Tests MUST discover and target UI controls using semantic accessibility attributes, explicit test IDs, or visible labels—NEVER fragile DOM indexing or CSS styling selectors.
 - **State-Verified Transitions**: Every interaction (clicking a button, selecting a radio option, confirming a dialog) MUST verify state changes before proceeding to the next step.
 
@@ -50,18 +54,21 @@ All sequential user journeys MUST be stored in a dedicated, unified automation d
 tests/automation/e2e/
 ├── journeys/                               # BDD Gherkin Feature Scenarios (What is tested)
 │   ├── sequential-user-flow.feature
-│   └── admin-user-suspension-flow.feature
+│   └── <domain>-user-flow.feature
 ├── step-definitions/                       # Language-Specific Step Glue (TypeScript/Python/Java)
 │   └── journeys_steps.[ts|py|java]
-├── page-objects/                           # Page / Screen Object Abstractions (Locators & Interactions)
-│   ├── base_page.[ts|py|java]
-│   ├── sign_up_page.[ts|py|java]
-│   ├── sign_in_page.[ts|py|java]
-│   └── dashboard_page.[ts|py|java]
+├── page-objects/                           # Extensible Page & Component Abstractions
+│   ├── base_page.[ts|py|java]             # Universal Abstract Base Class
+│   ├── components/                         # Embedded Reusable Widgets
+│   │   ├── modal_component.[ts|py|java]
+│   │   └── data_table_component.[ts|py|java]
+│   └── <domain>/                           # Domain-Specific Page Objects
+│       ├── <feature>_page.[ts|py|java]
+│       └── <subfeature>_page.[ts|py|java]
 ├── support/                                # Journey State Context & Diagnostic Handlers
 │   └── journey_context.[ts|py|java]
 └── runners/                                # Serial Execution Specs / Test Suites
-    └── sequential_user_flow.journey.[spec.ts|test.py|Test.java]
+    └── <journey_name>.journey.[spec.ts|test.py|Test.java]
 ```
 
 ### Naming Conventions:
@@ -116,12 +123,12 @@ Buttons initiate actions, submit forms, or open overlays. They exist as standard
 
 ```
 +-------------------------------------------------------+
-|  [Icon] Submit Registration  [Spinner / Disabled]     |
+|  [Icon] Submit Action  [Spinner / Disabled]           |
 +-------------------------------------------------------+
 ```
 
 #### Searching & Finding Rules:
-- **Search Strategy**: Search primarily by accessible role and visible text/name (e.g. `get_by_role("button", name="Submit Registration")`).
+- **Search Strategy**: Search primarily by accessible role and visible text/name (e.g. `get_by_role("button", name="Submit Action")`).
 - **Icon / Unlabeled Buttons**: Search by `aria-label`, `title`, or explicit `data-testid` (e.g. `data-testid="close-dialog-btn"`).
 - **Loading / Disabled State Verification**:
   - BEFORE clicking, assert the button is **visible** and **enabled** (`not disabled` and `aria-disabled != "true"`).
@@ -137,23 +144,23 @@ Dropdowns fall into two distinct structural categories: Native `<select>` elemen
 ```
 Native Select:             Custom ARIA Combobox:
 +-------------------+      +--------------------------------+
-| Select Role    v |      | Choose Role: [ Admin       v ] |
+| Select Option  v |      | Choose Item: [ Selected    v ] |
 +-------------------+      +--------------------------------+
-                             | [Search roles...           ] |
-                             | > Admin                      |
-                             |   Member                     |
+                             | [Search items...           ] |
+                             | > Option 1                   |
+                             |   Option 2                   |
                              +------------------------------+
 ```
 
 #### Searching & Finding Rules:
 1. **Native `<select>` Elements**:
    - Locate by associated `<label>` or accessible name.
-   - Interact directly via option value or label (e.g. `select_option(label="Administrator")`). Do NOT attempt to click to open native select menus.
+   - Interact directly via option value or label (e.g. `select_option(label="Option 1")`). Do NOT attempt to click to open native select menus.
 2. **Custom ARIA Comboboxes / Styled Dropdowns**:
    - **Step 1: Open Trigger**: Locate the dropdown trigger element by label or `role="combobox"` / `role="button"` and click it to expand.
    - **Step 2: List Visibility Checkpoint**: Explicitly wait and assert that the popup option container (`role="listbox"`, `role="menu"`, or `[aria-expanded="true"]`) is **visible** before searching for options.
    - **Step 3: Searchable Dropdowns (Typeahead)**: If the dropdown contains a search filter input, locate the search input inside the popup container, enter query text, and wait for filtered options to render.
-   - **Step 4: Option Selection**: Locate the desired option inside the container by `role="option"` and accessible text (e.g. `listbox.get_by_role("option", name="Admin")`) and click it.
+   - **Step 4: Option Selection**: Locate the desired option inside the container by `role="option"` and accessible text (e.g. `listbox.get_by_role("option", name="Option 1")`) and click it.
    - **Step 5: Dropdown Closure Checkpoint**: Assert that the dropdown list container closes AND the trigger control reflects the selected value text.
 
 ---
@@ -164,11 +171,11 @@ Modals interrupt normal execution to require user input or confirmation.
 
 ```
 +-------------------------------------------------------+
-|  Delete Workspace Modal                           [X] |
+|  Confirmation Modal                               [X] |
 +-------------------------------------------------------+
-|  Are you sure you want to delete 'Production Org'?    |
+|  Are you sure you want to proceed with this action?   |
 |                                                       |
-|  [ Cancel ]                     [ Confirm Delete ]    |
+|  [ Cancel ]                     [ Confirm Action ]    |
 +-------------------------------------------------------+
 ```
 
@@ -178,7 +185,7 @@ Modals interrupt normal execution to require user input or confirmation.
 2. **Custom DOM Modals & Slide-Over Drawers (`role="dialog"`)**:
    - **Step 1: Container Scoping**: Once opened, locate the modal root container using `role="dialog"` or `role="alertdialog"`.
    - **Step 2: Animation Stability Assertion**: Assert the modal container is **visible** AND its entry animation (fade-in, slide-in) has completed before interacting with internal controls.
-   - **Step 3: Action Scoping**: Search for elements inside the modal using container-scoped locators (e.g. `modal.get_by_role("button", name="Confirm Delete")`). NEVER search for modal buttons globally on the page.
+   - **Step 3: Action Scoping**: Search for elements inside the modal using container-scoped locators (e.g. `modal.get_by_role("button", name="Confirm Action")`). NEVER search for modal buttons globally on the page.
    - **Step 4: Dismissal Checkpoint**: After clicking confirm/cancel or close `[X]`, explicitly assert that the modal overlay container is **hidden/removed from DOM** before interacting with the main page behind it.
 
 ---
@@ -188,14 +195,14 @@ Modals interrupt normal execution to require user input or confirmation.
 Radio buttons allow selecting a single option from a mutually exclusive set.
 
 ```
-Select Plan:
- (o) Enterprise Plan ($99/mo)
- ( ) Professional Plan ($29/mo)
+Select Option Group:
+ (o) Primary Option ($99/mo)
+ ( ) Secondary Option ($29/mo)
 ```
 
 #### Searching & Finding Rules:
-- **Container Scoping**: Locate the group container via `role="radiogroup"` or associated fieldset legend (e.g. `get_by_role("radiogroup", name="Select Plan")`).
-- **Radio Selection**: Locate the individual radio option by accessible label or `role="radio"` and click it (e.g. `radiogroup.get_by_label("Enterprise Plan ($99/mo)")`).
+- **Container Scoping**: Locate the group container via `role="radiogroup"` or associated fieldset legend (e.g. `get_by_role("radiogroup", name="Select Option Group")`).
+- **Radio Selection**: Locate the individual radio option by accessible label or `role="radio"` and click it (e.g. `radiogroup.get_by_label("Primary Option ($99/mo)")`).
 - **State Checkpoint**: Assert that the clicked radio has state `checked = true` (`aria-checked="true"` or `:checked`), and all sibling radio options in the group have `checked = false`.
 
 ---
@@ -205,8 +212,8 @@ Select Plan:
 Checkboxes and toggle switches control independent boolean options.
 
 ```
-[X] Enable Two-Factor Authentication
-Toggle: [ ON  | off ]  Receive Email Notifications
+[X] Enable Option Feature
+Toggle: [ ON  | off ]  Receive Notifications
 ```
 
 #### Searching & Finding Rules:
@@ -221,7 +228,7 @@ Toggle: [ ON  | off ]  Receive Email Notifications
 Text inputs accept user strings, passwords, numbers, and search queries.
 
 ```
-Search Workspaces: [ Find telemetry...            ] [Clear (X)]
+Search Records: [ Type search query...            ] [Clear (X)]
 ```
 
 #### Searching & Finding Rules:
@@ -238,10 +245,10 @@ Data tables list rows of records with action menus, column sorting, and paginati
 
 ```
 +-------------------+-----------------+----------------+-----------------+
-| User Name         | Email           | Role           | Actions         |
+| Record Identifier | Property Field  | Status Badge   | Actions         |
 +-------------------+-----------------+----------------+-----------------+
-| Prod Admin        | admin@scaibu.io | Owner          | [Edit] [Delete] |
-| Jane Doe          | jane@scaibu.io  | Member         | [Edit] [Delete] |
+| Primary Record 1  | Value Alpha     | Active         | [Edit] [Delete] |
+| Secondary Record  | Value Beta      | Pending        | [Edit] [Delete] |
 +-------------------+-----------------+----------------+-----------------+
 | < Previous  Page 1 of 5  Next >                                        |
 +------------------------------------------------------------------------+
@@ -249,7 +256,7 @@ Data tables list rows of records with action menus, column sorting, and paginati
 
 #### Searching & Finding Rules:
 - **Row-Scoped Locator Strategy**:
-  1. Locate the target row by searching for cell text inside the table: `table.get_by_role("row").filter(has_text="jane@scaibu.io")`.
+  1. Locate the target row by searching for cell text inside the table: `table.get_by_role("row").filter(has_text="Primary Record 1")`.
   2. Locate action buttons/dropdowns **within that specific row boundary**: `target_row.get_by_role("button", name="Delete")`.
 - **Column Header Sorting**: Locate column headers by `role="columnheader"`, click to sort, and assert `aria-sort` changes (`ascending` / `descending`).
 - **Pagination Controls**: Locate pagination buttons (`Next`, `Previous`, `Page Number`) by accessible name, click, and assert table row content updates to reflect the new page.
@@ -262,8 +269,8 @@ Dynamic UI feedback elements require precise timing assertions.
 
 ```
 Tabs: [ General ] [ Security* ] [ Billing ]
-Toast Alert: (v) Organization updated successfully [X]
-Tooltip: (i) [ This permission allows full admin access ]
+Toast Alert: (v) Operation completed successfully [X]
+Tooltip: (i) [ Explanatory help tooltip text ]
 ```
 
 #### Searching & Finding Rules:
@@ -325,7 +332,7 @@ Sequential journeys MUST test that invalid inputs, missing fields, and out-of-bo
 #### Required Validation Categories:
 1. **Required Field Omission**:
    - Leave required form inputs blank (e.g. empty email, blank organization name). Click submit.
-   - Assert that inline field validation error messages appear immediately (e.g. `"Email address is required"`), and form submission is blocked.
+   - Assert that inline field validation error messages appear immediately (e.g. `"Field is required"`), and form submission is blocked.
 2. **Boundary Value & Constraint Violation Checks**:
    - **Length Boundaries**: Test string inputs at `min_length - 1` (too short) and `max_length + 1` (too long). Assert specific boundary error text.
    - **Format Constraints**: Enter malformed formats (e.g. `"not-an-email"`, `"ftp://invalid-url"`, `"123-abc-phone"`). Assert format validation blocks submission.
@@ -443,38 +450,38 @@ Data validation is the primary line of defense for application security, data in
 
 ---
 
-## 6. Master Production Lifecycle Phase Matrix
+## 6. Domain-Agnostic Production Lifecycle Phase Matrix
 
-Every complete enterprise user journey MUST execute sequentially through these 6 lifecycle phases:
+Every complete enterprise user journey MUST execute sequentially through these 6 lifecycle phases (adaptable to ANY application domain):
 
 ```
-Phase 1: Registration & Validation Guards
-  ├── 1.1 Invalid Email Format Validation Check ("not-an-email")
-  ├── 1.2 Weak Password Warning Check ("123")
-  ├── 1.3 Security XSS Payload Input Check ("<script>alert(1)</script>")
-  └── 1.4 Valid Admin Account & Organization Registration
+Phase 1: Initial Registration & Input Validation Guards
+  ├── 1.1 Input Format & Constraint Validation Check
+  ├── 1.2 Boundary Value & Weak Credential Check
+  ├── 1.3 Security Specialist Payload Check (XSS/SQLi)
+  └── 1.4 Valid Account & Resource Registration
 
-Phase 2: Duplicate Registration & Double-Tap Protection
-  ├── 2.1 Rapid Double-Tap Submit -> verify button disables and single record created
-  └── 2.2 Re-attempt registering exact same email -> verify rejection & warning alert
+Phase 2: Duplicate Prevention & Double-Tap Protection
+  ├── 2.1 Rapid Double-Tap Submit -> verify button disables & single record created
+  └── 2.2 Re-attempt registering exact same entity -> verify rejection & conflict alert
 
 Phase 3: Authentication & Security Guards
-  ├── 3.1 Invalid Password Sign-In Attempt -> verify rejection alert
-  ├── 3.2 Wrong Credential Lockout Check -> verify rejection response
-  └── 3.3 Valid Credential Authentication -> authenticate registered admin
+  ├── 3.1 Invalid Password / Bad Credential Sign-In Attempt -> verify rejection alert
+  ├── 3.2 Expired Token / Revoked Session Guard -> verify redirect to authentication
+  └── 3.3 Valid Credential Authentication -> authenticate registered user
 
-Phase 4: Workspace Dashboard & Telemetry Pipeline
-  ├── 4.1 Workspace Navigation & Route Access Verification
-  ├── 4.2 Telemetry Search Filter Query Pipeline Execution
-  └── 4.3 Active Data Table / Empty Dataset View Check
+Phase 4: Primary Domain Workspace & Feature Actions
+  ├── 4.1 Feature Navigation & Route Access Verification
+  ├── 4.2 Primary Domain Pipeline / Search Query Execution
+  └── 4.3 Data Table / Dataset View Check
 
-Phase 5: Team Member Management & RBAC Invites
-  ├── 5.1 Navigate to Organization Settings (/settings/org)
-  ├── 5.2 Invite Secondary Team Member User ("prod.member@scaibu.io") with Role ("Member")
-  ├── 5.3 Cross-Tenant Authorization Guard Check (IDOR attempt on unowned org) -> 430/403 Forbidden
-  └── 5.4 Verify Secondary Member Listing in Organization Team Directory Table
+Phase 5: Entity Administration & RBAC Permissions
+  ├── 5.1 Navigate to Resource Administration / Settings Screen
+  ├── 5.2 Invite Secondary Team Member / Provision Secondary Entity
+  ├── 5.3 Cross-Tenant Authorization Guard Check (IDOR attempt on unowned resource) -> 403 Forbidden
+  └── 5.4 Verify Secondary Entity Listing in Directory Table
 
-Phase 6: Audit Logging & Clean Logout State
+Phase 6: Audit Logging & Clean Session Termination
   └── 6.1 Verify Security Audit Log Trail & Clean Session Termination
 ```
 
@@ -488,25 +495,89 @@ Phase 6: Audit Logging & Clean Logout State
 | Arbitrary fixed sleep timeouts (`sleep(5000)`) | Causes slow, flaky runs and timing bugs | Use state-based waits (`wait_until_visible`, `wait_for_network_idle`) |
 | Raw CSS/XPath selectors in spec files | Breaks tests when DOM layout changes | ALL locators MUST live inside Page/Screen Objects |
 | Trusting UI success toast without backend state check | UI toast can show success even if DB write fails | Re-verify state via secondary route or direct API check |
-| Hardcoded static emails (`admin@test.com`) | Causes duplicate record conflicts on re-runs | Generate unique collision-free emails dynamically |
+| Hardcoded static emails/usernames | Causes duplicate record conflicts on re-runs | Generate unique collision-free data dynamically |
 | Searching for modal elements globally on page | Clicks wrong button outside active modal | Scope element search inside modal container (`role="dialog"`) |
 | Un-scoped table button clicks | Clicks edit/delete on wrong table record row | Scope search inside specific table row (`filter(has_text=...)`) |
 | Ignoring double-click / rapid-tap protection | Causes duplicate DB writes & order glitches | Test button double-tap and verify single API request |
 | Skipping security payload checks in form inputs | Leaves XSS and injection vulnerabilities untested | Include security specialist payloads (XSS/SQLi) in inputs |
 | Relying solely on client-side validation | API bypass can post invalid/malicious data | Enforce server-side validation on ALL incoming endpoints |
+| Hardcoding domain page names in test policies | Prevents implementing tests for other domains | Use generic Page Object patterns extending `BasePage` |
 
 ---
 
-## 8. Page Objects & Screen Abstraction Rules
+## 8. Universal Page & Component Object Abstraction Rules
 
-No raw element locator or low-level framework call may appear directly inside a journey spec file. All interactions MUST be encapsulated inside Page Objects / Screen Abstractions.
+No raw element locator or low-level framework call (e.g. `page.locator()`, `driver.find_element()`) may appear directly inside a journey spec file or step definition. All UI locators and screen interactions MUST be encapsulated inside Page Objects / Screen Abstractions using a modular, domain-agnostic hierarchy.
 
-### Required Page Object Hierarchy:
-- **`BasePage`**: Shared navigation, dialog handlers, toast verification, console error assertions, and security payload helpers.
-- **`SignUpPage`**: Form inputs (email, password), validation guards, double-tap submit actions, and alert overlays.
-- **`SignInPage`**: Login form controls, password visibility toggles, wrong credential alerts, and token handling.
-- **`DashboardPage`**: Search inputs, filter dropdowns, telemetry data tables, and tab navigation.
-- **`OrgSettingsPage`**: Member directory table, role select comboboxes, invite modals, and radio groups.
+### 8.1 Universal Page Object Architectural Blueprint
+
+Every test automation suite MUST implement a two-tier Object-Oriented or Functional Screen Abstraction model:
+
+```
+                          UNIVERSAL PAGE OBJECT HIERARCHY
+                                         │
+                   ┌─────────────────────┴─────────────────────┐
+                   ▼                                           ▼
+             BasePage / BaseScreen                    ComponentObjects / Widgets
+        (Abstract Universal Base Class)          (Reusable Embedded UI Widgets)
+                   │                                           │
+  ┌────────────────┼────────────────┐                          │
+  ▼                ▼                ▼                          ▼
+AuthPages       AdminPages       CustomDomainPages    (DataTable, Combobox, Modal)
+ (Registration,  (Settings,       (Catalog, Orders,
+  Login, Reset)   Directory)       Workflows, Analytics)
+```
+
+#### Tier 1: Abstract Base Class (`BasePage` / `BaseScreen`)
+The foundational abstract class inherited by every page object in the application. It encapsulates universal engine capabilities:
+- **Navigation & URL Verification**: Base route navigation, relative URL assertions, and route transition checkpoints.
+- **Global Toast & Dialog Handlers**: Methods to assert and handle alert popups (`role="alert"`), native browser dialogs, and toast notifications.
+- **Console & Error Cleanliness**: Automatic assertions verifying no uncaught JS exceptions or 5xx network errors occurred.
+- **Security & Payload Helpers**: Helper methods to inject XSS, SQLi, and unicode test strings into inputs and assert safe DOM rendering.
+- **Wait Condition Facades**: Named state-based wait helpers (`wait_until_visible`, `wait_for_enabled`, `wait_for_network_idle`).
+
+#### Tier 2: Extensible Feature Page Objects (`<Domain><Feature>Page`)
+Domain-specific screen classes extending `BasePage`. EVERY screen, multi-step wizard step, or major view in ANY domain MUST have its own dedicated Page Object.
+
+##### Generic Naming & Categorization Patterns Across Application Domains:
+- **Authentication & Onboarding Domain**: `RegistrationPage`, `AuthenticationPage`, `PasswordResetPage`, `MfaVerificationPage`.
+- **User & Organization Administration**: `OrganizationSettingsPage`, `UserDirectoryPage`, `RolePermissionPage`, `AuditLogsPage`.
+- **Analytics & Data Dashboards**: `MetricsDashboardPage`, `TelemetryGridPage`, `ReportBuilderPage`, `LogViewerPage`.
+- **E-Commerce & Financial Systems**: `ProductCatalogPage`, `CartCheckoutPage`, `PaymentGatewayPage`, `InvoiceHistoryPage`.
+- **AI & Workflow Builder Systems**: `WorkflowCanvasPage`, `AgentExecutionPage`, `PromptTemplatePage`.
+- **Healthcare & EHR Systems**: `PatientDirectoryPage`, `MedicalRecordPage`, `PrescriptionPage`.
+- **SaaS File & Cloud Storage**: `DirectoryBrowserPage`, `FileUploaderPage`, `PermissionAccessPage`.
+
+---
+
+### 8.2 Component Objects for Reusable Complex UI Widgets
+
+When a UI widget appears on multiple screens (e.g. dynamic data tables, search comboboxes, confirmation modals, notification toasts), do NOT duplicate locator code across Page Objects. Encapsulate the widget into a **Component Object** and embed it inside Page Objects.
+
+```typescript
+// Component Object Example: Encapsulates reusable ARIA Modal Widget across any domain
+export class ModalComponent {
+  constructor(private rootLocator: Locator) {}
+  
+  public get title() { return this.rootLocator.getByRole('heading'); }
+  public get confirmButton() { return this.rootLocator.getByRole('button', { name: /confirm|submit|save/i }); }
+  public get cancelButton() { return this.rootLocator.getByRole('button', { name: /cancel|close/i }); }
+  
+  public async confirm(): Promise<void> {
+    await this.confirmButton.click();
+    await expect(this.rootLocator).toBeHidden();
+  }
+}
+```
+
+---
+
+### 8.3 Page Object Scoping & Design Rules
+
+1. **One Page Object per Distinct View/Route**: If a route or wizard step has a distinct DOM structure or form fields, create a dedicated Page Object for it extending `BasePage`.
+2. **Encapsulate Locators as Private/Protected Properties**: Spec files call high-level action methods (e.g. `page.submitRegistration(data)`), NEVER raw locator queries.
+3. **Fluent State Transitions**: Methods that cause a screen transition MUST return the target Page Object or verify the target screen is ready before returning control.
+4. **Zero Assertion-less Actions**: Action methods on Page Objects MUST include internal visibility/enabled state checks before attempting clicks or inputs.
 
 ---
 
@@ -536,35 +607,35 @@ Feature: Production Enterprise User Sequential Journey
 
   Scenario: Full Enterprise User Lifecycle & Security Validation
     # Phase 1: Registration & Security Payload Checks
-    Given the admin user navigates to the registration screen
-    When the admin attempts registration with XSS string "<script>alert(1)</script>" as name
+    Given the user navigates to the registration screen
+    When the user attempts registration with XSS string "<script>alert(1)</script>" as name
     Then the input is safely sanitized and raw script execution is blocked
-    When the admin submits registration with a unique email and strong password
-    Then registration succeeds and a new workspace organization is created
+    When the user submits registration with a unique email and strong password
+    Then registration succeeds and a new workspace is created
 
     # Phase 2: Duplicate & Double-Tap Protection
-    When the admin rapid double-taps the registration submit button
+    When the user rapid double-taps the registration submit button
     Then the submit button immediately disables and exactly one account is created
-    When the admin re-attempts registration with the exact same email
+    When the user re-attempts registration with the exact same email
     Then duplicate registration is rejected with an error alert
 
     # Phase 3: Authentication & Wrong Data Guards
-    When the admin attempts sign in with an incorrect password
+    When the user attempts sign in with an incorrect password
     Then sign in is rejected with an invalid credentials error
-    When the admin signs in with valid credentials
-    Then authentication succeeds and redirects to the workspace dashboard
+    When the user signs in with valid credentials
+    Then authentication succeeds and redirects to the main dashboard
 
-    # Phase 4: Telemetry Search
-    When the admin searches telemetry data using filter keyword "latency"
-    Then the telemetry data table updates to display filtered records
+    # Phase 4: Primary Feature Action
+    When the user executes the primary domain search query "latency"
+    Then the data table updates to display filtered records
 
     # Phase 5: Member Invite & RBAC
-    When the admin navigates to organization settings
-    And invites team member "member@scaibu.io" with role "Member"
-    Then the new member appears in the organization directory table
+    When the user navigates to resource settings
+    And invites team member "member@domain.io" with role "Member"
+    Then the new member appears in the directory table
 
     # Phase 6: Logout & Clean Session
-    When the admin logs out of the workspace
+    When the user logs out of the workspace
     Then the session is cleanly terminated and redirected to sign-in
 ```
 
@@ -573,8 +644,8 @@ Feature: Production Enterprise User Sequential Journey
 ### 10.2 Page Object Pseudocode / Multi-Language Template
 
 ```typescript
-// Page Object Pattern Example (TypeScript / Playwright / Selenium compatible)
-export class SignUpPage extends BasePage {
+// Extensible Feature Page Object Example (TypeScript / Playwright / Selenium compatible)
+export class RegistrationPage extends BasePage {
   private get nameInput() { return this.page.getByLabel('Full Name'); }
   private get emailInput() { return this.page.getByLabel('Email Address'); }
   private get submitButton() { return this.page.getByRole('button', { name: 'Create Account' }); }
@@ -602,8 +673,8 @@ export class SignUpPage extends BasePage {
 ```
 
 ```python
-# Page Object Pattern Example (Python / PyTest / Selenium / Playwright)
-class SignUpPage(BasePage):
+# Extensible Feature Page Object Example (Python / PyTest / Selenium / Playwright)
+class RegistrationPage(BasePage):
     def __init__(self, page):
         super().__init__(page)
         self.name_input = page.get_by_label("Full Name")
