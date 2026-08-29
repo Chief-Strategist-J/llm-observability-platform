@@ -1,3 +1,23 @@
+/**
+ * ============================================================================
+ * ALGORITHM: AUTHENTICATION API CLIENT & RESILIENCY WRAPPER ARCHITECTURE
+ * ============================================================================
+ * 1. DELEGATED EXECUTION ENGINE:
+ *    RawAuthApiClient encapsulates domain-specific API methods (`signUp`, `signIn`, `listUsers`, etc.)
+ *    and delegates low-level HTTP transport, tracing, and error handling to `executeHttpRequest`.
+ *
+ * 2. SEPARATE DTO CONTRACTS:
+ *    All return types (`AuthResponse`, `Organization`, `UserMember`, `ApiKeyItem`, `AuditLogItem`)
+ *    are housed separately under `./responses/` to preserve high modularity and single-responsibility.
+ *
+ * 3. RESILIENCY DECORATOR COMPOSITION:
+ *    The raw client instance is composed with enterprise decorators:
+ *    - `withCircuitBreaker`: Prevents cascading service failures under backend stress.
+ *    - `withCache`: Caches idempotently read GET requests.
+ *    - `withRetry`: Retries transient network failures automatically.
+ * ============================================================================
+ */
+
 import { withRetry, withCache, withCircuitBreaker } from "../../core/data-driven/adapter-decorators";
 import { executeHttpRequest, type ExecuteParams } from "./executor";
 import type {
