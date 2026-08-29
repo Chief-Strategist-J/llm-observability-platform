@@ -4,7 +4,8 @@ from datetime import date
 import clickhouse_connect
 from shared.ports.latency_clickhouse_port import BaselineRow
 from shared.tracing.tracer import api_span
-from infra.adapters.clickhouse.queries import LatencyCheckpointModel, ClickHouseQueryRegistry
+from infra.adapters.clickhouse.models import LatencyCheckpointModel
+from infra.adapters.clickhouse.queries import ClickHouseQueryRegistry
 
 logger = logging.getLogger(__name__)
 

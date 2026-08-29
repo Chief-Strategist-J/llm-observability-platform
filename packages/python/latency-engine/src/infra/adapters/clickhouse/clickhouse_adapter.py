@@ -3,7 +3,8 @@ from datetime import date, datetime
 import clickhouse_connect
 from shared.ports.clickhouse_port import ClickHousePort
 from shared.tracing.tracer import trace_span
-from infra.adapters.clickhouse.queries import LatencyCheckpointModel, ClickHouseQueryRegistry
+from infra.adapters.clickhouse.models import LatencyCheckpointModel
+from infra.adapters.clickhouse.queries import ClickHouseQueryRegistry
 
 class ClickHouseAdapter(ClickHousePort):
     def __init__(self, host: str, port: int, username: str, password: str, database: str):
