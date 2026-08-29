@@ -35,6 +35,13 @@ test.describe.serial('Production Sequential User Journey: Registration -> Securi
     await signUpPage.assertWeakPasswordWarningVisible();
 
     await signUpPage.fillForm({
+      name: "<script>alert('xss-test')</script>",
+      orgName: "' OR '1'='1",
+      email: primaryAdminAccount.email,
+      password: primaryAdminAccount.password,
+    });
+
+    await signUpPage.fillForm({
       name: primaryAdminAccount.name,
       orgName: primaryAdminAccount.orgName,
       email: primaryAdminAccount.email,
@@ -61,7 +68,7 @@ test.describe.serial('Production Sequential User Journey: Registration -> Securi
     await signUpPage.assertErrorMessageVisible();
   });
 
-  test('Step 3: Authentication Security Guards — Validate Unregistered User & Wrong Password Blocks', async ({ page }) => {
+  test('Step 3: Authentication Security Guards — Validate Unregistered User & Case-Insensitive Email Sign-In', async ({ page }) => {
     signInPage = new SignInPage(page);
 
     await signInPage.goto();
@@ -81,7 +88,7 @@ test.describe.serial('Production Sequential User Journey: Registration -> Securi
     expect(signInPage.emailInput).toBeVisible();
 
     await signInPage.fillForm({
-      email: primaryAdminAccount.email,
+      email: `  ${primaryAdminAccount.email.toUpperCase()}  `,
       password: primaryAdminAccount.password,
     });
     await signInPage.submit();
