@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 import logging
 from prometheus_client import Counter, start_http_server
 from shared.ports.metrics_port import MetricsPort
@@ -19,22 +20,17 @@ SKETCH_DROPPED_TOTAL = Counter(
     ["key"]
 )
 
-
 class PrometheusMetricsAdapter(MetricsPort):
-    """
-    Adapter implementing MetricsPort using prometheus_client.
-    Starts Prometheus HTTP server on port 8000 if not already started.
-    """
-
     def __init__(self) -> None:
         global _server_started
         if not _server_started:
+            port = int(os.environ.get("PROMETHEUS_PORT", "9093"))
             try:
-                start_http_server(8000)
+                start_http_server(port)
                 _server_started = True
-                logger.info("Prometheus HTTP server started on port 8000")
-            except OSError as e:
-                logger.warning("Prometheus HTTP server start failed or already running: %s", e)
+                logger.info("Prometheus HTTP server started on port %d", port)
+            except OSError:
+                logger.debug("Prometheus HTTP server already active on port %d", port)
                 _server_started = True
 
     def record_span_processed(self, model: str, endpoint: str, retry_count: int) -> None:
