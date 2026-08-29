@@ -111,12 +111,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 76,
+                      "duration": 70,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:04:03.377Z",
+                      "startTime": "2026-08-29T05:04:56.516Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -162,12 +162,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 90,
+                      "duration": 34,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:04:03.122Z",
+                      "startTime": "2026-08-29T05:04:56.541Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -198,8 +198,8 @@
           "column": 6,
           "specs": [
             {
-              "title": "J-01: Should handle pagination query limit parameters gracefully",
-              "ok": false,
+              "title": "J-01: Should handle payload size boundary constraints gracefully",
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -212,56 +212,21 @@
                     {
                       "workerIndex": 1,
                       "parallelIndex": 1,
-                      "status": "failed",
-                      "duration": 158,
-                      "error": {
-                        "message": "Error: Route not found: GET /api/v1/auth/audit-logs?event_type=login",
-                        "stack": "Error: Route not found: GET /api/v1/auth/audit-logs?event_type=login\n    at executeHttpRequest (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/src/lib/api/executor.ts:84:17)\n    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/api/resource-limits.spec.ts:8:18",
-                        "location": {
-                          "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/src/lib/api/executor.ts",
-                          "column": 17,
-                          "line": 84
-                        },
-                        "snippet": "\u001b[90m   at \u001b[39m../../src/lib/api/executor.ts:84\n\n  82 |\n  83 |   if (!response.ok || json.status === \"error\" || json.error) {\n> 84 |     const err = new Error(json.error?.details || json.message || `HTTP ${response.status}`);\n     |                 ^\n  85 |     (err as any).code = json.error?.code || (response.status === 401 ? \"UNAUTHORIZED\" : \"HTTP_ERROR\");\n  86 |     (err as any).status = response.status;\n  87 |"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/src/lib/api/executor.ts",
-                            "column": 17,
-                            "line": 84
-                          },
-                          "message": "Error: Route not found: GET /api/v1/auth/audit-logs?event_type=login\n\n\u001b[90m   at \u001b[39m../../src/lib/api/executor.ts:84\n\n  82 |\n  83 |   if (!response.ok || json.status === \"error\" || json.error) {\n> 84 |     const err = new Error(json.error?.details || json.message || `HTTP ${response.status}`);\n     |                 ^\n  85 |     (err as any).code = json.error?.code || (response.status === 401 ? \"UNAUTHORIZED\" : \"HTTP_ERROR\");\n  86 |     (err as any).status = response.status;\n  87 |\n\u001b[2m    at executeHttpRequest (/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/src/lib/api/executor.ts:84:17)\u001b[22m\n\u001b[2m    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/api/resource-limits.spec.ts:8:18\u001b[22m"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 156,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:04:03.936Z",
+                      "startTime": "2026-08-29T05:04:56.972Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/api-resource-limits-Catego-13b51-limit-parameters-gracefully-chromium/error-context.md"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/api-resource-limits-Catego-13b51-limit-parameters-gracefully-chromium/trace.zip"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/src/lib/api/executor.ts",
-                        "column": 17,
-                        "line": 84
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
-              "id": "e116fe48a1b0690eb8b6-4f16eba37f3de377fb95",
+              "id": "e116fe48a1b0690eb8b6-41e18f5186e570c0f6b4",
               "file": "api/resource-limits.spec.ts",
               "line": 6,
               "column": 7
@@ -299,12 +264,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 74,
+                      "duration": 49,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:04:03.894Z",
+                      "startTime": "2026-08-29T05:04:56.950Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -333,12 +298,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 122,
+                      "duration": 70,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:04:04.096Z",
+                      "startTime": "2026-08-29T05:04:57.072Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -369,7 +334,7 @@
           "column": 6,
           "specs": [
             {
-              "title": "I-01: Concurrent identical sign-up requests should not duplicate account creation",
+              "title": "I-01: Concurrent identical sign-up requests should evaluate without unhandled exceptions",
               "ok": true,
               "tags": [],
               "tests": [
@@ -381,15 +346,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 103,
+                      "duration": 60,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:04:04.374Z",
+                      "startTime": "2026-08-29T05:04:57.204Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -397,7 +362,7 @@
                   "status": "expected"
                 }
               ],
-              "id": "2e588d0492770ad510fa-b8e7008210fe44cb92bc",
+              "id": "2e588d0492770ad510fa-bb0c46c4ff11d42087e2",
               "file": "auth/sign-up/sign-up-concurrency.spec.ts",
               "line": 6,
               "column": 7
@@ -432,15 +397,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
-                      "parallelIndex": 1,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 91,
+                      "duration": 134,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:04:06.141Z",
+                      "startTime": "2026-08-29T05:04:57.276Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -466,15 +431,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 38,
+                      "duration": 135,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:04:04.560Z",
+                      "startTime": "2026-08-29T05:04:57.466Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -503,12 +468,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 8,
+                      "duration": 15,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:04:04.664Z",
+                      "startTime": "2026-08-29T05:04:57.568Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -528,11 +493,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-08-29T05:03:57.887Z",
-    "duration": 8681.971,
-    "expected": 8,
+    "startTime": "2026-08-29T05:04:53.209Z",
+    "duration": 4656.385,
+    "expected": 9,
     "skipped": 0,
-    "unexpected": 1,
+    "unexpected": 0,
     "flaky": 0
   }
 }
