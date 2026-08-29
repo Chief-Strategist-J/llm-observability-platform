@@ -4,8 +4,8 @@
       "/home/btpl-lap-22/.nvm/versions/node/v20.20.0/bin/node",
       "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/node_modules/.bin/playwright",
       "test",
+      "tests/automation/e2e/new-user-onboarding.journey.spec.ts",
       "tests/automation/e2e/sequential-user-flow.journey.spec.ts",
-      "--headed",
       "--workers=1",
       "--project=chromium"
     ],
@@ -81,6 +81,57 @@
   },
   "suites": [
     {
+      "title": "e2e/new-user-onboarding.journey.spec.ts",
+      "file": "e2e/new-user-onboarding.journey.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "E2E Cross-Service Journey — New User Onboarding Flow",
+          "file": "e2e/new-user-onboarding.journey.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E2E-01: Cross-service user registration, auth token issuance, and org dashboard verification",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6989,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:50:35.931Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c4c49b9b3b6d3601312c-4445c16e7735f6b15ae0",
+              "file": "e2e/new-user-onboarding.journey.spec.ts",
+              "line": 9,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
       "title": "e2e/sequential-user-flow.journey.spec.ts",
       "file": "e2e/sequential-user-flow.journey.spec.ts",
       "column": 0,
@@ -88,7 +139,7 @@
       "specs": [],
       "suites": [
         {
-          "title": "Production Sequential User Journey: Registration -> Duplicate Check -> Login -> Workspace -> Team Invite",
+          "title": "Production Sequential User Journey: Registration -> Security Guards -> Workspace -> Team Invite -> Logout",
           "file": "e2e/sequential-user-flow.journey.spec.ts",
           "line": 7,
           "column": 15,
@@ -109,12 +160,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 23136,
+                      "duration": 9378,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:36:54.113Z",
+                      "startTime": "2026-08-29T05:50:43.295Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -122,7 +173,7 @@
                   "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-8122e66f51aa085a2a71",
+              "id": "a909e2d9f74e3bf31c89-631fd6eadb8451218449",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
               "line": 25,
               "column": 7
@@ -143,12 +194,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 11226,
+                      "duration": 8518,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:37:18.910Z",
+                      "startTime": "2026-08-29T05:50:52.725Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -156,13 +207,13 @@
                   "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-31ff431d2c953fae444e",
+              "id": "a909e2d9f74e3bf31c89-7ed98d5dd1ff3cf2e046",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 52,
+              "line": 55,
               "column": 7
             },
             {
-              "title": "Step 3: Authentication Phase — Validate Wrong Password Block & Execute Valid Sign-In",
+              "title": "Step 3: Authentication Security Guards — Validate Unregistered User & Case-Insensitive Email Sign-In",
               "ok": true,
               "tags": [],
               "tests": [
@@ -177,12 +228,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 7965,
+                      "duration": 6998,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:37:30.231Z",
+                      "startTime": "2026-08-29T05:51:01.285Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -190,9 +241,9 @@
                   "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-8e58e11fd82810c86f0d",
+              "id": "a909e2d9f74e3bf31c89-27744df14bea0badd8ed",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 70,
+              "line": 71,
               "column": 7
             },
             {
@@ -211,12 +262,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 6976,
+                      "duration": 5965,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:37:38.267Z",
+                      "startTime": "2026-08-29T05:51:08.313Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -224,13 +275,13 @@
                   "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-d66381ca5fdb997d61d5",
+              "id": "a909e2d9f74e3bf31c89-650639c7cf1260a35d5c",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 93,
+              "line": 98,
               "column": 7
             },
             {
-              "title": "Step 5: Team Member Invitation Phase — Add Secondary User to Organization",
+              "title": "Step 5: Team Member Invitation Phase — Input Validation & Add Secondary Member",
               "ok": true,
               "tags": [],
               "tests": [
@@ -245,12 +296,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 7563,
+                      "duration": 5258,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T05:37:45.358Z",
+                      "startTime": "2026-08-29T05:51:14.303Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -258,9 +309,43 @@
                   "status": "expected"
                 }
               ],
-              "id": "a909e2d9f74e3bf31c89-627e810945971d34999e",
+              "id": "a909e2d9f74e3bf31c89-6aef7a45797422386830",
               "file": "e2e/sequential-user-flow.journey.spec.ts",
-              "line": 107,
+              "line": 109,
+              "column": 7
+            },
+            {
+              "title": "Step 6: Session Logout & Protected Route Revocation Phase",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 22883,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T05:51:19.592Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a909e2d9f74e3bf31c89-6561414849c82cefb0fb",
+              "file": "e2e/sequential-user-flow.journey.spec.ts",
+              "line": 132,
               "column": 7
             }
           ]
@@ -270,9 +355,9 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-08-29T05:36:49.361Z",
-    "duration": 64030.263000000006,
-    "expected": 5,
+    "startTime": "2026-08-29T05:50:33.363Z",
+    "duration": 69724.15699999999,
+    "expected": 7,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0
