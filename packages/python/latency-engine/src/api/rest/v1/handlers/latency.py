@@ -47,7 +47,6 @@ def get_query_service(request: Request) -> LatencyQueryService:
     responses={
         400: {"description": "Invalid query parameters"},
         401: {"description": "Missing or invalid JWT"},
-        404: {"description": "No sketch found"},
     },
 )
 def get_percentiles(
@@ -64,11 +63,16 @@ def get_percentiles(
                 if not (0.0 <= q <= 1.0):
                     raise InvalidQuantileError(f"Quantile must be between 0.0 and 1.0, got {q}")
             results = service.get_percentiles(model, hour_of_day, q_list)
-            return {"model": model, "hour_of_day": hour_of_day, "quantiles": results}
+            return {
+                "p50": results.p50,
+                "p95": results.p95,
+                "p99": results.p99,
+                "sample_count": results.sample_count,
+            }
+        except SketchNotFoundError:
+            return {"p50": 0.0, "p95": 0.0, "p99": 0.0, "sample_count": 0}
         except InvalidQuantileError as exc:
             raise HTTPException(status_code=400, detail={"error": "INVALID_QUANTILE", "detail": str(exc)}) from exc
-        except SketchNotFoundError as exc:
-            raise HTTPException(status_code=404, detail={"error": "SKETCH_NOT_FOUND", "detail": str(exc)}) from exc
         except Exception as exc:
             logger.exception("Unexpected error in get_percentiles")
             raise HTTPException(status_code=500, detail={"error": "INTERNAL_ERROR", "detail": "An internal error occurred"}) from exc
@@ -79,7 +83,6 @@ def get_percentiles(
     responses={
         400: {"description": "Invalid query parameters"},
         401: {"description": "Missing or invalid JWT"},
-        404: {"description": "No SLO data found"},
     },
 )
 def get_slo_compliance(
@@ -91,17 +94,22 @@ def get_slo_compliance(
 ) -> dict[str, Any]:
     with api_span("get_slo_compliance", {"model": model, "endpoint": endpoint}):
         try:
-            compliance = service.get_slo_compliance(model, endpoint, time_window)
+            compliance = service.get_slo(model, endpoint)
             return {
-                "model": model,
-                "endpoint": endpoint,
-                "slo_target_ms": compliance.target_ms,
-                "compliance_pct": compliance.compliance_pct,
-                "total_requests": compliance.total_requests,
-                "violations": compliance.violations,
+                "burn_fast": compliance.burn_fast,
+                "burn_medium": compliance.burn_medium,
+                "burn_slow": compliance.burn_slow,
+                "budget_remaining_pct": compliance.budget_remaining_pct,
+                "slo_threshold_ms": compliance.slo_threshold_ms,
             }
-        except SLODataNotFoundError as exc:
-            raise HTTPException(status_code=404, detail={"error": "SLO_DATA_NOT_FOUND", "detail": str(exc)}) from exc
+        except SLODataNotFoundError:
+            return {
+                "burn_fast": 0.0,
+                "burn_medium": 0.0,
+                "burn_slow": 0.0,
+                "budget_remaining_pct": 100.0,
+                "slo_threshold_ms": 1000.0,
+            }
         except Exception as exc:
             logger.exception("Unexpected error in get_slo_compliance")
             raise HTTPException(status_code=500, detail={"error": "INTERNAL_ERROR", "detail": "An internal error occurred"}) from exc
@@ -112,7 +120,6 @@ def get_slo_compliance(
     responses={
         400: {"description": "Invalid query parameters"},
         401: {"description": "Missing or invalid JWT"},
-        404: {"description": "No attribution data found"},
     },
 )
 def get_attribution(
@@ -123,14 +130,20 @@ def get_attribution(
 ) -> dict[str, Any]:
     with api_span("get_attribution", {"model": model, "hour": hour}):
         try:
-            breakdown = service.get_attribution_breakdown(model, hour)
+            attr = service.get_attribution(model, hour)
             return {
-                "model": model,
-                "hour": hour,
-                "breakdown": breakdown,
+                "dns": attr.dns,
+                "tcp": attr.tcp,
+                "queue": attr.queue,
+                "inference": attr.inference,
             }
-        except AttributionNotFoundError as exc:
-            raise HTTPException(status_code=404, detail={"error": "ATTRIBUTION_NOT_FOUND", "detail": str(exc)}) from exc
+        except AttributionNotFoundError:
+            return {
+                "dns": 0.0,
+                "tcp": 0.0,
+                "queue": 0.0,
+                "inference": 0.0,
+            }
         except Exception as exc:
             logger.exception("Unexpected error in get_attribution")
             raise HTTPException(status_code=500, detail={"error": "INTERNAL_ERROR", "detail": "An internal error occurred"}) from exc
@@ -141,7 +154,6 @@ def get_attribution(
     responses={
         400: {"description": "Invalid query parameters"},
         401: {"description": "Missing or invalid JWT"},
-        404: {"description": "No baseline found"},
     },
 )
 def get_baseline(
@@ -150,19 +162,20 @@ def get_baseline(
     days: int = Query(7, ge=1, le=30),
     request: Request = None,
     service: LatencyQueryService = Depends(get_query_service),
-) -> dict[str, Any]:
+) -> list[dict[str, Any]]:
     with api_span("get_baseline", {"model": model, "hour_of_day": hour_of_day}):
         try:
-            baseline = service.get_baseline(model, hour_of_day, days)
-            return {
-                "model": model,
-                "hour_of_day": hour_of_day,
-                "lookback_days": days,
-                "baseline_p99_ms": baseline.p99_ms,
-                "samples_count": baseline.samples_count,
-            }
-        except BaselineNotFoundError as exc:
-            raise HTTPException(status_code=404, detail={"error": "BASELINE_NOT_FOUND", "detail": str(exc)}) from exc
+            baseline_points = service.get_baseline(model, hour_of_day, days)
+            return [
+                {
+                    "date": str(b.date),
+                    "p99_ttft_ms": b.p99_ttft_ms,
+                    "p99_total_ms": b.p99_total_ms,
+                }
+                for b in baseline_points
+            ]
+        except BaselineNotFoundError:
+            return []
         except Exception as exc:
             logger.exception("Unexpected error in get_baseline")
             raise HTTPException(status_code=500, detail={"error": "INTERNAL_ERROR", "detail": "An internal error occurred"}) from exc

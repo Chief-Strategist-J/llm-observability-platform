@@ -32,7 +32,12 @@ class RawLatencyClientAdapter implements LatencyClientAdapter {
   }
 
   private getAuthHeaders(): Record<string, string> {
-    const jwtToken = process.env.SERVICE_JWT_TOKEN || "service-jwt-token";
+    const now = Math.floor(Date.now() / 1000);
+    const payload = { sub: "nextjs-web-app", iat: now, exp: now + 3600 };
+    const encodedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
+    const signature = Buffer.from(`sig_nextjs_${now}`).toString("base64url");
+    const jwtToken = `${encodedPayload}.${signature}`;
+
     return {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${jwtToken}`,
