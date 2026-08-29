@@ -1,38 +1,14 @@
 from __future__ import annotations
-
 import logging
 from datetime import date
-
 import clickhouse_connect
-
 from shared.ports.latency_clickhouse_port import BaselineRow
 from shared.tracing.tracer import api_span
+from infra.adapters.clickhouse.queries import LatencyCheckpointModel, ClickHouseQueryRegistry
 
 logger = logging.getLogger(__name__)
 
-_BASELINE_QUERY = """
-SELECT
-    checkpoint_date,
-    p99_ttft_ms,
-    p99_total_ms
-FROM latency_checkpoints
-WHERE model = %(model)s
-  AND hour_of_day = %(hour_of_day)s
-  AND checkpoint_date >= today() - %(days)s
-ORDER BY checkpoint_date DESC
-LIMIT %(days)s
-"""
-
-
 class LatencyClickHouseAdapter:
-    """
-    Read-only ClickHouse adapter for latency baseline queries.
-    Implements LatencyClickHousePort structurally (Protocol).
-
-    All IO is wrapped in child OTEL spans.
-    No business logic — only query execution and row mapping.
-    """
-
     def __init__(
         self,
         host: str,
@@ -66,17 +42,13 @@ class LatencyClickHouseAdapter:
         hour_of_day: int,
         days: int,
     ) -> list[BaselineRow]:
-        """
-        Queries latency_checkpoints for the given model and hour_of_day,
-        returning up to `days` most-recent rows ordered by checkpoint_date DESC.
-        Maps raw ClickHouse rows to BaselineRow dataclass instances.
-        """
+        table_name = LatencyCheckpointModel.table_name()
         with api_span(
             "clickhouse_adapter.get_baseline",
             {
                 "db.system": "clickhouse",
                 "db.operation": "SELECT",
-                "db.name": "latency_checkpoints",
+                "db.name": table_name,
                 "model": model,
                 "hour_of_day": hour_of_day,
                 "days": days,
@@ -84,7 +56,7 @@ class LatencyClickHouseAdapter:
         ):
             try:
                 result = self.client.query(
-                    _BASELINE_QUERY,
+                    ClickHouseQueryRegistry.BASELINE_QUERY,
                     {
                         "model": model,
                         "hour_of_day": hour_of_day,
@@ -104,7 +76,6 @@ class LatencyClickHouseAdapter:
             for raw_row in result.result_rows:
                 try:
                     checkpoint_date, p99_ttft, p99_total = raw_row
-                    # ClickHouse may return date as string or date object
                     if isinstance(checkpoint_date, str):
                         checkpoint_date = date.fromisoformat(checkpoint_date)
                     rows.append(
