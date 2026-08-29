@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { RawAuthApiClient } from "../../src/lib/api/auth-client";
-import { AUTH_ENDPOINTS } from "../../src/lib/api/auth-endpoints";
+import { RawAuthApiClient } from "../../../src/lib/api/auth-client";
 
 describe("Auth Lifecycle & Organization Management Integration Suite", () => {
   let client: RawAuthApiClient;

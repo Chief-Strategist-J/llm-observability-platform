@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { executeFilterPipeline, buildFilterListOps, foldQueryParams, checkHasActiveFilters } from '../../src/hooks/filter-pipeline.engine';
-import { encodeFilters, decodeFilters } from '../../src/lib/utils/url-state';
-import { transformList } from '../../src/core/data-driven/list-transform';
-import { FIXTURE_SPANS } from '../../src/lib/fixtures/fixtures';
+import { executeFilterPipeline, buildFilterListOps } from '../../../src/hooks/filter-pipeline.engine';
+import { decodeFilters } from '../../../src/lib/utils/url-state';
+import { transformList } from '../../../src/core/data-driven/list-transform';
+import { FIXTURE_SPANS } from '../../../src/lib/fixtures/fixtures';
 
 describe('Filter Pipeline Engine & List Transform Integration Suite', () => {
   it('should end-to-end decode URL parameters, execute filter pipeline, and filter dataset via listTransform ops', () => {

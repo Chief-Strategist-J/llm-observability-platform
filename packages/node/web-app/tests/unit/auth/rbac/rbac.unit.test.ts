@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { canAccessRoute } from '../../src/server/auth/rbac';
+import { canAccessRoute } from '../../../../src/server/auth/rbac';
 
 describe('RBAC Middleware Guard Unit Tests (TEST-FE2-01)', () => {
   it('blocks /admin/* routes for member role', () => {

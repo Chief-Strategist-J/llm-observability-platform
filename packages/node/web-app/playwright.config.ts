@@ -1,11 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const isHeaded = process.env.HEADED === 'true' || process.argv.includes('--headed');
+
 export default defineConfig({
   testDir: './tests/automation',
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  retries: process.env.CI ? 1 : 0,
+  workers: 1,
   reporter: [
     ['html', { outputFolder: 'playwright-report', open: 'never' }],
     ['json', { outputFile: 'playwright-report/results.json' }],
@@ -13,9 +15,19 @@ export default defineConfig({
   ],
   use: {
     baseURL: 'http://localhost:31400',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    headless: true,
+    trace: 'on',
+    screenshot: 'on',
+    video: 'on',
+    headless: !isHeaded,
+    launchOptions: {
+      slowMo: isHeaded ? 400 : 0,
+    },
+  },
+  webServer: {
+    command: './scripts/app.sh web-app',
+    url: 'http://localhost:31400',
+    reuseExistingServer: true,
+    timeout: 120 * 1000,
   },
   projects: [
     {

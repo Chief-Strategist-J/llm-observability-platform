@@ -32,7 +32,9 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:perf": "vitest run tests/performance",
-    "test:e2e": "npx cucumber-js --config tests/automation/cucumber.json",
+    "test:e2e": "npx playwright test",
+    "test:e2e:headed": "npx playwright test --headed --project=chromium",
+    "test:e2e:ui": "npx playwright test --ui",
     "test:allure": "npx allure generate allure-results --clean -o allure-report",
     "build-storybook": "storybook build"
   },

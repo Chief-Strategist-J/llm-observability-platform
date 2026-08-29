@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { encodeFilters, decodeFilters } from '../../src/lib/utils/url-state';
+import { encodeFilters, decodeFilters } from '../../../../src/lib/utils/url-state';
 import type { FilterState } from '@observability/api-types';
 
 describe('URL Filter State Codec Unit Tests (F-11 / TEST-FE2-05)', () => {

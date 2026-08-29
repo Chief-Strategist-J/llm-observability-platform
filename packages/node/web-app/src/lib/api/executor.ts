@@ -1,39 +1,3 @@
-/**
- * ============================================================================
- * ALGORITHM: HTTP REQUEST EXECUTION & OPEN-TELEMETRY PROPAGATION ENGINE
- * ============================================================================
- * STEP 1: REGISTRY LOOKUP
- *         Retrieve the target endpoint metadata (HTTP method, URI pattern, auth flag)
- *         from the centralized endpoint registry. Throw explicit error if missing.
- *
- * STEP 2: PATH PARAMETER INTERPOLATION
- *         Substitute dynamic URI tokens (e.g. ":id") with URI-encoded values provided in
- *         pathParams.
- *
- * STEP 3: QUERY STRING COMPOSITION
- *         If queryParams are supplied, construct and append a serialized URLSearchParams
- *         string to the final request path.
- *
- * STEP 4: OPENTELEMETRY TRACE PROPAGATION
- *         Inject active OpenTelemetry context headers (traceparent) into request headers
- *         to maintain distributed trace context across microservices.
- *
- * STEP 5: CORRELATION IDENTIFIERS
- *         Generate unique "x-request-id" and "x-correlation-id" header tokens for observability.
- *
- * STEP 6: AUTHORIZATION TOKEN ATTACHMENT
- *         If a bearer token is provided, attach "Authorization: Bearer <token>".
- *
- * STEP 7: HTTP FETCH DISPATCH & RESPONSE PARSING
- *         Perform asynchronous fetch request with JSON body. Parse JSON payload response.
- *
- * STEP 8: ERROR CLASSIFICATION & SESSION SANITATION
- *         If HTTP status >= 400 or JSON payload reports an error, instantiate standardized Error.
- *         On 401 Unauthorized or session expiry in client browser environment, automatically
- *         redirect to login screen.
- * ============================================================================
- */
-
 import { propagation, context } from "@opentelemetry/api";
 import { AUTH_ENDPOINTS, type EndpointMeta } from "./auth-endpoints";
 
@@ -49,13 +13,11 @@ export async function executeHttpRequest<T = any>(
   actionKey: keyof typeof AUTH_ENDPOINTS,
   params?: ExecuteParams
 ): Promise<T> {
-  // Step 1: Endpoint Registry Lookup
   const meta: EndpointMeta = AUTH_ENDPOINTS[actionKey];
   if (!meta) {
     throw new Error(`Endpoint key "${String(actionKey)}" not defined in AUTH_ENDPOINTS registry`);
   }
 
-  // Step 2: Path Parameter Interpolation
   let urlPath = meta.path;
   if (params?.pathParams) {
     Object.entries(params.pathParams).forEach(([k, v]) => {
@@ -63,13 +25,11 @@ export async function executeHttpRequest<T = any>(
     });
   }
 
-  // Step 3: Query String Composition
   if (params?.queryParams) {
     const search = new URLSearchParams(params.queryParams).toString();
     if (search) urlPath += `?${search}`;
   }
 
-  // Step 4 & 5: Header Construction & Distributed Tracing Propagation
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -84,12 +44,10 @@ export async function executeHttpRequest<T = any>(
   headers["x-request-id"] = reqId;
   headers["x-correlation-id"] = reqId;
 
-  // Step 6: Authorization Token Attachment
   if (params?.token) {
     headers["Authorization"] = `Bearer ${params.token}`;
   }
 
-  // Step 7: HTTP Fetch Execution
   const response = await fetch(`${baseUrl}${urlPath}`, {
     method: meta.method,
     headers,
@@ -98,7 +56,6 @@ export async function executeHttpRequest<T = any>(
 
   const json = await response.json();
 
-  // Step 8: Error Classification & Auto-Redirect Handling
   if (!response.ok || json.status === "error" || json.error) {
     const err = new Error(json.error?.details || json.message || `HTTP ${response.status}`);
     (err as any).code = json.error?.code || (response.status === 401 ? "UNAUTHORIZED" : "HTTP_ERROR");

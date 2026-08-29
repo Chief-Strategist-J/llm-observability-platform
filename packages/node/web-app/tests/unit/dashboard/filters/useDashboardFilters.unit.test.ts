@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { DEFAULT_DASHBOARD_FILTERS, type DashboardFilters } from '../../src/hooks/filter-pipeline.rules';
-import { executeFilterPipeline, buildFilterListOps, foldQueryParams, checkHasActiveFilters } from '../../src/hooks/filter-pipeline.engine';
+import { DEFAULT_DASHBOARD_FILTERS, type DashboardFilters } from '../../../../src/hooks/filter-pipeline.rules';
+import { executeFilterPipeline, buildFilterListOps, foldQueryParams, checkHasActiveFilters } from '../../../../src/hooks/filter-pipeline.engine';
 
 describe('Data-Driven Filter Pipeline Engine Unit Tests (F-11)', () => {
   it('should return default filters and trace span when search params are empty', () => {

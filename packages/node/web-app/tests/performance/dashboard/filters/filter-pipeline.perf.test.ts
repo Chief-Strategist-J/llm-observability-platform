@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { transformList } from '../../src/core/data-driven/list-transform';
-import { executeFilterPipeline, buildFilterListOps } from '../../src/hooks/filter-pipeline.engine';
+import { transformList } from '../../../src/core/data-driven/list-transform';
+import { executeFilterPipeline, buildFilterListOps } from '../../../src/hooks/filter-pipeline.engine';
 
 describe('Filter Pipeline High-Scale Performance Benchmark Suite', () => {
   it('should process 100,000 telemetry records in under 50ms', () => {
