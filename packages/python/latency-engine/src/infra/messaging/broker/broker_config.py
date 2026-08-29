@@ -1,14 +1,10 @@
 from __future__ import annotations
-
 import os
 from dataclasses import dataclass, field
 
-
 @dataclass
 class KafkaBrokerConfig:
-    """Configuration settings for Kafka broker connections."""
-
-    bootstrap_servers: str = "localhost:9092"
+    bootstrap_servers: str = "localhost:31414"
     client_id: str = "latency-engine"
     security_protocol: str = "PLAINTEXT"
     sasl_mechanism: str | None = None
@@ -21,8 +17,7 @@ class KafkaBrokerConfig:
 
     @classmethod
     def from_env(cls) -> KafkaBrokerConfig:
-        """Loads Kafka broker configuration from environment variables."""
-        bootstrap = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+        bootstrap = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:31414")
         client_id = os.getenv("KAFKA_CLIENT_ID", "latency-engine")
         sec_protocol = os.getenv("KAFKA_SECURITY_PROTOCOL", "PLAINTEXT")
         sasl_mech = os.getenv("KAFKA_SASL_MECHANISM")
@@ -39,7 +34,6 @@ class KafkaBrokerConfig:
         )
 
     def to_confluent_config(self) -> dict[str, str | int]:
-        """Converts to confluent_kafka configuration dictionary."""
         config: dict[str, str | int] = {
             "bootstrap.servers": self.bootstrap_servers,
             "client.id": self.client_id,

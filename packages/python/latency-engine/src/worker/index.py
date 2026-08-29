@@ -19,6 +19,7 @@ from infra.adapters.redis.redis_adapter import RedisAdapter
 from infra.adapters.kafka.confluent_producer_adapter import ConfluentKafkaProducerAdapter
 from shared.tracing.tracer import init_tracer
 from infra.adapters.metrics.prometheus_adapter import PrometheusMetricsAdapter
+from infra.messaging.migrations.run_all_migrations import run_all_migrations
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,11 @@ def is_socket_reachable(host_port: str, timeout: float = 0.2) -> bool:
 async def run() -> None:
     init_tracer()
     cfg = load_config()
+
+    try:
+        run_all_migrations()
+    except Exception as exc:
+        logger.warning("Auto-migrations on startup encountered warning: %s", exc)
 
     metrics_adapter = PrometheusMetricsAdapter()
     redis_client = None
@@ -77,9 +83,11 @@ async def run() -> None:
                 database=cfg.clickhouse_database,
             )
             redis_adapter = RedisAdapter(url=cfg.redis_url)
-            kafka_producer = ConfluentKafkaProducerAdapter(
-                bootstrap_servers=cfg.kafka_bootstrap_servers
-            )
+            kafka_producer = None
+            if is_socket_reachable(cfg.kafka_bootstrap_servers):
+                kafka_producer = ConfluentKafkaProducerAdapter(
+                    bootstrap_servers=cfg.kafka_bootstrap_servers
+                )
             baseline_activities = LatencyBaselineActivities(
                 clickhouse=clickhouse,
                 redis=redis_adapter,

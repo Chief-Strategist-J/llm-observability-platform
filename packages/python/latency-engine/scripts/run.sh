@@ -42,4 +42,6 @@ elif [ -f "$PACKAGE_DIR/venv/bin/python" ]; then
     PYTHON_EXE="$PACKAGE_DIR/venv/bin/python"
 fi
 
+"$PACKAGE_DIR/scripts/migrate.sh" || true
+
 exec "$PYTHON_EXE" "$PACKAGE_DIR/src/worker/index.py"
