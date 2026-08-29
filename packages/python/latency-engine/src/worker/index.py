@@ -3,6 +3,7 @@ import asyncio
 import logging
 import signal
 import json
+import socket
 import redis
 from confluent_kafka import Consumer, KafkaError
 from temporalio.client import Client
@@ -21,6 +22,16 @@ from infra.adapters.metrics.prometheus_adapter import PrometheusMetricsAdapter
 
 logger = logging.getLogger(__name__)
 
+def is_socket_reachable(host_port: str, timeout: float = 0.2) -> bool:
+    try:
+        parts = host_port.split(",")[0].strip().split(":")
+        host = parts[0]
+        port = int(parts[1]) if len(parts) > 1 else 9092
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except Exception:
+        return False
+
 async def run() -> None:
     init_tracer()
     cfg = load_config()
@@ -35,53 +46,64 @@ async def run() -> None:
     handler = LatencyHandler(redis_client, cfg.slo_config_path, metrics=metrics_adapter) if redis_client else None
 
     consumer = None
-    try:
-        consumer = Consumer({
-            "bootstrap.servers": cfg.kafka_bootstrap_servers,
-            "group.id": cfg.kafka_consumer_group,
-            "auto.offset.reset": "earliest",
-            "enable.auto.commit": False,
-        })
-        consumer.subscribe([cfg.kafka_topic_input])
-        logger.info(
-            "latency-engine consumer started on topic=%s group=%s",
-            cfg.kafka_topic_input, cfg.kafka_consumer_group,
-        )
-    except Exception as exc:
-        logger.warning("Could not start Kafka consumer (%s)", exc)
+    if is_socket_reachable(cfg.kafka_bootstrap_servers):
+        try:
+            consumer = Consumer({
+                "bootstrap.servers": cfg.kafka_bootstrap_servers,
+                "group.id": cfg.kafka_consumer_group,
+                "auto.offset.reset": "earliest",
+                "enable.auto.commit": False,
+                "log_level": 2,
+            })
+            consumer.subscribe([cfg.kafka_topic_input])
+            logger.info(
+                "latency-engine consumer started on topic=%s group=%s",
+                cfg.kafka_topic_input, cfg.kafka_consumer_group,
+            )
+        except Exception as exc:
+            logger.warning("Could not start Kafka consumer (%s)", exc)
+    else:
+        logger.warning("Kafka broker unreachable at %s — skipping consumer thread to prevent log spam.", cfg.kafka_bootstrap_servers)
 
     baseline_activities = None
-    try:
-        clickhouse = ClickHouseAdapter(
-            host=cfg.clickhouse_host,
-            port=cfg.clickhouse_port,
-            username=cfg.clickhouse_username,
-            password=cfg.clickhouse_password,
-            database=cfg.clickhouse_database,
-        )
-        redis_adapter = RedisAdapter(url=cfg.redis_url)
-        kafka_producer = ConfluentKafkaProducerAdapter(
-            bootstrap_servers=cfg.kafka_bootstrap_servers
-        )
-        baseline_activities = LatencyBaselineActivities(
-            clickhouse=clickhouse,
-            redis=redis_adapter,
-            kafka=kafka_producer,
-        )
-    except Exception as exc:
-        logger.warning("Could not initialize ClickHouse baseline adapters (%s)", exc)
+    ch_host_port = f"{cfg.clickhouse_host}:{cfg.clickhouse_port}"
+    if is_socket_reachable(ch_host_port):
+        try:
+            clickhouse = ClickHouseAdapter(
+                host=cfg.clickhouse_host,
+                port=cfg.clickhouse_port,
+                username=cfg.clickhouse_username,
+                password=cfg.clickhouse_password,
+                database=cfg.clickhouse_database,
+            )
+            redis_adapter = RedisAdapter(url=cfg.redis_url)
+            kafka_producer = ConfluentKafkaProducerAdapter(
+                bootstrap_servers=cfg.kafka_bootstrap_servers
+            )
+            baseline_activities = LatencyBaselineActivities(
+                clickhouse=clickhouse,
+                redis=redis_adapter,
+                kafka=kafka_producer,
+            )
+        except Exception as exc:
+            logger.warning("Could not initialize ClickHouse baseline adapters (%s)", exc)
+    else:
+        logger.warning("ClickHouse unreachable at %s — baseline scheduler disabled.", ch_host_port)
 
     temporal_client: Client | None = None
     if cfg.temporal_host and baseline_activities:
-        try:
-            temporal_client = await Client.connect(
-                cfg.temporal_host,
-                namespace=cfg.temporal_namespace,
-                interceptors=[TracingInterceptor()],
-            )
-            logger.info("Temporal client connected to %s", cfg.temporal_host)
-        except Exception as exc:
-            logger.warning("Could not connect to Temporal (%s)", exc)
+        if is_socket_reachable(cfg.temporal_host):
+            try:
+                temporal_client = await Client.connect(
+                    cfg.temporal_host,
+                    namespace=cfg.temporal_namespace,
+                    interceptors=[TracingInterceptor()],
+                )
+                logger.info("Temporal client connected to %s", cfg.temporal_host)
+            except Exception as exc:
+                logger.warning("Could not connect to Temporal (%s)", exc)
+        else:
+            logger.warning("Temporal unreachable at %s", cfg.temporal_host)
 
     loop = asyncio.get_event_loop()
     stop = asyncio.Event()
@@ -98,7 +120,6 @@ async def run() -> None:
 
     async def consume() -> None:
         if not consumer or not handler:
-            logger.warning("Kafka consumer or handler uninitialized — consumer loop disabled.")
             return
         try:
             while not stop.is_set():
@@ -138,12 +159,11 @@ async def run() -> None:
                 else:
                     await asyncio.sleep(0.05)
         finally:
-            consumer.close()
-            logger.info("latency-engine consumer closed")
+            if consumer:
+                consumer.close()
 
     async def run_temporal_worker() -> None:
         if temporal_client is None or baseline_activities is None:
-            logger.warning("Temporal or baseline activities unavailable.")
             return
         worker = Worker(
             temporal_client,
