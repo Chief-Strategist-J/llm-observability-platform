@@ -1,84 +1,467 @@
-# Master Policy — Sequential Production User Journeys & End-to-End Execution Rules
+# Master Policy — Language-Agnostic Sequential Production User Journeys, UI Element Discovery & End-to-End Execution Rules
 
 ## Table of Contents
 1. [Purpose & Core Philosophy](#1-purpose--core-philosophy)
-2. [Directory Architecture & File Naming Rules](#2-directory-architecture--file-naming-rules)
+2. [Language-Agnostic Architecture & Directory Structure](#2-language-agnostic-architecture--directory-structure)
 3. [Strict Sequential Execution Controls](#3-strict-sequential-execution-controls)
-4. [Master Production Lifecycle Phase Matrix](#4-master-production-lifecycle-phase-matrix)
-5. [Anti-Patterns & Automatic Rejection Rules](#5-anti-patterns--automatic-rejection-rules)
-6. [Page Objects & Component Abstraction Rules](#6-page-objects--component-abstraction-rules)
-7. [State Preservation & Diagnostic Logging](#7-state-preservation--diagnostic-logging)
-8. [Generic Code Template for Sequential Journeys](#8-generic-code-template-for-sequential-journeys)
-9. [CLI Command Registry & Package Scripts](#9-cli-command-registry--package-scripts)
+4. [UI Component Element Searching & Discovery Taxonomy](#4-ui-component-element-searching--discovery-taxonomy)
+   - 4.1 [Universal Locator Discovery & Searching Priority Hierarchy](#41-universal-locator-discovery--searching-priority-hierarchy)
+   - 4.2 [Buttons & Action Triggers](#42-buttons--action-triggers)
+   - 4.3 [Dropdowns, Selects & Autocomplete Comboboxes](#43-dropdowns-selects--autocomplete-comboboxes)
+   - 4.4 [Dialogs, Modals, Overlays & Alert Popups](#44-dialogs-modals-overlays--alert-popups)
+   - 4.5 [Radio Buttons & Radio Groups](#45-radio-buttons--radio-groups)
+   - 4.6 [Checkboxes & Toggle Switches](#46-checkboxes--toggle-switches)
+   - 4.7 [Inputs, Textfields & Search Controls](#47-inputs-textfields--search-controls)
+   - 4.8 [Data Tables & Dynamic Grids](#48-data-tables--dynamic-grids)
+   - 4.9 [Tabs, Accordions, Toasts & Tooltips](#49-tabs-accordions-toasts--tooltips)
+5. [Comprehensive Test Case Coverage Taxonomy](#5-comprehensive-test-case-coverage-taxonomy)
+   - 5.1 [Double-Tap, Rapid Re-Click & Debounce Protection](#51-double-tap-rapid-re-click--debounce-protection)
+   - 5.2 [Input Validation & Wrong Data Boundary Coverage](#52-input-validation--wrong-data-boundary-coverage)
+   - 5.3 [Security Specialist Data & Vulnerability Test Payloads](#53-security-specialist-data--vulnerability-test-payloads)
+   - 5.4 [Master 20 Critical Edge Cases Matrix](#54-master-20-critical-edge-cases-matrix)
+   - 5.5 [Master Data Validation Edge Cases Taxonomy (OWASP & Industry Standards)](#55-master-data-validation-edge-cases-taxonomy-owasp--industry-standards)
+6. [Master Production Lifecycle Phase Matrix](#6-master-production-lifecycle-phase-matrix)
+7. [Anti-Patterns & Automatic Rejection Rules](#7-anti-patterns--automatic-rejection-rules)
+8. [Page Objects & Screen Abstraction Rules](#8-page-objects--screen-abstraction-rules)
+9. [State Preservation & Diagnostic Logging](#9-state-preservation--diagnostic-logging)
+10. [Language-Agnostic Code Patterns & Generic Templates](#10-language-agnostic-code-patterns--generic-templates)
+11. [Multi-Stack CLI Command Registry & Execution References](#11-multi-stack-cli-command-registry--execution-references)
 
 ---
 
 ## 1. Purpose & Core Philosophy
 
-Isolated unit and feature-level tests (Categories A–K) verify individual endpoints in isolation. They **do not prove** that a real enterprise user can register, encounter validation guards, authenticate, view workspace telemetry, and invite team members in sequence.
+Isolated unit, integration, or single-endpoint tests verify individual API routes or components in isolation. They **do not prove** that a real enterprise user can navigate a multi-screen flow, interact with dynamic UI controls (buttons, dropdowns, dialogs, radio groups), trigger background pipelines, encounter validation guards, authenticate, view telemetry, and manage organization settings in sequence.
 
-A **Sequential User Journey** tests the cumulative, end-to-end lifecycle of a production user across multiple services, routes, and state transitions.
+A **Sequential User Journey** tests the cumulative, end-to-end lifecycle of a production user across multiple services, UI routes, dynamic modal transitions, and persistent backend state changes.
+
+### Key Principles:
+- **Language-Agnostic & Tool-Agnostic**: These rules apply identically whether your test automation harness is built in Node.js/TypeScript, Python, Java/Kotlin, Go, C#, or uses engines like Playwright, Cypress, Selenium, Appium, PyTest, or Cucumber BDD.
+- **Robust UI Locating & Finding**: Tests MUST discover and target UI controls using semantic accessibility attributes, explicit test IDs, or visible labels—NEVER fragile DOM indexing or CSS styling selectors.
+- **State-Verified Transitions**: Every interaction (clicking a button, selecting a radio option, confirming a dialog) MUST verify state changes before proceeding to the next step.
 
 ---
 
-## 2. Directory Architecture & File Naming Rules
+## 2. Language-Agnostic Architecture & Directory Structure
 
-All sequential user journeys MUST be placed strictly inside `tests/automation/e2e/`. No journey spec file may exist in root folders or feature subdirectories.
+All sequential user journeys MUST be stored in a dedicated, unified automation directory structure regardless of programming language or framework.
 
 ```
-packages/node/web-app/tests/automation/e2e/
-├── journeys/                               # Gherkin BDD Feature Scenarios
+tests/automation/e2e/
+├── journeys/                               # BDD Gherkin Feature Scenarios (What is tested)
 │   ├── sequential-user-flow.feature
 │   └── admin-user-suspension-flow.feature
-├── step-definitions/                       # BDD Step Definitions
-│   └── journeys.steps.ts
-├── support/                                # State & Diagnostics Helpers
-│   └── journey-context.ts
-└── <journey-name>.journey.spec.ts          # Playwright Serial Runner Spec
+├── step-definitions/                       # Language-Specific Step Glue (TypeScript/Python/Java)
+│   └── journeys_steps.[ts|py|java]
+├── page-objects/                           # Page / Screen Object Abstractions (Locators & Interactions)
+│   ├── base_page.[ts|py|java]
+│   ├── sign_up_page.[ts|py|java]
+│   ├── sign_in_page.[ts|py|java]
+│   └── dashboard_page.[ts|py|java]
+├── support/                                # Journey State Context & Diagnostic Handlers
+│   └── journey_context.[ts|py|java]
+└── runners/                                # Serial Execution Specs / Test Suites
+    └── sequential_user_flow.journey.[spec.ts|test.py|Test.java]
 ```
 
 ### Naming Conventions:
-- Spec Runner File: `<journey-name>.journey.spec.ts` (e.g., `sequential-user-flow.journey.spec.ts`)
-- Gherkin Feature: `<journey-name>.feature`
-- Tagging Mandatory: Every sequential journey MUST be tagged `@e2e @sequential-journey @critical`.
+- **Feature Specification**: `<journey-name>.feature`
+- **Serial Runner File**: `<journey-name>.journey.[spec.ts|test.py|Test.java]`
+- **Mandatory Scenario Tagging**: Every sequential journey scenario MUST be tagged `@e2e @sequential-journey @critical`.
 
 ---
 
 ## 3. Strict Sequential Execution Controls
 
-To prevent race conditions, test shuffling, or cross-thread data pollution, all sequential journeys MUST adhere to these strict rules:
+To prevent race conditions, test thread shuffling, or cross-environment data contamination, all sequential journeys MUST follow these execution rules:
 
-1. **Serial Execution (`test.describe.serial`)**:
-   - Every sequential journey file MUST be wrapped inside `test.describe.serial()`.
-   - If Step $N$ fails, subsequent dependent steps in the lifecycle are immediately halted with `did not run` status, preventing cascade noise.
+1. **Strict Serial Runner Execution**:
+   - Every sequential journey MUST execute steps strictly in serial sequence.
+   - If Step $N$ fails, subsequent dependent steps in the journey MUST be immediately halted with a dependent failure status, preventing noise cascades.
 
-2. **Single Worker Limit (`workers: 1`)**:
-   - Sequential journeys MUST be executed with `--workers=1` to guarantee single-threaded execution.
+2. **Single Thread / Single Worker Limit (`workers = 1`)**:
+   - Sequential journeys MUST execute on a single worker thread (`--workers=1`, `pytest -n 0`, `parallel=false`) to guarantee thread-safe state continuity.
 
-3. **Collision-Free Deterministic Data**:
-   - All email addresses and organization names generated during a journey MUST use `generateUniqueEmail('prefix')` from `fixtures/generators/unique-email.ts`.
+3. **Collision-Free Deterministic Test Data**:
+   - All user emails, usernames, and organization names generated during a journey MUST use dynamic collision-free generators (e.g. `generate_unique_email("prod_admin")`).
 
-4. **Independent Failure Assertion**:
-   - Every phase in the journey MUST independently verify both the UI state and the backend server state before advancing to the next phase.
+4. **Dual Verification Rule (UI State + Backend API State)**:
+   - Every phase in the journey MUST verify both the UI state transition (e.g., table updated, dialog closed) and the server API/DB state before advancing.
 
 ---
 
-## 4. Master Production Lifecycle Phase Matrix
+## 4. UI Component Element Searching & Discovery Taxonomy
 
-Every complete enterprise user journey MUST execute through the following 6 sequential phases:
+Modern web applications use complex dynamic components (modal dialogs, styled ARIA comboboxes, custom radio buttons, slide-over drawers). Locating and interacting with these elements reliably requires standard searching strategies.
+
+### 4.1 Universal Locator Discovery & Searching Priority Hierarchy
+
+When locating any UI component, test harnesses MUST evaluate locator strategies in the following strict priority order:
+
+| Priority | Strategy | Example Selector Concept | Reason |
+|---|---|---|---|
+| **1 (Highest)** | Accessible Role & Name | `role="button"`, `name="Submit Order"` | Mirrors screen-reader accessibility; resistant to UI re-styling |
+| **2** | Associated Form Label | `label="Email Address"`, `for="user-email"` | Direct human-perceived label association |
+| **3** | Dedicated Test Attribute | `data-testid="submit-btn"`, `data-cy="role-radio"` | Explicit test contract resilient to structural DOM refactoring |
+| **4** | Container-Scoped Text | `dialog.find_by_text("Confirm Delete")` | Scopes search inside specific modal/card boundary |
+| **BANNED** | DOM Index / Position | `tr:nth-child(3) > td:nth-child(5) > button` | Breaks immediately on row insert/delete or sorting |
+| **BANNED** | Styling CSS Classes | `.btn.btn-primary.blue-500` | Breaks whenever visual styling changes |
+| **BANNED** | Auto-Generated Dynamic IDs | `#input-x92f-a3` | Re-generated on every framework re-render |
+
+---
+
+### 4.2 Buttons & Action Triggers
+
+Buttons initiate actions, submit forms, or open overlays. They exist as standard HTML `<button>`, `<input type="submit">`, or custom `role="button"` elements.
 
 ```
-Phase 1: Initial Registration & Input Validation
-  ├── 1.1 HTML5 Email Format Validation Check ("invalid-email-format")
-  ├── 1.2 Weak Password Meter Warning Check ("123")
-  └── 1.3 Valid Admin Account & Workspace Organization Registration
++-------------------------------------------------------+
+|  [Icon] Submit Registration  [Spinner / Disabled]     |
++-------------------------------------------------------+
+```
 
-Phase 2: Duplicate Registration Protection
-  └── 2.1 Re-attempt registering the EXACT SAME email -> verify error alert & creation block
+#### Searching & Finding Rules:
+- **Search Strategy**: Search primarily by accessible role and visible text/name (e.g. `get_by_role("button", name="Submit Registration")`).
+- **Icon / Unlabeled Buttons**: Search by `aria-label`, `title`, or explicit `data-testid` (e.g. `data-testid="close-dialog-btn"`).
+- **Loading / Disabled State Verification**:
+  - BEFORE clicking, assert the button is **visible** and **enabled** (`not disabled` and `aria-disabled != "true"`).
+  - If a spinner/loading indicator is active inside the button (`.is-loading`, `aria-busy="true"`), wait for the loading state to clear before clicking.
+- **Post-Click Checkpoint**: Assert the button state changes (e.g., disabled during API call) or the expected target UI transition (e.g. modal opens, route changes) occurs immediately.
+
+---
+
+### 4.3 Dropdowns, Selects & Autocomplete Comboboxes
+
+Dropdowns fall into two distinct structural categories: Native `<select>` elements and Custom ARIA Listbox/Combobox controls.
+
+```
+Native Select:             Custom ARIA Combobox:
++-------------------+      +--------------------------------+
+| Select Role    v |      | Choose Role: [ Admin       v ] |
++-------------------+      +--------------------------------+
+                             | [Search roles...           ] |
+                             | > Admin                      |
+                             |   Member                     |
+                             +------------------------------+
+```
+
+#### Searching & Finding Rules:
+1. **Native `<select>` Elements**:
+   - Locate by associated `<label>` or accessible name.
+   - Interact directly via option value or label (e.g. `select_option(label="Administrator")`). Do NOT attempt to click to open native select menus.
+2. **Custom ARIA Comboboxes / Styled Dropdowns**:
+   - **Step 1: Open Trigger**: Locate the dropdown trigger element by label or `role="combobox"` / `role="button"` and click it to expand.
+   - **Step 2: List Visibility Checkpoint**: Explicitly wait and assert that the popup option container (`role="listbox"`, `role="menu"`, or `[aria-expanded="true"]`) is **visible** before searching for options.
+   - **Step 3: Searchable Dropdowns (Typeahead)**: If the dropdown contains a search filter input, locate the search input inside the popup container, enter query text, and wait for filtered options to render.
+   - **Step 4: Option Selection**: Locate the desired option inside the container by `role="option"` and accessible text (e.g. `listbox.get_by_role("option", name="Admin")`) and click it.
+   - **Step 5: Dropdown Closure Checkpoint**: Assert that the dropdown list container closes AND the trigger control reflects the selected value text.
+
+---
+
+### 4.4 Dialogs, Modals, Overlays & Alert Popups
+
+Modals interrupt normal execution to require user input or confirmation.
+
+```
++-------------------------------------------------------+
+|  Delete Workspace Modal                           [X] |
++-------------------------------------------------------+
+|  Are you sure you want to delete 'Production Org'?    |
+|                                                       |
+|  [ Cancel ]                     [ Confirm Delete ]    |
++-------------------------------------------------------+
+```
+
+#### Searching & Finding Rules:
+1. **Native Browser Dialogs (`alert`, `confirm`, `prompt`)**:
+   - MUST register event handlers (e.g. `page.on("dialog", accept)`) **BEFORE** triggering the action that opens the native alert.
+2. **Custom DOM Modals & Slide-Over Drawers (`role="dialog"`)**:
+   - **Step 1: Container Scoping**: Once opened, locate the modal root container using `role="dialog"` or `role="alertdialog"`.
+   - **Step 2: Animation Stability Assertion**: Assert the modal container is **visible** AND its entry animation (fade-in, slide-in) has completed before interacting with internal controls.
+   - **Step 3: Action Scoping**: Search for elements inside the modal using container-scoped locators (e.g. `modal.get_by_role("button", name="Confirm Delete")`). NEVER search for modal buttons globally on the page.
+   - **Step 4: Dismissal Checkpoint**: After clicking confirm/cancel or close `[X]`, explicitly assert that the modal overlay container is **hidden/removed from DOM** before interacting with the main page behind it.
+
+---
+
+### 4.5 Radio Buttons & Radio Groups
+
+Radio buttons allow selecting a single option from a mutually exclusive set.
+
+```
+Select Plan:
+ (o) Enterprise Plan ($99/mo)
+ ( ) Professional Plan ($29/mo)
+```
+
+#### Searching & Finding Rules:
+- **Container Scoping**: Locate the group container via `role="radiogroup"` or associated fieldset legend (e.g. `get_by_role("radiogroup", name="Select Plan")`).
+- **Radio Selection**: Locate the individual radio option by accessible label or `role="radio"` and click it (e.g. `radiogroup.get_by_label("Enterprise Plan ($99/mo)")`).
+- **State Checkpoint**: Assert that the clicked radio has state `checked = true` (`aria-checked="true"` or `:checked`), and all sibling radio options in the group have `checked = false`.
+
+---
+
+### 4.6 Checkboxes & Toggle Switches
+
+Checkboxes and toggle switches control independent boolean options.
+
+```
+[X] Enable Two-Factor Authentication
+Toggle: [ ON  | off ]  Receive Email Notifications
+```
+
+#### Searching & Finding Rules:
+- **Searching**: Locate by associated label text or `role="checkbox"` / `role="switch"`.
+- **State Checkpoint Before Click**: Check the current state (`is_checked()`) before clicking. Do NOT click blindly if the checkbox is already in the desired target state.
+- **State Verification**: After clicking, assert that `checked` state toggles accurately (`aria-checked` flips from `false` to `true` or vice versa).
+
+---
+
+### 4.7 Inputs, Textfields & Search Controls
+
+Text inputs accept user strings, passwords, numbers, and search queries.
+
+```
+Search Workspaces: [ Find telemetry...            ] [Clear (X)]
+```
+
+#### Searching & Finding Rules:
+- **Searching**: Locate inputs by associated `<label>` text, `placeholder`, or `role="textbox"` / `role="searchbox"`.
+- **Text Clearing Protocol**: ALWAYS clear existing text content before filling new values into an input field to prevent string concatenation bugs.
+- **Masked / Password Fields**: For password inputs, verify that input attribute `type="password"` is set. If testing password visibility toggle buttons (eye icon), verify field type toggles between `"password"` and `"text"`.
+- **Search Inputs with Live Results**: When entering text into a live search box, wait for the network request / debounced search results panel to render before asserting search results.
+
+---
+
+### 4.8 Data Tables & Dynamic Grids
+
+Data tables list rows of records with action menus, column sorting, and pagination.
+
+```
++-------------------+-----------------+----------------+-----------------+
+| User Name         | Email           | Role           | Actions         |
++-------------------+-----------------+----------------+-----------------+
+| Prod Admin        | admin@scaibu.io | Owner          | [Edit] [Delete] |
+| Jane Doe          | jane@scaibu.io  | Member         | [Edit] [Delete] |
++-------------------+-----------------+----------------+-----------------+
+| < Previous  Page 1 of 5  Next >                                        |
++------------------------------------------------------------------------+
+```
+
+#### Searching & Finding Rules:
+- **Row-Scoped Locator Strategy**:
+  1. Locate the target row by searching for cell text inside the table: `table.get_by_role("row").filter(has_text="jane@scaibu.io")`.
+  2. Locate action buttons/dropdowns **within that specific row boundary**: `target_row.get_by_role("button", name="Delete")`.
+- **Column Header Sorting**: Locate column headers by `role="columnheader"`, click to sort, and assert `aria-sort` changes (`ascending` / `descending`).
+- **Pagination Controls**: Locate pagination buttons (`Next`, `Previous`, `Page Number`) by accessible name, click, and assert table row content updates to reflect the new page.
+
+---
+
+### 4.9 Tabs, Accordions, Toasts & Tooltips
+
+Dynamic UI feedback elements require precise timing assertions.
+
+```
+Tabs: [ General ] [ Security* ] [ Billing ]
+Toast Alert: (v) Organization updated successfully [X]
+Tooltip: (i) [ This permission allows full admin access ]
+```
+
+#### Searching & Finding Rules:
+- **Tabs (`role="tablist"`)**:
+  - Locate tabs by `role="tab"` and text. Click target tab.
+  - Assert target tab has `aria-selected="true"` and target tab panel (`role="tabpanel"`) becomes visible.
+- **Accordions / Collapsible Sections**:
+  - Locate trigger by `role="button"` or `aria-controls`. Click to expand.
+  - Assert trigger `aria-expanded="true"` and section content is visible.
+- **Toast Notifications (`role="alert"` / `role="status"`)**:
+  - Toast alerts are transient. Locate immediately using `role="alert"` or `role="status"`.
+  - Assert toast text matches expected outcome string.
+  - If testing auto-dismissal, assert toast disappears within the configured timeout window.
+- **Hover Tooltips**:
+  - Trigger tooltips by focusing or hovering over the target element (`element.hover()`).
+  - Locate tooltip container by `role="tooltip"` and assert text content is visible.
+
+---
+
+## 5. Comprehensive Test Case Coverage Taxonomy
+
+Every enterprise sequential journey MUST explicitly include scenarios across these critical testing vectors:
+
+```
+                                  TEST CASE TAXONOMY
+                                          │
+        ┌─────────────────────────────────┼─────────────────────────────────┐
+        ▼                                 ▼                                 ▼
+5.1 Double-Tap & Debounce     5.2 Validation & Wrong Data       5.3 Security Specialist Data
+  - Rapid double-click          - Boundary value limits           - XSS sanitization payloads
+  - Immediate button disable    - Required field omission         - SQL/NoSQL injection payloads
+  - Single-request guarantee    - Type coercion & format errors   - Path traversal payloads
+  - Backend idempotency check   - Password strength validation    - RBAC & IDOR cross-tenant access
+```
+
+---
+
+### 5.1 Double-Tap, Rapid Re-Click & Debounce Protection
+
+Submitting forms, processing payments, or triggering workflow actions must be resilient to user double-clicking or rapid tapping.
+
+#### Required Test Scenarios:
+1. **Immediate UI Disable Check**:
+   - Upon the first click on an action button (e.g. "Submit Payment", "Create Workspace"), assert that the button immediately flips to a disabled state (`disabled` or `aria-disabled="true"`) and shows a busy loading indicator (`aria-busy="true"`).
+2. **Rapid Double-Tap Simulation**:
+   - Fire two rapid consecutive click events on the submit button (`button.dblclick()` or two clicks within 50ms).
+3. **Single API Request & Exactly-Once Execution Assertion**:
+   - Intercept network traffic during the double-tap. Assert that **exactly one HTTP request** is dispatched to the backend service endpoint.
+   - Assert that the backend database record is created **exactly once** (no duplicate records).
+4. **Idempotency Key Reuse Verification**:
+   - If the endpoint accepts an idempotency key, verify that sending duplicate requests with the same key returns the cached original result without re-executing the operation.
+
+---
+
+### 5.2 Input Validation & Wrong Data Boundary Coverage
+
+Sequential journeys MUST test that invalid inputs, missing fields, and out-of-boundary values are caught cleanly both client-side and server-side.
+
+#### Required Validation Categories:
+1. **Required Field Omission**:
+   - Leave required form inputs blank (e.g. empty email, blank organization name). Click submit.
+   - Assert that inline field validation error messages appear immediately (e.g. `"Email address is required"`), and form submission is blocked.
+2. **Boundary Value & Constraint Violation Checks**:
+   - **Length Boundaries**: Test string inputs at `min_length - 1` (too short) and `max_length + 1` (too long). Assert specific boundary error text.
+   - **Format Constraints**: Enter malformed formats (e.g. `"not-an-email"`, `"ftp://invalid-url"`, `"123-abc-phone"`). Assert format validation blocks submission.
+   - **Weak Credentials**: Test password fields with weak inputs (e.g. `"123"`, `"password"`). Assert weak password strength warnings are displayed.
+3. **Wrong Data & Mismatched Input Scenarios**:
+   - **Invalid Password Sign-In**: Attempt authentication using a valid user email but an incorrect password. Assert error message `"Invalid email or password"` (ensure message does not leak whether the email exists).
+   - **Stale / Expired Authentication Tokens**: Attempt API interactions using an expired token or revoked session cookie. Assert system redirects to sign-in with a 401 Unauthorized state.
+   - **Mismatched Confirmation Inputs**: Enter differing values in `"Password"` and `"Confirm Password"` fields. Assert mismatch alert prevents form submission.
+4. **Dual Validation Assertion (Client UI + Direct API Bypass)**:
+   - For every input constraint, verify that submitting invalid data directly via HTTP API client (bypassing the UI) is independently rejected with a 400 Bad Request status.
+
+---
+
+### 5.3 Security Specialist Data & Vulnerability Test Payloads
+
+Enterprise sequential journeys MUST incorporate security specialist test payloads to verify that the application handles hostile or malicious inputs safely without security breaches.
+
+#### Required Security Test Categories:
+
+| Security Vector | Example Test Payload | Expected Safe System Behavior |
+|---|---|---|
+| **Cross-Site Scripting (XSS)** | `<script>alert('xss')</script>`<br>`"><img src=x onerror=alert(1)>`<br>`javascript:alert(1)` | Value is HTML-escaped/sanitized when displayed in UI. No JavaScript executes. No unhandled browser dialog appears. |
+| **SQL Injection (SQLi)** | `' OR '1'='1`<br><code>'; DROP TABLE users; --</code><br>`admin' --` | Database queries use parameterized statements. Input is treated as literal string. No SQL syntax error exposed; no unauthorized records returned. |
+| **NoSQL Injection** | `{"$gt": ""}`<br>`{"$ne": null}` | JSON inputs are validated against strict schema types. Operator injection is rejected with 400 Bad Request. |
+| **Command Injection / Traversal** | `../../etc/passwd`<br>`127.0.0.1; cat /etc/passwd`<br>`file.txt\0.pdf` | Path traversal and shell characters are rejected. System blocks file disclosure and returns safe error response. |
+| **IDOR & Cross-Tenant Access** | Accessing Resource ID `org_123` while authenticated as Tenant `org_999` | Server checks authorization context and returns 403 Forbidden. Zero cross-tenant data leaked. |
+| **Sensitive Data Exposure** | Passwords, Auth Tokens, SSNs, API Secret Keys | Password input fields use `type="password"`. Sensitive secrets are masked (`****`) in UI, DOM attributes, network payloads, and browser logs. |
+
+---
+
+### 5.4 Master 20 Critical Edge Cases Matrix
+
+All automated sequential journey suites MUST include explicit test assertions for at least the following 20 critical edge cases:
+
+| # | Critical Edge Case Category | Trigger Condition / Input Vector | Expected Safe Outcome & Required Assertion |
+|---|---|---|---|
+| 1 | **Rapid Double-Tap / Double-Submit** | Rapid consecutive double-click on submit button (`dblclick()`) | Button disables immediately on tap 1; exactly 1 network request fired; 0 duplicate DB records created. |
+| 2 | **Mid-Journey Session Expiry** | Auth token / session cookie expires between multi-screen steps | App captures unsaved state, redirects to login, and returns user to exact step after re-auth without 500 crash. |
+| 3 | **Cross-Tenant IDOR Parameter Tampering** | Logged-in user in `org_A` manually alters URL parameter `orgId=org_B` | API rejects with 403 Forbidden; zero cross-tenant data visible; security audit alert logged. |
+| 4 | **Stored / Reflected XSS Payload Injection** | Input `<script>alert(1)</script>` or `"><img src=x onerror=alert(1)>` in text fields | Input is sanitized/escaped when rendered in DOM; 0 script elements instantiated; clean browser console. |
+| 5 | **SQL / NoSQL Injection Attack Vectors** | Input `' OR '1'='1` or `{"$gt": ""}` into telemetry filter or search inputs | Parameterized query protects DB; input treated as literal string or rejected with 400 Bad Request. |
+| 6 | **Concurrent Duplicate Record Invites** | Two admin users invite the exact same email address simultaneously | Concurrency lock / unique index handles race condition; 1 invite succeeds, 2nd receives clean conflict alert. |
+| 7 | **Browser Back-Button Form Re-submission** | User completes Step 4, presses "Back" button to Step 3 form, and resubmits | SPA handles state reset cleanly; does not corrupt existing record or throw unhandled state exception. |
+| 8 | **Downstream Microservice Timeout / 504** | Telemetry / analytics microservice times out during dashboard query step | UI displays graceful fallback banner ("Service unavailable, retry later"); retry button active; session preserved. |
+| 9 | **Whitespace-Only Input Manipulation** | Filling required text inputs with spaces `"   "` or zero-width spaces (`\u200B`) | Input validator trims whitespace, treats field as empty, blocks submission with "Field required" message. |
+| 10 | **Payload Boundary Limit Overflow** | Uploading 50MB file or submitting 10,000+ character string into text field | Enforces client-side limit; server returns 413 Payload Too Large without crashing process memory. |
+| 11 | **Network Offline / Reconnection Recovery** | Network drops while clicking "Save Settings", then restores 5 seconds later | App displays "Offline" toast, queues action or retries on reconnect without duplicating state. |
+| 12 | **Role Demotion Mid-Session (RBAC Revocation)** | User's role is demoted from Admin to Member while actively viewing admin settings | Next API action rejected with 403 Forbidden; UI updates available navigation routes immediately. |
+| 13 | **Unicode, Emoji & International Input** | Entering characters (`Müller`, `张伟`, `éàç`), emojis (`🚀🔥`), or RTL text | Full UTF-8 handling end-to-end; no database truncation (`?`) or broken UI component rendering. |
+| 14 | **Stale Modal Form State Re-opening** | Filling half a modal form, closing via `[X]`, then re-opening the modal | Form fields reset to clean initial state; no stale residual data from cancelled attempt. |
+| 15 | **Soft-Deleted Record Access Re-attempt** | Attempting to view/update a record soft-deleted by another session seconds prior | Returns 404 Not Found with clean message ("Record no longer exists"); removes item from directory table. |
+| 16 | **Idempotency Key Reuse Payload Mismatch** | Re-using an Idempotency Key with a modified request payload | Server rejects with 400 Bad Request ("Idempotency key payload mismatch") to prevent payload tampering. |
+| 17 | **Partial Failure Workflow Saga Rollback** | In a 3-step provisioning flow (Create Org -> Provision DB -> Assign Role), Step 2 fails | Saga compensation triggers; orphaned Org is cleaned up so backend state remains consistent. |
+| 18 | **Hidden / Custom Scrollbar Container Click** | Target dropdown option or table action button is inside an overflow-scroll container | Harness explicitly scrolls custom container into view, asserts element visibility, then clicks. |
+| 19 | **Slow Network 3G Out-of-Order Search Race** | Fast typing in dynamic autocomplete dropdown; search responses arrive out of order | UI displays results matching the LAST typed query string, ignoring stale out-of-order network responses. |
+| 20 | **Sensitive Data Masking in UI & Logs** | Typing passwords, credit card numbers, or API secret keys into form inputs | Field uses `type="password"`; values masked (`••••`) in UI, DOM, browser console, and network payload logs. |
+
+---
+
+### 5.5 Master Data Validation Edge Cases Taxonomy (OWASP & Industry Standards)
+
+Data validation is the primary line of defense for application security, data integrity, and system stability. Grounded in **OWASP Input Validation Guidelines** and **Boundary Value Analysis (BVA)**, automated tests MUST verify data validation across 8 critical data categories:
+
+```
+                            DATA VALIDATION MATRIX
+                                      │
+     ┌──────────┬──────────┬──────────┼──────────┬──────────┬──────────┐
+     ▼          ▼          ▼          ▼          ▼          ▼          ▼
+  Strings     Emails    Numbers     Dates      JSON       Files     Allowlisting
+```
+
+#### 1. Text & String Input Edge Cases
+- **Whitespace-Only Strings**: Test inputs filled with spaces (`"   "`), tabs (`"\t"`), newlines (`"\n"`), or zero-width non-breaking spaces (`"\uFEFF"`, `"\u200B"`). Validator MUST trim whitespace and treat empty result as invalid for required fields.
+- **Unicode Homoglyph Attacks**: Test visually identical characters from different alphabets (e.g. Cyrillic 'а' vs Latin 'a'). Applications MUST apply **Unicode Normalization (NFC / NFKC)** before string comparison/storage to prevent account spoofing or filter bypasses.
+- **Control & Non-Printable Characters**: Input strings containing null bytes (`\0`), ANSI escape codes (`\x1b[31m`), or ASCII bell characters (`\x07`). Application MUST strip or reject non-printable control characters.
+- **Extreme Length Boundaries**: Test string inputs at `min_length - 1` (too short), `max_length` (exact edge), `max_length + 1` (just over edge), and 10,000+ character stress payloads to prevent buffer overflows or truncated database writes.
+
+#### 2. Email Address Validation Edge Cases
+- **Subdomains, Tags & Special Characters**: Verify support for legitimate complex emails: `user+tag@domain.com`, `admin@sub.department.co.uk`, `user.name@domain.io`.
+- **Case Normalization**: Verify domain parts are case-normalized (`ADMIN@DOMAIN.COM` $\rightarrow$ `admin@domain.com`) to prevent duplicate account creation via casing tricks.
+- **Invalid Email Formats**: Reject missing `@`, consecutive dots (`user..name@domain.com`), leading/trailing dots (`.user@domain.com`), and trailing spaces.
+- **OWASP Rule**: Avoid overly restrictive custom regexes that reject valid international emails. Use standard RFC 5322 validation libraries.
+
+#### 3. Numeric, Currency & Floating-Point Precision Edge Cases
+- **Floating-Point Precision Errors**: In financial, pricing, or telemetry calculations, test `0.1 + 0.2` rounding edge cases. System MUST use fixed-precision decimal types or integer representation (e.g. cents) to prevent precision drift (`0.30000000000000004`).
+- **Negative & Zero Values**: Test `-1`, `-0.01`, and `0` in quantity, pricing, age, or pagination limit inputs. Ensure negative values are rejected where positive values are required.
+- **Integer Boundary Overflow/Underflow**: Test 32-bit (`2,147,483,647`) and 64-bit (`9,223,372,036,854,775,807`) integer max boundaries + 1 to prevent integer overflow crashes.
+- **Non-Numeric Character Coercion**: Test inputs containing scientific notation (`12e3`), `NaN`, `Null`, `Infinity`, or hexadecimal (`0x1A`) in numeric fields. Validator MUST reject invalid numeric coercion.
+
+#### 4. Date, Time & Timezone Validation Edge Cases
+- **Strict Format Enforcement**: Enforce standard ISO 8601 strings (`YYYY-MM-DD` / `YYYY-MM-DDTHH:mm:ssZ`). Reject ambiguous regional formats (`MM/DD/YYYY` vs `DD/MM/YYYY`).
+- **Leap Year & Calendar Edge Cases**: Test invalid leap year dates (e.g. `2025-02-29` on a non-leap year) and out-of-bound dates (`2026-04-31`, `2026-13-01`).
+- **Semantic Date Logic**: Test logic constraints: "Start Date" MUST be before "End Date", birthdate MUST NOT be in the future, event date MUST NOT be >100 years in the future.
+- **Timezone Drift & DST Transitions**: Test date entries during Daylight Saving Time (DST) 23-hour and 25-hour transition days to prevent off-by-one day bugs when converting between client local time and server UTC.
+
+#### 5. JSON Payload & API Schema Validation Edge Cases
+- **Null vs Empty String vs Absent Field**: System MUST distinguish between `{"key": null}` (explicit null), `{"key": ""}` (empty string), and `{}` (absent key).
+- **Unexpected Extra Fields (Mass Assignment Protection)**: Submit unexpected keys in request JSON (e.g. `{"name": "Alice", "isAdmin": true, "role": "owner"}`). Server schema validator (e.g. Zod, Joi, Valibot) MUST strip or reject unauthorized fields.
+- **Type Coercion Mismatch**: Submit wrong data types for schema fields (e.g. passing a string `"true"` for boolean, or array `[1, 2]` for string). Validator MUST reject with a 400 Bad Request schema error.
+- **Deeply Nested JSON (DoS Vector)**: Test JSON objects nested 50+ levels deep (`{"a":{"b":{"c":...}}}`). Parser MUST enforce max nesting depth limits to prevent stack overflow DoS.
+
+#### 6. File Upload & Binary Payload Edge Cases
+- **MIME-Type vs Extension Mismatch**: Test uploading a executable script renamed to `.png` (`script.php` renamed to `script.png`). Server MUST inspect magic byte headers (content sniffing), not just file extensions.
+- **Double File Extensions**: Test files named `invoice.pdf.exe` or `avatar.png.php`.
+- **Zero-Byte & Oversized Files**: Test 0-byte empty file uploads AND files exceeding maximum byte limits (>10MB).
+- **Path Traversal Filenames**: Test uploading files with names containing path traversal (`../../../../etc/cron.d/malware.sh`). Filename MUST be sanitized to a clean safe basename before storage.
+
+#### 7. Phone Number & International Format Edge Cases
+- **International Prefixes**: Test international prefix formats (`+1-555-0199`, `+44 20 7946 0958`, `0033123456789`).
+- **Non-Numeric Character Stripping**: Input containing spaces, hyphens, or parentheses `(555) 019-9999` MUST be normalized to standard E.164 numeric format (`+15550199999`) while preserving the leading `+`.
+
+#### 8. OWASP Security Validation Rules
+- **Allowlisting (Positive Validation) Over Denylisting**: Define explicit allowed character sets/regexes (e.g. `^[a-zA-Z0-9_-]+$`) rather than attempting to filter out "bad" characters. Denylists are easily bypassed with encoding tricks.
+- **Early Client-Side UX + Independent Server-Side Security**: Client-side validation provides instant feedback to users; server-side validation strictly enforces constraints for all incoming API requests without exception.
+
+---
+
+## 6. Master Production Lifecycle Phase Matrix
+
+Every complete enterprise user journey MUST execute sequentially through these 6 lifecycle phases:
+
+```
+Phase 1: Registration & Validation Guards
+  ├── 1.1 Invalid Email Format Validation Check ("not-an-email")
+  ├── 1.2 Weak Password Warning Check ("123")
+  ├── 1.3 Security XSS Payload Input Check ("<script>alert(1)</script>")
+  └── 1.4 Valid Admin Account & Organization Registration
+
+Phase 2: Duplicate Registration & Double-Tap Protection
+  ├── 2.1 Rapid Double-Tap Submit -> verify button disables and single record created
+  └── 2.2 Re-attempt registering exact same email -> verify rejection & warning alert
 
 Phase 3: Authentication & Security Guards
-  ├── 3.1 Invalid Password Sign-In Attempt -> verify error rejection
-  └── 3.2 Valid Authentication -> authenticate registered credentials
+  ├── 3.1 Invalid Password Sign-In Attempt -> verify rejection alert
+  ├── 3.2 Wrong Credential Lockout Check -> verify rejection response
+  └── 3.3 Valid Credential Authentication -> authenticate registered admin
 
 Phase 4: Workspace Dashboard & Telemetry Pipeline
   ├── 4.1 Workspace Navigation & Route Access Verification
@@ -87,8 +470,9 @@ Phase 4: Workspace Dashboard & Telemetry Pipeline
 
 Phase 5: Team Member Management & RBAC Invites
   ├── 5.1 Navigate to Organization Settings (/settings/org)
-  ├── 5.2 Invite Secondary Team Member User ("prod.member@scaibu.io")
-  └── 5.3 Verify Secondary Member Listing in Organization Team Directory
+  ├── 5.2 Invite Secondary Team Member User ("prod.member@scaibu.io") with Role ("Member")
+  ├── 5.3 Cross-Tenant Authorization Guard Check (IDOR attempt on unowned org) -> 430/403 Forbidden
+  └── 5.4 Verify Secondary Member Listing in Organization Team Directory Table
 
 Phase 6: Audit Logging & Clean Logout State
   └── 6.1 Verify Security Audit Log Trail & Clean Session Termination
@@ -96,125 +480,175 @@ Phase 6: Audit Logging & Clean Logout State
 
 ---
 
-## 5. Anti-Patterns & Automatic Rejection Rules
+## 7. Anti-Patterns & Automatic Rejection Rules
 
-| Anti-Pattern | Why It Is Banned | Correct Requirement |
+| Anti-Pattern | Why It Is Banned | Mandatory Correct Requirement |
 |---|---|---|
-| Running sequential journeys with `--workers=2` or higher | Causes random step execution order and flaky failures | ALWAYS run sequential specs with `--workers=1` |
-| Using fixed `page.waitForTimeout(5000)` sleeps | Causes slow, fragile runs and intermittent timing bugs | Use state-based waits (`waitForLoadState('networkidle')`, `expect(element).toBeVisible()`) |
-| Inlining CSS/XPath selectors directly in spec files | Breaks all tests when a class or layout changes | ALL locators MUST live inside Page Objects (`SignUpPage`, `SignInPage`, `DashboardPage`) |
-| Trusting a UI success toast without checking state | UI toasts can show success even when DB writes fail | Re-verify state via a second route or API check |
-| Reusing hardcoded static emails (`admin@scaibu.io`) across runs | Causes duplicate user conflicts on re-runs | Generate collision-free emails via `generateUniqueEmail()` |
+| Parallel execution of sequential specs | Causes state collision and flaky failures | ALWAYS enforce `--workers=1` / serial execution |
+| Arbitrary fixed sleep timeouts (`sleep(5000)`) | Causes slow, flaky runs and timing bugs | Use state-based waits (`wait_until_visible`, `wait_for_network_idle`) |
+| Raw CSS/XPath selectors in spec files | Breaks tests when DOM layout changes | ALL locators MUST live inside Page/Screen Objects |
+| Trusting UI success toast without backend state check | UI toast can show success even if DB write fails | Re-verify state via secondary route or direct API check |
+| Hardcoded static emails (`admin@test.com`) | Causes duplicate record conflicts on re-runs | Generate unique collision-free emails dynamically |
+| Searching for modal elements globally on page | Clicks wrong button outside active modal | Scope element search inside modal container (`role="dialog"`) |
+| Un-scoped table button clicks | Clicks edit/delete on wrong table record row | Scope search inside specific table row (`filter(has_text=...)`) |
+| Ignoring double-click / rapid-tap protection | Causes duplicate DB writes & order glitches | Test button double-tap and verify single API request |
+| Skipping security payload checks in form inputs | Leaves XSS and injection vulnerabilities untested | Include security specialist payloads (XSS/SQLi) in inputs |
+| Relying solely on client-side validation | API bypass can post invalid/malicious data | Enforce server-side validation on ALL incoming endpoints |
 
 ---
 
-## 6. Page Objects & Component Abstraction Rules
+## 8. Page Objects & Screen Abstraction Rules
 
-No raw locator (e.g. `page.locator('#email')`, `page.fill()`) may appear directly inside a `.journey.spec.ts` or step definition file.
+No raw element locator or low-level framework call may appear directly inside a journey spec file. All interactions MUST be encapsulated inside Page Objects / Screen Abstractions.
 
-All interactions MUST delegate through Page Objects:
-- **`BasePage`**: Shared navigation, transition checkpoints, and automatic console error assertions (`assertNoConsoleErrors`).
-- **`SignUpPage`**: Registration form fields, submit actions, HTML5 validation, and error alert checks.
-- **`SignInPage`**: Login form fields, password toggles, submit actions, and error alert checks.
-- **`DashboardPage`**: Workspace search filters, active badges, and telemetry dataset table views.
+### Required Page Object Hierarchy:
+- **`BasePage`**: Shared navigation, dialog handlers, toast verification, console error assertions, and security payload helpers.
+- **`SignUpPage`**: Form inputs (email, password), validation guards, double-tap submit actions, and alert overlays.
+- **`SignInPage`**: Login form controls, password visibility toggles, wrong credential alerts, and token handling.
+- **`DashboardPage`**: Search inputs, filter dropdowns, telemetry data tables, and tab navigation.
+- **`OrgSettingsPage`**: Member directory table, role select comboboxes, invite modals, and radio groups.
 
 ---
 
-## 7. State Preservation & Diagnostic Logging
+## 9. State Preservation & Diagnostic Logging
 
-When a multi-step journey fails, the harness MUST log the exact step and service where the failure occurred.
+When a multi-step sequential journey encounters a failure at Step $N$, the automation framework MUST preserve diagnostic state and identify the exact step failure.
 
-### `JourneyContext` (`tests/automation/e2e/support/journey-context.ts`)
-- Carries active `userId`, `userEmail`, `orgId`, and `authToken` across journey steps.
-- On step failure, invokes `recordStepFailure(stepName, serviceName, error)` to attach clear diagnostic logs:
+### `JourneyContext` Responsibilities:
+1. **State Preservation**: Carries `userId`, `userEmail`, `orgId`, `authToken`, and active transaction tokens across journey steps.
+2. **Diagnostic Artifact Capture**: On step failure, automatically capture:
+   - DOM Screenshot at exact moment of failure.
+   - Network API Request/Response Log Trace.
+   - Browser Console Error Log Dump.
+   - Journey Step Identifier & Service Name.
 
-```typescript
-journeyContext.recordStepFailure(
-  "Step 4: Dashboard Telemetry Filter",
-  "Dashboard Web Service",
-  error
-);
+---
+
+## 10. Language-Agnostic Code Patterns & Generic Templates
+
+Below are generic, framework-agnostic examples demonstrating how sequential user journeys and page objects MUST be written.
+
+### 10.1 Gherkin BDD Feature Template (`sequential-user-flow.feature`)
+
+```gherkin
+@e2e @sequential-journey @critical
+Feature: Production Enterprise User Sequential Journey
+
+  Scenario: Full Enterprise User Lifecycle & Security Validation
+    # Phase 1: Registration & Security Payload Checks
+    Given the admin user navigates to the registration screen
+    When the admin attempts registration with XSS string "<script>alert(1)</script>" as name
+    Then the input is safely sanitized and raw script execution is blocked
+    When the admin submits registration with a unique email and strong password
+    Then registration succeeds and a new workspace organization is created
+
+    # Phase 2: Duplicate & Double-Tap Protection
+    When the admin rapid double-taps the registration submit button
+    Then the submit button immediately disables and exactly one account is created
+    When the admin re-attempts registration with the exact same email
+    Then duplicate registration is rejected with an error alert
+
+    # Phase 3: Authentication & Wrong Data Guards
+    When the admin attempts sign in with an incorrect password
+    Then sign in is rejected with an invalid credentials error
+    When the admin signs in with valid credentials
+    Then authentication succeeds and redirects to the workspace dashboard
+
+    # Phase 4: Telemetry Search
+    When the admin searches telemetry data using filter keyword "latency"
+    Then the telemetry data table updates to display filtered records
+
+    # Phase 5: Member Invite & RBAC
+    When the admin navigates to organization settings
+    And invites team member "member@scaibu.io" with role "Member"
+    Then the new member appears in the organization directory table
+
+    # Phase 6: Logout & Clean Session
+    When the admin logs out of the workspace
+    Then the session is cleanly terminated and redirected to sign-in
 ```
 
 ---
 
-## 8. Generic Code Template for Sequential Journeys
+### 10.2 Page Object Pseudocode / Multi-Language Template
 
 ```typescript
-import { test, expect } from '@playwright/test';
-import { SignUpPage } from '../page-objects/auth/sign-up.page';
-import { SignInPage } from '../page-objects/auth/sign-in.page';
-import { DashboardPage } from '../page-objects/dashboard/dashboard.page';
-import { generateUniqueEmail } from '../fixtures/generators/unique-email';
+// Page Object Pattern Example (TypeScript / Playwright / Selenium compatible)
+export class SignUpPage extends BasePage {
+  private get nameInput() { return this.page.getByLabel('Full Name'); }
+  private get emailInput() { return this.page.getByLabel('Email Address'); }
+  private get submitButton() { return this.page.getByRole('button', { name: 'Create Account' }); }
 
-test.describe.serial('[Service Name] Sequential Production User Journey', () => {
-  let signUpPage: SignUpPage;
-  let signInPage: SignInPage;
-  let dashboardPage: DashboardPage;
+  public async testDoubleTapSubmit(accountData: any): Promise<void> {
+    await this.nameInput.fill(accountData.name);
+    await this.emailInput.fill(accountData.email);
+    
+    // Simulate rapid double tap
+    await this.submitButton.dblclick();
+    
+    // Assert immediate button disable / busy loading state
+    await expect(this.submitButton).toBeDisabled();
+  }
 
-  const adminAccount = {
-    name: 'Production Admin',
-    orgName: 'Scaibu Production Org',
-    email: generateUniqueEmail('prod.admin'),
-    password: 'SecurePassword123!',
-  };
+  public async submitSecurityPayload(payload: string): Promise<void> {
+    await this.nameInput.fill(payload);
+    await this.submitButton.click();
+    
+    // Assert sanitized rendering in DOM (no script tags instantiated)
+    const scriptElements = this.page.locator('script:has-text("alert")');
+    await expect(scriptElements).toHaveCount(0);
+  }
+}
+```
 
-  test('Step 1: Registration Phase', async ({ page }) => {
-    signUpPage = new SignUpPage(page);
-    await signUpPage.goto();
-    await signUpPage.fillForm(adminAccount);
-    await signUpPage.submit();
-    await signUpPage.assertNoConsoleErrors();
-  });
+```python
+# Page Object Pattern Example (Python / PyTest / Selenium / Playwright)
+class SignUpPage(BasePage):
+    def __init__(self, page):
+        super().__init__(page)
+        self.name_input = page.get_by_label("Full Name")
+        self.email_input = page.get_by_label("Email Address")
+        self.submit_button = page.get_by_role("button", name="Create Account")
 
-  test('Step 2: Duplicate Registration Protection Phase', async ({ page }) => {
-    signUpPage = new SignUpPage(page);
-    await signUpPage.goto();
-    await signUpPage.fillForm(adminAccount);
-    await signUpPage.submit();
-    await signUpPage.assertErrorMessageVisible();
-  });
+    def test_double_tap_submit(self, account_data: dict) -> None:
+        self.name_input.fill(account_data["name"])
+        self.email_input.fill(account_data["email"])
+        
+        # Simulate rapid double tap
+        self.submit_button.dblclick()
+        
+        # Assert immediate button disable state
+        expect(self.submit_button).to_be_disabled()
 
-  test('Step 3: Authentication & Security Guard Phase', async ({ page }) => {
-    signInPage = new SignInPage(page);
-    await signInPage.goto();
-    await signInPage.fillForm(adminAccount);
-    await signInPage.submit();
-    await signInPage.assertNoConsoleErrors();
-  });
-
-  test('Step 4: Workspace Dashboard Phase', async ({ page }) => {
-    dashboardPage = new DashboardPage(page);
-    await dashboardPage.goto();
-    await dashboardPage.applySearchFilter('latency');
-    await dashboardPage.assertEmptyStateVisible();
-  });
-});
+    def submit_security_payload(self, payload: str) -> None:
+        self.name_input.fill(payload)
+        self.submit_button.click()
+        
+        # Assert safe rendering without script execution
+        script_elements = self.page.locator("script:has-text('alert')")
+        expect(script_elements).to_have_count(0)
 ```
 
 ---
 
-## 9. CLI Command Registry & Package Scripts
+## 11. Multi-Stack CLI Command Registry & Execution References
 
-The following scripts in `packages/node/web-app/package.json` control sequential journey execution:
+Depending on the underlying tech stack of your automation suite, sequential user journeys MUST be executed with single-worker, serial flags enabled.
 
-| Command Script | Execution Target | Mode | Browser Engine |
+### Multi-Language Command Reference:
+
+| Stack / Engine | Command Syntax | Serial / Single-Worker Flags | Mode |
 |---|---|---|---|
-| `npm run test:e2e:sequential` | Primary sequential user flow | Headed GUI | Google Chrome (`--project=chromium`) |
-| `npm run test:e2e:sequential:all` | All `.journey.spec.ts` files in `e2e/` | Headed GUI | Google Chrome (`--project=chromium`) |
-| `npm run test:e2e:sequential:headless` | All `.journey.spec.ts` files in `e2e/` | Headless (CI) | Google Chrome (`--project=chromium`) |
+| **Node.js / Playwright** | `npm run test:e2e:sequential` | `--workers=1 --project=chromium` | Visual / Headed |
+| **Node.js / Playwright** | `npm run test:e2e:sequential:headless` | `--workers=1` | Headless CI |
+| **Python / PyTest** | `pytest tests/automation/e2e/runners/ --serial -n 0` | `-n 0` (Single-threaded) | Headless CI |
+| **Java / Maven + JUnit** | `mvn test -Dtest=*JourneyTest -Dparallel=none` | `-Dparallel=none` | Headless CI |
+| **Go / Rod / Chromedp** | `go test -v ./tests/automation/e2e/... -p 1` | `-p 1` (Single process) | Headless CI |
+| **Cypress** | `npx cypress run --spec "tests/automation/e2e/**/*.journey.cy.ts"` | Cypress native serial spec runner | Headless CI |
 
 ---
 
-### Command Syntax Reference:
-
-```bash
-# Run Primary Sequential Journey in Visual Headed Chrome Mode
-npm --prefix packages/node/web-app run test:e2e:sequential
-
-# Run ALL E2E Sequential Journeys in Visual Headed Chrome Mode
-npm --prefix packages/node/web-app run test:e2e:sequential:all
-
-# Run ALL E2E Sequential Journeys in Headless CI Mode
-npm --prefix packages/node/web-app run test:e2e:sequential:headless
-```
+### Command Execution Best Practices:
+1. **Local Headed Debugging**: When writing or debugging a sequential journey locally, run in visual headed mode to visually observe element finding and modal transitions.
+2. **CI Pipeline Execution**: In CI/CD pipelines, execute in headless mode with artifact capturing enabled (`--reporter=allure`, screenshots on failure).
+3. **Non-Zero Exit Code**: Any step failure in a sequential journey MUST fail the CI pipeline build immediately with a non-zero exit code.
