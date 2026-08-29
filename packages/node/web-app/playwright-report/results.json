@@ -3,7 +3,18 @@
     "argv": [
       "/home/btpl-lap-22/.nvm/versions/node/v20.20.0/bin/node",
       "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/node_modules/.bin/playwright",
-      "test"
+      "test",
+      "tests/automation/auth/sign-up/sign-up-valid.spec.ts",
+      "tests/automation/auth/sign-up/sign-up-weak-password.spec.ts",
+      "tests/automation/auth/sign-up/sign-up-duplicate-user.spec.ts",
+      "tests/automation/auth/sign-up/sign-up-invalid-email.spec.ts",
+      "tests/automation/auth/sign-in/sign-in-valid.spec.ts",
+      "tests/automation/auth/sign-in/sign-in-invalid-pass.spec.ts",
+      "tests/automation/auth/sign-in/sign-in-blocked-user.spec.ts",
+      "tests/automation/auth/rbac/route-access.spec.ts",
+      "tests/automation/dashboard/filters/filter-selection.spec.ts",
+      "tests/automation/dashboard/filters/filter-corrupted-url.spec.ts",
+      "tests/automation/dashboard/telemetry/empty-state.spec.ts"
     ],
     "configFile": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/playwright.config.ts",
     "rootDir": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation",
@@ -77,20 +88,20 @@
   },
   "suites": [
     {
-      "title": "automation.spec.ts",
-      "file": "automation.spec.ts",
+      "title": "auth/rbac/route-access.spec.ts",
+      "file": "auth/rbac/route-access.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "LLM Observability Platform Playwright E2E Visual & Automation Suite",
-          "file": "automation.spec.ts",
-          "line": 6,
+          "title": "Auth RBAC - Route Security Access Automation",
+          "file": "auth/rbac/route-access.spec.ts",
+          "line": 4,
           "column": 6,
           "specs": [
             {
-              "title": "01 - Visual UI Navigation & Dashboard Telemetry Verification",
+              "title": "should validate access rules for unauthenticated, member, and admin roles",
               "ok": true,
               "tags": [],
               "tests": [
@@ -105,158 +116,107 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 7264,
+                      "duration": 35,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T04:11:29.382Z",
+                      "startTime": "2026-08-29T04:18:46.452Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-rbac-route-access-Aut-867ed-ated-member-and-admin-roles-chromium/trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "891a08ca8609457d57cb-ca7a34d65463944a7169",
+              "file": "auth/rbac/route-access.spec.ts",
+              "line": 5,
+              "column": 7
+            },
+            {
+              "title": "should redirect unauthenticated direct access attempts to login",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 19025,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/rbac/route-access.spec.ts:18:88",
+                        "location": {
+                          "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/rbac/route-access.spec.ts",
+                          "column": 88,
+                          "line": 18
+                        },
+                        "snippet": "  16 |\n  17 |     const url = page.url();\n> 18 |     expect(url.includes('/auth') || url.includes('/login') || url.includes('sign-in')).toBe(true);\n     |                                                                                        ^\n  19 |   });\n  20 | });\n  21 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/rbac/route-access.spec.ts",
+                            "column": 88,
+                            "line": 18
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n\n  16 |\n  17 |     const url = page.url();\n> 18 |     expect(url.includes('/auth') || url.includes('/login') || url.includes('sign-in')).toBe(true);\n     |                                                                                        ^\n  19 |   });\n  20 | });\n  21 |\n\u001b[2m    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/rbac/route-access.spec.ts:18:88\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T04:18:46.623Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "screenshot",
                           "contentType": "image/png",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/automation-LLM-Observabili-888da-oard-Telemetry-Verification-chromium/test-finished-1.png"
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-rbac-route-access-Aut-231f0-ct-access-attempts-to-login-chromium/test-failed-1.png"
                         },
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/automation-LLM-Observabili-888da-oard-Telemetry-Verification-chromium/video.webm"
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-rbac-route-access-Aut-231f0-ct-access-attempts-to-login-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-rbac-route-access-Aut-231f0-ct-access-attempts-to-login-chromium/error-context.md"
                         },
                         {
                           "name": "trace",
                           "contentType": "application/zip",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/automation-LLM-Observabili-888da-oard-Telemetry-Verification-chromium/trace.zip"
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-rbac-route-access-Aut-231f0-ct-access-attempts-to-login-chromium/trace.zip"
                         }
-                      ]
+                      ],
+                      "errorLocation": {
+                        "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/auth/rbac/route-access.spec.ts",
+                        "column": 88,
+                        "line": 18
+                      }
                     }
                   ],
-                  "status": "expected"
+                  "status": "unexpected"
                 }
               ],
-              "id": "af7144226575376c6417-445a557d84dc2d8ce539",
-              "file": "automation.spec.ts",
-              "line": 7,
-              "column": 7
-            },
-            {
-              "title": "02 - Auth Client API Endpoints & Request Execution Verification",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 6,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-08-29T04:11:37.001Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/automation-LLM-Observabili-39d5e-uest-Execution-Verification-chromium/trace.zip"
-                        }
-                      ]
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "af7144226575376c6417-143b9ce92dc92f54f73b",
-              "file": "automation.spec.ts",
-              "line": 27,
-              "column": 7
-            },
-            {
-              "title": "03 - Telemetry Filter Pipeline & Trace Span Generation Verification",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 11,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-08-29T04:11:37.040Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/automation-LLM-Observabili-baa5b-pan-Generation-Verification-chromium/trace.zip"
-                        }
-                      ]
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "af7144226575376c6417-b6035668015e41128cec",
-              "file": "automation.spec.ts",
-              "line": 32,
-              "column": 7
-            },
-            {
-              "title": "04 - RBAC Route Guard Permission Validation",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 8,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-08-29T04:11:37.094Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/automation-LLM-Observabili-ab29f-Guard-Permission-Validation-chromium/trace.zip"
-                        }
-                      ]
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "af7144226575376c6417-0608d8e4229943163f08",
-              "file": "automation.spec.ts",
-              "line": 41,
+              "id": "891a08ca8609457d57cb-aa2a2ecfe8dead5c6936",
+              "file": "auth/rbac/route-access.spec.ts",
+              "line": 12,
               "column": 7
             }
           ]
@@ -264,20 +224,20 @@
       ]
     },
     {
-      "title": "edge-cases.spec.ts",
-      "file": "edge-cases.spec.ts",
+      "title": "auth/sign-in/sign-in-blocked-user.spec.ts",
+      "file": "auth/sign-in/sign-in-blocked-user.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "LLM Observability Platform E2E UI Edge-Cases Automation Suite",
-          "file": "edge-cases.spec.ts",
+          "title": "Auth Sign In - Blocked User Edgecase Automation",
+          "file": "auth/sign-in/sign-in-blocked-user.spec.ts",
           "line": 3,
           "column": 6,
           "specs": [
             {
-              "title": "EC-01: Sign Up Form Invalid Email Validation Edge Case",
+              "title": "should reject authentication attempt for suspended user",
               "ok": true,
               "tags": [],
               "tests": [
@@ -289,31 +249,31 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 1,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 5349,
+                      "duration": 5152,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T04:11:37.152Z",
+                      "startTime": "2026-08-29T04:19:07.805Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "screenshot",
                           "contentType": "image/png",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/edge-cases-LLM-Observabili-4c883--Email-Validation-Edge-Case-chromium/test-finished-1.png"
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-in-sign-in-block-8a54f--attempt-for-suspended-user-chromium/test-finished-1.png"
                         },
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/edge-cases-LLM-Observabili-4c883--Email-Validation-Edge-Case-chromium/video.webm"
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-in-sign-in-block-8a54f--attempt-for-suspended-user-chromium/video.webm"
                         },
                         {
                           "name": "trace",
                           "contentType": "application/zip",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/edge-cases-LLM-Observabili-4c883--Email-Validation-Edge-Case-chromium/trace.zip"
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-in-sign-in-block-8a54f--attempt-for-suspended-user-chromium/trace.zip"
                         }
                       ]
                     }
@@ -321,13 +281,30 @@
                   "status": "expected"
                 }
               ],
-              "id": "db200a91ff2226597e25-8f14f57699e56f252213",
-              "file": "edge-cases.spec.ts",
-              "line": 10,
+              "id": "85e5ecb1c276b870f13c-b5a3df9caf61217ea7b4",
+              "file": "auth/sign-in/sign-in-blocked-user.spec.ts",
+              "line": 4,
               "column": 7
-            },
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/sign-in/sign-in-invalid-pass.spec.ts",
+      "file": "auth/sign-in/sign-in-invalid-pass.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Auth Sign In - Invalid Password Edgecase Automation",
+          "file": "auth/sign-in/sign-in-invalid-pass.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
             {
-              "title": "EC-02: Sign Up Short Password Length Validation Edge Case",
+              "title": "should validate form and block sign-in on wrong password",
               "ok": true,
               "tags": [],
               "tests": [
@@ -339,31 +316,31 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 1,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 7399,
+                      "duration": 5597,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T04:11:42.688Z",
+                      "startTime": "2026-08-29T04:19:13.287Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "screenshot",
                           "contentType": "image/png",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/edge-cases-LLM-Observabili-28d96-Length-Validation-Edge-Case-chromium/test-finished-1.png"
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-in-sign-in-inval-ca628-k-sign-in-on-wrong-password-chromium/test-finished-1.png"
                         },
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/edge-cases-LLM-Observabili-28d96-Length-Validation-Edge-Case-chromium/video.webm"
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-in-sign-in-inval-ca628-k-sign-in-on-wrong-password-chromium/video.webm"
                         },
                         {
                           "name": "trace",
                           "contentType": "application/zip",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/edge-cases-LLM-Observabili-28d96-Length-Validation-Edge-Case-chromium/trace.zip"
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-in-sign-in-inval-ca628-k-sign-in-on-wrong-password-chromium/trace.zip"
                         }
                       ]
                     }
@@ -371,13 +348,30 @@
                   "status": "expected"
                 }
               ],
-              "id": "db200a91ff2226597e25-21e1b7bc056963a84127",
-              "file": "edge-cases.spec.ts",
-              "line": 29,
+              "id": "215d32853115997730a6-f22e2e910062db997d6e",
+              "file": "auth/sign-in/sign-in-invalid-pass.spec.ts",
+              "line": 4,
               "column": 7
-            },
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/sign-in/sign-in-valid.spec.ts",
+      "file": "auth/sign-in/sign-in-valid.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Auth Sign In - Valid Login Automation",
+          "file": "auth/sign-in/sign-in-valid.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
             {
-              "title": "EC-03: Corrupted Query String Graceful Fallback Edge Case (EC-FE2-03)",
+              "title": "should render sign-in form and execute valid user sign-in",
               "ok": true,
               "tags": [],
               "tests": [
@@ -389,31 +383,31 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 1,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 23283,
+                      "duration": 6400,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T04:11:50.569Z",
+                      "startTime": "2026-08-29T04:19:19.142Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "screenshot",
                           "contentType": "image/png",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/edge-cases-LLM-Observabili-bc8f7-llback-Edge-Case-EC-FE2-03--chromium/test-finished-1.png"
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-in-sign-in-valid-d0408--execute-valid-user-sign-in-chromium/test-finished-1.png"
                         },
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/edge-cases-LLM-Observabili-bc8f7-llback-Edge-Case-EC-FE2-03--chromium/video.webm"
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-in-sign-in-valid-d0408--execute-valid-user-sign-in-chromium/video.webm"
                         },
                         {
                           "name": "trace",
                           "contentType": "application/zip",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/edge-cases-LLM-Observabili-bc8f7-llback-Edge-Case-EC-FE2-03--chromium/trace.zip"
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-in-sign-in-valid-d0408--execute-valid-user-sign-in-chromium/trace.zip"
                         }
                       ]
                     }
@@ -421,14 +415,31 @@
                   "status": "expected"
                 }
               ],
-              "id": "db200a91ff2226597e25-1a779a67d7cb0d7262b4",
-              "file": "edge-cases.spec.ts",
-              "line": 43,
+              "id": "7802242814f704243a11-70ee3147a1b8581426da",
+              "file": "auth/sign-in/sign-in-valid.spec.ts",
+              "line": 4,
               "column": 7
-            },
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/sign-up/sign-up-duplicate-user.spec.ts",
+      "file": "auth/sign-up/sign-up-duplicate-user.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Auth Registration - Duplicate User Edgecase Automation",
+          "file": "auth/sign-up/sign-up-duplicate-user.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
             {
-              "title": "EC-04: Unauthenticated Access Guard Redirection Edge Case",
-              "ok": false,
+              "title": "should handle duplicate user registration error gracefully",
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -439,74 +450,63 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 1,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 13421,
-                      "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/edge-cases.spec.ts:64:35",
-                        "location": {
-                          "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/edge-cases.spec.ts",
-                          "column": 35,
-                          "line": 64
-                        }
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/edge-cases.spec.ts",
-                            "column": 35,
-                            "line": 64
-                          },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n\u001b[2m    at /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/edge-cases.spec.ts:64:35\u001b[22m"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 7795,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T04:12:14.528Z",
+                      "startTime": "2026-08-29T04:19:25.869Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "screenshot",
                           "contentType": "image/png",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/edge-cases-LLM-Observabili-255bd-Guard-Redirection-Edge-Case-chromium/test-failed-1.png"
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-dupli-290f6-gistration-error-gracefully-chromium/test-finished-1.png"
                         },
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/edge-cases-LLM-Observabili-255bd-Guard-Redirection-Edge-Case-chromium/video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/edge-cases-LLM-Observabili-255bd-Guard-Redirection-Edge-Case-chromium/error-context.md"
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-dupli-290f6-gistration-error-gracefully-chromium/video.webm"
                         },
                         {
                           "name": "trace",
                           "contentType": "application/zip",
-                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/edge-cases-LLM-Observabili-255bd-Guard-Redirection-Edge-Case-chromium/trace.zip"
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-dupli-290f6-gistration-error-gracefully-chromium/trace.zip"
                         }
-                      ],
-                      "errorLocation": {
-                        "file": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/edge-cases.spec.ts",
-                        "column": 35,
-                        "line": 64
-                      }
+                      ]
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
-              "id": "db200a91ff2226597e25-1616f1a6fee1d78e733d",
-              "file": "edge-cases.spec.ts",
-              "line": 54,
+              "id": "b1bd98849655739db462-a531299854a569c6b76a",
+              "file": "auth/sign-up/sign-up-duplicate-user.spec.ts",
+              "line": 5,
               "column": 7
-            },
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/sign-up/sign-up-invalid-email.spec.ts",
+      "file": "auth/sign-up/sign-up-invalid-email.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Auth Registration - Invalid Email Edgecase Automation",
+          "file": "auth/sign-up/sign-up-invalid-email.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
             {
-              "title": "EC-05: Non-Existent Filter Query Result State Edge Case",
-              "ok": false,
+              "title": "should trigger native HTML5 validation on malformed email format",
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -517,33 +517,366 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "failed",
-                      "duration": 0,
-                      "error": {
-                        "message": "Error: Cannot find module '/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/edge-cases.spec.ts'\nRequire stack:\n- /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/node_modules/playwright/lib/common/index.js\n- /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/node_modules/playwright/lib/worker/workerProcessEntry.js",
-                        "stack": "Error: Cannot find module '/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/edge-cases.spec.ts'\nRequire stack:\n- /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/node_modules/playwright/lib/common/index.js\n- /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/node_modules/playwright/lib/worker/workerProcessEntry.js"
-                      },
-                      "errors": [
-                        {
-                          "message": "Error: Cannot find module '/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation/edge-cases.spec.ts'\nRequire stack:\n- /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/node_modules/playwright/lib/common/index.js\n- /home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/node_modules/playwright/lib/worker/workerProcessEntry.js"
-                        }
-                      ],
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6723,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T04:12:31.182Z",
+                      "startTime": "2026-08-29T04:19:34.253Z",
                       "annotations": [],
-                      "attachments": []
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-inval-1fcaf-n-on-malformed-email-format-chromium/test-finished-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-inval-1fcaf-n-on-malformed-email-format-chromium/video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-inval-1fcaf-n-on-malformed-email-format-chromium/trace.zip"
+                        }
+                      ]
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
-              "id": "db200a91ff2226597e25-beda853607d9d4948995",
-              "file": "edge-cases.spec.ts",
-              "line": 67,
+              "id": "d65323e937051a3f3c4a-a1c1f1bcea601a4689e3",
+              "file": "auth/sign-up/sign-up-invalid-email.spec.ts",
+              "line": 4,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/sign-up/sign-up-valid.spec.ts",
+      "file": "auth/sign-up/sign-up-valid.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Auth Registration - Valid User Registration Automation",
+          "file": "auth/sign-up/sign-up-valid.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should successfully register new organization and admin user",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6357,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T04:19:41.185Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-valid-0a489-organization-and-admin-user-chromium/test-finished-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-valid-0a489-organization-and-admin-user-chromium/video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-valid-0a489-organization-and-admin-user-chromium/trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "870c77f9c29230658b95-8a1bbff827f592e44a32",
+              "file": "auth/sign-up/sign-up-valid.spec.ts",
+              "line": 4,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth/sign-up/sign-up-weak-password.spec.ts",
+      "file": "auth/sign-up/sign-up-weak-password.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Auth Registration - Weak Password Edgecase Automation",
+          "file": "auth/sign-up/sign-up-weak-password.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should display weak password meter warning when entering short password",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4270,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T04:19:47.746Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-weak--5a667-hen-entering-short-password-chromium/test-finished-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-weak--5a667-hen-entering-short-password-chromium/video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/auth-sign-up-sign-up-weak--5a667-hen-entering-short-password-chromium/trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "0b32159a8580ba832aac-aa5ddad285a25a7ec722",
+              "file": "auth/sign-up/sign-up-weak-password.spec.ts",
+              "line": 4,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "dashboard/filters/filter-corrupted-url.spec.ts",
+      "file": "dashboard/filters/filter-corrupted-url.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Dashboard Filters - Corrupted URL Graceful Fallback Edgecase",
+          "file": "dashboard/filters/filter-corrupted-url.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should handle corrupted URL search params gracefully without crashing UI",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 8421,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T04:19:52.152Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/dashboard-filters-filter-c-47f1a-cefully-without-crashing-UI-chromium/test-finished-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/dashboard-filters-filter-c-47f1a-cefully-without-crashing-UI-chromium/video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/dashboard-filters-filter-c-47f1a-cefully-without-crashing-UI-chromium/trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "fcd5ce13fd67be86232e-1629650668e000b7708d",
+              "file": "dashboard/filters/filter-corrupted-url.spec.ts",
+              "line": 4,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "dashboard/filters/filter-selection.spec.ts",
+      "file": "dashboard/filters/filter-selection.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Dashboard Filters - Selection & Pipeline Automation",
+          "file": "dashboard/filters/filter-selection.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should execute filter pipeline over search params",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 26,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T04:20:01.096Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/dashboard-filters-filter-s-d4e44-pipeline-over-search-params-chromium/trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "dee99ac20a62b3f978d3-5cf962cd29ee18025dfe",
+              "file": "dashboard/filters/filter-selection.spec.ts",
+              "line": 5,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "dashboard/telemetry/empty-state.spec.ts",
+      "file": "dashboard/telemetry/empty-state.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Dashboard Telemetry - Non-Existent Filter Empty State Edgecase",
+          "file": "dashboard/telemetry/empty-state.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should render empty telemetry dataset state without throwing exceptions",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7354,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-29T04:20:01.213Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/dashboard-telemetry-empty--5bb24-without-throwing-exceptions-chromium/test-finished-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/dashboard-telemetry-empty--5bb24-without-throwing-exceptions-chromium/video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/test-results/dashboard-telemetry-empty--5bb24-without-throwing-exceptions-chromium/trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5ce9e4e732a47d3ced5-19353fcdf331fbe3d382",
+              "file": "dashboard/telemetry/empty-state.spec.ts",
+              "line": 4,
               "column": 7
             }
           ]
@@ -553,11 +886,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-08-29T04:11:26.643Z",
-    "duration": 64583.525,
-    "expected": 7,
+    "startTime": "2026-08-29T04:18:42.124Z",
+    "duration": 87216.40699999999,
+    "expected": 11,
     "skipped": 0,
-    "unexpected": 2,
+    "unexpected": 1,
     "flaky": 0
   }
 }
