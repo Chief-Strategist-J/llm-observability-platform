@@ -51,6 +51,10 @@ def init_tracer(service_name: str = _SERVICE_NAME) -> None:
     trace.set_tracer_provider(provider)
     _PROVIDER_INITIALIZED = True
 
+def get_tracer():
+    init_tracer()
+    return trace.get_tracer(_SERVICE_NAME)
+
 @contextmanager
 def trace_span(
     name: str,
@@ -59,7 +63,7 @@ def trace_span(
     attributes: dict[str, str | int | float | bool | None] | None = None,
 ) -> Generator[Span, None, None]:
     init_tracer()
-    t = trace.get_tracer(_SERVICE_NAME)
+    t = get_tracer()
     parent_ctx = None
     if trace_id and span_id:
         try:
@@ -95,7 +99,7 @@ def api_span(
     span_id: str | None = None,
 ) -> Generator[Span, None, None]:
     init_tracer()
-    tracer = trace.get_tracer(_SERVICE_NAME)
+    tracer = get_tracer()
     parent_ctx = None
     if trace_id and span_id:
         try:

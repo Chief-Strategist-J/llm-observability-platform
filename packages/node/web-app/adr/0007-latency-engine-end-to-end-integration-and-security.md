@@ -20,6 +20,7 @@ This ADR details:
 3. **Step-by-Step Security Authentication Verification** (Platform session tokens vs S2S HMAC-SHA256 Bearer JWTs).
 4. **W3C OpenTelemetry Tracing & Single Trace ID Correlation** (`traceparent` header injection/extraction, Next.js Web App propagation, HTTPTracingMiddleware, Consumer Pipeline Middleware, Error Tracing, and Tempo/Grafana trace rendering).
 5. **Master 4-Pipeline Middleware Engine** (Outbound REST, Inbound HTTP, Kafka Consumer, and Cache/Redis pipelines).
+6. **Centralized Repository Error Handling & Functional Query Pipelines** (`@handle_repository_errors`, functional map/filter transformations, zero inline comments, top algorithm summary docstrings).
 
 ---
 
@@ -74,14 +75,16 @@ flowchart TD
         HTTPMiddleware["HTTPTracingMiddleware (Auto Trace Extraction & Response Header Injection)"]
         JWTGuard["FastAPI verify_jwt_token Guard"]
         JWTVerifier["shared.auth.jwt_verifier (Dual Mode Engine)"]
-        QueryService["LatencyQueryService (Pure Domain Engine)"]
+        QueryService["LatencyQueryService (Pure Domain Engine, Functional Pipelines)"]
+        RepoErrorHandler["@handle_repository_errors Decorator"]
 
         FastAPI --> HTTPMiddleware
         HTTPMiddleware --> JWTGuard
         JWTGuard --> JWTVerifier
         JWTGuard --> QueryService
-        QueryService --> RedisStore
-        QueryService --> ClickHouseDB
+        QueryService --> RepoErrorHandler
+        RepoErrorHandler --> RedisStore
+        RepoErrorHandler --> ClickHouseDB
     end
 
     subgraph WebAppPlane["5. NEXT.JS DASHBOARD & TRACING PLANE (:31400 / :31415)"]
@@ -419,7 +422,7 @@ traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
               └── Version (00)                       (16 hex chars)
 ```
 
-### 6.2 Master 4-Pipeline Middleware Engine Topology
+### 6.2 Master 4-Pipeline Middleware Engine Topology & Centralized Error Handling
 
 1. **Outbound REST Client Pipeline (`rest-api-middleware.md`)**:
    `withTracingOutbound` -> `withCircuitBreakerOutbound` -> `withRetryAndJitter` -> `withRequestDeduplication` -> `withResponseCache` -> `withAuthHeaderInjection` -> `withSchemaValidationOutbound` -> `rawHttpClient.execute()`
@@ -432,6 +435,8 @@ traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
    - Extracts trace context from Kafka message headers and wraps batch ingestion in `tracing_consumer_middleware`.
 4. **Cache & Redis Middleware Pipeline (`cache-redis-middleware.md`)**:
    - `withCacheTracing` -> `withCircuitBreakerFallback` -> `withKeyNamespaceGuard` -> `withSingleflightStampedeProtection` -> `withTTLRandomJitter` -> `withPayloadCompression` -> `rawRedisClient.execute()`
+5. **Centralized Repository Error Handling ([repository_error_handler.py](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/latency-engine/src/shared/errors/repository_error_handler.py))**:
+   - Centralizes backend database error capturing (`@handle_repository_errors`). Logs infrastructure errors, records exception on active OTEL span, and returns safe fallback zero-state payloads without throwing unhandled 500 exceptions into domain logic.
 
 ---
 
@@ -498,7 +503,8 @@ traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
            │   ├── 16. verify_jwt_token() dependency guard [packages/python/latency-engine/src/api/rest/v1/handlers/latency.py]
            │   │   └── verify_service_jwt(token) [packages/python/latency-engine/src/shared/auth/jwt_verifier.py]
            │   ├── 17. get_percentiles() pure domain handler [packages/python/latency-engine/src/api/rest/v1/handlers/latency.py]
-           │   │   └── LatencyQueryService.get_percentiles("all", 14, [0.50, 0.95, 0.99])
+           │   │   └── LatencyQueryService.get_percentiles("all", 14, [0.50, 0.95, 0.99]) [packages/python/latency-engine/src/features/latency_query/service.py]
+           │   │       └── LatencyQueryRepository.get_sketch_b64() [@handle_repository_errors]
            │   └── 18. Return HTTP 200 OK JSON payload [Header: x-trace-id]
            │       │
            │       ▼ [HTTP 200 OK Response]
@@ -514,6 +520,8 @@ traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
 
 ```text
 ✅ Centralized Config Registry    config/infra/env_config.py (Zero Hardcoded Endpoint Strings or Span Names)
+✅ Centralized Repository Errors  @handle_repository_errors decorator (shared/errors/repository_error_handler.py)
+✅ Pure Functional Query Pipelines Service layer uses map/filter transforms, top algorithm docstrings & zero inline comments
 ✅ Master 4-Pipeline Engine      Outbound REST + Inbound HTTP + Kafka Consumer + Cache/Redis pipelines
 ✅ Middleware Pipeline           HTTPTracingMiddleware + pipeline.compose([deserialization, tracing_consumer])
 ✅ Decorator Composition         withTracing(withCircuitBreaker(withCache(withRetry(rawAdapter))))
