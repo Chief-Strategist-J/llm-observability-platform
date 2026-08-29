@@ -18,7 +18,7 @@ This ADR details:
 1. **Database DDL Schemas & Foreign Key Relationships** (PostgreSQL/AlloyDB ER Diagram, ClickHouse Tables, and Redis Key Mappings).
 2. **Kafka Messaging Catalog** (Topics, Consumer Groups, Partitioning, and Message Contracts).
 3. **Step-by-Step Security Authentication Verification** (Platform session tokens vs S2S HMAC-SHA256 Bearer JWTs).
-4. **W3C OpenTelemetry Tracing & Nested Span Context Propagation** (`traceparent` header injection/extraction, Instrumentation SDK reporting, Centralized Configuration Registry, Consumer Span Hierarchy, Error Tracing, and Tempo/Grafana trace rendering).
+4. **W3C OpenTelemetry Tracing & Nested Span Context Propagation** (`traceparent` header injection/extraction, Instrumentation SDK reporting, Data-Driven Configuration Registry, Consumer Span Hierarchy, Error Tracing, and Tempo/Grafana trace rendering).
 
 ---
 
@@ -414,7 +414,7 @@ traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
               └── Version (00)                       (16 hex chars)
 ```
 
-### 6.2 End-to-End Tracing Context Propagation Flow & Error Tracing
+### 6.2 End-to-End Tracing Context Propagation Flow & Multi-Span Hierarchy
 
 ```mermaid
 sequenceDiagram
@@ -429,7 +429,7 @@ sequenceDiagram
 
     User->>App: Execute sync_chat_completion()
     activate App
-    Note over App: OpenTelemetry creates parent span "llm-observability-platform:/v1/chat/completions"<br/>Trace ID: 4bf92f3577b34da6a3ce929d0e0e4736<br/>Span ID: b3320ec3a8ad0a07
+    Note over App: OpenTelemetry creates parent span "llm-observability-platform:/v1/chat/completions"<br/>Child Spans: prompt_tokenization, model_inference_generation, response_formatting, kafka_produce_span
 
     alt Execution Success
         App->>Kafka: KafkaSpanReporter.report(span_data)<br/>[Headers: traceparent=00-4bf92f35...-b3320ec3...-01]
@@ -459,6 +459,22 @@ sequenceDiagram
     Note over Tempo: Tempo merges producer + consumer spans into unified Trace Waterfall<br/>Errors highlighted in RED in Grafana Dashboard (:31415)
 ```
 
+### 6.3 Centralized Configuration Registry (Zero Hardcoded Strings)
+* **Config Registry**: All static endpoints, span names, model tags, topic names, port assignments, and exporter flags are centralized in `config/infra/env_config.py` (`ServiceConfig`) and `config/infra/infra_constants.py` (`PlatformInfrastructureConstants`).
+* **Zero Static Strings**: Instrumentation SDK components (`run_real_span_instrumentation.py`, `tracer.py`, `span_reporter.py`) consume:
+  - `service_config.kafka_bootstrap_servers` (`localhost:31414`)
+  - `service_config.otel_exporter_endpoint` (`localhost:31423`)
+  - `service_config.kafka_default_topic` (`llm.spans.raw`)
+  - `service_config.chat_endpoint` (`/v1/chat/completions`)
+  - `service_config.embeddings_endpoint` (`/v1/embeddings`)
+  - `service_config.default_model` (`gpt-4o`)
+  - `service_config.span_name_kafka_produce` (`kafka_produce_span`)
+  - `service_config.span_name_prompt_tok` (`prompt_tokenization`)
+  - `service_config.span_name_model_inference` (`model_inference_generation`)
+  - `service_config.span_name_response_fmt` (`response_formatting`)
+  - `service_config.span_name_text_chunk` (`text_chunking_and_tokenization`)
+  - `service_config.span_name_vector_calc` (`vector_embedding_calculation`)
+
 ---
 
 ## 7. End-to-End Line-by-Line Call Stack Topology
@@ -467,33 +483,35 @@ sequenceDiagram
 
 ```text
 1. User Application Code
-   └── @llm_observe(model="gpt-4o") [packages/python/instrumentation-sdk/src/features/spans/decorator.py]
-       ├── 2. init_tracer(service) -> get_tracer() [packages/python/instrumentation-sdk/src/infra/tracing/tracer.py]
+   └── @llm_observe(model=service_config.default_model) [packages/python/instrumentation-sdk/src/features/spans/decorator.py]
+       ├── 2. init_tracer(service_config.default_service_name) -> get_tracer() [packages/python/instrumentation-sdk/src/infra/tracing/tracer.py]
        │   └── Start OpenTelemetry span & capture trace_id (32 hex) and span_id (16 hex)
-       ├── 3. Execute LLM completion call (chat.completions.create)
-       ├── 4. Capture TTFT (time_to_first_token) and total latency_ms
-       └── 5. CompositeSpanReporter.report(span_data) [packages/python/instrumentation-sdk/examples/run_real_span_instrumentation.py]
+       ├── 3. Child Span: tracer.start_as_current_span(service_config.span_name_prompt_tok)
+       ├── 4. Child Span: tracer.start_as_current_span(service_config.span_name_model_inference)
+       ├── 5. Child Span: tracer.start_as_current_span(service_config.span_name_response_fmt)
+       └── 6. CompositeSpanReporter.report(span_data) [packages/python/instrumentation-sdk/examples/run_real_span_instrumentation.py]
            ├── ConsoleSpanReporter.report() -> Print to STDOUT console
            └── KafkaSpanReporter.report() [packages/python/instrumentation-sdk/src/infra/messaging/reporters/span_reporter.py]
+               ├── Child Span: tracer.start_as_current_span(service_config.span_name_kafka_produce)
                ├── Inject traceparent header into Kafka message headers
                └── kafka_producer_client.produce(topic=service_config.kafka_default_topic, key=span_id, value=span_data, headers=headers)
                    │
                    ▼ [Kafka Wire Protocol to Broker localhost:31414]
                    │
-6. Latency Engine Worker Process [packages/python/latency-engine/src/worker/index.py]
-   ├── 7. KafkaConsumerClient.poll_spans() [packages/python/latency-engine/src/infra/messaging/consumer/consumer_client/kafka_consumer_client.py]
+7. Latency Engine Worker Process [packages/python/latency-engine/src/worker/index.py]
+   ├── 8. KafkaConsumerClient.poll_spans() [packages/python/latency-engine/src/infra/messaging/consumer/consumer_client/kafka_consumer_client.py]
    │   └── confluent_kafka.Consumer.poll(timeout=1.0) -> Returns List[Message]
-   ├── 8. SpanConsumerHandler.__call__(message) [packages/python/latency-engine/src/infra/messaging/consumer/handlers/span_consumer_handler.py]
-   │   ├── 9. Validate span schema & parse timestamp_utc
-   │   ├── 10. Extract traceparent header and wrap in trace_span("span_consumer_handle_batch", trace_id, span_id)
-   │   ├── 11. LatencyQueryRepository.update_sketches(model, hour_of_day, latency_ms) [packages/python/latency-engine/src/features/latency_query/repository.py]
+   ├── 9. SpanConsumerHandler.__call__(message) [packages/python/latency-engine/src/infra/messaging/consumer/handlers/span_consumer_handler.py]
+   │   ├── 10. Validate span schema & parse timestamp_utc
+   │   ├── 11. Extract traceparent header and wrap in trace_span("span_consumer_handle_batch", trace_id, span_id)
+   │   ├── 12. LatencyQueryRepository.update_sketches(model, hour_of_day, latency_ms) [packages/python/latency-engine/src/features/latency_query/repository.py]
    │   │   ├── Deserialize existing DDSketch from Redis key "sketch:total:gpt-4o:14"
    │   │   ├── sketch.add(latency_ms)
    │   │   ├── DDSketchProto.to_proto(sketch).SerializeToString()
    │   │   └── redis_client.set("sketch:total:gpt-4o:14", base64_str)
-   │   ├── 12. LatencyQueryRepository.increment_slo_counters(model, endpoint, is_error)
+   │   ├── 13. LatencyQueryRepository.increment_slo_counters(model, endpoint, is_error)
    │   │   └── redis_client.incr("slo:gpt-4o:/v1/chat/completions:1h:total")
-   │   └── 13. LatencyClickHouseAdapter.insert_checkpoint_batch(records) [packages/python/latency-engine/src/infra/adapters/clickhouse/clickhouse_adapter.py]
+   │   └── 14. LatencyClickHouseAdapter.insert_checkpoint_batch(records) [packages/python/latency-engine/src/infra/adapters/clickhouse/clickhouse_adapter.py]
    │       └── INSERT INTO latency_checkpoints (model, hour_of_day, checkpoint_date, p99_ttft_ms, p99_total_ms, sample_count)
 ```
 
@@ -539,8 +557,9 @@ sequenceDiagram
 ## 8. Verification Summary Matrix
 
 ```text
-✅ Centralized Config Registry    config/infra/env_config.py (Zero Hardcoded Endpoint Strings)
+✅ Centralized Config Registry    config/infra/env_config.py (Zero Hardcoded Endpoint Strings or Span Names)
 ✅ W3C Trace Context Propagation  traceparent Header Forwarding (Producer -> Kafka -> Consumer)
+✅ Multi-Span Tree Hierarchy     Parent Span + Child Spans (prompt_tokenization, model_inference, kafka_produce)
 ✅ Tempo Direct OTLP Receiver   Tempo Port 31423 -> Direct gRPC Trace Ingestion Verified
 ✅ AlloyDB Omni PostgreSQL DB    Postgres Port 31412 -> Tables users, organizations, tenants, api_keys, password_reset_tokens verified with FKs
 ✅ ClickHouse Analytics DB       ClickHouse Port 31421 -> Tables latency_checkpoints, spans_raw verified

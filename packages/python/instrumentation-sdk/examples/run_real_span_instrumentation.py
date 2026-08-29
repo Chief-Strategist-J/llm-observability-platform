@@ -11,7 +11,7 @@ sys.path.insert(0, PACKAGE_DIR)
 from config.infra.env_config import service_config
 import src as instrumentation_sdk
 from src.infra.messaging.reporters.span_reporter import KafkaSpanReporter
-from src.infra.tracing.tracer import init_tracer
+from src.infra.tracing.tracer import init_tracer, get_tracer
 from opentelemetry import trace
 
 class ConsoleSpanReporter(instrumentation_sdk.SpanReporter):
@@ -57,14 +57,35 @@ if kafka_reporter:
 else:
     instrumentation_sdk.set_reporter(ConsoleSpanReporter())
 
-@instrumentation_sdk.llm_observe(service=service_config.default_service_name, endpoint="/v1/chat/completions")
+@instrumentation_sdk.llm_observe(service=service_config.default_service_name, endpoint=service_config.chat_endpoint)
 def sync_chat_completion(prompt: str) -> str:
-    time.sleep(0.125)
+    tracer = get_tracer()
+    with tracer.start_as_current_span(service_config.span_name_prompt_tok) as span1:
+        span1.set_attribute("prompt.length", len(prompt))
+        time.sleep(0.025)
+
+    with tracer.start_as_current_span(service_config.span_name_model_inference) as span2:
+        span2.set_attribute("llm.model", service_config.default_model)
+        span2.set_attribute("llm.temperature", 0.7)
+        time.sleep(0.080)
+
+    with tracer.start_as_current_span(service_config.span_name_response_fmt) as span3:
+        span3.set_attribute("tokens.generated", 64)
+        time.sleep(0.020)
+
     return f"Response to: {prompt}"
 
-@instrumentation_sdk.llm_observe(service=service_config.default_service_name, endpoint="/v1/embeddings")
+@instrumentation_sdk.llm_observe(service=service_config.default_service_name, endpoint=service_config.embeddings_endpoint)
 async def async_embedding_generation(text: str) -> list[float]:
-    await asyncio.sleep(0.080)
+    tracer = get_tracer()
+    with tracer.start_as_current_span(service_config.span_name_text_chunk) as span1:
+        span1.set_attribute("text.length", len(text))
+        await asyncio.sleep(0.020)
+
+    with tracer.start_as_current_span(service_config.span_name_vector_calc) as span2:
+        span2.set_attribute("embedding.dimensions", 1536)
+        await asyncio.sleep(0.060)
+
     return [0.1, 0.2, 0.3, 0.4, 0.5]
 
 def main():

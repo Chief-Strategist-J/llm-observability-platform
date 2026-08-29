@@ -33,4 +33,14 @@ class PlatformInfrastructureConstants:
     DEFAULT_WAL_PATH: str = "/tmp/llm-obs-wal.db"
     DEFAULT_API_KEY_TTL_SEC: int = 60
 
+    DEFAULT_CHAT_ENDPOINT: str = "/v1/chat/completions"
+    DEFAULT_EMBEDDINGS_ENDPOINT: str = "/v1/embeddings"
+    DEFAULT_MODEL: str = "gpt-4o"
+    DEFAULT_SPAN_NAME_KAFKA_PRODUCE: str = "kafka_produce_span"
+    DEFAULT_SPAN_NAME_PROMPT_TOK: str = "prompt_tokenization"
+    DEFAULT_SPAN_NAME_MODEL_INFERENCE: str = "model_inference_generation"
+    DEFAULT_SPAN_NAME_RESPONSE_FMT: str = "response_formatting"
+    DEFAULT_SPAN_NAME_TEXT_CHUNK: str = "text_chunking_and_tokenization"
+    DEFAULT_SPAN_NAME_VECTOR_CALC: str = "vector_embedding_calculation"
+
 infra_constants = PlatformInfrastructureConstants()

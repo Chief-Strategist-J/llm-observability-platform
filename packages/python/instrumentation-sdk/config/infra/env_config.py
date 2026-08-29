@@ -22,4 +22,15 @@ class ServiceConfig:
     wal_db_path: str = os.getenv("WAL_DB_PATH", infra_constants.DEFAULT_WAL_PATH)
     api_key_ttl_seconds: int = int(os.getenv("API_KEY_TTL_SECONDS", str(infra_constants.DEFAULT_API_KEY_TTL_SEC)))
 
+    chat_endpoint: str = infra_constants.DEFAULT_CHAT_ENDPOINT
+    embeddings_endpoint: str = infra_constants.DEFAULT_EMBEDDINGS_ENDPOINT
+    default_model: str = infra_constants.DEFAULT_MODEL
+
+    span_name_kafka_produce: str = infra_constants.DEFAULT_SPAN_NAME_KAFKA_PRODUCE
+    span_name_prompt_tok: str = infra_constants.DEFAULT_SPAN_NAME_PROMPT_TOK
+    span_name_model_inference: str = infra_constants.DEFAULT_SPAN_NAME_MODEL_INFERENCE
+    span_name_response_fmt: str = infra_constants.DEFAULT_SPAN_NAME_RESPONSE_FMT
+    span_name_text_chunk: str = infra_constants.DEFAULT_SPAN_NAME_TEXT_CHUNK
+    span_name_vector_calc: str = infra_constants.DEFAULT_SPAN_NAME_VECTOR_CALC
+
 service_config = ServiceConfig()
