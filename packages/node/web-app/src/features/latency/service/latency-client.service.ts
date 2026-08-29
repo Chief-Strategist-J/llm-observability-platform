@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { mapJson } from "@/core/data-driven/json-map";
+import type { JsonMapOp } from "@/core/data-driven/transform.types";
 import {
   withRetry,
   withCache,
@@ -47,68 +48,61 @@ class RawLatencyClientAdapter implements LatencyClientAdapter {
       .update(signingInput)
       .digest("base64url");
 
-    const jwtToken = `${signingInput}.${signatureB64}`;
-
     return {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${jwtToken}`,
+      "Authorization": `Bearer ${signingInput}.${signatureB64}`,
     };
   }
 
-  async getPercentiles(model: string, hourOfDay: number, quantiles = "0.50,0.95,0.99"): Promise<PercentilesResult> {
-    const queryDef = LATENCY_QUERIES.FLOW_QUERY_PERCENTILES;
-    const url = new URL(`${this.baseUrl}${queryDef.endpoint}`);
-    url.searchParams.set("model", model);
-    url.searchParams.set("hour_of_day", String(hourOfDay));
-    url.searchParams.set("quantiles", quantiles);
+  private async executeQuery<T>(
+    endpoint: string,
+    params: Record<string, string | number>,
+    transformOps?: JsonMapOp[]
+  ): Promise<T> {
+    const url = new URL(`${this.baseUrl}${endpoint}`);
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) {
+        url.searchParams.set(k, String(v));
+      }
+    });
 
     const res = await fetch(url.toString(), { headers: this.getAuthHeaders() });
     if (!res.ok) {
-      throw new Error(`LatencyEngine getPercentiles failed: ${res.status}`);
+      throw new Error(`LatencyEngine request to ${endpoint} failed: ${res.status}`);
     }
+
     const raw = await res.json();
-    return mapJson(raw, PercentilesFromApiOps) as unknown as PercentilesResult;
+    return transformOps ? (mapJson(raw, transformOps) as unknown as T) : (raw as T);
+  }
+
+  async getPercentiles(model: string, hourOfDay: number, quantiles = "0.50,0.95,0.99"): Promise<PercentilesResult> {
+    return this.executeQuery<PercentilesResult>(
+      LATENCY_QUERIES.FLOW_QUERY_PERCENTILES.endpoint,
+      { model, hour_of_day: hourOfDay, quantiles },
+      PercentilesFromApiOps
+    );
   }
 
   async getSLO(model: string, endpoint: string): Promise<SLOResult> {
-    const queryDef = LATENCY_QUERIES.FLOW_QUERY_SLO;
-    const url = new URL(`${this.baseUrl}${queryDef.endpoint}`);
-    url.searchParams.set("model", model);
-    url.searchParams.set("endpoint", endpoint);
-
-    const res = await fetch(url.toString(), { headers: this.getAuthHeaders() });
-    if (!res.ok) {
-      throw new Error(`LatencyEngine getSLO failed: ${res.status}`);
-    }
-    const raw = await res.json();
-    return mapJson(raw, SLOFromApiOps) as unknown as SLOResult;
+    return this.executeQuery<SLOResult>(
+      LATENCY_QUERIES.FLOW_QUERY_SLO.endpoint,
+      { model, endpoint },
+      SLOFromApiOps
+    );
   }
 
   async getBaseline(model: string, hourOfDay: number, days = 7): Promise<BaselinePoint[]> {
-    const queryDef = LATENCY_QUERIES.FLOW_QUERY_BASELINE;
-    const url = new URL(`${this.baseUrl}${queryDef.endpoint}`);
-    url.searchParams.set("model", model);
-    url.searchParams.set("hour_of_day", String(hourOfDay));
-    url.searchParams.set("days", String(days));
-
-    const res = await fetch(url.toString(), { headers: this.getAuthHeaders() });
-    if (!res.ok) {
-      throw new Error(`LatencyEngine getBaseline failed: ${res.status}`);
-    }
-    return (await res.json()) as BaselinePoint[];
+    return this.executeQuery<BaselinePoint[]>(
+      LATENCY_QUERIES.FLOW_QUERY_BASELINE.endpoint,
+      { model, hour_of_day: hourOfDay, days }
+    );
   }
 
   async getAttribution(model: string, hour: string): Promise<AttributionResult> {
-    const queryDef = LATENCY_QUERIES.FLOW_QUERY_ATTRIBUTION;
-    const url = new URL(`${this.baseUrl}${queryDef.endpoint}`);
-    url.searchParams.set("model", model);
-    url.searchParams.set("hour", hour);
-
-    const res = await fetch(url.toString(), { headers: this.getAuthHeaders() });
-    if (!res.ok) {
-      throw new Error(`LatencyEngine getAttribution failed: ${res.status}`);
-    }
-    return (await res.json()) as AttributionResult;
+    return this.executeQuery<AttributionResult>(
+      LATENCY_QUERIES.FLOW_QUERY_ATTRIBUTION.endpoint,
+      { model, hour }
+    );
   }
 }
 
