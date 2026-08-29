@@ -1,0 +1,7 @@
+feature:
+  name: latency_baseline
+  description: Temporal workflow and background worker for computing historical latency baselines
+  criticality: high
+  dependencies:
+    - ClickHouse
+    - Temporal

@@ -21,7 +21,6 @@ router = APIRouter()
 
 
 def verify_jwt_token(authorization: str | None = Header(None)) -> None:
-    """Enforces HS256 JWT service-to-service authentication."""
     if not authorization:
         raise HTTPException(
             status_code=401,
@@ -43,11 +42,9 @@ def verify_jwt_token(authorization: str | None = Header(None)) -> None:
 
 
 def get_query_service(request: Request) -> LatencyQueryService:
-    """Dependency resolver for LatencyQueryService."""
     return request.app.state.query_service
 
 
-# Secure all endpoints in this router using the JWT dependency
 @router.get(
     "/latency/percentiles",
     dependencies=[Depends(verify_jwt_token)],
@@ -63,7 +60,6 @@ def get_percentiles(
     quantiles: str = Query("0.50,0.95,0.99"),
     service: LatencyQueryService = Depends(get_query_service),
 ) -> Any:
-    """DDSketch quantile read from Redis."""
     with api_span(
         "api.get_latency_percentiles",
         {"model": model, "hour_of_day": hour_of_day, "quantiles": quantiles},
@@ -113,7 +109,6 @@ def get_slo(
     endpoint: str = Query(..., min_length=1),
     service: LatencyQueryService = Depends(get_query_service),
 ) -> Any:
-    """SLO burn rate read from Redis."""
     with api_span("api.get_latency_slo", {"model": model, "endpoint": endpoint}):
         try:
             res = service.get_slo(model, endpoint)
@@ -146,7 +141,6 @@ def get_baseline(
     days: int = Query(7, ge=1, le=90),
     service: LatencyQueryService = Depends(get_query_service),
 ) -> Any:
-    """Historical baseline read from ClickHouse."""
     with api_span(
         "api.get_latency_baseline",
         {"model": model, "hour_of_day": hour_of_day, "days": days},
@@ -187,7 +181,6 @@ def get_attribution(
     hour: str = Query(..., min_length=10, max_length=10),
     service: LatencyQueryService = Depends(get_query_service),
 ) -> Any:
-    """Average latency attribution segment read from Redis."""
     with api_span("api.get_latency_attribution", {"model": model, "hour": hour}):
         try:
             res = service.get_attribution(model, hour)
@@ -202,4 +195,3 @@ def get_attribution(
                 status_code=404,
                 detail={"error": "NOT_FOUND", "detail": str(exc)},
             ) from exc
-

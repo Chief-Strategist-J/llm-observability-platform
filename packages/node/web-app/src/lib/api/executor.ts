@@ -37,7 +37,7 @@ export async function executeHttpRequest<T = any>(
   actionKey: keyof typeof AUTH_ENDPOINTS,
   params?: ExecuteParams
 ): Promise<T> {
-  const meta: EndpointMeta = AUTH_ENDPOINTS[actionKey];
+  const meta = AUTH_ENDPOINTS[actionKey] as EndpointMeta | undefined;
   if (!meta) {
     throw new Error(`Endpoint key "${String(actionKey)}" not defined in AUTH_ENDPOINTS registry`);
   }

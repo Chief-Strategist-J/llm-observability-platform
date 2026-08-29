@@ -3,7 +3,7 @@ name = "latency-engine"
 version = "0.2.0"
 description = "LLM Observability Latency Engine — Kafka consumer, DDSketch SLO tracking & Temporal baseline scheduler"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
     "confluent-kafka>=2.3.0",
     "redis>=5.0.0",

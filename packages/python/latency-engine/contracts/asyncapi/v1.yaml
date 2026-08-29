@@ -1,0 +1,91 @@
+asyncapi: '2.6.0'
+info:
+  title: Latency Engine Event Streams
+  version: '1.0.0'
+  description: Event streams and message schemas for LLM span processing and latency metric updates.
+
+servers:
+  development:
+    url: localhost:9092
+    protocol: kafka
+
+channels:
+  llm.spans.raw:
+    description: Raw LLM span event telemetry stream.
+    subscribe:
+      operationId: consumeRawSpans
+      message:
+        $ref: '#/components/messages/RawSpanEvent'
+
+  latency.anomalies.v1:
+    description: Latency anomaly alert events stream.
+    publish:
+      operationId: publishLatencyAnomaly
+      message:
+        $ref: '#/components/messages/LatencyAnomalyEvent'
+
+components:
+  messages:
+    RawSpanEvent:
+      name: RawSpanEvent
+      title: Raw LLM Span Payload
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - trace_id
+          - span_id
+          - model
+          - latency_ms_total
+          - timestamp
+        properties:
+          trace_id:
+            type: string
+          span_id:
+            type: string
+          parent_span_id:
+            type: string
+          model:
+            type: string
+          endpoint:
+            type: string
+          latency_ms_total:
+            type: number
+          latency_ms_ttft:
+            type: number
+          retry_count:
+            type: integer
+          token_count_prompt:
+            type: integer
+          token_count_completion:
+            type: integer
+          timestamp:
+            type: string
+            format: date-time
+
+    LatencyAnomalyEvent:
+      name: LatencyAnomalyEvent
+      title: Latency Anomaly Event
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - model
+          - metric_name
+          - current_value_ms
+          - threshold_ms
+          - timestamp
+        properties:
+          model:
+            type: string
+          endpoint:
+            type: string
+          metric_name:
+            type: string
+          current_value_ms:
+            type: number
+          threshold_ms:
+            type: number
+          timestamp:
+            type: string
+            format: date-time
