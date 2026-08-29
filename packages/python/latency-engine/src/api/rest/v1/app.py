@@ -7,6 +7,7 @@ import yaml
 from fastapi import FastAPI
 
 from api.rest.v1.router import router as v1_router
+from api.rest.middleware.tracing_middleware import HTTPTracingMiddleware
 from config import load_config
 from features.latency_query.service import LatencyQueryService
 from infra.adapters.redis.latency_redis_adapter import LatencyRedisAdapter
@@ -23,10 +24,10 @@ def create_app() -> FastAPI:
         description="Internal service-to-service API for querying latency percentiles, SLO burn rates, and historical baselines.",
         version="1.0.0",
     )
+    app.add_middleware(HTTPTracingMiddleware)
 
     cfg = load_config()
 
-    # Load SLO thresholds from yaml
     slo_thresholds = {}
     try:
         if os.path.exists(cfg.slo_config_path):
@@ -36,7 +37,6 @@ def create_app() -> FastAPI:
     except Exception as e:
         logger.error("Failed to load SLO config in app initialization: %s", e)
 
-    # Initialize adapters and services
     redis_client = redis.from_url(cfg.redis_url)
     redis_adapter = LatencyRedisAdapter(redis_client)
     
@@ -59,10 +59,7 @@ def create_app() -> FastAPI:
         slo_thresholds=slo_thresholds,
     )
 
-    # Store in app state
     app.state.query_service = query_service
-    
-    # Include API endpoints router
     app.include_router(v1_router)
     
     return app
