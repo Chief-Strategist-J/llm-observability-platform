@@ -3,42 +3,28 @@ import os
 from dataclasses import dataclass
 from shared.errors.base import ValidationError
 
-
 @dataclass(frozen=True)
 class LatencyEngineConfig:
-    # Kafka consumer
     kafka_bootstrap_servers: str
     kafka_consumer_group: str
     kafka_topic_input: str
-
-    # Redis (shared — sketch storage, SLO counters, baselines)
     redis_url: str
-
-    # SLO config
     slo_config_path: str
-
-    # ClickHouse (shared — checkpoints + latency query reads)
     clickhouse_host: str
     clickhouse_port: int
     clickhouse_username: str
     clickhouse_password: str
     clickhouse_database: str
-
-    # Temporal — baseline scheduler
     temporal_host: str
     temporal_namespace: str
     temporal_task_queue: str
-
-    # Health server port
     health_port: int
-
 
 def _int_val(raw: str, key: str) -> int:
     try:
         return int(raw)
     except ValueError as exc:
         raise ValidationError(f"{key} must be an integer") from exc
-
 
 def load_config(env: dict[str, str] | None = None) -> LatencyEngineConfig:
     source = env or os.environ

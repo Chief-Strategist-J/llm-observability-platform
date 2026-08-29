@@ -28,7 +28,7 @@ class RawLatencyClientAdapter implements LatencyClientAdapter {
   private readonly baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.LATENCY_ENGINE_URL || "http://localhost:8002";
+    this.baseUrl = process.env.LATENCY_ENGINE_URL || "http://localhost:8003";
   }
 
   private getAuthHeaders(): Record<string, string> {

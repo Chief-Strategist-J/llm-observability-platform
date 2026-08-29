@@ -16,7 +16,6 @@ COPY contracts/ contracts/
 
 RUN pip install --no-cache-dir ".[dev]" --no-deps
 
-# Run unit tests to verify correctness during build
 RUN SKIP_CONSOLE_EXPORTER=true SKIP_OTLP_EXPORTER=true \
     pytest tests/ --tb=short -q
 
@@ -34,7 +33,6 @@ COPY --from=builder /app/src /app/src
 COPY --from=builder /app/pyproject.toml /app/pyproject.toml
 COPY --from=builder /app/contracts /app/contracts
 
-
 ENV PYTHONPATH=/app/src
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -42,9 +40,9 @@ ENV PYTHONUNBUFFERED=1
 ENV SKIP_CONSOLE_EXPORTER=false
 ENV SKIP_OTLP_EXPORTER=true
 
-EXPOSE 8002
+EXPOSE 8003
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8002/health || exit 1
+    CMD curl -f http://localhost:8003/health || exit 1
 
 CMD ["python", "src/worker/index.py"]

@@ -1,7 +1,6 @@
 from __future__ import annotations
 import asyncio
 import logging
-import os
 import signal
 import json
 import redis
@@ -18,55 +17,62 @@ from infra.adapters.clickhouse.clickhouse_adapter import ClickHouseAdapter
 from infra.adapters.redis.redis_adapter import RedisAdapter
 from infra.adapters.kafka.confluent_producer_adapter import ConfluentKafkaProducerAdapter
 from shared.tracing.tracer import init_tracer
+from infra.adapters.metrics.prometheus_adapter import PrometheusMetricsAdapter
 
 logger = logging.getLogger(__name__)
-
 
 async def run() -> None:
     init_tracer()
     cfg = load_config()
 
-    # ── Shared adapters ───────────────────────────────────────────────────────
-    from infra.adapters.metrics.prometheus_adapter import PrometheusMetricsAdapter
     metrics_adapter = PrometheusMetricsAdapter()
-    redis_client = redis.from_url(cfg.redis_url)
+    redis_client = None
+    try:
+        redis_client = redis.from_url(cfg.redis_url)
+    except Exception as exc:
+        logger.warning("Could not connect to Redis (%s)", exc)
 
-    # ── Kafka consumer handler (event-driven — DDSketch + SLO) ───────────────
-    handler = LatencyHandler(redis_client, cfg.slo_config_path, metrics=metrics_adapter)
+    handler = LatencyHandler(redis_client, cfg.slo_config_path, metrics=metrics_adapter) if redis_client else None
 
-    consumer = Consumer({
-        "bootstrap.servers": cfg.kafka_bootstrap_servers,
-        "group.id": cfg.kafka_consumer_group,
-        "auto.offset.reset": "earliest",
-        "enable.auto.commit": False,  # manual commit to control batches
-    })
-    consumer.subscribe([cfg.kafka_topic_input])
-    logger.info(
-        "latency-engine consumer started on topic=%s group=%s",
-        cfg.kafka_topic_input, cfg.kafka_consumer_group,
-    )
+    consumer = None
+    try:
+        consumer = Consumer({
+            "bootstrap.servers": cfg.kafka_bootstrap_servers,
+            "group.id": cfg.kafka_consumer_group,
+            "auto.offset.reset": "earliest",
+            "enable.auto.commit": False,
+        })
+        consumer.subscribe([cfg.kafka_topic_input])
+        logger.info(
+            "latency-engine consumer started on topic=%s group=%s",
+            cfg.kafka_topic_input, cfg.kafka_consumer_group,
+        )
+    except Exception as exc:
+        logger.warning("Could not start Kafka consumer (%s)", exc)
 
-    # ── Temporal baseline scheduler adapters ─────────────────────────────────
-    clickhouse = ClickHouseAdapter(
-        host=cfg.clickhouse_host,
-        port=cfg.clickhouse_port,
-        username=cfg.clickhouse_username,
-        password=cfg.clickhouse_password,
-        database=cfg.clickhouse_database,
-    )
-    redis_adapter = RedisAdapter(url=cfg.redis_url)
-    kafka_producer = ConfluentKafkaProducerAdapter(
-        bootstrap_servers=cfg.kafka_bootstrap_servers
-    )
-    baseline_activities = LatencyBaselineActivities(
-        clickhouse=clickhouse,
-        redis=redis_adapter,
-        kafka=kafka_producer,
-    )
+    baseline_activities = None
+    try:
+        clickhouse = ClickHouseAdapter(
+            host=cfg.clickhouse_host,
+            port=cfg.clickhouse_port,
+            username=cfg.clickhouse_username,
+            password=cfg.clickhouse_password,
+            database=cfg.clickhouse_database,
+        )
+        redis_adapter = RedisAdapter(url=cfg.redis_url)
+        kafka_producer = ConfluentKafkaProducerAdapter(
+            bootstrap_servers=cfg.kafka_bootstrap_servers
+        )
+        baseline_activities = LatencyBaselineActivities(
+            clickhouse=clickhouse,
+            redis=redis_adapter,
+            kafka=kafka_producer,
+        )
+    except Exception as exc:
+        logger.warning("Could not initialize ClickHouse baseline adapters (%s)", exc)
 
-    # ── Temporal client ───────────────────────────────────────────────────────
     temporal_client: Client | None = None
-    if cfg.temporal_host:
+    if cfg.temporal_host and baseline_activities:
         try:
             temporal_client = await Client.connect(
                 cfg.temporal_host,
@@ -75,26 +81,28 @@ async def run() -> None:
             )
             logger.info("Temporal client connected to %s", cfg.temporal_host)
         except Exception as exc:
-            logger.warning("Could not connect to Temporal (%s) — baseline scheduler will not start.", exc)
+            logger.warning("Could not connect to Temporal (%s)", exc)
 
     loop = asyncio.get_event_loop()
     stop = asyncio.Event()
-    loop.add_signal_handler(signal.SIGTERM, stop.set)
-    loop.add_signal_handler(signal.SIGINT, stop.set)
+    try:
+        loop.add_signal_handler(signal.SIGTERM, stop.set)
+        loop.add_signal_handler(signal.SIGINT, stop.set)
+    except NotImplementedError:
+        pass
 
-    # ── Health API server ─────────────────────────────────────────────────────
     import uvicorn
     from api.rest.v1.app import app
     server_config = uvicorn.Config(app, host="0.0.0.0", port=cfg.health_port, log_level="info")
     server = uvicorn.Server(server_config)
 
-    # ── Coroutine: Kafka span consumer loop ───────────────────────────────────
     async def consume() -> None:
+        if not consumer or not handler:
+            logger.warning("Kafka consumer or handler uninitialized — consumer loop disabled.")
+            return
         try:
             while not stop.is_set():
                 spans_batch = []
-                kafka_messages = []
-
                 for _ in range(500):
                     msg = await loop.run_in_executor(None, lambda: consumer.poll(timeout=0.1))
                     if msg is None:
@@ -105,7 +113,6 @@ async def run() -> None:
                         logger.error("Kafka error: %s", msg.error())
                         continue
 
-                    kafka_messages.append(msg)
                     try:
                         payload = json.loads(msg.value().decode("utf-8"))
                         headers = msg.headers()
@@ -134,10 +141,9 @@ async def run() -> None:
             consumer.close()
             logger.info("latency-engine consumer closed")
 
-    # ── Coroutine: Temporal baseline worker ───────────────────────────────────
     async def run_temporal_worker() -> None:
-        if temporal_client is None:
-            logger.warning("Temporal unavailable — latency baseline scheduler will not start.")
+        if temporal_client is None or baseline_activities is None:
+            logger.warning("Temporal or baseline activities unavailable.")
             return
         worker = Worker(
             temporal_client,
@@ -154,7 +160,6 @@ async def run() -> None:
         run_temporal_worker(),
         server.serve(),
     )
-
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
