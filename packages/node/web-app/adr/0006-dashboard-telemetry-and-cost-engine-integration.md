@@ -1,215 +1,175 @@
-# ADR 0006: Web App Dashboard Integration with Telemetry SDK and Event Cost Engine
+# ADR 0006: Web App Dashboard Integration with Telemetry SDK, Security Pipeline, and Event Cost Engine
 
 | Field | Value |
 | --- | --- |
 | **ADR ID** | `ADR-NODE-WEB-APP-0006` |
-| **Title** | Web App Dashboard Integration with Python Telemetry SDK and Event Cost Engine |
+| **Title** | Web App Dashboard Integration with Python Telemetry SDK, HMAC-SHA256 Security Pipeline, and Event Cost Engine |
 | **Status** | **Accepted** |
-| **Date** | 2026-08-25 |
-| **Scope** | Next.js Web App (`packages/node/web-app`), Telemetry SDK (`instrumentation-sdk`), Cost Engine (`event-cost`) |
+| **Date** | 2026-08-25 (Updated: 2026-08-29) |
+| **Scope** | Next.js Web App (`packages/node/web-app`), Telemetry SDK (`instrumentation-sdk`), Cost Engine (`event-cost`), Latency Engine (`latency-engine`) |
 
 ---
 
 ## 1. Context & Problem Statement
 
-The `web-app` microservice provides the primary user-facing Next.js dashboard (`/costs`, `/traces`, `/latency`, `/quality`, `/prompts`). To render real-time observability metrics, cost breakdowns, and distributed trace waterfalls, `web-app` must interface cleanly with the Python backend services:
-- **`instrumentation-sdk`**: Captures raw LLM spans, token counts, TTFT, PII flags, and exposes REST management APIs.
-- **`event-cost`**: Computes micro-USD LLM costs and manages pricing registries (`model_prices.yaml`).
-- **`event-cost-worker`**: Consumes raw spans from Kafka and persists aggregated analytics to PostgreSQL/ClickHouse.
+The `web-app` microservice provides the primary user-facing Next.js dashboard (`/costs`, `/traces`, `/latency`, `/quality`, `/prompts`). To render real-time observability metrics, cost breakdowns, and latency percentiles, `web-app` must interface with backend microservices (`latency-engine` on port `8003`, `instrumentation-sdk` on port `8000`, `auth` service on port `3001`).
 
-We need a formal High-Level Design (HLD) and Low-Level Design (LLD) detailing how `web-app` connects to these backend components reliably.
+We require a resilient, security-hardened, and data-driven client pipeline to:
+1. Authenticate outgoing HTTP requests to Python microservices via HMAC-SHA256 Service-to-Service (S2S) Bearer JWT tokens.
+2. Eliminate code repetition via a centralized, data-driven `executeQuery` pipeline.
+3. Protect against microservice failures using decorator chains (`withTracing`, `withCircuitBreaker`, `withCache`, `withRetry`).
 
 ---
 
 ## 2. High-Level Design (HLD)
 
-### 2.1 High-Level Architecture Topology
+### 2.1 High-Level Architecture & Security Topology
 
 ```mermaid
 flowchart TD
-    subgraph AppLayer["Application & Capture Layer"]
-        UserApp["Python / Node LLM App"]
-        SDK["packages/python/instrumentation-sdk\n(Span Capture, PII Scanning, TTFT)"]
-        UserApp --> SDK
+    subgraph ClientBrowser["Client Browser / User Navigation"]
+        User["Dashboard User"]
+        AuthForm["Auth Form (/auth/sign-in)"]
+        DashboardUI["Latency & Telemetry Dashboard UI"]
+        User --> AuthForm
+        User --> DashboardUI
     end
 
-    subgraph ProcessingStorage["Processing & Storage Layer"]
-        CostEngine["packages/python/event-cost\n(Micro-USD Cost Computation)"]
-        CostWorker["event-cost-worker\n(Kafka Consumer & Aggregator)"]
-        AnalyticsDB[("PostgreSQL / ClickHouse / Redis\n(Spans, Traces, Cost Ledgers)")]
-
-        SDK --> CostEngine
-        SDK -->|Kafka: llm.spans.raw or REST POST /v1/spans| CostWorker
-        CostWorker --> AnalyticsDB
-        SDK -->|FastAPI REST Server :8000| AnalyticsDB
+    subgraph AuthMicroservice["Node.js Auth Microservice (:3001)"]
+        SignInApi["POST /api/v1/auth/sign-in"]
+        AuthForm -->|Fetch User Token| SignInApi
     end
 
-    subgraph FrontendLayer["Next.js Web App Dashboard Layer"]
-        WebApp["packages/node/web-app\n(Next.js App Router on :3000)"]
-        DashboardRoutes["/costs | /traces | /latency | /prompts"]
-        
-        WebApp --> DashboardRoutes
-        WebApp -->|Pattern A: REST API Fetch| SDK
-        WebApp -->|Pattern B: Server Route DB Queries| AnalyticsDB
-        WebApp -->|Pattern C: OTLP Web Tracing| AnalyticsDB
+    subgraph WebAppServer["Next.js Web App App Router (:3000)"]
+        NextApiRoutes["Next.js App API Routes\n(/api/v1/latency/*)"]
+        LatencyClientService["latencyClientService\n(RawLatencyClientAdapter)"]
+        S2STokenGen["HMAC-SHA256 S2S JWT Generator\n(Crypto Hmac sha256)"]
+        CentralRegistry["Centralized Registry\n(LATENCY_CONFIG_DEFAULTS & LATENCY_ENDPOINTS)"]
+
+        DashboardUI -->|Fetch Relative API| NextApiRoutes
+        NextApiRoutes --> LatencyClientService
+        LatencyClientService --> S2STokenGen
+        LatencyClientService --> CentralRegistry
+    end
+
+    subgraph PythonBackend["Python Backend Microservices (:8003)"]
+        FastAPIEngine["FastAPI Latency Engine REST API"]
+        JWTGuard["verify_jwt_token Dependency Guard"]
+        JWTVerifier["verify_service_jwt (HS256 & 2-Part Platform Token)"]
+        QueryService["LatencyQueryService (Pure Domain Engine)"]
+
+        S2STokenGen -->|Authorization: Bearer <S2S_JWT>| FastAPIEngine
+        FastAPIEngine --> JWTGuard
+        JWTGuard --> JWTVerifier
+        JWTVerifier --> QueryService
     end
 ```
-
-### 2.3 Three-Plane Architectural Blueprint (Control, Data & Messaging)
-
-```mermaid
-flowchart TD
-    subgraph ControlPlane["1. CONTROL PLANE (Configuration & Policy Governance)"]
-        ConfigState["Dashboard Filter State (useDashboardFilters)"]
-        PriceReloadSignal["Hot-Reload Price Signal (POST /v1/metrics/prices/reload)"]
-        TenantAuth["Auth Context & API Keys (x-api-key)"]
-    end
-
-    subgraph DataPlane["2. DATA PLANE (High-Throughput Analytics & Rendering)"]
-        WebAppUI["Next.js React Dashboard UI (Pages & Suspense Views)"]
-        ServerActions["Next.js Server API Routes / Direct DB Query"]
-        RestProxy["FastAPI REST Ingestion Proxy (http://localhost:8000)"]
-        AnalyticsStore[("PostgreSQL / ClickHouse Analytics Store")]
-
-        WebAppUI --> ServerActions
-        ServerActions --> AnalyticsStore
-        WebAppUI --> RestProxy
-    end
-
-    subgraph MessagingPlane["3. MESSAGING PLANE (Asynchronous Telemetry & Tracing)"]
-        OtelExporter["OTLP Web SDK Exporter (NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT)"]
-        TempoCollector["OpenTelemetry Collector & Tempo Tracing Engine (Port 31417)"]
-        SseStreamer["Server-Sent Events (SSE) / Real-time WebSockets"]
-
-        WebAppUI --> OtelExporter
-        OtelExporter --> TempoCollector
-        RestProxy --> SseStreamer
-        SseStreamer --> WebAppUI
-    end
-
-    ControlPlane --> DataPlane
-    MessagingPlane --> DataPlane
-```
-
-### 2.4 Integration Architectural Patterns
-
-| Pattern | Description | Primary Use Case | Target Endpoint |
-|---|---|---|---|
-| **Pattern A: REST API Proxy** | Next.js Client/Server Components fetch directly from `instrumentation-sdk` REST API | Dynamic pricing lists, test LLM calls, span ingestion status | `http://localhost:8000/v1/metrics/prices`<br>`http://localhost:8000/v1/spans` |
-| **Pattern B: Direct DB Analytics** | Next.js Server Actions / API Routes query PostgreSQL or ClickHouse ledgers | Heavy dashboard aggregations (`SUM(cost_usd_micro)`, `p95` latencies) | `postgresql://admin:password@localhost:5432/llm_observability` |
-| **Pattern C: OTLP Web Tracing** | Next.js frontend emits OpenTelemetry traces via OTLP Exporter | End-to-end user navigation trace context propagation | `http://localhost:31417/v1/traces` |
 
 ---
 
-## 3. Low-Level Design (LLD)
+## 3. Security Architecture & S2S Authentication (How Security Works)
 
-### 3.1 Sequence Diagram: Web App Data Fetching & Tracing Lifecycle
+### 3.1 HMAC-SHA256 S2S Token Generation
+To prevent unauthorized API access, `latencyClientService` generates a valid standard 3-part HS256 JWT in `getAuthHeaders()` for every outgoing server-side request:
+
+```typescript
+private getAuthHeaders(): Record<string, string> {
+  const secret = process.env.JWT_SECRET || LATENCY_CONFIG_DEFAULTS.DEFAULT_JWT_SECRET;
+  const header = { alg: "HS256", typ: "JWT" };
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    sub: LATENCY_CONFIG_DEFAULTS.DEFAULT_SERVICE_SUB,
+    iat: now,
+    exp: now + LATENCY_CONFIG_DEFAULTS.DEFAULT_JWT_EXPIRY_SECONDS,
+  };
+
+  const headerB64 = Buffer.from(JSON.stringify(header)).toString("base64url");
+  const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signingInput = `${headerB64}.${payloadB64}`;
+
+  const signatureB64 = crypto
+    .createHmac("sha256", secret)
+    .update(signingInput)
+    .digest("base64url");
+
+  return {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${signingInput}.${signatureB64}`,
+  };
+}
+```
+
+### 3.2 Security Authentication Sequence Diagram
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as Dashboard User
-    participant WebApp as Next.js Web App (3000)
-    participant NextApi as Next.js Server API Route
-    participant RestApi as instrumentation-sdk API (8000)
-    participant AnalyticsDB as Analytics Store (Postgres/Redis)
+    actor Dashboard as Next.js Dashboard UI
+    participant Route as Next.js Server Route (/api/v1/latency/percentiles)
+    participant Client as LatencyClientAdapter (withTracing Decorator)
+    participant Crypto as Node.js Crypto Module
+    participant FastAPI as FastAPI Engine (Port 8003)
+    participant Verifier as Python JWT Verifier Engine
 
-    Note over User, AnalyticsDB: Phase 1: Cost Dashboard Initial Load
-    User->>WebApp: Navigate to /costs
-    activate WebApp
-    WebApp->>NextApi: GET /api/costs?timeRange=24h&model=gpt-4o
-    activate NextApi
+    Dashboard->>Route: GET /api/v1/latency/percentiles?model=all&hour_of_day=14
+    activate Route
+    Route->>Client: latencyClientService.getPercentiles("all", 14)
+    activate Client
 
-    par Fetch Real-Time Model Prices
-        NextApi->>RestApi: GET /v1/metrics/prices
-        RestApi-->>NextApi: List[ModelPriceDTO] (gpt-4o, claude-3)
-    and Fetch Aggregated Ledger Spend
-        NextApi->>AnalyticsDB: SELECT SUM(cost_usd_micro) GROUP BY provider, model
-        AnalyticsDB-->>NextApi: CostAggregatesResultSet
-    end
+    Client->>Crypto: Compute HMAC-SHA256 signature over header.payload
+    Crypto-->>Client: Return signatureB64 string
+    Note over Client: Construct Authorization: Bearer <header.payload.signature>
 
-    NextApi-->>WebApp: JSON Response (Total spend, breakdown by model/provider)
-    deactivate NextApi
-    WebApp-->>User: Render Cost Analytics Cards & Charts
-    deactivate WebApp
+    Client->>FastAPI: HTTP GET http://localhost:8003/v1/latency/percentiles<br/>[Authorization: Bearer <S2S_JWT>]
+    activate FastAPI
 
-    Note over User, AnalyticsDB: Phase 2: Live Trace Detail Inspection
-    User->>WebApp: Click Trace ID (e.g. "tr-98421")
-    activate WebApp
-    WebApp->>RestApi: POST /v1/spans (Query trace_id="tr-98421")
-    RestApi->>AnalyticsDB: Query span tree & TTFT metrics
-    AnalyticsDB-->>RestApi: SpanRecordTree
-    RestApi-->>WebApp: Detailed Span Payload (tokens, latency, PII flags)
-    WebApp-->>User: Render Interactive Trace Waterfall & Cost Breakdown
-    deactivate WebApp
-```
+    FastAPI->>Verifier: verify_jwt_token(authorization)
+    activate Verifier
+    Verifier->>Verifier: Extract token -> Check alg == "HS256"<br/>Recompute HMAC-SHA256 signature<br/>Verify sub, iat, exp claims & clock skew
+    Verifier-->>FastAPI: Token Valid (Claims Verified)
+    deactivate Verifier
 
-### 3.2 Component Contracts & Environment Configurations
+    FastAPI-->>Client: HTTP 200 OK { percentiles payload }
+    deactivate FastAPI
 
-#### Environment Variables (`packages/node/web-app/.env.local`)
-```env
-NEXT_PUBLIC_API_URL="http://localhost:8000"
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-DATABASE_URL="postgresql://admin:password@localhost:5432/llm_observability"
-NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:31417/v1/traces"
-```
-
-#### TypeScript API Client Contract (`packages/node/web-app/src/lib/telemetry-client.ts`)
-```typescript
-export interface ModelPrice {
-  model: string;
-  provider: string;
-  input_price_per_1m: number;
-  output_price_per_1m: number;
-  version: string;
-}
-
-export interface CostSummaryResponse {
-  total_spend_usd: number;
-  currency: string;
-  time_range: string;
-  breakdown: Array<{
-    provider: string;
-    model: string;
-    cost_usd: number;
-    tokens_count: number;
-  }>;
-}
-
-export async function getModelPrices(): Promise<ModelPrice[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-  const res = await fetch(`${baseUrl}/v1/metrics/prices`, {
-    next: { revalidate: 60 },
-  });
-  if (!res.ok) throw new Error('Failed to fetch model prices');
-  return res.json();
-}
+    Client-->>Route: Return PercentilesResult Object
+    deactivate Client
+    Route-->>Dashboard: NextResponse.json(data)
+    deactivate Route
 ```
 
 ---
 
-## 4. End-to-End Call Stack Topology
+## 4. Low-Level Design (LLD)
 
-```text
-└── [User Navigation] User opens http://localhost:3000/costs
-    ├── 1. app/(dashboard)/costs/page.tsx :: CostDashboardPage()
-    │   └── 2. React.Suspense :: Fallback pulse skeleton
-    │       └── 3. page.tsx :: CostDashboardContent()
-    │           ├── 4. hooks/useDashboardFilters.ts :: useDashboardFilters()
-    │           │   └── Extract searchParams (`timeRange`, `model`, `service`, `environment`)
-    │           ├── 5. components/forms/DashboardFilterBar.tsx :: DashboardFilterBar()
-    │           └── 6. lib/telemetry-client.ts :: fetchModelPrices()
-    │               └── HTTP GET http://localhost:8000/v1/metrics/prices
-    │                   ├── 7. FastAPI :: router.get("/v1/metrics/prices")
-    │                   └── 8. price_registry.py :: get_all_prices()
-    │
-    └── [Trace Waterfall Inspection] Click Trace ID "tr-98421"
-        ├── 1. app/(dashboard)/traces/page.tsx :: TraceDetailsModal()
-        └── 2. lib/telemetry-client.ts :: fetchTraceSpans("tr-98421")
-            └── HTTP POST http://localhost:8000/v1/spans (Query trace_id)
-                ├── 3. spans/service.py :: query_span_tree("tr-98421")
-                ├── 4. postgres/adapter.py :: SELECT * FROM llm_spans WHERE trace_id = 'tr-98421'
-                └── 5. components/views/TraceWaterfall.tsx :: Render Interactive Gantt Chart
+### 4.1 Data-Driven `executeQuery` Pipeline Flow
+
+```mermaid
+flowchart LR
+    subgraph Methods["Feature Methods"]
+        M1["getPercentiles()"]
+        M2["getSLO()"]
+        M3["getBaseline()"]
+        M4["getAttribution()"]
+    end
+
+    subgraph Pipeline["Centralized executeQuery Pipeline"]
+        Exec["executeQuery<T>(endpoint, params, transformOps)"]
+        UrlComp["Compose URL & Set searchParams"]
+        AuthHeader["Attach HMAC-SHA256 Auth Headers"]
+        Fetch["Dispatch Async Fetch"]
+        Transform["Execute mapJson(raw, transformOps)"]
+
+        Exec --> UrlComp
+        UrlComp --> AuthHeader
+        AuthHeader --> Fetch
+        Fetch --> Transform
+    end
+
+    M1 --> Exec
+    M2 --> Exec
+    M3 --> Exec
+    M4 --> Exec
 ```
 
 ---
@@ -217,9 +177,11 @@ export async function getModelPrices(): Promise<ModelPrice[]> {
 ## 5. Decision Rationale & Consequences
 
 ### Positive Consequences
-- **Decoupled Architecture**: `web-app` consumes standardized REST & OTLP endpoints without tight coupling to Python worker implementations.
-- **High Performance**: Heavy aggregation runs asynchronously via `event-cost-worker` into PostgreSQL/ClickHouse, allowing Next.js Server Components to render dashboards with sub-100ms response times.
-- **Fail-Safe Operation**: If the REST API is temporarily unavailable, Next.js Server Actions can fall back to cached pricing data or direct database reads.
+- **Security Hardening**: All service-to-service requests carry HMAC-SHA256 signed Bearer JWTs verified with clock-skew leeway.
+- **Code Maintenance**: Code repetition is eliminated by delegating URL composition, header injection, status checking, and `mapJson` transformations to the centralized `executeQuery` pipeline.
+- **Data-Driven Consistency**: All default parameters, endpoints, and timeouts are controlled via central registries (`LATENCY_CONFIG_DEFAULTS`, `LATENCY_ENDPOINTS`).
 
-### Negative Consequences
-- Requires maintaining database schemas and API contract DTOs across Python (`api-types`) and TypeScript packages.
+---
+
+## 6. Review Trigger
+Review implementation when external identity providers (Auth0 / OIDC) are introduced or when key rotation policies change.

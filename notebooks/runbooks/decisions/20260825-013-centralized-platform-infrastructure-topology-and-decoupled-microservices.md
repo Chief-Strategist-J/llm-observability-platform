@@ -3,152 +3,131 @@
 | Field | Value |
 | --- | --- |
 | **ID** | `013` |
-| **Date** | 2026-08-25 |
+| **Date** | 2026-08-25 (Updated: 2026-08-29) |
 | **Status** | **accepted** |
 | **Deciders** | LLM Observability Platform Architecture Team |
-| **Scope** | Root Platform Infrastructure (`packages/configs/llm-obs-infra/docker-compose.yml`), `instrumentation-sdk`, `event-cost-worker`, `web-app`, `nli-worker`, `slo-burn-worker`, `quality-engine` |
+| **Scope** | Root Platform Infrastructure (`packages/configs/llm-obs-infra/docker-compose.yml`), `instrumentation-sdk`, `latency-engine`, `event-cost-worker`, `web-app`, `nli-worker`, `slo-burn-worker`, `quality-engine` |
 
 ---
 
 ## 1. Context & Problem Statement
 
-As the platform expanded, multiple microservice packages (e.g. `packages/python/event-cost-worker`, `packages/python/instrumentation-sdk`) introduced localized `deploy/docker/docker-compose.yaml` files defining separate Redpanda/Kafka brokers, Redis containers, and PostgreSQL instances.
+As the platform expanded, multiple microservice packages introduced localized container setups. This decentralized infrastructure topology introduced severe architectural anti-patterns and production failure modes:
 
-This decentralized infrastructure topology introduced severe architectural anti-patterns and production failure modes:
-
-1. **Event Delivery Isolation & Siloing**:
-   - `instrumentation-sdk` published span events to an isolated message broker.
-   - `event-cost-worker` consumed from a different isolated container.
-   - **Result**: `event-cost-worker` never received span events because the message broker was fragmented into two disconnected instances.
-
-2. **Host Port Collisions & Conflict Errors**:
-   - Multiple local `docker-compose.yaml` files attempted to bind the same host ports (`9092` for Kafka, `6379` for Redis, `5432` for Postgres, `4317` for OTLP).
-
-3. **Resource Waste & Data Drift**:
-   - Running duplicate Kafka, Redis, and database servers across package directories consumed excessive CPU/RAM and fragmented Redis financial spend counters (`org:id:spend`).
+1. **Event Delivery Isolation & Siloing**: `instrumentation-sdk` published span events to an isolated message broker, while `event-cost-worker` consumed from another, resulting in lost telemetry.
+2. **Host Port Collisions**: Multiple local compose setups attempted to bind duplicate host ports (`9092` for Kafka, `6379` for Redis, `5432` for Postgres).
+3. **Security Perimeter Drift**: Inconsistent authentication headers and token formats across Node.js web services and Python microservices caused upstream `401 Unauthorized` cascades or security bypass risks.
 
 ---
 
-## 2. Decision & Architecture Overview
+## 2. Platform Infrastructure & Security Topology
 
-We adopt a **Single Central Shared Platform Infrastructure Architecture**:
+We adopt a **Single Central Shared Platform Infrastructure Architecture** backed by a **Zero-Trust Security Perimeter**:
 
-1. **Centralized Platform Infrastructure Package (`packages/configs/llm-obs-infra/docker-compose.yml`)**:
-   - **Traefik Ingress Gateway** (`llmobs-traefik:80/8080/443` -> Host `31410`/`31411`/`31419`): Central reverse proxy & security rate limiter.
-   - **Kafka Broker** (`llmobs-kafka:9092` -> Host `31414`): Single KRaft event streaming bus serving `llm.spans.raw` and DLQs for all services.
-   - **Shared Redis Cache** (`llmobs-redis:6379` -> Host `31413`): Single key-value store for API key TTL caching, rate limiting, and real-time micro-USD cost ledgers.
-   - **ClickHouse Analytics Engine** (`llmobs-clickhouse:8123/9000`): Columnar telemetry engine for query log mining and token aggregates.
-   - **Tempo Tracing Engine** (`llmobs-tempo:3200` -> Host `31416` / OTLP `4317`): Central distributed trace waterfall store.
-   - **OpenTelemetry Collector** (`llmobs-otel-collector:4318/4317` -> Host `31417`/`31418`): OTLP pipeline with attributes enrichment and memory limiting.
-   - **Grafana Platform Portal** (`llmobs-grafana:3000` -> Host `31415`): Unified web dashboard portal.
-   - **Google AlloyDB Omni DB** (`llmobs-alloydb:5432` -> Host `31420`): High-performance transactional database standard (`google/alloydbomni:15`).
-   - **Temporal Workflow Engine** (`llmobs-temporal:7233` -> Host `7233`, UI `8088`): Durable execution framework backed by AlloyDB Omni.
-
-2. **Decoupled Database-per-Service Pattern (`packages/{lang}/{package-name}`)**:
-   - Each microservice package maintains its **own dedicated database schema** while attaching to `llmobs-network`.
-   - Microservices use standard environment variables: `ALLOYDB_HOST`, `ALLOYDB_PORT`, `ALLOYDB_USER`, `ALLOYDB_PASSWORD`, `ALLOYDB_DB`, `ALLOYDB_DSN`.
-
----
-
-## 3. High-Level Design (HLD) Architecture
+1. **Traefik Ingress Gateway** (`llmobs-traefik:80/8080/443` -> Host `31410`/`31411`/`31419`): Edge reverse proxy, TLS termination, and rate limiter.
+2. **Auth Microservice & Token Authority** (`packages/node/auth` on Port `3001`): Issues HS256 session and organization tokens.
+3. **Service-to-Service (S2S) Security Bus**: Inter-service REST calls carry HMAC-SHA256 signed Bearer JWTs validated by FastAPI `verify_jwt_token` guards with 30-second leeway checks.
+4. **Kafka KRaft Message Bus** (`llmobs-kafka:9092` -> Host `31414`): KRaft event streaming bus serving `llm.spans.raw` and DLQs.
+5. **Shared Redis Cache & Ledger** (`llmobs-redis:6379` -> Host `31413`): Stores session denylists, sliding-window rate limits, and real-time micro-USD cost ledgers (`redis://:llmobs_redis_s3cret_2024@localhost:31413/0`).
+6. **ClickHouse Analytics Engine** (`llmobs-clickhouse:8123/9000` -> Host `31421`): Columnar telemetry engine for daily percentiles and baselines (password `llmobs_clickhouse_s3cret_2026`).
+7. **OpenTelemetry Collector & Tempo** (`llmobs-otel-collector:4317/4318` -> Host `31417`/`31418`): OTLP trace ingestion pipeline.
 
 ```mermaid
 flowchart TD
-    subgraph CentralInfra["CENTRAL SHARED PLATFORM INFRASTRUCTURE (llmobs-network)"]
-        Traefik["Traefik Gateway\n(llmobs-traefik:31410)"]
-        KafkaBroker["Kafka KRaft Message Bus\n(llmobs-kafka:9092)"]
-        RedisCache["Redis Micro-USD Ledger\n(llmobs-redis:6379)"]
-        OtelPipeline["OpenTelemetry Collector & Tempo\n(llmobs-otel-collector:4317 / llmobs-tempo:3200)"]
-        AlloyDatabase[("Google AlloyDB Omni 15\n(llmobs-alloydb:5432)")]
-        ClickHouseDB[("ClickHouse Analytics Engine\n(llmobs-clickhouse:8123)")]
-        TemporalEngine["Temporal Workflow Engine\n(llmobs-temporal:7233)"]
-        GrafanaPortal["Grafana Portal\n(llmobs-grafana:31415)"]
+    subgraph EdgePerimeter["1. EDGE & INGRESS PERIMETER"]
+        Client["Browser / External Client"]
+        Traefik["Traefik Edge Gateway (:31410 / :31411)"]
+        Client -->|TLS + x-api-key| Traefik
     end
 
-    subgraph Microservices["APPLICATION SERVICES & WORKERS"]
-        SDK["packages/python/instrumentation-sdk\n(FastAPI Ingestion Server)"]
-        CostWorker["packages/python/event-cost-worker\n(Async Kafka Consumer Daemon)"]
-        NliWorker["packages/python/nli-worker\n(Evaluation Worker)"]
-        WebApp["packages/node/web-app\n(Next.js Dashboard)"]
+    subgraph AuthPlane["2. IDENTITY & TOKEN AUTHORITY"]
+        AuthApp["Node.js Auth Microservice (:3001)"]
+        TokenGen["HS256 Token Issuer"]
+        RedisDenylist["Redis Session Denylist (:31413)"]
+        Traefik -->|POST /api/v1/auth/sign-in| AuthApp
+        AuthApp --> TokenGen
+        AuthApp --> RedisDenylist
     end
 
-    SDK -->|Publish Spans| KafkaBroker
-    KafkaBroker -->|Stream Batches| CostWorker
-    KafkaBroker -->|Stream Batches| NliWorker
-    CostWorker -->|HINCRBY Spend Counters| RedisCache
-    CostWorker -->|Bulk Insert Spans| ClickHouseDB
-    TemporalEngine -->|State Persistence| AlloyDatabase
-    WebApp -->|Emit UI Traces| OtelPipeline
-    WebApp -->|Query Analytics| ClickHouseDB
-    GrafanaPortal -->|Query Metrics & Traces| Tempo
+    subgraph S2SSecurityBus["3. SERVICE-TO-SERVICE (S2S) SECURITY BUS"]
+        WebApp["Next.js Web App (:3000)"]
+        CryptoSigner["Node.js Crypto HMAC-SHA256 Signer"]
+        FastAPIEngine["Python Latency Engine REST API (:8003)"]
+        JWTGuard["FastAPI verify_jwt_token Guard"]
+        JWTVerifier["shared.auth.jwt_verifier (Dual Token Verifier)"]
+
+        WebApp --> CryptoSigner
+        CryptoSigner -->|Authorization: Bearer <S2S_JWT>| FastAPIEngine
+        FastAPIEngine --> JWTGuard
+        JWTGuard --> JWTVerifier
+    end
+
+    subgraph DataPersistence["4. DATA & TELEMETRY PERSISTENCE"]
+        KafkaBus["Kafka KRaft Broker (:31414)"]
+        RedisLedger["Redis Cache & DDSketch Store (:31413)"]
+        ClickHouseDB["ClickHouse Columnar Store (:31421)"]
+
+        FastAPIEngine --> RedisLedger
+        FastAPIEngine --> ClickHouseDB
+        KafkaBus --> FastAPIEngine
+    end
 ```
 
 ---
 
-## 4. Control, Data, and Messaging Planes Architecture
+## 3. Comprehensive Zero-Trust Security Specification
+
+| Security Layer | Implementation Detail | Guarantee / Protection | Target Port / Component |
+| :--- | :--- | :--- | :--- |
+| **Edge Ingress Security** | Traefik Reverse Proxy & Rate Limiting | Shields internal microservices from DDoS and brute-force attacks. | Port `31410` / `31411` |
+| **S2S Token Authentication** | HMAC-SHA256 Bearer JWT (`header.payload.signature`) | Guarantees that internal microservices only accept authenticated requests signed with `JWT_SECRET`. | Port `8003` (`latency-engine`) |
+| **Dual Token Compatibility** | `jwt_verifier.py` (Supports 2-part platform tokens and 3-part HS256 tokens) | Enables seamless authentication from both platform session users and automated Node.js S2S clients. | Python `shared.auth.jwt_verifier` |
+| **Session Revocation** | Redis Token Denylist (`tokenDenylist.has(token)`) | Instantly revokes session tokens upon user sign-out or organization switch. | Port `31413` (`llmobs-redis`) |
+| **Zero-State Fallback** | Exception Trapping (`SketchNotFoundError`, `SLODataNotFoundError`) | Prevents missing metric queries from cascading into `500` server errors in downstream dashboards. | FastAPI REST Handlers |
+
+---
+
+## 4. End-to-End Security Sequence Flow
 
 ```mermaid
-flowchart TD
-    subgraph ControlPlane["1. CONTROL PLANE"]
-        EnvConfig["Central Environment Config (.env.example)"]
-        DockerNetwork["Shared Docker Bridge Network (llmobs-network)"]
-        TraefikRouter["Traefik Dynamic Ingress Router (dynamic.yml)"]
+sequenceDiagram
+    autonumber
+    actor User as Dashboard User
+    participant Auth as Auth Service (:3001)
+    participant WebApp as Next.js Web App (:3000)
+    participant Engine as Latency Engine (:8003)
+    participant Redis as Redis Cache (:31413)
+
+    User->>Auth: POST /api/v1/auth/sign-in (jaydeep@gmail.com)
+    Auth->>Auth: Verify password hash & generate token
+    Auth-->>User: Return Auth Token { token: "eyJ..." }
+
+    User->>WebApp: View Latency Dashboard (/latency)
+    WebApp->>WebApp: Generate HMAC-SHA256 S2S Bearer JWT using JWT_SECRET
+    WebApp->>Engine: GET /v1/latency/percentiles?model=all&hour_of_day=14<br/>[Authorization: Bearer <S2S_JWT>]
+
+    Engine->>Engine: Execute verify_jwt_token guard
+    alt Invalid Signature or Expired Claims
+        Engine-->>WebApp: 401 Unauthorized { error: "UNAUTHORIZED" }
+    else Valid S2S Token Signature
+        Engine->>Redis: Query DDSketch Log-buckets
+        Redis-->>Engine: Sketch data or None
+        Engine-->>WebApp: 200 OK { p50: 0.0, p95: 0.0, p99: 0.0, sample_count: 0 }
     end
-
-    subgraph DataPlane["2. DATA PLANE"]
-        FastApiIngest["instrumentation-sdk Ingestion Engine"]
-        AlloyStore[("AlloyDB Omni Transactional Storage")]
-        ClickHouseAnalytics[("ClickHouse Telemetry Database")]
-        RedisLedger[("Redis Micro-USD Cost Ledger")]
-
-        FastApiIngest --> ClickHouseAnalytics
-        FastApiIngest --> RedisLedger
-    end
-
-    subgraph MessagingPlane["3. MESSAGING & TELEMETRY PLANE"]
-        CentralKafka["Apache Kafka KRaft Broker (llmobs-kafka:9092)"]
-        CentralOtel["OTLP Collector & Tempo Engine (llmobs-otel-collector)"]
-        TemporalSaga["Temporal Durable Workflow Engine (llmobs-temporal:7233)"]
-        WorkerConsumers["event-cost-worker & nli-worker Consumer Groups"]
-
-        FastApiIngest --> CentralKafka
-        CentralKafka --> WorkerConsumers
-        WorkerConsumers --> TemporalSaga
-        CentralOtel --> CentralKafka
-    end
-
-    ControlPlane --> DataPlane
-    MessagingPlane --> DataPlane
+    WebApp-->>User: Render Dashboard UI Components
 ```
 
 ---
 
-## 5. Schema & Key Patterns Specification
-
-### 5.1 Redis Key Schemas
-- `org:{org_id}:spend_micro_usd` -> Hash `model_name -> accrued_micro_usd`
-- `rate_limit:{tenant_id}:sliding_window` -> Sorted Set `timestamp -> req_id`
-- `api_key:{key_hash}:ttl_cache` -> Serialized metadata string (TTL 300s)
-
-### 5.2 ClickHouse Columnar Schemas
-- `llm_telemetry_analytics.spans_raw` -> Primary span log table (`MergeTree` engine)
-- `llm_telemetry_analytics.token_aggregates_hourly` -> Real-time token rollup (`SummingMergeTree`)
-
-### 5.3 AlloyDB Omni Transactional Schemas
-- `organizations`, `tenants`, `api_keys`, `prompt_templates`, `evaluations`
-
----
-
-## 6. Summary of Verification Test Results
+## 5. Verification Test Summary
 
 ```text
 ✅ Traefik Gateway         HTTP GET http://localhost:31411/api/version  -> Status 200
+✅ Auth Microservice        HTTP POST http://localhost:3001/api/v1/auth/sign-in -> Status 200
 ✅ Redis Ledger             TCP Connect localhost:31413                  -> SUCCESS
 ✅ Kafka Broker             TCP Connect localhost:31414                  -> SUCCESS
-✅ ClickHouse Analytics     HTTP GET http://localhost:8123/ping          -> Status 200 (Ok.)
-✅ Tempo Tracing            HTTP GET http://localhost:31416/ready         -> Status 200 (ready)
+✅ ClickHouse Analytics     HTTP GET http://localhost:31421/ping         -> Status 200 (Ok.)
+✅ Latency Engine API       HTTP GET http://localhost:8003/v1/latency/percentiles -> Status 200 (Bearer Auth Verified)
 ✅ OTEL Collector gRPC      TCP Connect localhost:31418                  -> SUCCESS
-✅ Grafana Portal           HTTP GET http://localhost:31415/api/health   -> Status 200 (database ok)
-✅ AlloyDB Omni DB          TCP Connect localhost:31420                  -> SUCCESS
-✅ Temporal Engine          TCP Connect localhost:7233                   -> SUCCESS
+✅ Grafana Portal           HTTP GET http://localhost:31415/api/health   -> Status 200
 ```

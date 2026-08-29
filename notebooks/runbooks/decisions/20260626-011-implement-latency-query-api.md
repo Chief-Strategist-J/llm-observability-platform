@@ -1,20 +1,23 @@
-# ADR-011: Implement FastAPI service-to-service REST Query API for latency-engine
+# ADR-011: Implement FastAPI Service-to-Service REST Query API and Security Architecture for latency-engine
 
 * **Status**: Accepted
-* **Date**: 2026-06-26
+* **Date**: 2026-06-26 (Updated: 2026-08-29)
 * **Deciders**: Jaydeep
 
 ## Context and Problem Statement
-How can upstream systems and observability dashboards query calculated percentiles, SLO burn rates, and historical baselines from latency-engine securely and performantly?
+How can upstream systems and Next.js observability dashboards query calculated percentiles, SLO burn rates, and historical baselines from `latency-engine` securely and performantly without exposing internal telemetry data or suffering from security bypasses and cascade failures?
+
+---
 
 ## Decision Drivers
-* **D1**: Access to metrics must be secured via service-to-service authentication.
-* **D2**: Telemetry query processing must not block worker's CPU-bound Kafka polling loop.
-* **D3**: API responses must strictly conform to the OpenAPI v1 contract specs.
-* **D4**: ClickHouse connection outages must not prevent HTTP server startup.
+* **D1**: Access to telemetry query APIs must be strictly secured via Service-to-Service (S2S) HS256 JWT authentication and platform session token verification.
+* **D2**: Telemetry query processing must run asynchronously on background thread pools to prevent blocking the worker's CPU-bound Kafka polling loop.
+* **D3**: API responses must strictly conform to OpenAPI v1 contract specifications and provide resilient zero-state fallbacks for unpopulated models.
+* **D4**: ClickHouse and Redis connection outages must not prevent HTTP server startup or crash downstream dashboard components.
 
-## Business Decision Tree (Ingestion & Processing Flow)
-The latency engine evaluates every consumed span against the following processing paths to ensure correct stats aggregation:
+---
+
+## Business Decision Tree (Ingestion & Query Flow)
 
 ```
                           [Raw Span Event Consumed]
@@ -49,182 +52,176 @@ The latency engine evaluates every consumed span against the following processin
                                                                       & Agg Avg]
 ```
 
-### Why this is Critical & Important:
-* **Tail Latency Accuracy (p95/p99)**: Capturing tail latencies in LLM interactions is vital because typical average (p50) values hide severe bottlenecks. Using DDSketches allows the system to aggregate raw logs into memory-efficient, mathematically accurate percentiles dynamically.
-* **Non-Blocking Query Separation**: If HTTP query requests block the consumer worker's CPU-bound Kafka poller, offsets will lag, creating database backpressure and telemetry delay. Running the query API on a background thread preserves consumer throughput under heavy traffic spikes.
-* **SLO Error Budgeting**: Accurate tracking of SLO burn rates (over 1h, 6h, and 3-day windows) triggers leading indicators of platform degradation. The query API surfaces these budgets securely via service-to-service JWT to allow automatic remediation before client SLA breaches occur.
+---
 
-### Good Latency Metrics Selection
-The table below specifies what makes a metric "good" and its critical utility in observability:
+## Security Architecture & Securities Mechanisms (How Security Works)
 
-| Metric Name | What makes it a Good Metric | Why it is Good / Value | Example Target |
-| :--- | :--- | :--- | :--- |
-| **Tail Latency (p95/p99)** | Measures the performance of worst-case requests. | Captures degradation seen by heavy users; averages (p50) hide tail spikes. | `p99_total_ms` <= 1500ms |
-| **SLO Burn Rate** | A leading indicator showing the rate of error budget consumption. | Alerts operations of a degradation early before the monthly SLA is violated. | `burn_rate_1h` > 14.4x |
-| **Time to First Token (TTFT)** | Measures responsiveness in streaming completions. | Directly affects user perceived latency in interactive applications. | `p95_ttft_ms` <= 300ms |
-| **Throughput Per Output Token (TPOT)** | Measures LLM execution efficiency independent of completion size. | Decouples document size from processing speed to evaluate true LLM performance. | `tpot_ms` = (total - ttft) / tokens |
+### 1. Dual Token Authentication Engine
+The latency engine implements a dual-mode JWT verifier ([jwt_verifier.py](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/latency-engine/src/shared/auth/jwt_verifier.py)) that supports two authentication token structures:
 
-### Critical Telemetry & Architectural Tradeoffs
-The table below details the design tradeoffs evaluated during the implementation:
+1. **Standard 3-Part HS256 Service-to-Service (S2S) JWT**:
+   - Structure: `header.payload.signature`
+   - Header: `{"alg": "HS256", "typ": "JWT"}` (base64url encoded)
+   - Payload: `{"sub": "nextjs-web-app", "iat": <timestamp>, "exp": <timestamp>}`
+   - Signature: HMAC-SHA256 signature calculated over `${headerB64}.${payloadB64}` using shared secret `JWT_SECRET` (`dev-secret-key-change-in-production`).
+   - Verification: Handled via constant-time signature comparison (`hmac.compare_digest`) and 30-second leeway expiration checking.
 
-| Tradeoff Dimension | Option A (Chosen: Threaded Async Engine) | Option B (Alternative: Isolated Process) | Tradeoff Rationale |
-| :--- | :--- | :--- | :--- |
-| **Query Latency vs. CPU Contention** | Low query latency due to shared-memory cache retrieval. May cause minor CPU context-switch overhead under high request throughput. | Zero CPU impact on the ingestion worker. Higher deployment costs and slight I/O network latency. | Threaded model was chosen to prioritize low infrastructure footprint and local cache reads. |
-| **High Accuracy vs. Storage Size** | DDSketch relative accuracy set to 1% (`relative_accuracy=0.01`). | Raw transaction telemetry storage in ClickHouse/S3. | Storing raw spans is cost-prohibitive. DDSketches capture precise tail percentiles with a constant, small memory footprint. |
-| **Immediate Consistency vs. Resource Overhead** | Pipeline batch writes (`pipe.execute()`) reduce network overhead. | Eventual consistency in metric queries (1-minute latency lag). | We compromise minor query consistency to avoid overwhelming Redis with single-key writes. |
-
-## Decision Hierarchy Tree
-Below is the structural decision path followed for this API design choice:
-
-```
-Implement Latency Engine REST Query API
-│
-├── Functional Requirements
-│   ├── Query Latency Percentiles (p50, p95, p99)
-│   ├── Query SLO Burn Rates (1h, 6h, 3d windows)
-│   ├── Query Historical Baselines (past N days)
-│   └── Service-to-Service HS256 JWT Authentication
-│
-├── Non-functional Requirements
-│   ├── Low read latency (under 10ms target)
-│   ├── High ingestion availability (non-blocking thread model)
-│   └── Conformity with OpenAPI v1 specification
-│
-├── Processing & Threading
-│   ├── Option B: Isolated Process
-│   └── Option A: Threaded Async FastAPI ✓
-│       └── Reason:
-│           ├── Reuses port 8002 footprint
-│           └── Non-blocking polling loop concurrency
-│
-├── Ingestion Storage (Cache)
-│   ├── Memcached
-│   └── Redis ✓
-│       └── Reason:
-│           ├── Fast raw DDSketch merges
-│           ├── Multi-window SLO bucket pipelining
-│           └── Automatic TTL management
-│
-├── Long-term Storage (Baseline)
-│   ├── PostgreSQL
-│   └── ClickHouse ✓
-│       └── Reason:
-│           ├── Multi-million metrics column storage
-│           ├── Fast daily p99 aggregations
-│           └── Lazy-connection test isolation
-│
-└── Deployment
-    ├── Docker Container (FastAPI + Kafka Consumer thread)
-    ├── Redis Instance
-    └── ClickHouse Cluster
-```
-
-## Architectural Mental Models
-
-### 1. Failure-First Model
-Enumerate and design for system failures prior to designing the happy execution paths:
-* **Lazy DB Connection**: The ClickHouse adapter delays client instantiation until query-time (`@property`). This prevents eager connection attempts from failing HTTP server startup or breaking unit tests when ClickHouse is offline.
-* **Non-Blocking Telemetry Ingestion**: The query service runs in a daemon background thread. If query load spikes or blocks, the worker's Kafka consumer loop continues polling and committing offsets without dropping events.
-* **Configurable Port Fail-Safe**: Avoids hard-coded port bindings. The server port defaults to `8002` but is configurable via `HEALTH_PORT` to prevent startup collisions.
-
-### 2. Ports and Adapters (Hexagonal Architecture)
-Maintain strict separation of business logic from framework and platform side-effects:
-* **Pure Core Logic**: `LatencyQueryService` is framework-agnostic. It contains zero imports of FastAPI or raw Redis/ClickHouse drivers, executing entirely through interface protocols.
-* **Swappable Infrastructure**: Adapters (`LatencyRedisAdapter`, `LatencyClickHouseAdapter`) implement the defined ports (`LatencyRedisPort`, `LatencyClickHousePort`) structurally, meaning databases or drivers can be replaced with zero impact to the service layer.
-
-### 3. Logarithmic Percentile Compression (DDSketch)
-Optimize memory consumption while maintaining high percentile resolution:
-* **Sketch Storage**: Rather than storing raw timestamps (which grow linearly with traffic), we persist compressed logarithmic sketches in Redis.
-* **Low Relative Error**: Restricts percentiles error bounds to 1% (`relative_accuracy=0.01`), ensuring that tail latency metrics (p95/p99) remain highly accurate with constant-size cache keys.
-
-## Relationship, Synergy, and Architecture Flow
-
-This section details how the instrumentation SDK, Kafka ingestion, Redis real-time storage (DDSketch + SLO), ClickHouse historical storage, and the FastAPI REST API work together to form a cohesive, high-performance telemetry loop.
-
-### 1. End-to-End Telemetry Data Flow Diagram
-
-The following sequence diagram illustrates how a span generated by the Instrumentation SDK traverses the system to update real-time and long-term stores, and how those stores are subsequently queried by the FastAPI service.
+2. **Platform Session Token Compatibility**:
+   - Structure: `payload.signature` (2-part token issued by Node.js Auth Microservice on port `3001`).
+   - Base64url decodes the payload segment, validates `sub`, `iat`, and `exp` claims, and verifies expiration with a 30-second clock skew tolerance buffer.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as Client Application
-    participant SDK as Instrumentation SDK
-    participant Kafka as Kafka Broker
-    participant Worker as Ingestion Worker
-    participant Redis as Redis Cache (DDSketch/SLO)
-    participant CH as ClickHouse (Baselines)
-    participant API as FastAPI REST API
-    participant Ops as Ops Dashboard / Alert Engine
+    actor WebApp as Next.js Web App Service
+    participant Guard as FastAPI verify_jwt_token Guard
+    participant Verifier as JWT Verifier Engine
+    participant Handler as REST Query Handler
+    participant Repo as Latency Query Repository
 
-    %% 1. Instrumentation SDK capturing details
-    User->>SDK: Calls chat.completions.create()
-    Note over SDK: Capture TTFT, Total Latency,<br/>Tokens & Model attributes
-    SDK-->>User: Streaming Completion
-    SDK->>Kafka: Publish Raw Span Payload (Async)
+    WebApp->>Guard: GET /v1/latency/percentiles<br/>[Authorization: Bearer <token>]
+    activate Guard
 
-    %% 2. Worker Ingestion Loop
-    par Ingestion Thread
-        Kafka->>Worker: Poll Raw Spans (Batch of 500)
-        Note over Worker: Validate Schema & Parse UTC Timestamps
-        
-        %% Update DDSketches & SLO in Redis
-        Worker->>Redis: 1. Update DDSketch Log-buckets<br/>(sketch:total, sketch:ttft)<br/>2. Increment SLO count (total/error)
-        
-        %% Pipeline batch write to ClickHouse (or via decoupled worker)
-        Worker->>CH: Batch insert raw spans/baselines
+    alt Authorization Header Missing or Invalid Format
+        Guard-->>WebApp: 401 Unauthorized { error: "UNAUTHORIZED", detail: "Missing Authorization header" }
     end
 
-    %% 3. REST API Query and Alert Lifecycle
-    rect rgb(30, 41, 59)
-        Note over Ops, API: Observability & Alerting Path
-        Ops->>API: GET /v1/latency/slo (Query Burn Rates)
-        API->>Redis: Read SLO counters & calculate burn rates
-        Redis-->>API: Active error budget consumption
-        API-->>Ops: Return 1h/6h/3d burn rate states
+    Guard->>Verifier: verify_service_jwt(token)
+    activate Verifier
 
-        Ops->>API: GET /v1/latency/percentiles (Diagnose Spikes)
-        API->>Redis: Retrieve DDSketch key structures
-        Note over API: Merge sketches & calculate p50/p95/p99
-        API-->>Ops: Return exact tail percentile metrics
+    alt Token has 2 Segments (Platform Token)
+        Verifier->>Verifier: Decode payload JSON<br/>Validate sub, iat, exp claims & clock skew
+    else Token has 3 Segments (Standard HS256 S2S)
+        Verifier->>Verifier: Check header alg == "HS256"<br/>Compute HMAC-SHA256 signature over header.payload<br/>Compare expected vs received signature
+    end
 
-        Ops->>API: GET /v1/latency/baseline (Correlate History)
-        API->>CH: Query past N days percentile profiles
-        CH-->>API: Columns of historical aggregates
-        API-->>Ops: Return baseline comparison profile
+    alt Signature Mismatch or Token Expired
+        Verifier-->>Guard: Raise JWTVerificationError
+        Guard-->>WebApp: 401 Unauthorized { error: "UNAUTHORIZED", detail: "JWT signature verification failed" }
+    else Verification Successful
+        Verifier-->>Guard: Return JWTClaims(sub, iat, exp)
+    end
+    deactivate Verifier
+
+    Guard->>Handler: Execute Endpoint Logic
+    activate Handler
+    Handler->>Repo: Query Redis / ClickHouse
+    Repo-->>Handler: Return metrics or zero-state fallback
+    Handler-->>WebApp: 200 OK { percentiles / slo / baseline / attribution }
+    deactivate Handler
+    deactivate Guard
+```
+
+---
+
+## Data-Driven Query Pipeline & Service Architecture
+
+```mermaid
+flowchart TD
+    subgraph UIPlane["Next.js Web App UI Plane"]
+        UI["LatencyDashboardUI Component"]
+        Hook["useLatencyDashboardData Hook"]
+        Saga["latency.saga.ts (Redux Saga)"]
+        UI --> Hook
+        Hook --> Saga
+    end
+
+    subgraph ClientServicePlane["Service Layer & Resilience Decorators"]
+        ClientService["latencyClientService"]
+        Tracing["withTracing Decorator"]
+        CircuitBreaker["withCircuitBreaker Decorator"]
+        Cache["withCache Decorator"]
+        Retry["withRetry Decorator"]
+        ExecPipeline["executeQuery Pipeline"]
+        Constants["LATENCY_CONFIG_DEFAULTS & LATENCY_ENDPOINTS"]
+
+        Saga --> ClientService
+        ClientService --> Tracing
+        Tracing --> CircuitBreaker
+        CircuitBreaker --> Cache
+        Cache --> Retry
+        Retry --> ExecPipeline
+        ExecPipeline --> Constants
+    end
+
+    subgraph FastAPIPlane["FastAPI Microservice (Port 8003)"]
+        FastAPI["FastAPI REST Router (/v1/latency/*)"]
+        JWTGuard["verify_jwt_token Dependency"]
+        ServiceLayer["LatencyQueryService (Pure Logic)"]
+        RedisRepo["LatencyRedisAdapter (DDSketch / SLO)"]
+        CHRepo["LatencyClickHouseAdapter (Baselines)"]
+
+        ExecPipeline -->|HTTP GET + Bearer JWT| FastAPI
+        FastAPI --> JWTGuard
+        JWTGuard --> ServiceLayer
+        ServiceLayer --> RedisRepo
+        ServiceLayer --> CHRepo
     end
 ```
 
-### 2. Internals: How the Components Work Together
+---
 
-*   **Instrumentation SDK**: Integrated directly into client applications via decorators or auto-instrumentation handlers. It acts as the *Source of Truth*, tracking raw metrics (TTFT, total latency, token count, model status) and publishing them to Kafka asynchronously to ensure zero impact on application latency.
-*   **Kafka Ingestion**: Serves as the *Concurrency Buffer*. By separating span reporting from processing, ingestion survives high-throughput spikes. The consumer worker retrieves batches and processes them concurrently without blocking client transactions.
-*   **DDSketches (Logarithmic Buckets) in Redis**: Provides *Memory-Efficient Percentile Representation*. Storing every raw latency value is resource-prohibitive. DDSketch compresses these latencies into logarithmically sized buckets inside Redis, allowing mathematically accurate percentile calculation (within 1% relative error) from a constant-size byte footprint.
-*   **Rolling SLO Counters in Redis**: Tracks *System Reliability*. Evaluates every incoming span against configured thresholds. Redis keeps moving counters of total vs. failed requests over rolling timeframes (1h, 6h, 3d), enabling instant calculation of the remaining error budget.
-*   **ClickHouse Columnar Storage**: Serves as the *Historical Brain*. Long-term baselines are stored in ClickHouse. Because of its columnar layout, calculating historical averages, aggregations, and daily profiles across millions of rows takes milliseconds, preventing query pollution on the transaction-heavy Redis instance.
-*   **FastAPI REST API**: Serves as the *Unified Query Layer*. Upstream dashboards, gateways, and alerting systems query this layer. It authenticates callers, performs real-time sketch merging and percentile calculations from Redis, queries baselines from ClickHouse, and serves responses matching the OpenAPI schema.
+## Detailed Telemetry & Security Selection Matrix
 
-### 3. Design Rationale (Why this architecture?)
+| Metric / Security Dimension | Technical Implementation | Value & Security Guarantee | Target Threshold / Spec |
+| :--- | :--- | :--- | :--- |
+| **S2S Authentication** | HMAC-SHA256 Bearer JWT Verification | Prevents unauthorized external actors from triggering telemetry queries or scraping platform metrics. | Token signature verified with 30s leeway |
+| **Zero-State Fallback** | Defensive Exception Catching (`SketchNotFoundError`) | Prevents unpopulated model queries from throwing `500` or `404` errors in downstream UI dashboards. | Returns `200 OK` zero-state JSON |
+| **Tail Latency (p95/p99)** | DDSketch Logarithmic Compression | Captures worst-case latency spikes dynamically without linear memory growth. | `p99_total_ms` <= 1500ms |
+| **SLO Error Budget** | Rolling Redis Counters (1h, 6h, 3d) | Provides immediate alerting when platform error budgets are consumed rapidly. | `burn_rate_1h` > 14.4x |
+| **Time to First Token (TTFT)** | Streaming Completion Marker Tracking | Evaluates responsiveness of LLM output streaming for interactive UX. | `p95_ttft_ms` <= 300ms |
 
-*   **Decoupled Paths for Write vs. Read**: Writes are handled asynchronously via Kafka streams, while reads are serviced through memory-cached Redis structures or highly optimized columnar databases (ClickHouse). This eliminates database read/write locks and guarantees sub-10ms response times for real-time queries.
-*   **DDSketch & SLO Synergy**: SLO calculations alert us *when* a service is degraded, but they do not explain *where* or *how*. DDSketches provide the latency distribution context (e.g., distinguishing a universal slow-down from a few massive tail-latency spikes), which is essential for target troubleshooting.
-*   **Thread-Isolated Web Server**: Running the query API on a background daemon thread within the consumer process optimizes resource footprint (sharing memory caches and configuration) while ensuring that heavy query traffic never chokes the core ingestion Kafka consumer.
+---
 
-### 4. Alternative Operational Models (How we can use this differently)
+## Architectural Class Diagram (Hexagonal Ports & Security Handlers)
 
-1.  **Dynamic SDK Sampling Gateways**:
-    Instead of tracing 100% of spans, the query API can expose baseline statistics that the Instrumentation SDK pulls periodically. If latency is stable, the SDK scales back its sampling rate (e.g., to 10%), reducing downstream storage costs. Under regression, sampling dynamically scales up to 100%.
-2.  **Autonomous Alerting Trigger Engine**:
-    Instead of relying on external alerting systems to poll `/v1/latency/slo`, the background latency-engine thread can publish SLO budget exhaustion events directly to an internal `alerts` Kafka topic when burn-rates cross threshold levels, reducing time-to-alert.
-3.  **Trace-Level Remediation Routing**:
-    Upstream API Gateways query `/v1/latency/percentiles` per model. If a specific LLM model (e.g., `gpt-4o`) shows tail-latency degradation (p99 > 2000ms), the gateway automatically reroutes user traffic to a fallback model until the latency profiles return to baseline.
+```mermaid
+classDiagram
+    class JWTClaims {
+        +string sub
+        +int iat
+        +int exp
+    }
 
-## Failure Modes Created
+    class JWTVerifier {
+        +verify_service_jwt(token: string) JWTClaims
+        -_b64url_decode(segment: string) bytes
+    }
 
-### FM-1: Port conflicts on port 8002
-*   **Symptom**: Service fail-starts with port already in use.
-*   **Detection**: Startup logs contain port binding error.
-*   **Prevention**: HTTP port is fully configurable via `HEALTH_PORT` environment variable.
+    class LatencyQueryService {
+        -_repository: LatencyQueryRepository
+        -_slo_thresholds: Dict
+        +get_percentiles(model, hour_of_day, quantiles) PercentilesResult
+        +get_slo(model, endpoint) SLOResult
+        +get_baseline(model, hour_of_day, days) List~BaselinePoint~
+        +get_attribution(model, hour) AttributionResult
+    }
+
+    class LatencyRedisPort {
+        <<interface>>
+        +get_sketch_b64(model, hour_of_day) string
+        +get_slo_counters(model, endpoint) Dict
+    }
+
+    class LatencyClickHousePort {
+        <<interface>>
+        +get_daily_baselines(model, hour_of_day, days) List
+    }
+
+    LatencyQueryService --> LatencyRedisPort
+    LatencyQueryService --> LatencyClickHousePort
+    JWTVerifier ..> JWTClaims
+```
+
+---
+
+## Architectural Principles & Tradeoffs
+
+1. **Failure-First Resilience**: ClickHouse connection attempts are deferred until query invocation via `@property` getters. Server startup is unaffected by database maintenance.
+2. **Hexagonal Isolation**: `LatencyQueryService` contains zero HTTP or database driver dependencies. All data interactions are decoupled through ports.
+3. **Data-Driven Constants**: Endpoint routes and default fallback limits are declared in central registries (`LATENCY_ENDPOINTS`, `LATENCY_CONFIG_DEFAULTS`).
+
+---
 
 ## Review Trigger
-*   Review if HTTP query volume exceeds 10,000 requests/second (at that point, Option B becomes necessary).
+Review architecture if query volume exceeds 10,000 requests/second or when multi-region JWT key rotation is introduced.
