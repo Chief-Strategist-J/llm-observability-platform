@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, TypeVar
 
-T = TypeVar("T")
-
+Ctx = TypeVar("Ctx")
+Res = TypeVar("Res")
 
 @dataclass
 class ProduceCtx:
@@ -13,9 +14,11 @@ class ProduceCtx:
     key: str | bytes | None = None
     headers: dict[str, str | bytes] = field(default_factory=dict)
     partition: int = -1
+    tenant_id: str = "default"
+    correlation_id: str = ""
+    deadline_ms: float = 0.0
     aborted: bool = False
     error: Exception | None = None
-
 
 @dataclass
 class ConsumeCtx:
@@ -24,30 +27,21 @@ class ConsumeCtx:
     offset: int
     raw_key: bytes | None
     raw_value: bytes | None
-    headers: dict[str, bytes] = field(default_factory=dict)
+    headers: dict[str, str] = field(default_factory=dict)
     payload: Any = None
     tenant_id: str | None = None
+    correlation_id: str = ""
     retry_count: int = 0
     aborted: bool = False
     error: Exception | None = None
 
+NextFn = Callable[[Ctx], Res]
+MiddlewareFn = Callable[[NextFn[Ctx, Res]], NextFn[Ctx, Res]]
 
-MiddlewareFn = Callable[[T, Callable[[T], None]], None]
-
-
-def compose(middlewares: list[MiddlewareFn[T]], target: Callable[[T], None]) -> Callable[[T], None]:
-    def _composed(ctx: T) -> None:
-        idx = 0
-
-        def _next(curr_ctx: T) -> None:
-            nonlocal idx
-            if idx < len(middlewares):
-                curr_mw = middlewares[idx]
-                idx += 1
-                curr_mw(curr_ctx, _next)
-            else:
-                target(curr_ctx)
-
-        _next(ctx)
-
-    return _composed
+def compose(*middlewares: MiddlewareFn[Ctx, Res]) -> Callable[[NextFn[Ctx, Res]], NextFn[Ctx, Res]]:
+    def decorator(target: NextFn[Ctx, Res]) -> NextFn[Ctx, Res]:
+        fn = target
+        for mw in reversed(middlewares):
+            fn = mw(fn)
+        return fn
+    return decorator

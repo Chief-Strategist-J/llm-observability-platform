@@ -19,6 +19,7 @@ This ADR details:
 2. **Kafka Messaging Catalog** (Topics, Consumer Groups, Partitioning, and Message Contracts).
 3. **Step-by-Step Security Authentication Verification** (Platform session tokens vs S2S HMAC-SHA256 Bearer JWTs).
 4. **W3C OpenTelemetry Tracing & Single Trace ID Correlation** (`traceparent` header injection/extraction, Next.js Web App propagation, HTTPTracingMiddleware, Consumer Pipeline Middleware, Error Tracing, and Tempo/Grafana trace rendering).
+5. **Master 4-Pipeline Middleware Engine** (Outbound REST, Inbound HTTP, Kafka Consumer, and Cache/Redis pipelines).
 
 ---
 
@@ -418,17 +419,19 @@ traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
               └── Version (00)                       (16 hex chars)
 ```
 
-### 6.2 Middleware Pipeline & Decorator Composition Architecture
+### 6.2 Master 4-Pipeline Middleware Engine Topology
 
-1. **HTTP REST Tracing Middleware ([tracing_middleware.py](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/latency-engine/src/api/rest/middleware/tracing_middleware.py))**:
+1. **Outbound REST Client Pipeline (`rest-api-middleware.md`)**:
+   `withTracingOutbound` -> `withCircuitBreakerOutbound` -> `withRetryAndJitter` -> `withRequestDeduplication` -> `withResponseCache` -> `withAuthHeaderInjection` -> `withSchemaValidationOutbound` -> `rawHttpClient.execute()`
+2. **FastAPI HTTP REST Tracing Middleware (`rest-api-middleware.md`)**:
    - `HTTPTracingMiddleware` is mounted on FastAPI (`app.add_middleware(HTTPTracingMiddleware)`).
    - Automatically extracts W3C `traceparent` or `x-trace-id` headers from incoming HTTP requests using `extract_trace_context()`.
    - Injects `x-trace-id` into outgoing response headers and records exceptions automatically on all routes with ZERO repeated handler code.
-2. **Kafka Consumer Pipeline Middleware ([tracing_middleware.py](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/latency-engine/src/infra/messaging/middleware/tracing_middleware.py))**:
+3. **Kafka Consumer Pipeline Middleware (`kafka-middleware.md`)**:
    - `SpanConsumerHandler` executes via `pipeline.compose([deserialization_middleware, tracing_consumer_middleware], target)`.
    - Extracts trace context from Kafka message headers and wraps batch ingestion in `tracing_consumer_middleware`.
-3. **Web App Adapter Decorator Composition ([adapter-decorators.ts](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/src/core/data-driven/adapter-decorators.ts))**:
-   - `latencyClientService` composes decorators: `withTracing(withCircuitBreaker(withCache(withRetry(rawAdapter))))`.
+4. **Cache & Redis Middleware Pipeline (`cache-redis-middleware.md`)**:
+   - `withCacheTracing` -> `withCircuitBreakerFallback` -> `withKeyNamespaceGuard` -> `withSingleflightStampedeProtection` -> `withTTLRandomJitter` -> `withPayloadCompression` -> `rawRedisClient.execute()`
 
 ---
 
@@ -511,6 +514,7 @@ traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
 
 ```text
 ✅ Centralized Config Registry    config/infra/env_config.py (Zero Hardcoded Endpoint Strings or Span Names)
+✅ Master 4-Pipeline Engine      Outbound REST + Inbound HTTP + Kafka Consumer + Cache/Redis pipelines
 ✅ Middleware Pipeline           HTTPTracingMiddleware + pipeline.compose([deserialization, tracing_consumer])
 ✅ Decorator Composition         withTracing(withCircuitBreaker(withCache(withRetry(rawAdapter))))
 ✅ Single Trace ID Preservation   x-trace-id & traceparent preserved across all HTTP & Kafka hops
