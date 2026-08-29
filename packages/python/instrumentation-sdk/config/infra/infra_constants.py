@@ -23,6 +23,7 @@ class PlatformInfrastructureConstants:
     OTEL_COLLECTOR_GRPC_PORT: int = 31418
 
     TEMPO_HTTP_PORT: int = 31416
+    TEMPO_GRPC_HOST_PORT: int = 31423
     TEMPO_GRPC_PORT: int = 4317
 
     GRAFANA_HOST_PORT: int = 31415

@@ -85,14 +85,14 @@ flowchart TD
         ClientAdapter["latencyClientService (RawLatencyClientAdapter)"]
         ResilienceChain["withTracing -> withCircuitBreaker -> withCache -> withRetry"]
         S2SSigner["Node.js Crypto HMAC-SHA256 S2S JWT Generator"]
-        GrafanaTempo["Grafana & Tempo Dashboard (:31415 / :31416)\nView Trace Waterfalls & Spans"]
+        GrafanaTempo["Grafana & Tempo Dashboard (:31415 / :31416 / :31423)\nView Trace Waterfalls & Spans"]
 
         ReactUI --> ReduxSaga
         ReduxSaga --> ClientAdapter
         ClientAdapter --> ResilienceChain
         ResilienceChain --> S2SSigner
         S2SSigner -->|Authorization: Bearer <S2S_JWT>| FastAPI
-        CompositeReporter -->|OTLP gRPC Export :31418| GrafanaTempo
+        CompositeReporter -->|OTLP gRPC Export :31423| GrafanaTempo
         ReduxSaga --> ReduxSlice
         ReduxSlice --> ReactUI
     end
@@ -424,7 +424,7 @@ sequenceDiagram
     participant ApiRoute as Next.js API Route (/api/v1/latency/percentiles)
     participant ClientSvc as latencyClientService (withTracing)
     participant FastAPI as FastAPI Latency Engine (:8003)
-    participant Tempo as OpenTelemetry Tempo & Grafana (:31416 / :31415)
+    participant Tempo as OpenTelemetry Tempo & Grafana (:31416 / :31423 / :31415)
 
     User->>WebApp: Click /latency Page
     activate WebApp
@@ -452,8 +452,8 @@ sequenceDiagram
     deactivate ApiRoute
 
     par Async Trace Export
-        OtelWeb->>Tempo: Push Span Batch via OTLP gRPC/HTTP (:31418 / :31417)
-        FastAPI->>Tempo: Push Backend Spans via OTLP Exporter
+        OtelWeb->>Tempo: Push Span Batch via OTLP gRPC (:31423)
+        FastAPI->>Tempo: Push Backend Spans via OTLP Exporter (:31423)
     end
 
     Note over Tempo: Tempo merges spans into unified Trace Waterfall<br/>Searchable in Grafana Dashboard (:31415)
@@ -462,8 +462,8 @@ sequenceDiagram
 
 ### 6.3 Centralized Configuration & Trace Verification
 * **Config Registry**: All static endpoints, port assignments, default topics, and exporter flags are centralized in `config/infra/env_config.py` (`ServiceConfig`) and `config/infra/infra_constants.py` (`PlatformInfrastructureConstants`).
-* **Zero Hardcoded Strings**: Instrumentation SDK components (`run_real_span_instrumentation.py`, `tracer.py`) consume `service_config.kafka_bootstrap_servers` (`localhost:31414`), `service_config.otel_exporter_endpoint` (`http://localhost:31418`), and `service_config.kafka_default_topic` (`llm.spans.raw`).
-* **Grafana Tempo Trace Verification**: Open Grafana at [http://localhost:31415](http://localhost:31415) -> Navigate to **Explore** -> Select Data Source **Tempo** -> Search Service Name `llm-observability-platform` to view real-time trace waterfalls.
+* **Zero Hardcoded Strings**: Instrumentation SDK components (`run_real_span_instrumentation.py`, `tracer.py`) consume `service_config.kafka_bootstrap_servers` (`localhost:31414`), `service_config.otel_exporter_endpoint` (`localhost:31423`), and `service_config.kafka_default_topic` (`llm.spans.raw`).
+* **Grafana Tempo Trace Verification**: Open Grafana at [http://localhost:31415](http://localhost:31415) -> Navigate to **Explore** -> Select Data Source **Tempo** -> Search Service Name `llm-observability-platform` (or run TraceQL query `{ resource.service.name = "llm-observability-platform" }`) to view real-time trace waterfalls.
 
 ---
 
@@ -546,6 +546,7 @@ sequenceDiagram
 
 ```text
 ✅ Centralized Config Registry    config/infra/env_config.py (Zero Hardcoded Endpoint Strings)
+✅ Tempo Direct OTLP Receiver   Tempo Port 31423 -> Direct gRPC Trace Ingestion Verified
 ✅ AlloyDB Omni PostgreSQL DB    Postgres Port 31412 -> Tables users, organizations, tenants, api_keys, password_reset_tokens verified with FKs
 ✅ ClickHouse Analytics DB       ClickHouse Port 31421 -> Tables latency_checkpoints, spans_raw verified
 ✅ Redis Cache & Ledger         Redis Port 31413 -> DDSketches & SLO rolling counters verified
@@ -553,7 +554,7 @@ sequenceDiagram
 ✅ Auth Service Sign-in         HTTP POST http://localhost:3001/api/v1/auth/sign-in -> 200 OK
 ✅ S2S HMAC-SHA256 Signer       Node.js Crypto Generator -> Valid 3-part HS256 JWT
 ✅ FastAPI verify_jwt_token      Python JWT Verifier -> Claims Verified (200 OK)
-✅ OpenTelemetry W3C Tracing    traceparent Header Propagation -> Tempo & Grafana Exporter Verified (:31415 / :31418)
+✅ OpenTelemetry W3C Tracing    traceparent Header Propagation -> Tempo & Grafana Exporter Verified (:31415 / :31423)
 ✅ Real Span Instrumentation    run_real_span_instrumentation.py -> CompositeSpanReporter + Centralized Config
 ✅ Next.js Dashboard UI         HTTP GET http://localhost:31400/latency -> 200 OK
 ```

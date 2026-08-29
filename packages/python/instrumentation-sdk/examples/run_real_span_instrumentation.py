@@ -12,6 +12,7 @@ from config.infra.env_config import service_config
 import src as instrumentation_sdk
 from src.infra.messaging.reporters.span_reporter import KafkaSpanReporter
 from src.infra.tracing.tracer import init_tracer
+from opentelemetry import trace
 
 class ConsoleSpanReporter(instrumentation_sdk.SpanReporter):
     def report(self, span_data: dict) -> None:
@@ -75,6 +76,13 @@ def main():
     print("2. Running async @llm_observe function...")
     res_async = asyncio.run(async_embedding_generation("Sample text for vector embedding"))
     print(f"   Function output: vector length {len(res_async)}\n")
+
+    try:
+        provider = trace.get_tracer_provider()
+        if hasattr(provider, "shutdown"):
+            provider.shutdown()
+    except Exception:
+        pass
 
     print(f"Done! Both real instrumentation SDK spans were captured, sent to Kafka ({service_config.kafka_bootstrap_servers} topic {service_config.kafka_default_topic}), and exported to OpenTelemetry/Tempo/Grafana ({service_config.otel_exporter_endpoint}).")
 

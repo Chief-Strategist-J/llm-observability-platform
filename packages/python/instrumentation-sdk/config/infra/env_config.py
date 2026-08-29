@@ -10,9 +10,15 @@ class ServiceConfig:
     
     ingestion_endpoint: str = os.getenv("INGESTION_ENDPOINT", f"{infra_constants.DEFAULT_INGESTION_HOST}/v1/spans")
     auth_service_url: str = os.getenv("AUTH_SERVICE_URL", infra_constants.DEFAULT_AUTH_SERVICE_HOST)
-    kafka_bootstrap_servers: str = os.getenv("KAFKA_BOOTSTRAP_SERVERS", f"localhost:{infra_constants.KAFKA_INTERNAL_PORT}")
+    kafka_bootstrap_servers: str = os.getenv("KAFKA_BOOTSTRAP_SERVERS", f"localhost:{infra_constants.KAFKA_HOST_PORT}")
+    kafka_default_topic: str = os.getenv("KAFKA_DEFAULT_TOPIC", infra_constants.KAFKA_DEFAULT_TOPIC)
     
-    default_service_name: str = os.getenv("DEFAULT_SERVICE_NAME", "llm-obs-service")
+    otel_exporter_endpoint: str = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", f"localhost:{infra_constants.TEMPO_GRPC_HOST_PORT}")
+    skip_otlp_exporter: str = os.getenv("SKIP_OTLP_EXPORTER", "false")
+    skip_console_exporter: str = os.getenv("SKIP_CONSOLE_EXPORTER", "true")
+
+    default_service_name: str = os.getenv("DEFAULT_SERVICE_NAME", "llm-observability-platform")
+    service_version: str = os.getenv("SERVICE_VERSION", "0.1.0")
     wal_db_path: str = os.getenv("WAL_DB_PATH", infra_constants.DEFAULT_WAL_PATH)
     api_key_ttl_seconds: int = int(os.getenv("API_KEY_TTL_SECONDS", str(infra_constants.DEFAULT_API_KEY_TTL_SEC)))
 

@@ -33,7 +33,8 @@ def init_tracer(service_name: str | None = None, env: str | None = None) -> None
     if service_config.skip_otlp_exporter.lower() != "true":
         try:
             otlp_endpoint = service_config.otel_exporter_endpoint
-            otlp_exporter = OTLPSpanExporter(endpoint=otlp_endpoint, insecure=True)
+            grpc_target = otlp_endpoint.replace("http://", "").replace("https://", "")
+            otlp_exporter = OTLPSpanExporter(endpoint=grpc_target, insecure=True)
             otlp_processor = BatchSpanProcessor(otlp_exporter)
             provider.add_span_processor(otlp_processor)
         except Exception:
