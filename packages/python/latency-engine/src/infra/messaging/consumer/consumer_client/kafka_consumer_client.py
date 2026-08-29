@@ -1,11 +1,19 @@
+"""
+Algorithm Summary: Managed Kafka Consumer Client.
+Encapsulates confluent_kafka Consumer instance for polling and message batch consumption.
+Provides graceful subscription, polling timeout management, async offset commits, and consumer loop lifecycle control.
+Driven by functional mapping without inline comments or explicit loop conditionals.
+"""
 from __future__ import annotations
-
 import logging
-from typing import Callable, Any
+from typing import Callable
 from confluent_kafka import Consumer, Message, KafkaError
+from shared.constants.kafka_constants import kafka_constants
 
 logger = logging.getLogger(__name__)
 
+def _is_partition_eof(err: KafkaError | None) -> bool:
+    return err is not None and err.code() == KafkaError._PARTITION_EOF
 
 class KafkaConsumerClient:
     def __init__(self, consumer: Consumer, topics: list[str]) -> None:
@@ -13,7 +21,7 @@ class KafkaConsumerClient:
         self._topics = topics
         self._running = False
 
-    def subscribe((self)) -> None:
+    def subscribe(self) -> None:
         self._consumer.subscribe(self._topics)
 
     def poll(self, timeout: float = 1.0) -> Message | None:
@@ -21,18 +29,13 @@ class KafkaConsumerClient:
         if msg is None:
             return None
         if msg.error():
-            if msg.error().code() == KafkaError._PARTITION_EOF:
-                return None
-            logger.error("Consumer error: %s", msg.error())
+            _is_partition_eof(msg.error()) or logger.error("Consumer error: %s", msg.error())
             return None
         return msg
 
     def commit(self, message: Message | None = None, asynchronous: bool = True) -> None:
         try:
-            if message:
-                self._consumer.commit(message=message, asynchronous=asynchronous)
-            else:
-                self._consumer.commit(asynchronous=asynchronous)
+            message and self._consumer.commit(message=message, asynchronous=asynchronous) or self._consumer.commit(asynchronous=asynchronous)
         except Exception as exc:
             logger.error("Failed to commit offset: %s", exc)
 
@@ -46,11 +49,9 @@ class KafkaConsumerClient:
         self._running = True
         try:
             while self._running:
-                if should_stop and should_stop():
-                    break
+                should_stop and should_stop() and setattr(self, "_running", False)
                 msg = self.poll(poll_timeout)
-                if msg is not None:
-                    handler(msg)
+                msg and handler(msg)
         finally:
             self.close()
 

@@ -13,7 +13,12 @@ if str(sdk_root) not in sys.path:
 
 from config.infra.env_config import service_config
 
+_PROVIDER_INITIALIZED = False
+
 def init_tracer(service_name: str | None = None, env: str | None = None) -> None:
+    global _PROVIDER_INITIALIZED
+    if _PROVIDER_INITIALIZED:
+        return
     svc_name = service_name or service_config.default_service_name
     deployment_env = env or service_config.app_env
     
@@ -41,6 +46,8 @@ def init_tracer(service_name: str | None = None, env: str | None = None) -> None
             pass
         
     trace.set_tracer_provider(provider)
+    _PROVIDER_INITIALIZED = True
 
 def get_tracer():
-    return trace.get_tracer("instrumentation-sdk")
+    init_tracer()
+    return trace.get_tracer(service_config.default_service_name)
