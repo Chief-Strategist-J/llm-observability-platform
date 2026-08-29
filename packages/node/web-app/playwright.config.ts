@@ -15,9 +15,9 @@ export default defineConfig({
   ],
   use: {
     baseURL: 'http://localhost:31400',
-    trace: 'on',
-    screenshot: 'on',
-    video: 'on',
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
     headless: !isHeaded,
     launchOptions: {
       slowMo: isHeaded ? 400 : 0,
