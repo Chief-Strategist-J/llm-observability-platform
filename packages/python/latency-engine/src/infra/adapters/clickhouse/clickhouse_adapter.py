@@ -6,13 +6,24 @@ from shared.tracing.tracer import trace_span
 
 class ClickHouseAdapter(ClickHousePort):
     def __init__(self, host: str, port: int, username: str, password: str, database: str):
-        self.client = clickhouse_connect.get_client(
-            host=host,
-            port=port,
-            username=username,
-            password=password,
-            database=database,
-        )
+        self._host = host
+        self._port = port
+        self._username = username
+        self._password = password
+        self._database = database
+        self._client = None
+
+    @property
+    def client(self):
+        if self._client is None:
+            self._client = clickhouse_connect.get_client(
+                host=self._host,
+                port=self._port,
+                username=self._username,
+                password=self._password,
+                database=self._database,
+            )
+        return self._client
 
     def insert_latency_checkpoints(self, rows: list[tuple]) -> None:
         if not rows:
