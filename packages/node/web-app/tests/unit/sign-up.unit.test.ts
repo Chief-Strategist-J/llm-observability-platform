@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { RawAuthApiClient } from "../../../lib/api/auth-client";
+import { RawAuthApiClient } from "../../src/lib/api/auth-client";
 
-describe("Register Organization & Sign Up Integration Test", () => {
+describe("Register Organization & Sign Up Unit Test", () => {
   let client: RawAuthApiClient;
 
   beforeEach(() => {
@@ -28,8 +28,8 @@ describe("Register Organization & Sign Up Integration Test", () => {
     const res = await client.signUp(payload);
 
     expect(client.execute).toHaveBeenCalledWith("signUp", { body: payload });
-    expect(res.organization.name).toBe("Scaibu");
-    expect(res.user.email).toBe("jaydeep@gmail.com");
-    expect(res.user.name).toBe("Jaydeep");
+    expect(res.organization?.name).toBe("Scaibu");
+    expect(res.user?.email).toBe("jaydeep@gmail.com");
+    expect(res.user?.name).toBe("Jaydeep");
   });
 });

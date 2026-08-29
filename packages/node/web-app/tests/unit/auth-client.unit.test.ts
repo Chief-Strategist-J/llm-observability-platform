@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { RawAuthApiClient } from "../auth-client";
-import { AUTH_ENDPOINTS } from "../auth-endpoints";
+import { RawAuthApiClient } from "../../src/lib/api/auth-client";
+import { AUTH_ENDPOINTS } from "../../src/lib/api/auth-endpoints";
 
-describe("RawAuthApiClient & AUTH_ENDPOINTS Registry", () => {
+describe("RawAuthApiClient & AUTH_ENDPOINTS Registry Unit Tests", () => {
   let client: RawAuthApiClient;
   const mockBaseUrl = "http://localhost:3001";
 

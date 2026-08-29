@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { encodeFilters, decodeFilters } from '../url-state';
+import { encodeFilters, decodeFilters } from '../../src/lib/utils/url-state';
 import type { FilterState } from '@observability/api-types';
 
-describe('URL Filter State Codec (F-11 / TEST-FE2-05)', () => {
+describe('URL Filter State Codec Unit Tests (F-11 / TEST-FE2-05)', () => {
   it('encodes FilterState into URL query string', () => {
     const filters: FilterState = {
       dateRange: { from: '2026-08-01', to: '2026-08-07' },

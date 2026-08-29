@@ -1,0 +1,17 @@
+{
+  "default": {
+    "paths": ["tests/automation/features/**/*.feature"],
+    "require": ["tests/automation/step-definitions/**/*.ts", "tests/automation/support/**/*.ts"],
+    "requireModule": ["ts-node/register"],
+    "format": [
+      "progress-bar",
+      "html:reports/cucumber-report.html",
+      "json:reports/cucumber-report.json",
+      "allure-cucumberjs/reporter"
+    ],
+    "formatOptions": {
+      "resultsDir": "allure-results"
+    },
+    "publishQuiet": true
+  }
+}

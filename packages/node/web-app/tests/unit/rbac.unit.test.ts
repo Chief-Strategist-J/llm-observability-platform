@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { canAccessRoute } from './rbac';
+import { canAccessRoute } from '../../src/server/auth/rbac';
 
-describe('RBAC Middleware Guard (TEST-FE2-01)', () => {
+describe('RBAC Middleware Guard Unit Tests (TEST-FE2-01)', () => {
   it('blocks /admin/* routes for member role', () => {
     expect(canAccessRoute('member', '/admin/budgets')).toBe(false);
     expect(canAccessRoute('member', '/admin/slos')).toBe(false);

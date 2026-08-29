@@ -29,6 +29,11 @@
     "start": "./scripts/app.sh free-ports && next start -p ${PORT_UNIT:-31400}",
     "lint": "eslint",
     "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:perf": "vitest run tests/performance",
+    "test:e2e": "npx cucumber-js --config tests/automation/cucumber.json",
+    "test:allure": "npx allure generate allure-results --clean -o allure-report",
     "build-storybook": "storybook build"
   },
   "dependencies": {
