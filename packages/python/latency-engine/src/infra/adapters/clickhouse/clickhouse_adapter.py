@@ -1,8 +1,13 @@
-from typing import List, Tuple
-from datetime import date, datetime
+"""
+Algorithm Summary: Infrastructure ClickHouse Adapter.
+Provides direct ClickHouse database access using clickhouse-connect driver. Uses @traced_adapter
+to automatically attach trace_id and span context without repetitive inline tracing code blocks.
+Executes batch insertions of latency checkpoints and historical percentile queries using functional mapping pipelines.
+"""
+from __future__ import annotations
 import clickhouse_connect
 from shared.ports.clickhouse_port import ClickHousePort
-from shared.tracing.tracer import trace_span
+from shared.tracing.tracer import traced_adapter
 from infra.adapters.clickhouse.models import LatencyCheckpointModel
 from infra.adapters.clickhouse.queries import ClickHouseQueryRegistry
 
@@ -17,45 +22,27 @@ class ClickHouseAdapter(ClickHousePort):
 
     @property
     def client(self):
-        if self._client is None:
-            self._client = clickhouse_connect.get_client(
-                host=self._host,
-                port=self._port,
-                username=self._username,
-                password=self._password,
-                database=self._database,
-            )
+        self._client = self._client or clickhouse_connect.get_client(
+            host=self._host,
+            port=self._port,
+            username=self._username,
+            password=self._password,
+            database=self._database,
+        )
         return self._client
 
+    @traced_adapter("clickhouse")
     def insert_latency_checkpoints(self, rows: list[tuple]) -> None:
-        if not rows:
-            return
-        column_names = LatencyCheckpointModel.column_names()
-        table_name = LatencyCheckpointModel.table_name()
-        data = [list(row) for row in rows]
-        with trace_span(
-            "clickhouse:insert_latency_checkpoints",
-            attributes={
-                "db.system": "clickhouse",
-                "row_count": len(rows)
-            }
-        ):
-            self.client.insert(table_name, data, column_names=column_names)
+        rows and self.client.insert(
+            LatencyCheckpointModel.table_name(),
+            list(map(list, rows)),
+            column_names=LatencyCheckpointModel.column_names(),
+        )
 
+    @traced_adapter("clickhouse")
     def get_p99_ttft_history_7d(self, model: str, endpoint: str, hour_of_day: int) -> list[float]:
-        with trace_span(
-            "clickhouse:get_p99_ttft_history_7d",
-            attributes={
-                "db.system": "clickhouse",
-                "model": model,
-                "endpoint": endpoint,
-                "hour_of_day": hour_of_day
-            }
-        ):
-            query = ClickHouseQueryRegistry.P99_TTFT_HISTORY_QUERY
-            result = self.client.query(query, {
-                "model": model,
-                "endpoint": endpoint,
-                "hour_of_day": hour_of_day
-            })
-            return [float(row[0]) for row in result.result_rows if row[0] is not None]
+        result = self.client.query(
+            ClickHouseQueryRegistry.P99_TTFT_HISTORY_QUERY,
+            {"model": model, "endpoint": endpoint, "hour_of_day": hour_of_day},
+        )
+        return list(map(float, filter(lambda val: val is not None, map(lambda r: r[0], result.result_rows))))

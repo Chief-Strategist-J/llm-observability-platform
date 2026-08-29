@@ -1,186 +1,132 @@
+"""
+Algorithm Summary: Latency Redis Analytics Read Adapter.
+Provides read-only query access for DDSketch logarithmic structures, multi-window SLO request counters,
+and request duration attributions from Redis storage. Uses @traced_adapter to capture trace_id context and
+record execution metrics without inline tracing code blocks. Operates using pipelining and functional mapping pipelines.
+"""
 from __future__ import annotations
-
 import base64
 import logging
 import time
-
+from typing import Any
 import redis
 from ddsketch import DDSketch
 from ddsketch.pb import ddsketch_pb2
 from ddsketch.pb.proto import DDSketchProto
 
-from shared.tracing.tracer import api_span
+from shared.tracing.tracer import traced_adapter
 
 logger = logging.getLogger(__name__)
 
-# SLO keys older than 6 hours are expired by the writer — 360 minute max window
 _MAX_SLO_WINDOW_MINUTES = 360
 
+def _raise_err(exc: Exception) -> None:
+    raise exc
 
-class LatencyRedisAdapter:
-    """
-    Read-only Redis adapter for latency query operations.
-    Implements LatencyRedisPort structurally (Protocol).
+def _parse_int_safe(val: Any) -> int:
+    try:
+        return int(val) if val is not None else 0
+    except (ValueError, TypeError):
+        return 0
 
-    All IO is wrapped in child OTEL spans.
-    All vendor errors are caught and re-raised with context.
-    No business logic — only translation between Redis primitives and port types.
-    """
+def _parse_float_safe(val: Any) -> float:
+    try:
+        return float(val) if val is not None else 0.0
+    except (ValueError, TypeError):
+        return 0.0
 
-    def __init__(self, redis_client: redis.Redis) -> None:
-        self._redis = redis_client
-
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-
-    def _deserialize_sketch(self, b64_str: str) -> DDSketch:
+def _deserialize_sketch(b64_str: str) -> DDSketch | None:
+    try:
         binary_data = base64.b64decode(b64_str)
         proto_msg = ddsketch_pb2.DDSketch()
         proto_msg.ParseFromString(binary_data)
         return DDSketchProto.from_proto(proto_msg)
+    except Exception as exc:
+        logger.warning("Skipping sketch payload due to error: %s", exc)
+        return None
 
-    def _serialize_sketch(self, sketch: DDSketch) -> str:
-        proto_msg = DDSketchProto.to_proto(sketch)
-        return base64.b64encode(proto_msg.SerializeToString()).decode("utf-8")
+def _serialize_sketch(sketch: DDSketch) -> str:
+    proto_msg = DDSketchProto.to_proto(sketch)
+    return base64.b64encode(proto_msg.SerializeToString()).decode("utf-8")
 
-    # ------------------------------------------------------------------
-    # Port implementation
-    # ------------------------------------------------------------------
+def _merge_sketches(acc: DDSketch | None, s: DDSketch | None) -> DDSketch | None:
+    if acc is None:
+        return s
+    if s is not None:
+        acc.merge(s)
+    return acc
 
+class LatencyRedisAdapter:
+    def __init__(self, redis_client: redis.Redis) -> None:
+        self._redis = redis_client
+
+    @traced_adapter("redis")
     def get_sketch_b64(self, model: str, hour_of_day: int) -> str | None:
-        """
-        Scans all sketch:total:{model}:*:{hour_of_day} keys, merges them
-        into a single DDSketch and returns its base64 serialization.
-        Returns None if no matching keys exist.
-        """
-        with api_span(
-            "redis_adapter.get_sketch_b64",
-            {"db.system": "redis", "model": model, "hour_of_day": hour_of_day},
-        ):
-            pattern = f"sketch:total:{model}:*:{hour_of_day}"
-            try:
-                raw_keys = self._redis.keys(pattern)
-            except redis.RedisError as exc:
-                logger.error("Redis KEYS failed for pattern %s: %s", pattern, exc)
-                raise
+        pattern = f"sketch:total:{model}:*:{hour_of_day}"
+        raw_keys = self._redis.keys(pattern)
+        keys = list(map(lambda k: k.decode("utf-8") if isinstance(k, bytes) else str(k), raw_keys))
 
-            keys = [
-                k.decode("utf-8") if isinstance(k, bytes) else str(k)
-                for k in raw_keys
-            ]
-            if not keys:
-                return None
+        if not keys:
+            return None
 
-            merged: DDSketch | None = None
-            for key in keys:
-                try:
-                    raw = self._redis.get(key)
-                    if raw is None:
-                        continue
-                    b64 = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
-                    sketch = self._deserialize_sketch(b64)
-                    if merged is None:
-                        merged = sketch
-                    else:
-                        merged.merge(sketch)
-                except Exception as exc:
-                    logger.warning("Skipping sketch key %s due to error: %s", key, exc)
+        raw_values = map(lambda key: self._redis.get(key), keys)
+        valid_b64s = filter(lambda raw: raw is not None, raw_values)
+        decoded_b64s = map(lambda raw: raw.decode("utf-8") if isinstance(raw, bytes) else str(raw), valid_b64s)
+        sketches = filter(lambda s: s is not None, map(_deserialize_sketch, decoded_b64s))
 
-            if merged is None:
-                return None
-            return self._serialize_sketch(merged)
+        merged: DDSketch | None = None
+        for s in sketches:
+            merged = _merge_sketches(merged, s)
 
+        return None if merged is None else _serialize_sketch(merged)
+
+    @traced_adapter("redis")
     def get_slo_counts(
         self,
         model: str,
         endpoint: str,
         window_minutes: int,
     ) -> tuple[int, int]:
-        """
-        Returns (total_requests, total_errors) by summing slo:total and
-        slo:errors buckets over the last `window_minutes` 1-minute buckets.
-        Uses a Redis pipeline for efficiency.
-        """
-        if window_minutes < 1 or window_minutes > _MAX_SLO_WINDOW_MINUTES:
-            raise ValueError(
-                f"window_minutes must be between 1 and {_MAX_SLO_WINDOW_MINUTES}"
-            )
+        not (1 <= window_minutes <= _MAX_SLO_WINDOW_MINUTES) and _raise_err(
+            ValueError(f"window_minutes must be between 1 and {_MAX_SLO_WINDOW_MINUTES}")
+        )
 
-        with api_span(
-            "redis_adapter.get_slo_counts",
-            {
-                "db.system": "redis",
-                "model": model,
-                "endpoint": endpoint,
-                "window_minutes": window_minutes,
-            },
-        ):
-            now_bucket = int(time.time()) // 60
-            pipe = self._redis.pipeline(transaction=False)
+        now_bucket = int(time.time()) // 60
+        pipe = self._redis.pipeline(transaction=False)
 
-            for offset in range(window_minutes):
-                bucket = now_bucket - offset
-                pipe.get(f"slo:total:{model}:{endpoint}:{bucket}")
-                pipe.get(f"slo:errors:{model}:{endpoint}:{bucket}")
+        list(map(
+            lambda offset: (
+                pipe.get(f"slo:total:{model}:{endpoint}:{now_bucket - offset}"),
+                pipe.get(f"slo:errors:{model}:{endpoint}:{now_bucket - offset}")
+            ),
+            range(window_minutes)
+        ))
 
-            try:
-                results = pipe.execute()
-            except redis.RedisError as exc:
-                logger.error("Redis pipeline failed for SLO counts: %s", exc)
-                raise
+        results = pipe.execute()
+        total_requests = sum(map(_parse_int_safe, results[0::2]))
+        total_errors = sum(map(_parse_int_safe, results[1::2]))
 
-            total_requests = 0
-            total_errors = 0
-            for i in range(0, len(results), 2):
-                raw_total = results[i]
-                raw_errors = results[i + 1]
-                if raw_total is not None:
-                    try:
-                        total_requests += int(raw_total)
-                    except (ValueError, TypeError):
-                        pass
-                if raw_errors is not None:
-                    try:
-                        total_errors += int(raw_errors)
-                    except (ValueError, TypeError):
-                        pass
+        return total_requests, total_errors
 
-            return total_requests, total_errors
-
+    @traced_adapter("redis")
     def get_attribution_avg(self, model: str, hour: str) -> dict[str, float] | None:
-        """
-        Reads the attribution hash for the given model and hour string from Redis.
-        Returns a dictionary of float segment averages, or None if the key does not exist.
-        """
-        with api_span(
-            "redis_adapter.get_attribution_avg",
-            {"db.system": "redis", "model": model, "hour": hour},
-        ):
-            key = f"attr:avg:{model}:{hour}"
-            try:
-                if not self._redis.exists(key):
-                    return None
-                raw_hash = self._redis.hgetall(key)
-            except redis.RedisError as exc:
-                logger.error("Redis HGETALL failed for key %s: %s", key, exc)
-                raise
+        key = f"attr:avg:{model}:{hour}"
+        if not self._redis.exists(key):
+            return None
 
-            if not raw_hash:
-                return None
+        raw_hash = self._redis.hgetall(key)
+        if not raw_hash:
+            return None
 
-            result = {}
-            for field in (b"dns", b"tcp", b"queue", b"inference"):
-                val = raw_hash.get(field)
-                if val is None:
-                    val = raw_hash.get(field.decode('utf-8'))
-                
-                if val is not None:
-                    try:
-                        result[field.decode('utf-8')] = float(val)
-                    except (ValueError, TypeError):
-                        result[field.decode('utf-8')] = 0.0
-                else:
-                    result[field.decode('utf-8')] = 0.0
-            return result
+        fields = ["dns", "tcp", "queue", "inference"]
+        parsed = map(
+            lambda f: (
+                f,
+                _parse_float_safe(
+                    raw_hash.get(f.encode("utf-8")) or raw_hash.get(f)
+                )
+            ),
+            fields
+        )
 
+        return dict(parsed)

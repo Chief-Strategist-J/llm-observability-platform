@@ -2,8 +2,9 @@ from __future__ import annotations
 import os
 import socket
 import logging
+import functools
 from contextlib import contextmanager
-from typing import Generator
+from typing import Generator, Callable, Any
 
 from opentelemetry import trace
 from opentelemetry.trace import Span, SpanContext, TraceFlags, Status, StatusCode
@@ -55,6 +56,38 @@ def get_tracer():
     init_tracer()
     return trace.get_tracer(_SERVICE_NAME)
 
+def traced_adapter(system: str = "adapter"):
+    def decorator(func: Callable):
+        @functools.wraps(func)
+        def wrapper(self, *args, **kwargs):
+            tracer = get_tracer()
+            span_name = f"{system}:{func.__name__}"
+            with tracer.start_as_current_span(span_name) as span:
+                ctx = span.get_span_context()
+                trace_id_hex = f"{ctx.trace_id:032x}" if ctx and ctx.trace_id else ""
+                span_id_hex = f"{ctx.span_id:016x}" if ctx and ctx.span_id else ""
+
+                span.set_attribute("db.system", system)
+                span.set_attribute("db.operation", func.__name__)
+                span.set_attribute("trace_id", trace_id_hex)
+                span.set_attribute("span_id", span_id_hex)
+
+                for idx, arg in enumerate(args):
+                    span.set_attribute(f"arg.{idx}", str(arg))
+                for k, v in kwargs.items():
+                    span.set_attribute(f"param.{k}", str(v))
+
+                try:
+                    result = func(self, *args, **kwargs)
+                    span.set_status(Status(StatusCode.OK))
+                    return result
+                except Exception as exc:
+                    span.record_exception(exc)
+                    span.set_status(Status(StatusCode.ERROR, str(exc)))
+                    raise
+        return wrapper
+    return decorator
+
 @contextmanager
 def trace_span(
     name: str,
@@ -80,6 +113,9 @@ def trace_span(
             pass
 
     with t.start_as_current_span(name, context=parent_ctx) as span:
+        ctx = span.get_span_context()
+        if ctx and ctx.trace_id:
+            span.set_attribute("trace_id", f"{ctx.trace_id:032x}")
         if attributes:
             for k, v in attributes.items():
                 if v is not None:
@@ -124,6 +160,9 @@ def api_span(
         base_attrs.update(attributes)
 
     with tracer.start_as_current_span(name, context=parent_ctx, attributes=base_attrs) as span:
+        ctx = span.get_span_context()
+        if ctx and ctx.trace_id:
+            span.set_attribute("trace_id", f"{ctx.trace_id:032x}")
         try:
             yield span
         except Exception as exc:

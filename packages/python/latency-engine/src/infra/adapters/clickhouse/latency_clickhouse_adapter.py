@@ -1,13 +1,32 @@
+"""
+Algorithm Summary: Latency ClickHouse Analytics Read Adapter.
+Provides read-only query access to ClickHouse latency checkpoints using clickhouse-connect driver.
+Uses @traced_adapter decorator to capture trace_id context and record execution metrics without inline tracing boilerplate.
+Transforms query result rows into BaselineRow value objects using functional map and filter pipelines.
+"""
 from __future__ import annotations
 import logging
 from datetime import date
 import clickhouse_connect
 from shared.ports.latency_clickhouse_port import BaselineRow
-from shared.tracing.tracer import api_span
+from shared.tracing.tracer import traced_adapter
 from infra.adapters.clickhouse.models import LatencyCheckpointModel
 from infra.adapters.clickhouse.queries import ClickHouseQueryRegistry
 
 logger = logging.getLogger(__name__)
+
+def _parse_baseline_row(raw_row: tuple) -> BaselineRow | None:
+    try:
+        chk_date, p99_ttft, p99_total = raw_row
+        parsed_date = date.fromisoformat(chk_date) if isinstance(chk_date, str) else chk_date
+        return BaselineRow(
+            checkpoint_date=parsed_date,
+            p99_ttft_ms=float(p99_ttft),
+            p99_total_ms=float(p99_total),
+        )
+    except Exception as exc:
+        logger.warning("Skipping malformed row %s: %s", raw_row, exc)
+        return None
 
 class LatencyClickHouseAdapter:
     def __init__(
@@ -27,66 +46,29 @@ class LatencyClickHouseAdapter:
 
     @property
     def client(self):
-        if self._client is None:
-            self._client = clickhouse_connect.get_client(
-                host=self._host,
-                port=self._port,
-                username=self._username,
-                password=self._password,
-                database=self._database,
-            )
+        self._client = self._client or clickhouse_connect.get_client(
+            host=self._host,
+            port=self._port,
+            username=self._username,
+            password=self._password,
+            database=self._database,
+        )
         return self._client
 
+    @traced_adapter("clickhouse")
     def get_baseline(
         self,
         model: str,
         hour_of_day: int,
         days: int,
     ) -> list[BaselineRow]:
-        table_name = LatencyCheckpointModel.table_name()
-        with api_span(
-            "clickhouse_adapter.get_baseline",
+        result = self.client.query(
+            ClickHouseQueryRegistry.BASELINE_QUERY,
             {
-                "db.system": "clickhouse",
-                "db.operation": "SELECT",
-                "db.name": table_name,
                 "model": model,
                 "hour_of_day": hour_of_day,
                 "days": days,
             },
-        ):
-            try:
-                result = self.client.query(
-                    ClickHouseQueryRegistry.BASELINE_QUERY,
-                    {
-                        "model": model,
-                        "hour_of_day": hour_of_day,
-                        "days": days,
-                    },
-                )
-            except Exception as exc:
-                logger.error(
-                    "ClickHouse query failed for model=%s hour=%s: %s",
-                    model,
-                    hour_of_day,
-                    exc,
-                )
-                raise
-
-            rows: list[BaselineRow] = []
-            for raw_row in result.result_rows:
-                try:
-                    checkpoint_date, p99_ttft, p99_total = raw_row
-                    if isinstance(checkpoint_date, str):
-                        checkpoint_date = date.fromisoformat(checkpoint_date)
-                    rows.append(
-                        BaselineRow(
-                            checkpoint_date=checkpoint_date,
-                            p99_ttft_ms=float(p99_ttft),
-                            p99_total_ms=float(p99_total),
-                        )
-                    )
-                except Exception as exc:
-                    logger.warning("Skipping malformed row %s: %s", raw_row, exc)
-
-            return rows
+        )
+        parsed_rows = map(_parse_baseline_row, result.result_rows)
+        return list(filter(lambda r: r is not None, parsed_rows))

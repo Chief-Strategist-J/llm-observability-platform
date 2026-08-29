@@ -20,7 +20,7 @@ This ADR details:
 3. **Step-by-Step Security Authentication Verification** (Platform session tokens vs S2S HMAC-SHA256 Bearer JWTs).
 4. **W3C OpenTelemetry Tracing & Single Trace ID Correlation** (`traceparent` header injection/extraction, Next.js Web App propagation, HTTPTracingMiddleware, Consumer Pipeline Middleware, Error Tracing, and Tempo/Grafana trace rendering).
 5. **Master 4-Pipeline Middleware Engine** (Outbound REST, Inbound HTTP, Kafka Consumer, and Cache/Redis pipelines).
-6. **Centralized Repository Error Handling & Functional Query Pipelines** (`@handle_repository_errors`, functional map/filter transformations, zero inline comments, top algorithm summary docstrings).
+6. **Declarative Adapter Tracing & Trace ID Preservation** (`@traced_adapter("clickhouse")` / `@traced_adapter("redis")` decorators automatically attaching `trace_id` and `span_id` without inline tracing boilerplate).
 
 ---
 
@@ -57,6 +57,8 @@ flowchart TD
         ConsumerPipeline["pipeline.compose([deserialization_middleware, tracing_consumer_middleware])"]
         SpanHandler["SpanConsumerHandler"]
         DDSketchEngine["DDSketch Logarithmic Aggregator"]
+        RedisAdapter["RedisAdapter / LatencyRedisAdapter [@traced_adapter('redis')]"]
+        ClickHouseAdapter["ClickHouseAdapter / LatencyClickHouseAdapter [@traced_adapter('clickhouse')]"]
         RedisStore[("Redis Cache & DDSketch Ledger (:31413)\nsketch:total:{model}:{hour}\nslo:{model}:{endpoint}:{window}:total")]
         ClickHouseDB[("ClickHouse Columnar Store (:31421)\nTable: default.latency_checkpoints\nTable: default.spans_raw")]
         AlloyDB[("Google AlloyDB Omni 15 (:31412)\nDb: observability_auth")]
@@ -65,8 +67,10 @@ flowchart TD
         KafkaConsumer --> SpanHandler
         SpanHandler --> ConsumerPipeline
         ConsumerPipeline --> DDSketchEngine
-        DDSketchEngine --> RedisStore
-        ConsumerPipeline --> ClickHouseDB
+        DDSketchEngine --> RedisAdapter
+        ConsumerPipeline --> ClickHouseAdapter
+        RedisAdapter --> RedisStore
+        ClickHouseAdapter --> ClickHouseDB
         SpanHandler -.->|Malformed Spans / Errors| TopicDLQ
     end
 
@@ -83,8 +87,8 @@ flowchart TD
         JWTGuard --> JWTVerifier
         JWTGuard --> QueryService
         QueryService --> RepoErrorHandler
-        RepoErrorHandler --> RedisStore
-        RepoErrorHandler --> ClickHouseDB
+        RepoErrorHandler --> RedisAdapter
+        RepoErrorHandler --> ClickHouseAdapter
     end
 
     subgraph WebAppPlane["5. NEXT.JS DASHBOARD & TRACING PLANE (:31400 / :31415)"]
@@ -187,7 +191,7 @@ erDiagram
 
 ---
 
-### 3.2 Database Relationship Specifications Catalog
+## 3.2 Database Relationship Specifications Catalog
 
 | Parent Entity (Source) | Child Entity (Target) | Relationship Type | Foreign Key Constraint | Cascading Action |
 | :--- | :--- | :--- | :--- | :--- |
@@ -199,7 +203,7 @@ erDiagram
 
 ---
 
-### 3.3 PostgreSQL / Google AlloyDB Omni (`observability_auth` on Port `31412`)
+## 3.3 PostgreSQL / Google AlloyDB Omni (`observability_auth` on Port `31412`)
 
 #### Table: `users`
 ```sql
@@ -263,7 +267,7 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
 
 ---
 
-### 3.4 ClickHouse Columnar Analytics Database (`default` on Port `31421`)
+## 3.4 ClickHouse Columnar Analytics Database (`default` on Port `31421`)
 
 #### Table: `latency_checkpoints`
 ```sql
@@ -298,7 +302,7 @@ ORDER BY (timestamp_utc, model, trace_id);
 
 ---
 
-### 3.5 Redis Real-Time Key Catalog (`redis://:llmobs_redis_s3cret_2024@localhost:31413/0`)
+## 3.5 Redis Real-Time Key Catalog (`redis://:llmobs_redis_s3cret_2024@localhost:31413/0`)
 
 | Redis Key Structure | Type | Purpose | TTL / Expiry |
 | :--- | :--- | :--- | :--- |
@@ -422,7 +426,7 @@ traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
               └── Version (00)                       (16 hex chars)
 ```
 
-### 6.2 Master 4-Pipeline Middleware Engine Topology & Centralized Error Handling
+### 6.2 Master 4-Pipeline Middleware Engine Topology & Adapter Tracing Decorator
 
 1. **Outbound REST Client Pipeline (`rest-api-middleware.md`)**:
    `withTracingOutbound` -> `withCircuitBreakerOutbound` -> `withRetryAndJitter` -> `withRequestDeduplication` -> `withResponseCache` -> `withAuthHeaderInjection` -> `withSchemaValidationOutbound` -> `rawHttpClient.execute()`
@@ -437,6 +441,9 @@ traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
    - `withCacheTracing` -> `withCircuitBreakerFallback` -> `withKeyNamespaceGuard` -> `withSingleflightStampedeProtection` -> `withTTLRandomJitter` -> `withPayloadCompression` -> `rawRedisClient.execute()`
 5. **Centralized Repository Error Handling ([repository_error_handler.py](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/latency-engine/src/shared/errors/repository_error_handler.py))**:
    - Centralizes backend database error capturing (`@handle_repository_errors`). Logs infrastructure errors, records exception on active OTEL span, and returns safe fallback zero-state payloads without throwing unhandled 500 exceptions into domain logic.
+6. **Declarative Adapter Tracing (`@traced_adapter("clickhouse")` / `@traced_adapter("redis")`)**:
+   - Replaces repetitive `with trace_span(...)` blocks with a declarative decorator on infrastructure adapters.
+   - Automatically records `trace_id` (32-hex) and `span_id` (16-hex) on every OpenTelemetry span and log entry for instant trace visualization in Tempo and Grafana.
 
 ---
 
@@ -467,14 +474,14 @@ traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
    ├── 9. SpanConsumerHandler.__call__(message) [packages/python/latency-engine/src/infra/messaging/consumer/handlers/span_consumer_handler.py]
    │   └── pipeline.compose([deserialization_middleware, tracing_consumer_middleware], target)
    │       ├── 10. tracing_consumer_middleware: Extract traceparent header & start kafka.consume span
-   │       ├── 11. LatencyQueryRepository.update_sketches(model, hour_of_day, latency_ms) [packages/python/latency-engine/src/features/latency_query/repository.py]
+   │       ├── 11. LatencyRedisAdapter.get_sketch_b64() [@traced_adapter("redis")]
    │       │   ├── Deserialize existing DDSketch from Redis key "sketch:total:gpt-4o:14"
    │       │   ├── sketch.add(latency_ms)
    │       │   ├── DDSketchProto.to_proto(sketch).SerializeToString()
    │       │   └── redis_client.set("sketch:total:gpt-4o:14", base64_str)
-   │       ├── 12. LatencyQueryRepository.increment_slo_counters(model, endpoint, is_error)
+   │       ├── 12. LatencyRedisAdapter.get_slo_counts() [@traced_adapter("redis")]
    │       │   └── redis_client.incr("slo:gpt-4o:/v1/chat/completions:1h:total")
-   │       └── 13. LatencyClickHouseAdapter.insert_checkpoint_batch(records) [packages/python/latency-engine/src/infra/adapters/clickhouse/clickhouse_adapter.py]
+   │       └── 13. ClickHouseAdapter.insert_latency_checkpoints(records) [@traced_adapter("clickhouse")]
    │           └── INSERT INTO latency_checkpoints (model, hour_of_day, checkpoint_date, p99_ttft_ms, p99_total_ms, sample_count)
 ```
 
@@ -505,6 +512,7 @@ traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
            │   ├── 17. get_percentiles() pure domain handler [packages/python/latency-engine/src/api/rest/v1/handlers/latency.py]
            │   │   └── LatencyQueryService.get_percentiles("all", 14, [0.50, 0.95, 0.99]) [packages/python/latency-engine/src/features/latency_query/service.py]
            │   │       └── LatencyQueryRepository.get_sketch_b64() [@handle_repository_errors]
+           │   │           └── LatencyRedisAdapter.get_sketch_b64() [@traced_adapter("redis")]
            │   └── 18. Return HTTP 200 OK JSON payload [Header: x-trace-id]
            │       │
            │       ▼ [HTTP 200 OK Response]
@@ -519,6 +527,9 @@ traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
 ## 8. Verification Summary Matrix
 
 ```text
+✅ Declarative Adapter Decorator @traced_adapter("clickhouse") & @traced_adapter("redis") in shared/tracing/tracer.py
+✅ Trace ID & Span ID Capture   span.set_attribute("trace_id", trace_id_hex) on every adapter span
+✅ Zero Repetitive Tracing Code  Eliminated repetitive with trace_span(...) blocks across infrastructure adapters
 ✅ Centralized Config Registry    config/infra/env_config.py (Zero Hardcoded Endpoint Strings or Span Names)
 ✅ Centralized Repository Errors  @handle_repository_errors decorator (shared/errors/repository_error_handler.py)
 ✅ Pure Functional Query Pipelines Service layer uses map/filter transforms, top algorithm docstrings & zero inline comments
