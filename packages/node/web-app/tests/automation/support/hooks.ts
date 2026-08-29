@@ -1,4 +1,4 @@
-import { Before, After, BeforeAll, AfterAll, Status } from '@cucumber/cucumber';
+import { Before, After, BeforeAll, AfterAll, Status, type ITestCaseHookParameter } from '@cucumber/cucumber';
 import { chromium, type Browser, type BrowserContext, type Page } from '@playwright/test';
 
 export interface CustomWorld {
@@ -30,7 +30,7 @@ Before(async function (this: CustomWorld) {
   this.testData = {};
 });
 
-After(async function (this: CustomWorld, scenario) {
+After(async function (this: CustomWorld, scenario: ITestCaseHookParameter) {
   if (scenario.result?.status === Status.FAILED && this.page) {
     const screenshot = await this.page.screenshot({ fullPage: true });
     this.attach(screenshot, 'image/png');
