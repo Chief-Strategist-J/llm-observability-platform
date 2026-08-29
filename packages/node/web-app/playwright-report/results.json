@@ -4,13 +4,15 @@
       "/home/btpl-lap-22/.nvm/versions/node/v20.20.0/bin/node",
       "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/node_modules/.bin/playwright",
       "test",
-      "tests/automation/auth/sign-up"
+      "--headed",
+      "--project=chromium",
+      "tests/automation/auth/sign-up/sign-up-duplicate-user.spec.ts"
     ],
     "configFile": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/playwright.config.ts",
     "rootDir": "/home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app/tests/automation",
     "failOnFlakyTests": false,
     "forbidOnly": false,
-    "fullyParallel": false,
+    "fullyParallel": true,
     "globalSetup": null,
     "globalTeardown": null,
     "globalTimeout": 0,
@@ -106,12 +108,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 9603,
+                      "duration": 10383,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-08-29T04:21:36.636Z",
+                      "startTime": "2026-08-29T04:25:52.061Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -127,166 +129,13 @@
           ]
         }
       ]
-    },
-    {
-      "title": "auth/sign-up/sign-up-invalid-email.spec.ts",
-      "file": "auth/sign-up/sign-up-invalid-email.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Auth Registration - Invalid Email Edgecase Automation",
-          "file": "auth/sign-up/sign-up-invalid-email.spec.ts",
-          "line": 3,
-          "column": 6,
-          "specs": [
-            {
-              "title": "should trigger native HTML5 validation on malformed email format",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 11347,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-08-29T04:21:46.905Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "d65323e937051a3f3c4a-a1c1f1bcea601a4689e3",
-              "file": "auth/sign-up/sign-up-invalid-email.spec.ts",
-              "line": 4,
-              "column": 7
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "auth/sign-up/sign-up-valid.spec.ts",
-      "file": "auth/sign-up/sign-up-valid.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Auth Registration - Valid User Registration Automation",
-          "file": "auth/sign-up/sign-up-valid.spec.ts",
-          "line": 3,
-          "column": 6,
-          "specs": [
-            {
-              "title": "should successfully register new organization and admin user",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 9889,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-08-29T04:21:58.328Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "870c77f9c29230658b95-8a1bbff827f592e44a32",
-              "file": "auth/sign-up/sign-up-valid.spec.ts",
-              "line": 4,
-              "column": 7
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "auth/sign-up/sign-up-weak-password.spec.ts",
-      "file": "auth/sign-up/sign-up-weak-password.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Auth Registration - Weak Password Edgecase Automation",
-          "file": "auth/sign-up/sign-up-weak-password.spec.ts",
-          "line": 3,
-          "column": 6,
-          "specs": [
-            {
-              "title": "should display weak password meter warning when entering short password",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 6258,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-08-29T04:22:08.272Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "0b32159a8580ba832aac-aa5ddad285a25a7ec722",
-              "file": "auth/sign-up/sign-up-weak-password.spec.ts",
-              "line": 4,
-              "column": 7
-            }
-          ]
-        }
-      ]
     }
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-08-29T04:21:28.915Z",
-    "duration": 45718.041,
-    "expected": 4,
+    "startTime": "2026-08-29T04:25:48.431Z",
+    "duration": 16038.637999999999,
+    "expected": 1,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0
