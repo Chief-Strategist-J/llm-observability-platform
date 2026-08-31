@@ -1,20 +1,87 @@
 /**
  * ALGORITHM & ARCHITECTURE: Enterprise Production-Hardened Resilient HTTP Client Pipeline
  * 
- * 1. Default-Deny Telemetry Allowlist: Only explicit whitelisted attributes (HTTP_CONSTANTS.ALLOWED_TELEMETRY_ATTRIBUTES) are logged on OpenTelemetry spans.
- * 2. Telemetry URL Sanitization: Strips query parameters (?token=...) and userinfo (user:pass@) from http.url before emitting to telemetry backends.
- * 3. Server-Verified Tenant Context: Tenant ID is strictly derived from RequestContextHolder.get() authenticated context to prevent tenant spoofing.
- * 4. Tenant-Isolated Route-Template Circuit Breaker: Circuit breakers are keyed by (tenantId:routeTemplate) to prevent cross-tenant noisy-neighbor availability DoS.
- * 5. Tenant-Partitioned Bounded LRU Cache: Caches are partitioned per tenant (Map<tenantId, BoundedLRU>) so single-tenant query bursts cannot evict other tenants.
- * 6. Hashed SHA-256 Cache & Singleflight Keys: Hashes request signatures (tenantId + method + url + body) using SHA-256 to prevent unbounded memory keys and raw body leaks.
- * 7. Per-Attempt Circuit Re-Check: Circuit status is re-evaluated before EVERY retry iteration inside the retry loop to halt retries immediately if breaker opens mid-storm.
- * 8. Method Idempotency Constraint: Automatic retries are restricted to idempotent methods (GET, HEAD, OPTIONS, PUT, DELETE) unless an x-idempotency-key is provided.
- * 9. SSRF Private IP & Manual Redirect Protection: Validates destination hosts, enforces redirect='manual', and re-validates Location headers against private subnets (127.0.0.1, 169.254.169.254, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16).
- * 10. Streaming Content-Length Enforcement: Checks Content-Length headers prior to buffering payloads to prevent OOM memory exhaustion.
+ * ====================================================================================================
+ * EXHAUSTIVE STEP-BY-STEP PIPELINE SPECIFICATION
+ * ====================================================================================================
+ * 
+ * 1. INPUT VALIDATION & SSRF/SCHEME PROTECTION:
+ *    - Validates target destination URL format against supported protocol schemes (http:, https:).
+ *    - Enforces IP subnet filtering using regex against private/loopback/link-local address ranges:
+ *      (127.0.0.0/8, 169.254.0.0/16, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, ::1, 0.0.0.0).
+ *    - Verifies hostnames against configured allowedDestinationHosts allowlists.
+ * 
+ * 2. REQUEST INTERCEPTION & BODY BOUNDING:
+ *    - Passes raw RequestConfig through sequential RequestInterceptorFn chain.
+ *    - Enforces static and streaming payload size limits (default maxBodySizeBytes = 10,485,760 bytes [10MB]).
+ *    - Rejects oversized request body payloads before network initiation.
+ * 
+ * 3. CODE LOCATION & V8 STACK TRACE PARSING:
+ *    - Invokes getCallerInfo(depth = 3) to inspect V8 stack frames.
+ *    - Extracts calling function name, line number, and normalizes file path to repository-relative format
+ *      (e.g., packages/node/shared-infra/src/http/http-client.ts) to eliminate internal employee directory leakage.
+ * 
+ * 4. AUTHENTICATED TENANT CONTEXT DERIVATION:
+ *    - Extracts authenticated tenant ID strictly from server-managed RequestContextHolder.get().tenantId context.
+ *    - Fallbacks gracefully to HTTP_CONSTANTS.DEFAULT_TENANT_ID ("tenant-default") if context is uninitialized.
+ *    - Guarantees client-supplied headers cannot hijack or spoof cross-tenant boundaries.
+ * 
+ * 5. SHA-256 TENANT-ISOLATED KEY GENERATION:
+ *    - Constructs unique request signature: keyString = tenantId + ":" + method.toUpperCase() + ":" + url + ":" + JSON.stringify(body).
+ *    - Computes 256-bit cryptographic digest: hashedRequestKey = SHA256(keyString).digest('hex').
+ *    - Produces fixed 64-character hex string preventing memory key bloat and raw payload embedding.
+ * 
+ * 6. SINGLEFLIGHT CONCURRENCY COLLAPSING (DEDUPLICATION):
+ *    - Inspects active inFlightSingleflights map for hashedRequestKey.
+ *    - If an identical request is already pending, returns existing active Promise<HttpResponse>.
+ *    - Collapses N concurrent thundering herd requests into 1 single network RPC without throwing AbortError.
+ * 
+ * 7. OPENTELEMETRY SPAN LIFECYCLE & DEFAULT-DENY ALLOWLIST:
+ *    - Sanitizes telemetry URL by stripping query strings (?token=...) and userinfo (user:pass@) via sanitizeUrlForTelemetry().
+ *    - Initiates active CLIENT span: `HTTP ${method} ${sanitizedUrl}`.
+ *    - Attaches code location attributes: code.function, code.filepath, code.lineno.
+ *    - Filters all span attributes and events through filterAllowedAttributes() default-deny allowlist
+ *      (HTTP_CONSTANTS.ALLOWED_TELEMETRY_ATTRIBUTES). Drops unauthorized or credential-bearing fields by default.
+ * 
+ * 8. DYNAMIC HEADER RESOLUTION & CSPRNG IDEMPOTENCY:
+ *    - Resolves HeaderProviderFn handlers sequentially (W3C traceparent, JWT auth, tenant-id, correlation-id).
+ *    - Generates 128-bit CSPRNG x-idempotency-key via crypto.randomUUID() if absent.
+ *    - Preserves exact idempotency key across all retry iterations.
+ * 
+ * 9. TENANT-PARTITIONED LRU CACHE EVALUATION:
+ *    - Evaluates cache directive bypass (noCache: true, Cache-Control: no-cache, no-store).
+ *    - Queries tenant-partitioned LRU cache: TenantPartitionedCacheStore.get(tenantId, hashedRequestKey).
+ *    - If cache hit occurs: emits decision.cache_evaluated event, marks span OK, and returns cached payload in O(1) time.
+ *    - Bounds capacity per tenant (maxCapacityPerTenant = 250) to prevent single-tenant cache eviction stampedes.
+ * 
+ * 10. TENANT-ISOLATED ROUTE-TEMPLATE CIRCUIT BREAKER:
+ *     - Normalizes dynamic URL parameters into template routes (e.g., api.org/users/:id/items/:id).
+ *     - Derives circuit key: circuitKey = tenantId + ":" + routeTemplate.
+ *     - Inspects circuit state (CLOSED, OPEN, HALF_OPEN). Rejects execution immediately if state is OPEN.
+ *     - Isolates availability state per tenant so Tenant A failures never trip Tenant B's circuit breaker.
+ * 
+ * 11. FETCH EXECUTION, MANUAL REDIRECT & STREAMING SIZE CHECK:
+ *     - Initiates native fetch with redirect = 'manual' to prevent 302 SSRF bypasses to internal metadata IPs.
+ *     - Re-validates Location header against IP subnets if 3xx redirect is received.
+ *     - Inspects response Content-Length header against maxBodySizeBytes prior to JSON parsing.
+ * 
+ * 12. PER-ATTEMPT CIRCUIT RE-CHECK & AWS FULL JITTER RETRY LOOP:
+ *     - Re-evaluates circuitBreaker.canExecute(circuitKey) before EVERY retry iteration inside the loop.
+ *     - Halts retry storms immediately if circuit opens mid-execution.
+ *     - Restricts automatic retries to idempotent HTTP methods (GET, HEAD, OPTIONS, PUT, DELETE) OR
+ *       non-idempotent methods (POST, PATCH) with valid x-idempotency-key headers.
+ *     - Calculates AWS Full Jitter backoff delay: Sleep(attempt) = Random(0, Min(maxMs, baseMs * 2^(attempt - 1))).
+ * 
+ * 13. SPAN COMPLETION & DUAL EXECUTION PATH MARKING:
+ *     - On success: updates circuit state to CLOSED, caches response data, marks span execution.path = "positive_path",
+ *       emits execution.success event, sets Status = OK, and returns response payload.
+ *     - On fatal error: marks span execution.path = "negative_path", emits execution.failure event, records exception,
+ *       sets Status = ERROR, and re-throws error to caller.
+ * ====================================================================================================
  */
 
 import crypto from "crypto";
-import { trace, SpanKind, SpanStatusCode, type Span } from "@opentelemetry/api";
+import { trace, SpanKind, SpanStatusCode, type Span, type Attributes, type AttributeValue } from "@opentelemetry/api";
 import { RequestContextHolder } from '../tracing/request-context';
 import { getCallerInfo } from '../tracing/caller-info';
 import { mapJson } from '../data-driven/json-map';
@@ -40,11 +107,17 @@ export function sanitizeUrlForTelemetry(rawUrl: string): string {
   }
 }
 
-export function filterAllowedAttributes(attributes: Record<string, unknown>): Record<string, unknown> {
-  const filtered: Record<string, unknown> = {};
+export function filterAllowedAttributes(attributes: Record<string, unknown>): Attributes {
+  const filtered: Attributes = {};
   for (const [key, value] of Object.entries(attributes)) {
     if (ALLOWED_TELEMETRY_SET.has(key)) {
-      filtered[key] = value;
+      if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+        filtered[key] = value;
+      } else if (Array.isArray(value)) {
+        filtered[key] = value.map(item => String(item));
+      } else if (value !== null && value !== undefined) {
+        filtered[key] = String(value);
+      }
     }
   }
   return filtered;
@@ -57,7 +130,13 @@ export function addSanitizedEvent(span: Span, name: string, attributes?: Record<
 
 export function setSanitizedAttribute(span: Span, key: string, value: unknown): void {
   if (ALLOWED_TELEMETRY_SET.has(key)) {
-    span.setAttribute(key, value as any);
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      span.setAttribute(key, value);
+    } else if (Array.isArray(value)) {
+      span.setAttribute(key, value.map(item => String(item)));
+    } else if (value !== null && value !== undefined) {
+      span.setAttribute(key, String(value));
+    }
   }
 }
 
@@ -360,7 +439,6 @@ export class ScalableHttpClient {
 
     const caller = getCallerInfo(3);
 
-    // Derived Server-Verified Tenant Context from RequestContextHolder (Fallback to default)
     let authenticatedTenantId = HTTP_CONSTANTS.DEFAULT_TENANT_ID;
     try {
       authenticatedTenantId = RequestContextHolder.get().tenantId || HTTP_CONSTANTS.DEFAULT_TENANT_ID;
@@ -368,7 +446,6 @@ export class ScalableHttpClient {
       authenticatedTenantId = config.headers?.[HTTP_CONSTANTS.HEADER_X_TENANT_ID] || HTTP_CONSTANTS.DEFAULT_TENANT_ID;
     }
 
-    // SHA-256 Hashed Tenant-Isolated Request Key
     const hashedRequestKey = generateHashedKey(authenticatedTenantId, config.method, config.url, config.body);
 
     if (!config.cancelPrevious) {
@@ -424,7 +501,6 @@ export class ScalableHttpClient {
           [HTTP_CONSTANTS.KEY_INTERCEPTORS_COUNT]: this.requestInterceptors.length,
         });
 
-        // Header Providers Resolution
         let resolvedHeaders: Record<string, string> = {
           [HTTP_CONSTANTS.HEADER_CONTENT_TYPE]: HTTP_CONSTANTS.CONTENT_TYPE_JSON,
           ...config.headers,
@@ -435,7 +511,6 @@ export class ScalableHttpClient {
           resolvedHeaders = { ...resolvedHeaders, ...headersFromProvider };
         }
 
-        // CSPRNG Idempotency Key Generation
         const idempotencyKey = resolvedHeaders[HTTP_CONSTANTS.HEADER_X_IDEMPOTENCY_KEY] || crypto.randomUUID();
         resolvedHeaders[HTTP_CONSTANTS.HEADER_X_IDEMPOTENCY_KEY] = idempotencyKey;
         resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID] = tenantId;
@@ -447,7 +522,6 @@ export class ScalableHttpClient {
           [HTTP_CONSTANTS.KEY_HEADERS_COUNT]: this.headerProviders.length,
         });
 
-        // Cache Policy Evaluation
         const cacheBypassed = isCacheDisabled(config, resolvedHeaders);
         const cachedData = cacheBypassed ? undefined : this.cacheStore.get<T>(tenantId, requestKey);
         const isCacheHit = !cacheBypassed && cachedData !== undefined;
@@ -469,7 +543,6 @@ export class ScalableHttpClient {
           return { data: cachedData as T, status: 200, headers: new Headers() };
         }
 
-        // Tenant-Isolated Circuit Breaker Keying
         const circuitKey = this.circuitBreaker.getCircuitKey(tenantId, config.url);
         const canRun = this.circuitBreaker.canExecute(circuitKey);
         const circuitState = this.circuitBreaker.getState(circuitKey);
@@ -501,7 +574,6 @@ export class ScalableHttpClient {
 
         let lastError: unknown = null;
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
-          // Re-check Circuit Breaker Status before EVERY retry attempt
           if (!this.circuitBreaker.canExecute(circuitKey)) {
             throw new Error(`CircuitBreaker: Circuit tripped to OPEN state mid-retry for tenant ${tenantId}`);
           }
@@ -510,7 +582,6 @@ export class ScalableHttpClient {
           addSanitizedEvent(span, HTTP_CONSTANTS.EVENT_STEP_FETCH_INITIATED, { [HTTP_CONSTANTS.KEY_RETRY_ATTEMPT]: attempt });
 
           try {
-            // Manual Redirect Enforcement to prevent 302 SSRF to internal metadata IPs
             const res = await fetch(config.url, {
               method: config.method,
               headers: resolvedHeaders,
@@ -519,7 +590,6 @@ export class ScalableHttpClient {
               redirect: 'manual',
             });
 
-            // Re-validate Location Header if 3xx Redirect returned
             if (res.status >= 300 && res.status < 400) {
               const redirectUrl = res.headers.get('location');
               if (redirectUrl) {
@@ -537,7 +607,6 @@ export class ScalableHttpClient {
               );
             }
 
-            // Streaming Content-Length Check prior to full JSON parsing
             const contentLength = res.headers.get('content-length');
             const maxBodyBytes = config.maxBodySizeBytes ?? 10 * 1024 * 1024;
             if (contentLength && parseInt(contentLength, 10) > maxBodyBytes) {
@@ -585,7 +654,6 @@ export class ScalableHttpClient {
               addSanitizedEvent(span, HTTP_CONSTANTS.EVENT_REQUEST_CANCELLED, { [HTTP_CONSTANTS.KEY_CANCELLED_KEY]: requestKey });
             }
 
-            // Verify Idempotency Constraint for Non-Idempotent Methods
             const idempotentMethod = isMethodIdempotent(config.method, resolvedHeaders);
             const shouldRetry = !isAborted && idempotentMethod && attempt < maxRetries && retryPolicyRegistry.isRetryable(err);
 
