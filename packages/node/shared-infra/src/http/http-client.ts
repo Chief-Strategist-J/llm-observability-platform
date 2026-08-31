@@ -1,5 +1,5 @@
 /**
- * ALGORITHM & ARCHITECTURE: Scalable Resilient HTTP Client Pipeline with Granular Step-by-Step Telemetry
+ * ALGORITHM & ARCHITECTURE: Scalable Resilient HTTP Client Pipeline with Code Telemetry & Step Telemetry
  * 
  * 1. Step 1 (Request Interception): Config passes through registered RequestInterceptors via Promise.reduce. Emits EVENT_STEP_REQUEST_INTERCEPTORS.
  * 2. Step 2 (Singleflight & Cancellation): Collapses identical concurrent read requests (Singleflight pattern) to prevent thundering herd; aborts previous request via AbortController if cancelPrevious is true. Emits EVENT_STEP_SINGLEFLIGHT_CHECK.
@@ -7,8 +7,9 @@
  * 4. Step 4 (Idempotency Key Preservation): Preserves identical x-idempotency-key across all retry attempts for idempotent downstream processing.
  * 5. Step 5 (Cache Policy Evaluation): Evaluates Cache-Control headers (no-cache, no-store) and config.noCache flag with Decision Span Events.
  * 6. Step 6 (Circuit Breaker Inspection): Evaluates ICircuitBreaker status; rejects execution if state is OPEN with Decision Span Events.
- * 7. Step 7 (Timeout & Signal Merging): Integrates request timeout (timeoutMs) and merges caller-provided AbortSignal.
- * 8. Step 8 (Recursive Retry Pipeline with Dual Positive & Negative Path Tracing & Step Telemetry):
+ * 7. Step 7 (Code Location Telemetry): Captures caller function name, file path, and line number via getCallerInfo() and populates OTEL Semantic Conventions (code.function, code.filepath, code.lineno).
+ * 8. Step 8 (Timeout & Signal Merging): Integrates request timeout (timeoutMs) and merges caller-provided AbortSignal.
+ * 9. Step 9 (Recursive Retry Pipeline with Dual Positive & Negative Path Tracing & Step Telemetry):
  *    a. Invokes fetch with merged AbortSignal and exponential Full Jitter backoff calculation. Emits EVENT_STEP_FETCH_INITIATED.
  *    b. On HTTP failure, queries RetryPolicyRegistry to verify error retryability. Emits EVENT_STEP_ERROR_HANDLED.
  *    c. On HTTP success, executes ResponseInterceptors, resets Circuit Breaker, updates CacheStore (if enabled). Emits EVENT_STEP_RESPONSE_INTERCEPTORS and EVENT_EXECUTION_SUCCESS.
@@ -18,6 +19,7 @@
 import crypto from "crypto";
 import { trace, SpanKind, SpanStatusCode } from "@opentelemetry/api";
 import { RequestContextHolder } from '../tracing/request-context';
+import { getCallerInfo } from '../tracing/caller-info';
 import { mapJson } from '../data-driven/json-map';
 import type { JsonMapOp } from '../data-driven/transform.types';
 import { HTTP_CONSTANTS } from './constants';
@@ -199,18 +201,23 @@ export class ScalableHttpClient {
     );
 
     const requestKey = `${config.method}:${config.url}:${config.body ? JSON.stringify(config.body) : ''}`;
+    const caller = getCallerInfo(3);
 
     const existingSingleflight = !config.cancelPrevious && this.inFlightSingleflights.get(requestKey);
     return existingSingleflight
       ? (existingSingleflight as Promise<{ data: T; status: number; headers: Headers }>)
       : await (async () => {
-          const executionPromise = this.executePipeline<T>(config, requestKey);
+          const executionPromise = this.executePipeline<T>(config, requestKey, caller);
           this.inFlightSingleflights.set(requestKey, executionPromise);
           return executionPromise.finally(() => this.inFlightSingleflights.delete(requestKey));
         })();
   }
 
-  private async executePipeline<T>(config: RequestConfig, requestKey: string): Promise<{ data: T; status: number; headers: Headers }> {
+  private async executePipeline<T>(
+    config: RequestConfig,
+    requestKey: string,
+    caller = getCallerInfo(3)
+  ): Promise<{ data: T; status: number; headers: Headers }> {
     const maxRetries = config.retries ?? 3;
     const ttlMs = config.ttlMs ?? 5000;
     const timeoutMs = config.timeoutMs ?? 30000;
@@ -228,12 +235,15 @@ export class ScalableHttpClient {
     const timeoutTimer = setTimeout(() => controller.abort(), timeoutMs);
 
     return tracer.startActiveSpan(`HTTP ${config.method} ${config.url}`, { kind: SpanKind.CLIENT }, async (span) => {
-      // Step 1 Telemetry: Request Interceptors
+      // OpenTelemetry Semantic Conventions for Code Attributes
+      span.setAttribute(HTTP_CONSTANTS.ATTR_CODE_FUNCTION, caller.functionName);
+      span.setAttribute(HTTP_CONSTANTS.ATTR_CODE_FILEPATH, caller.filePath);
+      span.setAttribute(HTTP_CONSTANTS.ATTR_CODE_LINENO, caller.lineNumber);
+
       span.addEvent(HTTP_CONSTANTS.EVENT_STEP_REQUEST_INTERCEPTORS, {
         [HTTP_CONSTANTS.KEY_INTERCEPTORS_COUNT]: this.requestInterceptors.length,
       });
 
-      // Step 2 Telemetry: Header Providers Resolution
       const resolvedHeaders = await this.headerProviders.reduce<Promise<Record<string, string>>>(
         async (accPromise, provider) => ({
           ...(await accPromise),
@@ -253,7 +263,6 @@ export class ScalableHttpClient {
       resolvedHeaders[HTTP_CONSTANTS.HEADER_X_IDEMPOTENCY_KEY] = idempotencyKey;
       span.setAttribute(HTTP_CONSTANTS.ATTR_IDEMPOTENCY_KEY, idempotencyKey);
 
-      // Step 3 Telemetry: Cache Policy Evaluation
       const cacheBypassed = isCacheDisabled(config, resolvedHeaders);
       const cachedData = cacheBypassed ? undefined : this.cacheStore.get<T>(requestKey);
       const isCacheHit = !cacheBypassed && cachedData !== undefined;
@@ -265,7 +274,6 @@ export class ScalableHttpClient {
         [HTTP_CONSTANTS.KEY_CACHE_KEY]: requestKey,
       });
 
-      // Positive Path: Cache Hit Resolution
       return isCacheHit
         ? (
             clearTimeout(timeoutTimer),
@@ -277,7 +285,6 @@ export class ScalableHttpClient {
             { data: cachedData, status: 200, headers: new Headers() }
           )
         : await (async () => {
-            // Step 4 Telemetry: Circuit Breaker Inspection
             const canRun = this.circuitBreaker.canExecute(config.url);
             const circuitState = this.circuitBreaker.getState(config.url);
             span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CIRCUIT_STATE, circuitState.state);
@@ -288,7 +295,6 @@ export class ScalableHttpClient {
               [HTTP_CONSTANTS.KEY_CIRCUIT_FAILURES]: circuitState.failures,
             });
 
-            // Negative Path: Circuit Breaker Rejection
             return !canRun
               ? (() => {
                   clearTimeout(timeoutTimer);
@@ -310,7 +316,6 @@ export class ScalableHttpClient {
                   resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID] &&
                     span.setAttribute(HTTP_CONSTANTS.ATTR_TENANT_ID, resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID]!);
 
-                  // Pure Recursive Retry Pipeline with Step & Decision Telemetry
                   const attemptFetch = async (attempt: number): Promise<{ data: T; status: number; headers: Headers }> => {
                     span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_RETRY_ATTEMPT, attempt);
                     span.addEvent(HTTP_CONSTANTS.EVENT_STEP_FETCH_INITIATED, { [HTTP_CONSTANTS.KEY_RETRY_ATTEMPT]: attempt });
@@ -349,7 +354,6 @@ export class ScalableHttpClient {
                             clearTimeout(timeoutTimer);
                             this.activeControllers.delete(requestKey);
 
-                            // Positive Path: Network Success Resolution
                             span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_POSITIVE);
                             span.addEvent(HTTP_CONSTANTS.EVENT_EXECUTION_SUCCESS, { [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_SUCCESS });
                             span.setStatus({ code: SpanStatusCode.OK });
@@ -385,7 +389,6 @@ export class ScalableHttpClient {
                             clearTimeout(timeoutTimer);
                             this.activeControllers.delete(requestKey);
 
-                            // Negative Path: Network Failure / Retry Exhaustion Resolution
                             span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_NEGATIVE);
                             span.addEvent(HTTP_CONSTANTS.EVENT_EXECUTION_FAILURE, {
                               [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_FAILURE,

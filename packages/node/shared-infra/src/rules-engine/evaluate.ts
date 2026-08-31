@@ -1,5 +1,6 @@
 import type { Rule } from './rule.types';
 import { withSpan } from '../tracing/tracer';
+import { getCallerInfo } from '../tracing/caller-info';
 import { RULES_ENGINE_CONSTANTS } from './constants';
 import { conditionRegistry } from './condition-registry';
 
@@ -12,7 +13,12 @@ export async function resolveRules(
   rules: Rule[],
   ctx: Record<string, unknown>,
 ): Promise<Rule[]> {
+  const caller = getCallerInfo(2);
   return withSpan(RULES_ENGINE_CONSTANTS.SPAN_RESOLVE_RULES, async (span) => {
+    span.setAttribute(RULES_ENGINE_CONSTANTS.ATTR_CODE_FUNCTION, caller.functionName);
+    span.setAttribute(RULES_ENGINE_CONSTANTS.ATTR_CODE_FILEPATH, caller.filePath);
+    span.setAttribute(RULES_ENGINE_CONSTANTS.ATTR_CODE_LINENO, caller.lineNumber);
+
     span.setAttribute(RULES_ENGINE_CONSTANTS.ATTR_EVALUATED_COUNT, rules.length);
     const sorted = [...rules].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
 

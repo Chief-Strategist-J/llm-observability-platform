@@ -17,6 +17,9 @@ export const RULES_ENGINE_CONSTANTS = {
   ATTR_TRIGGERED_COUNT: "rules.triggered_count",
   ATTR_TRIGGERED_IDS: "rules.triggered_ids",
   ATTR_TRIGGERED_NAMES: "rules.triggered_names",
+  ATTR_CODE_FUNCTION: "code.function",
+  ATTR_CODE_FILEPATH: "code.filepath",
+  ATTR_CODE_LINENO: "code.lineno",
 
   // Decision Span Events
   EVENT_RULE_EVALUATED: "decision.rule_evaluated",

@@ -39,7 +39,7 @@ export const HTTP_CONSTANTS = {
   CIRCUIT_OPEN: "OPEN",
   CIRCUIT_HALF_OPEN: "HALF_OPEN",
 
-  // OTEL Span Attributes & Decision Events
+  // OTEL Span Attributes & Code Telemetry
   ATTR_HTTP_METHOD: "http.method",
   ATTR_HTTP_URL: "http.url",
   ATTR_HTTP_STATUS_CODE: "http.status_code",
@@ -53,6 +53,9 @@ export const HTTP_CONSTANTS = {
   ATTR_EXECUTION_PATH: "execution.path",
   ATTR_RESULT_STATUS: "execution.status",
   ATTR_ERROR_DETAIL: "execution.error_detail",
+  ATTR_CODE_FUNCTION: "code.function",
+  ATTR_CODE_FILEPATH: "code.filepath",
+  ATTR_CODE_LINENO: "code.lineno",
 
   // Execution Paths
   PATH_POSITIVE: "positive_path",
