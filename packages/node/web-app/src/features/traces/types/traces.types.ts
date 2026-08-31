@@ -1,3 +1,7 @@
+import type { Span } from "@observability/api-types";
+
+export type { Span };
+
 export interface TraceSummary {
   id: string;
   root_span_name: string;
