@@ -6,7 +6,7 @@ import { mapJson } from "../../../core/data-driven/json-map";
 describe("Quality Feature Slice", () => {
   it("defines rules with categories and priorities", () => {
     expect(QUALITY_RULES.length).toBeGreaterThan(0);
-    const criticalRule = QUALITY_RULES.find((r) => r.effect === "critical");
+    const criticalRule = QUALITY_RULES.find((r) => r.effect === "deny");
     expect(criticalRule).toBeDefined();
     expect(criticalRule?.priority).toBeGreaterThanOrEqual(90);
   });

@@ -1,25 +1,14 @@
-export interface LatencyRule {
-  id: string;
-  name: string;
-  category: "sla" | "burn_rate" | "anomaly";
-  priority: number;
-  effect: "warning" | "critical" | "ok";
-  conditions: Array<{
-    field: string;
-    op: "gt" | "gte" | "lt" | "lte" | "eq";
-    value: number;
-  }>;
-}
+import { type Rule, resolveRules } from "@observability/shared-infra";
 
-export const LATENCY_RULES: LatencyRule[] = [
+export const LATENCY_RULES: Rule[] = [
   {
     id: "RULE_SLO_BURN_CRITICAL",
     name: "Fast Burn Rate Exceeds Critical Threshold",
     category: "burn_rate",
     priority: 100,
-    effect: "critical",
+    effect: "deny",
     conditions: [
-      { field: "burn_fast", op: "gt", value: 14.4 },
+      { field: "burn_fast", op: "greater_than", value: 14.4 },
     ],
   },
   {
@@ -27,9 +16,9 @@ export const LATENCY_RULES: LatencyRule[] = [
     name: "Medium Burn Rate Exceeds Warning Threshold",
     category: "burn_rate",
     priority: 50,
-    effect: "warning",
+    effect: "deny",
     conditions: [
-      { field: "burn_medium", op: "gt", value: 6.0 },
+      { field: "burn_medium", op: "greater_than", value: 6.0 },
     ],
   },
   {
@@ -37,9 +26,13 @@ export const LATENCY_RULES: LatencyRule[] = [
     name: "P99 Latency Spike Above 5000ms",
     category: "anomaly",
     priority: 80,
-    effect: "warning",
+    effect: "deny",
     conditions: [
-      { field: "p99", op: "gt", value: 5000 },
+      { field: "p99", op: "greater_than", value: 5000 },
     ],
   },
 ];
+
+export async function evaluateLatencyRules(ctx: Record<string, unknown>): Promise<Rule[]> {
+  return resolveRules(LATENCY_RULES, ctx);
+}
