@@ -11,6 +11,29 @@ function isString(val: unknown): val is string {
   return typeof val === RULES_ENGINE_CONSTANTS.TYPE_STRING;
 }
 
+export function getSafeContextValue(ctx: Record<string, unknown>, fieldPath: string): unknown {
+  if (!ctx || typeof ctx !== 'object' || !fieldPath) {
+    return undefined;
+  }
+
+  if (fieldPath.includes('__proto__') || fieldPath.includes('constructor') || fieldPath.includes('prototype')) {
+    return undefined;
+  }
+
+  const parts = fieldPath.split('.');
+  let current: any = ctx;
+  for (const part of parts) {
+    if (current === null || current === undefined || typeof current !== 'object') {
+      return undefined;
+    }
+    if (part === '__proto__' || part === 'constructor' || part === 'prototype') {
+      return undefined;
+    }
+    current = current[part];
+  }
+  return current;
+}
+
 class ConditionHandlerRegistry {
   private readonly handlers = new Map<string, ConditionHandlerFn>();
 
@@ -23,7 +46,7 @@ class ConditionHandlerRegistry {
   }
 
   public evaluate(cond: RuleCondition, ctx: Record<string, unknown>): boolean {
-    const actual = ctx[cond.field];
+    const actual = getSafeContextValue(ctx, cond.field);
     const handler = this.handlers.get(cond.op);
     return handler ? handler(actual, cond.value) : false;
   }

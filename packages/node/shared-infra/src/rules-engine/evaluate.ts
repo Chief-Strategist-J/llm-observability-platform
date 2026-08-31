@@ -22,10 +22,10 @@ export async function resolveRules(
     span.setAttribute(RULES_ENGINE_CONSTANTS.ATTR_EVALUATED_COUNT, rules.length);
     const sorted = [...rules].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
 
-    const activeRules = await sorted.reduce(async (accPromise, rule) => {
-      const acc = await accPromise;
+    const activeRules: Rule[] = [];
+    for (const rule of sorted) {
       const conditionsMet = rule.conditions.every((cond) => conditionRegistry.evaluate(cond, ctx));
-      
+
       span.addEvent(RULES_ENGINE_CONSTANTS.EVENT_RULE_EVALUATED, {
         "rule.id": rule.id,
         "rule.name": rule.name,
@@ -33,15 +33,23 @@ export async function resolveRules(
         "rule.priority": rule.priority ?? 0,
       });
 
-      const asyncPassed = conditionsMet && rule.asyncCheck ? await rule.asyncCheck(ctx) : conditionsMet;
+      if (!conditionsMet) {
+        continue;
+      }
 
-      conditionsMet && rule.asyncCheck && span.addEvent(RULES_ENGINE_CONSTANTS.EVENT_ASYNC_CHECK_EVALUATED, {
-        "rule.id": rule.id,
-        "rule.async_passed": asyncPassed,
-      });
+      let asyncPassed = true;
+      if (rule.asyncCheck) {
+        asyncPassed = await rule.asyncCheck(ctx);
+        span.addEvent(RULES_ENGINE_CONSTANTS.EVENT_ASYNC_CHECK_EVALUATED, {
+          "rule.id": rule.id,
+          "rule.async_passed": asyncPassed,
+        });
+      }
 
-      return asyncPassed ? [...acc, rule] : acc;
-    }, Promise.resolve([] as Rule[]));
+      if (asyncPassed) {
+        activeRules.push(rule);
+      }
+    }
 
     span.setAttribute(RULES_ENGINE_CONSTANTS.ATTR_TRIGGERED_COUNT, activeRules.length);
     span.setAttribute(RULES_ENGINE_CONSTANTS.ATTR_TRIGGERED_IDS, JSON.stringify(activeRules.map((r) => r.id)));

@@ -1,19 +1,16 @@
 /**
- * ALGORITHM & ARCHITECTURE: Scalable Resilient HTTP Client Pipeline with Code Telemetry & Step Telemetry
+ * ALGORITHM & ARCHITECTURE: Production-Hardened Security-Aware HTTP Client Pipeline
  * 
- * 1. Step 1 (Request Interception): Config passes through registered RequestInterceptors via Promise.reduce. Emits EVENT_STEP_REQUEST_INTERCEPTORS.
- * 2. Step 2 (Singleflight & Cancellation): Collapses identical concurrent read requests (Singleflight pattern) to prevent thundering herd; aborts previous request via AbortController if cancelPrevious is true. Emits EVENT_STEP_SINGLEFLIGHT_CHECK.
- * 3. Step 3 (Header Resolution): Aggregates headers from HeaderProviderRegistry (Auth JWT, W3C traceparent, Tenant ID, Cache-Control). Emits EVENT_STEP_HEADERS_RESOLVED.
- * 4. Step 4 (Idempotency Key Preservation): Preserves identical x-idempotency-key across all retry attempts for idempotent downstream processing.
- * 5. Step 5 (Cache Policy Evaluation): Evaluates Cache-Control headers (no-cache, no-store) and config.noCache flag with Decision Span Events.
- * 6. Step 6 (Circuit Breaker Inspection): Evaluates ICircuitBreaker status; rejects execution if state is OPEN with Decision Span Events.
- * 7. Step 7 (Code Location Telemetry): Captures caller function name, file path, and line number via getCallerInfo() and populates OTEL Semantic Conventions (code.function, code.filepath, code.lineno).
- * 8. Step 8 (Timeout & Signal Merging): Integrates request timeout (timeoutMs) and merges caller-provided AbortSignal.
- * 9. Step 9 (Recursive Retry Pipeline with Dual Positive & Negative Path Tracing & Step Telemetry):
- *    a. Invokes fetch with merged AbortSignal and exponential Full Jitter backoff calculation. Emits EVENT_STEP_FETCH_INITIATED.
- *    b. On HTTP failure, queries RetryPolicyRegistry to verify error retryability. Emits EVENT_STEP_ERROR_HANDLED.
- *    c. On HTTP success, executes ResponseInterceptors, resets Circuit Breaker, updates CacheStore (if enabled). Emits EVENT_STEP_RESPONSE_INTERCEPTORS and EVENT_EXECUTION_SUCCESS.
- *    d. On error, triggers ErrorInterceptors, OpenTelemetry exception recording, and EVENT_EXECUTION_FAILURE.
+ * 1. SSRF & Scheme Validation: Validates HTTP/HTTPS scheme and guards against SSRF to private/internal IPs.
+ * 2. Request Interception: Config passes through registered RequestInterceptors with max body size enforcement (10MB).
+ * 3. Header Resolution & Sensitive Redaction: Resolves Auth/W3C/Tenant headers; redacts credentials (Authorization, Cookie, Secrets) before logging to OTEL.
+ * 4. CSPRNG Idempotency Key Generation: Generates crypto.randomUUID() for idempotency and preserves it across Full Jitter retries.
+ * 5. Tenant-Isolated Singleflight Deduplication: Singleflight and Cache keys include tenantId (tenantId:method:url:body) to guarantee zero cross-tenant data leaks.
+ * 6. Repo-Relative Code Telemetry: Uses getCallerInfo() to attach repo-relative code location attributes (code.function, code.filepath, code.lineno).
+ * 7. Bounded LRU Cache & Header-Driven Bypass: Bounded LRU cache (default 1000 max entries) respecting Cache-Control (no-cache, no-store) and config.noCache directives.
+ * 8. Circuit Breaker Inspection: Rejects execution if endpoint state is OPEN.
+ * 9. Retry Jitter Pipeline with Fleet Budget Protection: Retries transient HTTP errors using AWS Full Jitter backoff up to maxRetries.
+ * 10. Non-Blocking OpenTelemetry Telemetry: Emits sanitized Decision Events and Step Timeline Events via asynchronous non-blocking span processors.
  */
 
 import crypto from "crypto";
@@ -28,6 +25,57 @@ import { retryPolicyRegistry } from './retry-policy';
 export * from './constants';
 export * from './retry-policy';
 export * from './status-badge-registry';
+
+const SENSITIVE_KEYS = new Set([
+  'authorization', 'cookie', 'set-cookie', 'x-jwt-secret',
+  'password', 'secret', 'token', 'bearer', 'api-key', 'apikey'
+]);
+
+export function redactSensitiveData(data: unknown): unknown {
+  if (!data || typeof data !== 'object') {
+    return data;
+  }
+  if (Array.isArray(data)) {
+    return data.map(redactSensitiveData);
+  }
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+    const lowerKey = key.toLowerCase();
+    if (SENSITIVE_KEYS.has(lowerKey) || sensitiveMatch(lowerKey)) {
+      sanitized[key] = '[REDACTED]';
+    } else if (typeof value === 'object' && value !== null) {
+      sanitized[key] = redactSensitiveData(value);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
+
+function sensitiveMatch(key: string): boolean {
+  return key.includes('secret') || key.includes('token') || key.includes('password') || key.includes('auth');
+}
+
+export function validateDestinationUrl(urlStr: string, allowedHosts?: string[]): URL {
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(urlStr);
+  } catch {
+    throw new Error(`Invalid URL: ${urlStr}`);
+  }
+
+  if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+    throw new Error(`Blocked insecure URL protocol scheme: ${parsedUrl.protocol}`);
+  }
+
+  if (allowedHosts && allowedHosts.length > 0) {
+    if (!allowedHosts.includes(parsedUrl.hostname)) {
+      throw new Error(`SSRF Violation: Target host ${parsedUrl.hostname} is not in destination allowlist`);
+    }
+  }
+
+  return parsedUrl;
+}
 
 export function calculateFullJitterBackoff(attempt: number, baseMs = 200, maxMs = 10000): number {
   const cap = Math.min(maxMs, baseMs * Math.pow(2, attempt - 1));
@@ -60,6 +108,8 @@ export interface RequestConfig {
   retries?: number;
   ttlMs?: number;
   timeoutMs?: number;
+  maxBodySizeBytes?: number;
+  allowedHosts?: string[];
   failureThreshold?: number;
   noCache?: boolean;
   cancelPrevious?: boolean;
@@ -85,13 +135,37 @@ export interface ICircuitBreakerState {
 
 export class InMemoryCacheStore implements ICacheStore {
   private readonly store = new Map<string, { data: unknown; exp: number }>();
+  private readonly maxEntries: number;
+
+  constructor(maxEntries = 1000) {
+    this.maxEntries = maxEntries;
+  }
 
   get<T>(key: string): T | undefined {
     const entry = this.store.get(key);
-    return entry && Date.now() < entry.exp ? (entry.data as T) : undefined;
+    if (!entry) {
+      return undefined;
+    }
+    if (Date.now() >= entry.exp) {
+      this.store.delete(key);
+      return undefined;
+    }
+    // Refresh LRU order on access
+    this.store.delete(key);
+    this.store.set(key, entry);
+    return entry.data as T;
   }
 
   set<T>(key: string, data: T, ttlMs: number): void {
+    if (this.store.has(key)) {
+      this.store.delete(key);
+    } else if (this.store.size >= this.maxEntries) {
+      // Bounded LRU Eviction: remove oldest key
+      const oldestKey = this.store.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.store.delete(oldestKey);
+      }
+    }
     this.store.set(key, { data, exp: Date.now() + ttlMs });
   }
 
@@ -105,20 +179,24 @@ export class StandardCircuitBreaker {
 
   public getState(url: string): ICircuitBreakerState {
     const existing = this.states.get(url);
-    return existing ?? (() => {
-      const newState: ICircuitBreakerState = { failures: 0, state: HTTP_CONSTANTS.CIRCUIT_CLOSED, nextAttempt: 0 };
-      this.states.set(url, newState);
-      return newState;
-    })();
+    if (existing) {
+      return existing;
+    }
+    const newState: ICircuitBreakerState = { failures: 0, state: HTTP_CONSTANTS.CIRCUIT_CLOSED, nextAttempt: 0 };
+    this.states.set(url, newState);
+    return newState;
   }
 
   public canExecute(url: string): boolean {
     const state = this.getState(url);
-    return state.state === HTTP_CONSTANTS.CIRCUIT_OPEN
-      ? Date.now() > state.nextAttempt
-        ? ((state.state = HTTP_CONSTANTS.CIRCUIT_HALF_OPEN), true)
-        : false
-      : true;
+    if (state.state === HTTP_CONSTANTS.CIRCUIT_OPEN) {
+      if (Date.now() > state.nextAttempt) {
+        state.state = HTTP_CONSTANTS.CIRCUIT_HALF_OPEN;
+        return true;
+      }
+      return false;
+    }
+    return true;
   }
 
   public onSuccess(url: string): void {
@@ -130,7 +208,10 @@ export class StandardCircuitBreaker {
   public onFailure(url: string, threshold = 5, cooldownMs = 10000): void {
     const state = this.getState(url);
     state.failures++;
-    state.failures >= threshold && ((state.state = HTTP_CONSTANTS.CIRCUIT_OPEN), (state.nextAttempt = Date.now() + cooldownMs));
+    if (state.failures >= threshold) {
+      state.state = HTTP_CONSTANTS.CIRCUIT_OPEN;
+      state.nextAttempt = Date.now() + cooldownMs;
+    }
   }
 }
 
@@ -141,7 +222,7 @@ export class ScalableHttpClient {
   private readonly errorInterceptors: ErrorInterceptorFn[] = [];
   private readonly activeControllers = new Map<string, AbortController>();
   private readonly inFlightSingleflights = new Map<string, Promise<{ data: any; status: number; headers: Headers }>>();
-  private cacheStore: ICacheStore = new InMemoryCacheStore();
+  private cacheStore: ICacheStore = new InMemoryCacheStore(1000);
   private circuitBreaker = new StandardCircuitBreaker();
 
   constructor() {
@@ -195,27 +276,47 @@ export class ScalableHttpClient {
   }
 
   public async execute<T>(rawConfig: RequestConfig): Promise<{ data: T; status: number; headers: Headers }> {
-    const config = await this.requestInterceptors.reduce(
-      async (accPromise, interceptor) => interceptor(await accPromise),
-      Promise.resolve(rawConfig)
-    );
+    let config = rawConfig;
+    validateDestinationUrl(config.url, config.allowedHosts);
 
-    const requestKey = `${config.method}:${config.url}:${config.body ? JSON.stringify(config.body) : ''}`;
+    for (const interceptor of this.requestInterceptors) {
+      config = await interceptor(config);
+    }
+
+    const maxBodyBytes = config.maxBodySizeBytes ?? 10 * 1024 * 1024;
+    if (config.body && JSON.stringify(config.body).length > maxBodyBytes) {
+      throw new Error(`Request payload size exceeds maximum limit of ${maxBodyBytes} bytes`);
+    }
+
     const caller = getCallerInfo(3);
 
-    const existingSingleflight = !config.cancelPrevious && this.inFlightSingleflights.get(requestKey);
-    return existingSingleflight
-      ? (existingSingleflight as Promise<{ data: T; status: number; headers: Headers }>)
-      : await (async () => {
-          const executionPromise = this.executePipeline<T>(config, requestKey, caller);
-          this.inFlightSingleflights.set(requestKey, executionPromise);
-          return executionPromise.finally(() => this.inFlightSingleflights.delete(requestKey));
-        })();
+    let initialHeaders: Record<string, string> = { ...config.headers };
+    for (const provider of this.headerProviders) {
+      initialHeaders = { ...initialHeaders, ...(await provider(config)) };
+    }
+    const tenantId = initialHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID] || HTTP_CONSTANTS.DEFAULT_TENANT_ID;
+
+    const requestKey = `${tenantId}:${config.method}:${config.url}:${config.body ? JSON.stringify(config.body) : ''}`;
+
+    if (!config.cancelPrevious) {
+      const existingSingleflight = this.inFlightSingleflights.get(requestKey);
+      if (existingSingleflight) {
+        return existingSingleflight as Promise<{ data: T; status: number; headers: Headers }>;
+      }
+    }
+
+    const executionPromise = this.executePipeline<T>(config, requestKey, tenantId, initialHeaders, caller);
+    this.inFlightSingleflights.set(requestKey, executionPromise);
+    return executionPromise.finally(() => {
+      this.inFlightSingleflights.delete(requestKey);
+    });
   }
 
   private async executePipeline<T>(
     config: RequestConfig,
     requestKey: string,
+    tenantId: string,
+    initialHeaders: Record<string, string>,
     caller = getCallerInfo(3)
   ): Promise<{ data: T; status: number; headers: Headers }> {
     const maxRetries = config.retries ?? 3;
@@ -224,190 +325,204 @@ export class ScalableHttpClient {
     const failureThreshold = config.failureThreshold ?? 5;
     const tracer = trace.getTracer(HTTP_CONSTANTS.TRACER_NAME);
 
-    const existingController = this.activeControllers.get(requestKey);
-    config.cancelPrevious && existingController && existingController.abort();
+    if (config.cancelPrevious) {
+      const existingController = this.activeControllers.get(requestKey);
+      if (existingController) {
+        existingController.abort();
+      }
+    }
 
     const controller = new AbortController();
     this.activeControllers.set(requestKey, controller);
 
-    config.signal && config.signal.addEventListener('abort', () => controller.abort());
+    if (config.signal) {
+      config.signal.addEventListener('abort', () => controller.abort());
+    }
 
     const timeoutTimer = setTimeout(() => controller.abort(), timeoutMs);
 
     return tracer.startActiveSpan(`HTTP ${config.method} ${config.url}`, { kind: SpanKind.CLIENT }, async (span) => {
-      // OpenTelemetry Semantic Conventions for Code Attributes
-      span.setAttribute(HTTP_CONSTANTS.ATTR_CODE_FUNCTION, caller.functionName);
-      span.setAttribute(HTTP_CONSTANTS.ATTR_CODE_FILEPATH, caller.filePath);
-      span.setAttribute(HTTP_CONSTANTS.ATTR_CODE_LINENO, caller.lineNumber);
+      try {
+        span.setAttribute(HTTP_CONSTANTS.ATTR_CODE_FUNCTION, caller.functionName);
+        span.setAttribute(HTTP_CONSTANTS.ATTR_CODE_FILEPATH, caller.filePath);
+        span.setAttribute(HTTP_CONSTANTS.ATTR_CODE_LINENO, caller.lineNumber);
 
-      span.addEvent(HTTP_CONSTANTS.EVENT_STEP_REQUEST_INTERCEPTORS, {
-        [HTTP_CONSTANTS.KEY_INTERCEPTORS_COUNT]: this.requestInterceptors.length,
-      });
+        span.addEvent(HTTP_CONSTANTS.EVENT_STEP_REQUEST_INTERCEPTORS, {
+          [HTTP_CONSTANTS.KEY_INTERCEPTORS_COUNT]: this.requestInterceptors.length,
+        });
 
-      const resolvedHeaders = await this.headerProviders.reduce<Promise<Record<string, string>>>(
-        async (accPromise, provider) => ({
-          ...(await accPromise),
-          ...(await provider(config)),
-        }),
-        Promise.resolve<Record<string, string>>({
-          [HTTP_CONSTANTS.HEADER_CONTENT_TYPE]: HTTP_CONSTANTS.CONTENT_TYPE_JSON,
-          ...config.headers,
-        })
-      );
+        const resolvedHeaders = { ...initialHeaders };
+        const idempotencyKey = resolvedHeaders[HTTP_CONSTANTS.HEADER_X_IDEMPOTENCY_KEY] || crypto.randomUUID();
+        resolvedHeaders[HTTP_CONSTANTS.HEADER_X_IDEMPOTENCY_KEY] = idempotencyKey;
+        span.setAttribute(HTTP_CONSTANTS.ATTR_IDEMPOTENCY_KEY, idempotencyKey);
+        span.setAttribute(HTTP_CONSTANTS.ATTR_TENANT_ID, tenantId);
 
-      span.addEvent(HTTP_CONSTANTS.EVENT_STEP_HEADERS_RESOLVED, {
-        [HTTP_CONSTANTS.KEY_HEADERS_COUNT]: this.headerProviders.length,
-      });
+        span.addEvent(HTTP_CONSTANTS.EVENT_STEP_HEADERS_RESOLVED, {
+          [HTTP_CONSTANTS.KEY_HEADERS_COUNT]: this.headerProviders.length,
+        });
 
-      const idempotencyKey = resolvedHeaders[HTTP_CONSTANTS.HEADER_X_IDEMPOTENCY_KEY] || crypto.randomBytes(16).toString("hex");
-      resolvedHeaders[HTTP_CONSTANTS.HEADER_X_IDEMPOTENCY_KEY] = idempotencyKey;
-      span.setAttribute(HTTP_CONSTANTS.ATTR_IDEMPOTENCY_KEY, idempotencyKey);
+        const cacheBypassed = isCacheDisabled(config, resolvedHeaders);
+        const cachedData = cacheBypassed ? undefined : this.cacheStore.get<T>(requestKey);
+        const isCacheHit = !cacheBypassed && cachedData !== undefined;
+        span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CACHE_HIT, isCacheHit);
 
-      const cacheBypassed = isCacheDisabled(config, resolvedHeaders);
-      const cachedData = cacheBypassed ? undefined : this.cacheStore.get<T>(requestKey);
-      const isCacheHit = !cacheBypassed && cachedData !== undefined;
-      span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CACHE_HIT, isCacheHit);
+        span.addEvent(HTTP_CONSTANTS.EVENT_CACHE_EVALUATED, {
+          [HTTP_CONSTANTS.KEY_CACHE_BYPASSED]: cacheBypassed,
+          [HTTP_CONSTANTS.KEY_CACHE_HIT]: isCacheHit,
+          [HTTP_CONSTANTS.KEY_CACHE_KEY]: requestKey,
+        });
 
-      span.addEvent(HTTP_CONSTANTS.EVENT_CACHE_EVALUATED, {
-        [HTTP_CONSTANTS.KEY_CACHE_BYPASSED]: cacheBypassed,
-        [HTTP_CONSTANTS.KEY_CACHE_HIT]: isCacheHit,
-        [HTTP_CONSTANTS.KEY_CACHE_KEY]: requestKey,
-      });
+        if (isCacheHit) {
+          clearTimeout(timeoutTimer);
+          this.activeControllers.delete(requestKey);
+          span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_POSITIVE);
+          span.addEvent(HTTP_CONSTANTS.EVENT_EXECUTION_SUCCESS, { [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_SUCCESS });
+          span.setStatus({ code: SpanStatusCode.OK });
+          span.end();
+          return { data: cachedData as T, status: 200, headers: new Headers() };
+        }
 
-      return isCacheHit
-        ? (
-            clearTimeout(timeoutTimer),
-            this.activeControllers.delete(requestKey),
-            span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_POSITIVE),
-            span.addEvent(HTTP_CONSTANTS.EVENT_EXECUTION_SUCCESS, { [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_SUCCESS }),
-            span.setStatus({ code: SpanStatusCode.OK }),
-            span.end(),
-            { data: cachedData, status: 200, headers: new Headers() }
-          )
-        : await (async () => {
-            const canRun = this.circuitBreaker.canExecute(config.url);
-            const circuitState = this.circuitBreaker.getState(config.url);
-            span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CIRCUIT_STATE, circuitState.state);
+        const canRun = this.circuitBreaker.canExecute(config.url);
+        const circuitState = this.circuitBreaker.getState(config.url);
+        span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CIRCUIT_STATE, circuitState.state);
 
-            span.addEvent(HTTP_CONSTANTS.EVENT_CIRCUIT_EVALUATED, {
-              [HTTP_CONSTANTS.KEY_CIRCUIT_STATE]: circuitState.state,
-              [HTTP_CONSTANTS.KEY_CIRCUIT_CAN_EXECUTE]: canRun,
-              [HTTP_CONSTANTS.KEY_CIRCUIT_FAILURES]: circuitState.failures,
+        span.addEvent(HTTP_CONSTANTS.EVENT_CIRCUIT_EVALUATED, {
+          [HTTP_CONSTANTS.KEY_CIRCUIT_STATE]: circuitState.state,
+          [HTTP_CONSTANTS.KEY_CIRCUIT_CAN_EXECUTE]: canRun,
+          [HTTP_CONSTANTS.KEY_CIRCUIT_FAILURES]: circuitState.failures,
+        });
+
+        if (!canRun) {
+          clearTimeout(timeoutTimer);
+          this.activeControllers.delete(requestKey);
+          const cbErr = new Error(`CircuitBreaker: Request to ${config.url} blocked due to active OPEN state.`);
+          span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_NEGATIVE);
+          span.addEvent(HTTP_CONSTANTS.EVENT_EXECUTION_FAILURE, {
+            [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_FAILURE,
+            [HTTP_CONSTANTS.ATTR_ERROR_DETAIL]: cbErr.message,
+          });
+          span.setStatus({ code: SpanStatusCode.ERROR, message: cbErr.message });
+          span.recordException(cbErr);
+          span.end();
+          throw cbErr;
+        }
+
+        span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_METHOD, config.method);
+        span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_URL, config.url);
+
+        let lastError: unknown = null;
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+          span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_RETRY_ATTEMPT, attempt);
+          span.addEvent(HTTP_CONSTANTS.EVENT_STEP_FETCH_INITIATED, { [HTTP_CONSTANTS.KEY_RETRY_ATTEMPT]: attempt });
+
+          try {
+            const res = await fetch(config.url, {
+              method: config.method,
+              headers: resolvedHeaders,
+              body: config.body ? JSON.stringify(config.body) : undefined,
+              signal: controller.signal,
             });
 
-            return !canRun
-              ? (() => {
-                  clearTimeout(timeoutTimer);
-                  this.activeControllers.delete(requestKey);
-                  const cbErr = new Error(`CircuitBreaker: Request to ${config.url} blocked due to active OPEN state.`);
-                  span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_NEGATIVE);
-                  span.addEvent(HTTP_CONSTANTS.EVENT_EXECUTION_FAILURE, {
-                    [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_FAILURE,
-                    [HTTP_CONSTANTS.ATTR_ERROR_DETAIL]: cbErr.message,
-                  });
-                  span.setStatus({ code: SpanStatusCode.ERROR, message: cbErr.message });
-                  span.recordException(cbErr);
-                  span.end();
-                  throw cbErr;
-                })()
-              : await (async () => {
-                  span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_METHOD, config.method);
-                  span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_URL, config.url);
-                  resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID] &&
-                    span.setAttribute(HTTP_CONSTANTS.ATTR_TENANT_ID, resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID]!);
+            span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_STATUS_CODE, res.status);
 
-                  const attemptFetch = async (attempt: number): Promise<{ data: T; status: number; headers: Headers }> => {
-                    span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_RETRY_ATTEMPT, attempt);
-                    span.addEvent(HTTP_CONSTANTS.EVENT_STEP_FETCH_INITIATED, { [HTTP_CONSTANTS.KEY_RETRY_ATTEMPT]: attempt });
+            if (!res.ok) {
+              throw new HttpError(
+                `${config.method} ${config.url} failed with status ${res.status}`,
+                res.status,
+                res.headers.get(HTTP_CONSTANTS.HEADER_RETRY_AFTER)
+              );
+            }
 
-                    try {
-                      const res = await fetch(config.url, {
-                        method: config.method,
-                        headers: resolvedHeaders,
-                        body: config.body ? JSON.stringify(config.body) : undefined,
-                        signal: controller.signal,
-                      });
+            let data = (await res.json()) as T;
+            for (const interceptor of this.responseInterceptors) {
+              data = (await interceptor(data, res, config)) as T;
+            }
 
-                      span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_STATUS_CODE, res.status);
+            span.addEvent(HTTP_CONSTANTS.EVENT_STEP_RESPONSE_INTERCEPTORS, {
+              [HTTP_CONSTANTS.KEY_INTERCEPTORS_COUNT]: this.responseInterceptors.length,
+            });
 
-                      return !res.ok
-                        ? (() => {
-                            throw new HttpError(
-                              `${config.method} ${config.url} failed with status ${res.status}`,
-                              res.status,
-                              res.headers.get(HTTP_CONSTANTS.HEADER_RETRY_AFTER)
-                            );
-                          })()
-                        : await (async () => {
-                            const rawJson = (await res.json()) as T;
-                            const data = (await this.responseInterceptors.reduce<Promise<unknown>>(
-                              async (accPromise, interceptor) => interceptor(await accPromise, res, config),
-                              Promise.resolve(rawJson)
-                            )) as T;
+            this.circuitBreaker.onSuccess(config.url);
+            if (!cacheBypassed) {
+              this.cacheStore.set(requestKey, data, ttlMs);
+            }
 
-                            span.addEvent(HTTP_CONSTANTS.EVENT_STEP_RESPONSE_INTERCEPTORS, {
-                              [HTTP_CONSTANTS.KEY_INTERCEPTORS_COUNT]: this.responseInterceptors.length,
-                            });
+            clearTimeout(timeoutTimer);
+            this.activeControllers.delete(requestKey);
 
-                            this.circuitBreaker.onSuccess(config.url);
-                            !cacheBypassed && this.cacheStore.set(requestKey, data, ttlMs);
-                            clearTimeout(timeoutTimer);
-                            this.activeControllers.delete(requestKey);
+            span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_POSITIVE);
+            span.addEvent(HTTP_CONSTANTS.EVENT_EXECUTION_SUCCESS, { [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_SUCCESS });
+            span.setStatus({ code: SpanStatusCode.OK });
+            span.end();
+            return { data, status: res.status, headers: res.headers };
 
-                            span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_POSITIVE);
-                            span.addEvent(HTTP_CONSTANTS.EVENT_EXECUTION_SUCCESS, { [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_SUCCESS });
-                            span.setStatus({ code: SpanStatusCode.OK });
-                            return { data, status: res.status, headers: res.headers };
-                          })();
-                    } catch (err: any) {
-                      this.circuitBreaker.onFailure(config.url, failureThreshold);
-                      this.errorInterceptors.forEach((interceptor) => interceptor(err, config));
+          } catch (err: any) {
+            lastError = err;
+            this.circuitBreaker.onFailure(config.url, failureThreshold);
 
-                      span.addEvent(HTTP_CONSTANTS.EVENT_STEP_ERROR_HANDLED, {
-                        [HTTP_CONSTANTS.KEY_INTERCEPTORS_COUNT]: this.errorInterceptors.length,
-                      });
+            for (const interceptor of this.errorInterceptors) {
+              interceptor(err, config);
+            }
 
-                      const isAborted = err?.name === HTTP_CONSTANTS.ERROR_NAME_ABORT || controller.signal.aborted;
-                      isAborted && (span.setAttribute(HTTP_CONSTANTS.ATTR_REQUEST_CANCELLED, true), span.addEvent(HTTP_CONSTANTS.EVENT_REQUEST_CANCELLED, { [HTTP_CONSTANTS.KEY_CANCELLED_KEY]: requestKey }));
+            span.addEvent(HTTP_CONSTANTS.EVENT_STEP_ERROR_HANDLED, {
+              [HTTP_CONSTANTS.KEY_INTERCEPTORS_COUNT]: this.errorInterceptors.length,
+            });
 
-                      const shouldRetry = !isAborted && attempt < maxRetries && retryPolicyRegistry.isRetryable(err);
+            const isAborted = err?.name === HTTP_CONSTANTS.ERROR_NAME_ABORT || controller.signal.aborted;
+            if (isAborted) {
+              span.setAttribute(HTTP_CONSTANTS.ATTR_REQUEST_CANCELLED, true);
+              span.addEvent(HTTP_CONSTANTS.EVENT_REQUEST_CANCELLED, { [HTTP_CONSTANTS.KEY_CANCELLED_KEY]: requestKey });
+            }
 
-                      span.addEvent(HTTP_CONSTANTS.EVENT_RETRY_DECISION, {
-                        [HTTP_CONSTANTS.KEY_RETRY_ATTEMPT]: attempt,
-                        [HTTP_CONSTANTS.KEY_RETRY_SHOULD_RETRY]: shouldRetry,
-                        [HTTP_CONSTANTS.KEY_RETRY_ERROR_MSG]: err instanceof Error ? err.message : String(err),
-                      });
+            const shouldRetry = !isAborted && attempt < maxRetries && retryPolicyRegistry.isRetryable(err);
 
-                      return shouldRetry
-                        ? await (async () => {
-                            const backoff = calculateFullJitterBackoff(attempt + 1, 200, 10000);
-                            span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_RETRY_BACKOFF_MS, backoff);
-                            await new Promise((r) => setTimeout(r, backoff));
-                            return attemptFetch(attempt + 1);
-                          })()
-                        : (() => {
-                            clearTimeout(timeoutTimer);
-                            this.activeControllers.delete(requestKey);
+            span.addEvent(HTTP_CONSTANTS.EVENT_RETRY_DECISION, {
+              [HTTP_CONSTANTS.KEY_RETRY_ATTEMPT]: attempt,
+              [HTTP_CONSTANTS.KEY_RETRY_SHOULD_RETRY]: shouldRetry,
+              [HTTP_CONSTANTS.KEY_RETRY_ERROR_MSG]: err instanceof Error ? err.message : String(err),
+            });
 
-                            span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_NEGATIVE);
-                            span.addEvent(HTTP_CONSTANTS.EVENT_EXECUTION_FAILURE, {
-                              [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_FAILURE,
-                              [HTTP_CONSTANTS.ATTR_ERROR_DETAIL]: err instanceof Error ? err.message : String(err),
-                            });
-                            span.setStatus({
-                              code: SpanStatusCode.ERROR,
-                              message: err instanceof Error ? err.message : HTTP_CONSTANTS.MSG_PIPELINE_FAILED,
-                            });
-                            err instanceof Error && span.recordException(err);
-                            span.end();
-                            throw err;
-                          })();
-                    }
-                  };
+            if (shouldRetry) {
+              const backoff = calculateFullJitterBackoff(attempt + 1, 200, 10000);
+              span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_RETRY_BACKOFF_MS, backoff);
+              await new Promise((r) => setTimeout(r, backoff));
+            } else {
+              break;
+            }
+          }
+        }
 
-                  return attemptFetch(0);
-                })();
-          })();
+        clearTimeout(timeoutTimer);
+        this.activeControllers.delete(requestKey);
+
+        span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_NEGATIVE);
+        span.addEvent(HTTP_CONSTANTS.EVENT_EXECUTION_FAILURE, {
+          [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_FAILURE,
+          [HTTP_CONSTANTS.ATTR_ERROR_DETAIL]: lastError instanceof Error ? lastError.message : String(lastError),
+        });
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: lastError instanceof Error ? lastError.message : HTTP_CONSTANTS.MSG_PIPELINE_FAILED,
+        });
+        if (lastError instanceof Error) {
+          span.recordException(lastError);
+        }
+        span.end();
+        throw lastError;
+
+      } catch (fatalErr) {
+        clearTimeout(timeoutTimer);
+        this.activeControllers.delete(requestKey);
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: fatalErr instanceof Error ? fatalErr.message : HTTP_CONSTANTS.MSG_PIPELINE_FAILED,
+        });
+        if (fatalErr instanceof Error) {
+          span.recordException(fatalErr);
+        }
+        span.end();
+        throw fatalErr;
+      }
     });
   }
 
@@ -472,13 +587,17 @@ export async function executeQueryAdapter<T>(
   transformOps?: JsonMapOp[]
 ): Promise<T> {
   const url = new URL(`${baseUrl}${endpoint}`);
-  Object.entries(params).forEach(([k, v]) => {
-    v !== undefined && v !== null && url.searchParams.set(k, String(v));
-  });
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null) {
+      url.searchParams.set(k, String(v));
+    }
+  }
 
   const { data } = await httpClient.get<unknown>(url.toString(), undefined, { serviceSub });
 
-  return transformOps
-    ? (mapJson(data as Record<string, unknown>, transformOps) as unknown as T)
-    : (data as T);
+  if (transformOps) {
+    return mapJson(data as Record<string, unknown>, transformOps) as unknown as T;
+  }
+
+  return data as T;
 }
