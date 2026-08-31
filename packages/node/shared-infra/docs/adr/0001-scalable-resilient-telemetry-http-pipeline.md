@@ -142,9 +142,101 @@ graph TD
 
 ---
 
-## 5. Low-Level Architecture (LLA)
+## 5. Low-Level Architecture & Comprehensive Diagrams
 
-### 5.1 Telemetry Data Scrubbing & Default-Deny Allowlist Filter Diagram
+### 5.1 End-to-End Pipeline Execution Sequence Diagram
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Caller as Feature Component / Service
+  participant ADM as ConcurrencyAdmissionControl
+  participant ALS as AsyncLocalStorage Context
+  participant Client as ScalableHttpClient Pipeline
+  participant DNS as DNSResolver (dns.promises.lookup)
+  participant SF as Singleflight Map (SHA-256)
+  participant Cache as TenantPartitionedCacheStore
+  participant CB as StandardCircuitBreaker (Bounded LRU)
+  participant Net as Fetch API / Network
+  participant Span as TracedSpanFacade (Default-Deny Filter)
+
+  Caller->>ADM: execute({ method: 'GET', url: 'https://api.org/data' })
+  alt In-Flight Concurrency > 500
+    ADM-->>Caller: Reject 429 (Load Shedding)
+  else In-Flight Capacity Available
+    ADM->>ALS: Get isolated RequestContext (tenantId)
+    ALS-->>Client: tenantId ("tenant-acme")
+    Client->>DNS: lookup(hostname)
+    alt Resolved IP in Private Subnets (127.0.0.1 / 169.254.169.254)
+      DNS-->>Client: Private IP
+      Client-->>Caller: Reject SSRF Violation Error
+    else Valid Public IP
+      Client->>SF: Check SHA256(tenantId:method:url:body)
+      alt Singleflight Hit
+        SF-->>Caller: Return shared in-flight Promise
+      else Singleflight Miss
+        Client->>Span: startActiveSpan("HTTP GET https://api.org/data")
+        Span->>Span: Filter attributes via ALLOWED_TELEMETRY_ATTRIBUTES
+        Client->>Cache: get(tenantId, requestKey)
+        alt Cache Hit
+          Cache-->>Client: Return cached data
+          Client->>Span: setStatus(OK), emit decision.cache_evaluated
+          Span-->>Caller: Return cached payload
+        else Cache Miss
+          Client->>CB: canExecute(tenantId:routeTemplate)
+          alt Circuit State OPEN
+            CB-->>Client: false
+            Client->>Span: setStatus(ERROR), recordException
+            Client-->>Caller: Throw CircuitBreaker Error
+          else Circuit CLOSED / HALF_OPEN
+            loop Retry Attempt Loop (Max 3, Total Timeout <= 15s)
+              Client->>CB: Re-check canExecute(circuitKey)
+              Client->>Net: fetch(url, { redirect: 'manual' })
+              alt Network Response 200 OK
+                Net-->>Client: Response Stream (Streaming Byte Limit <= 10MB)
+                Client->>Cache: set(tenantId, requestKey, data)
+                Client->>CB: onSuccess(circuitKey)
+                Client->>Span: setStatus(OK), emit execution.success
+                Client-->>Caller: Return response data
+              else Network 500 / Error
+                Net-->>Client: HttpError 500
+                Client->>CB: onFailure(circuitKey)
+                Client->>Client: Check FleetRetryBudget & method idempotency
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+```
+
+---
+
+### 5.2 Circuit Breaker State Machine Transition Diagram
+
+```mermaid
+stateDiagram-v2
+  [*] --> CLOSED : Initialize Circuit State (TTL = 1h)
+
+  CLOSED --> OPEN : Failures >= threshold (default 5 failures)
+  note right of OPEN
+    All incoming requests for tenant:routeTemplate
+    are rejected immediately without network call.
+  end note
+
+  OPEN --> HALF_OPEN : Cooldown period expires (Date.now() > nextAttempt)
+  note right of HALF_OPEN
+    Trial execution permitted.
+  end note
+
+  HALF_OPEN --> CLOSED : Trial Request Succeeds (onSuccess)
+  HALF_OPEN --> OPEN : Trial Request Fails (onFailure)
+```
+
+---
+
+### 5.3 Telemetry Data Scrubbing & Default-Deny Allowlist Filter Diagram
 
 ```mermaid
 graph LR
@@ -174,34 +266,29 @@ graph LR
 
 ---
 
-### 5.2 Fleet-Wide Resilience & Concurrency Guard Diagram
+### 5.4 Multi-Tenant Isolation & AsyncLocalStorage Architecture Diagram
 
 ```mermaid
 graph TD
-  subgraph InboundGuard ["Inbound Concurrency Control"]
-    ADM["ConcurrencyAdmissionControl (Active <= 500)"]
-  end
-
-  subgraph ContextEngine ["Async Context & Auth"]
+  subgraph AuthContext ["Node.js AsyncLocalStorage Context"]
     ALS["AsyncLocalStorage.getStore() -> tenantId"]
   end
 
-  subgraph RetryGuard ["Fleet Retry Protection"]
-    BUDGET["FleetRetryBudget (Retries / Requests <= 20%)"]
-    WALL["Total Wall-Clock Timeout Budget (<= 15,000ms)"]
+  subgraph KeyGenerators ["SHA-256 & Route Template Generators"]
+    HASH["generateHashedKey(tenantId, method, url, body)"]
+    ROUTE["deriveRouteTemplate(tenantId, url)"]
   end
 
-  subgraph PartitionedState ["State Isolation & Bounds"]
-    LRU["TenantPartitionedCacheStore (Bounded LRU)"]
-    CBStore["StandardCircuitBreaker (Bounded LRU: tenantId:routeTemplate)"]
+  subgraph IsolatedPartitions ["Tenant-Isolated State Stores"]
+    LRU["TenantPartitionedCacheStore (Map<tenantId, BoundedLRU>)"]
+    CBStore["StandardCircuitBreaker (BoundedLRU: tenantId:routeTemplate)"]
     RateStore["TenantRateLimiter (TokenBucket: tenantId)"]
   end
 
-  ADM --> ALS
+  ALS --> HASH & ROUTE
   ALS --> RateStore
-  RateStore --> BUDGET
-  BUDGET --> WALL
-  WALL --> LRU & CBStore
+  HASH --> LRU
+  ROUTE --> CBStore
 ```
 
 ---
