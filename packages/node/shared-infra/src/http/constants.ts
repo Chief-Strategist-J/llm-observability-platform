@@ -19,6 +19,10 @@ export const HTTP_CONSTANTS = {
   DEFAULT_TENANT_ID: "tenant-default",
   DEFAULT_TRACESTATE: "rojo=1",
 
+  TRACER_NAME: "http-client",
+  ERROR_NAME_ABORT: "AbortError",
+  MSG_PIPELINE_FAILED: "HTTP Request Pipeline Failed",
+
   // Cache Directives
   CACHE_NO_CACHE: "no-cache",
   CACHE_NO_STORE: "no-store",
@@ -46,6 +50,15 @@ export const HTTP_CONSTANTS = {
   ATTR_TENANT_ID: "tenant.id",
   ATTR_IDEMPOTENCY_KEY: "http.idempotency_key",
   ATTR_REQUEST_CANCELLED: "http.request_cancelled",
+  ATTR_EXECUTION_PATH: "execution.path",
+  ATTR_RESULT_STATUS: "execution.status",
+  ATTR_ERROR_DETAIL: "execution.error_detail",
+
+  // Execution Paths
+  PATH_POSITIVE: "positive_path",
+  PATH_NEGATIVE: "negative_path",
+  STATUS_SUCCESS: "success",
+  STATUS_FAILURE: "failure",
 
   // Decision Span Events
   EVENT_SINGLEFLIGHT_HIT: "decision.singleflight_collapsed",
@@ -53,4 +66,18 @@ export const HTTP_CONSTANTS = {
   EVENT_CIRCUIT_EVALUATED: "decision.circuit_breaker_evaluated",
   EVENT_REQUEST_CANCELLED: "decision.request_cancelled",
   EVENT_RETRY_DECISION: "decision.retry_evaluated",
+  EVENT_EXECUTION_SUCCESS: "execution.success",
+  EVENT_EXECUTION_FAILURE: "execution.failure",
+
+  // Attribute Keys for Decision Events
+  KEY_CACHE_BYPASSED: "cache.bypassed",
+  KEY_CACHE_HIT: "cache.hit",
+  KEY_CACHE_KEY: "cache.key",
+  KEY_CIRCUIT_STATE: "circuit.state",
+  KEY_CIRCUIT_CAN_EXECUTE: "circuit.can_execute",
+  KEY_CIRCUIT_FAILURES: "circuit.failures",
+  KEY_CANCELLED_KEY: "request.cancelled_key",
+  KEY_RETRY_ATTEMPT: "retry.attempt",
+  KEY_RETRY_SHOULD_RETRY: "retry.should_retry",
+  KEY_RETRY_ERROR_MSG: "retry.error_message",
 } as const;
