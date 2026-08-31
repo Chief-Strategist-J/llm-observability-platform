@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { httpClient, ScalableHttpClient, calculateFullJitterBackoff, isCacheDisabled } from './http-client';
-import { HTTP_CONSTANTS } from './constants';
+import { httpClient, ScalableHttpClient, calculateFullJitterBackoff, isCacheDisabled } from '../http-client';
+import { HTTP_CONSTANTS } from '../constants';
 
 describe('ScalableHttpClient Edge Cases & Architecture', () => {
   let client: ScalableHttpClient;
