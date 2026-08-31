@@ -3,15 +3,18 @@ import { trace, SpanKind, SpanStatusCode } from "@opentelemetry/api";
 import { RequestContextHolder } from '../tracing/request-context';
 import { mapJson } from '../data-driven/json-map';
 import type { JsonMapOp } from '../data-driven/transform.types';
+import { HTTP_CONSTANTS } from './constants';
+
+export * from './constants';
 
 export function calculateFullJitterBackoff(attempt: number, baseMs = 200, maxMs = 10000): number {
   const cap = Math.min(maxMs, baseMs * Math.pow(2, attempt - 1));
   return Math.floor(Math.random() * cap);
 }
 
-export function getAuthHeaders(serviceSub = "web-app-service"): Record<string, string> {
-  const secret = process.env.JWT_SECRET || "development-jwt-secret-key-32-bytes-min!!";
-  const header = { alg: "HS256", typ: "JWT" };
+export function getAuthHeaders(serviceSub = HTTP_CONSTANTS.DEFAULT_SERVICE_SUB): Record<string, string> {
+  const secret = process.env.JWT_SECRET || HTTP_CONSTANTS.DEFAULT_JWT_SECRET;
+  const header = { alg: HTTP_CONSTANTS.JWT_ALG, typ: HTTP_CONSTANTS.JWT_TYP };
   const now = Math.floor(Date.now() / 1000);
   const payload = {
     sub: serviceSub,
@@ -32,10 +35,10 @@ export function getAuthHeaders(serviceSub = "web-app-service"): Record<string, s
   const spanId = crypto.randomBytes(8).toString("hex");
 
   return {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${signingInput}.${signatureB64}`,
-    "traceparent": `00-${traceId}-${spanId}-01`,
-    "x-trace-id": traceId,
+    [HTTP_CONSTANTS.HEADER_CONTENT_TYPE]: HTTP_CONSTANTS.CONTENT_TYPE_JSON,
+    [HTTP_CONSTANTS.HEADER_AUTHORIZATION]: `${HTTP_CONSTANTS.BEARER_PREFIX}${signingInput}.${signatureB64}`,
+    [HTTP_CONSTANTS.HEADER_TRACEPARENT]: `00-${traceId}-${spanId}-01`,
+    [HTTP_CONSTANTS.HEADER_X_TRACE_ID]: traceId,
   };
 }
 
@@ -56,7 +59,7 @@ const httpCache = new Map<string, { data: unknown; exp: number }>();
 // Circuit Breaker State Tracking
 interface CircuitState {
   failures: number;
-  state: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+  state: typeof HTTP_CONSTANTS.CIRCUIT_CLOSED | typeof HTTP_CONSTANTS.CIRCUIT_OPEN | typeof HTTP_CONSTANTS.CIRCUIT_HALF_OPEN;
   nextAttempt: number;
 }
 const circuitStates = new Map<string, CircuitState>();
@@ -79,23 +82,23 @@ async function request<T = unknown>(
     // Check Cache
     const cached = httpCache.get(cacheKey);
     if (cached && Date.now() < cached.exp) {
-      span.setAttribute('http.cache_hit', true);
+      span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CACHE_HIT, true);
       span.setStatus({ code: SpanStatusCode.OK });
       span.end();
       return { data: cached.data as T, status: 200, headers: new Headers() };
     }
-    span.setAttribute('http.cache_hit', false);
+    span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CACHE_HIT, false);
 
     // Check Circuit Breaker
     let circuit = circuitStates.get(url);
     if (!circuit) {
-      circuit = { failures: 0, state: 'CLOSED', nextAttempt: 0 };
+      circuit = { failures: 0, state: HTTP_CONSTANTS.CIRCUIT_CLOSED, nextAttempt: 0 };
       circuitStates.set(url, circuit);
     }
 
-    if (circuit.state === 'OPEN') {
+    if (circuit.state === HTTP_CONSTANTS.CIRCUIT_OPEN) {
       if (Date.now() > circuit.nextAttempt) {
-        circuit.state = 'HALF_OPEN';
+        circuit.state = HTTP_CONSTANTS.CIRCUIT_HALF_OPEN;
       } else {
         const cbErr = new Error(`CircuitBreaker: Request to ${url} blocked due to active OPEN state.`);
         span.setStatus({ code: SpanStatusCode.ERROR, message: cbErr.message });
@@ -105,50 +108,50 @@ async function request<T = unknown>(
       }
     }
 
-    span.setAttribute('http.circuit_state', circuit.state);
+    span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CIRCUIT_STATE, circuit.state);
 
     let contextHeaders: Record<string, string> = {};
     try {
       const ctx = RequestContextHolder.get();
       contextHeaders = {
-        'x-request-id': ctx.requestId,
-        'x-correlation-id': ctx.correlationId,
-        'x-idempotency-key': ctx.idempotencyKey,
-        'x-tenant-id': ctx.tenantId || 'tenant-default',
-        traceparent: ctx.traceparent,
-        tracestate: ctx.tracestate || 'rojo=1',
+        [HTTP_CONSTANTS.HEADER_X_REQUEST_ID]: ctx.requestId,
+        [HTTP_CONSTANTS.HEADER_X_CORRELATION_ID]: ctx.correlationId,
+        [HTTP_CONSTANTS.HEADER_X_IDEMPOTENCY_KEY]: ctx.idempotencyKey,
+        [HTTP_CONSTANTS.HEADER_X_TENANT_ID]: ctx.tenantId || HTTP_CONSTANTS.DEFAULT_TENANT_ID,
+        [HTTP_CONSTANTS.HEADER_TRACEPARENT]: ctx.traceparent,
+        [HTTP_CONSTANTS.HEADER_TRACESTATE]: ctx.tracestate || HTTP_CONSTANTS.DEFAULT_TRACESTATE,
       };
-      span.setAttribute('tenant.id', ctx.tenantId || 'tenant-default');
+      span.setAttribute(HTTP_CONSTANTS.ATTR_TENANT_ID, ctx.tenantId || HTTP_CONSTANTS.DEFAULT_TENANT_ID);
     } catch {
       // Optional context
     }
 
-    span.setAttribute('http.method', method);
-    span.setAttribute('http.url', url);
+    span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_METHOD, method);
+    span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_URL, url);
 
     let attempt = 0;
     let lastError: unknown;
 
     while (attempt <= maxRetries) {
       try {
-        span.setAttribute('http.retry_attempt', attempt);
+        span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_RETRY_ATTEMPT, attempt);
         const res = await fetch(url, {
           method,
           headers: {
-            'Content-Type': 'application/json',
+            [HTTP_CONSTANTS.HEADER_CONTENT_TYPE]: HTTP_CONSTANTS.CONTENT_TYPE_JSON,
             ...contextHeaders,
             ...headers,
           },
           body: body ? JSON.stringify(body) : undefined,
         });
 
-        span.setAttribute('http.status_code', res.status);
+        span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_STATUS_CODE, res.status);
 
         if (!res.ok) {
           throw new HttpError(
             `${method} ${url} failed with status ${res.status}`,
             res.status,
-            res.headers.get('Retry-After'),
+            res.headers.get(HTTP_CONSTANTS.HEADER_RETRY_AFTER),
           );
         }
 
@@ -156,7 +159,7 @@ async function request<T = unknown>(
 
         // Reset Circuit Breaker on Success
         circuit.failures = 0;
-        circuit.state = 'CLOSED';
+        circuit.state = HTTP_CONSTANTS.CIRCUIT_CLOSED;
 
         // Cache Response
         httpCache.set(cacheKey, { data, exp: Date.now() + ttlMs });
@@ -170,13 +173,13 @@ async function request<T = unknown>(
         // Update Circuit Breaker
         circuit.failures++;
         if (circuit.failures >= failureThreshold) {
-          circuit.state = 'OPEN';
+          circuit.state = HTTP_CONSTANTS.CIRCUIT_OPEN;
           circuit.nextAttempt = Date.now() + 10000;
         }
 
         if (attempt <= maxRetries && err?.status !== 401 && err?.status !== 403) {
           const backoff = calculateFullJitterBackoff(attempt, 200, 10000);
-          span.setAttribute('http.retry_backoff_ms', backoff);
+          span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_RETRY_BACKOFF_MS, backoff);
           await new Promise((res) => setTimeout(res, backoff));
         } else {
           break;
@@ -198,19 +201,19 @@ async function request<T = unknown>(
 
 export const httpClient = {
   get: <T = unknown>(url: string, headers?: Record<string, string>, options?: { retries?: number; ttlMs?: number }) =>
-    request<T>('GET', url, undefined, headers, options),
+    request<T>(HTTP_CONSTANTS.METHOD_GET, url, undefined, headers, options),
 
   post: <T = unknown>(url: string, body: unknown, headers?: Record<string, string>, options?: { retries?: number; ttlMs?: number }) =>
-    request<T>('POST', url, body, headers, options),
+    request<T>(HTTP_CONSTANTS.METHOD_POST, url, body, headers, options),
 
   patch: <T = unknown>(url: string, body: unknown, headers?: Record<string, string>, options?: { retries?: number; ttlMs?: number }) =>
-    request<T>('PATCH', url, body, headers, options),
+    request<T>(HTTP_CONSTANTS.METHOD_PATCH, url, body, headers, options),
 
   put: <T = unknown>(url: string, body: unknown, headers?: Record<string, string>, options?: { retries?: number; ttlMs?: number }) =>
-    request<T>('PUT', url, body, headers, options),
+    request<T>(HTTP_CONSTANTS.METHOD_PUT, url, body, headers, options),
 
   delete: <T = unknown>(url: string, headers?: Record<string, string>, options?: { retries?: number; ttlMs?: number }) =>
-    request<T>('DELETE', url, undefined, headers, options),
+    request<T>(HTTP_CONSTANTS.METHOD_DELETE, url, undefined, headers, options),
 };
 
 export async function executeQueryAdapter<T>(

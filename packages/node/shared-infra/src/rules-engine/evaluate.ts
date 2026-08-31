@@ -1,20 +1,23 @@
 import type { Rule, RuleCondition } from './rule.types';
 import { withSpan } from '../tracing/tracer';
+import { RULES_ENGINE_CONSTANTS } from './constants';
+
+export * from './constants';
 
 function evaluateCondition(cond: RuleCondition, ctx: Record<string, unknown>): boolean {
   const actual = ctx[cond.field];
   switch (cond.op) {
-    case 'equals':
+    case RULES_ENGINE_CONSTANTS.OP_EQUALS:
       return actual === cond.value;
-    case 'not_equals':
+    case RULES_ENGINE_CONSTANTS.OP_NOT_EQUALS:
       return actual !== cond.value;
-    case 'greater_than':
-      return typeof actual === 'number' && typeof cond.value === 'number' && actual > cond.value;
-    case 'less_than':
-      return typeof actual === 'number' && typeof cond.value === 'number' && actual < cond.value;
-    case 'contains':
-      return typeof actual === 'string' && typeof cond.value === 'string' && actual.includes(cond.value);
-    case 'in':
+    case RULES_ENGINE_CONSTANTS.OP_GREATER_THAN:
+      return typeof actual === RULES_ENGINE_CONSTANTS.TYPE_NUMBER && typeof cond.value === RULES_ENGINE_CONSTANTS.TYPE_NUMBER && actual > cond.value;
+    case RULES_ENGINE_CONSTANTS.OP_LESS_THAN:
+      return typeof actual === RULES_ENGINE_CONSTANTS.TYPE_NUMBER && typeof cond.value === RULES_ENGINE_CONSTANTS.TYPE_NUMBER && actual < cond.value;
+    case RULES_ENGINE_CONSTANTS.OP_CONTAINS:
+      return typeof actual === RULES_ENGINE_CONSTANTS.TYPE_STRING && typeof cond.value === RULES_ENGINE_CONSTANTS.TYPE_STRING && actual.includes(cond.value as string);
+    case RULES_ENGINE_CONSTANTS.OP_IN:
       return Array.isArray(cond.value) && cond.value.includes(actual);
     default:
       return false;
@@ -25,8 +28,8 @@ export async function resolveRules(
   rules: Rule[],
   ctx: Record<string, unknown>,
 ): Promise<Rule[]> {
-  return withSpan("RulesEngine.resolveRules", async (span) => {
-    span.setAttribute('rules.evaluated_count', rules.length);
+  return withSpan(RULES_ENGINE_CONSTANTS.SPAN_RESOLVE_RULES, async (span) => {
+    span.setAttribute(RULES_ENGINE_CONSTANTS.ATTR_EVALUATED_COUNT, rules.length);
     const sorted = [...rules].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
     const activeRules: Rule[] = [];
 
@@ -42,9 +45,9 @@ export async function resolveRules(
       activeRules.push(rule);
     }
 
-    span.setAttribute('rules.triggered_count', activeRules.length);
-    span.setAttribute('rules.triggered_ids', JSON.stringify(activeRules.map((r) => r.id)));
-    span.setAttribute('rules.triggered_names', JSON.stringify(activeRules.map((r) => r.name)));
+    span.setAttribute(RULES_ENGINE_CONSTANTS.ATTR_TRIGGERED_COUNT, activeRules.length);
+    span.setAttribute(RULES_ENGINE_CONSTANTS.ATTR_TRIGGERED_IDS, JSON.stringify(activeRules.map((r) => r.id)));
+    span.setAttribute(RULES_ENGINE_CONSTANTS.ATTR_TRIGGERED_NAMES, JSON.stringify(activeRules.map((r) => r.name)));
 
     return activeRules;
   });
