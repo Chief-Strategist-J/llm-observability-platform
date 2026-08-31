@@ -35,7 +35,7 @@ export const HTTP_CONSTANTS = {
   CIRCUIT_OPEN: "OPEN",
   CIRCUIT_HALF_OPEN: "HALF_OPEN",
 
-  // OTEL Span Attributes
+  // OTEL Span Attributes & Decision Events
   ATTR_HTTP_METHOD: "http.method",
   ATTR_HTTP_URL: "http.url",
   ATTR_HTTP_STATUS_CODE: "http.status_code",
@@ -46,4 +46,11 @@ export const HTTP_CONSTANTS = {
   ATTR_TENANT_ID: "tenant.id",
   ATTR_IDEMPOTENCY_KEY: "http.idempotency_key",
   ATTR_REQUEST_CANCELLED: "http.request_cancelled",
+
+  // Decision Span Events
+  EVENT_SINGLEFLIGHT_HIT: "decision.singleflight_collapsed",
+  EVENT_CACHE_EVALUATED: "decision.cache_evaluated",
+  EVENT_CIRCUIT_EVALUATED: "decision.circuit_breaker_evaluated",
+  EVENT_REQUEST_CANCELLED: "decision.request_cancelled",
+  EVENT_RETRY_DECISION: "decision.retry_evaluated",
 } as const;

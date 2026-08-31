@@ -19,7 +19,20 @@ export async function resolveRules(
     const activeRules = await sorted.reduce(async (accPromise, rule) => {
       const acc = await accPromise;
       const conditionsMet = rule.conditions.every((cond) => conditionRegistry.evaluate(cond, ctx));
+      
+      span.addEvent(RULES_ENGINE_CONSTANTS.EVENT_RULE_EVALUATED, {
+        "rule.id": rule.id,
+        "rule.name": rule.name,
+        "rule.conditions_passed": conditionsMet,
+        "rule.priority": rule.priority ?? 0,
+      });
+
       const asyncPassed = conditionsMet && rule.asyncCheck ? await rule.asyncCheck(ctx) : conditionsMet;
+
+      conditionsMet && rule.asyncCheck && span.addEvent(RULES_ENGINE_CONSTANTS.EVENT_ASYNC_CHECK_EVALUATED, {
+        "rule.id": rule.id,
+        "rule.async_passed": asyncPassed,
+      });
 
       return asyncPassed ? [...acc, rule] : acc;
     }, Promise.resolve([] as Rule[]));

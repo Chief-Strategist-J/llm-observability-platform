@@ -2,17 +2,17 @@
  * ALGORITHM & ARCHITECTURE: Scalable Resilient HTTP Client Pipeline
  * 
  * 1. Request Interception: Config passes through registered RequestInterceptors via Promise.reduce.
- * 2. In-Flight Singleflight & Cancellation: Collapses identical concurrent read requests (Singleflight pattern) to prevent thundering herd; aborts previous request via AbortController if cancelPrevious is true.
+ * 2. In-Flight Singleflight & Cancellation: Collapses identical concurrent read requests (Singleflight pattern) to prevent thundering herd; aborts previous request via AbortController if cancelPrevious is true. Emits OTEL Decision Events.
  * 3. Header Resolution: Aggregates headers from HeaderProviderRegistry (Auth JWT, W3C traceparent, Tenant ID, Cache-Control).
  * 4. Idempotency Key Preservation: Preserves identical x-idempotency-key across all retry attempts for idempotent downstream processing.
- * 5. Endpoint-Level Cache Policy: Evaluates Cache-Control headers (no-cache, no-store) and config.noCache flag.
+ * 5. Endpoint-Level Cache Policy: Evaluates Cache-Control headers (no-cache, no-store) and config.noCache flag with Decision Span Events.
  * 6. Cache Lookup: Checks ICacheStore if caching enabled; returns cached data synchronously on hit.
- * 7. Circuit Breaker Check: Evaluates ICircuitBreaker status; rejects execution if state is OPEN.
+ * 7. Circuit Breaker Check: Evaluates ICircuitBreaker status; rejects execution if state is OPEN with Decision Span Events.
  * 8. Timeout & Signal Merging: Integrates request timeout (timeoutMs) and merges caller-provided AbortSignal.
  * 9. Recursive Retry Pipeline:
  *    a. Invokes fetch with merged AbortSignal and exponential Full Jitter backoff calculation:
  *       sleep_ms = random(0, min(maxMs, baseMs * 2^(attempt-1)))
- *    b. On HTTP failure, queries RetryPolicyRegistry to verify error retryability.
+ *    b. On HTTP failure, queries RetryPolicyRegistry to verify error retryability and emits Retry Decision Events.
  *    c. On HTTP success, executes ResponseInterceptors, resets Circuit Breaker, updates CacheStore (if enabled).
  *    d. On error, triggers ErrorInterceptors and OpenTelemetry exception recording.
  */
@@ -250,17 +250,31 @@ export class ScalableHttpClient {
       resolvedHeaders[HTTP_CONSTANTS.HEADER_X_IDEMPOTENCY_KEY] = idempotencyKey;
       span.setAttribute(HTTP_CONSTANTS.ATTR_IDEMPOTENCY_KEY, idempotencyKey);
 
+      // Decision Telemetry: Cache Policy Evaluation
       const cacheBypassed = isCacheDisabled(config, resolvedHeaders);
       const cachedData = cacheBypassed ? undefined : this.cacheStore.get<T>(requestKey);
       const isCacheHit = !cacheBypassed && cachedData !== undefined;
       span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CACHE_HIT, isCacheHit);
 
+      span.addEvent(HTTP_CONSTANTS.EVENT_CACHE_EVALUATED, {
+        "cache.bypassed": cacheBypassed,
+        "cache.hit": isCacheHit,
+        "cache.key": requestKey,
+      });
+
       return isCacheHit
         ? (clearTimeout(timeoutTimer), this.activeControllers.delete(requestKey), span.setStatus({ code: SpanStatusCode.OK }), span.end(), { data: cachedData, status: 200, headers: new Headers() })
         : await (async () => {
+            // Decision Telemetry: Circuit Breaker Evaluation
             const canRun = this.circuitBreaker.canExecute(config.url);
             const circuitState = this.circuitBreaker.getState(config.url);
             span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CIRCUIT_STATE, circuitState.state);
+
+            span.addEvent(HTTP_CONSTANTS.EVENT_CIRCUIT_EVALUATED, {
+              "circuit.state": circuitState.state,
+              "circuit.can_execute": canRun,
+              "circuit.failures": circuitState.failures,
+            });
 
             return !canRun
               ? (() => {
@@ -278,7 +292,7 @@ export class ScalableHttpClient {
                   resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID] &&
                     span.setAttribute(HTTP_CONSTANTS.ATTR_TENANT_ID, resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID]!);
 
-                  // Pure Recursive Retry Pipeline (Zero Loops)
+                  // Pure Recursive Retry Pipeline with Decision Telemetry (Zero Loops)
                   const attemptFetch = async (attempt: number): Promise<{ data: T; status: number; headers: Headers }> => {
                     span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_RETRY_ATTEMPT, attempt);
                     try {
@@ -318,9 +332,16 @@ export class ScalableHttpClient {
                       this.errorInterceptors.forEach((interceptor) => interceptor(err, config));
 
                       const isAborted = err?.name === 'AbortError' || controller.signal.aborted;
-                      isAborted && span.setAttribute(HTTP_CONSTANTS.ATTR_REQUEST_CANCELLED, true);
+                      isAborted && (span.setAttribute(HTTP_CONSTANTS.ATTR_REQUEST_CANCELLED, true), span.addEvent(HTTP_CONSTANTS.EVENT_REQUEST_CANCELLED, { "request.cancelled_key": requestKey }));
 
                       const shouldRetry = !isAborted && attempt < maxRetries && retryPolicyRegistry.isRetryable(err);
+
+                      span.addEvent(HTTP_CONSTANTS.EVENT_RETRY_DECISION, {
+                        "retry.attempt": attempt,
+                        "retry.should_retry": shouldRetry,
+                        "retry.error_message": err instanceof Error ? err.message : String(err),
+                      });
+
                       return shouldRetry
                         ? await (async () => {
                             const backoff = calculateFullJitterBackoff(attempt + 1, 200, 10000);

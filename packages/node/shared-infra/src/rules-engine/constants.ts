@@ -18,6 +18,10 @@ export const RULES_ENGINE_CONSTANTS = {
   ATTR_TRIGGERED_IDS: "rules.triggered_ids",
   ATTR_TRIGGERED_NAMES: "rules.triggered_names",
 
+  // Decision Span Events
+  EVENT_RULE_EVALUATED: "decision.rule_evaluated",
+  EVENT_ASYNC_CHECK_EVALUATED: "decision.async_check_evaluated",
+
   // Error Codes
   ERR_VALIDATION_FAILED: "ERR_VALIDATION_FAILED",
   ERR_CIRCUIT_OPEN: "ERR_CIRCUIT_OPEN",
