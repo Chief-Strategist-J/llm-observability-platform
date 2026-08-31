@@ -5,53 +5,39 @@
  * EXHAUSTIVE STEP-BY-STEP PIPELINE SPECIFICATION
  * ====================================================================================================
  * 
- * 1. ASYNCLOCALSTORAGE TENANT CONTEXT DERIVATION:
+ * 1. INBOUND CONCURRENCY ADMISSION CONTROL & LOAD SHEDDING:
+ *    - Tracks total in-flight concurrent requests in Client (default maxInFlightRequests = 500).
+ *    - If total active requests exceed capacity, sheds load immediately to protect Node process event loop.
+ * 
+ * 2. ASYNCLOCALSTORAGE TENANT CONTEXT DERIVATION:
  *    - Extracts tenant ID strictly from Node.js native AsyncLocalStorage (RequestContextHolder.get().tenantId).
  *    - Eliminates event loop context-bleeding bugs where concurrent requests could overwrite static context variables.
  * 
- * 2. DNS LOOKUP IP-LEVEL SSRF & SCHEME PROTECTION:
+ * 3. DNS LOOKUP IP-LEVEL SSRF & SCHEME PROTECTION:
  *    - Validates target URL scheme (http:, https:).
  *    - Performs async DNS resolution via dns.promises.lookup() to validate resolved IP against private subnets:
  *      (127.0.0.0/8, 169.254.0.0/16, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, ::1, 0.0.0.0).
- *    - Prevents TOCTOU & DNS Rebinding attacks by validating resolved socket IPs, not just hostname strings.
  * 
- * 3. PER-TENANT OUTBOUND RATE LIMITING:
+ * 4. PER-TENANT OUTBOUND RATE LIMITING:
  *    - Enforces Token Bucket rate limiting per tenant (default 100 req/sec bucket capacity).
- *    - Prevents single tenant traffic bursts from starving shared event loop and connection pools.
  * 
- * 4. REAL-TIME STREAMING BYTE-COUNT BODY BOUNDING:
- *    - Enforces static and streaming payload size limits (default maxBodySizeBytes = 10MB).
- *    - Counts cumulative bytes as stream chunks arrive. Aborts reader immediately if currentBytes > maxBodySizeBytes,
- *      protecting against downstream servers lying about Content-Length or omitting headers.
+ * 5. FLEET-WIDE RETRY BUDGETING (RETRY STORM PREVENTION):
+ *    - Maintains a fleet-wide Retry Budget token bucket (max retry ratio = 20% of total requests).
+ *    - Suppresses retries globally if retry volume exceeds 20% budget, preventing fleet-wide thundering herds.
  * 
- * 5. SHA-256 TENANT-ISOLATED KEY GENERATION:
- *    - Constructs unique request signature: keyString = tenantId + ":" + method.toUpperCase() + ":" + url + ":" + JSON.stringify(body).
- *    - Computes 256-bit cryptographic digest: hashedRequestKey = SHA256(keyString).digest('hex').
+ * 6. TOTAL WALL-CLOCK OPERATION TIMEOUT BUDGET:
+ *    - Enforces a strict total wall-clock timeout budget across ALL retry attempts (totalMaxTimeoutMs = 15,000ms).
+ *    - Cancels entire pipeline if total cumulative elapsed execution time exceeds totalMaxTimeoutMs.
  * 
- * 6. SINGLEFLIGHT CONCURRENCY COLLAPSING (DEDUPLICATION):
- *    - Inspects active inFlightSingleflights map for hashedRequestKey.
- *    - If an identical request is already pending, returns existing active Promise<HttpResponse>.
+ * 7. REAL-TIME STREAMING BYTE-COUNT BODY BOUNDING:
+ *    - Enforces streaming payload size limits (default maxBodySizeBytes = 10MB).
+ *    - Counts cumulative bytes as stream chunks arrive via res.body.getReader(), aborting reader if total > 10MB.
  * 
- * 7. WRAPPED SEALED SPAN FACADE & DEFAULT-DENY ALLOWLIST:
- *    - Wraps OpenTelemetry span in TracedSpanFacade. Intercepts all setAttribute and addEvent calls,
- *      forcing values through filterAllowedAttributes() default-deny allowlist (ALLOWED_TELEMETRY_ATTRIBUTES).
- *    - Strips query parameters (?token=...) and userinfo (user:pass@) from http.url.
+ * 8. BOUNDED LRU TENANT-ISOLATED CIRCUIT BREAKER:
+ *    - Keyed by tenantId:routeTemplate. Bounded via LRU capacity (maxCircuitStates = 1000, 1h TTL) to prevent OOM.
  * 
- * 8. TENANT-PARTITIONED LRU CACHE EVALUATION & WRITE INVALIDATION:
- *    - Queries tenant-partitioned LRU cache: TenantPartitionedCacheStore.get(tenantId, hashedRequestKey).
- *    - On successful mutating write RPCs (POST, PUT, PATCH, DELETE), automatically invalidates tenant cache partition
- *      (cacheStore.clear(tenantId)) to eliminate stale reads.
- * 
- * 9. BOUNDED LRU TENANT-ISOLATED CIRCUIT BREAKER:
- *    - Derives circuit key: circuitKey = tenantId + ":" + routeTemplate.
- *    - Bounds circuit breaker state map via LRU capacity (maxCircuitStates = 1000) to prevent memory leaks.
- *    - Inspects circuit state (CLOSED, OPEN, HALF_OPEN). Rejects execution immediately if state is OPEN.
- * 
- * 10. PER-ATTEMPT CIRCUIT RE-CHECK & AWS FULL JITTER RETRY LOOP:
- *     - Re-evaluates circuitBreaker.canExecute(circuitKey) before EVERY retry iteration inside the loop.
- *     - Restricts automatic retries to idempotent methods (GET, HEAD, OPTIONS, PUT, DELETE) OR
- *       non-idempotent methods (POST, PATCH) with valid x-idempotency-key headers.
- *     - Calculates AWS Full Jitter backoff delay: Sleep(attempt) = Random(0, Min(maxMs, baseMs * 2^(attempt - 1))).
+ * 9. TENANT-PARTITIONED LRU CACHE & WRITE INVALIDATION:
+ *    - Queries tenant-partitioned LRU cache. Invalidates tenant cache partition on mutating write RPCs (POST, PUT, PATCH, DELETE).
  * ====================================================================================================
  */
 
@@ -156,7 +142,6 @@ export async function validateDestinationUrl(urlStr: string, allowedHosts?: stri
     }
   }
 
-  // DNS IP Resolution Validation against DNS-Rebinding TOCTOU
   try {
     const addresses = await dns.promises.lookup(parsedUrl.hostname, { all: true });
     for (const addr of addresses) {
@@ -214,6 +199,50 @@ export function isMethodIdempotent(method: string, headers: Record<string, strin
   return Boolean(headers[HTTP_CONSTANTS.HEADER_X_IDEMPOTENCY_KEY]);
 }
 
+export class ConcurrencyAdmissionControl {
+  private activeCount = 0;
+
+  constructor(private readonly maxInFlight = 500) {}
+
+  public acquire(): boolean {
+    if (this.activeCount >= this.maxInFlight) {
+      return false;
+    }
+    this.activeCount++;
+    return true;
+  }
+
+  public release(): void {
+    if (this.activeCount > 0) {
+      this.activeCount--;
+    }
+  }
+
+  public getActiveCount(): number {
+    return this.activeCount;
+  }
+}
+
+export class FleetRetryBudget {
+  private totalRequests = 0;
+  private totalRetries = 0;
+
+  constructor(private readonly maxRetryRatio = 0.2) {} // Max 20% retries fleet-wide
+
+  public recordRequest(): void {
+    this.totalRequests++;
+  }
+
+  public canRetry(): boolean {
+    if (this.totalRequests < 10) return true; // Grace period for initial requests
+    return (this.totalRetries / this.totalRequests) < this.maxRetryRatio;
+  }
+
+  public recordRetry(): void {
+    this.totalRetries++;
+  }
+}
+
 export class TenantRateLimiter {
   private readonly buckets = new Map<string, { tokens: number; lastRefill: number }>();
 
@@ -262,6 +291,7 @@ export interface RequestConfig {
   retries?: number;
   ttlMs?: number;
   timeoutMs?: number;
+  totalMaxTimeoutMs?: number;
   maxBodySizeBytes?: number;
   allowedHosts?: string[];
   failureThreshold?: number;
@@ -410,6 +440,8 @@ export class ScalableHttpClient {
   private cacheStore: ICacheStore = new TenantPartitionedCacheStore(250);
   private circuitBreaker = new StandardCircuitBreaker();
   private rateLimiter = new TenantRateLimiter(100, 50);
+  private admissionControl = new ConcurrencyAdmissionControl(500);
+  private retryBudget = new FleetRetryBudget(0.2);
 
   constructor() {
     this.registerDefaultHeaderProviders();
@@ -462,46 +494,57 @@ export class ScalableHttpClient {
   }
 
   public async execute<T>(rawConfig: RequestConfig): Promise<{ data: T; status: number; headers: Headers }> {
-    let config = rawConfig;
-    await validateDestinationUrl(config.url, config.allowedHosts);
-
-    for (const interceptor of this.requestInterceptors) {
-      config = await interceptor(config);
+    // Inbound Concurrency Admission Control Check
+    if (!this.admissionControl.acquire()) {
+      throw new Error(`Load Shedding: Client process in-flight concurrency capacity (500) exceeded`);
     }
 
-    const maxBodyBytes = config.maxBodySizeBytes ?? 10 * 1024 * 1024;
-    if (config.body && JSON.stringify(config.body).length > maxBodyBytes) {
-      throw new Error(`Request payload size exceeds maximum limit of ${maxBodyBytes} bytes`);
-    }
-
-    const caller = getCallerInfo();
-
-    let authenticatedTenantId = HTTP_CONSTANTS.DEFAULT_TENANT_ID;
     try {
-      authenticatedTenantId = RequestContextHolder.get().tenantId || HTTP_CONSTANTS.DEFAULT_TENANT_ID;
-    } catch {
-      authenticatedTenantId = config.headers?.[HTTP_CONSTANTS.HEADER_X_TENANT_ID] || HTTP_CONSTANTS.DEFAULT_TENANT_ID;
-    }
+      let config = rawConfig;
+      await validateDestinationUrl(config.url, config.allowedHosts);
 
-    // Tenant Outbound Rate Limiting Check
-    if (!this.rateLimiter.allowRequest(authenticatedTenantId)) {
-      throw new Error(`Rate limit exceeded for tenant ${authenticatedTenantId}`);
-    }
-
-    const hashedRequestKey = generateHashedKey(authenticatedTenantId, config.method, config.url, config.body);
-
-    if (!config.cancelPrevious) {
-      const existingSingleflight = this.inFlightSingleflights.get(hashedRequestKey);
-      if (existingSingleflight) {
-        return existingSingleflight as Promise<{ data: T; status: number; headers: Headers }>;
+      for (const interceptor of this.requestInterceptors) {
+        config = await interceptor(config);
       }
-    }
 
-    const executionPromise = this.executePipeline<T>(config, hashedRequestKey, authenticatedTenantId, caller);
-    this.inFlightSingleflights.set(hashedRequestKey, executionPromise);
-    return executionPromise.finally(() => {
-      this.inFlightSingleflights.delete(hashedRequestKey);
-    });
+      const maxBodyBytes = config.maxBodySizeBytes ?? 10 * 1024 * 1024;
+      if (config.body && JSON.stringify(config.body).length > maxBodyBytes) {
+        throw new Error(`Request payload size exceeds maximum limit of ${maxBodyBytes} bytes`);
+      }
+
+      const caller = getCallerInfo();
+
+      let authenticatedTenantId = HTTP_CONSTANTS.DEFAULT_TENANT_ID;
+      try {
+        authenticatedTenantId = RequestContextHolder.get().tenantId || HTTP_CONSTANTS.DEFAULT_TENANT_ID;
+      } catch {
+        authenticatedTenantId = config.headers?.[HTTP_CONSTANTS.HEADER_X_TENANT_ID] || HTTP_CONSTANTS.DEFAULT_TENANT_ID;
+      }
+
+      // Tenant Outbound Rate Limiting Check
+      if (!this.rateLimiter.allowRequest(authenticatedTenantId)) {
+        throw new Error(`Rate limit exceeded for tenant ${authenticatedTenantId}`);
+      }
+
+      this.retryBudget.recordRequest();
+
+      const hashedRequestKey = generateHashedKey(authenticatedTenantId, config.method, config.url, config.body);
+
+      if (!config.cancelPrevious) {
+        const existingSingleflight = this.inFlightSingleflights.get(hashedRequestKey);
+        if (existingSingleflight) {
+          return existingSingleflight as Promise<{ data: T; status: number; headers: Headers }>;
+        }
+      }
+
+      const executionPromise = this.executePipeline<T>(config, hashedRequestKey, authenticatedTenantId, caller);
+      this.inFlightSingleflights.set(hashedRequestKey, executionPromise);
+      return await executionPromise.finally(() => {
+        this.inFlightSingleflights.delete(hashedRequestKey);
+      });
+    } finally {
+      this.admissionControl.release();
+    }
   }
 
   private async executePipeline<T>(
@@ -512,10 +555,12 @@ export class ScalableHttpClient {
   ): Promise<{ data: T; status: number; headers: Headers }> {
     const maxRetries = config.retries ?? 3;
     const ttlMs = config.ttlMs ?? 5000;
-    const timeoutMs = config.timeoutMs ?? 30000;
+    const attemptTimeoutMs = config.timeoutMs ?? 30000;
+    const totalMaxTimeoutMs = config.totalMaxTimeoutMs ?? 15000; // 15s Total Wall-Clock Budget
     const failureThreshold = config.failureThreshold ?? 5;
     const tracer = trace.getTracer(HTTP_CONSTANTS.TRACER_NAME);
     const sanitizedUrl = sanitizeUrlForTelemetry(config.url);
+    const startTime = Date.now();
 
     if (config.cancelPrevious) {
       const existingController = this.activeControllers.get(requestKey);
@@ -531,7 +576,7 @@ export class ScalableHttpClient {
       config.signal.addEventListener('abort', () => controller.abort());
     }
 
-    const timeoutTimer = setTimeout(() => controller.abort(), timeoutMs);
+    const totalTimeoutTimer = setTimeout(() => controller.abort(), totalMaxTimeoutMs);
 
     return tracer.startActiveSpan(`HTTP ${config.method} ${sanitizedUrl}`, { kind: SpanKind.CLIENT }, async (rawSpan) => {
       const span = new TracedSpanFacade(rawSpan);
@@ -577,7 +622,7 @@ export class ScalableHttpClient {
         });
 
         if (isCacheHit) {
-          clearTimeout(timeoutTimer);
+          clearTimeout(totalTimeoutTimer);
           this.activeControllers.delete(requestKey);
           span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_POSITIVE);
           span.addEvent(HTTP_CONSTANTS.EVENT_EXECUTION_SUCCESS, { [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_SUCCESS });
@@ -598,7 +643,7 @@ export class ScalableHttpClient {
         });
 
         if (!canRun) {
-          clearTimeout(timeoutTimer);
+          clearTimeout(totalTimeoutTimer);
           this.activeControllers.delete(requestKey);
           const cbErr = new Error(`CircuitBreaker: Request to ${sanitizedUrl} blocked due to active OPEN state for tenant ${tenantId}`);
           span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_NEGATIVE);
@@ -617,6 +662,11 @@ export class ScalableHttpClient {
 
         let lastError: unknown = null;
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
+          // Total Wall-Clock Timeout Budget Check across retries
+          if (Date.now() - startTime >= totalMaxTimeoutMs) {
+            throw new Error(`Total operation wall-clock timeout budget (${totalMaxTimeoutMs}ms) exceeded`);
+          }
+
           if (!this.circuitBreaker.canExecute(circuitKey)) {
             throw new Error(`CircuitBreaker: Circuit tripped to OPEN state mid-retry for tenant ${tenantId}`);
           }
@@ -624,14 +674,19 @@ export class ScalableHttpClient {
           span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_RETRY_ATTEMPT, attempt);
           span.addEvent(HTTP_CONSTANTS.EVENT_STEP_FETCH_INITIATED, { [HTTP_CONSTANTS.KEY_RETRY_ATTEMPT]: attempt });
 
+          const perAttemptController = new AbortController();
+          const attemptTimer = setTimeout(() => perAttemptController.abort(), attemptTimeoutMs);
+
           try {
             const res = await fetch(config.url, {
               method: config.method,
               headers: resolvedHeaders,
               body: config.body ? JSON.stringify(config.body) : undefined,
-              signal: controller.signal,
+              signal: perAttemptController.signal,
               redirect: 'manual',
             });
+
+            clearTimeout(attemptTimer);
 
             if (res.status >= 300 && res.status < 400) {
               const redirectUrl = res.headers.get('location');
@@ -650,7 +705,6 @@ export class ScalableHttpClient {
               );
             }
 
-            // Real-time Streaming Byte-Counting Body Limit
             const maxBodyBytes = config.maxBodySizeBytes ?? 10 * 1024 * 1024;
             let data: T;
 
@@ -688,7 +742,6 @@ export class ScalableHttpClient {
 
             this.circuitBreaker.onSuccess(circuitKey);
 
-            // Mutating Write Request Cache Invalidation
             const upperMethod = config.method.toUpperCase();
             if (upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH' || upperMethod === 'DELETE') {
               this.cacheStore.clear(tenantId);
@@ -696,7 +749,7 @@ export class ScalableHttpClient {
               this.cacheStore.set(tenantId, requestKey, data, ttlMs);
             }
 
-            clearTimeout(timeoutTimer);
+            clearTimeout(totalTimeoutTimer);
             this.activeControllers.delete(requestKey);
 
             span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_POSITIVE);
@@ -706,6 +759,7 @@ export class ScalableHttpClient {
             return { data, status: res.status, headers: res.headers };
 
           } catch (err: any) {
+            clearTimeout(attemptTimer);
             lastError = err;
             this.circuitBreaker.onFailure(circuitKey, failureThreshold);
 
@@ -724,7 +778,12 @@ export class ScalableHttpClient {
             }
 
             const idempotentMethod = isMethodIdempotent(config.method, resolvedHeaders);
-            const shouldRetry = !isAborted && idempotentMethod && attempt < maxRetries && retryPolicyRegistry.isRetryable(err);
+            const retryBudgetAvailable = this.retryBudget.canRetry();
+            const shouldRetry = !isAborted && idempotentMethod && retryBudgetAvailable && attempt < maxRetries && retryPolicyRegistry.isRetryable(err);
+
+            if (shouldRetry) {
+              this.retryBudget.recordRetry();
+            }
 
             span.addEvent(HTTP_CONSTANTS.EVENT_RETRY_DECISION, {
               [HTTP_CONSTANTS.KEY_RETRY_ATTEMPT]: attempt,
@@ -742,7 +801,7 @@ export class ScalableHttpClient {
           }
         }
 
-        clearTimeout(timeoutTimer);
+        clearTimeout(totalTimeoutTimer);
         this.activeControllers.delete(requestKey);
 
         span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_NEGATIVE);
@@ -761,7 +820,7 @@ export class ScalableHttpClient {
         throw lastError;
 
       } catch (fatalErr) {
-        clearTimeout(timeoutTimer);
+        clearTimeout(totalTimeoutTimer);
         this.activeControllers.delete(requestKey);
         span.setStatus({
           code: SpanStatusCode.ERROR,

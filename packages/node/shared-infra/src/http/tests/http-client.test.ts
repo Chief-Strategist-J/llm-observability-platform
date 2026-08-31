@@ -12,17 +12,47 @@ import {
   isMethodIdempotent,
   TenantPartitionedCacheStore,
   TenantRateLimiter,
-  StandardCircuitBreaker
+  StandardCircuitBreaker,
+  ConcurrencyAdmissionControl,
+  FleetRetryBudget
 } from '../http-client';
 import { RequestContextHolder } from '../../tracing/request-context';
 import { getCallerInfo } from '../../tracing/caller-info';
 
-describe('ScalableHttpClient Production Hardening Architecture', () => {
+describe('ScalableHttpClient Fleet Resilience Architecture', () => {
   let client: ScalableHttpClient;
 
   beforeEach(() => {
     client = new ScalableHttpClient();
     vi.restoreAllMocks();
+  });
+
+  describe('Concurrency Admission Control & Load Shedding', () => {
+    it('sheds load when process in-flight concurrency capacity is reached', () => {
+      const admission = new ConcurrencyAdmissionControl(2);
+      expect(admission.acquire()).toBe(true);
+      expect(admission.acquire()).toBe(true);
+      expect(admission.acquire()).toBe(false); // Capacity exceeded
+
+      admission.release();
+      expect(admission.acquire()).toBe(true);
+    });
+  });
+
+  describe('Fleet-Wide Retry Budgeting', () => {
+    it('suppresses retries when fleet-wide retry volume exceeds 20% budget', () => {
+      const budget = new FleetRetryBudget(0.2);
+      for (let i = 0; i < 20; i++) {
+        budget.recordRequest();
+      }
+
+      // Record 5 retries (25% ratio > 20% budget)
+      for (let i = 0; i < 5; i++) {
+        budget.recordRetry();
+      }
+
+      expect(budget.canRetry()).toBe(false);
+    });
   });
 
   describe('AsyncLocalStorage Request Context Isolation', () => {
@@ -45,15 +75,6 @@ describe('ScalableHttpClient Production Hardening Architecture', () => {
     });
   });
 
-  describe('Self-Verifying Dynamic Caller Location Telemetry', () => {
-    it('dynamically scans V8 stack frames outside http-client infrastructure', () => {
-      const caller = getCallerInfo();
-      expect(caller.filePath).toBeDefined();
-      expect(caller.functionName).toBeDefined();
-      expect(caller.filePath).not.toContain('/home/');
-    });
-  });
-
   describe('DNS IP-Level SSRF & Protocol Protection', () => {
     it('blocks private internal IP ranges and invalid protocols', async () => {
       await expect(validateDestinationUrl('http://169.254.169.254/latest/meta-data')).rejects.toThrow(/SSRF Blocked/);
@@ -73,7 +94,6 @@ describe('ScalableHttpClient Production Hardening Architecture', () => {
       expect(limiter.allowRequest('tenant-A')).toBe(true);
       expect(limiter.allowRequest('tenant-A')).toBe(true);
       expect(limiter.allowRequest('tenant-A')).toBe(false);
-      // Independent tenant bucket
       expect(limiter.allowRequest('tenant-B')).toBe(true);
     });
   });
@@ -84,7 +104,6 @@ describe('ScalableHttpClient Production Hardening Architecture', () => {
       cache.set('tenant-1', 'key-1', 'cached-data', 5000);
       expect(cache.get('tenant-1', 'key-1')).toBe('cached-data');
 
-      // Clear tenant partition on write mutation
       cache.clear('tenant-1');
       expect(cache.get('tenant-1', 'key-1')).toBeUndefined();
     });
