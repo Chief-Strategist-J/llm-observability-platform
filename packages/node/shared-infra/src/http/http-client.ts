@@ -41,7 +41,7 @@ export interface RequestConfig {
 
 export type HeaderProviderFn = (config: RequestConfig) => Record<string, string> | Promise<Record<string, string>>;
 export type RequestInterceptorFn = (config: RequestConfig) => RequestConfig | Promise<RequestConfig>;
-export type ResponseInterceptorFn<T = unknown> = (data: T, response: Response, config: RequestConfig) => T | Promise<T>;
+export type ResponseInterceptorFn<T = any> = (data: T, response: Response, config: RequestConfig) => T | Promise<T>;
 export type ErrorInterceptorFn = (error: unknown, config: RequestConfig) => unknown;
 
 export interface ICacheStore {
@@ -241,10 +241,10 @@ export class ScalableHttpClient {
                           })()
                         : await (async () => {
                             const rawJson = (await res.json()) as T;
-                            const data = await this.responseInterceptors.reduce(
+                            const data = (await this.responseInterceptors.reduce<Promise<unknown>>(
                               async (accPromise, interceptor) => interceptor(await accPromise, res, config),
                               Promise.resolve(rawJson)
-                            );
+                            )) as T;
 
                             this.circuitBreaker.onSuccess(config.url);
                             this.cacheStore.set(cacheKey, data, ttlMs);
