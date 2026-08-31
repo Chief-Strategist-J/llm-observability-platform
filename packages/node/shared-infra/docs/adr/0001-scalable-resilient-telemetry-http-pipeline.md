@@ -31,68 +31,73 @@ We need a standardized, resilient, readable shared infrastructure combining an H
 
 ---
 
-## 3. Detailed 10-Step Hardened Pipeline Specification
+## 3. Detailed 10-Step Fleet-Resilient Pipeline Specification
 
-### Step 1: AsyncLocalStorage Request Context Isolation
-To eliminate cross-tenant data leaks and context-bleeding bugs in concurrent Node.js asynchronous execution chains, context propagation uses Node.js native `AsyncLocalStorage`:
+### Step 1: Inbound Concurrency Admission Control & Load Shedding
+To protect the Node.js process event loop and connection pools from inbound request saturation:
+$$\text{ActiveInFlight} \le \text{MaxInFlightRequests} \quad (\text{default } 500)$$
+If active in-flight execution count exceeds capacity, the client sheds load immediately, rejecting incoming calls with a `429 / Load Shedding` error.
+
+---
+
+### Step 2: AsyncLocalStorage Request Context Isolation
+Context propagation uses Node.js native `AsyncLocalStorage` to eliminate cross-tenant data leaks and context-bleeding bugs in concurrent asynchronous execution chains:
 $$\text{Context}_{\text{active}} = \text{AsyncLocalStorage.getStore}()$$
 If uninitialized, a fallback context with `tenantId: "tenant-default"` is created automatically.
 
 ---
 
-### Step 2: DNS IP-Level Resolution SSRF & TOCTOU Protection
-String-based URL checks are vulnerable to DNS Rebinding and TOCTOU (Time-of-Check to Time-of-Use) attacks. The pipeline performs an asynchronous DNS resolution via `dns.promises.lookup()` to validate the actual resolved IP address against restricted subnets before opening a socket connection:
+### Step 3: DNS IP-Level Resolution SSRF & TOCTOU Protection
+The pipeline performs async DNS resolution via `dns.promises.lookup()` to validate the actual resolved IP address against restricted subnets before opening a socket connection:
 $$\text{BlockedSubnets} = \{ 127.0.0.0/8, 169.254.0.0/16, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, ::1, 0.0.0.0 \}$$
 If the target hostname resolves to any IP in $\text{BlockedSubnets}$, execution is aborted immediately with an SSRF Violation error.
 
 ---
 
-### Step 3: Per-Tenant Outbound Rate Limiting (Token Bucket)
-To prevent a single noisy or misconfigured tenant from saturating connection pools or starving shared event loop cycles:
+### Step 4: Per-Tenant Outbound Rate Limiting (Token Bucket)
+Enforces Token Bucket outbound rate limiting per tenant:
 $$\text{Tokens}_{\text{new}} = \min(\text{MaxTokens}, \text{Tokens}_{\text{current}} + \Delta t \times \text{RefillRate})$$
-Default configuration: $\text{MaxTokens} = 100$, $\text{RefillRate} = 50\text{ req/sec}$. Requests exceeding tenant capacity are rejected with a rate limit error.
+Default configuration: $\text{MaxTokens} = 100$, $\text{RefillRate} = 50\text{ req/sec}$.
 
 ---
 
-### Step 4: Real-Time Streaming Byte-Counting Body Bounding
-Downstream servers can omit `Content-Length` headers or stream unbounded chunked payloads. The client inspects response streams using `res.body.getReader()`, accumulating byte counts in real time:
-$$\text{Bytes}_{\text{total}} = \sum_{i=1}^{n} \text{chunk}_i.\text{length}$$
-If $\text{Bytes}_{\text{total}} > \text{maxBodySizeBytes}$ (default 10MB), the stream reader is cancelled immediately and an OOM prevention error is thrown.
+### Step 5: Fleet-Wide Retry Budgeting (Retry Storm Prevention)
+To prevent broad partial outages across multiple routes from turning into a retry-amplified thundering herd:
+$$\text{RetryRatio} = \frac{\text{TotalRetries}}{\text{TotalRequests}} \le 0.20 \quad (20\% \text{ Fleet Retry Budget})$$
+If cumulative retry volume exceeds 20% of total fleet requests, retries are suppressed globally, failing fast to protect downstreams.
 
 ---
 
-### Step 5: SHA-256 Tenant-Isolated Key Hashing
-Request signatures incorporate tenant identity and payload structure, hashed into a fixed 256-bit hex digest:
+### Step 6: Total Operation Wall-Clock Timeout Budget
+Enforces a strict total wall-clock timeout budget across ALL retry attempts ($\text{totalMaxTimeoutMs} = 15,000\text{ms}$):
+$$\text{ElapsedTime} = \text{Date.now}() - \text{StartTime} \le \text{totalMaxTimeoutMs}$$
+An overarching `AbortController` cancels the entire pipeline if total cumulative execution time reaches 15 seconds, preventing UI stalls.
+
+---
+
+### Step 7: SHA-256 Tenant-Isolated Key Hashing & Singleflight Collapsing
+Request signatures incorporate tenant identity and payload structure, hashed into a 256-bit hex digest:
 $$\text{Key}_{\text{raw}} = \text{tenantId} \parallel \text{method} \parallel \text{url} \parallel \text{JSON.stringify}(\text{body})$$
 $$\text{Key}_{\text{hashed}} = \text{SHA256}(\text{Key}_{\text{raw}}).\text{digest}("hex")$$
+Inspects active `inFlightSingleflights` map for $\text{Key}_{\text{hashed}}$, collapsing $N$ duplicate concurrent requests into 1 network RPC in $O(1)$ memory time.
 
 ---
 
-### Step 6: Singleflight Concurrency Collapsing (O(1) Memory Lookup)
-Inspects active `inFlightSingleflights` map for $\text{Key}_{\text{hashed}}$. If an identical in-flight request exists, concurrent callers share the pending `Promise<HttpResponse>`, reducing network RPC overhead to $O(1)$.
-
----
-
-### Step 7: Sealed TracedSpanFacade & Default-Deny Allowlist Filter
-To prevent accidental telemetry credential leakage, raw OpenTelemetry spans are wrapped inside a sealed `TracedSpanFacade`. All attributes and events are filtered against an explicit allowlist:
+### Step 8: Sealed TracedSpanFacade & Default-Deny Allowlist Filter
+Raw OpenTelemetry spans are wrapped inside a sealed `TracedSpanFacade`. Attributes are filtered against an explicit allowlist:
 $$\text{Attributes}_{\text{allowed}} = \{ k \in \text{Attributes}_{\text{raw}} \mid k \in \text{ALLOWED\_TELEMETRY\_ATTRIBUTES} \}$$
 URLs are sanitized via `sanitizeUrlForTelemetry()`, removing userinfo (`user:pass@`) and query strings (`?access_token=...`).
 
 ---
 
-### Step 8: Tenant-Partitioned LRU Cache & Write Invalidation
-- **Tenant Isolation**: Caches are partitioned per tenant ($\text{Map}<\text{tenantId}, \text{BoundedLRU}>$), preventing single-tenant cache stampedes.
-- **Write Invalidation**: Executing write mutations (`POST`, `PUT`, `PATCH`, `DELETE`) automatically invalidates the tenant's cache partition ($\text{cacheStore.clear}(\text{tenantId})$) to prevent stale GET reads.
+### Step 9: Tenant-Partitioned LRU Cache & Write Invalidation
+- **Tenant Isolation**: Caches are partitioned per tenant ($\text{Map}<\text{tenantId}, \text{BoundedLRU}>$).
+- **Write Invalidation**: Executing write mutations (`POST`, `PUT`, `PATCH`, `DELETE`) automatically invalidates the tenant's cache partition ($\text{cacheStore.clear}(\text{tenantId})$).
 
 ---
 
-### Step 9: Bounded LRU Circuit Breaker (Tenant-Isolated Route Templates)
-Circuit breaker states are keyed by `tenantId:routeTemplate` (e.g., `tenant-acme:api.org/users/:id`). States are managed inside a Bounded LRU store ($\text{maxCapacity} = 1000$, $\text{TTL} = 1\text{ hour}$), preventing memory leaks from dynamic route expansion.
-
----
-
-### Step 10: Per-Attempt Circuit Re-Check & AWS Full Jitter Retry
-Re-evaluates `circuitBreaker.canExecute(circuitKey)` before every retry iteration. Retries are restricted to idempotent methods (`GET`, `HEAD`, `OPTIONS`, `PUT`, `DELETE`) or requests with an explicit `x-idempotency-key`. Backoff delay uses AWS Full Jitter:
+### Step 10: Bounded LRU Circuit Breaker & Per-Attempt Re-Check
+Circuit breaker states are stored in a Bounded LRU store ($\text{maxCapacity} = 1000$, $\text{TTL} = 1\text{ hour}$). The status (`CLOSED`, `OPEN`, `HALF_OPEN`) is re-evaluated before EVERY retry iteration. Retries use AWS Full Jitter:
 $$\text{Sleep}(\text{attempt}) = \text{Random}\left(0, \min\left(\text{maxMs}, \text{baseMs} \times 2^{\text{attempt} - 1}\right)\right)$$
 
 ---
@@ -108,7 +113,8 @@ graph TD
   subgraph SharedInfra ["Shared Infrastructure Layer (@observability/shared-infra)"]
     HTTP["ScalableHttpClient Facade"]
     ALS["Node.js AsyncLocalStorage Context"]
-    RE["Rules Engine (resolveRules)"]
+    ADM["ConcurrencyAdmissionControl (Max 500 In-Flight)"]
+    BUDGET["FleetRetryBudget (Max 20% Retry Ratio)"]
     SF["Singleflight Deduplicator Map"]
     CB["Tenant-Isolated CircuitBreaker (Bounded LRU)"]
     CACHE["TenantPartitionedCacheStore (LRU Bounded)"]
@@ -122,8 +128,10 @@ graph TD
   end
 
   FE -->|"1. execute(RequestConfig)"| HTTP
+  HTTP -->|"Inbound Concurrency Check"| ADM
   HTTP -->|"Isolated Context"| ALS
   HTTP -->|"Check Outbound Rate"| LIMIT
+  HTTP -->|"Check Fleet Retry Budget"| BUDGET
   HTTP -->|"Check In-Flight Singleflight"| SF
   HTTP -->|"Evaluate Cache Policy"| CACHE
   HTTP -->|"Inspect Bounded Circuit State"| CB
@@ -166,29 +174,34 @@ graph LR
 
 ---
 
-### 5.2 Multi-Tenant Isolation & AsyncLocalStorage Architecture Diagram
+### 5.2 Fleet-Wide Resilience & Concurrency Guard Diagram
 
 ```mermaid
 graph TD
-  subgraph AuthContext ["Node.js AsyncLocalStorage Context"]
+  subgraph InboundGuard ["Inbound Concurrency Control"]
+    ADM["ConcurrencyAdmissionControl (Active <= 500)"]
+  end
+
+  subgraph ContextEngine ["Async Context & Auth"]
     ALS["AsyncLocalStorage.getStore() -> tenantId"]
   end
 
-  subgraph KeyGenerators ["SHA-256 & Route Template Generators"]
-    HASH["generateHashedKey(tenantId, method, url, body)"]
-    ROUTE["deriveRouteTemplate(tenantId, url)"]
+  subgraph RetryGuard ["Fleet Retry Protection"]
+    BUDGET["FleetRetryBudget (Retries / Requests <= 20%)"]
+    WALL["Total Wall-Clock Timeout Budget (<= 15,000ms)"]
   end
 
-  subgraph IsolatedPartitions ["Tenant-Isolated State Stores"]
-    LRU["TenantPartitionedCacheStore (Map<tenantId, BoundedLRU>)"]
-    CBStore["StandardCircuitBreaker (BoundedLRU: tenantId:routeTemplate)"]
+  subgraph PartitionedState ["State Isolation & Bounds"]
+    LRU["TenantPartitionedCacheStore (Bounded LRU)"]
+    CBStore["StandardCircuitBreaker (Bounded LRU: tenantId:routeTemplate)"]
     RateStore["TenantRateLimiter (TokenBucket: tenantId)"]
   end
 
-  ALS --> HASH & ROUTE
+  ADM --> ALS
   ALS --> RateStore
-  HASH --> LRU
-  ROUTE --> CBStore
+  RateStore --> BUDGET
+  BUDGET --> WALL
+  WALL --> LRU & CBStore
 ```
 
 ---
@@ -196,10 +209,12 @@ graph TD
 ## 6. Verification & Test Coverage Matrix
 
 ### 6.1 Automated Unit & Integration Tests (100% Passing)
+* **Concurrency Admission Control**: Verified process load shedding when in-flight capacity (500) is exceeded.
+* **Fleet-Wide Retry Budgeting**: Verified retries are suppressed when fleet retry ratio exceeds 20%.
 * **AsyncLocalStorage Context Isolation**: Verified thread-safe isolated tenant context across concurrent async executions.
 * **Dynamic V8 Stack Frame Telemetry**: Verified self-verifying stack frame resolution outside infrastructure packages.
 * **DNS IP-Level SSRF Protection**: Verified resolved IP address subnets (`127.0.0.1`, `169.254.169.254`) are blocked.
-* **Streaming Byte-Counting Body Limit**: Verified real-time chunk byte counting aborts oversized streams.
+* **Streaming Byte-Counting Body Limit**: Verified real-time chunk byte counting aborts oversized streams (>10MB).
 * **Bounded LRU Circuit Breaker**: Verified circuit breaker states map is bounded to `1000` entries.
 * **Mutating Write Cache Invalidation**: Verified `POST`, `PUT`, `PATCH`, `DELETE` operations clear tenant cache partitions.
 * **Per-Tenant Outbound Rate Limiter**: Verified Token Bucket rate limiting enforces per-tenant request limits.
