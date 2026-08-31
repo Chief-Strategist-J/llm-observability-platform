@@ -1,17 +1,18 @@
 /**
- * ALGORITHM & ARCHITECTURE: Scalable Resilient HTTP Client Pipeline
+ * ALGORITHM & ARCHITECTURE: Scalable Resilient HTTP Client Pipeline with Granular Step-by-Step Telemetry
  * 
- * 1. Request Interception: Config passes through registered RequestInterceptors via Promise.reduce.
- * 2. In-Flight Singleflight & Cancellation: Collapses identical concurrent read requests (Singleflight pattern) to prevent thundering herd; aborts previous request via AbortController if cancelPrevious is true. Emits OTEL Decision Events.
- * 3. Header Resolution: Aggregates headers from HeaderProviderRegistry (Auth JWT, W3C traceparent, Tenant ID, Cache-Control).
- * 4. Idempotency Key Preservation: Preserves identical x-idempotency-key across all retry attempts for idempotent downstream processing.
- * 5. Endpoint-Level Cache Policy: Evaluates Cache-Control headers (no-cache, no-store) and config.noCache flag with Decision Span Events.
- * 6. Cache Lookup: Checks ICacheStore if caching enabled; returns cached data synchronously on hit.
- * 7. Circuit Breaker Check: Evaluates ICircuitBreaker status; rejects execution if state is OPEN with Decision Span Events.
- * 8. Timeout & Signal Merging: Integrates request timeout (timeoutMs) and merges caller-provided AbortSignal.
- * 9. Recursive Retry Pipeline with Dual Positive & Negative Path Tracing:
- *    a. Positive Path Tracing: Sets SpanStatusCode.OK, ATTR_EXECUTION_PATH = PATH_POSITIVE, and emits EVENT_EXECUTION_SUCCESS.
- *    b. Negative Path Tracing: Sets SpanStatusCode.ERROR, ATTR_EXECUTION_PATH = PATH_NEGATIVE, records exception, and emits EVENT_EXECUTION_FAILURE.
+ * 1. Step 1 (Request Interception): Config passes through registered RequestInterceptors via Promise.reduce. Emits EVENT_STEP_REQUEST_INTERCEPTORS.
+ * 2. Step 2 (Singleflight & Cancellation): Collapses identical concurrent read requests (Singleflight pattern) to prevent thundering herd; aborts previous request via AbortController if cancelPrevious is true. Emits EVENT_STEP_SINGLEFLIGHT_CHECK.
+ * 3. Step 3 (Header Resolution): Aggregates headers from HeaderProviderRegistry (Auth JWT, W3C traceparent, Tenant ID, Cache-Control). Emits EVENT_STEP_HEADERS_RESOLVED.
+ * 4. Step 4 (Idempotency Key Preservation): Preserves identical x-idempotency-key across all retry attempts for idempotent downstream processing.
+ * 5. Step 5 (Cache Policy Evaluation): Evaluates Cache-Control headers (no-cache, no-store) and config.noCache flag with Decision Span Events.
+ * 6. Step 6 (Circuit Breaker Inspection): Evaluates ICircuitBreaker status; rejects execution if state is OPEN with Decision Span Events.
+ * 7. Step 7 (Timeout & Signal Merging): Integrates request timeout (timeoutMs) and merges caller-provided AbortSignal.
+ * 8. Step 8 (Recursive Retry Pipeline with Dual Positive & Negative Path Tracing & Step Telemetry):
+ *    a. Invokes fetch with merged AbortSignal and exponential Full Jitter backoff calculation. Emits EVENT_STEP_FETCH_INITIATED.
+ *    b. On HTTP failure, queries RetryPolicyRegistry to verify error retryability. Emits EVENT_STEP_ERROR_HANDLED.
+ *    c. On HTTP success, executes ResponseInterceptors, resets Circuit Breaker, updates CacheStore (if enabled). Emits EVENT_STEP_RESPONSE_INTERCEPTORS and EVENT_EXECUTION_SUCCESS.
+ *    d. On error, triggers ErrorInterceptors, OpenTelemetry exception recording, and EVENT_EXECUTION_FAILURE.
  */
 
 import crypto from "crypto";
@@ -227,6 +228,12 @@ export class ScalableHttpClient {
     const timeoutTimer = setTimeout(() => controller.abort(), timeoutMs);
 
     return tracer.startActiveSpan(`HTTP ${config.method} ${config.url}`, { kind: SpanKind.CLIENT }, async (span) => {
+      // Step 1 Telemetry: Request Interceptors
+      span.addEvent(HTTP_CONSTANTS.EVENT_STEP_REQUEST_INTERCEPTORS, {
+        [HTTP_CONSTANTS.KEY_INTERCEPTORS_COUNT]: this.requestInterceptors.length,
+      });
+
+      // Step 2 Telemetry: Header Providers Resolution
       const resolvedHeaders = await this.headerProviders.reduce<Promise<Record<string, string>>>(
         async (accPromise, provider) => ({
           ...(await accPromise),
@@ -238,10 +245,15 @@ export class ScalableHttpClient {
         })
       );
 
+      span.addEvent(HTTP_CONSTANTS.EVENT_STEP_HEADERS_RESOLVED, {
+        [HTTP_CONSTANTS.KEY_HEADERS_COUNT]: this.headerProviders.length,
+      });
+
       const idempotencyKey = resolvedHeaders[HTTP_CONSTANTS.HEADER_X_IDEMPOTENCY_KEY] || crypto.randomBytes(16).toString("hex");
       resolvedHeaders[HTTP_CONSTANTS.HEADER_X_IDEMPOTENCY_KEY] = idempotencyKey;
       span.setAttribute(HTTP_CONSTANTS.ATTR_IDEMPOTENCY_KEY, idempotencyKey);
 
+      // Step 3 Telemetry: Cache Policy Evaluation
       const cacheBypassed = isCacheDisabled(config, resolvedHeaders);
       const cachedData = cacheBypassed ? undefined : this.cacheStore.get<T>(requestKey);
       const isCacheHit = !cacheBypassed && cachedData !== undefined;
@@ -265,6 +277,7 @@ export class ScalableHttpClient {
             { data: cachedData, status: 200, headers: new Headers() }
           )
         : await (async () => {
+            // Step 4 Telemetry: Circuit Breaker Inspection
             const canRun = this.circuitBreaker.canExecute(config.url);
             const circuitState = this.circuitBreaker.getState(config.url);
             span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CIRCUIT_STATE, circuitState.state);
@@ -297,8 +310,11 @@ export class ScalableHttpClient {
                   resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID] &&
                     span.setAttribute(HTTP_CONSTANTS.ATTR_TENANT_ID, resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID]!);
 
+                  // Pure Recursive Retry Pipeline with Step & Decision Telemetry
                   const attemptFetch = async (attempt: number): Promise<{ data: T; status: number; headers: Headers }> => {
                     span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_RETRY_ATTEMPT, attempt);
+                    span.addEvent(HTTP_CONSTANTS.EVENT_STEP_FETCH_INITIATED, { [HTTP_CONSTANTS.KEY_RETRY_ATTEMPT]: attempt });
+
                     try {
                       const res = await fetch(config.url, {
                         method: config.method,
@@ -324,6 +340,10 @@ export class ScalableHttpClient {
                               Promise.resolve(rawJson)
                             )) as T;
 
+                            span.addEvent(HTTP_CONSTANTS.EVENT_STEP_RESPONSE_INTERCEPTORS, {
+                              [HTTP_CONSTANTS.KEY_INTERCEPTORS_COUNT]: this.responseInterceptors.length,
+                            });
+
                             this.circuitBreaker.onSuccess(config.url);
                             !cacheBypassed && this.cacheStore.set(requestKey, data, ttlMs);
                             clearTimeout(timeoutTimer);
@@ -338,6 +358,10 @@ export class ScalableHttpClient {
                     } catch (err: any) {
                       this.circuitBreaker.onFailure(config.url, failureThreshold);
                       this.errorInterceptors.forEach((interceptor) => interceptor(err, config));
+
+                      span.addEvent(HTTP_CONSTANTS.EVENT_STEP_ERROR_HANDLED, {
+                        [HTTP_CONSTANTS.KEY_INTERCEPTORS_COUNT]: this.errorInterceptors.length,
+                      });
 
                       const isAborted = err?.name === HTTP_CONSTANTS.ERROR_NAME_ABORT || controller.signal.aborted;
                       isAborted && (span.setAttribute(HTTP_CONSTANTS.ATTR_REQUEST_CANCELLED, true), span.addEvent(HTTP_CONSTANTS.EVENT_REQUEST_CANCELLED, { [HTTP_CONSTANTS.KEY_CANCELLED_KEY]: requestKey }));

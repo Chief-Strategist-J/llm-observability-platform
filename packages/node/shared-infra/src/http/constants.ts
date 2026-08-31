@@ -60,7 +60,7 @@ export const HTTP_CONSTANTS = {
   STATUS_SUCCESS: "success",
   STATUS_FAILURE: "failure",
 
-  // Decision Span Events
+  // Decision & Step Span Events
   EVENT_SINGLEFLIGHT_HIT: "decision.singleflight_collapsed",
   EVENT_CACHE_EVALUATED: "decision.cache_evaluated",
   EVENT_CIRCUIT_EVALUATED: "decision.circuit_breaker_evaluated",
@@ -68,6 +68,14 @@ export const HTTP_CONSTANTS = {
   EVENT_RETRY_DECISION: "decision.retry_evaluated",
   EVENT_EXECUTION_SUCCESS: "execution.success",
   EVENT_EXECUTION_FAILURE: "execution.failure",
+
+  // Granular Pipeline Step Span Events
+  EVENT_STEP_REQUEST_INTERCEPTORS: "step.request_interceptors_executed",
+  EVENT_STEP_SINGLEFLIGHT_CHECK: "step.singleflight_check_completed",
+  EVENT_STEP_HEADERS_RESOLVED: "step.header_providers_resolved",
+  EVENT_STEP_FETCH_INITIATED: "step.fetch_attempt_initiated",
+  EVENT_STEP_RESPONSE_INTERCEPTORS: "step.response_interceptors_executed",
+  EVENT_STEP_ERROR_HANDLED: "step.error_interceptors_handled",
 
   // Attribute Keys for Decision Events
   KEY_CACHE_BYPASSED: "cache.bypassed",
@@ -80,4 +88,6 @@ export const HTTP_CONSTANTS = {
   KEY_RETRY_ATTEMPT: "retry.attempt",
   KEY_RETRY_SHOULD_RETRY: "retry.should_retry",
   KEY_RETRY_ERROR_MSG: "retry.error_message",
+  KEY_INTERCEPTORS_COUNT: "interceptors.count",
+  KEY_HEADERS_COUNT: "headers.provider_count",
 } as const;
