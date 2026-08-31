@@ -9,12 +9,9 @@
  * 6. Cache Lookup: Checks ICacheStore if caching enabled; returns cached data synchronously on hit.
  * 7. Circuit Breaker Check: Evaluates ICircuitBreaker status; rejects execution if state is OPEN with Decision Span Events.
  * 8. Timeout & Signal Merging: Integrates request timeout (timeoutMs) and merges caller-provided AbortSignal.
- * 9. Recursive Retry Pipeline:
- *    a. Invokes fetch with merged AbortSignal and exponential Full Jitter backoff calculation:
- *       sleep_ms = random(0, min(maxMs, baseMs * 2^(attempt-1)))
- *    b. On HTTP failure, queries RetryPolicyRegistry to verify error retryability and emits Retry Decision Events.
- *    c. On HTTP success, executes ResponseInterceptors, resets Circuit Breaker, updates CacheStore (if enabled).
- *    d. On error, triggers ErrorInterceptors and OpenTelemetry exception recording.
+ * 9. Recursive Retry Pipeline with Dual Positive & Negative Path Tracing:
+ *    a. Positive Path Tracing: Sets SpanStatusCode.OK, ATTR_EXECUTION_PATH = PATH_POSITIVE, and emits EVENT_EXECUTION_SUCCESS.
+ *    b. Negative Path Tracing: Sets SpanStatusCode.ERROR, ATTR_EXECUTION_PATH = PATH_NEGATIVE, records exception, and emits EVENT_EXECUTION_FAILURE.
  */
 
 import crypto from "crypto";
@@ -202,7 +199,6 @@ export class ScalableHttpClient {
 
     const requestKey = `${config.method}:${config.url}:${config.body ? JSON.stringify(config.body) : ''}`;
 
-    // Singleflight Request Collapsing for In-Flight Read/Identical Requests
     const existingSingleflight = !config.cancelPrevious && this.inFlightSingleflights.get(requestKey);
     return existingSingleflight
       ? (existingSingleflight as Promise<{ data: T; status: number; headers: Headers }>)
@@ -218,19 +214,16 @@ export class ScalableHttpClient {
     const ttlMs = config.ttlMs ?? 5000;
     const timeoutMs = config.timeoutMs ?? 30000;
     const failureThreshold = config.failureThreshold ?? 5;
-    const tracer = trace.getTracer('http-client');
+    const tracer = trace.getTracer(HTTP_CONSTANTS.TRACER_NAME);
 
-    // In-Flight Request Cancellation & Abort Controller Setup
     const existingController = this.activeControllers.get(requestKey);
     config.cancelPrevious && existingController && existingController.abort();
 
     const controller = new AbortController();
     this.activeControllers.set(requestKey, controller);
 
-    // Merge External AbortSignal if Provided by Caller
     config.signal && config.signal.addEventListener('abort', () => controller.abort());
 
-    // Timeout Controller Timer
     const timeoutTimer = setTimeout(() => controller.abort(), timeoutMs);
 
     return tracer.startActiveSpan(`HTTP ${config.method} ${config.url}`, { kind: SpanKind.CLIENT }, async (span) => {
@@ -245,42 +238,54 @@ export class ScalableHttpClient {
         })
       );
 
-      // Preserve Exact Idempotency Key Across All Retries
       const idempotencyKey = resolvedHeaders[HTTP_CONSTANTS.HEADER_X_IDEMPOTENCY_KEY] || crypto.randomBytes(16).toString("hex");
       resolvedHeaders[HTTP_CONSTANTS.HEADER_X_IDEMPOTENCY_KEY] = idempotencyKey;
       span.setAttribute(HTTP_CONSTANTS.ATTR_IDEMPOTENCY_KEY, idempotencyKey);
 
-      // Decision Telemetry: Cache Policy Evaluation
       const cacheBypassed = isCacheDisabled(config, resolvedHeaders);
       const cachedData = cacheBypassed ? undefined : this.cacheStore.get<T>(requestKey);
       const isCacheHit = !cacheBypassed && cachedData !== undefined;
       span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CACHE_HIT, isCacheHit);
 
       span.addEvent(HTTP_CONSTANTS.EVENT_CACHE_EVALUATED, {
-        "cache.bypassed": cacheBypassed,
-        "cache.hit": isCacheHit,
-        "cache.key": requestKey,
+        [HTTP_CONSTANTS.KEY_CACHE_BYPASSED]: cacheBypassed,
+        [HTTP_CONSTANTS.KEY_CACHE_HIT]: isCacheHit,
+        [HTTP_CONSTANTS.KEY_CACHE_KEY]: requestKey,
       });
 
+      // Positive Path: Cache Hit Resolution
       return isCacheHit
-        ? (clearTimeout(timeoutTimer), this.activeControllers.delete(requestKey), span.setStatus({ code: SpanStatusCode.OK }), span.end(), { data: cachedData, status: 200, headers: new Headers() })
+        ? (
+            clearTimeout(timeoutTimer),
+            this.activeControllers.delete(requestKey),
+            span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_POSITIVE),
+            span.addEvent(HTTP_CONSTANTS.EVENT_EXECUTION_SUCCESS, { [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_SUCCESS }),
+            span.setStatus({ code: SpanStatusCode.OK }),
+            span.end(),
+            { data: cachedData, status: 200, headers: new Headers() }
+          )
         : await (async () => {
-            // Decision Telemetry: Circuit Breaker Evaluation
             const canRun = this.circuitBreaker.canExecute(config.url);
             const circuitState = this.circuitBreaker.getState(config.url);
             span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CIRCUIT_STATE, circuitState.state);
 
             span.addEvent(HTTP_CONSTANTS.EVENT_CIRCUIT_EVALUATED, {
-              "circuit.state": circuitState.state,
-              "circuit.can_execute": canRun,
-              "circuit.failures": circuitState.failures,
+              [HTTP_CONSTANTS.KEY_CIRCUIT_STATE]: circuitState.state,
+              [HTTP_CONSTANTS.KEY_CIRCUIT_CAN_EXECUTE]: canRun,
+              [HTTP_CONSTANTS.KEY_CIRCUIT_FAILURES]: circuitState.failures,
             });
 
+            // Negative Path: Circuit Breaker Rejection
             return !canRun
               ? (() => {
                   clearTimeout(timeoutTimer);
                   this.activeControllers.delete(requestKey);
                   const cbErr = new Error(`CircuitBreaker: Request to ${config.url} blocked due to active OPEN state.`);
+                  span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_NEGATIVE);
+                  span.addEvent(HTTP_CONSTANTS.EVENT_EXECUTION_FAILURE, {
+                    [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_FAILURE,
+                    [HTTP_CONSTANTS.ATTR_ERROR_DETAIL]: cbErr.message,
+                  });
                   span.setStatus({ code: SpanStatusCode.ERROR, message: cbErr.message });
                   span.recordException(cbErr);
                   span.end();
@@ -292,7 +297,6 @@ export class ScalableHttpClient {
                   resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID] &&
                     span.setAttribute(HTTP_CONSTANTS.ATTR_TENANT_ID, resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID]!);
 
-                  // Pure Recursive Retry Pipeline with Decision Telemetry (Zero Loops)
                   const attemptFetch = async (attempt: number): Promise<{ data: T; status: number; headers: Headers }> => {
                     span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_RETRY_ATTEMPT, attempt);
                     try {
@@ -324,6 +328,10 @@ export class ScalableHttpClient {
                             !cacheBypassed && this.cacheStore.set(requestKey, data, ttlMs);
                             clearTimeout(timeoutTimer);
                             this.activeControllers.delete(requestKey);
+
+                            // Positive Path: Network Success Resolution
+                            span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_POSITIVE);
+                            span.addEvent(HTTP_CONSTANTS.EVENT_EXECUTION_SUCCESS, { [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_SUCCESS });
                             span.setStatus({ code: SpanStatusCode.OK });
                             return { data, status: res.status, headers: res.headers };
                           })();
@@ -331,15 +339,15 @@ export class ScalableHttpClient {
                       this.circuitBreaker.onFailure(config.url, failureThreshold);
                       this.errorInterceptors.forEach((interceptor) => interceptor(err, config));
 
-                      const isAborted = err?.name === 'AbortError' || controller.signal.aborted;
-                      isAborted && (span.setAttribute(HTTP_CONSTANTS.ATTR_REQUEST_CANCELLED, true), span.addEvent(HTTP_CONSTANTS.EVENT_REQUEST_CANCELLED, { "request.cancelled_key": requestKey }));
+                      const isAborted = err?.name === HTTP_CONSTANTS.ERROR_NAME_ABORT || controller.signal.aborted;
+                      isAborted && (span.setAttribute(HTTP_CONSTANTS.ATTR_REQUEST_CANCELLED, true), span.addEvent(HTTP_CONSTANTS.EVENT_REQUEST_CANCELLED, { [HTTP_CONSTANTS.KEY_CANCELLED_KEY]: requestKey }));
 
                       const shouldRetry = !isAborted && attempt < maxRetries && retryPolicyRegistry.isRetryable(err);
 
                       span.addEvent(HTTP_CONSTANTS.EVENT_RETRY_DECISION, {
-                        "retry.attempt": attempt,
-                        "retry.should_retry": shouldRetry,
-                        "retry.error_message": err instanceof Error ? err.message : String(err),
+                        [HTTP_CONSTANTS.KEY_RETRY_ATTEMPT]: attempt,
+                        [HTTP_CONSTANTS.KEY_RETRY_SHOULD_RETRY]: shouldRetry,
+                        [HTTP_CONSTANTS.KEY_RETRY_ERROR_MSG]: err instanceof Error ? err.message : String(err),
                       });
 
                       return shouldRetry
@@ -352,9 +360,16 @@ export class ScalableHttpClient {
                         : (() => {
                             clearTimeout(timeoutTimer);
                             this.activeControllers.delete(requestKey);
+
+                            // Negative Path: Network Failure / Retry Exhaustion Resolution
+                            span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_NEGATIVE);
+                            span.addEvent(HTTP_CONSTANTS.EVENT_EXECUTION_FAILURE, {
+                              [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_FAILURE,
+                              [HTTP_CONSTANTS.ATTR_ERROR_DETAIL]: err instanceof Error ? err.message : String(err),
+                            });
                             span.setStatus({
                               code: SpanStatusCode.ERROR,
-                              message: err instanceof Error ? err.message : 'HTTP Request Pipeline Failed',
+                              message: err instanceof Error ? err.message : HTTP_CONSTANTS.MSG_PIPELINE_FAILED,
                             });
                             err instanceof Error && span.recordException(err);
                             span.end();
