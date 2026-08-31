@@ -37,11 +37,11 @@ The High-Level Architecture establishes `@observability/shared-infra` as the cor
 
 ```mermaid
 graph TD
-  subgraph Client Application Layer
+  subgraph ClientApp ["Client Application Layer"]
     FE["React Feature Hooks / Next.js API Routes"]
   end
 
-  subgraph Shared Infrastructure Layer [@observability/shared-infra]
+  subgraph SharedInfra ["Shared Infrastructure Layer (@observability/shared-infra)"]
     HTTP["ScalableHttpClient Facade"]
     RE["Rules Engine (resolveRules)"]
     REG["HeaderProvider & Interceptor Registries"]
@@ -54,7 +54,7 @@ graph TD
     CALLER["Stack Frame Parser (getCallerInfo)"]
   end
 
-  subgraph Observability & Network Layer
+  subgraph ObsNet ["Observability & Network Layer"]
     OTEL["OpenTelemetry Collector / Span Processor"]
     NET["Downstream LLM Backend Microservices"]
   end
@@ -70,7 +70,8 @@ graph TD
   NET -->|"Handle Errors / Retry Policy"| RETRY
   RE -->|"Evaluate Conditions"| COND
   RE -->|"Lookup Errors"| ERR
-  HTTP & RE -->|"Emit Spans, Code Attributes & Step Events"| OTEL
+  HTTP -->|"Emit Spans, Code Attributes & Step Events"| OTEL
+  RE -->|"Emit Spans, Code Attributes & Step Events"| OTEL
 ```
 
 ---
