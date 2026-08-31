@@ -2,14 +2,15 @@
  * ALGORITHM & ARCHITECTURE: Scalable Resilient HTTP Client Pipeline
  * 
  * 1. Request Interception: Config passes through registered RequestInterceptors via Promise.reduce.
- * 2. In-Flight Deduplication & Cancellation: Aborts any identical active in-flight request via AbortController map to reduce server load.
+ * 2. In-Flight Singleflight & Cancellation: Collapses identical concurrent read requests (Singleflight pattern) to prevent thundering herd; aborts previous request via AbortController if cancelPrevious is true.
  * 3. Header Resolution: Aggregates headers from HeaderProviderRegistry (Auth JWT, W3C traceparent, Tenant ID, Cache-Control).
  * 4. Idempotency Key Preservation: Preserves identical x-idempotency-key across all retry attempts for idempotent downstream processing.
  * 5. Endpoint-Level Cache Policy: Evaluates Cache-Control headers (no-cache, no-store) and config.noCache flag.
  * 6. Cache Lookup: Checks ICacheStore if caching enabled; returns cached data synchronously on hit.
  * 7. Circuit Breaker Check: Evaluates ICircuitBreaker status; rejects execution if state is OPEN.
- * 8. Recursive Retry Pipeline:
- *    a. Invokes fetch with AbortSignal and exponential Full Jitter backoff calculation:
+ * 8. Timeout & Signal Merging: Integrates request timeout (timeoutMs) and merges caller-provided AbortSignal.
+ * 9. Recursive Retry Pipeline:
+ *    a. Invokes fetch with merged AbortSignal and exponential Full Jitter backoff calculation:
  *       sleep_ms = random(0, min(maxMs, baseMs * 2^(attempt-1)))
  *    b. On HTTP failure, queries RetryPolicyRegistry to verify error retryability.
  *    c. On HTTP success, executes ResponseInterceptors, resets Circuit Breaker, updates CacheStore (if enabled).
@@ -58,8 +59,11 @@ export interface RequestConfig {
   serviceSub?: string;
   retries?: number;
   ttlMs?: number;
+  timeoutMs?: number;
   failureThreshold?: number;
   noCache?: boolean;
+  cancelPrevious?: boolean;
+  signal?: AbortSignal;
 }
 
 export type HeaderProviderFn = (config: RequestConfig) => Record<string, string> | Promise<Record<string, string>>;
@@ -136,6 +140,7 @@ export class ScalableHttpClient {
   private readonly responseInterceptors: ResponseInterceptorFn[] = [];
   private readonly errorInterceptors: ErrorInterceptorFn[] = [];
   private readonly activeControllers = new Map<string, AbortController>();
+  private readonly inFlightSingleflights = new Map<string, Promise<{ data: any; status: number; headers: Headers }>>();
   private cacheStore: ICacheStore = new InMemoryCacheStore();
   private circuitBreaker = new StandardCircuitBreaker();
 
@@ -195,18 +200,38 @@ export class ScalableHttpClient {
       Promise.resolve(rawConfig)
     );
 
+    const requestKey = `${config.method}:${config.url}:${config.body ? JSON.stringify(config.body) : ''}`;
+
+    // Singleflight Request Collapsing for In-Flight Read/Identical Requests
+    const existingSingleflight = !config.cancelPrevious && this.inFlightSingleflights.get(requestKey);
+    return existingSingleflight
+      ? (existingSingleflight as Promise<{ data: T; status: number; headers: Headers }>)
+      : await (async () => {
+          const executionPromise = this.executePipeline<T>(config, requestKey);
+          this.inFlightSingleflights.set(requestKey, executionPromise);
+          return executionPromise.finally(() => this.inFlightSingleflights.delete(requestKey));
+        })();
+  }
+
+  private async executePipeline<T>(config: RequestConfig, requestKey: string): Promise<{ data: T; status: number; headers: Headers }> {
     const maxRetries = config.retries ?? 3;
     const ttlMs = config.ttlMs ?? 5000;
+    const timeoutMs = config.timeoutMs ?? 30000;
     const failureThreshold = config.failureThreshold ?? 5;
-    const requestKey = `${config.method}:${config.url}:${config.body ? JSON.stringify(config.body) : ''}`;
     const tracer = trace.getTracer('http-client');
 
     // In-Flight Request Cancellation & Abort Controller Setup
     const existingController = this.activeControllers.get(requestKey);
-    existingController && existingController.abort();
+    config.cancelPrevious && existingController && existingController.abort();
 
     const controller = new AbortController();
     this.activeControllers.set(requestKey, controller);
+
+    // Merge External AbortSignal if Provided by Caller
+    config.signal && config.signal.addEventListener('abort', () => controller.abort());
+
+    // Timeout Controller Timer
+    const timeoutTimer = setTimeout(() => controller.abort(), timeoutMs);
 
     return tracer.startActiveSpan(`HTTP ${config.method} ${config.url}`, { kind: SpanKind.CLIENT }, async (span) => {
       const resolvedHeaders = await this.headerProviders.reduce<Promise<Record<string, string>>>(
@@ -231,7 +256,7 @@ export class ScalableHttpClient {
       span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CACHE_HIT, isCacheHit);
 
       return isCacheHit
-        ? (this.activeControllers.delete(requestKey), span.setStatus({ code: SpanStatusCode.OK }), span.end(), { data: cachedData, status: 200, headers: new Headers() })
+        ? (clearTimeout(timeoutTimer), this.activeControllers.delete(requestKey), span.setStatus({ code: SpanStatusCode.OK }), span.end(), { data: cachedData, status: 200, headers: new Headers() })
         : await (async () => {
             const canRun = this.circuitBreaker.canExecute(config.url);
             const circuitState = this.circuitBreaker.getState(config.url);
@@ -239,6 +264,7 @@ export class ScalableHttpClient {
 
             return !canRun
               ? (() => {
+                  clearTimeout(timeoutTimer);
                   this.activeControllers.delete(requestKey);
                   const cbErr = new Error(`CircuitBreaker: Request to ${config.url} blocked due to active OPEN state.`);
                   span.setStatus({ code: SpanStatusCode.ERROR, message: cbErr.message });
@@ -252,6 +278,7 @@ export class ScalableHttpClient {
                   resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID] &&
                     span.setAttribute(HTTP_CONSTANTS.ATTR_TENANT_ID, resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID]!);
 
+                  // Pure Recursive Retry Pipeline (Zero Loops)
                   const attemptFetch = async (attempt: number): Promise<{ data: T; status: number; headers: Headers }> => {
                     span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_RETRY_ATTEMPT, attempt);
                     try {
@@ -281,6 +308,7 @@ export class ScalableHttpClient {
 
                             this.circuitBreaker.onSuccess(config.url);
                             !cacheBypassed && this.cacheStore.set(requestKey, data, ttlMs);
+                            clearTimeout(timeoutTimer);
                             this.activeControllers.delete(requestKey);
                             span.setStatus({ code: SpanStatusCode.OK });
                             return { data, status: res.status, headers: res.headers };
@@ -301,6 +329,7 @@ export class ScalableHttpClient {
                             return attemptFetch(attempt + 1);
                           })()
                         : (() => {
+                            clearTimeout(timeoutTimer);
                             this.activeControllers.delete(requestKey);
                             span.setStatus({
                               code: SpanStatusCode.ERROR,
