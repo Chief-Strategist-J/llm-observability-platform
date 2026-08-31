@@ -1,3 +1,18 @@
+/**
+ * ALGORITHM & ARCHITECTURE: Scalable Resilient HTTP Client Pipeline
+ * 
+ * 1. Request Interception: Config passes through registered RequestInterceptors via Promise.reduce.
+ * 2. Cache Lookup: Checks ICacheStore; returns cached data synchronously on hit.
+ * 3. Circuit Breaker Check: Evaluates ICircuitBreaker status; rejects execution if state is OPEN.
+ * 4. Header Resolution: Aggregates headers from HeaderProviderRegistry (Auth JWT, W3C traceparent, Tenant ID).
+ * 5. Recursive Retry Pipeline:
+ *    a. Invokes fetch with exponential Full Jitter backoff calculation:
+ *       sleep_ms = random(0, min(maxMs, baseMs * 2^(attempt-1)))
+ *    b. On HTTP failure, queries RetryPolicyRegistry to verify error retryability.
+ *    c. On HTTP success, executes ResponseInterceptors, resets Circuit Breaker, updates CacheStore.
+ *    d. On error, triggers ErrorInterceptors and OpenTelemetry exception recording.
+ */
+
 import crypto from "crypto";
 import { trace, SpanKind, SpanStatusCode } from "@opentelemetry/api";
 import { RequestContextHolder } from '../tracing/request-context';
@@ -9,8 +24,6 @@ import { retryPolicyRegistry } from './retry-policy';
 export * from './constants';
 export * from './retry-policy';
 export * from './status-badge-registry';
-
-// --- 1. Resilient Strategy Definitions & Functional Helpers ---
 
 export function calculateFullJitterBackoff(attempt: number, baseMs = 200, maxMs = 10000): number {
   const cap = Math.min(maxMs, baseMs * Math.pow(2, attempt - 1));
@@ -55,8 +68,6 @@ export interface ICircuitBreakerState {
   state: typeof HTTP_CONSTANTS.CIRCUIT_CLOSED | typeof HTTP_CONSTANTS.CIRCUIT_OPEN | typeof HTTP_CONSTANTS.CIRCUIT_HALF_OPEN;
   nextAttempt: number;
 }
-
-// --- 2. Functional Cache & Circuit Breaker Implementations ---
 
 export class InMemoryCacheStore implements ICacheStore {
   private readonly store = new Map<string, { data: unknown; exp: number }>();
@@ -108,8 +119,6 @@ export class StandardCircuitBreaker {
     state.failures >= threshold && ((state.state = HTTP_CONSTANTS.CIRCUIT_OPEN), (state.nextAttempt = Date.now() + cooldownMs));
   }
 }
-
-// --- 3. Pure Functional Scalable HttpClient Engine ---
 
 export class ScalableHttpClient {
   private readonly headerProviders: HeaderProviderFn[] = [];
@@ -182,7 +191,6 @@ export class ScalableHttpClient {
     const tracer = trace.getTracer('http-client');
 
     return tracer.startActiveSpan(`HTTP ${config.method} ${config.url}`, { kind: SpanKind.CLIENT }, async (span) => {
-      // Functional Cache Check
       const cachedData = this.cacheStore.get<T>(cacheKey);
       const isCacheHit = cachedData !== undefined;
       span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CACHE_HIT, isCacheHit);
@@ -219,7 +227,6 @@ export class ScalableHttpClient {
                   resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID] &&
                     span.setAttribute(HTTP_CONSTANTS.ATTR_TENANT_ID, resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID]!);
 
-                  // Pure Recursive Retry Pipeline (Zero Loops)
                   const attemptFetch = async (attempt: number): Promise<{ data: T; status: number; headers: Headers }> => {
                     span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_RETRY_ATTEMPT, attempt);
                     try {
@@ -304,7 +311,7 @@ export class ScalableHttpClient {
 
 export const httpClient = new ScalableHttpClient();
 
-export function getAuthHeaders(serviceSub = HTTP_CONSTANTS.DEFAULT_SERVICE_SUB): Record<string, string> {
+export function getAuthHeaders(serviceSub: string = HTTP_CONSTANTS.DEFAULT_SERVICE_SUB): Record<string, string> {
   const secret = process.env.JWT_SECRET || HTTP_CONSTANTS.DEFAULT_JWT_SECRET;
   const header = { alg: HTTP_CONSTANTS.JWT_ALG, typ: HTTP_CONSTANTS.JWT_TYP };
   const now = Math.floor(Date.now() / 1000);
