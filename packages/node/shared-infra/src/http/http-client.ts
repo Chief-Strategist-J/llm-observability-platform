@@ -7,7 +7,7 @@ import { HTTP_CONSTANTS } from './constants';
 
 export * from './constants';
 
-// --- 1. Resilient Strategy Definitions & Contracts ---
+// --- 1. Resilient Strategy Definitions & Functional Helpers ---
 
 export function calculateFullJitterBackoff(attempt: number, baseMs = 200, maxMs = 10000): number {
   const cap = Math.min(maxMs, baseMs * Math.pow(2, attempt - 1));
@@ -53,17 +53,14 @@ export interface ICircuitBreakerState {
   nextAttempt: number;
 }
 
-// --- 2. Centralized Cache & Circuit Breaker Implementations ---
+// --- 2. Functional Cache & Circuit Breaker Implementations ---
 
 export class InMemoryCacheStore implements ICacheStore {
   private readonly store = new Map<string, { data: unknown; exp: number }>();
 
   get<T>(key: string): T | undefined {
     const entry = this.store.get(key);
-    if (entry && Date.now() < entry.exp) {
-      return entry.data as T;
-    }
-    return undefined;
+    return entry && Date.now() < entry.exp ? (entry.data as T) : undefined;
   }
 
   set<T>(key: string, data: T, ttlMs: number): void {
@@ -79,24 +76,21 @@ export class StandardCircuitBreaker {
   private readonly states = new Map<string, ICircuitBreakerState>();
 
   public getState(url: string): ICircuitBreakerState {
-    let state = this.states.get(url);
-    if (!state) {
-      state = { failures: 0, state: HTTP_CONSTANTS.CIRCUIT_CLOSED, nextAttempt: 0 };
-      this.states.set(url, state);
-    }
-    return state;
+    const existing = this.states.get(url);
+    return existing ?? (() => {
+      const newState: ICircuitBreakerState = { failures: 0, state: HTTP_CONSTANTS.CIRCUIT_CLOSED, nextAttempt: 0 };
+      this.states.set(url, newState);
+      return newState;
+    })();
   }
 
   public canExecute(url: string): boolean {
     const state = this.getState(url);
-    if (state.state === HTTP_CONSTANTS.CIRCUIT_OPEN) {
-      if (Date.now() > state.nextAttempt) {
-        state.state = HTTP_CONSTANTS.CIRCUIT_HALF_OPEN;
-        return true;
-      }
-      return false;
-    }
-    return true;
+    return state.state === HTTP_CONSTANTS.CIRCUIT_OPEN
+      ? Date.now() > state.nextAttempt
+        ? ((state.state = HTTP_CONSTANTS.CIRCUIT_HALF_OPEN), true)
+        : false
+      : true;
   }
 
   public onSuccess(url: string): void {
@@ -108,14 +102,11 @@ export class StandardCircuitBreaker {
   public onFailure(url: string, threshold = 5, cooldownMs = 10000): void {
     const state = this.getState(url);
     state.failures++;
-    if (state.failures >= threshold) {
-      state.state = HTTP_CONSTANTS.CIRCUIT_OPEN;
-      state.nextAttempt = Date.now() + cooldownMs;
-    }
+    state.failures >= threshold && ((state.state = HTTP_CONSTANTS.CIRCUIT_OPEN), (state.nextAttempt = Date.now() + cooldownMs));
   }
 }
 
-// --- 3. Pluggable Scalable HttpClient Engine ---
+// --- 3. Pure Functional Scalable HttpClient Engine ---
 
 export class ScalableHttpClient {
   private readonly headerProviders: HeaderProviderFn[] = [];
@@ -129,7 +120,6 @@ export class ScalableHttpClient {
     this.registerDefaultHeaderProviders();
   }
 
-  // --- Pluggable Registries ---
   public registerHeaderProvider(provider: HeaderProviderFn): void {
     this.headerProviders.push(provider);
   }
@@ -154,15 +144,11 @@ export class ScalableHttpClient {
     this.circuitBreaker = cb;
   }
 
-  // --- Default Builtin Header Providers ---
   private registerDefaultHeaderProviders(): void {
-    // 1. Auth JWT Provider
-    this.registerHeaderProvider((config) => {
-      const sub = config.serviceSub || HTTP_CONSTANTS.DEFAULT_SERVICE_SUB;
-      return getAuthHeaders(sub);
-    });
+    this.registerHeaderProvider((config) =>
+      getAuthHeaders(config.serviceSub || HTTP_CONSTANTS.DEFAULT_SERVICE_SUB)
+    );
 
-    // 2. W3C & Context Provider
     this.registerHeaderProvider(() => {
       try {
         const ctx = RequestContextHolder.get();
@@ -180,12 +166,11 @@ export class ScalableHttpClient {
     });
   }
 
-  // --- Core Request Pipeline Execution ---
   public async execute<T>(rawConfig: RequestConfig): Promise<{ data: T; status: number; headers: Headers }> {
-    let config = { ...rawConfig };
-    for (const reqInterceptor of this.requestInterceptors) {
-      config = await reqInterceptor(config);
-    }
+    const config = await this.requestInterceptors.reduce(
+      async (accPromise, interceptor) => interceptor(await accPromise),
+      Promise.resolve(rawConfig)
+    );
 
     const maxRetries = config.retries ?? 3;
     const ttlMs = config.ttlMs ?? 5000;
@@ -194,113 +179,105 @@ export class ScalableHttpClient {
     const tracer = trace.getTracer('http-client');
 
     return tracer.startActiveSpan(`HTTP ${config.method} ${config.url}`, { kind: SpanKind.CLIENT }, async (span) => {
-      // 1. Cache Lookup
+      // Functional Cache Check
       const cachedData = this.cacheStore.get<T>(cacheKey);
-      if (cachedData !== undefined) {
-        span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CACHE_HIT, true);
-        span.setStatus({ code: SpanStatusCode.OK });
-        span.end();
-        return { data: cachedData, status: 200, headers: new Headers() };
-      }
-      span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CACHE_HIT, false);
+      const isCacheHit = cachedData !== undefined;
+      span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CACHE_HIT, isCacheHit);
 
-      // 2. Circuit Breaker Check
-      if (!this.circuitBreaker.canExecute(config.url)) {
-        const cbErr = new Error(`CircuitBreaker: Request to ${config.url} blocked due to active OPEN state.`);
-        span.setStatus({ code: SpanStatusCode.ERROR, message: cbErr.message });
-        span.recordException(cbErr);
-        span.end();
-        throw cbErr;
-      }
-      const circuitState = this.circuitBreaker.getState(config.url);
-      span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CIRCUIT_STATE, circuitState.state);
+      return isCacheHit
+        ? (span.setStatus({ code: SpanStatusCode.OK }), span.end(), { data: cachedData, status: 200, headers: new Headers() })
+        : await (async () => {
+            const canRun = this.circuitBreaker.canExecute(config.url);
+            const circuitState = this.circuitBreaker.getState(config.url);
+            span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CIRCUIT_STATE, circuitState.state);
 
-      // 3. Resolve Header Providers
-      let resolvedHeaders: Record<string, string> = {
-        [HTTP_CONSTANTS.HEADER_CONTENT_TYPE]: HTTP_CONSTANTS.CONTENT_TYPE_JSON,
-        ...config.headers,
-      };
+            return !canRun
+              ? (() => {
+                  const cbErr = new Error(`CircuitBreaker: Request to ${config.url} blocked due to active OPEN state.`);
+                  span.setStatus({ code: SpanStatusCode.ERROR, message: cbErr.message });
+                  span.recordException(cbErr);
+                  span.end();
+                  throw cbErr;
+                })()
+              : await (async () => {
+                  const resolvedHeaders = await this.headerProviders.reduce(
+                    async (accPromise, provider) => ({
+                      ...(await accPromise),
+                      ...(await provider(config)),
+                    }),
+                    Promise.resolve({
+                      [HTTP_CONSTANTS.HEADER_CONTENT_TYPE]: HTTP_CONSTANTS.CONTENT_TYPE_JSON,
+                      ...config.headers,
+                    })
+                  );
 
-      for (const provider of this.headerProviders) {
-        const providerHeaders = await provider(config);
-        resolvedHeaders = { ...resolvedHeaders, ...providerHeaders };
-      }
+                  span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_METHOD, config.method);
+                  span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_URL, config.url);
+                  resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID] &&
+                    span.setAttribute(HTTP_CONSTANTS.ATTR_TENANT_ID, resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID]!);
 
-      span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_METHOD, config.method);
-      span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_URL, config.url);
-      if (resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID]) {
-        span.setAttribute(HTTP_CONSTANTS.ATTR_TENANT_ID, resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID]!);
-      }
+                  // Pure Recursive Retry Pipeline (Zero Loops)
+                  const attemptFetch = async (attempt: number): Promise<{ data: T; status: number; headers: Headers }> => {
+                    span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_RETRY_ATTEMPT, attempt);
+                    try {
+                      const res = await fetch(config.url, {
+                        method: config.method,
+                        headers: resolvedHeaders,
+                        body: config.body ? JSON.stringify(config.body) : undefined,
+                      });
 
-      let attempt = 0;
-      let lastError: unknown;
+                      span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_STATUS_CODE, res.status);
 
-      while (attempt <= maxRetries) {
-        try {
-          span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_RETRY_ATTEMPT, attempt);
-          const res = await fetch(config.url, {
-            method: config.method,
-            headers: resolvedHeaders,
-            body: config.body ? JSON.stringify(config.body) : undefined,
-          });
+                      return !res.ok
+                        ? (() => {
+                            throw new HttpError(
+                              `${config.method} ${config.url} failed with status ${res.status}`,
+                              res.status,
+                              res.headers.get(HTTP_CONSTANTS.HEADER_RETRY_AFTER)
+                            );
+                          })()
+                        : await (async () => {
+                            const rawJson = (await res.json()) as T;
+                            const data = await this.responseInterceptors.reduce(
+                              async (accPromise, interceptor) => interceptor(await accPromise, res, config),
+                              Promise.resolve(rawJson)
+                            );
 
-          span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_STATUS_CODE, res.status);
+                            this.circuitBreaker.onSuccess(config.url);
+                            this.cacheStore.set(cacheKey, data, ttlMs);
+                            span.setStatus({ code: SpanStatusCode.OK });
+                            return { data, status: res.status, headers: res.headers };
+                          })();
+                    } catch (err: any) {
+                      this.circuitBreaker.onFailure(config.url, failureThreshold);
+                      this.errorInterceptors.forEach((interceptor) => interceptor(err, config));
 
-          if (!res.ok) {
-            throw new HttpError(
-              `${config.method} ${config.url} failed with status ${res.status}`,
-              res.status,
-              res.headers.get(HTTP_CONSTANTS.HEADER_RETRY_AFTER),
-            );
-          }
+                      const shouldRetry = attempt < maxRetries && err?.status !== 401 && err?.status !== 403;
+                      return shouldRetry
+                        ? await (async () => {
+                            const backoff = calculateFullJitterBackoff(attempt + 1, 200, 10000);
+                            span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_RETRY_BACKOFF_MS, backoff);
+                            await new Promise((r) => setTimeout(r, backoff));
+                            return attemptFetch(attempt + 1);
+                          })()
+                        : (() => {
+                            span.setStatus({
+                              code: SpanStatusCode.ERROR,
+                              message: err instanceof Error ? err.message : 'HTTP Request Pipeline Failed',
+                            });
+                            err instanceof Error && span.recordException(err);
+                            span.end();
+                            throw err;
+                          })();
+                    }
+                  };
 
-          let data = (await res.json()) as T;
-
-          // Run Response Interceptors
-          for (const resInterceptor of this.responseInterceptors) {
-            data = (await resInterceptor(data, res, config)) as T;
-          }
-
-          // Reset Circuit Breaker & Cache
-          this.circuitBreaker.onSuccess(config.url);
-          this.cacheStore.set(cacheKey, data, ttlMs);
-
-          span.setStatus({ code: SpanStatusCode.OK });
-          return { data, status: res.status, headers: res.headers };
-        } catch (err: any) {
-          lastError = err;
-          attempt++;
-
-          this.circuitBreaker.onFailure(config.url, failureThreshold);
-
-          // Run Error Interceptors
-          for (const errInterceptor of this.errorInterceptors) {
-            errInterceptor(err, config);
-          }
-
-          if (attempt <= maxRetries && err?.status !== 401 && err?.status !== 403) {
-            const backoff = calculateFullJitterBackoff(attempt, 200, 10000);
-            span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_RETRY_BACKOFF_MS, backoff);
-            await new Promise((r) => setTimeout(r, backoff));
-          } else {
-            break;
-          }
-        }
-      }
-
-      span.setStatus({
-        code: SpanStatusCode.ERROR,
-        message: lastError instanceof Error ? lastError.message : 'HTTP Request Pipeline Failed',
-      });
-      if (lastError instanceof Error) {
-        span.recordException(lastError);
-      }
-      span.end();
-      throw lastError;
+                  return attemptFetch(0);
+                })();
+          })();
     });
   }
 
-  // --- Convenience Facade Methods ---
   public get<T>(url: string, headers?: Record<string, string>, options?: Partial<RequestConfig>) {
     return this.execute<T>({ method: HTTP_CONSTANTS.METHOD_GET, url, headers, ...options });
   }
@@ -322,7 +299,6 @@ export class ScalableHttpClient {
   }
 }
 
-// Global Singleton Exported Client Engine
 export const httpClient = new ScalableHttpClient();
 
 export function getAuthHeaders(serviceSub = HTTP_CONSTANTS.DEFAULT_SERVICE_SUB): Record<string, string> {
@@ -364,9 +340,7 @@ export async function executeQueryAdapter<T>(
 ): Promise<T> {
   const url = new URL(`${baseUrl}${endpoint}`);
   Object.entries(params).forEach(([k, v]) => {
-    if (v !== undefined && v !== null) {
-      url.searchParams.set(k, String(v));
-    }
+    v !== undefined && v !== null && url.searchParams.set(k, String(v));
   });
 
   const { data } = await httpClient.get<unknown>(url.toString(), undefined, { serviceSub });

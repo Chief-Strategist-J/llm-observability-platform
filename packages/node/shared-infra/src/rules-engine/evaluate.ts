@@ -15,19 +15,14 @@ export async function resolveRules(
   return withSpan(RULES_ENGINE_CONSTANTS.SPAN_RESOLVE_RULES, async (span) => {
     span.setAttribute(RULES_ENGINE_CONSTANTS.ATTR_EVALUATED_COUNT, rules.length);
     const sorted = [...rules].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
-    const activeRules: Rule[] = [];
 
-    for (const rule of sorted) {
+    const activeRules = await sorted.reduce(async (accPromise, rule) => {
+      const acc = await accPromise;
       const conditionsMet = rule.conditions.every((cond) => conditionRegistry.evaluate(cond, ctx));
-      if (!conditionsMet) continue;
+      const asyncPassed = conditionsMet && rule.asyncCheck ? await rule.asyncCheck(ctx) : conditionsMet;
 
-      if (rule.asyncCheck) {
-        const asyncPassed = await rule.asyncCheck(ctx);
-        if (!asyncPassed) continue;
-      }
-
-      activeRules.push(rule);
-    }
+      return asyncPassed ? [...acc, rule] : acc;
+    }, Promise.resolve([] as Rule[]));
 
     span.setAttribute(RULES_ENGINE_CONSTANTS.ATTR_TRIGGERED_COUNT, activeRules.length);
     span.setAttribute(RULES_ENGINE_CONSTANTS.ATTR_TRIGGERED_IDS, JSON.stringify(activeRules.map((r) => r.id)));
