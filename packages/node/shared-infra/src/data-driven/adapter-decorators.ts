@@ -1,8 +1,10 @@
 import type { CrudPort } from './create-entity-adapter';
+import { calculateFullJitterBackoff } from '../http/http-client';
 
 export interface DecoratorOptions {
   retries?: number;
   backoffMs?: number;
+  maxBackoffMs?: number;
   ttlMs?: number;
   failureThreshold?: number;
   resetTimeoutMs?: number;
@@ -10,17 +12,19 @@ export interface DecoratorOptions {
 
 export function withRetry<T>(port: CrudPort<T>, options: DecoratorOptions = {}): CrudPort<T> {
   const maxRetries = options.retries ?? 3;
-  const backoff = options.backoffMs ?? 300;
+  const baseBackoff = options.backoffMs ?? 200;
+  const maxBackoff = options.maxBackoffMs ?? 10000;
 
   async function retryOperation<R>(fn: () => Promise<R>): Promise<R> {
     let lastError: unknown;
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
       try {
         return await fn();
       } catch (err) {
         lastError = err;
-        if (attempt < maxRetries) {
-          await new Promise((res) => setTimeout(res, backoff * Math.pow(2, attempt)));
+        if (attempt <= maxRetries) {
+          const delay = calculateFullJitterBackoff(attempt, baseBackoff, maxBackoff);
+          await new Promise((res) => setTimeout(res, delay));
         }
       }
     }

@@ -4,6 +4,11 @@ import { RequestContextHolder } from '../tracing/request-context';
 import { mapJson } from '../data-driven/json-map';
 import type { JsonMapOp } from '../data-driven/transform.types';
 
+export function calculateFullJitterBackoff(attempt: number, baseMs = 200, maxMs = 10000): number {
+  const cap = Math.min(maxMs, baseMs * Math.pow(2, attempt - 1));
+  return Math.floor(Math.random() * cap);
+}
+
 export function getAuthHeaders(serviceSub = "web-app-service"): Record<string, string> {
   const secret = process.env.JWT_SECRET || "development-jwt-secret-key-32-bytes-min!!";
   const header = { alg: "HS256", typ: "JWT" };
@@ -170,7 +175,8 @@ async function request<T = unknown>(
         }
 
         if (attempt <= maxRetries && err?.status !== 401 && err?.status !== 403) {
-          const backoff = 200 * Math.pow(2, attempt - 1);
+          const backoff = calculateFullJitterBackoff(attempt, 200, 10000);
+          span.setAttribute('http.retry_backoff_ms', backoff);
           await new Promise((res) => setTimeout(res, backoff));
         } else {
           break;
