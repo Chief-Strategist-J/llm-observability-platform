@@ -1,25 +1,33 @@
+/**
+ * ALGORITHM & ARCHITECTURE: AsyncLocalStorage Request Context Propagation
+ * 
+ * Guarantees 100% thread-safe per-async-execution-chain isolation using Node.js native AsyncLocalStorage.
+ * Eliminates context-bleeding bugs where concurrent requests on the Node.js event loop could overwrite
+ * static mutable context variables and leak cross-tenant data.
+ */
+
+import { AsyncLocalStorage } from "async_hooks";
+import crypto from "crypto";
+
 export interface RequestContext {
   requestId: string;
   correlationId: string;
   idempotencyKey: string;
-  tenantId?: string;
+  tenantId: string;
   traceparent: string;
   tracestate?: string;
 }
 
 export class RequestContextHolder {
-  private static activeContext: RequestContext | null = null;
+  private static asyncLocalStorage = new AsyncLocalStorage<RequestContext>();
 
   public static generateId(prefix: string): string {
-    return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    return `${prefix}-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
   }
 
   public static generateW3CTraceparent(): string {
-    const hexChars = '0123456789abcdef';
-    let traceId = '';
-    let spanId = '';
-    for (let i = 0; i < 32; i++) traceId += hexChars[Math.floor(Math.random() * 16)];
-    for (let i = 0; i < 16; i++) spanId += hexChars[Math.floor(Math.random() * 16)];
+    const traceId = crypto.randomBytes(16).toString("hex");
+    const spanId = crypto.randomBytes(8).toString("hex");
     return `00-${traceId}-${spanId}-01`;
   }
 
@@ -29,7 +37,7 @@ export class RequestContextHolder {
     const idempotencyKey = incoming?.idempotencyKey || incoming?.requestId || this.generateId('idem');
     const traceparent = incoming?.traceparent || this.generateW3CTraceparent();
 
-    const ctx: RequestContext = {
+    return {
       requestId,
       correlationId,
       idempotencyKey,
@@ -37,23 +45,28 @@ export class RequestContextHolder {
       traceparent,
       tracestate: incoming?.tracestate || 'rojo=1',
     };
+  }
 
-    this.activeContext = ctx;
-    return ctx;
+  public static run<T>(context: RequestContext, callback: () => T): T {
+    return this.asyncLocalStorage.run(context, callback);
   }
 
   public static get(): RequestContext {
-    if (!this.activeContext) {
-      return this.create();
+    const store = this.asyncLocalStorage.getStore();
+    if (!store) {
+      return this.createDefault();
     }
-    return this.activeContext;
+    return store;
   }
 
-  public static set(ctx: RequestContext): void {
-    this.activeContext = ctx;
-  }
-
-  public static clear(): void {
-    this.activeContext = null;
+  private static createDefault(): RequestContext {
+    return {
+      requestId: this.generateId('req'),
+      correlationId: this.generateId('corr'),
+      idempotencyKey: this.generateId('idem'),
+      tenantId: 'tenant-default',
+      traceparent: this.generateW3CTraceparent(),
+      tracestate: 'rojo=1',
+    };
   }
 }

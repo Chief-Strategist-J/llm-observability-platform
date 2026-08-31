@@ -4,12 +4,25 @@ export interface CallerInfo {
   lineNumber: number;
 }
 
-export function getCallerInfo(depth = 2): CallerInfo {
+export function getCallerInfo(fallbackDepth = 3): CallerInfo {
   const err = new Error();
   const stack = err.stack?.split('\n') || [];
-  const frame = stack[depth] || stack[1] || '';
-  const match = frame.match(/at\s+(?:(.+?)\s+\()?\(?(.+?):(\d+):(\d+)\)?/);
 
+  // Dynamic stack scanning: find first frame outside http-client infrastructure boundary
+  let targetFrame = '';
+  for (let i = 2; i < stack.length; i++) {
+    const frame = stack[i];
+    if (frame && !frame.includes('http-client.ts') && !frame.includes('caller-info.ts')) {
+      targetFrame = frame;
+      break;
+    }
+  }
+
+  if (!targetFrame) {
+    targetFrame = stack[fallbackDepth] || stack[1] || '';
+  }
+
+  const match = targetFrame.match(/at\s+(?:(.+?)\s+\()?\(?(.+?):(\d+):(\d+)\)?/);
   const rawPath = match?.[2] || 'unknown';
 
   // Normalize to repo-relative path to prevent internal user/infra directory leakage in OpenTelemetry telemetry

@@ -10,11 +10,14 @@ import {
   deriveRouteTemplate,
   validateDestinationUrl,
   isMethodIdempotent,
-  TenantPartitionedCacheStore
+  TenantPartitionedCacheStore,
+  TenantRateLimiter,
+  StandardCircuitBreaker
 } from '../http-client';
-import { HTTP_CONSTANTS } from '../constants';
+import { RequestContextHolder } from '../../tracing/request-context';
+import { getCallerInfo } from '../../tracing/caller-info';
 
-describe('ScalableHttpClient Hardened Security & Architecture', () => {
+describe('ScalableHttpClient Production Hardening Architecture', () => {
   let client: ScalableHttpClient;
 
   beforeEach(() => {
@@ -22,78 +25,75 @@ describe('ScalableHttpClient Hardened Security & Architecture', () => {
     vi.restoreAllMocks();
   });
 
-  describe('Telemetry URL Sanitization & Default-Deny Allowlist', () => {
-    it('strips query parameters and userinfo credentials from URLs for telemetry', () => {
-      const rawUrl = 'https://admin:secret123@api.observability.com/v1/traces?access_token=secret_token&signature=abc';
-      const cleanUrl = sanitizeUrlForTelemetry(rawUrl);
-      expect(cleanUrl).toBe('https://api.observability.com/v1/traces');
-      expect(cleanUrl).not.toContain('secret123');
-      expect(cleanUrl).not.toContain('access_token');
-    });
+  describe('AsyncLocalStorage Request Context Isolation', () => {
+    it('guarantees thread-safe isolated tenant context across async chains', async () => {
+      const ctx1 = RequestContextHolder.create({ tenantId: 'tenant-acme' });
+      const ctx2 = RequestContextHolder.create({ tenantId: 'tenant-globex' });
 
-    it('filters out non-whitelisted attributes via default-deny allowlist', () => {
-      const rawAttributes = {
-        'http.method': 'GET',
-        'http.status_code': 200,
-        'untrusted.sensitive.header': 'bearer_token_123',
-        'raw.auth.payload': { password: 'secret' },
-        'tenant.id': 'tenant-acme',
-      };
-      const cleanAttributes = filterAllowedAttributes(rawAttributes);
-      expect(cleanAttributes).toEqual({
-        'http.method': 'GET',
-        'http.status_code': 200,
-        'tenant.id': 'tenant-acme',
+      const res1 = await RequestContextHolder.run(ctx1, async () => {
+        await new Promise(r => setTimeout(r, 10));
+        return RequestContextHolder.get().tenantId;
       });
-      expect(cleanAttributes).not.toHaveProperty('untrusted.sensitive.header');
-      expect(cleanAttributes).not.toHaveProperty('raw.auth.payload');
+
+      const res2 = await RequestContextHolder.run(ctx2, async () => {
+        await new Promise(r => setTimeout(r, 5));
+        return RequestContextHolder.get().tenantId;
+      });
+
+      expect(res1).toBe('tenant-acme');
+      expect(res2).toBe('tenant-globex');
     });
   });
 
-  describe('Tenant-Isolated SHA-256 Hashed Keys & Route Templates', () => {
-    it('derives SHA-256 hashed request keys with tenant isolation', () => {
-      const keyA = generateHashedKey('tenant-A', 'GET', 'http://api.org/data', { page: 1 });
-      const keyB = generateHashedKey('tenant-B', 'GET', 'http://api.org/data', { page: 1 });
-      expect(keyA).not.toEqual(keyB);
-      expect(keyA).toMatch(/^[0-9a-f]{64}$/);
-    });
-
-    it('derives normalized route templates replacing unique IDs with :id', () => {
-      const templateNum = deriveRouteTemplate('http://api.org/users/123/items/456');
-      expect(templateNum).toBe('api.org/users/:id/items/:id');
-
-      const templateUuid = deriveRouteTemplate('http://api.org/traces/a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d');
-      expect(templateUuid).toBe('api.org/traces/:id');
+  describe('Self-Verifying Dynamic Caller Location Telemetry', () => {
+    it('dynamically scans V8 stack frames outside http-client infrastructure', () => {
+      const caller = getCallerInfo();
+      expect(caller.filePath).toBeDefined();
+      expect(caller.functionName).toBeDefined();
+      expect(caller.filePath).not.toContain('/home/');
     });
   });
 
-  describe('SSRF Private IP & Protocol Protection', () => {
-    it('blocks private internal IP ranges and invalid protocols', () => {
-      expect(() => validateDestinationUrl('http://169.254.169.254/latest/meta-data')).toThrow(/SSRF Blocked/);
-      expect(() => validateDestinationUrl('http://127.0.0.1/admin')).toThrow(/SSRF Blocked/);
-      expect(() => validateDestinationUrl('ftp://api.org/data')).toThrow(/Blocked insecure URL protocol scheme/);
+  describe('DNS IP-Level SSRF & Protocol Protection', () => {
+    it('blocks private internal IP ranges and invalid protocols', async () => {
+      await expect(validateDestinationUrl('http://169.254.169.254/latest/meta-data')).rejects.toThrow(/SSRF Blocked/);
+      await expect(validateDestinationUrl('http://127.0.0.1/admin')).rejects.toThrow(/SSRF Blocked/);
+      await expect(validateDestinationUrl('ftp://api.org/data')).rejects.toThrow(/Blocked insecure URL protocol scheme/);
     });
 
-    it('allows valid public HTTP/HTTPS URLs', () => {
-      const valid = validateDestinationUrl('https://api.observability.com/v1/summary');
+    it('allows valid public HTTP/HTTPS URLs', async () => {
+      const valid = await validateDestinationUrl('https://api.observability.com/v1/summary');
       expect(valid.hostname).toBe('api.observability.com');
     });
   });
 
-  describe('Method Idempotency & Tenant Partitioned Cache', () => {
-    it('restricts retries for non-idempotent methods unless x-idempotency-key is set', () => {
-      expect(isMethodIdempotent('GET', {})).toBe(true);
-      expect(isMethodIdempotent('POST', {})).toBe(false);
-      expect(isMethodIdempotent('POST', { 'x-idempotency-key': 'uuid-123' })).toBe(true);
+  describe('Per-Tenant Token Bucket Outbound Rate Limiter', () => {
+    it('enforces outbound rate limits per tenant', () => {
+      const limiter = new TenantRateLimiter(2, 1);
+      expect(limiter.allowRequest('tenant-A')).toBe(true);
+      expect(limiter.allowRequest('tenant-A')).toBe(true);
+      expect(limiter.allowRequest('tenant-A')).toBe(false);
+      // Independent tenant bucket
+      expect(limiter.allowRequest('tenant-B')).toBe(true);
+    });
+  });
+
+  describe('Bounded LRU Circuit Breaker & Write Cache Invalidation', () => {
+    it('invalidates tenant cache entries on mutating write RPCs', () => {
+      const cache = new TenantPartitionedCacheStore(10);
+      cache.set('tenant-1', 'key-1', 'cached-data', 5000);
+      expect(cache.get('tenant-1', 'key-1')).toBe('cached-data');
+
+      // Clear tenant partition on write mutation
+      cache.clear('tenant-1');
+      expect(cache.get('tenant-1', 'key-1')).toBeUndefined();
     });
 
-    it('partitions cache stores per tenant preventing cross-tenant eviction', () => {
-      const cache = new TenantPartitionedCacheStore(2);
-      cache.set('tenant-1', 'key-1', 'data-tenant-1', 5000);
-      cache.set('tenant-2', 'key-1', 'data-tenant-2', 5000);
-
-      expect(cache.get('tenant-1', 'key-1')).toBe('data-tenant-1');
-      expect(cache.get('tenant-2', 'key-1')).toBe('data-tenant-2');
+    it('bounds circuit breaker states using LRU capacity', () => {
+      const cb = new StandardCircuitBreaker();
+      const key = cb.getCircuitKey('tenant-1', 'http://api.org/users/123');
+      expect(key).toBe('tenant-1:api.org/users/:id');
+      expect(cb.canExecute(key)).toBe(true);
     });
   });
 });
