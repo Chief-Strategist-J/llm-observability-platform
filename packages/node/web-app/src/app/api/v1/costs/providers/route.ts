@@ -1,27 +1,23 @@
 import { NextResponse } from "next/server";
 import { CostSummaryQuerySchema, costsClientService } from "@/features/costs";
+import { withTracedValidation } from "@observability/shared-infra";
 
 export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const parseResult = CostSummaryQuerySchema.safeParse({
-      time_range: searchParams.get("time_range") || undefined,
-    });
+  const { searchParams } = new URL(request.url);
+  const rawParams = {
+    time_range: searchParams.get("time_range") || undefined,
+  };
 
-    if (!parseResult.success) {
-      return NextResponse.json(
-        { error: "Invalid query parameters", details: parseResult.error.format() },
-        { status: 400 }
-      );
-    }
+  const result = await withTracedValidation(
+    "GET /api/v1/costs/providers",
+    CostSummaryQuerySchema,
+    rawParams,
+    async (params) => costsClientService.getCostProviders(params.time_range)
+  );
 
-    const { time_range } = parseResult.data;
-    const data = await costsClientService.getCostProviders(time_range);
-    return NextResponse.json(data);
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to fetch cost provider breakdown" },
-      { status: 500 }
-    );
+  if (!result.success) {
+    return NextResponse.json({ error: result.error, details: result.details }, { status: 400 });
   }
+
+  return NextResponse.json(result.data);
 }

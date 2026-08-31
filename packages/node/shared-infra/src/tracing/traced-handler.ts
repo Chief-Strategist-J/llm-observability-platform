@@ -1,6 +1,6 @@
-import type { Span } from '@opentelemetry/api';
+import { type Span, SpanKind, SpanStatusCode, withSpan } from './tracer';
 import type { KafkaEvent } from '../kafka/kafka-client';
-import { withSpan } from './tracer';
+import { z } from 'zod';
 
 export abstract class BaseTracedKafkaHandler<T = unknown> {
   public abstract readonly eventName: string;
@@ -25,4 +25,39 @@ export abstract class BaseTracedKafkaHandler<T = unknown> {
   }
 
   protected abstract handlePayload(payload: T, event: KafkaEvent<T>, span: Span): Promise<void>;
+}
+
+export async function withTracedValidation<TParams, TResult>(
+  routeName: string,
+  schema: z.ZodType<TParams>,
+  rawParams: unknown,
+  handler: (validatedParams: TParams, span: Span) => Promise<TResult>
+): Promise<{ success: true; data: TResult } | { success: false; error: string; details: unknown }> {
+  return withSpan(
+    `Route ${routeName}`,
+    async (span) => {
+      span.setAttribute('http.route', routeName);
+      const parseResult = schema.safeParse(rawParams);
+
+      if (!parseResult.success) {
+        const formattedErrors = parseResult.error.format();
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: `Validation Failed for ${routeName}`,
+        });
+        span.setAttribute('validation.status', 'validation_failed');
+        span.setAttribute('validation.errors', JSON.stringify(formattedErrors));
+        return {
+          success: false,
+          error: 'Invalid request parameters',
+          details: formattedErrors,
+        };
+      }
+
+      span.setAttribute('validation.status', 'success');
+      const data = await handler(parseResult.data, span);
+      return { success: true, data };
+    },
+    { kind: SpanKind.SERVER }
+  );
 }

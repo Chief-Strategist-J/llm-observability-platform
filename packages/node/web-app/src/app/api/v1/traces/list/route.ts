@@ -1,30 +1,27 @@
 import { NextResponse } from "next/server";
 import { TraceListQuerySchema, tracesClientService } from "@/features/traces";
+import { withTracedValidation } from "@observability/shared-infra";
 
 export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const parseResult = TraceListQuerySchema.safeParse({
-      model: searchParams.get("model") || undefined,
-      status: searchParams.get("status") || undefined,
-      service: searchParams.get("service") || undefined,
-      limit: searchParams.get("limit") || undefined,
-    });
+  const { searchParams } = new URL(request.url);
+  const rawParams = {
+    model: searchParams.get("model") || undefined,
+    status: searchParams.get("status") || undefined,
+    service: searchParams.get("service") || undefined,
+    limit: searchParams.get("limit") || undefined,
+  };
 
-    if (!parseResult.success) {
-      return NextResponse.json(
-        { error: "Invalid query parameters", details: parseResult.error.format() },
-        { status: 400 }
-      );
-    }
+  const result = await withTracedValidation(
+    "GET /api/v1/traces/list",
+    TraceListQuerySchema,
+    rawParams,
+    async (params) =>
+      tracesClientService.listTraces(params.model, params.status, params.service, params.limit)
+  );
 
-    const { model, status, service, limit } = parseResult.data;
-    const data = await tracesClientService.listTraces(model, status, service, limit);
-    return NextResponse.json(data);
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to list trace summaries" },
-      { status: 500 }
-    );
+  if (!result.success) {
+    return NextResponse.json({ error: result.error, details: result.details }, { status: 400 });
   }
+
+  return NextResponse.json(result.data);
 }

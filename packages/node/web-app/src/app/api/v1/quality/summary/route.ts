@@ -1,29 +1,24 @@
 import { NextResponse } from "next/server";
 import { QualitySummaryQuerySchema, qualityClientService } from "@/features/quality";
+import { withTracedValidation } from "@observability/shared-infra";
 
 export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const parseResult = QualitySummaryQuerySchema.safeParse({
-      model: searchParams.get("model") || undefined,
-      time_range: searchParams.get("time_range") || undefined,
-      service: searchParams.get("service") || undefined,
-    });
+  const { searchParams } = new URL(request.url);
+  const rawParams = {
+    model: searchParams.get("model") || undefined,
+    time_range: searchParams.get("time_range") || undefined,
+  };
 
-    if (!parseResult.success) {
-      return NextResponse.json(
-        { error: "Invalid query parameters", details: parseResult.error.format() },
-        { status: 400 }
-      );
-    }
+  const result = await withTracedValidation(
+    "GET /api/v1/quality/summary",
+    QualitySummaryQuerySchema,
+    rawParams,
+    async (params) => qualityClientService.getQualitySummary(params.model, params.time_range)
+  );
 
-    const { model, time_range, service } = parseResult.data;
-    const data = await qualityClientService.getQualitySummary(model, time_range, service);
-    return NextResponse.json(data);
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to fetch quality summary" },
-      { status: 500 }
-    );
+  if (!result.success) {
+    return NextResponse.json({ error: result.error, details: result.details }, { status: 400 });
   }
+
+  return NextResponse.json(result.data);
 }
