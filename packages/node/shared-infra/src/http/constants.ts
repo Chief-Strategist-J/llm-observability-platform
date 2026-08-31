@@ -44,4 +44,6 @@ export const HTTP_CONSTANTS = {
   ATTR_HTTP_RETRY_ATTEMPT: "http.retry_attempt",
   ATTR_HTTP_RETRY_BACKOFF_MS: "http.retry_backoff_ms",
   ATTR_TENANT_ID: "tenant.id",
+  ATTR_IDEMPOTENCY_KEY: "http.idempotency_key",
+  ATTR_REQUEST_CANCELLED: "http.request_cancelled",
 } as const;

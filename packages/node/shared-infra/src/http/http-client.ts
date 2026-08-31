@@ -2,12 +2,14 @@
  * ALGORITHM & ARCHITECTURE: Scalable Resilient HTTP Client Pipeline
  * 
  * 1. Request Interception: Config passes through registered RequestInterceptors via Promise.reduce.
- * 2. Header Resolution: Aggregates headers from HeaderProviderRegistry (Auth JWT, W3C traceparent, Tenant ID, Cache-Control).
- * 3. Endpoint-Level Cache Policy: Evaluates Cache-Control headers (no-cache, no-store) and config.noCache flag.
- * 4. Cache Lookup: Checks ICacheStore if caching enabled; returns cached data synchronously on hit.
- * 5. Circuit Breaker Check: Evaluates ICircuitBreaker status; rejects execution if state is OPEN.
- * 6. Recursive Retry Pipeline:
- *    a. Invokes fetch with exponential Full Jitter backoff calculation:
+ * 2. In-Flight Deduplication & Cancellation: Aborts any identical active in-flight request via AbortController map to reduce server load.
+ * 3. Header Resolution: Aggregates headers from HeaderProviderRegistry (Auth JWT, W3C traceparent, Tenant ID, Cache-Control).
+ * 4. Idempotency Key Preservation: Preserves identical x-idempotency-key across all retry attempts for idempotent downstream processing.
+ * 5. Endpoint-Level Cache Policy: Evaluates Cache-Control headers (no-cache, no-store) and config.noCache flag.
+ * 6. Cache Lookup: Checks ICacheStore if caching enabled; returns cached data synchronously on hit.
+ * 7. Circuit Breaker Check: Evaluates ICircuitBreaker status; rejects execution if state is OPEN.
+ * 8. Recursive Retry Pipeline:
+ *    a. Invokes fetch with AbortSignal and exponential Full Jitter backoff calculation:
  *       sleep_ms = random(0, min(maxMs, baseMs * 2^(attempt-1)))
  *    b. On HTTP failure, queries RetryPolicyRegistry to verify error retryability.
  *    c. On HTTP success, executes ResponseInterceptors, resets Circuit Breaker, updates CacheStore (if enabled).
@@ -133,6 +135,7 @@ export class ScalableHttpClient {
   private readonly requestInterceptors: RequestInterceptorFn[] = [];
   private readonly responseInterceptors: ResponseInterceptorFn[] = [];
   private readonly errorInterceptors: ErrorInterceptorFn[] = [];
+  private readonly activeControllers = new Map<string, AbortController>();
   private cacheStore: ICacheStore = new InMemoryCacheStore();
   private circuitBreaker = new StandardCircuitBreaker();
 
@@ -195,8 +198,15 @@ export class ScalableHttpClient {
     const maxRetries = config.retries ?? 3;
     const ttlMs = config.ttlMs ?? 5000;
     const failureThreshold = config.failureThreshold ?? 5;
-    const cacheKey = `${config.method}:${config.url}:${config.body ? JSON.stringify(config.body) : ''}`;
+    const requestKey = `${config.method}:${config.url}:${config.body ? JSON.stringify(config.body) : ''}`;
     const tracer = trace.getTracer('http-client');
+
+    // In-Flight Request Cancellation & Abort Controller Setup
+    const existingController = this.activeControllers.get(requestKey);
+    existingController && existingController.abort();
+
+    const controller = new AbortController();
+    this.activeControllers.set(requestKey, controller);
 
     return tracer.startActiveSpan(`HTTP ${config.method} ${config.url}`, { kind: SpanKind.CLIENT }, async (span) => {
       const resolvedHeaders = await this.headerProviders.reduce<Promise<Record<string, string>>>(
@@ -210,13 +220,18 @@ export class ScalableHttpClient {
         })
       );
 
+      // Preserve Exact Idempotency Key Across All Retries
+      const idempotencyKey = resolvedHeaders[HTTP_CONSTANTS.HEADER_X_IDEMPOTENCY_KEY] || crypto.randomBytes(16).toString("hex");
+      resolvedHeaders[HTTP_CONSTANTS.HEADER_X_IDEMPOTENCY_KEY] = idempotencyKey;
+      span.setAttribute(HTTP_CONSTANTS.ATTR_IDEMPOTENCY_KEY, idempotencyKey);
+
       const cacheBypassed = isCacheDisabled(config, resolvedHeaders);
-      const cachedData = cacheBypassed ? undefined : this.cacheStore.get<T>(cacheKey);
+      const cachedData = cacheBypassed ? undefined : this.cacheStore.get<T>(requestKey);
       const isCacheHit = !cacheBypassed && cachedData !== undefined;
       span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CACHE_HIT, isCacheHit);
 
       return isCacheHit
-        ? (span.setStatus({ code: SpanStatusCode.OK }), span.end(), { data: cachedData, status: 200, headers: new Headers() })
+        ? (this.activeControllers.delete(requestKey), span.setStatus({ code: SpanStatusCode.OK }), span.end(), { data: cachedData, status: 200, headers: new Headers() })
         : await (async () => {
             const canRun = this.circuitBreaker.canExecute(config.url);
             const circuitState = this.circuitBreaker.getState(config.url);
@@ -224,6 +239,7 @@ export class ScalableHttpClient {
 
             return !canRun
               ? (() => {
+                  this.activeControllers.delete(requestKey);
                   const cbErr = new Error(`CircuitBreaker: Request to ${config.url} blocked due to active OPEN state.`);
                   span.setStatus({ code: SpanStatusCode.ERROR, message: cbErr.message });
                   span.recordException(cbErr);
@@ -243,6 +259,7 @@ export class ScalableHttpClient {
                         method: config.method,
                         headers: resolvedHeaders,
                         body: config.body ? JSON.stringify(config.body) : undefined,
+                        signal: controller.signal,
                       });
 
                       span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_STATUS_CODE, res.status);
@@ -263,7 +280,8 @@ export class ScalableHttpClient {
                             )) as T;
 
                             this.circuitBreaker.onSuccess(config.url);
-                            !cacheBypassed && this.cacheStore.set(cacheKey, data, ttlMs);
+                            !cacheBypassed && this.cacheStore.set(requestKey, data, ttlMs);
+                            this.activeControllers.delete(requestKey);
                             span.setStatus({ code: SpanStatusCode.OK });
                             return { data, status: res.status, headers: res.headers };
                           })();
@@ -271,7 +289,10 @@ export class ScalableHttpClient {
                       this.circuitBreaker.onFailure(config.url, failureThreshold);
                       this.errorInterceptors.forEach((interceptor) => interceptor(err, config));
 
-                      const shouldRetry = attempt < maxRetries && retryPolicyRegistry.isRetryable(err);
+                      const isAborted = err?.name === 'AbortError' || controller.signal.aborted;
+                      isAborted && span.setAttribute(HTTP_CONSTANTS.ATTR_REQUEST_CANCELLED, true);
+
+                      const shouldRetry = !isAborted && attempt < maxRetries && retryPolicyRegistry.isRetryable(err);
                       return shouldRetry
                         ? await (async () => {
                             const backoff = calculateFullJitterBackoff(attempt + 1, 200, 10000);
@@ -280,6 +301,7 @@ export class ScalableHttpClient {
                             return attemptFetch(attempt + 1);
                           })()
                         : (() => {
+                            this.activeControllers.delete(requestKey);
                             span.setStatus({
                               code: SpanStatusCode.ERROR,
                               message: err instanceof Error ? err.message : 'HTTP Request Pipeline Failed',
