@@ -4,8 +4,11 @@ import { RequestContextHolder } from '../tracing/request-context';
 import { mapJson } from '../data-driven/json-map';
 import type { JsonMapOp } from '../data-driven/transform.types';
 import { HTTP_CONSTANTS } from './constants';
+import { retryPolicyRegistry } from './retry-policy';
 
 export * from './constants';
+export * from './retry-policy';
+export * from './status-badge-registry';
 
 // --- 1. Resilient Strategy Definitions & Functional Helpers ---
 
@@ -252,7 +255,7 @@ export class ScalableHttpClient {
                       this.circuitBreaker.onFailure(config.url, failureThreshold);
                       this.errorInterceptors.forEach((interceptor) => interceptor(err, config));
 
-                      const shouldRetry = attempt < maxRetries && err?.status !== 401 && err?.status !== 403;
+                      const shouldRetry = attempt < maxRetries && retryPolicyRegistry.isRetryable(err);
                       return shouldRetry
                         ? await (async () => {
                             const backoff = calculateFullJitterBackoff(attempt + 1, 200, 10000);
