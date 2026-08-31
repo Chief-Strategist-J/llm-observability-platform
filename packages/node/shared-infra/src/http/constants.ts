@@ -13,10 +13,15 @@ export const HTTP_CONSTANTS = {
   HEADER_X_TENANT_ID: "x-tenant-id",
   HEADER_TRACESTATE: "tracestate",
   HEADER_RETRY_AFTER: "Retry-After",
+  HEADER_CACHE_CONTROL: "Cache-Control",
   CONTENT_TYPE_JSON: "application/json",
   BEARER_PREFIX: "Bearer ",
   DEFAULT_TENANT_ID: "tenant-default",
   DEFAULT_TRACESTATE: "rojo=1",
+
+  // Cache Directives
+  CACHE_NO_CACHE: "no-cache",
+  CACHE_NO_STORE: "no-store",
 
   // HTTP Methods
   METHOD_GET: "GET",

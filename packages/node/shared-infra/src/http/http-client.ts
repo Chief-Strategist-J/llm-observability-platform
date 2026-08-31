@@ -2,14 +2,15 @@
  * ALGORITHM & ARCHITECTURE: Scalable Resilient HTTP Client Pipeline
  * 
  * 1. Request Interception: Config passes through registered RequestInterceptors via Promise.reduce.
- * 2. Cache Lookup: Checks ICacheStore; returns cached data synchronously on hit.
- * 3. Circuit Breaker Check: Evaluates ICircuitBreaker status; rejects execution if state is OPEN.
- * 4. Header Resolution: Aggregates headers from HeaderProviderRegistry (Auth JWT, W3C traceparent, Tenant ID).
- * 5. Recursive Retry Pipeline:
+ * 2. Header Resolution: Aggregates headers from HeaderProviderRegistry (Auth JWT, W3C traceparent, Tenant ID, Cache-Control).
+ * 3. Endpoint-Level Cache Policy: Evaluates Cache-Control headers (no-cache, no-store) and config.noCache flag.
+ * 4. Cache Lookup: Checks ICacheStore if caching enabled; returns cached data synchronously on hit.
+ * 5. Circuit Breaker Check: Evaluates ICircuitBreaker status; rejects execution if state is OPEN.
+ * 6. Recursive Retry Pipeline:
  *    a. Invokes fetch with exponential Full Jitter backoff calculation:
  *       sleep_ms = random(0, min(maxMs, baseMs * 2^(attempt-1)))
  *    b. On HTTP failure, queries RetryPolicyRegistry to verify error retryability.
- *    c. On HTTP success, executes ResponseInterceptors, resets Circuit Breaker, updates CacheStore.
+ *    c. On HTTP success, executes ResponseInterceptors, resets Circuit Breaker, updates CacheStore (if enabled).
  *    d. On error, triggers ErrorInterceptors and OpenTelemetry exception recording.
  */
 
@@ -28,6 +29,12 @@ export * from './status-badge-registry';
 export function calculateFullJitterBackoff(attempt: number, baseMs = 200, maxMs = 10000): number {
   const cap = Math.min(maxMs, baseMs * Math.pow(2, attempt - 1));
   return Math.floor(Math.random() * cap);
+}
+
+export function isCacheDisabled(config: RequestConfig, headers: Record<string, string>): boolean {
+  const cacheControlHeader = (headers[HTTP_CONSTANTS.HEADER_CACHE_CONTROL] || config.headers?.[HTTP_CONSTANTS.HEADER_CACHE_CONTROL] || "").toLowerCase();
+  const hasNoCacheDirective = cacheControlHeader.includes(HTTP_CONSTANTS.CACHE_NO_CACHE) || cacheControlHeader.includes(HTTP_CONSTANTS.CACHE_NO_STORE);
+  return Boolean(config.noCache || hasNoCacheDirective);
 }
 
 export class HttpError extends Error {
@@ -50,6 +57,7 @@ export interface RequestConfig {
   retries?: number;
   ttlMs?: number;
   failureThreshold?: number;
+  noCache?: boolean;
 }
 
 export type HeaderProviderFn = (config: RequestConfig) => Record<string, string> | Promise<Record<string, string>>;
@@ -191,8 +199,20 @@ export class ScalableHttpClient {
     const tracer = trace.getTracer('http-client');
 
     return tracer.startActiveSpan(`HTTP ${config.method} ${config.url}`, { kind: SpanKind.CLIENT }, async (span) => {
-      const cachedData = this.cacheStore.get<T>(cacheKey);
-      const isCacheHit = cachedData !== undefined;
+      const resolvedHeaders = await this.headerProviders.reduce<Promise<Record<string, string>>>(
+        async (accPromise, provider) => ({
+          ...(await accPromise),
+          ...(await provider(config)),
+        }),
+        Promise.resolve<Record<string, string>>({
+          [HTTP_CONSTANTS.HEADER_CONTENT_TYPE]: HTTP_CONSTANTS.CONTENT_TYPE_JSON,
+          ...config.headers,
+        })
+      );
+
+      const cacheBypassed = isCacheDisabled(config, resolvedHeaders);
+      const cachedData = cacheBypassed ? undefined : this.cacheStore.get<T>(cacheKey);
+      const isCacheHit = !cacheBypassed && cachedData !== undefined;
       span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CACHE_HIT, isCacheHit);
 
       return isCacheHit
@@ -211,17 +231,6 @@ export class ScalableHttpClient {
                   throw cbErr;
                 })()
               : await (async () => {
-                  const resolvedHeaders = await this.headerProviders.reduce<Promise<Record<string, string>>>(
-                    async (accPromise, provider) => ({
-                      ...(await accPromise),
-                      ...(await provider(config)),
-                    }),
-                    Promise.resolve<Record<string, string>>({
-                      [HTTP_CONSTANTS.HEADER_CONTENT_TYPE]: HTTP_CONSTANTS.CONTENT_TYPE_JSON,
-                      ...config.headers,
-                    })
-                  );
-
                   span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_METHOD, config.method);
                   span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_URL, config.url);
                   resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID] &&
@@ -254,7 +263,7 @@ export class ScalableHttpClient {
                             )) as T;
 
                             this.circuitBreaker.onSuccess(config.url);
-                            this.cacheStore.set(cacheKey, data, ttlMs);
+                            !cacheBypassed && this.cacheStore.set(cacheKey, data, ttlMs);
                             span.setStatus({ code: SpanStatusCode.OK });
                             return { data, status: res.status, headers: res.headers };
                           })();
