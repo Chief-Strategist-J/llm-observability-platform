@@ -12,10 +12,10 @@ Prioritized checklist for replacing `<EmptyState />` placeholders with live inte
 ---
 
 ## 🟠 Priority 2: Quality & Evaluation Dashboard (`/quality`)
-- [ ] **P2.1**: Connect `trpc.quality.getSummary` to render quality summary stats (Avg Quality Score, Score Delta %, Below SLO Count).
-- [ ] **P2.2**: Implement **Composite Score Trend Line Chart** (24-hour rolling average).
-- [ ] **P2.3**: Build **Model Quality Distribution Table** showing average, min, max scores by model (`gpt-4o`, `claude-3-opus`, `gpt-4o-mini`).
-- [ ] **P2.4**: Add **Flagged Content Panel** displaying toxicity and hallucination alerts.
+- [x] **P2.1**: Connect `qualityClientService.getQualitySummary` to render quality summary stats (Avg Quality Score, Score Delta %, Below SLO Count).
+- [x] **P2.2**: Implement **Composite Score & Alert Trend Table** (7-day rolling baseline).
+- [x] **P2.3**: Build **Model Quality Distribution Table** showing average, min, max scores by model (`gpt-4o`, `claude-3-5-sonnet`, `gpt-4o-mini`).
+- [x] **P2.4**: Add **Flagged Content Panel** displaying toxicity and hallucination alerts.
 
 ---
 
