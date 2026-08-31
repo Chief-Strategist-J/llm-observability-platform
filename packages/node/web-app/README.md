@@ -35,6 +35,45 @@ Run all commands from within the `packages/node/web-app` directory (or use `npm 
 
 ---
 
+## Backend Requirements & API Contracts
+
+The frontend features (`latency`, `quality`, `overview`, `traces`, `costs`) communicate with the backend query engine services via Next.js API Proxy routes.
+
+### 1. Authentication & Security Header Requirement
+- **JWT Authorization**: Outgoing service-to-service requests carry HMAC HS256 signed JWT tokens:
+  ```http
+  Authorization: Bearer <base64Url(header)>.<base64Url(payload)>.<base64Url(signature)>
+  ```
+  - **Required Claims**: `sub` (e.g. `web-app-quality-service`), `iat` (issued at epoch seconds), `exp` (expiration epoch seconds).
+  - **Environment Key**: `JWT_SECRET` (defaults to development secret key).
+
+### 2. OpenTelemetry & Distributed Context Propagation
+- **Headers**: Every adapter request automatically propagates W3C context headers via `@observability/shared-infra`:
+  - `traceparent`: `00-<trace_id>-<span_id>-01`
+  - `x-trace-id`: `<32_hex_trace_id>`
+  - `x-request-id`, `x-correlation-id`, `x-tenant-id`
+
+### 3. Feature Endpoint Contracts
+
+| Feature Slice | Next.js API Route | Backend Query Target | Response Payload Contract |
+| :--- | :--- | :--- | :--- |
+| **Latency** | `/api/v1/latency/percentiles` | `GET /v1/latency/percentiles` | `{ p50: number, p95: number, p99: number, sample_count: number }` |
+| **Latency** | `/api/v1/latency/slo` | `GET /v1/latency/slo` | `{ burn_fast: number, burn_medium: number, burn_slow: number, budget_remaining_pct: number, slo_threshold_ms: number }` |
+| **Latency** | `/api/v1/latency/attribution` | `GET /v1/latency/attribution` | `{ dns: number, tcp: number, queue: number, inference: number }` |
+| **Latency** | `/api/v1/latency/baseline` | `GET /v1/latency/baseline` | Array of `{ date: string, p99_ttft_ms: number, p99_total_ms: number }` |
+| **Quality** | `/api/v1/quality/summary` | `GET /v1/quality/summary` | `{ avg_quality_score: number, score_delta_pct: number, below_slo_count: number, total_evaluated_prompts: number }` |
+| **Quality** | `/api/v1/quality/trend` | `GET /v1/quality/trend` | Array of `{ date: string, avg_quality_score: number, toxicity_alerts: number, hallucination_alerts: number }` |
+| **Quality** | `/api/v1/quality/models` | `GET /v1/quality/models` | Array of `{ model: string, avg_score: number, min_score: number, max_score: number, evaluation_count: number, pass_rate_pct: number }` |
+| **Quality** | `/api/v1/quality/flagged` | `GET /v1/quality/flagged` | Array of `{ id: string, span_id: string, alert_type: string, severity: string, confidence_score: number, prompt_snippet: string, timestamp: string }` |
+| **Overview** | `/api/v1/overview/summary` | `GET /v1/overview/summary` | `{ p95_latency_ms: number, quality_avg_score: number, total_spend_usd: number, active_spans_count: number, p95_latency_delta_pct: number, quality_delta_pct: number, spend_delta_pct: number }` |
+| **Overview** | `/api/v1/overview/health` | `GET /v1/overview/health` | `{ status: string, fast_burn_active: boolean, medium_burn_active: boolean, active_alerts_count: number, message: string }` |
+| **Traces** | `/api/v1/traces/list` | `GET /v1/traces/list` | Array of `{ id: string, root_span_name: string, service: string, model: string, duration_ms: number, total_tokens: number, cost_usd: number, status: string, timestamp: string }` |
+| **Traces** | `/api/v1/traces/[traceId]` | `GET /v1/traces/:traceId` | `{ trace_id: string, root_span_name: string, total_duration_ms: number, spans: Array<SpanNode> }` |
+| **Costs** | `/api/v1/costs/summary` | `GET /v1/costs/summary` | `{ total_cost_usd: number, daily_avg_usd: number, cost_delta_pct: number, projected_monthly_usd: number }` |
+| **Costs** | `/api/v1/costs/providers` | `GET /v1/costs/providers` | Array of `{ provider: string, model: string, cost_usd: number, token_count: number, pct_of_total: number }` |
+
+---
+
 ## OpenTelemetry Distributed Tracing & Middleware Architecture
 
 1. **Centralized Tracing Initialization (`src/core/tracing/tracer.ts`)**:
