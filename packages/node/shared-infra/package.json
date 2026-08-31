@@ -38,6 +38,7 @@
     "@types/node": "^20.11.0",
     "react": "^19.0.0",
     "react-redux": "^9.2.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "vitest": "^2.1.8"
   }
 }
