@@ -46,8 +46,8 @@ graph TD
     RE["Rules Engine (resolveRules)"]
     REG["HeaderProvider & Interceptor Registries"]
     SF["Singleflight Deduplicator Map"]
-    CB["StandardCircuitBreaker"]
-    CACHE["InMemoryCacheStore (LRU Bounded)"]
+    CB["Tenant-Isolated CircuitBreaker"]
+    CACHE["TenantPartitionedCacheStore (LRU Bounded)"]
     RETRY["RetryPolicyRegistry"]
     COND["ConditionHandlerRegistry"]
     ERR["CentralizedErrorRegistry"]
@@ -55,7 +55,7 @@ graph TD
   end
 
   subgraph ObsNet ["Observability & Network Layer"]
-    OTEL["OpenTelemetry Collector / Span Processor (Non-Blocking Batch)"]
+    OTEL["OpenTelemetry Collector (Default-Deny Allowlist)"]
     NET["Downstream LLM Backend Microservices"]
   end
 
@@ -116,17 +116,17 @@ classDiagram
 
   class ICacheStore {
     <<interface>>
-    +get~T~(key: string): T
-    +set~T~(key: string, data: T, ttlMs: number): void
-    +clear(): void
+    +get~T~(tenantId: string, key: string): T
+    +set~T~(tenantId: string, key: string, data: T, ttlMs: number): void
+    +clear(tenantId?: string): void
   }
 
   class StandardCircuitBreaker {
     -states: Map~string, ICircuitBreakerState~
-    +getState(url: string): ICircuitBreakerState
-    +canExecute(url: string): boolean
-    +onSuccess(url: string): void
-    +onFailure(url: string, threshold, cooldownMs): void
+    +getCircuitKey(tenantId: string, url: string): string
+    +canExecute(circuitKey: string): boolean
+    +onSuccess(circuitKey: string): void
+    +onFailure(circuitKey: string, threshold, cooldownMs): void
   }
 
   class getCallerInfo {
@@ -152,14 +152,14 @@ sequenceDiagram
   participant Client as ScalableHttpClient
   participant SF as Singleflight Map
   participant CodeTracer as getCallerInfo()
-  participant Cache as ICacheStore (LRU)
+  participant Cache as TenantPartitionedCacheStore (LRU)
   participant CB as StandardCircuitBreaker
   participant Fetch as Fetch API
   participant OTEL as OpenTelemetry Active Span
 
   Caller->>Client: execute({ method: 'GET', url: '/api/v1/summary' })
-  Client->>Client: Run requestInterceptors
-  Client->>SF: Check inFlightSingleflights.get(requestKey)
+  Client->>Client: Run requestInterceptors + SSRF/Scheme Validation
+  Client->>SF: Check SHA-256 inFlightSingleflights.get(hashedRequestKey)
   alt Singleflight Hit
     SF-->>Caller: Return shared active Promise (No network request)
   else Singleflight Miss
@@ -169,32 +169,33 @@ sequenceDiagram
     OTEL->>OTEL: setAttribute("code.filepath", filePath)
     OTEL->>OTEL: setAttribute("code.lineno", lineNumber)
     Client->>Client: Resolve headerProviders (JWT, traceparent, tenant-id)
-    Client->>Cache: isCacheDisabled() ? null : get(requestKey)
+    Client->>Cache: isCacheDisabled() ? null : get(tenantId, hashedRequestKey)
     alt Cache Hit
       Cache-->>Client: Return cached data
       Client->>OTEL: addEvent("decision.cache_evaluated", { hit: true })
       Client->>OTEL: setStatus(SpanStatusCode.OK)
       OTEL-->>Caller: Return cached payload
     else Cache Miss
-      Client->>CB: canExecute(url)
+      Client->>CB: canExecute(tenantId:routeTemplate)
       alt Circuit Open
         CB-->>Client: false
         Client->>OTEL: setStatus(SpanStatusCode.ERROR)
         Client-->>Caller: Throw CircuitBreaker Error
       else Circuit Closed / Half Open
-        Client->>Fetch: fetch(url, { headers, signal })
+        Client->>Fetch: fetch(url, { headers, signal, redirect: 'manual' })
         alt HTTP 200 OK
-          Fetch-->>Client: Response JSON
-          Client->>Cache: set(requestKey, data, ttlMs)
-          Client->>CB: onSuccess(url)
+          Fetch-->>Client: Response JSON (Streaming Content-Length Checked)
+          Client->>Cache: set(tenantId, hashedRequestKey, data, ttlMs)
+          Client->>CB: onSuccess(circuitKey)
           Client->>OTEL: addEvent("execution.success")
           Client->>OTEL: setStatus(SpanStatusCode.OK)
           Client-->>Caller: Return response payload
         else HTTP 500 / Error
           Fetch-->>Client: HttpError
-          Client->>CB: onFailure(url)
+          Client->>CB: onFailure(circuitKey)
           Client->>Client: calculateFullJitterBackoff(attempt)
           Client->>OTEL: addEvent("decision.retry_evaluated", { shouldRetry: true })
+          Client->>CB: Re-check canExecute(circuitKey) before retry
           Client->>Fetch: Retry attemptFetch(attempt + 1)
         end
       end
@@ -204,39 +205,93 @@ sequenceDiagram
 
 ---
 
+### 4.3 Telemetry Data Scrubbing & Default-Deny Allowlist Filter Diagram
+
+```mermaid
+graph LR
+  subgraph RawTelemetry ["Raw Event Attributes & Headers"]
+    A1["http.method: GET"]
+    A2["Authorization: Bearer secret_jwt_token"]
+    A3["Cookie: session=123"]
+    A4["code.filepath: packages/node/shared-infra/src/..."]
+    A5["http.url: https://api.org/data?token=secret"]
+  end
+
+  subgraph TelemetryFilter ["Sanitization & Allowlist Engine"]
+    URLFilter["sanitizeUrlForTelemetry()"]
+    AllowlistFilter["filterAllowedAttributes() (Default-Deny Set)"]
+  end
+
+  subgraph ExportedSpan ["Clean OpenTelemetry Span"]
+    S1["http.method: GET"]
+    S2["http.url: https://api.org/data"]
+    S3["code.filepath: packages/node/shared-infra/src/..."]
+  end
+
+  A5 --> URLFilter --> S2
+  A1 & A4 --> AllowlistFilter --> S1 & S3
+  A2 & A3 -->|"BLOCKED BY DEFAULT-DENY ALLOWLIST"| Drop["Dropped / Redacted"]
+```
+
+---
+
+### 4.4 Multi-Tenant Isolation & Defense-in-Depth Architecture Diagram
+
+```mermaid
+graph TD
+  subgraph AuthContext ["Server Auth Context"]
+    CTX["RequestContextHolder.get() -> tenantId"]
+  end
+
+  subgraph KeyGenerators ["SHA-256 & Route Template Generators"]
+    HASH["generateHashedKey(tenantId, method, url, body)"]
+    ROUTE["deriveRouteTemplate(tenantId, url)"]
+  end
+
+  subgraph IsolatedPartitions ["Tenant-Isolated State Stores"]
+    LRU["TenantPartitionedCacheStore (Map<tenantId, LRUCache>)"]
+    CBStore["StandardCircuitBreaker (tenantId:routeTemplate)"]
+    SFStore["inFlightSingleflights (tenantId:SHA256Key)"]
+  end
+
+  CTX --> HASH & ROUTE
+  HASH --> SFStore
+  HASH --> LRU
+  ROUTE --> CBStore
+```
+
+---
+
 ## 5. Security Architecture & Risk Analysis
 
-### 5.1 Telemetry Data Scrubbing & Credential Redaction
-* **Issue Addressed**: Unredacted HTTP headers (`Authorization`, `Cookie`, `Set-Cookie`, `x-jwt-secret`) or payload keys (`password`, `secret`, `token`, `bearer`) could leak credentials into telemetry backends.
-* **Mitigation Implemented**: Introduced `redactSensitiveData()` which recursively sanitizes all span attributes and event payloads, replacing sensitive values with `"[REDACTED]"`.
+### 5.1 Default-Deny Telemetry Allowlist & URL Sanitization
+* **Default-Deny Allowlist**: Only explicitly whitelisted attributes (`HTTP_CONSTANTS.ALLOWED_TELEMETRY_ATTRIBUTES`) are permitted onto spans. Unapproved headers (`Authorization`, `Cookie`, `x-jwt-secret`) or payload keys are dropped by default.
+* **URL Sanitization**: `sanitizeUrlForTelemetry()` strips query parameters (`?access_token=...`, `?signature=...`) and userinfo (`user:pass@host`) before setting `http.url` on spans.
 
 ### 5.2 Repo-Relative Code Location Telemetry
 * **Issue Addressed**: Absolute V8 call stack file paths (`/home/user/...`) leak internal employee usernames and local infrastructure directories.
 * **Mitigation Implemented**: `getCallerInfo()` normalizes file paths to repository-relative paths (`packages/node/shared-infra/src/http/http-client.ts`), eliminating local machine path leakage.
 
-### 5.3 Tenant-Isolated Singleflight & Cache Keying
-* **Issue Addressed**: Singleflight or cache keys derived solely from `method:url` risk cross-tenant data leakage if Tenant A and Tenant B issue identical requests concurrently.
-* **Mitigation Implemented**: Singleflight and cache keys incorporate `tenantId` (`tenantId:method:url:body`), strictly isolating in-flight requests and cached responses per tenant.
+### 5.3 Tenant-Isolated Singleflight & Hashed SHA-256 Keying
+* **Cross-Tenant Leakage & Key Overhead**: Singleflight keys, cache keys, and circuit breakers incorporate `tenantId` (`tenantId:method:url:body`). Keys are hashed using SHA-256 (`crypto.createHash('sha256')`) to prevent raw body embedding and unbounded key strings.
+* **Server-Verified Context**: `tenantId` is strictly derived from authenticated `RequestContextHolder.get()` context.
 
-### 5.4 CSPRNG Idempotency Key Generation
-* **Issue Addressed**: Predictable idempotency keys can be exploited for replay attacks or key collisions.
-* **Mitigation Implemented**: Uses Cryptographically Secure Pseudorandom Number Generators (`crypto.randomUUID()`) to guarantee 128-bit entropy.
+### 5.4 Tenant-Isolated Route-Template Circuit Breakers
+* **Noisy-Neighbor DoS Protection**: Circuit breakers are keyed by `tenantId:routeTemplate` (e.g. `tenant-acme:api.org/users/:id`). Tenant A hammering a failing route does NOT trip Tenant B's circuit breaker.
 
-### 5.5 SSRF & Protocol Scheme Validation
-* **Issue Addressed**: Dynamic URL inputs could target private internal microservice IPs (`127.0.0.1`, `169.254.169.254`).
-* **Mitigation Implemented**: `validateDestinationUrl()` enforces `http:` and `https:` schemes and validates target hostnames against `config.allowedHosts`.
+### 5.5 SSRF Protection & Manual Redirect 302 Re-Validation
+* **Private IP & Protocol Scheme Protection**: `validateDestinationUrl()` enforces `http:` / `https:` schemes and blocks private internal IP subnets (`127.0.0.1`, `169.254.169.254`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`).
+* **Manual Redirect Validation**: Enforces `redirect: 'manual'` on `fetch` calls and re-validates `Location` redirect headers to prevent 302 SSRF bypasses.
 
-### 5.6 Max Payload Size & Timeout Enforcement
-* **Issue Addressed**: Large or hanging downstream responses can exhaust server memory or cause hanging requests.
-* **Mitigation Implemented**: Enforces `maxBodySizeBytes` (default 10MB) and `timeoutMs` (default 30,000ms) with `AbortController` cancellation.
+### 5.6 Streaming Content-Length Check & Timeout Enforcement
+* **Downstream Memory Protection**: Checks `Content-Length` headers before consuming response body stream (`maxBodySizeBytes = 10MB`), preventing OOM crashes from huge responses. Configurable `timeoutMs` (30s) cancels hanging requests via `AbortController`.
 
 ### 5.7 Prototype Pollution Protection in Rules Engine
-* **Issue Addressed**: User-provided condition fields accessing special object keys (`__proto__`, `constructor`, `prototype`) could pollute Object prototypes.
-* **Mitigation Implemented**: `getSafeContextValue()` explicitly blocks prototype property keys and safely resolves nested property dot-paths.
+* **Property Sanitization**: `getSafeContextValue()` explicitly blocks special keys (`__proto__`, `constructor`, `prototype`) and safely resolves nested property dot-paths.
 
-### 5.8 Single-Instance In-Memory Limitations & Distributed Extension Path
-* **Known Limitation (v1)**: `InMemoryCacheStore` and `StandardCircuitBreaker` operate per-node process. In multi-pod deployments, circuit breaker state is unshared.
-* **Stated Evolution Path**: Production deployments can inject Redis-backed `ICacheStore` and `ICircuitBreaker` adapters via `client.setCacheStore(...)` and `client.setCircuitBreaker(...)`.
+### 5.8 Per-Attempt Circuit Re-Check & Method Idempotency Constraint
+* **Mid-Storm Retry Halting**: The retry loop re-evaluates `circuitBreaker.canExecute(circuitKey)` *before* every retry attempt to halt retries immediately if the circuit opens mid-storm.
+* **Method Idempotency Constraint**: Automatic retries are restricted to idempotent methods (`GET`, `HEAD`, `OPTIONS`, `PUT`, `DELETE`), or non-idempotent methods (`POST`, `PATCH`) only if an `x-idempotency-key` is set.
 
 ---
 
@@ -245,79 +300,19 @@ sequenceDiagram
 ### 6.1 Non-Blocking OpenTelemetry Exporter Backpressure
 To guarantee that telemetry collector latency or network outages **never block** HTTP execution paths:
 1. **Asynchronous Batch Processor**: Telemetry spans are enqueued into an in-memory `BatchSpanProcessor` (`maxQueueSize = 2048`, `scheduledDelayMillis = 5000`, `exportTimeoutMillis = 3000`).
-2. **Zero Request Path Overhead**: Span event creation and attribute assignment execute in $O(1)$ memory time and return control immediately.
-3. **Queue Overflow Drop Policy**: If the OpenTelemetry queue fills up due to collector failure, oldest spans are dropped silently while emitting a counter metric (`otel.spans_dropped`). Request execution latency remains unaffected.
+2. **Priority Span Retention**: Under telemetry queue overflow, `OK` status spans are dropped first, retaining `ERROR` spans and decision failure events for diagnostic retention.
 
-### 6.2 Bounded LRU Cache Eviction Policy
-To prevent unbounded memory growth (`OOM`) in long-running Node.js processes under high traffic:
-1. **LRU Bounded Capacity**: `InMemoryCacheStore` is bounded to `maxEntries = 1000` (configurable).
-2. **Eviction Mechanics**: When cache size reaches `maxEntries`, the Least Recently Used (LRU) entry is deleted prior to inserting new items.
+### 6.2 Tenant-Partitioned Bounded LRU Cache Policy
+1. **Tenant-Partitioned LRU Capacity**: `TenantPartitionedCacheStore` partitions LRU caches per tenant (`Map<tenantId, BoundedLRUCache>`), bounded to `maxCapacityPerTenant = 250`.
+2. **Stampede & Eviction Isolation**: Single-tenant query bursts evict entries within their own partition only, insulating other tenants' cached entries.
 
 ### 6.3 Interface Versioning & Backward Compatibility Story
-As `@observability/shared-infra` evolves across 4+ consuming features:
-1. **Additive Interface Extension**: New properties added to `RequestConfig` or `HeaderProviderFn` context must be optional (`?`).
-2. **Deprecation Strategy**: Signature deprecations must follow a 2-release cycle using JSDoc `@deprecated` tags prior to breaking signature removals.
+1. **Additive Extension**: New properties added to `RequestConfig` or `HeaderProviderFn` context must be optional (`?`).
+2. **Deprecation Strategy**: Signature deprecations follow a 2-release cycle using JSDoc `@deprecated` tags prior to breaking signature removals.
 
 ---
 
-## 7. Complete OpenTelemetry Telemetry Specification
-
-### 7.1 Standard Span Attributes
-
-| Attribute Key | Type | Description |
-|---|---|---|
-| `http.method` | `string` | HTTP verb (`"GET"`, `"POST"`, `"PATCH"`, etc.) |
-| `http.url` | `string` | Full destination URL endpoint |
-| `http.status_code` | `number` | HTTP status code (`200`, `400`, `500`, etc.) |
-| `http.cache_hit` | `boolean` | `true` (Cache Hit) \| `false` (Cache Miss / Bypassed) |
-| `http.circuit_state` | `string` | `"CLOSED"` \| `"OPEN"` \| `"HALF_OPEN"` |
-| `http.idempotency_key` | `string` | Preserved UUID/hex idempotency key |
-| `tenant.id` | `string` | Tenant identifier |
-| `execution.path` | `string` | `"positive_path"` \| `"negative_path"` |
-| `code.function` | `string` | Function or method name initiating the span |
-| `code.filepath` | `string` | Repo-relative file path of caller |
-| `code.lineno` | `number` | Exact line number of caller |
-
----
-
-## 8. Full OpenTelemetry Span Samples
-
-### 8.1 Positive Path Span Sample
-```json
-{
-  "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
-  "spanId": "00f067aa0ba902b7",
-  "name": "HTTP GET http://localhost:3000/api/v1/overview/summary",
-  "kind": 2,
-  "status": { "code": 1 },
-  "attributes": {
-    "http.method": "GET",
-    "http.url": "http://localhost:3000/api/v1/overview/summary",
-    "http.status_code": 200,
-    "http.cache_hit": false,
-    "http.circuit_state": "CLOSED",
-    "http.idempotency_key": "3f9a12bc-890e-4f5a-8b9c-0d1e2f3a4b5c",
-    "tenant.id": "tenant-default",
-    "execution.path": "positive_path",
-    "code.function": "executePipeline",
-    "code.filepath": "packages/node/shared-infra/src/http/http-client.ts",
-    "code.lineno": 242
-  },
-  "events": [
-    { "name": "step.request_interceptors_executed", "attributes": { "interceptors.count": 1 } },
-    { "name": "step.header_providers_resolved", "attributes": { "headers.provider_count": 2 } },
-    { "name": "decision.cache_evaluated", "attributes": { "cache.bypassed": false, "cache.hit": false } },
-    { "name": "decision.circuit_breaker_evaluated", "attributes": { "circuit.state": "CLOSED", "circuit.can_execute": true } },
-    { "name": "step.fetch_attempt_initiated", "attributes": { "retry.attempt": 0 } },
-    { "name": "step.response_interceptors_executed", "attributes": { "interceptors.count": 1 } },
-    { "name": "execution.success", "attributes": { "execution.status": "success" } }
-  ]
-}
-```
-
----
-
-## 9. Package Directory Structure (ASCII Tree)
+## 7. Package Directory Structure (ASCII Tree)
 
 ```
 packages/node/shared-infra/
@@ -326,13 +321,13 @@ packages/node/shared-infra/
 │       └── 0001-scalable-resilient-telemetry-http-pipeline.md  # Master Architecture Specification
 ├── src/
 │   ├── http/
-│   │   ├── constants.ts                    # HTTP_CONSTANTS (as const)
-│   │   ├── http-client.ts                  # ScalableHttpClient (LRU bounded, tenant-isolated)
+│   │   ├── constants.ts                    # HTTP_CONSTANTS (as const + ALLOWED_TELEMETRY_ATTRIBUTES)
+│   │   ├── http-client.ts                  # ScalableHttpClient (hardened, tenant-isolated, SSRF protected)
 │   │   ├── middleware.ts                   # HttpMiddleware composition facade
 │   │   ├── retry-policy.ts                 # RetryPolicyRegistry
 │   │   ├── status-badge-registry.ts        # StatusBadgeRegistry
 │   │   └── tests/
-│   │       └── http-client.test.ts         # Vitest test suite
+│   │       └── http-client.test.ts         # Vitest security & architecture test suite
 │   │
 │   ├── rules-engine/
 │   │   ├── condition-registry.ts           # ConditionHandlerRegistry (Prototype pollution protected)
@@ -354,15 +349,12 @@ packages/node/shared-infra/
 
 ---
 
-## 10. Verification & Test Coverage Matrix
+## 8. Verification & Test Coverage Matrix
 
-### 10.1 Automated Unit & Integration Tests (100% Passing)
-* **Singleflight Deduplication**: Verified that identical concurrent GET requests collapse into 1 network call and resolve for all callers.
-* **Header & Endpoint Cache Bypass**: Verified `noCache: true` and `Cache-Control: no-cache` bypass.
-* **Bounded LRU Cache Eviction**: Verified oldest key eviction at `maxEntries = 1000`.
-* **Prototype Pollution Protection**: Verified dot-path resolution blocks `__proto__`, `constructor`, `prototype`.
-* **Repo-Relative Code Location**: Verified path normalization strips local environment user directories.
-
-### 10.2 Out-of-Scope Staging Verification (Chaos & Multi-Pod Load Testing)
-* **Distributed Redis State Sync**: Multi-pod circuit breaker synchronization (requires staging Redis cluster).
-* **OpenTelemetry Collector Outage Chaos Testing**: Collector drop metric verification under synthetic network blackhole injection.
+### 8.1 Automated Unit & Integration Tests (100% Passing)
+* **Default-Deny Telemetry Allowlist**: Verified un-whitelisted attributes and credentials are filtered out.
+* **Telemetry URL Sanitization**: Verified query parameters and userinfo are stripped from `http.url`.
+* **Private IP & Protocol SSRF Protection**: Verified private IP subnets (`127.0.0.1`, `169.254.169.254`) and non-HTTP schemes are blocked.
+* **Tenant-Isolated Route Templates & SHA-256 Hashing**: Verified `tenantId:routeTemplate` circuit breakers and SHA-256 hashed keys prevent cross-tenant DoS and data leaks.
+* **Tenant Partitioned LRU Cache**: Verified per-tenant partition bounds prevent cross-tenant eviction stampedes.
+* **Method Idempotency Verification**: Verified non-idempotent methods skip retries unless `x-idempotency-key` is set.

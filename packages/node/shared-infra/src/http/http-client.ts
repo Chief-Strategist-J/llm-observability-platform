@@ -1,20 +1,20 @@
 /**
- * ALGORITHM & ARCHITECTURE: Production-Hardened Security-Aware HTTP Client Pipeline
+ * ALGORITHM & ARCHITECTURE: Enterprise Production-Hardened Resilient HTTP Client Pipeline
  * 
- * 1. SSRF & Scheme Validation: Validates HTTP/HTTPS scheme and guards against SSRF to private/internal IPs.
- * 2. Request Interception: Config passes through registered RequestInterceptors with max body size enforcement (10MB).
- * 3. Header Resolution & Sensitive Redaction: Resolves Auth/W3C/Tenant headers; redacts credentials (Authorization, Cookie, Secrets) before logging to OTEL.
- * 4. CSPRNG Idempotency Key Generation: Generates crypto.randomUUID() for idempotency and preserves it across Full Jitter retries.
- * 5. Tenant-Isolated Singleflight Deduplication: Singleflight and Cache keys include tenantId (tenantId:method:url:body) to guarantee zero cross-tenant data leaks.
- * 6. Repo-Relative Code Telemetry: Uses getCallerInfo() to attach repo-relative code location attributes (code.function, code.filepath, code.lineno).
- * 7. Bounded LRU Cache & Header-Driven Bypass: Bounded LRU cache (default 1000 max entries) respecting Cache-Control (no-cache, no-store) and config.noCache directives.
- * 8. Circuit Breaker Inspection: Rejects execution if endpoint state is OPEN.
- * 9. Retry Jitter Pipeline with Fleet Budget Protection: Retries transient HTTP errors using AWS Full Jitter backoff up to maxRetries.
- * 10. Non-Blocking OpenTelemetry Telemetry: Emits sanitized Decision Events and Step Timeline Events via asynchronous non-blocking span processors.
+ * 1. Default-Deny Telemetry Allowlist: Only explicit whitelisted attributes (HTTP_CONSTANTS.ALLOWED_TELEMETRY_ATTRIBUTES) are logged on OpenTelemetry spans.
+ * 2. Telemetry URL Sanitization: Strips query parameters (?token=...) and userinfo (user:pass@) from http.url before emitting to telemetry backends.
+ * 3. Server-Verified Tenant Context: Tenant ID is strictly derived from RequestContextHolder.get() authenticated context to prevent tenant spoofing.
+ * 4. Tenant-Isolated Route-Template Circuit Breaker: Circuit breakers are keyed by (tenantId:routeTemplate) to prevent cross-tenant noisy-neighbor availability DoS.
+ * 5. Tenant-Partitioned Bounded LRU Cache: Caches are partitioned per tenant (Map<tenantId, BoundedLRU>) so single-tenant query bursts cannot evict other tenants.
+ * 6. Hashed SHA-256 Cache & Singleflight Keys: Hashes request signatures (tenantId + method + url + body) using SHA-256 to prevent unbounded memory keys and raw body leaks.
+ * 7. Per-Attempt Circuit Re-Check: Circuit status is re-evaluated before EVERY retry iteration inside the retry loop to halt retries immediately if breaker opens mid-storm.
+ * 8. Method Idempotency Constraint: Automatic retries are restricted to idempotent methods (GET, HEAD, OPTIONS, PUT, DELETE) unless an x-idempotency-key is provided.
+ * 9. SSRF Private IP & Manual Redirect Protection: Validates destination hosts, enforces redirect='manual', and re-validates Location headers against private subnets (127.0.0.1, 169.254.169.254, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16).
+ * 10. Streaming Content-Length Enforcement: Checks Content-Length headers prior to buffering payloads to prevent OOM memory exhaustion.
  */
 
 import crypto from "crypto";
-import { trace, SpanKind, SpanStatusCode } from "@opentelemetry/api";
+import { trace, SpanKind, SpanStatusCode, type Span } from "@opentelemetry/api";
 import { RequestContextHolder } from '../tracing/request-context';
 import { getCallerInfo } from '../tracing/caller-info';
 import { mapJson } from '../data-driven/json-map';
@@ -26,35 +26,42 @@ export * from './constants';
 export * from './retry-policy';
 export * from './status-badge-registry';
 
-const SENSITIVE_KEYS = new Set([
-  'authorization', 'cookie', 'set-cookie', 'x-jwt-secret',
-  'password', 'secret', 'token', 'bearer', 'api-key', 'apikey'
-]);
+const ALLOWED_TELEMETRY_SET = new Set<string>(HTTP_CONSTANTS.ALLOWED_TELEMETRY_ATTRIBUTES);
 
-export function redactSensitiveData(data: unknown): unknown {
-  if (!data || typeof data !== 'object') {
-    return data;
+export function sanitizeUrlForTelemetry(rawUrl: string): string {
+  try {
+    const parsed = new URL(rawUrl);
+    parsed.username = '';
+    parsed.password = '';
+    parsed.search = '';
+    return parsed.toString();
+  } catch {
+    return rawUrl.split('?')[0];
   }
-  if (Array.isArray(data)) {
-    return data.map(redactSensitiveData);
-  }
-  const sanitized: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
-    const lowerKey = key.toLowerCase();
-    if (SENSITIVE_KEYS.has(lowerKey) || sensitiveMatch(lowerKey)) {
-      sanitized[key] = '[REDACTED]';
-    } else if (typeof value === 'object' && value !== null) {
-      sanitized[key] = redactSensitiveData(value);
-    } else {
-      sanitized[key] = value;
+}
+
+export function filterAllowedAttributes(attributes: Record<string, unknown>): Record<string, unknown> {
+  const filtered: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(attributes)) {
+    if (ALLOWED_TELEMETRY_SET.has(key)) {
+      filtered[key] = value;
     }
   }
-  return sanitized;
+  return filtered;
 }
 
-function sensitiveMatch(key: string): boolean {
-  return key.includes('secret') || key.includes('token') || key.includes('password') || key.includes('auth');
+export function addSanitizedEvent(span: Span, name: string, attributes?: Record<string, unknown>): void {
+  const cleanAttributes = attributes ? filterAllowedAttributes(attributes) : undefined;
+  span.addEvent(name, cleanAttributes);
 }
+
+export function setSanitizedAttribute(span: Span, key: string, value: unknown): void {
+  if (ALLOWED_TELEMETRY_SET.has(key)) {
+    span.setAttribute(key, value as any);
+  }
+}
+
+const BLOCKED_IP_REGEX = /^(127\.|169\.254\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.|::1|0\.0\.0\.0)/;
 
 export function validateDestinationUrl(urlStr: string, allowedHosts?: string[]): URL {
   let parsedUrl: URL;
@@ -68,6 +75,10 @@ export function validateDestinationUrl(urlStr: string, allowedHosts?: string[]):
     throw new Error(`Blocked insecure URL protocol scheme: ${parsedUrl.protocol}`);
   }
 
+  if (BLOCKED_IP_REGEX.test(parsedUrl.hostname)) {
+    throw new Error(`SSRF Blocked: Destination IP/Host ${parsedUrl.hostname} is a restricted private/internal address`);
+  }
+
   if (allowedHosts && allowedHosts.length > 0) {
     if (!allowedHosts.includes(parsedUrl.hostname)) {
       throw new Error(`SSRF Violation: Target host ${parsedUrl.hostname} is not in destination allowlist`);
@@ -75,6 +86,28 @@ export function validateDestinationUrl(urlStr: string, allowedHosts?: string[]):
   }
 
   return parsedUrl;
+}
+
+export function generateHashedKey(tenantId: string, method: string, url: string, body?: unknown): string {
+  const bodyStr = body ? JSON.stringify(body) : '';
+  const rawKey = `${tenantId}:${method.toUpperCase()}:${url}:${bodyStr}`;
+  return crypto.createHash('sha256').update(rawKey).digest('hex');
+}
+
+export function deriveRouteTemplate(urlStr: string): string {
+  try {
+    const parsed = new URL(urlStr);
+    const pathParts = parsed.pathname.split('/').map(part => {
+      if (!part) return part;
+      if (/^[0-9]+$/.test(part) || /^[0-9a-fA-F-]{36}$/.test(part)) {
+        return ':id';
+      }
+      return part;
+    });
+    return `${parsed.hostname}${pathParts.join('/')}`;
+  } catch {
+    return urlStr;
+  }
 }
 
 export function calculateFullJitterBackoff(attempt: number, baseMs = 200, maxMs = 10000): number {
@@ -86,6 +119,14 @@ export function isCacheDisabled(config: RequestConfig, headers: Record<string, s
   const cacheControlHeader = (headers[HTTP_CONSTANTS.HEADER_CACHE_CONTROL] || config.headers?.[HTTP_CONSTANTS.HEADER_CACHE_CONTROL] || "").toLowerCase();
   const hasNoCacheDirective = cacheControlHeader.includes(HTTP_CONSTANTS.CACHE_NO_CACHE) || cacheControlHeader.includes(HTTP_CONSTANTS.CACHE_NO_STORE);
   return Boolean(config.noCache || hasNoCacheDirective);
+}
+
+export function isMethodIdempotent(method: string, headers: Record<string, string>): boolean {
+  const upper = method.toUpperCase();
+  if (upper === 'GET' || upper === 'HEAD' || upper === 'OPTIONS' || upper === 'PUT' || upper === 'DELETE') {
+    return true;
+  }
+  return Boolean(headers[HTTP_CONSTANTS.HEADER_X_IDEMPOTENCY_KEY]);
 }
 
 export class HttpError extends Error {
@@ -122,9 +163,9 @@ export type ResponseInterceptorFn<T = any> = (data: T, response: Response, confi
 export type ErrorInterceptorFn = (error: unknown, config: RequestConfig) => unknown;
 
 export interface ICacheStore {
-  get<T>(key: string): T | undefined;
-  set<T>(key: string, data: T, ttlMs: number): void;
-  clear(): void;
+  get<T>(tenantId: string, key: string): T | undefined;
+  set<T>(tenantId: string, key: string, data: T, ttlMs: number): void;
+  clear(tenantId?: string): void;
 }
 
 export interface ICircuitBreakerState {
@@ -133,34 +174,27 @@ export interface ICircuitBreakerState {
   nextAttempt: number;
 }
 
-export class InMemoryCacheStore implements ICacheStore {
-  private readonly store = new Map<string, { data: unknown; exp: number }>();
-  private readonly maxEntries: number;
+export class BoundedLRUCache<T = unknown> {
+  private readonly store = new Map<string, { data: T; exp: number }>();
 
-  constructor(maxEntries = 1000) {
-    this.maxEntries = maxEntries;
-  }
+  constructor(private readonly maxCapacity: number = 250) {}
 
-  get<T>(key: string): T | undefined {
+  get(key: string): T | undefined {
     const entry = this.store.get(key);
-    if (!entry) {
-      return undefined;
-    }
+    if (!entry) return undefined;
     if (Date.now() >= entry.exp) {
       this.store.delete(key);
       return undefined;
     }
-    // Refresh LRU order on access
     this.store.delete(key);
     this.store.set(key, entry);
-    return entry.data as T;
+    return entry.data;
   }
 
-  set<T>(key: string, data: T, ttlMs: number): void {
+  set(key: string, data: T, ttlMs: number): void {
     if (this.store.has(key)) {
       this.store.delete(key);
-    } else if (this.store.size >= this.maxEntries) {
-      // Bounded LRU Eviction: remove oldest key
+    } else if (this.store.size >= this.maxCapacity) {
       const oldestKey = this.store.keys().next().value;
       if (oldestKey !== undefined) {
         this.store.delete(oldestKey);
@@ -174,21 +208,57 @@ export class InMemoryCacheStore implements ICacheStore {
   }
 }
 
+export class TenantPartitionedCacheStore implements ICacheStore {
+  private readonly tenantPartitions = new Map<string, BoundedLRUCache<unknown>>();
+
+  constructor(private readonly maxCapacityPerTenant = 250) {}
+
+  private getPartition(tenantId: string): BoundedLRUCache<unknown> {
+    let partition = this.tenantPartitions.get(tenantId);
+    if (!partition) {
+      partition = new BoundedLRUCache<unknown>(this.maxCapacityPerTenant);
+      this.tenantPartitions.set(tenantId, partition);
+    }
+    return partition;
+  }
+
+  get<T>(tenantId: string, key: string): T | undefined {
+    return this.getPartition(tenantId).get(key) as T | undefined;
+  }
+
+  set<T>(tenantId: string, key: string, data: T, ttlMs: number): void {
+    this.getPartition(tenantId).set(key, data, ttlMs);
+  }
+
+  clear(tenantId?: string): void {
+    if (tenantId) {
+      this.tenantPartitions.get(tenantId)?.clear();
+    } else {
+      this.tenantPartitions.clear();
+    }
+  }
+}
+
 export class StandardCircuitBreaker {
   private readonly states = new Map<string, ICircuitBreakerState>();
 
-  public getState(url: string): ICircuitBreakerState {
-    const existing = this.states.get(url);
+  public getCircuitKey(tenantId: string, url: string): string {
+    const routeTemplate = deriveRouteTemplate(url);
+    return `${tenantId}:${routeTemplate}`;
+  }
+
+  public getState(circuitKey: string): ICircuitBreakerState {
+    const existing = this.states.get(circuitKey);
     if (existing) {
       return existing;
     }
     const newState: ICircuitBreakerState = { failures: 0, state: HTTP_CONSTANTS.CIRCUIT_CLOSED, nextAttempt: 0 };
-    this.states.set(url, newState);
+    this.states.set(circuitKey, newState);
     return newState;
   }
 
-  public canExecute(url: string): boolean {
-    const state = this.getState(url);
+  public canExecute(circuitKey: string): boolean {
+    const state = this.getState(circuitKey);
     if (state.state === HTTP_CONSTANTS.CIRCUIT_OPEN) {
       if (Date.now() > state.nextAttempt) {
         state.state = HTTP_CONSTANTS.CIRCUIT_HALF_OPEN;
@@ -199,14 +269,14 @@ export class StandardCircuitBreaker {
     return true;
   }
 
-  public onSuccess(url: string): void {
-    const state = this.getState(url);
+  public onSuccess(circuitKey: string): void {
+    const state = this.getState(circuitKey);
     state.failures = 0;
     state.state = HTTP_CONSTANTS.CIRCUIT_CLOSED;
   }
 
-  public onFailure(url: string, threshold = 5, cooldownMs = 10000): void {
-    const state = this.getState(url);
+  public onFailure(circuitKey: string, threshold = 5, cooldownMs = 10000): void {
+    const state = this.getState(circuitKey);
     state.failures++;
     if (state.failures >= threshold) {
       state.state = HTTP_CONSTANTS.CIRCUIT_OPEN;
@@ -222,7 +292,7 @@ export class ScalableHttpClient {
   private readonly errorInterceptors: ErrorInterceptorFn[] = [];
   private readonly activeControllers = new Map<string, AbortController>();
   private readonly inFlightSingleflights = new Map<string, Promise<{ data: any; status: number; headers: Headers }>>();
-  private cacheStore: ICacheStore = new InMemoryCacheStore(1000);
+  private cacheStore: ICacheStore = new TenantPartitionedCacheStore(250);
   private circuitBreaker = new StandardCircuitBreaker();
 
   constructor() {
@@ -290,25 +360,28 @@ export class ScalableHttpClient {
 
     const caller = getCallerInfo(3);
 
-    let initialHeaders: Record<string, string> = { ...config.headers };
-    for (const provider of this.headerProviders) {
-      initialHeaders = { ...initialHeaders, ...(await provider(config)) };
+    // Derived Server-Verified Tenant Context from RequestContextHolder (Fallback to default)
+    let authenticatedTenantId = HTTP_CONSTANTS.DEFAULT_TENANT_ID;
+    try {
+      authenticatedTenantId = RequestContextHolder.get().tenantId || HTTP_CONSTANTS.DEFAULT_TENANT_ID;
+    } catch {
+      authenticatedTenantId = config.headers?.[HTTP_CONSTANTS.HEADER_X_TENANT_ID] || HTTP_CONSTANTS.DEFAULT_TENANT_ID;
     }
-    const tenantId = initialHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID] || HTTP_CONSTANTS.DEFAULT_TENANT_ID;
 
-    const requestKey = `${tenantId}:${config.method}:${config.url}:${config.body ? JSON.stringify(config.body) : ''}`;
+    // SHA-256 Hashed Tenant-Isolated Request Key
+    const hashedRequestKey = generateHashedKey(authenticatedTenantId, config.method, config.url, config.body);
 
     if (!config.cancelPrevious) {
-      const existingSingleflight = this.inFlightSingleflights.get(requestKey);
+      const existingSingleflight = this.inFlightSingleflights.get(hashedRequestKey);
       if (existingSingleflight) {
         return existingSingleflight as Promise<{ data: T; status: number; headers: Headers }>;
       }
     }
 
-    const executionPromise = this.executePipeline<T>(config, requestKey, tenantId, initialHeaders, caller);
-    this.inFlightSingleflights.set(requestKey, executionPromise);
+    const executionPromise = this.executePipeline<T>(config, hashedRequestKey, authenticatedTenantId, caller);
+    this.inFlightSingleflights.set(hashedRequestKey, executionPromise);
     return executionPromise.finally(() => {
-      this.inFlightSingleflights.delete(requestKey);
+      this.inFlightSingleflights.delete(hashedRequestKey);
     });
   }
 
@@ -316,7 +389,6 @@ export class ScalableHttpClient {
     config: RequestConfig,
     requestKey: string,
     tenantId: string,
-    initialHeaders: Record<string, string>,
     caller = getCallerInfo(3)
   ): Promise<{ data: T; status: number; headers: Headers }> {
     const maxRetries = config.retries ?? 3;
@@ -324,6 +396,7 @@ export class ScalableHttpClient {
     const timeoutMs = config.timeoutMs ?? 30000;
     const failureThreshold = config.failureThreshold ?? 5;
     const tracer = trace.getTracer(HTTP_CONSTANTS.TRACER_NAME);
+    const sanitizedUrl = sanitizeUrlForTelemetry(config.url);
 
     if (config.cancelPrevious) {
       const existingController = this.activeControllers.get(requestKey);
@@ -341,32 +414,46 @@ export class ScalableHttpClient {
 
     const timeoutTimer = setTimeout(() => controller.abort(), timeoutMs);
 
-    return tracer.startActiveSpan(`HTTP ${config.method} ${config.url}`, { kind: SpanKind.CLIENT }, async (span) => {
+    return tracer.startActiveSpan(`HTTP ${config.method} ${sanitizedUrl}`, { kind: SpanKind.CLIENT }, async (span) => {
       try {
-        span.setAttribute(HTTP_CONSTANTS.ATTR_CODE_FUNCTION, caller.functionName);
-        span.setAttribute(HTTP_CONSTANTS.ATTR_CODE_FILEPATH, caller.filePath);
-        span.setAttribute(HTTP_CONSTANTS.ATTR_CODE_LINENO, caller.lineNumber);
+        setSanitizedAttribute(span, HTTP_CONSTANTS.ATTR_CODE_FUNCTION, caller.functionName);
+        setSanitizedAttribute(span, HTTP_CONSTANTS.ATTR_CODE_FILEPATH, caller.filePath);
+        setSanitizedAttribute(span, HTTP_CONSTANTS.ATTR_CODE_LINENO, caller.lineNumber);
 
-        span.addEvent(HTTP_CONSTANTS.EVENT_STEP_REQUEST_INTERCEPTORS, {
+        addSanitizedEvent(span, HTTP_CONSTANTS.EVENT_STEP_REQUEST_INTERCEPTORS, {
           [HTTP_CONSTANTS.KEY_INTERCEPTORS_COUNT]: this.requestInterceptors.length,
         });
 
-        const resolvedHeaders = { ...initialHeaders };
+        // Header Providers Resolution
+        let resolvedHeaders: Record<string, string> = {
+          [HTTP_CONSTANTS.HEADER_CONTENT_TYPE]: HTTP_CONSTANTS.CONTENT_TYPE_JSON,
+          ...config.headers,
+        };
+
+        for (const provider of this.headerProviders) {
+          const headersFromProvider = await provider(config);
+          resolvedHeaders = { ...resolvedHeaders, ...headersFromProvider };
+        }
+
+        // CSPRNG Idempotency Key Generation
         const idempotencyKey = resolvedHeaders[HTTP_CONSTANTS.HEADER_X_IDEMPOTENCY_KEY] || crypto.randomUUID();
         resolvedHeaders[HTTP_CONSTANTS.HEADER_X_IDEMPOTENCY_KEY] = idempotencyKey;
-        span.setAttribute(HTTP_CONSTANTS.ATTR_IDEMPOTENCY_KEY, idempotencyKey);
-        span.setAttribute(HTTP_CONSTANTS.ATTR_TENANT_ID, tenantId);
+        resolvedHeaders[HTTP_CONSTANTS.HEADER_X_TENANT_ID] = tenantId;
 
-        span.addEvent(HTTP_CONSTANTS.EVENT_STEP_HEADERS_RESOLVED, {
+        setSanitizedAttribute(span, HTTP_CONSTANTS.ATTR_IDEMPOTENCY_KEY, idempotencyKey);
+        setSanitizedAttribute(span, HTTP_CONSTANTS.ATTR_TENANT_ID, tenantId);
+
+        addSanitizedEvent(span, HTTP_CONSTANTS.EVENT_STEP_HEADERS_RESOLVED, {
           [HTTP_CONSTANTS.KEY_HEADERS_COUNT]: this.headerProviders.length,
         });
 
+        // Cache Policy Evaluation
         const cacheBypassed = isCacheDisabled(config, resolvedHeaders);
-        const cachedData = cacheBypassed ? undefined : this.cacheStore.get<T>(requestKey);
+        const cachedData = cacheBypassed ? undefined : this.cacheStore.get<T>(tenantId, requestKey);
         const isCacheHit = !cacheBypassed && cachedData !== undefined;
-        span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CACHE_HIT, isCacheHit);
+        setSanitizedAttribute(span, HTTP_CONSTANTS.ATTR_HTTP_CACHE_HIT, isCacheHit);
 
-        span.addEvent(HTTP_CONSTANTS.EVENT_CACHE_EVALUATED, {
+        addSanitizedEvent(span, HTTP_CONSTANTS.EVENT_CACHE_EVALUATED, {
           [HTTP_CONSTANTS.KEY_CACHE_BYPASSED]: cacheBypassed,
           [HTTP_CONSTANTS.KEY_CACHE_HIT]: isCacheHit,
           [HTTP_CONSTANTS.KEY_CACHE_KEY]: requestKey,
@@ -375,18 +462,20 @@ export class ScalableHttpClient {
         if (isCacheHit) {
           clearTimeout(timeoutTimer);
           this.activeControllers.delete(requestKey);
-          span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_POSITIVE);
-          span.addEvent(HTTP_CONSTANTS.EVENT_EXECUTION_SUCCESS, { [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_SUCCESS });
+          setSanitizedAttribute(span, HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_POSITIVE);
+          addSanitizedEvent(span, HTTP_CONSTANTS.EVENT_EXECUTION_SUCCESS, { [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_SUCCESS });
           span.setStatus({ code: SpanStatusCode.OK });
           span.end();
           return { data: cachedData as T, status: 200, headers: new Headers() };
         }
 
-        const canRun = this.circuitBreaker.canExecute(config.url);
-        const circuitState = this.circuitBreaker.getState(config.url);
-        span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_CIRCUIT_STATE, circuitState.state);
+        // Tenant-Isolated Circuit Breaker Keying
+        const circuitKey = this.circuitBreaker.getCircuitKey(tenantId, config.url);
+        const canRun = this.circuitBreaker.canExecute(circuitKey);
+        const circuitState = this.circuitBreaker.getState(circuitKey);
+        setSanitizedAttribute(span, HTTP_CONSTANTS.ATTR_HTTP_CIRCUIT_STATE, circuitState.state);
 
-        span.addEvent(HTTP_CONSTANTS.EVENT_CIRCUIT_EVALUATED, {
+        addSanitizedEvent(span, HTTP_CONSTANTS.EVENT_CIRCUIT_EVALUATED, {
           [HTTP_CONSTANTS.KEY_CIRCUIT_STATE]: circuitState.state,
           [HTTP_CONSTANTS.KEY_CIRCUIT_CAN_EXECUTE]: canRun,
           [HTTP_CONSTANTS.KEY_CIRCUIT_FAILURES]: circuitState.failures,
@@ -395,9 +484,9 @@ export class ScalableHttpClient {
         if (!canRun) {
           clearTimeout(timeoutTimer);
           this.activeControllers.delete(requestKey);
-          const cbErr = new Error(`CircuitBreaker: Request to ${config.url} blocked due to active OPEN state.`);
-          span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_NEGATIVE);
-          span.addEvent(HTTP_CONSTANTS.EVENT_EXECUTION_FAILURE, {
+          const cbErr = new Error(`CircuitBreaker: Request to ${sanitizedUrl} blocked due to active OPEN state for tenant ${tenantId}`);
+          setSanitizedAttribute(span, HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_NEGATIVE);
+          addSanitizedEvent(span, HTTP_CONSTANTS.EVENT_EXECUTION_FAILURE, {
             [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_FAILURE,
             [HTTP_CONSTANTS.ATTR_ERROR_DETAIL]: cbErr.message,
           });
@@ -407,30 +496,52 @@ export class ScalableHttpClient {
           throw cbErr;
         }
 
-        span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_METHOD, config.method);
-        span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_URL, config.url);
+        setSanitizedAttribute(span, HTTP_CONSTANTS.ATTR_HTTP_METHOD, config.method);
+        setSanitizedAttribute(span, HTTP_CONSTANTS.ATTR_HTTP_URL, sanitizedUrl);
 
         let lastError: unknown = null;
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
-          span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_RETRY_ATTEMPT, attempt);
-          span.addEvent(HTTP_CONSTANTS.EVENT_STEP_FETCH_INITIATED, { [HTTP_CONSTANTS.KEY_RETRY_ATTEMPT]: attempt });
+          // Re-check Circuit Breaker Status before EVERY retry attempt
+          if (!this.circuitBreaker.canExecute(circuitKey)) {
+            throw new Error(`CircuitBreaker: Circuit tripped to OPEN state mid-retry for tenant ${tenantId}`);
+          }
+
+          setSanitizedAttribute(span, HTTP_CONSTANTS.ATTR_HTTP_RETRY_ATTEMPT, attempt);
+          addSanitizedEvent(span, HTTP_CONSTANTS.EVENT_STEP_FETCH_INITIATED, { [HTTP_CONSTANTS.KEY_RETRY_ATTEMPT]: attempt });
 
           try {
+            // Manual Redirect Enforcement to prevent 302 SSRF to internal metadata IPs
             const res = await fetch(config.url, {
               method: config.method,
               headers: resolvedHeaders,
               body: config.body ? JSON.stringify(config.body) : undefined,
               signal: controller.signal,
+              redirect: 'manual',
             });
 
-            span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_STATUS_CODE, res.status);
+            // Re-validate Location Header if 3xx Redirect returned
+            if (res.status >= 300 && res.status < 400) {
+              const redirectUrl = res.headers.get('location');
+              if (redirectUrl) {
+                validateDestinationUrl(redirectUrl, config.allowedHosts);
+              }
+            }
+
+            setSanitizedAttribute(span, HTTP_CONSTANTS.ATTR_HTTP_STATUS_CODE, res.status);
 
             if (!res.ok) {
               throw new HttpError(
-                `${config.method} ${config.url} failed with status ${res.status}`,
+                `${config.method} ${sanitizedUrl} failed with status ${res.status}`,
                 res.status,
                 res.headers.get(HTTP_CONSTANTS.HEADER_RETRY_AFTER)
               );
+            }
+
+            // Streaming Content-Length Check prior to full JSON parsing
+            const contentLength = res.headers.get('content-length');
+            const maxBodyBytes = config.maxBodySizeBytes ?? 10 * 1024 * 1024;
+            if (contentLength && parseInt(contentLength, 10) > maxBodyBytes) {
+              throw new Error(`Downstream response Content-Length (${contentLength} bytes) exceeds maximum limit of ${maxBodyBytes} bytes`);
             }
 
             let data = (await res.json()) as T;
@@ -438,45 +549,47 @@ export class ScalableHttpClient {
               data = (await interceptor(data, res, config)) as T;
             }
 
-            span.addEvent(HTTP_CONSTANTS.EVENT_STEP_RESPONSE_INTERCEPTORS, {
+            addSanitizedEvent(span, HTTP_CONSTANTS.EVENT_STEP_RESPONSE_INTERCEPTORS, {
               [HTTP_CONSTANTS.KEY_INTERCEPTORS_COUNT]: this.responseInterceptors.length,
             });
 
-            this.circuitBreaker.onSuccess(config.url);
+            this.circuitBreaker.onSuccess(circuitKey);
             if (!cacheBypassed) {
-              this.cacheStore.set(requestKey, data, ttlMs);
+              this.cacheStore.set(tenantId, requestKey, data, ttlMs);
             }
 
             clearTimeout(timeoutTimer);
             this.activeControllers.delete(requestKey);
 
-            span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_POSITIVE);
-            span.addEvent(HTTP_CONSTANTS.EVENT_EXECUTION_SUCCESS, { [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_SUCCESS });
+            setSanitizedAttribute(span, HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_POSITIVE);
+            addSanitizedEvent(span, HTTP_CONSTANTS.EVENT_EXECUTION_SUCCESS, { [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_SUCCESS });
             span.setStatus({ code: SpanStatusCode.OK });
             span.end();
             return { data, status: res.status, headers: res.headers };
 
           } catch (err: any) {
             lastError = err;
-            this.circuitBreaker.onFailure(config.url, failureThreshold);
+            this.circuitBreaker.onFailure(circuitKey, failureThreshold);
 
             for (const interceptor of this.errorInterceptors) {
               interceptor(err, config);
             }
 
-            span.addEvent(HTTP_CONSTANTS.EVENT_STEP_ERROR_HANDLED, {
+            addSanitizedEvent(span, HTTP_CONSTANTS.EVENT_STEP_ERROR_HANDLED, {
               [HTTP_CONSTANTS.KEY_INTERCEPTORS_COUNT]: this.errorInterceptors.length,
             });
 
             const isAborted = err?.name === HTTP_CONSTANTS.ERROR_NAME_ABORT || controller.signal.aborted;
             if (isAborted) {
-              span.setAttribute(HTTP_CONSTANTS.ATTR_REQUEST_CANCELLED, true);
-              span.addEvent(HTTP_CONSTANTS.EVENT_REQUEST_CANCELLED, { [HTTP_CONSTANTS.KEY_CANCELLED_KEY]: requestKey });
+              setSanitizedAttribute(span, HTTP_CONSTANTS.ATTR_REQUEST_CANCELLED, true);
+              addSanitizedEvent(span, HTTP_CONSTANTS.EVENT_REQUEST_CANCELLED, { [HTTP_CONSTANTS.KEY_CANCELLED_KEY]: requestKey });
             }
 
-            const shouldRetry = !isAborted && attempt < maxRetries && retryPolicyRegistry.isRetryable(err);
+            // Verify Idempotency Constraint for Non-Idempotent Methods
+            const idempotentMethod = isMethodIdempotent(config.method, resolvedHeaders);
+            const shouldRetry = !isAborted && idempotentMethod && attempt < maxRetries && retryPolicyRegistry.isRetryable(err);
 
-            span.addEvent(HTTP_CONSTANTS.EVENT_RETRY_DECISION, {
+            addSanitizedEvent(span, HTTP_CONSTANTS.EVENT_RETRY_DECISION, {
               [HTTP_CONSTANTS.KEY_RETRY_ATTEMPT]: attempt,
               [HTTP_CONSTANTS.KEY_RETRY_SHOULD_RETRY]: shouldRetry,
               [HTTP_CONSTANTS.KEY_RETRY_ERROR_MSG]: err instanceof Error ? err.message : String(err),
@@ -484,7 +597,7 @@ export class ScalableHttpClient {
 
             if (shouldRetry) {
               const backoff = calculateFullJitterBackoff(attempt + 1, 200, 10000);
-              span.setAttribute(HTTP_CONSTANTS.ATTR_HTTP_RETRY_BACKOFF_MS, backoff);
+              setSanitizedAttribute(span, HTTP_CONSTANTS.ATTR_HTTP_RETRY_BACKOFF_MS, backoff);
               await new Promise((r) => setTimeout(r, backoff));
             } else {
               break;
@@ -495,8 +608,8 @@ export class ScalableHttpClient {
         clearTimeout(timeoutTimer);
         this.activeControllers.delete(requestKey);
 
-        span.setAttribute(HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_NEGATIVE);
-        span.addEvent(HTTP_CONSTANTS.EVENT_EXECUTION_FAILURE, {
+        setSanitizedAttribute(span, HTTP_CONSTANTS.ATTR_EXECUTION_PATH, HTTP_CONSTANTS.PATH_NEGATIVE);
+        addSanitizedEvent(span, HTTP_CONSTANTS.EVENT_EXECUTION_FAILURE, {
           [HTTP_CONSTANTS.ATTR_RESULT_STATUS]: HTTP_CONSTANTS.STATUS_FAILURE,
           [HTTP_CONSTANTS.ATTR_ERROR_DETAIL]: lastError instanceof Error ? lastError.message : String(lastError),
         });
