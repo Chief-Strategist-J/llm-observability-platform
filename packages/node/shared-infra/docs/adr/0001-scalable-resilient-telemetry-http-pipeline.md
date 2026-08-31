@@ -30,7 +30,188 @@ We need a standardized, resilient, pure functional HTTP client pipeline with dee
 
 ---
 
-## 3. Considered Options
+## 3. High-Level Architecture (HLA)
+
+The High-Level Architecture establishes `ScalableHttpClient` as the central anti-corruption and network resilience facade for all frontend features (`overview`, `traces`, `costs`, `quality`) and Node.js microservices.
+
+```mermaid
+graph TD
+  subgraph Client Application Layer
+    FE["React Feature Hooks / Next.js API Routes"]
+  end
+
+  subgraph Shared Infrastructure Layer [@observability/shared-infra]
+    HTTP["ScalableHttpClient Facade"]
+    REG["HeaderProvider & Interceptor Registries"]
+    SF["Singleflight Deduplicator Map"]
+    CB["StandardCircuitBreaker"]
+    CACHE["InMemoryCacheStore"]
+    RETRY["RetryPolicyRegistry"]
+    CALLER["Stack Frame Parser (getCallerInfo)"]
+  end
+
+  subgraph Observability & Network Layer
+    OTEL["OpenTelemetry Collector / Span Processor"]
+    NET["Downstream LLM Backend Microservices"]
+  end
+
+  FE -->|"1. execute(RequestConfig)"| HTTP
+  HTTP -->|"2. Resolve Auth/Context Headers"| REG
+  HTTP -->|"3. Check In-Flight Singleflight"| SF
+  HTTP -->|"4. Extract Line & Function No."| CALLER
+  HTTP -->|"5. Evaluate Cache Policy"| CACHE
+  HTTP -->|"6. Inspect Circuit State"| CB
+  HTTP -->|"7. Execute Fetch + Full Jitter Jitter"| NET
+  NET -->|"8. Handle Errors / Retry Policy"| RETRY
+  HTTP -->|"9. Emit Spans, Code Attributes & Step Events"| OTEL
+```
+
+### Key High-Level System Responsibilities:
+
+1. **Isolation & Interception**: Wraps raw `fetch` requests with pluggable request/response/error interceptors.
+2. **Telemetry Ingestion**: Bridges W3C `traceparent`, `x-request-id`, and `x-tenant-id` context directly into OpenTelemetry spans.
+3. **Resilience Boundary**: Prevents cascading downstream outages through circuit breaking and exponential backoff retry jitter.
+
+---
+
+## 4. Low-Level Architecture (LLA)
+
+The Low-Level Architecture details the internal pure functional execution pipeline, data structures, and class contracts powering `ScalableHttpClient`.
+
+### 4.1 Class & Component Contract Diagram
+
+```mermaid
+classDiagram
+  class ScalableHttpClient {
+    -headerProviders: HeaderProviderFn[]
+    -requestInterceptors: RequestInterceptorFn[]
+    -responseInterceptors: ResponseInterceptorFn[]
+    -errorInterceptors: ErrorInterceptorFn[]
+    -activeControllers: Map~string, AbortController~
+    -inFlightSingleflights: Map~string, Promise~
+    -cacheStore: ICacheStore
+    -circuitBreaker: StandardCircuitBreaker
+    +execute~T~(rawConfig: RequestConfig): Promise~T~
+    +get~T~(url: string, headers?, options?): Promise~T~
+    +post~T~(url: string, body, headers?, options?): Promise~T~
+    +registerHeaderProvider(provider: HeaderProviderFn): void
+    +registerRequestInterceptor(interceptor: RequestInterceptorFn): void
+    +registerResponseInterceptor(interceptor: ResponseInterceptorFn): void
+  }
+
+  class ICacheStore {
+    <<interface>>
+    +get~T~(key: string): T
+    +set~T~(key: string, data: T, ttlMs: number): void
+    +clear(): void
+  }
+
+  class StandardCircuitBreaker {
+    -states: Map~string, ICircuitBreakerState~
+    +getState(url: string): ICircuitBreakerState
+    +canExecute(url: string): boolean
+    +onSuccess(url: string): void
+    +onFailure(url: string, threshold, cooldownMs): void
+  }
+
+  class RetryPolicyRegistry {
+    -nonRetryableCodes: Set~number~
+    +isRetryable(error: unknown): boolean
+  }
+
+  class getCallerInfo {
+    +getCallerInfo(depth: number): CallerInfo
+  }
+
+  ScalableHttpClient --> ICacheStore
+  ScalableHttpClient --> StandardCircuitBreaker
+  ScalableHttpClient --> RetryPolicyRegistry
+  ScalableHttpClient ..> getCallerInfo
+```
+
+---
+
+### 4.2 Low-Level Pipeline Execution Sequence Diagram
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Caller as Feature Code / Hook
+  participant Client as ScalableHttpClient
+  participant SF as Singleflight Map
+  participant CodeTracer as getCallerInfo()
+  participant Cache as ICacheStore
+  participant CB as StandardCircuitBreaker
+  participant Fetch as Fetch API
+  participant OTEL as OpenTelemetry Active Span
+
+  Caller->>Client: execute({ method: 'GET', url: '/api/v1/summary' })
+  Client->>Client: Run requestInterceptors (Promise.reduce)
+  Client->>SF: Check inFlightSingleflights.get(requestKey)
+  alt Singleflight Hit
+    SF-->>Caller: Return shared active Promise (No network request)
+  else Singleflight Miss
+    Client->>CodeTracer: getCallerInfo(3) -> { functionName, filePath, lineNumber }
+    Client->>OTEL: startActiveSpan("HTTP GET /api/v1/summary")
+    OTEL->>OTEL: setAttribute("code.function", functionName)
+    OTEL->>OTEL: setAttribute("code.filepath", filePath)
+    OTEL->>OTEL: setAttribute("code.lineno", lineNumber)
+    Client->>Client: Resolve headerProviders (JWT, traceparent, tenant-id)
+    Client->>Cache: isCacheDisabled() ? null : get(requestKey)
+    alt Cache Hit
+      Cache-->>Client: Return cached data
+      Client->>OTEL: addEvent("decision.cache_evaluated", { hit: true })
+      Client->>OTEL: setStatus(SpanStatusCode.OK)
+      OTEL-->>Caller: Return cached payload
+    else Cache Miss
+      Client->>CB: canExecute(url)
+      alt Circuit Open
+        CB-->>Client: false
+        Client->>OTEL: setStatus(SpanStatusCode.ERROR)
+        Client-->>Caller: Throw CircuitBreaker Error
+      else Circuit Closed / Half Open
+        Client->>Fetch: fetch(url, { headers, signal })
+        alt HTTP 200 OK
+          Fetch-->>Client: Response JSON
+          Client->>Cache: set(requestKey, data, ttlMs)
+          Client->>CB: onSuccess(url)
+          Client->>OTEL: addEvent("execution.success")
+          Client->>OTEL: setStatus(SpanStatusCode.OK)
+          Client-->>Caller: Return response payload
+        else HTTP 500 / Error
+          Fetch-->>Client: HttpError
+          Client->>CB: onFailure(url)
+          Client->>Client: calculateFullJitterBackoff(attempt)
+          Client->>OTEL: addEvent("decision.retry_evaluated", { shouldRetry: true })
+          Client->>Fetch: Retry attemptFetch(attempt + 1)
+        end
+      end
+    end
+  end
+```
+
+---
+
+### 4.3 Internal Data Structures & Types
+
+#### `CallerInfo` Interface
+```typescript
+export interface CallerInfo {
+  functionName: string; // Calling function or method name
+  filePath: string;     // Absolute file path
+  lineNumber: number;   // Line number where the request originated
+}
+```
+
+#### `inFlightSingleflights` Map
+```typescript
+// Collapses concurrent identical requests without throwing AbortError to callers
+private readonly inFlightSingleflights = new Map<string, Promise<{ data: any; status: number; headers: Headers }>>();
+```
+
+---
+
+## 5. Considered Options
 
 1. **Option 1: Traditional Axios/Fetch Wrappers with Imperative Loops**
    * *Pros*: Simple to write initially.
@@ -45,35 +226,13 @@ We need a standardized, resilient, pure functional HTTP client pipeline with dee
 
 ---
 
-## 4. Decision Outcome
+## 6. Decision Outcome
 
 **Chosen Option**: Option 3 (Pure Functional `ScalableHttpClient` with Data-Driven Registries & OTEL Telemetry).
 
-### Architectural Key Mechanics:
-
-#### A. Singleflight Request Collapsing
-Identical in-flight GET requests map to a shared promise stored in `inFlightSingleflights`. Upon resolution or rejection, the promise resolves for all callers simultaneously while issuing exactly 1 network call.
-
-#### B. OpenTelemetry Code Location Telemetry
-Using stack frame extraction (`getCallerInfo()`), every span created by the HTTP client automatically attaches OTEL Semantic Conventions:
-* `code.function`: Function/method name initiating the call.
-* `code.filepath`: File path where the call originated.
-* `code.lineno`: Exact line number where the call originated.
-
-#### C. Granular Step-by-Step & Decision Telemetry
-Spans emit structured events at each execution phase:
-1. `step.request_interceptors_executed`
-2. `step.header_providers_resolved`
-3. `decision.cache_evaluated`
-4. `decision.circuit_breaker_evaluated`
-5. `step.fetch_attempt_initiated`
-6. `step.response_interceptors_executed`
-7. `decision.retry_evaluated`
-8. `execution.success` (Positive Path: `SpanStatusCode.OK`) / `execution.failure` (Negative Path: `SpanStatusCode.ERROR`)
-
 ---
 
-## 5. Consequences
+## 7. Consequences
 
 ### Positive
 * **Zero Thundering Herds**: Deduplicates identical concurrent read queries seamlessly.
@@ -86,7 +245,7 @@ Spans emit structured events at each execution phase:
 
 ---
 
-## 6. Verification and Compliance
+## 8. Verification and Compliance
 
 * **Unit Test Suite**: Verified by Vitest test suite in [`packages/node/shared-infra/src/http/tests/http-client.test.ts`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/shared-infra/src/http/tests/http-client.test.ts).
 * **Feature Test Suites**: Passes 100% across all feature test suites (`overview`, `traces`, `costs`, `quality`).
