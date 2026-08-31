@@ -152,7 +152,7 @@ export class ScalableHttpClient {
       getAuthHeaders(config.serviceSub || HTTP_CONSTANTS.DEFAULT_SERVICE_SUB)
     );
 
-    this.registerHeaderProvider(() => {
+    this.registerHeaderProvider((): Record<string, string> => {
       try {
         const ctx = RequestContextHolder.get();
         return {
@@ -203,12 +203,12 @@ export class ScalableHttpClient {
                   throw cbErr;
                 })()
               : await (async () => {
-                  const resolvedHeaders = await this.headerProviders.reduce(
+                  const resolvedHeaders = await this.headerProviders.reduce<Promise<Record<string, string>>>(
                     async (accPromise, provider) => ({
                       ...(await accPromise),
                       ...(await provider(config)),
                     }),
-                    Promise.resolve({
+                    Promise.resolve<Record<string, string>>({
                       [HTTP_CONSTANTS.HEADER_CONTENT_TYPE]: HTTP_CONSTANTS.CONTENT_TYPE_JSON,
                       ...config.headers,
                     })
