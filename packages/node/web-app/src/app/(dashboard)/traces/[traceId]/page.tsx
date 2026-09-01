@@ -16,7 +16,12 @@ export default function TraceDetailPage({ params }: { params: Promise<{ traceId:
       setLoading(true);
       try {
         const res = await fetch(`/api/v1/traces/${resolvedParams.traceId}`);
-        if (!res.ok) throw new Error(`Failed to load trace ${resolvedParams.traceId}`);
+        if (!res.ok) {
+          if (res.status === 404) {
+            throw new Error(`Trace ID ${resolvedParams.traceId} was not found in telemetry storage.`);
+          }
+          throw new Error(`Failed to load trace ${resolvedParams.traceId}`);
+        }
         const data = await res.json();
         if (isMounted) {
           setTrace(data);

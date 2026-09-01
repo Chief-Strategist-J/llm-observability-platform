@@ -24,7 +24,7 @@ export interface SpanNode {
   start_time_offset_ms: number;
   duration_ms: number;
   status: "success" | "error";
-  attributes?: Record<string, string | number | boolean>;
+  attributes?: Record<string, unknown>;
   children?: SpanNode[];
 }
 

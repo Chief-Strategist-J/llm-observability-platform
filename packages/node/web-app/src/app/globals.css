@@ -2,6 +2,7 @@
 @import "@observability/design-tokens/dist/variables.css";
 @import "../shared/ui/css/shared-ui.css";
 @import "../features/auth/css/auth.css";
+@import "../features/traces/css/traces.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant high-contrast (&:where(.high-contrast, .high-contrast *));

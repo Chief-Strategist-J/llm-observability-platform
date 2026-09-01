@@ -9,7 +9,7 @@ export async function GET(
     const { traceId } = await params;
     const data = await tracesClientService.getTraceDetail(traceId);
     if (!data) {
-      return NextResponse.json({ error: "Trace detail not found" }, { status: 44 });
+      return NextResponse.json({ error: "Trace detail not found" }, { status: 404 });
     }
     return NextResponse.json(data);
   } catch (error: any) {

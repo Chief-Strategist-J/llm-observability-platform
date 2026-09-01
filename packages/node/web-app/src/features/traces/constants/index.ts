@@ -1,3 +1,6 @@
+export * from './traces.text';
+export * from './traces.telemetry';
+
 export const TRACES_CONFIG_DEFAULTS = {
   DEFAULT_PAGE_SIZE: 20,
   DEFAULT_SERVICE_SUB: "web-app-traces-service",
