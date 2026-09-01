@@ -34,71 +34,145 @@ We need a standardized, resilient, readable shared infrastructure combining an H
 ## 3. Detailed 10-Step Fleet-Resilient Pipeline Specification
 
 ### Step 1: Inbound Concurrency Admission Control & Load Shedding
-To protect the Node.js process event loop and connection pools from inbound request saturation:
-$$\text{ActiveInFlight} \le \text{MaxInFlightRequests} \quad (\text{default } 500)$$
-If active in-flight execution count exceeds capacity, the client sheds load immediately, rejecting incoming calls with a `429 / Load Shedding` error.
+
+* **Definition**: Admission control limits the total number of concurrent HTTP operations executing across the client process to prevent Node.js event loop starvation and socket pool exhaustion.
+* **Operational Logic & Formula**:
+  ```text
+  ActiveInFlight <= MaxInFlightRequests  (Default: 500)
+  ```
+  $$\text{ActiveInFlight} \le \text{MaxInFlightRequests} \quad (\text{default: } 500)$$
+* **Execution Rules**:
+  - **Positive Path**: If `ActiveInFlight < MaxInFlightRequests`, increment the active counter and proceed to Step 2.
+  - **Negative Path**: If active capacity is exceeded, immediately shed load by rejecting the caller with an `HttpError` (`429 Too Many Requests / Load Shedding`).
+* **Telemetry**: Emits `admission_control.shed` span event and sets span status to `ERROR`.
 
 ---
 
 ### Step 2: AsyncLocalStorage Request Context Isolation
-Context propagation uses Node.js native `AsyncLocalStorage` to eliminate cross-tenant data leaks and context-bleeding bugs in concurrent asynchronous execution chains:
-$$\text{Context}_{\text{active}} = \text{AsyncLocalStorage.getStore}()$$
-If uninitialized, a fallback context with `tenantId: "tenant-default"` is created automatically.
+
+* **Definition**: Uses Node.js native `AsyncLocalStorage` to maintain thread-safe, tenant-isolated context across asynchronous call chains without parameter drilling.
+* **Operational Logic & Formula**:
+  ```text
+  Context_active = AsyncLocalStorage.getStore() ?? DefaultContext
+  ```
+  $$\text{Context}_{\text{active}} = \text{AsyncLocalStorage.getStore}() \mathbin{\Vert} \text{Context}_{\text{default}}$$
+* **Execution Rules**:
+  - Automatically retrieves `tenantId`, `traceId`, and security claims from the active async execution context.
+  - If context is uninitialized, defaults to `tenantId: "tenant-default"`.
 
 ---
 
 ### Step 3: DNS IP-Level Resolution SSRF & TOCTOU Protection
-The pipeline performs async DNS resolution via `dns.promises.lookup()` to validate the actual resolved IP address against restricted subnets before opening a socket connection:
-$$\text{BlockedSubnets} = \{ 127.0.0.0/8, 169.254.0.0/16, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, ::1, 0.0.0.0 \}$$
-If the target hostname resolves to any IP in $\text{BlockedSubnets}$, execution is aborted immediately with an SSRF Violation error.
+
+* **Definition**: Asynchronously resolves domain hostnames to IP addresses before opening sockets to prevent Server-Side Request Forgery (SSRF) and Time-of-Check to Time-of-Use (TOCTOU) attacks against internal infrastructure.
+* **Operational Logic & Formula**:
+  ```text
+  BlockedSubnets = { 127.0.0.0/8, 169.254.0.0/16, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, ::1, 0.0.0.0 }
+  ```
+  $$\text{TargetIP} \notin \text{BlockedSubnets}$$
+* **Execution Rules**:
+  - Performs `dns.promises.lookup(hostname)`.
+  - Rejects execution if the resolved IP falls within loopback, link-local, or private RFC 1918 subnets.
 
 ---
 
 ### Step 4: Per-Tenant Outbound Rate Limiting (Token Bucket)
-Enforces Token Bucket outbound rate limiting per tenant:
-$$\text{Tokens}_{\text{new}} = \min(\text{MaxTokens}, \text{Tokens}_{\text{current}} + \Delta t \times \text{RefillRate})$$
-Default configuration: $\text{MaxTokens} = 100$, $\text{RefillRate} = 50\text{ req/sec}$.
+
+* **Definition**: Enforces Token Bucket rate limiting per tenant to prevent single-tenant traffic spikes from monopolizing shared outbound network bandwidth.
+* **Operational Logic & Formula**:
+  ```text
+  Tokens_new = min(MaxTokens, Tokens_current + (Time_elapsed * RefillRate))
+  ```
+  $$\text{Tokens}_{\text{new}} = \min\left(\text{MaxTokens},\, \text{Tokens}_{\text{current}} + \Delta t \times \text{RefillRate}\right)$$
+  - Default parameters: $\text{MaxTokens} = 100$, $\text{RefillRate} = 50\text{ tokens/sec}$.
+* **Execution Rules**:
+  - Consumes 1 token per request. If tokens are unavailable, rejects with `429 Rate Limit Exceeded`.
 
 ---
 
 ### Step 5: Fleet-Wide Retry Budgeting (Retry Storm Prevention)
-To prevent broad partial outages across multiple routes from turning into a retry-amplified thundering herd:
-$$\text{RetryRatio} = \frac{\text{TotalRetries}}{\text{TotalRequests}} \le 0.20 \quad (20\% \text{ Fleet Retry Budget})$$
-If cumulative retry volume exceeds 20% of total fleet requests, retries are suppressed globally, failing fast to protect downstreams.
+
+* **Definition**: Tracks overall client fleet retry attempts to prevent retry storms from overwhelming failing downstream microservices during partial outages.
+* **Operational Logic & Formula**:
+  ```text
+  RetryRatio = TotalRetries / TotalRequests <= 0.20  (20% Fleet Retry Budget)
+  ```
+  $$\text{RetryRatio} = \frac{\text{TotalRetries}}{\text{TotalRequests}} \le 0.20 \quad (20\% \text{ Fleet Retry Budget})$$
+* **Execution Rules**:
+  - If cumulative retries exceed 20% of total fleet requests, retries are suppressed globally across all callers, failing fast to protect downstreams.
 
 ---
 
 ### Step 6: Total Operation Wall-Clock Timeout Budget
-Enforces a strict total wall-clock timeout budget across ALL retry attempts ($\text{totalMaxTimeoutMs} = 15,000\text{ms}$):
-$$\text{ElapsedTime} = \text{Date.now}() - \text{StartTime} \le \text{totalMaxTimeoutMs}$$
-An overarching `AbortController` cancels the entire pipeline if total cumulative execution time reaches 15 seconds, preventing UI stalls.
+
+* **Definition**: Enforces a global wall-clock deadline across all retry attempts to ensure asynchronous callers receive timely responses and UI components do not hang indefinitely.
+* **Operational Logic & Formula**:
+  ```text
+  ElapsedTime = Date.now() - StartTime <= totalMaxTimeoutMs  (Default: 15,000ms)
+  ```
+  $$\text{ElapsedTime} = \text{Date.now}() - \text{StartTime} \le \text{totalMaxTimeoutMs}$$
+* **Execution Rules**:
+  - An overarching `AbortController` terminates all active and pending retry attempts if cumulative execution time reaches 15 seconds.
 
 ---
 
 ### Step 7: SHA-256 Tenant-Isolated Key Hashing & Singleflight Collapsing
-Request signatures incorporate tenant identity and payload structure, hashed into a 256-bit hex digest:
-$$\text{Key}_{\text{raw}} = \text{tenantId} \parallel \text{method} \parallel \text{url} \parallel \text{JSON.stringify}(\text{body})$$
-$$\text{Key}_{\text{hashed}} = \text{SHA256}(\text{Key}_{\text{raw}}).\text{digest}("hex")$$
-Inspects active `inFlightSingleflights` map for $\text{Key}_{\text{hashed}}$, collapsing $N$ duplicate concurrent requests into 1 network RPC in $O(1)$ memory time.
+
+* **Definition**: Singleflight request collapsing deduplicates concurrent read operations. When $N$ callers simultaneously initiate identical read requests, only 1 network request is dispatched to the backend. All $N$ callers attach to the same pending `Promise`, receiving the exact same result simultaneously without throwing `AbortError` or duplicating network RPCs.
+
+* **Key Generation Specification**:
+  ```text
+  Key_raw    = tenantId + ":" + method + ":" + url + ":" + JSON.stringify(body)
+  Key_hashed = SHA256(Key_raw).digest("hex")
+  ```
+  $$\text{Key}_{\text{raw}} = \text{tenantId} \mathbin{\Vert} \text{method} \mathbin{\Vert} \text{url} \mathbin{\Vert} \text{JSON.stringify}(\text{body})$$
+  $$\text{Key}_{\text{hashed}} = \text{SHA256}(\text{Key}_{\text{raw}}).\text{digest}(\text{"hex"})$$
+
+* **Operational Mechanics**:
+  1. The client generates `Key_hashed` using SHA-256 over tenant ID, HTTP method, target URL, and request body payload.
+  2. **In-Flight Hit**: If `Key_hashed` exists in `inFlightSingleflights`, the current request attaches to the existing pending `Promise` and awaits completion in $O(1)$ lookup time.
+  3. **In-Flight Miss**: If `Key_hashed` is not present, a new `Promise` is registered, the network call executes, and upon resolution or failure, the promise is removed from `inFlightSingleflights` in a `finally` block.
 
 ---
 
 ### Step 8: Sealed TracedSpanFacade & Default-Deny Allowlist Filter
-Raw OpenTelemetry spans are wrapped inside a sealed `TracedSpanFacade`. Attributes are filtered against an explicit allowlist:
-$$\text{Attributes}_{\text{allowed}} = \{ k \in \text{Attributes}_{\text{raw}} \mid k \in \text{ALLOWED\_TELEMETRY\_ATTRIBUTES} \}$$
-URLs are sanitized via `sanitizeUrlForTelemetry()`, removing userinfo (`user:pass@`) and query strings (`?access_token=...`).
+
+* **Definition**: Wraps raw OpenTelemetry spans inside a sealed facade to ensure sensitive headers, authorization tokens, and query credentials are automatically scrubbed prior to export.
+* **Operational Logic & Formula**:
+  ```text
+  Attributes_allowed = { k in Attributes_raw | k in ALLOWED_TELEMETRY_ATTRIBUTES }
+  ```
+  $$\text{Attributes}_{\text{allowed}} = \{ k \in \text{Attributes}_{\text{raw}} \mid k \in \text{ALLOWED\_TELEMETRY\_ATTRIBUTES} \}$$
+* **Execution Rules**:
+  - Sanitizes URLs via `sanitizeUrlForTelemetry()`, removing userinfo and URL query tokens.
+  - Automatically records caller file path, function name, and line number (`code.filepath`, `code.function`, `code.lineno`).
 
 ---
 
 ### Step 9: Tenant-Partitioned LRU Cache & Write Invalidation
-- **Tenant Isolation**: Caches are partitioned per tenant ($\text{Map}<\text{tenantId}, \text{BoundedLRU}>$).
-- **Write Invalidation**: Executing write mutations (`POST`, `PUT`, `PATCH`, `DELETE`) automatically invalidates the tenant's cache partition ($\text{cacheStore.clear}(\text{tenantId})$).
+
+* **Definition**: Provides bounded in-memory caching partitioned per tenant, automatically invalidating tenant entries when mutating write operations occur.
+* **Operational Logic & Formula**:
+  ```text
+  CacheStore = Map<tenantId, BoundedLRU<requestKey, ResponsePayload>>
+  ```
+  $$\text{CacheStore} = \text{Map}<\text{tenantId}, \text{BoundedLRU}<\text{requestKey}, \text{ResponsePayload}>>$$
+* **Execution Rules**:
+  - `GET` requests check tenant cache partition.
+  - Executing mutating writes (`POST`, `PUT`, `PATCH`, `DELETE`) automatically invalidates the tenant's cache partition (`cacheStore.clear(tenantId)`).
 
 ---
 
 ### Step 10: Bounded LRU Circuit Breaker & Per-Attempt Re-Check
-Circuit breaker states are stored in a Bounded LRU store ($\text{maxCapacity} = 1000$, $\text{TTL} = 1\text{ hour}$). The status (`CLOSED`, `OPEN`, `HALF_OPEN`) is re-evaluated before EVERY retry iteration. Retries use AWS Full Jitter:
-$$\text{Sleep}(\text{attempt}) = \text{Random}\left(0, \min\left(\text{maxMs}, \text{baseMs} \times 2^{\text{attempt} - 1}\right)\right)$$
+
+* **Definition**: Tracks service health using a Bounded LRU Circuit Breaker to isolate failing downstream endpoints and prevent cascade failures.
+* **Operational Logic & Formula**:
+  ```text
+  BackoffMs(attempt) = Random(0, min(maxMs, baseMs * 2^(attempt - 1)))
+  ```
+  $$\text{Sleep}(\text{attempt}) = \text{Random}\left(0,\, \min\left(\text{maxMs},\, \text{baseMs} \times 2^{\text{attempt} - 1}\right)\right)$$
+* **Execution Rules**:
+  - Evaluates circuit state (`CLOSED`, `OPEN`, `HALF_OPEN`) before every retry iteration. Retries use AWS Full Jitter backoff.
 
 ---
 
@@ -139,6 +213,13 @@ graph TD
   HTTP -->|"8. Emit Filtered Spans & Events"| SPAN
   SPAN --> OTEL
 ```
+
+### Component Definitions & Architecture Role:
+* **Client Application Layer (`FE`)**: React hooks, server components, or Next.js API handlers initiating data fetching operations.
+* **`ScalableHttpClient` Facade (`HTTP`)**: The central entry point coordinating the 10-step resilient pipeline.
+* **`AsyncLocalStorage` Context (`ALS`)**: Manages tenant identity and request boundaries across async steps.
+* **Pipeline Resilience Modules (`ADM`, `LIMIT`, `BUDGET`, `SF`, `CACHE`, `CB`)**: Modular guardrails enforcing load shedding, rate limiting, deduplication, caching, and circuit breaking.
+* **`TracedSpanFacade` (`SPAN`)**: Sanitizes and records telemetry spans before exporting to OpenTelemetry (`OTEL`).
 
 ---
 
@@ -216,23 +297,39 @@ sequenceDiagram
 ### 5.2 Circuit Breaker State Machine Transition Diagram
 
 ```mermaid
-stateDiagram-v2
-  [*] --> CLOSED : Initialize Circuit State (TTL = 1h)
+graph TD
+  classDef closed fill:#1b4332,stroke:#40916c,stroke-width:2px,color:#fff
+  classDef open fill:#5c1d24,stroke:#e63946,stroke-width:2px,color:#fff
+  classDef halfOpen fill:#7f4f24,stroke:#fb8500,stroke-width:2px,color:#fff
 
-  CLOSED --> OPEN : Failures &ge; threshold (default 5 failures)
-  note right of OPEN
-    All incoming requests for tenant:routeTemplate
-    are rejected immediately without network call.
-  end note
+  CLOSED["CLOSED<br/>(Normal Operation: Requests Allowed)"]:::closed
+  OPEN["OPEN<br/>(Tripped: Requests Fast-Failed 503)"]:::open
+  HALF_OPEN["HALF-OPEN<br/>(Trial Recovery Mode)"]:::halfOpen
 
-  OPEN --> HALF_OPEN : Cooldown period expires (Date.now() &gt; nextAttempt)
-  note right of HALF_OPEN
-    Trial execution permitted.
-  end note
-
-  HALF_OPEN --> CLOSED : Trial Request Succeeds (onSuccess)
-  HALF_OPEN --> OPEN : Trial Request Fails (onFailure)
+  CLOSED -->|"Failures &ge; Threshold (Default 5)"| OPEN
+  OPEN -->|"Cooldown Period Expires (TTL = 1 Hour)"| HALF_OPEN
+  HALF_OPEN -->|"Trial Request Succeeds (onSuccess)"| CLOSED
+  HALF_OPEN -->|"Trial Request Fails (onFailure)"| OPEN
 ```
+
+#### Complete State Definitions & Operational Rules:
+
+1. **`CLOSED` State (Normal Operation)**:
+   - **Definition**: The circuit breaker is healthy. All incoming requests pass through directly to the downstream network.
+   - **Behavior**: Consecutive failure counters are reset upon successful network execution.
+   - **Transition Trigger**: If consecutive network errors reach the failure threshold (default: 5 failures), the circuit transitions immediately to `OPEN`.
+
+2. **`OPEN` State (Fast-Failure Mode)**:
+   - **Definition**: Downstream microservice is failing or unreachable. The circuit is open to protect downstream systems from crash overload.
+   - **Behavior**: All incoming requests for the `tenantId:routeTemplate` key are rejected immediately with a `503 Service Unavailable / CircuitBreakerOpenException` without initiating network sockets.
+   - **Transition Trigger**: Remains `OPEN` until the cooldown timer (`TTL = 1 hour`) expires. Upon expiration, transitions to `HALF_OPEN`.
+
+3. **`HALF-OPEN` State (Trial Recovery Mode)**:
+   - **Definition**: A temporary probe state to test downstream recovery.
+   - **Behavior**: Allows exactly one trial request to pass through to the downstream service.
+   - **Transition Triggers**:
+     - **Success**: If the trial request succeeds (`onSuccess`), the circuit resets to `CLOSED`.
+     - **Failure**: If the trial request fails (`onFailure`), the circuit reverts immediately back to `OPEN` and resets the cooldown timer.
 
 ---
 
@@ -269,6 +366,10 @@ graph LR
   A3 -->|"BLOCKED BY DEFAULT-DENY ALLOWLIST"| Drop["Dropped / Redacted"]
 ```
 
+#### Scrubbing Rules & Security Guarantees:
+- **Default-Deny Policy**: Only telemetry keys explicitly enumerated in `ALLOWED_TELEMETRY_ATTRIBUTES` are exported. Unmatched keys (e.g. `Authorization`, `Cookie`, `x-api-key`) are dropped by default.
+- **URL Credential Sanitization**: `sanitizeUrlForTelemetry()` strips query parameters (`?token=secret`) and inline user credentials (`user:pass@`) before span creation.
+
 ---
 
 ### 5.4 Multi-Tenant Isolation & AsyncLocalStorage Architecture Diagram
@@ -296,6 +397,10 @@ graph TD
   HASH --> LRU
   ROUTE --> CBStore
 ```
+
+#### Multi-Tenant Isolation Guarantees:
+- **Partitioned Storage**: LRU Caches, Circuit Breaker states, and Rate Limit token buckets are keyed by `tenantId`.
+- **Zero Cross-Tenant Leakage**: Cache operations and mutation invalidations strictly target the partition matching the active `AsyncLocalStorage` store context.
 
 ---
 
