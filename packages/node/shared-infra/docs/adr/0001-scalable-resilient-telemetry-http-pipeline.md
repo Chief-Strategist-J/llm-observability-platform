@@ -81,32 +81,32 @@ We need a standardized, resilient, readable shared infrastructure combining an H
 ### 2.2 Detailed Principle Definitions & Operational Rationale
 
 #### 1. Pragmatic Readable Engineering over Dogmatic Purity
-* **Definition**: Prioritizes readable, transparent control flow and V8 step-through debuggability over dogmatic functional abstractions or obfuscated syntax.
-* **Operational Rationale**: Complex nested `.reduce()` chains, point-free pipelines, and deeply nested ternaries make stack traces cryptic and prevent step-by-step debugger inspection. Standardizing on explicit `if` guard clauses, early returns, and clean `for...of` loops guarantees immediate readability, zero V8 execution overhead, and rapid root-cause diagnosis during live incidents.
+* **Definition**: Standardizes clear, straightforward system design and code structure that prioritizes long-term maintainability, team readability, and rapid troubleshooting over overly complex or abstract programming patterns.
+* **Operational Rationale**: Overly complex code or hidden abstractions increase developer onboarding time, obscure system behavior during live incidents, and slow down emergency fixes. Keeping control flow clear and direct ensures any engineer on call can instantly understand system state and resolve production issues quickly.
 
 #### 2. Zero Hardcoded Strings
-* **Definition**: A strict policy banning raw string literals (`"GET"`, `"application/json"`, `"Content-Type"`, `"503"`) across all infrastructure modules.
-* **Operational Rationale**: Hardcoded strings are prone to subtle typos, refactoring breakage, and telemetry attribute drift. Centralizing all string tokens into frozen `as const` constant dictionaries (`HTTP_CONSTANTS`, `TRACING_CONSTANTS`, `RULES_ENGINE_CONSTANTS`) enforces compile-time auto-completion, refactoring safety, and strict global consistency.
+* **Definition**: Eliminates manual text entry for configuration values, system keys, status labels, and protocol metadata by enforcing centralized, strictly managed data dictionaries.
+* **Operational Rationale**: Manually typing text values throughout an application leads to subtle data corruption, mismatched analytics, and broken integration points. Centralizing all configuration names ensures total consistency, prevents human entry errors, and makes updates effortless across all services.
 
 #### 3. Singleflight Request Collapsing
-* **Definition**: An in-flight request deduplication mechanism that merges $N$ duplicate concurrent read operations targeting the exact same resource into a single network execution.
-* **Operational Rationale**: Simultaneous UI component renders or parallel API calls frequently trigger duplicate requests for identical endpoints (Thundering Herd). Singleflight hashes request parameters into a SHA-256 key (`Key_hashed`) and attaches all $N$ concurrent callers to 1 shared pending `Promise`. When the network call completes, the exact same response is returned to all callers simultaneously in $O(1)$ memory time without throwing `AbortError` or crashing UI state.
+* **Definition**: An operational efficiency control that automatically merges identical concurrent user requests for the same data into a single backend fetch, sharing the result across all requesting users simultaneously.
+* **Operational Rationale**: When multiple users or interface components request identical information at the same moment (such as loading a shared dashboard), sending multiple backend queries wastes network bandwidth and overloads database services. Singleflight ensures the system performs work only once and fulfills all pending requests concurrently.
 
 #### 4. Idempotency Key Preservation
-* **Definition**: Generating a cryptographically secure unique identifier (`x-idempotency-key`) via CSPRNG (`crypto.randomUUID()`) once per logical operation and preserving it identically across all retry attempts.
-* **Operational Rationale**: Network timeouts often occur *after* a downstream service has executed a write mutation (`POST`, `PUT`, `PATCH`) but *before* the client receives the response. Retrying with a new key causes duplicate mutations; preserving the original `x-idempotency-key` across retries allows downstream microservices to safely identify and deduplicate retried operations.
+* **Definition**: Assigns a unique transaction tracking identifier to every business operation and reuses that exact identifier across all retry attempts until completion.
+* **Operational Rationale**: If a network connection drops while submitting a transaction or data update, the client cannot confirm if the request succeeded. Re-transmitting the request with the identical tracking identifier allows downstream services to safely recognize and prevent duplicate processing, such as double-billing or redundant record creation.
 
 #### 5. Header & Endpoint Driven Caching
-* **Definition**: A dynamic caching policy where response storage and cache lookup are strictly governed by standard HTTP headers (`Cache-Control: no-cache, no-store`) and explicit endpoint configuration options (`noCache: true`).
-* **Operational Rationale**: Static caching rules cause stale data bugs or unintended caching of tenant-specific data. Respecting standard HTTP headers and explicit caller flags guarantees that clients can forcefully bypass cached entries when real-time data is mandatory while preserving high cache hit ratios for static read requests.
+* **Definition**: Dynamically governs data retention and retrieval using standard communication policies, allowing real-time requests to bypass stored data when fresh information is explicitly required.
+* **Operational Rationale**: Fixed caching policies risk serving outdated information or inadvertently exposing tenant-sensitive data. Allowing endpoint rules and caller requirements to dynamically dictate caching ensures critical operations receive live data while routine queries benefit from fast, low-cost cached responses.
 
 #### 6. Comprehensive OpenTelemetry Telemetry
-* **Definition**: Automated enrichment of OpenTelemetry spans with caller source location metadata (`code.function`, `code.filepath`, `code.lineno`), decision markers, and dual execution paths (Positive Path vs. Negative Path).
-* **Operational Rationale**: Black-box infrastructure makes production troubleshooting difficult. Recording exact line numbers and internal decision outcomes directly on spans enables instant tracing from telemetry dashboards back to the precise line of code that initiated the request.
+* **Definition**: Automatically records detailed operational audit logs, execution decisions, and exact origin context for every transaction across system boundaries.
+* **Operational Rationale**: Without comprehensive context, diagnosing system slowdowns or unexpected failures requires guesswork. Enriching transaction traces with decision outcomes and precise execution origin points gives engineering teams end-to-end visibility to trace issues back to their exact source instantly.
 
 #### 7. Pluggable Data-Driven Registries
-* **Definition**: Replacing hardcoded `switch` statements and monolithic `if/else` logic trees with decoupled, extensible registry objects (`ConditionHandlerRegistry`, `CentralizedErrorRegistry`, `StatusBadgeRegistry`, `RetryPolicyRegistry`).
-* **Operational Rationale**: Monolithic conditional logic violates the Open/Closed Principle (OCP)—adding a new retry policy or status badge requires modifying core code. Data-driven registries allow new handlers and rules to be registered dynamically at runtime without mutating core pipeline logic.
+* **Definition**: Establishes a modular architecture where system rules, error handlers, and business policies are registered dynamically as configurable data components rather than hardcoded logic.
+* **Operational Rationale**: Hardcoding business rules directly into core execution paths makes adding new features risky and expensive. Data-driven registries allow teams to introduce new business logic, retry policies, or integration rules seamlessly without altering core system infrastructure.
 
 ---
 
