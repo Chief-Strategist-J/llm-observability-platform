@@ -112,146 +112,146 @@ We need a standardized, resilient, readable shared infrastructure combining an H
 
 ## 3. Detailed 10-Step Fleet-Resilient Pipeline Specification
 
-### Step 1: Inbound Concurrency Admission Control & Load Shedding
+### 3.1 Unified Master Pipeline Pseudocode Specification
 
-* **Definition**: Admission control limits the total number of concurrent HTTP operations executing across the client process to prevent Node.js event loop starvation and socket pool exhaustion.
-* **Operational Logic & Formula**:
-  ```text
-  ActiveInFlight <= MaxInFlightRequests  (Default: 500)
-  ```
-  $$\text{ActiveInFlight} \le \text{MaxInFlightRequests} \quad (\text{default: } 500)$$
-* **Execution Rules**:
-  - **Positive Path**: If `ActiveInFlight < MaxInFlightRequests`, increment the active counter and proceed to Step 2.
-  - **Negative Path**: If active capacity is exceeded, immediately shed load by rejecting the caller with an `HttpError` (`429 Too Many Requests / Load Shedding`).
-* **Telemetry**: Emits `admission_control.shed` span event and sets span status to `ERROR`.
+```typescript
+/**
+ * Master Pipeline Specification: Unified 10-Step Fleet-Resilient HTTP Execution Pipeline
+ */
+ASYNC FUNCTION executeResilientHttpPipeline(requestConfig):
 
----
+  // STEP 1: Inbound Concurrency Admission Control & Load Shedding
+  IF activeInFlightRequests >= MAX_IN_FLIGHT_REQUESTS THEN  // Default capacity: 500
+    emitSpanEvent("admission_control.shed", { activeCount: activeInFlightRequests })
+    THROW HttpError(429, "Too Many Requests - Fleet Load Shedding")
+  END IF
+  INCREMENT activeInFlightRequests
 
-### Step 2: AsyncLocalStorage Request Context Isolation
+  TRY:
+    // STEP 2: AsyncLocalStorage Request Context Isolation
+    context = AsyncLocalStorage.getStore() ?? { tenantId: "tenant-default", traceId: generateUUID() }
+    tenantId = context.tenantId
 
-* **Definition**: Uses Node.js native `AsyncLocalStorage` to maintain thread-safe, tenant-isolated context across asynchronous call chains without parameter drilling.
-* **Operational Logic & Formula**:
-  ```text
-  Context_active = AsyncLocalStorage.getStore() ?? DefaultContext
-  ```
-  $$\text{Context}_{\text{active}} = \text{AsyncLocalStorage.getStore}() \mathbin{\Vert} \text{Context}_{\text{default}}$$
-* **Execution Rules**:
-  - Automatically retrieves `tenantId`, `traceId`, and security claims from the active async execution context.
-  - If context is uninitialized, defaults to `tenantId: "tenant-default"`.
+    // STEP 3: DNS IP-Level Resolution SSRF & TOCTOU Protection
+    targetIP = AWAIT dns.lookup(parseUrl(requestConfig.url).hostname)
+    IF isIpInBlockedSubnets(targetIP) THEN
+      // Restricted: 127.0.0.0/8, 169.254.0.0/16, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, ::1
+      emitSpanEvent("ssrf_violation_detected", { targetIP })
+      THROW SecurityError(403, "SSRF Violation: Resolved IP belongs to restricted subnet")
+    END IF
 
----
+    // STEP 4: Per-Tenant Outbound Rate Limiting (Token Bucket)
+    rateBucket = rateLimiterStore.getBucket(tenantId)  // Capacity: 100, Refill: 50 tokens/sec
+    IF rateBucket.consumeToken() == FALSE THEN
+      emitSpanEvent("rate_limit.exceeded", { tenantId })
+      THROW HttpError(429, "Rate Limit Exceeded for Tenant")
+    END IF
 
-### Step 3: DNS IP-Level Resolution SSRF & TOCTOU Protection
+    // STEP 5: Fleet-Wide Retry Budgeting (Retry Storm Prevention)
+    IF (globalFleetRetries / globalFleetRequests) > 0.20 THEN
+      emitSpanEvent("retry_budget.exhausted")
+      allowRetries = FALSE  // Suppress retries globally to protect downstreams
+    ELSE
+      allowRetries = TRUE
+    END IF
 
-* **Definition**: Asynchronously resolves domain hostnames to IP addresses before opening sockets to prevent Server-Side Request Forgery (SSRF) and Time-of-Check to Time-of-Use (TOCTOU) attacks against internal infrastructure.
-* **Operational Logic & Formula**:
-  ```text
-  BlockedSubnets = { 127.0.0.0/8, 169.254.0.0/16, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, ::1, 0.0.0.0 }
-  ```
-  $$\text{TargetIP} \notin \text{BlockedSubnets}$$
-* **Execution Rules**:
-  - Performs `dns.promises.lookup(hostname)`.
-  - Rejects execution if the resolved IP falls within loopback, link-local, or private RFC 1918 subnets.
+    // STEP 6: Total Operation Wall-Clock Timeout Budget
+    abortController = NEW AbortController()
+    globalTimer = setTimeout(() => abortController.abort(), 15000)  // 15s Wall-Clock Timeout Budget
 
----
+    // STEP 7: SHA-256 Tenant-Isolated Key Hashing & Singleflight Collapsing
+    rawKey = tenantId + ":" + requestConfig.method + ":" + requestConfig.url + ":" + JSON.stringify(requestConfig.body)
+    hashedKey = SHA256(rawKey).toHex()
 
-### Step 4: Per-Tenant Outbound Rate Limiting (Token Bucket)
+    IF requestConfig.method == "GET" AND inFlightSingleflights.has(hashedKey) THEN
+      emitSpanEvent("singleflight.deduplicated_hit", { hashedKey })
+      RETURN AWAIT inFlightSingleflights.get(hashedKey)  // Attach to existing in-flight Promise ($N -> 1 RPCs)
+    END IF
 
-* **Definition**: Enforces Token Bucket rate limiting per tenant to prevent single-tenant traffic spikes from monopolizing shared outbound network bandwidth.
-* **Operational Logic & Formula**:
-  ```text
-  Tokens_new = min(MaxTokens, Tokens_current + (Time_elapsed * RefillRate))
-  ```
-  $$\text{Tokens}_{\text{new}} = \min\left(\text{MaxTokens},\, \text{Tokens}_{\text{current}} + \Delta t \times \text{RefillRate}\right)$$
-  - Default parameters: $\text{MaxTokens} = 100$, $\text{RefillRate} = 50\text{ tokens/sec}$.
-* **Execution Rules**:
-  - Consumes 1 token per request. If tokens are unavailable, rejects with `429 Rate Limit Exceeded`.
+    // Define core pipeline execution task
+    pipelineTask = ASYNC () => {
 
----
+      // STEP 8: Sealed TracedSpanFacade & Default-Deny Allowlist Filter
+      sanitizedAttributes = filterAllowedAttributes(requestConfig.headers, ALLOWED_TELEMETRY_ATTRIBUTES)
+      callerLocation = extractV8CallerStackFrame()  // Captures code.filepath, code.function, code.lineno
 
-### Step 5: Fleet-Wide Retry Budgeting (Retry Storm Prevention)
+      RETURN AWAIT tracer.startActiveSpan("HTTP " + requestConfig.method, sanitizedAttributes, ASYNC (span) => {
 
-* **Definition**: Tracks overall client fleet retry attempts to prevent retry storms from overwhelming failing downstream microservices during partial outages.
-* **Operational Logic & Formula**:
-  ```text
-  RetryRatio = TotalRetries / TotalRequests <= 0.20  (20% Fleet Retry Budget)
-  ```
-  $$\text{RetryRatio} = \frac{\text{TotalRetries}}{\text{TotalRequests}} \le 0.20 \quad (20\% \text{ Fleet Retry Budget})$$
-* **Execution Rules**:
-  - If cumulative retries exceed 20% of total fleet requests, retries are suppressed globally across all callers, failing fast to protect downstreams.
+        // STEP 9: Tenant-Partitioned LRU Cache & Write Invalidation
+        tenantCache = lruCacheStore.getPartition(tenantId)
 
----
+        IF requestConfig.method IN ["POST", "PUT", "PATCH", "DELETE"] THEN
+          tenantCache.clear()  // Invalidate tenant cache partition on mutating write operations
+        ELSE IF requestConfig.noCache != TRUE AND tenantCache.has(hashedKey) THEN
+          span.setStatus("OK")
+          emitSpanEvent("cache.hit", { hashedKey })
+          RETURN tenantCache.get(hashedKey)  // Cache Hit
+        END IF
 
-### Step 6: Total Operation Wall-Clock Timeout Budget
+        // STEP 10: Bounded LRU Circuit Breaker & Per-Attempt Re-Check
+        circuitKey = tenantId + ":" + deriveRouteTemplate(requestConfig.url)
+        circuit = circuitBreakerLRU.get(circuitKey)
 
-* **Definition**: Enforces a global wall-clock deadline across all retry attempts to ensure asynchronous callers receive timely responses and UI components do not hang indefinitely.
-* **Operational Logic & Formula**:
-  ```text
-  ElapsedTime = Date.now() - StartTime <= totalMaxTimeoutMs  (Default: 15,000ms)
-  ```
-  $$\text{ElapsedTime} = \text{Date.now}() - \text{StartTime} \le \text{totalMaxTimeoutMs}$$
-* **Execution Rules**:
-  - An overarching `AbortController` terminates all active and pending retry attempts if cumulative execution time reaches 15 seconds.
+        IF circuit.state == "OPEN" THEN
+          IF Date.now() < circuit.nextAttemptTimestamp THEN
+            span.setStatus("ERROR")
+            THROW CircuitError(503, "Circuit Breaker OPEN - Fast Failure")
+          ELSE
+            circuit.state = "HALF_OPEN"  // Cooldown expired: Enter trial probe mode
+          END IF
+        END IF
 
----
+        // Execute Network Call with AWS Full Jitter Retry Loop
+        attempt = 1
+        maxAttempts = allowRetries ? 3 : 1
 
-### Step 7: SHA-256 Tenant-Isolated Key Hashing & Singleflight Collapsing
+        WHILE attempt <= maxAttempts:
+          TRY:
+            response = AWAIT fetchNetwork(requestConfig.url, requestConfig, abortController.signal)
+            circuit.onSuccess()  // Reset circuit to CLOSED
 
-* **Definition**: Singleflight request collapsing deduplicates concurrent read operations. When $N$ callers simultaneously initiate identical read requests, only 1 network request is dispatched to the backend. All $N$ callers attach to the same pending `Promise`, receiving the exact same result simultaneously without throwing `AbortError` or duplicating network RPCs.
+            IF requestConfig.method == "GET" THEN
+              tenantCache.set(hashedKey, response)
+            END IF
 
-* **Key Generation Specification**:
-  ```text
-  Key_raw    = tenantId + ":" + method + ":" + url + ":" + JSON.stringify(body)
-  Key_hashed = SHA256(Key_raw).digest("hex")
-  ```
-  $$\text{Key}_{\text{raw}} = \text{tenantId} \mathbin{\Vert} \text{method} \mathbin{\Vert} \text{url} \mathbin{\Vert} \text{JSON.stringify}(\text{body})$$
-  $$\text{Key}_{\text{hashed}} = \text{SHA256}(\text{Key}_{\text{raw}}).\text{digest}(\text{"hex"})$$
+            span.setStatus("OK")
+            RETURN response
 
-* **Operational Mechanics**:
-  1. The client generates `Key_hashed` using SHA-256 over tenant ID, HTTP method, target URL, and request body payload.
-  2. **In-Flight Hit**: If `Key_hashed` exists in `inFlightSingleflights`, the current request attaches to the existing pending `Promise` and awaits completion in $O(1)$ lookup time.
-  3. **In-Flight Miss**: If `Key_hashed` is not present, a new `Promise` is registered, the network call executes, and upon resolution or failure, the promise is removed from `inFlightSingleflights` in a `finally` block.
+          CATCH error:
+            circuit.onFailure()
+            IF attempt == maxAttempts OR abortController.signal.aborted THEN
+              span.setStatus("ERROR")
+              RETHROW error
+            END IF
 
----
+            // AWS Full Jitter Exponential Backoff Jitter calculation
+            backoffMs = random(0, min(MAX_BACKOFF_MS, BASE_BACKOFF_MS * (2 ^ (attempt - 1))))
+            AWAIT sleep(backoffMs)
+            attempt = attempt + 1
+          END TRY
+        END WHILE
+      })
+    }
 
-### Step 8: Sealed TracedSpanFacade & Default-Deny Allowlist Filter
+    // Register singleflight promise for read operations
+    IF requestConfig.method == "GET" THEN
+      executionPromise = pipelineTask()
+      inFlightSingleflights.set(hashedKey, executionPromise)
+      TRY:
+        RETURN AWAIT executionPromise
+      FINALLY:
+        inFlightSingleflights.delete(hashedKey)
+      END TRY
+    ELSE:
+      RETURN AWAIT pipelineTask()
+    END IF
 
-* **Definition**: Wraps raw OpenTelemetry spans inside a sealed facade to ensure sensitive headers, authorization tokens, and query credentials are automatically scrubbed prior to export.
-* **Operational Logic & Formula**:
-  ```text
-  Attributes_allowed = { k in Attributes_raw | k in ALLOWED_TELEMETRY_ATTRIBUTES }
-  ```
-  $$\text{Attributes}_{\text{allowed}} = \{ k \in \text{Attributes}_{\text{raw}} \mid k \in \text{ALLOWED\_TELEMETRY\_ATTRIBUTES} \}$$
-* **Execution Rules**:
-  - Sanitizes URLs via `sanitizeUrlForTelemetry()`, removing userinfo and URL query tokens.
-  - Automatically records caller file path, function name, and line number (`code.filepath`, `code.function`, `code.lineno`).
-
----
-
-### Step 9: Tenant-Partitioned LRU Cache & Write Invalidation
-
-* **Definition**: Provides bounded in-memory caching partitioned per tenant, automatically invalidating tenant entries when mutating write operations occur.
-* **Operational Logic & Formula**:
-  ```text
-  CacheStore = Map<tenantId, BoundedLRU<requestKey, ResponsePayload>>
-  ```
-  $$\text{CacheStore} = \text{Map}<\text{tenantId}, \text{BoundedLRU}<\text{requestKey}, \text{ResponsePayload}>>$$
-* **Execution Rules**:
-  - `GET` requests check tenant cache partition.
-  - Executing mutating writes (`POST`, `PUT`, `PATCH`, `DELETE`) automatically invalidates the tenant's cache partition (`cacheStore.clear(tenantId)`).
-
----
-
-### Step 10: Bounded LRU Circuit Breaker & Per-Attempt Re-Check
-
-* **Definition**: Tracks service health using a Bounded LRU Circuit Breaker to isolate failing downstream endpoints and prevent cascade failures.
-* **Operational Logic & Formula**:
-  ```text
-  BackoffMs(attempt) = Random(0, min(maxMs, baseMs * 2^(attempt - 1)))
-  ```
-  $$\text{Sleep}(\text{attempt}) = \text{Random}\left(0,\, \min\left(\text{maxMs},\, \text{baseMs} \times 2^{\text{attempt} - 1}\right)\right)$$
-* **Execution Rules**:
-  - Evaluates circuit state (`CLOSED`, `OPEN`, `HALF_OPEN`) before every retry iteration. Retries use AWS Full Jitter backoff.
+  FINALLY:
+    DECREMENT activeInFlightRequests
+    clearTimeout(globalTimer)
+  END TRY
+END FUNCTION
+```
 
 ---
 
