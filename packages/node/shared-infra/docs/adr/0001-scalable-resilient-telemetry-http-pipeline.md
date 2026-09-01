@@ -153,12 +153,12 @@ sequenceDiagram
   participant ADM as ConcurrencyAdmissionControl
   participant ALS as AsyncLocalStorage Context
   participant Client as ScalableHttpClient Pipeline
-  participant DNS as DNSResolver (dns.promises.lookup)
+  participant DNS as "DNSResolver (dns.promises.lookup)"
   participant SF as Singleflight Map (SHA-256)
   participant Cache as TenantPartitionedCacheStore
-  participant CB as StandardCircuitBreaker (Bounded LRU)
+  participant CB as "StandardCircuitBreaker (Bounded LRU)"
   participant Net as Fetch API / Network
-  participant Span as TracedSpanFacade (Default-Deny Filter)
+  participant Span as "TracedSpanFacade (Default-Deny Filter)"
 
   Caller->>ADM: execute({ method: 'GET', url: 'https://api.org/data' })
   alt In-Flight Concurrency > 500
@@ -175,7 +175,7 @@ sequenceDiagram
       alt Singleflight Hit
         SF-->>Caller: Return shared in-flight Promise
       else Singleflight Miss
-        Client->>Span: startActiveSpan("HTTP GET https://api.org/data")
+        Client->>Span: startActiveSpan('HTTP GET https://api.org/data')
         Span->>Span: Filter attributes via ALLOWED_TELEMETRY_ATTRIBUTES
         Client->>Cache: get(tenantId, requestKey)
         alt Cache Hit
@@ -219,13 +219,13 @@ sequenceDiagram
 stateDiagram-v2
   [*] --> CLOSED : Initialize Circuit State (TTL = 1h)
 
-  CLOSED --> OPEN : Failures >= threshold (default 5 failures)
+  CLOSED --> OPEN : Failures &ge; threshold (default 5 failures)
   note right of OPEN
     All incoming requests for tenant:routeTemplate
     are rejected immediately without network call.
   end note
 
-  OPEN --> HALF_OPEN : Cooldown period expires (Date.now() > nextAttempt)
+  OPEN --> HALF_OPEN : Cooldown period expires (Date.now() &gt; nextAttempt)
   note right of HALF_OPEN
     Trial execution permitted.
   end note
@@ -259,9 +259,14 @@ graph LR
     S3["code.filepath: packages/node/shared-infra/src/..."]
   end
 
-  A5 --> URLFilter --> S2
-  A1 & A4 --> SpanFacade --> S1 & S3
-  A2 & A3 -->|"BLOCKED BY DEFAULT-DENY ALLOWLIST"| Drop["Dropped / Redacted"]
+  A5 --> URLFilter
+  URLFilter --> S2
+  A1 --> SpanFacade
+  A4 --> SpanFacade
+  SpanFacade --> S1
+  SpanFacade --> S3
+  A2 -->|"BLOCKED BY DEFAULT-DENY ALLOWLIST"| Drop["Dropped / Redacted"]
+  A3 -->|"BLOCKED BY DEFAULT-DENY ALLOWLIST"| Drop["Dropped / Redacted"]
 ```
 
 ---
@@ -285,7 +290,8 @@ graph TD
     RateStore["TenantRateLimiter (TokenBucket: tenantId)"]
   end
 
-  ALS --> HASH & ROUTE
+  ALS --> HASH
+  ALS --> ROUTE
   ALS --> RateStore
   HASH --> LRU
   ROUTE --> CBStore
