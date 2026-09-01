@@ -21,6 +21,10 @@ cmd_run_service() {
     IFS=':' read -r key name port dir cmd <<< "$entry"
     if [ "$key" = "$target_key" ]; then
       found=true
+      if [ ! -d "$dir" ]; then
+        log_error "Target directory '$dir' for service '$key' does not exist."
+        exit 1
+      fi
       load_env_variant "$dir" "$APP_ENV"
       if [ "$key" = "auth" ]; then
         if ! nc -z localhost 31412 >/dev/null 2>&1; then

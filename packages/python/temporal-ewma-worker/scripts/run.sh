@@ -18,8 +18,40 @@ if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1 &
     exec docker compose -f "$COMPOSE_FILE" up --build
 fi
 
+PYTHON_EXE="python3"
+VENV_DIR=""
+
+if [ -d "$PACKAGE_DIR/.venv" ]; then
+    VENV_DIR="$PACKAGE_DIR/.venv"
+elif [ -d "$PACKAGE_DIR/venv" ]; then
+    VENV_DIR="$PACKAGE_DIR/venv"
+fi
+
+if [ -n "$VENV_DIR" ]; then
+    PYTHON_EXE="$VENV_DIR/bin/python"
+else
+    echo -e "\033[1;33m[temporal-ewma-worker] Virtual environment missing. Creating .venv...\033[0m"
+    python3 -m venv "$PACKAGE_DIR/.venv" || true
+    if [ -f "$PACKAGE_DIR/.venv/bin/python" ]; then
+        VENV_DIR="$PACKAGE_DIR/.venv"
+        PYTHON_EXE="$VENV_DIR/bin/python"
+    fi
+fi
+
+if [ -f "$PACKAGE_DIR/pyproject.toml" ] || [ -f "$PACKAGE_DIR/requirements.txt" ]; then
+    if ! "$PYTHON_EXE" -c "import fastapi" 2>/dev/null; then
+        echo -e "\033[1;33m[temporal-ewma-worker] Dependencies missing. Auto-installing packages...\033[0m"
+        "$PYTHON_EXE" -m pip install --upgrade pip >/dev/null 2>&1 || true
+        if [ -f "$PACKAGE_DIR/pyproject.toml" ]; then
+            "$PYTHON_EXE" -m pip install -e "$PACKAGE_DIR" || "$PYTHON_EXE" -m pip install fastapi
+        elif [ -f "$PACKAGE_DIR/requirements.txt" ]; then
+            "$PYTHON_EXE" -m pip install -r "$PACKAGE_DIR/requirements.txt"
+        fi
+    fi
+fi
+
 export HEALTH_PORT="${HEALTH_PORT:-8013}"
-export PYTHONPATH="src"
+export PYTHONPATH="$PACKAGE_DIR/src"
 
 free_port() {
     local port="$1"
@@ -39,13 +71,6 @@ free_port() {
 }
 
 free_port "$HEALTH_PORT"
-
-PYTHON_EXE="python3"
-if [ -f "$PACKAGE_DIR/.venv/bin/python" ]; then
-    PYTHON_EXE="$PACKAGE_DIR/.venv/bin/python"
-elif [ -f "$PACKAGE_DIR/venv/bin/python" ]; then
-    PYTHON_EXE="$PACKAGE_DIR/venv/bin/python"
-fi
 
 if [ -f "$PACKAGE_DIR/scripts/migrate.sh" ]; then
     echo -e "\033[0;34m[temporal-ewma-worker] Executing database migrations...\033[0m"

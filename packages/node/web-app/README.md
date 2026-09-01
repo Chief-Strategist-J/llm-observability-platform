@@ -6,19 +6,55 @@ The frontend web application for the LLM Observability Platform, built with Next
 
 ## Available Commands
 
-Run all commands from within the `packages/node/web-app` directory (or use `npm --prefix packages/node/web-app <command>` from the root).
+Run all commands using the central CLI orchestrator `./scripts/app.sh` inside `packages/node/web-app`:
 
-### Development & Build
+```bash
+cd packages/node/web-app
+```
+
+### Central CLI Orchestrator (`./scripts/app.sh`)
 | Command | Description |
 | :--- | :--- |
-| `npm run dev` | Automatically frees ports `31400` & `31406`, clears `.next` cache, and launches Next.js (`http://localhost:31400`), Auth service, and Storybook (`http://localhost:31406`) concurrently |
-| `npm run latency` / `npm run latency-engine` | Launches the Python Latency Engine worker service and REST query API (`http://localhost:8003`) |
-| `npm run dev:latency` | Launches Next.js (`http://localhost:31400`) and Latency Engine (`http://localhost:8003`) concurrently |
-| `npm run dev:all` | Launches Next.js (`http://localhost:31400`), Auth service (`http://localhost:3001`), Storybook (`http://localhost:31406`), and Latency Engine (`http://localhost:8003`) concurrently |
-| `npm run clean` | Removes the `.next` cache directory |
-| `npm run free-ports` | Kills any processes currently bound to registered service ports (`31400`, `3001`, `31406`, `8003`) |
-| `npm run build` | Compiles and builds production bundle |
-| `npm run start` | Starts production server on port `31400` after build |
+| `./scripts/app.sh list` | Displays the complete registered catalog of all 17 microservices, assigned ports, and folder paths |
+| `./scripts/app.sh run <service-key>` | Starts any microservice individually (e.g. `faithfulness`, `toxicity`, `latency`, `auth`, `quality`) |
+| `./scripts/app.sh dev` | Launches default dev environment: Next.js (`http://localhost:31400`), Auth service, and Storybook (`http://localhost:31406`) |
+| `./scripts/app.sh dev <services...>` | Launches custom combination of services concurrently (e.g. `./scripts/app.sh dev web-app auth quality faithfulness`) |
+| `./scripts/app.sh health` | Executes automated health check probing across all registered HTTP & TCP microservice endpoints |
+| `./scripts/app.sh db:setup` | Starts PostgreSQL Auth DB container (`port 31412`) and executes automated database migrations |
+| `./scripts/app.sh free-ports` | Kills any processes currently bound to registered service ports (`31400`, `3001`, `31406`, `8003`–`8017`) |
+| `./scripts/app.sh clean` | Removes build artifacts (`.next`, `storybook-static`, `.vitest`, `coverage`) |
+| `./scripts/app.sh clean-all` | Deep clean (removes build artifacts, `node_modules`, and `package-lock.json`) |
+
+### Microservices Unique Port Matrix (`./scripts/app.sh run <key>`)
+| Service Key | Target Microservice | Assigned Port | Direct Script Path |
+| :--- | :--- | :--- | :--- |
+| `web-app` | Next.js Web Application | `31400` | [`packages/node/web-app`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app) |
+| `auth` | Auth HTTP Service | `3001` | [`packages/node/auth`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/auth) |
+| `storybook` | Storybook Server | `31406` | [`packages/node/web-app`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/node/web-app) |
+| `latency` / `latency-engine` | Latency Engine Worker & API | `8003` | [`packages/python/latency-engine/scripts/run.sh`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/latency-engine/scripts/run.sh) |
+| `alert` / `alert-engine` | Alert Engine Notification Worker | `8004` | [`packages/python/alert-engine/scripts/run.sh`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/alert-engine/scripts/run.sh) |
+| `quality` / `quality-engine` | Quality Engine Scorer Worker | `8005` | [`packages/python/quality-engine/scripts/run.sh`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/quality-engine/scripts/run.sh) |
+| `faithfulness` | Faithfulness Scorer Service | `8006` | [`packages/python/faithfulness/scripts/run.sh`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/faithfulness/scripts/run.sh) |
+| `perplexity` | Perplexity Scorer Service | `8007` | [`packages/python/perplexity/scripts/run.sh`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/perplexity/scripts/run.sh) |
+| `toxicity` | Toxicity Detector Service | `8008` | [`packages/python/toxicity/scripts/run.sh`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/toxicity/scripts/run.sh) |
+| `nli` / `nli-worker` | NLI Classifier Worker | `8009` | [`packages/python/nli-worker/scripts/run.sh`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/nli-worker/scripts/run.sh) |
+| `embedding` / `queue-embedding-worker` | Queue Embedding Worker | `8010` | [`packages/python/queue-embedding-worker/scripts/run.sh`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/queue-embedding-worker/scripts/run.sh) |
+| `coherence` / `semantic-coherence` | Semantic Coherence Worker | `8011` | [`packages/python/semantic-coherence/scripts/run.sh`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/semantic-coherence/scripts/run.sh) |
+| `slo` / `slo-burn-worker` | SLO Burn Rate Worker | `8012` | [`packages/python/slo-burn-worker/scripts/run.sh`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/slo-burn-worker/scripts/run.sh) |
+| `ewma` / `temporal-ewma-worker` | Temporal EWMA Worker | `8013` | [`packages/python/temporal-ewma-worker/scripts/run.sh`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/temporal-ewma-worker/scripts/run.sh) |
+| `budget` / `budget-provisioner` | Budget Provisioner Service | `8014` | [`packages/python/budget-provisioner/scripts/run.sh`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/budget-provisioner/scripts/run.sh) |
+| `cost` / `event-cost` | Event Cost Calculator Worker | `8015` | [`packages/python/event-cost/scripts/run.sh`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/event-cost/scripts/run.sh) |
+| `forecast` / `forecast-worker` | Forecast Engine Worker | `8017` | [`packages/python/forecast-worker/scripts/run.sh`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/python/forecast-worker/scripts/run.sh) |
+
+### Development & Build (`npm` scripts)
+| Command | Description |
+| :--- | :--- |
+| `npm run dev` | Runs `./scripts/app.sh dev` (launches Next.js, Auth service, and Storybook) |
+| `npm run dev:all` | Runs `./scripts/app.sh dev all` |
+| `npm run clean` | Removes build artifacts |
+| `npm run free-ports` | Kills any processes currently bound to registered service ports |
+| `npm run build` | Compiles production build |
+| `npm run start` | Starts production server on port `31400` |
 
 ### Linting & Type Checking
 | Command | Description |

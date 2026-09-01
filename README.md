@@ -52,6 +52,29 @@ Manage all infrastructure services directly from the project root (`/home/btpl-l
 ./packages/configs/llm-obs-infra/scripts/manage.sh down
 ```
 
+### ⚡ Application Microservices Orchestrator (`app.sh`)
+
+Run all microservices using the CLI orchestrator from `packages/node/web-app`:
+
+```bash
+# List all 17 registered microservices and assigned unique ports
+./packages/node/web-app/scripts/app.sh list
+
+# Run any microservice individually (e.g. faithfulness, toxicity, latency, quality, auth)
+./packages/node/web-app/scripts/app.sh run faithfulness
+./packages/node/web-app/scripts/app.sh run toxicity
+./packages/node/web-app/scripts/app.sh run latency
+
+# Run default development environment (Web App + Auth + Storybook)
+./packages/node/web-app/scripts/app.sh dev
+
+# Run custom combination of services
+./packages/node/web-app/scripts/app.sh dev web-app auth quality faithfulness
+
+# Run full health check across all microservices
+./packages/node/web-app/scripts/app.sh health
+```
+
 ### 🐳 Direct Docker Compose Commands
 
 ```bash

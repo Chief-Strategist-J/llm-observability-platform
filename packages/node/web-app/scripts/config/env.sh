@@ -26,11 +26,16 @@ PORT_BUDGET="${PORT_BUDGET:-8014}"
 PORT_EVENT_COST="${PORT_EVENT_COST:-8015}"
 PORT_FORECAST="${PORT_FORECAST:-8017}"
 
-# Directories Calculation
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_DIR="$(dirname "$SCRIPT_DIR")"
-AUTH_DIR="$(dirname "$APP_DIR")/auth"
-PYTHON_ROOT="$(cd "$APP_DIR/../../python" 2>/dev/null && pwd || echo "$(dirname "$(dirname "$APP_DIR")")/python")"
+# Robust Relative Path Discovery from BASH_SOURCE[0]
+CURRENT_ENV_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPTS_DIR="$(cd "$CURRENT_ENV_SCRIPT/.." && pwd)"
+APP_DIR="$(cd "$SCRIPTS_DIR/.." && pwd)"
+NODE_DIR="$(cd "$APP_DIR/.." && pwd)"
+PACKAGES_DIR="$(cd "$NODE_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$PACKAGES_DIR/.." && pwd)"
+
+AUTH_DIR="$NODE_DIR/auth"
+PYTHON_ROOT="$PACKAGES_DIR/python"
 
 LATENCY_DIR="${PYTHON_ROOT}/latency-engine"
 ALERT_DIR="${PYTHON_ROOT}/alert-engine"
@@ -47,6 +52,6 @@ BUDGET_DIR="${PYTHON_ROOT}/budget-provisioner"
 EVENT_COST_DIR="${PYTHON_ROOT}/event-cost"
 FORECAST_DIR="${PYTHON_ROOT}/forecast-worker"
 
-DEPLOYMENT_DIR="$(dirname "$APP_DIR")/frontend-deployment"
-AUTH_COMPOSE_FILE="$DEPLOYMENT_DIR/docker-compose.yml"
-AUTH_DB_COMPOSE_FILE="$AUTH_DIR/docker-compose.yml"
+DEPLOYMENT_DIR="${NODE_DIR}/frontend-deployment"
+AUTH_COMPOSE_FILE="${DEPLOYMENT_DIR}/docker-compose.yml"
+AUTH_DB_COMPOSE_FILE="${AUTH_DIR}/docker-compose.yml"
