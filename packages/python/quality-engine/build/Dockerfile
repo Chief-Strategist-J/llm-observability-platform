@@ -26,6 +26,6 @@ RUN chmod +x scripts/*.sh
 
 ENV PYTHONPATH=/app/src
 
-EXPOSE 8080
+EXPOSE 8005
 
 CMD ["python", "-m", "worker.index"]

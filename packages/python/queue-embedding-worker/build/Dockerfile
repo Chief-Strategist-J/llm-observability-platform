@@ -22,7 +22,7 @@ COPY contracts/ contracts/
 RUN pip install . --no-deps
 
 # Expose the API port (for health/remote execution)
-EXPOSE 8000
+EXPOSE 8010
 
 # Command to run the API
-CMD ["uvicorn", "src.api.rest.v1.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src.api.rest.v1.app:app", "--host", "0.0.0.0", "--port", "8010"]

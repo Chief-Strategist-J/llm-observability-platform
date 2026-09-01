@@ -16,7 +16,7 @@ COPY contracts/ contracts/
 COPY service_owners.yaml service_owners.yaml
 RUN pip install ".[dev]" --no-deps
 
-EXPOSE 8001
+EXPOSE 8014
 EXPOSE 9464
 
 CMD ["python", "-m", "budget_provisioner.api.main"]

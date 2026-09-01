@@ -15,6 +15,6 @@ COPY src/ src/
 COPY contracts/ contracts/
 RUN pip install ".[dev]" --no-deps
 
-EXPOSE 8001
+EXPOSE 8015
 
 CMD ["python", "src/worker/index.py"]

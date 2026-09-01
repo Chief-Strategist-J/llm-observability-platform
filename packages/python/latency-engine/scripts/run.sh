@@ -55,10 +55,23 @@ free_port "$HEALTH_PORT"
 free_port "$PROMETHEUS_PORT"
 
 PYTHON_EXE="python3"
-if [ -f "$PACKAGE_DIR/.venv/bin/python" ]; then
-    PYTHON_EXE="$PACKAGE_DIR/.venv/bin/python"
-elif [ -f "$PACKAGE_DIR/venv/bin/python" ]; then
-    PYTHON_EXE="$PACKAGE_DIR/venv/bin/python"
+VENV_DIR=""
+
+if [ -d "$PACKAGE_DIR/.venv" ]; then
+    VENV_DIR="$PACKAGE_DIR/.venv"
+elif [ -d "$PACKAGE_DIR/venv" ]; then
+    VENV_DIR="$PACKAGE_DIR/venv"
+fi
+
+if [ -n "$VENV_DIR" ]; then
+    PYTHON_EXE="$VENV_DIR/bin/python"
+else
+    echo -e "\033[1;33m[latency-engine] Virtual environment missing. Creating .venv...\033[0m"
+    python3 -m venv "$PACKAGE_DIR/.venv" || true
+    if [ -f "$PACKAGE_DIR/.venv/bin/python" ]; then
+        VENV_DIR="$PACKAGE_DIR/.venv"
+        PYTHON_EXE="$VENV_DIR/bin/python"
+    fi
 fi
 
 COMPOSE_FILE="$PACKAGE_DIR/deploy/docker/docker-compose.yaml"
