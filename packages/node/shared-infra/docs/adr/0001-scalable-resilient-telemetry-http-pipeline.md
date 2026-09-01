@@ -21,13 +21,92 @@ We need a standardized, resilient, readable shared infrastructure combining an H
 
 ## 2. Decision Drivers & Core Engineering Principles
 
-* **Pragmatic Readable Engineering over Dogmatic Purity**: Favor explicit `if` statements, early return guard clauses, and clean `for...of` loops over obfuscated `.reduce()` chains or nested ternaries. Code readability, clear control flow, and clean V8 stack trace step-through debugging take precedence over cargo-cult functional aesthetics.
-* **Zero Hardcoded Strings**: All HTTP verbs, headers, status codes, tracer names, error codes, and span event keys must be enforced via `as const` constant objects (`HTTP_CONSTANTS`, `RULES_ENGINE_CONSTANTS`, `TRACING_CONSTANTS`).
-* **Singleflight Request Collapsing**: Duplicate concurrent read requests must map to a single in-flight `Promise`, returning data to all callers simultaneously without throwing `AbortError`.
-* **Idempotency Key Preservation**: The `x-idempotency-key` header must be generated once per logical operation using CSPRNG (`crypto.randomUUID()`) and preserved identically across all retry attempts.
-* **Header & Endpoint Driven Caching**: Cache lookup must be dynamically bypassed when `noCache: true` or `Cache-Control: no-cache, no-store` headers are present.
-* **Comprehensive OpenTelemetry Telemetry**: Spans must record caller location (`code.function`, `code.filepath`, `code.lineno`), granular step-by-step pipeline events, decision markers, and dual execution paths (Positive Path vs. Negative Path).
-* **Pluggable Data-Driven Registries**: Condition evaluations, error descriptors, status badge mappings, and retry policies must be managed via extensible registry objects (`ConditionHandlerRegistry`, `CentralizedErrorRegistry`, `StatusBadgeRegistry`, `RetryPolicyRegistry`).
+### 2.1 ASCII Decision Tree for Engineering Principles Evaluation
+
+```text
+========================================================================================
+             DECISION DRIVERS & CORE ENGINEERING PRINCIPLES (DECISION TREE)
+========================================================================================
+
++-- [IF: Implementing Code Style & Control Flow?]
+|   +-- [YES] --> Is logic written with complex `.reduce()` chains or nested ternaries?
+|   |             +-- [YES] --> REJECT: Refactor to explicit `if`, guard clauses & `for...of`
+|   |             +-- [NO]  --> ADOPT: Pragmatic Readable Engineering over Dogmatic Purity
+|   |
+|   +-- [NO]  --> Continue evaluation below...
+|
++-- [IF: Handling Literal Strings & Tokens?]
+|   +-- [YES] --> Are HTTP verbs, headers, status codes or tracer keys hardcoded as strings?
+|   |             +-- [YES] --> REJECT: Extract into `as const` constant dictionaries
+|   |             +-- [NO]  --> ADOPT: Zero Hardcoded Strings (`HTTP_CONSTANTS`, etc.)
+|   |
+|   +-- [NO]  --> Continue evaluation below...
+|
++-- [IF: Processing Incoming Read Requests?]
+|   +-- [YES] --> Is an identical read request already active in-flight?
+|   |             +-- [YES] --> EXECUTE: Collapse callers to 1 shared Promise via SHA-256 key
+|   |             +-- [NO]  --> ADOPT: Singleflight Request Collapsing ($N \to 1$ RPCs)
+|   |
+|   +-- [NO]  --> Continue evaluation below...
+|
++-- [IF: Retrying Write / Mutation Operations?]
+|   +-- [YES] --> Is a retry attempt initiated after a network drop/failure?
+|   |             +-- [YES] --> EXECUTE: Preserve original `x-idempotency-key` (crypto.randomUUID)
+|   |             +-- [NO]  --> ADOPT: Idempotency Key Preservation
+|   |
+|   +-- [NO]  --> Continue evaluation below...
+|
++-- [IF: Evaluating Response Caching?]
+|   +-- [YES] --> Is `noCache: true` or `Cache-Control: no-cache, no-store` present?
+|   |             +-- [YES] --> EXECUTE: Dynamically bypass tenant LRU cache lookup
+|   |             +-- [NO]  --> ADOPT: Header & Endpoint Driven Caching
+|   |
+|   +-- [NO]  --> Continue evaluation below...
+|
++-- [IF: Instrumentation & Observability?]
+|   +-- [YES] --> Are telemetry spans created for pipeline steps?
+|   |             +-- [YES] --> EXECUTE: Wrap span in `TracedSpanFacade`, capture `code.filepath`
+|   |             +-- [NO]  --> ADOPT: Comprehensive OpenTelemetry Telemetry
+|   |
+|   +-- [NO]  --> Continue evaluation below...
+|
++-- [IF: Adding New Rules, Errors, or Retries?]
+    +-- [YES] --> Are rules or errors evaluated via hardcoded `switch` statements?
+                  +-- [YES] --> REJECT: Register dynamic handlers in registry maps
+                  +-- [NO]  --> ADOPT: Pluggable Data-Driven Registries
+```
+
+---
+
+### 2.2 Detailed Principle Definitions & Operational Rationale
+
+#### 1. Pragmatic Readable Engineering over Dogmatic Purity
+* **Definition**: Prioritizes readable, transparent control flow and V8 step-through debuggability over dogmatic functional abstractions or obfuscated syntax.
+* **Operational Rationale**: Complex nested `.reduce()` chains, point-free pipelines, and deeply nested ternaries make stack traces cryptic and prevent step-by-step debugger inspection. Standardizing on explicit `if` guard clauses, early returns, and clean `for...of` loops guarantees immediate readability, zero V8 execution overhead, and rapid root-cause diagnosis during live incidents.
+
+#### 2. Zero Hardcoded Strings
+* **Definition**: A strict policy banning raw string literals (`"GET"`, `"application/json"`, `"Content-Type"`, `"503"`) across all infrastructure modules.
+* **Operational Rationale**: Hardcoded strings are prone to subtle typos, refactoring breakage, and telemetry attribute drift. Centralizing all string tokens into frozen `as const` constant dictionaries (`HTTP_CONSTANTS`, `TRACING_CONSTANTS`, `RULES_ENGINE_CONSTANTS`) enforces compile-time auto-completion, refactoring safety, and strict global consistency.
+
+#### 3. Singleflight Request Collapsing
+* **Definition**: An in-flight request deduplication mechanism that merges $N$ duplicate concurrent read operations targeting the exact same resource into a single network execution.
+* **Operational Rationale**: Simultaneous UI component renders or parallel API calls frequently trigger duplicate requests for identical endpoints (Thundering Herd). Singleflight hashes request parameters into a SHA-256 key (`Key_hashed`) and attaches all $N$ concurrent callers to 1 shared pending `Promise`. When the network call completes, the exact same response is returned to all callers simultaneously in $O(1)$ memory time without throwing `AbortError` or crashing UI state.
+
+#### 4. Idempotency Key Preservation
+* **Definition**: Generating a cryptographically secure unique identifier (`x-idempotency-key`) via CSPRNG (`crypto.randomUUID()`) once per logical operation and preserving it identically across all retry attempts.
+* **Operational Rationale**: Network timeouts often occur *after* a downstream service has executed a write mutation (`POST`, `PUT`, `PATCH`) but *before* the client receives the response. Retrying with a new key causes duplicate mutations; preserving the original `x-idempotency-key` across retries allows downstream microservices to safely identify and deduplicate retried operations.
+
+#### 5. Header & Endpoint Driven Caching
+* **Definition**: A dynamic caching policy where response storage and cache lookup are strictly governed by standard HTTP headers (`Cache-Control: no-cache, no-store`) and explicit endpoint configuration options (`noCache: true`).
+* **Operational Rationale**: Static caching rules cause stale data bugs or unintended caching of tenant-specific data. Respecting standard HTTP headers and explicit caller flags guarantees that clients can forcefully bypass cached entries when real-time data is mandatory while preserving high cache hit ratios for static read requests.
+
+#### 6. Comprehensive OpenTelemetry Telemetry
+* **Definition**: Automated enrichment of OpenTelemetry spans with caller source location metadata (`code.function`, `code.filepath`, `code.lineno`), decision markers, and dual execution paths (Positive Path vs. Negative Path).
+* **Operational Rationale**: Black-box infrastructure makes production troubleshooting difficult. Recording exact line numbers and internal decision outcomes directly on spans enables instant tracing from telemetry dashboards back to the precise line of code that initiated the request.
+
+#### 7. Pluggable Data-Driven Registries
+* **Definition**: Replacing hardcoded `switch` statements and monolithic `if/else` logic trees with decoupled, extensible registry objects (`ConditionHandlerRegistry`, `CentralizedErrorRegistry`, `StatusBadgeRegistry`, `RetryPolicyRegistry`).
+* **Operational Rationale**: Monolithic conditional logic violates the Open/Closed Principle (OCP)—adding a new retry policy or status badge requires modifying core code. Data-driven registries allow new handlers and rules to be registered dynamically at runtime without mutating core pipeline logic.
 
 ---
 
