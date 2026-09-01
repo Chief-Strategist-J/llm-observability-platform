@@ -12,13 +12,13 @@ if [ ! -f "$COMPOSE_FILE" ]; then
 fi
 
 if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1 && [ -f "$COMPOSE_FILE" ]; then
-    echo -e "\033[0;34m[temporal-ewma-worker] Cleaning up previous image...\033[0m"
-    docker image rm docker-temporal-ewma-worker temporal-ewma-worker-temporal-ewma-worker --force >/dev/null 2>&1 || true
-    echo -e "\033[0;34m[temporal-ewma-worker] Starting Docker container...\033[0m"
+    echo -e "\033[0;34m[forecast-worker] Cleaning up previous image...\033[0m"
+    docker image rm docker-forecast-worker forecast-worker-forecast-worker --force >/dev/null 2>&1 || true
+    echo -e "\033[0;34m[forecast-worker] Starting Docker container...\033[0m"
     exec docker compose -f "$COMPOSE_FILE" up --build
 fi
 
-export HEALTH_PORT="${HEALTH_PORT:-8013}"
+export HEALTH_PORT="${HEALTH_PORT:-8017}"
 export PYTHONPATH="src"
 
 free_port() {
@@ -48,9 +48,9 @@ elif [ -f "$PACKAGE_DIR/venv/bin/python" ]; then
 fi
 
 if [ -f "$PACKAGE_DIR/scripts/migrate.sh" ]; then
-    echo -e "\033[0;34m[temporal-ewma-worker] Executing database migrations...\033[0m"
+    echo -e "\033[0;34m[forecast-worker] Executing database migrations...\033[0m"
     "$PACKAGE_DIR/scripts/migrate.sh" || true
 fi
 
-echo -e "\033[0;32m[temporal-ewma-worker] Starting service on port ${HEALTH_PORT}...\033[0m"
+echo -e "\033[0;32m[forecast-worker] Starting service on port ${HEALTH_PORT}...\033[0m"
 exec $PYTHON_EXE src/worker/index.py
