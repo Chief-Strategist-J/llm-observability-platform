@@ -110,7 +110,7 @@ graph TD
     FE["React Feature Hooks / Next.js API Routes"]
   end
 
-  subgraph SharedInfra ["Shared Infrastructure Layer (@observability/shared-infra)"]
+  subgraph SharedInfra ["Shared Infrastructure Layer (observability/shared-infra)"]
     HTTP["ScalableHttpClient Facade"]
     ALS["Node.js AsyncLocalStorage Context"]
     ADM["ConcurrencyAdmissionControl (Max 500 In-Flight)"]
@@ -128,15 +128,15 @@ graph TD
   end
 
   FE -->|"1. execute(RequestConfig)"| HTTP
-  HTTP -->|"Inbound Concurrency Check"| ADM
-  HTTP -->|"Isolated Context"| ALS
-  HTTP -->|"Check Outbound Rate"| LIMIT
-  HTTP -->|"Check Fleet Retry Budget"| BUDGET
-  HTTP -->|"Check In-Flight Singleflight"| SF
-  HTTP -->|"Evaluate Cache Policy"| CACHE
-  HTTP -->|"Inspect Bounded Circuit State"| CB
-  HTTP -->|"Execute Fetch + DNS SSRF Check"| NET
-  HTTP -->|"Emit Filtered Spans & Events"| SPAN
+  HTTP --> ADM
+  ADM -->|"1. Inbound Concurrency Check"| ALS
+  ALS -->|"2. Isolated Context"| LIMIT
+  LIMIT -->|"3. Check Outbound Rate"| BUDGET
+  BUDGET -->|"4. Check Fleet Retry Budget"| SF
+  SF -->|"5. Check In-Flight Singleflight"| CACHE
+  CACHE -->|"6. Evaluate Cache Policy"| CB
+  CB -->|"7. Inspect Circuit State"| NET
+  HTTP -->|"8. Emit Filtered Spans & Events"| SPAN
   SPAN --> OTEL
 ```
 
@@ -161,7 +161,7 @@ sequenceDiagram
   participant Span as "TracedSpanFacade (Default-Deny Filter)"
 
   Caller->>ADM: execute({ method: 'GET', url: 'https://api.org/data' })
-  alt In-Flight Concurrency > 500
+  alt In-Flight Concurrency &gt; 500
     ADM-->>Caller: Reject 429 (Load Shedding)
   else In-Flight Capacity Available
     ADM->>ALS: Get isolated RequestContext (tenantId)
@@ -189,11 +189,11 @@ sequenceDiagram
             Client->>Span: setStatus(ERROR), recordException
             Client-->>Caller: Throw CircuitBreaker Error
           else Circuit CLOSED / HALF_OPEN
-            loop Retry Attempt Loop (Max 3, Total Timeout <= 15s)
+            loop Retry Attempt Loop (Max 3, Total Timeout &le; 15s)
               Client->>CB: Re-check canExecute(circuitKey)
               Client->>Net: fetch(url, { redirect: 'manual' })
               alt Network Response 200 OK
-                Net-->>Client: Response Stream (Streaming Byte Limit <= 10MB)
+                Net-->>Client: Response Stream (Streaming Byte Limit &le; 10MB)
                 Client->>Cache: set(tenantId, requestKey, data)
                 Client->>CB: onSuccess(circuitKey)
                 Client->>Span: setStatus(OK), emit execution.success
