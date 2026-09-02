@@ -109,6 +109,7 @@ func Middleware(next http.Handler) http.Handler {
 		span.SetAttribute("http.client_ip", req.RemoteAddr)
 		span.SetAttribute("x-request-id", reqID)
 		span.SetAttribute("x-correlation-id", corrID)
+		span.SetAttribute("x-causation-id", causID)
 		span.SetAttribute("x-tenant-id", tenantID)
 		span.SetAttribute("x-user-id", userID)
 
