@@ -31,7 +31,6 @@ func (s HealthStatus) String() string {
 type HealthCheckSpec struct {
 	Protocol         string        `json:"protocol"`
 	Path             string        `json:"path,omitempty"`
-	Command          []string      `json:"command,omitempty"`
 	Interval         time.Duration `json:"interval,omitempty"`
 	Timeout          time.Duration `json:"timeout,omitempty"`
 	SuccessThreshold int           `json:"successThreshold,omitempty"`
@@ -68,7 +67,7 @@ const (
 	EventDeregistered
 	EventStatusChanged
 	EventHeartbeatExpired
-	EventWeightUpdated
+	EventEvicted
 )
 
 var eventTypeNames = map[EventType]string{
@@ -76,7 +75,7 @@ var eventTypeNames = map[EventType]string{
 	EventDeregistered:     "DEREGISTERED",
 	EventStatusChanged:    "STATUS_CHANGED",
 	EventHeartbeatExpired: "HEARTBEAT_EXPIRED",
-	EventWeightUpdated:    "WEIGHT_UPDATED",
+	EventEvicted:          "EVICTED",
 }
 
 func (e EventType) String() string {
@@ -130,44 +129,24 @@ var DefaultHealthProberConfig = HealthProberConfig{
 	DefaultFailureTh: 3,
 }
 
-type CircuitState int
-
-const (
-	CircuitClosed CircuitState = iota
-	CircuitOpen
-	CircuitHalfOpen
-)
-
-var circuitStateNames = map[CircuitState]string{
-	CircuitClosed:   "CLOSED",
-	CircuitOpen:     "OPEN",
-	CircuitHalfOpen: "HALF_OPEN",
+type SecurityConfig struct {
+	AuthToken             string `json:"authToken"`
+	EnforceRFC1918        bool   `json:"enforceRFC1918"`
+	RateLimitRequestsSec  int    `json:"rateLimitRequestsSec"`
 }
 
-func (s CircuitState) String() string {
-	if name, ok := circuitStateNames[s]; ok {
-		return name
-	}
-	return "UNKNOWN"
-}
-
-type CircuitBreakerConfig struct {
-	FailureThreshold int           `json:"failureThreshold"`
-	CooldownDuration time.Duration `json:"cooldownDuration"`
-	HalfOpenMaxCalls int           `json:"halfOpenMaxCalls"`
-}
-
-var DefaultCircuitBreakerConfig = CircuitBreakerConfig{
-	FailureThreshold: 5,
-	CooldownDuration: 30 * time.Second,
-	HalfOpenMaxCalls: 1,
+var DefaultSecurityConfig = SecurityConfig{
+	AuthToken:            "",
+	EnforceRFC1918:       true,
+	RateLimitRequestsSec: 100,
 }
 
 type ExporterConfig struct {
-	OutputPath         string   `json:"outputPath"`
-	DefaultDomain      string   `json:"defaultDomain"`
-	DefaultEntryPoints []string `json:"defaultEntryPoints"`
-	DefaultMiddlewares []string `json:"defaultMiddlewares"`
+	OutputPath         string        `json:"outputPath"`
+	DefaultDomain      string        `json:"defaultDomain"`
+	DefaultEntryPoints []string      `json:"defaultEntryPoints"`
+	DefaultMiddlewares []string      `json:"defaultMiddlewares"`
+	SyncInterval       time.Duration `json:"syncInterval"`
 }
 
 var DefaultExporterConfig = ExporterConfig{
@@ -175,6 +154,7 @@ var DefaultExporterConfig = ExporterConfig{
 	DefaultDomain:      "llmobs.local",
 	DefaultEntryPoints: []string{"websecure"},
 	DefaultMiddlewares: []string{"security-headers@file", "rate-limit@file"},
+	SyncInterval:       5 * time.Second,
 }
 
 type ServerConfig struct {
@@ -192,27 +172,21 @@ var DefaultServerConfig = ServerConfig{
 }
 
 type AppConfig struct {
-	Server         ServerConfig         `json:"server"`
-	Registry       InstanceDefaults     `json:"registry"`
-	LeaseManager   LeaseManagerConfig   `json:"leaseManager"`
-	HealthProber   HealthProberConfig   `json:"healthProber"`
-	CircuitBreaker CircuitBreakerConfig `json:"circuitBreaker"`
-	LoadBalancer   struct {
-		Algorithm string `json:"algorithm"`
-	} `json:"loadBalancer"`
-	Traefik ExporterConfig `json:"traefik"`
+	Server       ServerConfig       `json:"server"`
+	Registry     InstanceDefaults   `json:"registry"`
+	LeaseManager LeaseManagerConfig `json:"leaseManager"`
+	HealthProber HealthProberConfig `json:"healthProber"`
+	Security     SecurityConfig     `json:"security"`
+	Traefik      ExporterConfig     `json:"traefik"`
 }
 
 var DefaultAppConfig = AppConfig{
-	Server:         DefaultServerConfig,
-	Registry:       DefaultInstanceDefaults,
-	LeaseManager:   DefaultLeaseManagerConfig,
-	HealthProber:   DefaultHealthProberConfig,
-	CircuitBreaker: DefaultCircuitBreakerConfig,
-	LoadBalancer: struct {
-		Algorithm string `json:"algorithm"`
-	}{Algorithm: "round_robin"},
-	Traefik: DefaultExporterConfig,
+	Server:       DefaultServerConfig,
+	Registry:     DefaultInstanceDefaults,
+	LeaseManager: DefaultLeaseManagerConfig,
+	HealthProber: DefaultHealthProberConfig,
+	Security:     DefaultSecurityConfig,
+	Traefik:      DefaultExporterConfig,
 }
 
 type SeedService struct {
@@ -230,7 +204,7 @@ type SeedCatalog struct {
 	Services []SeedService `json:"services"`
 }
 
-// Standardized API Envelopes per policies/rules/folderStructure/api-request-response-structure.md
+// Standardized API Envelopes
 
 type ApiMeta struct {
 	RequestId       string `json:"requestId"`
@@ -265,16 +239,15 @@ type ApiErrorResponse struct {
 	Meta       ApiMeta      `json:"meta"`
 }
 
-// Canonical Error Code Constants
 const (
-	ErrCodeBadRequest         = "BAD_REQUEST"
-	ErrCodeValidationFailed   = "VALIDATION_FAILED"
-	ErrCodeUnauthenticated   = "UNAUTHENTICATED"
-	ErrCodeForbidden          = "FORBIDDEN"
-	ErrCodeNotFound           = "NOT_FOUND"
-	ErrCodeConflict           = "CONFLICT"
-	ErrCodeUnprocessable      = "UNPROCESSABLE_ENTITY"
-	ErrCodeTooManyRequests    = "TOO_MANY_REQUESTS"
-	ErrCodeInternalServerError = "INTERNAL_SERVER_ERROR"
-	ErrCodeServiceUnavailable = "SERVICE_UNAVAILABLE"
+	ErrCodeBadRequest          = "BAD_REQUEST"
+	ErrCodeValidationFailed    = "VALIDATION_FAILED"
+	ErrCodeUnauthenticated    = "UNAUTHENTICATED"
+	ErrCodeForbidden           = "FORBIDDEN"
+	ErrCodeNotFound            = "NOT_FOUND"
+	ErrCodeConflict            = "CONFLICT"
+	ErrCodeUnprocessable       = "UNPROCESSABLE_ENTITY"
+	ErrCodeTooManyRequests     = "TOO_MANY_REQUESTS"
+	ErrCodeInternalServerError  = "INTERNAL_SERVER_ERROR"
+	ErrCodeServiceUnavailable  = "SERVICE_UNAVAILABLE"
 )

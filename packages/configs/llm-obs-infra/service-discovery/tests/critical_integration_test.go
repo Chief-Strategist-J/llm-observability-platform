@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/discovery"
-	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/loadbalancer"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/models"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/registry"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/server"
@@ -68,13 +67,14 @@ func TestCriticalEndToEndSystemIntegration(t *testing.T) {
 		DefaultDomain:      "llmobs.local",
 		DefaultEntryPoints: []string{"web"},
 		DefaultMiddlewares: []string{},
+		SyncInterval:       100 * time.Millisecond,
 	}
 	exporter := traefik.NewExporter(reg, expCfg)
 	eventsCh := reg.Subscribe()
 	go exporter.Start(eventsCh)
 
-	// REST Gateway Router
-	router := server.NewRouter(reg, disc)
+	// REST Gateway Router with open testing security
+	router := server.NewRouter(reg, disc, models.SecurityConfig{EnforceRFC1918: false})
 	httpHandler := tracing.Middleware(router)
 
 	// 3. Test Mock Target Server Lifecycle (Node 1 & Node 2)
@@ -191,7 +191,6 @@ func TestCriticalEndToEndSystemIntegration(t *testing.T) {
 	}
 
 	// 6. Test Active Health Prober & Dynamic Failure Failover
-	// Wait for initial prober sweep
 	time.Sleep(150 * time.Millisecond)
 
 	// Verify exactly 2 healthy nodes initially
@@ -217,17 +216,8 @@ func TestCriticalEndToEndSystemIntegration(t *testing.T) {
 		t.Errorf("expected traffic to route to Node 2 (port %d), got port %d", node2Port, instancesAfterFailure[0].Port)
 	}
 
-	// 7. Test Dual-Resolution Fallback for Unregistered Target
-	fallbackInst, fallbackUsed := disc.ResolveWithFallback("legacy-analytics", "10.0.0.50", 9090, "http")
-	if !fallbackUsed {
-		t.Errorf("expected fallbackUsed: true for unregistered target")
-	}
-	if fallbackInst.Endpoint() != "http://10.0.0.50:9090" {
-		t.Errorf("expected fallback endpoint http://10.0.0.50:9090, got %s", fallbackInst.Endpoint())
-	}
-
-	// 8. Test Traefik File Provider Exporter Auto-Generation
-	time.Sleep(100 * time.Millisecond)
+	// 7. Test Traefik File Provider Exporter Auto-Generation & Atomic Write
+	time.Sleep(150 * time.Millisecond)
 	if _, err := os.Stat(traefikOutPath); os.IsNotExist(err) {
 		t.Fatalf("expected Traefik discovery.yml file to exist at %s", traefikOutPath)
 	}
@@ -240,12 +230,6 @@ func TestCriticalEndToEndSystemIntegration(t *testing.T) {
 	yamlStr := string(yamlBytes)
 	if !bytes.Contains(yamlBytes, []byte("ai-service")) || !bytes.Contains(yamlBytes, []byte("Host(`ai-service.llmobs.local`)")) {
 		t.Errorf("generated discovery.yml missing expected Traefik router rules:\n%s", yamlStr)
-	}
-
-	// 9. Test Circuit Breaker & Load Balancer Integration
-	cb := loadbalancer.NewCircuitBreaker(models.DefaultCircuitBreakerConfig)
-	if cb.State() != models.CircuitClosed {
-		t.Errorf("expected circuit breaker state CLOSED, got %s", cb.State())
 	}
 
 	t.Logf("CRITICAL SYSTEM INTEGRATION TEST PASSED SUCCESSFULLY!")

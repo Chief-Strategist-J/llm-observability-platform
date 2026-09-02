@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/discovery"
-	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/loadbalancer"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/models"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/registry"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/server"
@@ -24,8 +23,6 @@ type Container struct {
 	LeaseManager    *registry.LeaseManager
 	HealthProber    *registry.HealthProber
 	Discovery       *discovery.Discovery
-	Balancer        loadbalancer.Balancer
-	CBRegistry      *loadbalancer.CircuitBreakerRegistry
 	Server          *server.Server
 	TraefikExporter *traefik.Exporter
 }
@@ -58,6 +55,9 @@ func applyDurationDefaults(config *AppConfig) {
 	if config.Server.ShutdownTimeout == 0 {
 		config.Server.ShutdownTimeout = 5 * time.Second
 	}
+	if config.Traefik.SyncInterval == 0 {
+		config.Traefik.SyncInterval = 5 * time.Second
+	}
 }
 
 func BuildContainer(config AppConfig) *Container {
@@ -66,14 +66,7 @@ func BuildContainer(config AppConfig) *Container {
 	hp := registry.NewHealthProber(reg, config.HealthProber)
 	disc := discovery.NewDiscovery(reg)
 
-	balancer, err := loadbalancer.NewBalancer(loadbalancer.Algorithm(config.LoadBalancer.Algorithm))
-	if err != nil {
-		log.Printf("[di] falling back to round_robin: %v", err)
-		balancer, _ = loadbalancer.NewBalancer(loadbalancer.AlgorithmRoundRobin)
-	}
-
-	cbReg := loadbalancer.NewCircuitBreakerRegistry(config.CircuitBreaker)
-	router := server.NewRouter(reg, disc)
+	router := server.NewRouter(reg, disc, config.Security)
 	srv := server.NewServer(config.Server, router)
 	exporter := traefik.NewExporter(reg, config.Traefik)
 
@@ -83,8 +76,6 @@ func BuildContainer(config AppConfig) *Container {
 		LeaseManager:    lm,
 		HealthProber:    hp,
 		Discovery:       disc,
-		Balancer:        balancer,
-		CBRegistry:      cbReg,
 		Server:          srv,
 		TraefikExporter: exporter,
 	}

@@ -7,25 +7,17 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
+	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/models"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/registry"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/tracing"
 	"gopkg.in/yaml.v3"
 )
 
-type ExporterConfig struct {
-	OutputPath         string   `json:"outputPath"`
-	DefaultDomain      string   `json:"defaultDomain"`
-	DefaultEntryPoints []string `json:"defaultEntryPoints"`
-	DefaultMiddlewares []string `json:"defaultMiddlewares"`
-}
+type ExporterConfig = models.ExporterConfig
 
-var DefaultExporterConfig = ExporterConfig{
-	OutputPath:         "/etc/traefik/dynamic/discovery.yml",
-	DefaultDomain:      "llmobs.local",
-	DefaultEntryPoints: []string{"websecure"},
-	DefaultMiddlewares: []string{"security-headers@file", "rate-limit@file"},
-}
+var DefaultExporterConfig = models.DefaultExporterConfig
 
 type Exporter struct {
 	registry *registry.Registry
@@ -34,17 +26,35 @@ type Exporter struct {
 }
 
 func NewExporter(reg *registry.Registry, config ExporterConfig) *Exporter {
+	if config.SyncInterval <= 0 {
+		config.SyncInterval = 5 * time.Second
+	}
 	return &Exporter{registry: reg, config: config}
 }
 
 func (e *Exporter) Start(events chan registry.RegistryEvent) {
-	log.Printf("[traefik-exporter] started (output=%s, domain=%s)", e.config.OutputPath, e.config.DefaultDomain)
+	log.Printf("[traefik-reconciler] started (output=%s, domain=%s, periodicSync=%s)",
+		e.config.OutputPath, e.config.DefaultDomain, e.config.SyncInterval)
 
 	e.Export()
 
-	for event := range events {
-		log.Printf("[traefik-exporter] topology change: %s %s/%s", event.Type, event.Instance.Name, event.Instance.ID)
-		e.Export()
+	ticker := time.NewTicker(e.config.SyncInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case event, ok := <-events:
+			if !ok {
+				log.Println("[traefik-reconciler] event stream closed, relying on periodic ticker")
+				events = nil
+				continue
+			}
+			log.Printf("[traefik-reconciler] event-triggered reconciliation: %s %s/%s",
+				event.Type, event.Instance.Name, event.Instance.ID)
+			e.Export()
+		case <-ticker.C:
+			e.Export()
+		}
 	}
 }
 
@@ -88,7 +98,7 @@ func (e *Exporter) Export() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	_, span := tracing.StartSpan(context.Background(), "traefik-export")
+	_, span := tracing.StartSpan(context.Background(), "traefik-reconcile")
 	defer span.End()
 	span.SetAttribute("output.path", e.config.OutputPath)
 	span.SetAttribute("domain", e.config.DefaultDomain)
@@ -149,19 +159,29 @@ func (e *Exporter) Export() {
 
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
-		log.Printf("[traefik-exporter] marshal error: %v", err)
+		log.Printf("[traefik-reconciler] marshal error: %v", err)
 		span.SetAttribute("export.error", err.Error())
 		return
 	}
 
-	_ = os.MkdirAll(filepath.Dir(e.config.OutputPath), 0755)
+	dir := filepath.Dir(e.config.OutputPath)
+	_ = os.MkdirAll(dir, 0755)
 
-	if err := os.WriteFile(e.config.OutputPath, data, 0644); err != nil {
-		log.Printf("[traefik-exporter] write error: %v", err)
+	// Atomic File Write: Write to tempfile and atomic rename to target
+	tempFile := fmt.Sprintf("%s.tmp.%d", e.config.OutputPath, time.Now().UnixNano())
+	if err := os.WriteFile(tempFile, data, 0644); err != nil {
+		log.Printf("[traefik-reconciler] write temp file error: %v", err)
 		span.SetAttribute("export.error", err.Error())
+		return
+	}
+
+	if err := os.Rename(tempFile, e.config.OutputPath); err != nil {
+		log.Printf("[traefik-reconciler] atomic rename error: %v", err)
+		span.SetAttribute("export.error", err.Error())
+		_ = os.Remove(tempFile)
 		return
 	}
 
 	span.SetAttribute("exported.services", fmt.Sprintf("%d", len(cfg.HTTP.Services)))
-	log.Printf("[traefik-exporter] exported %d services to %s", len(cfg.HTTP.Services), e.config.OutputPath)
+	log.Printf("[traefik-reconciler] reconciled %d services to %s", len(cfg.HTTP.Services), e.config.OutputPath)
 }

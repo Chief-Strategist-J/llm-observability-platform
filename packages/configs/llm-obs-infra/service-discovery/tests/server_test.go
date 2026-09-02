@@ -16,14 +16,14 @@ import (
 func newTestRouter() (*server.Router, *registry.Registry) {
 	reg := newTestRegistry()
 	disc := discovery.NewDiscovery(reg)
-	router := server.NewRouter(reg, disc)
+	router := server.NewRouter(reg, disc, models.SecurityConfig{EnforceRFC1918: false})
 	return router, reg
 }
 
 func TestRegisterEndpoint(t *testing.T) {
 	router, _ := newTestRouter()
 
-	body := `{"name":"test-svc","host":"localhost","port":9090,"protocol":"http","healthCheck":{"protocol":"http","path":"/health"}}`
+	body := `{"name":"test-svc","host":"test-svc-host","port":9090,"protocol":"http","healthCheck":{"protocol":"http","path":"/health"}}`
 	req := httptest.NewRequest("POST", "/v1/register", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
@@ -49,7 +49,7 @@ func TestRegisterEndpoint(t *testing.T) {
 
 func TestResolveEndpointAPI(t *testing.T) {
 	router, reg := newTestRouter()
-	reg.Register(newTestInstance("api-svc", "localhost", 7070))
+	reg.Register(newTestInstance("api-svc", "api-svc-host", 7070))
 
 	req := httptest.NewRequest("GET", "/v1/resolve?service=api-svc", nil)
 	rr := httptest.NewRecorder()
@@ -65,8 +65,8 @@ func TestResolveEndpointAPI(t *testing.T) {
 		t.Fatalf("failed to unmarshal resolve response: %v", err)
 	}
 
-	if envelope.Data["endpoint"] != "http://localhost:7070" {
-		t.Fatalf("expected http://localhost:7070, got %v", envelope.Data["endpoint"])
+	if envelope.Data["endpoint"] != "http://api-svc-host:7070" {
+		t.Fatalf("expected http://api-svc-host:7070, got %v", envelope.Data["endpoint"])
 	}
 }
 
@@ -98,8 +98,8 @@ func TestResolveMissingParam(t *testing.T) {
 
 func TestListServicesEndpoint(t *testing.T) {
 	router, reg := newTestRouter()
-	reg.Register(newTestInstance("svc-a", "localhost", 8080))
-	reg.Register(newTestInstance("svc-b", "localhost", 8081))
+	reg.Register(newTestInstance("svc-a", "svc-a-host", 8080))
+	reg.Register(newTestInstance("svc-b", "svc-b-host", 8081))
 
 	req := httptest.NewRequest("GET", "/v1/services", nil)
 	rr := httptest.NewRecorder()
@@ -135,7 +135,7 @@ func TestHealthEndpoint(t *testing.T) {
 
 func TestHeartbeatEndpoint(t *testing.T) {
 	router, reg := newTestRouter()
-	inst := reg.Register(newTestInstance("hb-svc", "localhost", 8080))
+	inst := reg.Register(newTestInstance("hb-svc", "hb-svc-host", 8080))
 
 	body := `{"name":"hb-svc","instanceId":"` + inst.ID + `"}`
 	req := httptest.NewRequest("POST", "/v1/heartbeat", strings.NewReader(body))
@@ -151,7 +151,7 @@ func TestHeartbeatEndpoint(t *testing.T) {
 
 func TestDeregisterEndpoint(t *testing.T) {
 	router, reg := newTestRouter()
-	inst := reg.Register(newTestInstance("dereg-svc", "localhost", 8080))
+	inst := reg.Register(newTestInstance("dereg-svc", "dereg-svc-host", 8080))
 
 	body := `{"name":"dereg-svc","instanceId":"` + inst.ID + `"}`
 	req := httptest.NewRequest("POST", "/v1/deregister", strings.NewReader(body))

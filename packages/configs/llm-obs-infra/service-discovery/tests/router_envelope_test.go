@@ -16,7 +16,7 @@ import (
 func setupTestRouter() *server.Router {
 	reg := registry.NewRegistry(registry.DefaultInstanceDefaults)
 	disc := discovery.NewDiscovery(reg)
-	return server.NewRouter(reg, disc)
+	return server.NewRouter(reg, disc, models.SecurityConfig{EnforceRFC1918: false})
 }
 
 func TestStandardSuccessEnvelope(t *testing.T) {
@@ -24,7 +24,7 @@ func TestStandardSuccessEnvelope(t *testing.T) {
 
 	payload := map[string]interface{}{
 		"name":     "test-service",
-		"host":     "localhost",
+		"host":     "test-service-container",
 		"port":     9000,
 		"protocol": "http",
 	}
@@ -39,7 +39,7 @@ func TestStandardSuccessEnvelope(t *testing.T) {
 	r.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusCreated {
-		t.Fatalf("expected status 201, got %d", rec.Code)
+		t.Fatalf("expected status 201, got %d: %s", rec.Code, rec.Body.String())
 	}
 
 	if rec.Header().Get("x-request-id") != "req-test-12345" {
@@ -163,7 +163,7 @@ func TestMutationIdempotencyCache(t *testing.T) {
 
 	payload := map[string]interface{}{
 		"name":     "idempotent-service",
-		"host":     "localhost",
+		"host":     "idempotent-service-host",
 		"port":     9090,
 		"protocol": "http",
 	}

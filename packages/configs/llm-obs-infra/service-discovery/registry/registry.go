@@ -31,6 +31,20 @@ func generateID() string {
 	return hex.EncodeToString(b)
 }
 
+func cloneInstance(inst *ServiceInstance) *ServiceInstance {
+	if inst == nil {
+		return nil
+	}
+	cp := *inst
+	if inst.Metadata != nil {
+		cp.Metadata = make(map[string]string, len(inst.Metadata))
+		for k, v := range inst.Metadata {
+			cp.Metadata[k] = v
+		}
+	}
+	return &cp
+}
+
 func (r *Registry) applyDefaults(inst *ServiceInstance) {
 	if inst.ID == "" {
 		inst.ID = generateID()
@@ -59,22 +73,23 @@ func (r *Registry) Register(instance *ServiceInstance) *ServiceInstance {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.applyDefaults(instance)
+	inst := cloneInstance(instance)
+	r.applyDefaults(inst)
 
 	now := time.Now()
-	instance.RegisteredAt = now
-	instance.LastHeartbeat = now
-	instance.Status = StatusHealthy
+	inst.RegisteredAt = now
+	inst.LastHeartbeat = now
+	inst.Status = StatusHealthy
 
-	if r.instances[instance.Name] == nil {
-		r.instances[instance.Name] = make(map[string]*ServiceInstance)
+	if r.instances[inst.Name] == nil {
+		r.instances[inst.Name] = make(map[string]*ServiceInstance)
 	}
-	r.instances[instance.Name][instance.ID] = instance
+	r.instances[inst.Name][inst.ID] = inst
 
-	log.Printf("[registry] registered %s/%s at %s:%d", instance.Name, instance.ID, instance.Host, instance.Port)
-	r.emitAsync(RegistryEvent{Type: EventRegistered, Instance: instance, Time: now})
+	log.Printf("[registry] registered %s/%s at %s:%d", inst.Name, inst.ID, inst.Host, inst.Port)
+	r.emitAsync(RegistryEvent{Type: EventRegistered, Instance: cloneInstance(inst), Time: now})
 
-	return instance
+	return cloneInstance(inst)
 }
 
 func (r *Registry) Deregister(serviceName, instanceID string) error {
@@ -86,13 +101,14 @@ func (r *Registry) Deregister(serviceName, instanceID string) error {
 		return fmt.Errorf("instance %q not found in service %q", instanceID, serviceName)
 	}
 
+	instCopy := cloneInstance(inst)
 	delete(r.instances[serviceName], instanceID)
 	if len(r.instances[serviceName]) == 0 {
 		delete(r.instances, serviceName)
 	}
 
 	log.Printf("[registry] deregistered %s/%s", serviceName, instanceID)
-	r.emitAsync(RegistryEvent{Type: EventDeregistered, Instance: inst, Time: time.Now()})
+	r.emitAsync(RegistryEvent{Type: EventDeregistered, Instance: instCopy, Time: time.Now()})
 
 	return nil
 }
@@ -111,7 +127,7 @@ func (r *Registry) Heartbeat(serviceName, instanceID string) error {
 	if inst.Status == StatusUnhealthy && inst.LastProbeErr == "heartbeat expired" {
 		inst.Status = StatusHealthy
 		inst.LastProbeErr = ""
-		r.emitAsync(RegistryEvent{Type: EventStatusChanged, Instance: inst, Time: time.Now()})
+		r.emitAsync(RegistryEvent{Type: EventStatusChanged, Instance: cloneInstance(inst), Time: time.Now()})
 	}
 
 	return nil
@@ -133,7 +149,56 @@ func (r *Registry) UpdateStatus(serviceName, instanceID string, status HealthSta
 
 	if oldStatus != status {
 		log.Printf("[registry] status changed %s/%s: %s -> %s (%s)", serviceName, instanceID, oldStatus, status, probeErr)
-		r.emitAsync(RegistryEvent{Type: EventStatusChanged, Instance: inst, Time: time.Now()})
+		r.emitAsync(RegistryEvent{Type: EventStatusChanged, Instance: cloneInstance(inst), Time: time.Now()})
+	}
+}
+
+func (r *Registry) RecordProbeResult(serviceName, instanceID string, probeErr error, defaultSuccessTh, defaultFailureTh int) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	inst, ok := r.findInstanceLocked(serviceName, instanceID)
+	if !ok {
+		return
+	}
+
+	failThreshold := inst.HealthCheck.FailureThreshold
+	if failThreshold <= 0 {
+		failThreshold = defaultFailureTh
+	}
+	successThreshold := inst.HealthCheck.SuccessThreshold
+	if successThreshold <= 0 {
+		successThreshold = defaultSuccessTh
+	}
+
+	inst.LastProbeAt = time.Now()
+
+	if probeErr != nil {
+		inst.ConsecutiveFails++
+		inst.ConsecutiveSuccesses = 0
+		inst.LastProbeErr = probeErr.Error()
+
+		if inst.ConsecutiveFails >= failThreshold && inst.Status != StatusUnhealthy {
+			oldStatus := inst.Status
+			inst.Status = StatusUnhealthy
+			log.Printf("[registry] status changed %s/%s: %s -> UNHEALTHY (%v)", serviceName, instanceID, oldStatus, probeErr)
+			r.emitAsync(RegistryEvent{Type: EventStatusChanged, Instance: cloneInstance(inst), Time: time.Now()})
+		}
+		return
+	}
+
+	inst.ConsecutiveSuccesses++
+	inst.ConsecutiveFails = 0
+	inst.LastProbeErr = ""
+
+	if (inst.Status == StatusUnhealthy || inst.Status == StatusDegraded) && inst.ConsecutiveSuccesses >= successThreshold {
+		oldStatus := inst.Status
+		inst.Status = StatusHealthy
+		log.Printf("[registry] status changed %s/%s: %s -> HEALTHY (recovered)", serviceName, instanceID, oldStatus)
+		r.emitAsync(RegistryEvent{Type: EventStatusChanged, Instance: cloneInstance(inst), Time: time.Now()})
+	} else if inst.Status != StatusHealthy && inst.ConsecutiveSuccesses >= successThreshold {
+		inst.Status = StatusHealthy
+		r.emitAsync(RegistryEvent{Type: EventStatusChanged, Instance: cloneInstance(inst), Time: time.Now()})
 	}
 }
 
@@ -148,7 +213,7 @@ func (r *Registry) GetAll(serviceName string) []*ServiceInstance {
 
 	result := make([]*ServiceInstance, 0, len(instances))
 	for _, inst := range instances {
-		result = append(result, inst)
+		result = append(result, cloneInstance(inst))
 	}
 	return result
 }
@@ -165,7 +230,7 @@ func (r *Registry) GetHealthy(serviceName string) []*ServiceInstance {
 	result := make([]*ServiceInstance, 0, len(instances))
 	for _, inst := range instances {
 		if inst.Status == StatusHealthy || inst.Status == StatusDegraded {
-			result = append(result, inst)
+			result = append(result, cloneInstance(inst))
 		}
 	}
 	return result
@@ -179,7 +244,7 @@ func (r *Registry) GetAllServices() map[string][]*ServiceInstance {
 	for name, instances := range r.instances {
 		list := make([]*ServiceInstance, 0, len(instances))
 		for _, inst := range instances {
-			list = append(list, inst)
+			list = append(list, cloneInstance(inst))
 		}
 		result[name] = list
 	}
@@ -190,7 +255,11 @@ func (r *Registry) GetInstance(serviceName, instanceID string) (*ServiceInstance
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	return r.findInstanceLocked(serviceName, instanceID)
+	inst, ok := r.findInstanceLocked(serviceName, instanceID)
+	if !ok {
+		return nil, false
+	}
+	return cloneInstance(inst), true
 }
 
 func (r *Registry) Subscribe() chan RegistryEvent {
@@ -239,6 +308,7 @@ func (r *Registry) EvictInstance(serviceName, instanceID string) {
 	}
 
 	inst.Status = StatusDead
+	instCopy := cloneInstance(inst)
 	delete(r.instances[serviceName], instanceID)
 	if len(r.instances[serviceName]) == 0 {
 		delete(r.instances, serviceName)
@@ -246,7 +316,7 @@ func (r *Registry) EvictInstance(serviceName, instanceID string) {
 	r.mu.Unlock()
 
 	log.Printf("[registry] evicted %s/%s", serviceName, instanceID)
-	r.emitAsync(RegistryEvent{Type: EventHeartbeatExpired, Instance: inst, Time: time.Now()})
+	r.emitAsync(RegistryEvent{Type: EventHeartbeatExpired, Instance: instCopy, Time: time.Now()})
 }
 
 func (r *Registry) Snapshot() []*ServiceInstance {
@@ -256,7 +326,7 @@ func (r *Registry) Snapshot() []*ServiceInstance {
 	var all []*ServiceInstance
 	for _, instances := range r.instances {
 		for _, inst := range instances {
-			all = append(all, inst)
+			all = append(all, cloneInstance(inst))
 		}
 	}
 	return all

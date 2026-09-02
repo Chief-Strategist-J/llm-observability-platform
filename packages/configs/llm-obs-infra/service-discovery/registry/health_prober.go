@@ -6,10 +6,10 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os/exec"
 	"sync"
 	"time"
 
+	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/security"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/tracing"
 )
 
@@ -20,7 +20,6 @@ var (
 	probeStrategies   = map[string]ProbeStrategy{
 		"http": probeHTTP,
 		"tcp":  probeTCP,
-		"exec": probeExec,
 	}
 )
 
@@ -38,6 +37,10 @@ func getProbeStrategy(protocol string) (ProbeStrategy, bool) {
 }
 
 func probeHTTP(ctx context.Context, host string, port int, spec HealthCheckSpec) error {
+	if err := security.ValidateEndpoint(host, port, false); err != nil {
+		return fmt.Errorf("SSRF safety violation for probe target: %w", err)
+	}
+
 	url := fmt.Sprintf("http://%s:%d%s", host, port, spec.Path)
 	client := &http.Client{Timeout: spec.Timeout}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -59,6 +62,10 @@ func probeHTTP(ctx context.Context, host string, port int, spec HealthCheckSpec)
 }
 
 func probeTCP(ctx context.Context, host string, port int, spec HealthCheckSpec) error {
+	if err := security.ValidateEndpoint(host, port, false); err != nil {
+		return fmt.Errorf("SSRF safety violation for probe target: %w", err)
+	}
+
 	addr := fmt.Sprintf("%s:%d", host, port)
 	dialer := net.Dialer{Timeout: spec.Timeout}
 	conn, err := dialer.DialContext(ctx, "tcp", addr)
@@ -66,23 +73,6 @@ func probeTCP(ctx context.Context, host string, port int, spec HealthCheckSpec) 
 		return fmt.Errorf("TCP probe failed: %w", err)
 	}
 	conn.Close()
-	return nil
-}
-
-func probeExec(ctx context.Context, host string, port int, spec HealthCheckSpec) error {
-	var cmd *exec.Cmd
-	if len(spec.Command) > 0 {
-		cmd = exec.CommandContext(ctx, spec.Command[0], spec.Command[1:]...)
-	} else if spec.Path != "" {
-		cmd = exec.CommandContext(ctx, "/bin/sh", "-c", spec.Path)
-	} else {
-		return fmt.Errorf("exec probe requires command slice or shell path spec")
-	}
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("exec probe failed (%v): %s", err, string(output))
-	}
 	return nil
 }
 
@@ -214,39 +204,5 @@ func (hp *HealthProber) executeProbe(ctx context.Context, inst *ServiceInstance)
 }
 
 func (hp *HealthProber) processResult(inst *ServiceInstance, probeErr error) {
-	failThreshold := inst.HealthCheck.FailureThreshold
-	if failThreshold <= 0 {
-		failThreshold = hp.config.DefaultFailureTh
-	}
-	successThreshold := inst.HealthCheck.SuccessThreshold
-	if successThreshold <= 0 {
-		successThreshold = hp.config.DefaultSuccessTh
-	}
-
-	if probeErr != nil {
-		inst.ConsecutiveFails++
-		inst.ConsecutiveSuccesses = 0
-
-		if inst.ConsecutiveFails >= failThreshold {
-			hp.registry.UpdateStatus(inst.Name, inst.ID, StatusUnhealthy, probeErr.Error())
-		} else {
-			log.Printf("[health-prober] probe failed for %s/%s (%d/%d): %v",
-				inst.Name, inst.ID, inst.ConsecutiveFails, failThreshold, probeErr)
-		}
-		return
-	}
-
-	inst.ConsecutiveSuccesses++
-	inst.ConsecutiveFails = 0
-
-	if inst.Status == StatusUnhealthy || inst.Status == StatusDegraded {
-		if inst.ConsecutiveSuccesses >= successThreshold {
-			hp.registry.UpdateStatus(inst.Name, inst.ID, StatusHealthy, "")
-		} else {
-			log.Printf("[health-prober] probe passed for %s/%s (%d/%d required for recovery)",
-				inst.Name, inst.ID, inst.ConsecutiveSuccesses, successThreshold)
-		}
-	} else if inst.Status != StatusHealthy {
-		hp.registry.UpdateStatus(inst.Name, inst.ID, StatusHealthy, "")
-	}
+	hp.registry.RecordProbeResult(inst.Name, inst.ID, probeErr, hp.config.DefaultSuccessTh, hp.config.DefaultFailureTh)
 }

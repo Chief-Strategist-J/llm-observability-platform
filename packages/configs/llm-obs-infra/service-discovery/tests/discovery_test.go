@@ -2,13 +2,12 @@ package tests
 
 import (
 	"testing"
-	"time"
 
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/discovery"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/registry"
 )
 
-func TestDiscoveryResolutionAndFallback(t *testing.T) {
+func TestDiscoveryResolutionAndLKG(t *testing.T) {
 	reg := registry.NewRegistry(registry.DefaultInstanceDefaults)
 	disc := discovery.NewDiscovery(reg)
 
@@ -18,16 +17,7 @@ func TestDiscoveryResolutionAndFallback(t *testing.T) {
 		t.Fatalf("expected error for unregistered service, got nil")
 	}
 
-	// 2. ResolveWithFallback for unregistered service -> should return fallback instance
-	inst, fallbackUsed := disc.ResolveWithFallback("ai-service", "legacy-ai-host", 8080, "http")
-	if !fallbackUsed {
-		t.Errorf("expected fallbackUsed: true, got false")
-	}
-	if inst.Host != "legacy-ai-host" || inst.Port != 8080 {
-		t.Errorf("expected fallback host/port legacy-ai-host:8080, got %s:%d", inst.Host, inst.Port)
-	}
-
-	// 3. Register service -> Resolve should succeed without fallback
+	// 2. Register service -> Resolve should succeed
 	reg.Register(&registry.ServiceInstance{
 		Name:     "ai-service",
 		Host:     "ai-container",
@@ -35,34 +25,29 @@ func TestDiscoveryResolutionAndFallback(t *testing.T) {
 		Protocol: "http",
 	})
 
-	instResolved, fallbackUsed2 := disc.ResolveWithFallback("ai-service", "legacy-ai-host", 8080, "http")
-	if fallbackUsed2 {
-		t.Errorf("expected fallbackUsed: false for registered service, got true")
+	instResolved, err := disc.Resolve("ai-service")
+	if err != nil {
+		t.Fatalf("expected resolved instance, got error: %v", err)
 	}
 	if instResolved.Host != "ai-container" || instResolved.Port != 9000 {
 		t.Errorf("expected resolved host/port ai-container:9000, got %s:%d", instResolved.Host, instResolved.Port)
 	}
-}
 
-func TestDiscoveryWatchEventStream(t *testing.T) {
-	reg := registry.NewRegistry(registry.DefaultInstanceDefaults)
-	disc := discovery.NewDiscovery(reg)
+	// 3. Test LKG caching when service is updated to unhealthy
+	reg.UpdateStatus("ai-service", instResolved.ID, registry.StatusUnhealthy, "transient error")
+	
+	// Direct resolve should fail
+	_, err = disc.Resolve("ai-service")
+	if err == nil {
+		t.Fatalf("expected resolve to fail when service is unhealthy")
+	}
 
-	events := disc.Watch("watch-service")
-
-	reg.Register(&registry.ServiceInstance{
-		Name:     "watch-service",
-		Host:     "localhost",
-		Port:     8000,
-		Protocol: "http",
-	})
-
-	select {
-	case evt := <-events:
-		if evt.Instance.Name != "watch-service" {
-			t.Errorf("expected event for watch-service, got %s", evt.Instance.Name)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatalf("timed out waiting for watch event")
+	// LKG resolution should return cached instances with lkgUsed=true
+	lkgInstances, lkgUsed, err := disc.ResolveWithLKG("ai-service")
+	if err != nil || !lkgUsed || len(lkgInstances) == 0 {
+		t.Fatalf("expected LKG resolution to return cached topology, got lkgUsed=%v, err=%v", lkgUsed, err)
+	}
+	if lkgInstances[0].Host != "ai-container" {
+		t.Errorf("expected LKG host ai-container, got %s", lkgInstances[0].Host)
 	}
 }

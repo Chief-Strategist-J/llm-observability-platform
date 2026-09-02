@@ -22,7 +22,7 @@ const (
 	EventDeregistered     = models.EventDeregistered
 	EventStatusChanged    = models.EventStatusChanged
 	EventHeartbeatExpired = models.EventHeartbeatExpired
-	EventWeightUpdated    = models.EventWeightUpdated
+	EventEvicted          = models.EventEvicted
 )
 
 type RegistryEvent = models.RegistryEvent

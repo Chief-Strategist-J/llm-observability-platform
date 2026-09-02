@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/discovery"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/models"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/registry"
+	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/security"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/tracing"
 )
 
@@ -17,6 +19,8 @@ type Router struct {
 	mux              *http.ServeMux
 	registry         *registry.Registry
 	discovery        *discovery.Discovery
+	securityConfig   models.SecurityConfig
+	rateLimiter      *security.TokenBucketLimiter
 	idempotencyStore map[string][]byte
 	idemMu           sync.RWMutex
 }
@@ -28,11 +32,13 @@ type RouteSpec struct {
 	Handler http.HandlerFunc
 }
 
-func NewRouter(reg *registry.Registry, disc *discovery.Discovery) *Router {
+func NewRouter(reg *registry.Registry, disc *discovery.Discovery, sec models.SecurityConfig) *Router {
 	r := &Router{
 		mux:              http.NewServeMux(),
 		registry:         reg,
 		discovery:        disc,
+		securityConfig:   sec,
+		rateLimiter:      security.NewTokenBucketLimiter(sec.RateLimitRequestsSec, sec.RateLimitRequestsSec*2),
 		idempotencyStore: make(map[string][]byte),
 	}
 	r.registerDataDrivenRoutes()
@@ -79,6 +85,18 @@ func (r *Router) saveIdempotency(key string, payload []byte) {
 	r.idemMu.Lock()
 	defer r.idemMu.Unlock()
 	r.idempotencyStore[key] = payload
+}
+
+func (r *Router) checkRateLimit(req *http.Request) bool {
+	host, _, err := net.SplitHostPort(req.RemoteAddr)
+	if err != nil {
+		host = req.RemoteAddr
+	}
+	return r.rateLimiter.Allow(host)
+}
+
+func (r *Router) checkAuth(req *http.Request) bool {
+	return security.ValidateBearerAuth(req, r.securityConfig.AuthToken)
 }
 
 func writeSuccess[T any](r *Router, w http.ResponseWriter, req *http.Request, status int, data T) {
@@ -141,7 +159,6 @@ func (r *Router) registerDataDrivenRoutes() {
 		{http.MethodPost, "/v1/deregister", "deregister", r.handleDeregister},
 		{http.MethodGet, "/v1/resolve", "resolve", r.handleResolve},
 		{http.MethodGet, "/v1/services", "services", r.handleListServices},
-		{http.MethodGet, "/v1/watch", "watch", r.handleWatch},
 		{http.MethodGet, "/health", "health", r.handleHealth},
 	}
 
@@ -170,9 +187,8 @@ type registerRequest struct {
 	Weight      int               `json:"weight,omitempty"`
 	Metadata    map[string]string `json:"metadata,omitempty"`
 	HealthCheck struct {
-		Protocol string   `json:"protocol"`
-		Path     string   `json:"path,omitempty"`
-		Command  []string `json:"command,omitempty"`
+		Protocol string `json:"protocol"`
+		Path     string `json:"path,omitempty"`
 	} `json:"healthCheck"`
 }
 
@@ -187,6 +203,16 @@ type deregisterRequest struct {
 }
 
 func (r *Router) handleRegister(w http.ResponseWriter, req *http.Request) {
+	if !r.checkAuth(req) {
+		writeError(w, req, http.StatusUnauthorized, models.ErrCodeUnauthenticated, "Missing or invalid Bearer authentication token.", nil)
+		return
+	}
+
+	if !r.checkRateLimit(req) {
+		writeError(w, req, http.StatusTooManyRequests, models.ErrCodeTooManyRequests, "Rate limit exceeded for registration requests.", nil)
+		return
+	}
+
 	body, err := bindJSON[registerRequest](req)
 	if err != nil {
 		writeError(w, req, http.StatusBadRequest, models.ErrCodeBadRequest, "Malformed JSON request body: "+err.Error(), nil)
@@ -205,6 +231,14 @@ func (r *Router) handleRegister(w http.ResponseWriter, req *http.Request) {
 	}
 	if body.Protocol == "" {
 		details = append(details, models.ApiErrorDetail{Field: "protocol", Issue: "Field 'protocol' is required (e.g. 'http', 'tcp')."})
+	} else if err := security.ValidateProtocol(body.Protocol); err != nil {
+		details = append(details, models.ApiErrorDetail{Field: "protocol", Issue: err.Error()})
+	}
+
+	if body.Host != "" && body.Port > 0 {
+		if err := security.ValidateEndpoint(body.Host, body.Port, r.securityConfig.EnforceRFC1918); err != nil {
+			details = append(details, models.ApiErrorDetail{Field: "host", Issue: err.Error()})
+		}
 	}
 
 	if len(details) > 0 {
@@ -223,7 +257,6 @@ func (r *Router) handleRegister(w http.ResponseWriter, req *http.Request) {
 		HealthCheck: registry.HealthCheckSpec{
 			Protocol: body.HealthCheck.Protocol,
 			Path:     body.HealthCheck.Path,
-			Command:  body.HealthCheck.Command,
 		},
 	}
 
@@ -232,6 +265,16 @@ func (r *Router) handleRegister(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) handleHeartbeat(w http.ResponseWriter, req *http.Request) {
+	if !r.checkAuth(req) {
+		writeError(w, req, http.StatusUnauthorized, models.ErrCodeUnauthenticated, "Missing or invalid Bearer authentication token.", nil)
+		return
+	}
+
+	if !r.checkRateLimit(req) {
+		writeError(w, req, http.StatusTooManyRequests, models.ErrCodeTooManyRequests, "Rate limit exceeded for heartbeat requests.", nil)
+		return
+	}
+
 	body, err := bindJSON[heartbeatRequest](req)
 	if err != nil {
 		writeError(w, req, http.StatusBadRequest, models.ErrCodeBadRequest, "Malformed JSON request body: "+err.Error(), nil)
@@ -259,6 +302,11 @@ func (r *Router) handleHeartbeat(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) handleDeregister(w http.ResponseWriter, req *http.Request) {
+	if !r.checkAuth(req) {
+		writeError(w, req, http.StatusUnauthorized, models.ErrCodeUnauthenticated, "Missing or invalid Bearer authentication token.", nil)
+		return
+	}
+
 	body, err := bindJSON[deregisterRequest](req)
 	if err != nil {
 		writeError(w, req, http.StatusBadRequest, models.ErrCodeBadRequest, "Malformed JSON request body: "+err.Error(), nil)
@@ -316,44 +364,6 @@ func (r *Router) handleResolve(w http.ResponseWriter, req *http.Request) {
 func (r *Router) handleListServices(w http.ResponseWriter, req *http.Request) {
 	services := r.discovery.ListServices()
 	writeSuccess(r, w, req, http.StatusOK, services)
-}
-
-func (r *Router) handleWatch(w http.ResponseWriter, req *http.Request) {
-	serviceName := req.URL.Query().Get("service")
-
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		writeError(w, req, http.StatusInternalServerError, models.ErrCodeInternalServerError, "Server Sent Events (SSE) streaming not supported.", nil)
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.WriteHeader(http.StatusOK)
-	flusher.Flush()
-
-	var events chan registry.RegistryEvent
-	if serviceName != "" {
-		events = r.discovery.Watch(serviceName)
-	} else {
-		events = r.discovery.WatchAll()
-	}
-
-	ctx := req.Context()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case event, ok := <-events:
-			if !ok {
-				return
-			}
-			data, _ := json.Marshal(event)
-			fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event.Type.String(), data)
-			flusher.Flush()
-		}
-	}
 }
 
 func (r *Router) handleHealth(w http.ResponseWriter, req *http.Request) {

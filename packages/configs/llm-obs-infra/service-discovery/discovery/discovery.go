@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/registry"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/tracing"
@@ -11,10 +12,15 @@ import (
 
 type Discovery struct {
 	registry *registry.Registry
+	lkgCache map[string][]*registry.ServiceInstance
+	lkgMu    sync.RWMutex
 }
 
 func NewDiscovery(reg *registry.Registry) *Discovery {
-	return &Discovery{registry: reg}
+	return &Discovery{
+		registry: reg,
+		lkgCache: make(map[string][]*registry.ServiceInstance),
+	}
 }
 
 func (d *Discovery) Resolve(serviceName string) (*registry.ServiceInstance, error) {
@@ -28,30 +34,32 @@ func (d *Discovery) Resolve(serviceName string) (*registry.ServiceInstance, erro
 		span.SetAttribute("resolve.error", err.Error())
 		return nil, err
 	}
+
+	d.lkgMu.Lock()
+	d.lkgCache[serviceName] = healthy
+	d.lkgMu.Unlock()
+
 	span.SetAttribute("resolved.endpoint", healthy[0].Endpoint())
 	return healthy[0], nil
 }
 
-func (d *Discovery) ResolveWithFallback(serviceName string, fallbackHost string, fallbackPort int, fallbackProtocol string) (*registry.ServiceInstance, bool) {
-	inst, err := d.Resolve(serviceName)
+// ResolveWithLKG returns active healthy instances, or if the registry returns no healthy instances,
+// returns the Last-Known-Good cached instances as a resilience measure.
+func (d *Discovery) ResolveWithLKG(serviceName string) ([]*registry.ServiceInstance, bool, error) {
+	instances, err := d.ResolveAll(serviceName)
 	if err == nil {
-		return inst, false
+		return instances, false, nil
 	}
 
-	if fallbackProtocol == "" {
-		fallbackProtocol = "http"
+	d.lkgMu.RLock()
+	lkg, exists := d.lkgCache[serviceName]
+	d.lkgMu.RUnlock()
+
+	if exists && len(lkg) > 0 {
+		return lkg, true, nil
 	}
 
-	fallback := &registry.ServiceInstance{
-		ID:       fmt.Sprintf("%s-fallback", serviceName),
-		Name:     serviceName,
-		Host:     fallbackHost,
-		Port:     fallbackPort,
-		Protocol: fallbackProtocol,
-		Status:   registry.StatusHealthy,
-		Metadata: map[string]string{"resolution": "fallback-legacy-env"},
-	}
-	return fallback, true
+	return nil, false, err
 }
 
 func (d *Discovery) ResolveAll(serviceName string) ([]*registry.ServiceInstance, error) {
@@ -65,6 +73,11 @@ func (d *Discovery) ResolveAll(serviceName string) ([]*registry.ServiceInstance,
 		span.SetAttribute("resolve.error", err.Error())
 		return nil, err
 	}
+
+	d.lkgMu.Lock()
+	d.lkgCache[serviceName] = healthy
+	d.lkgMu.Unlock()
+
 	span.SetAttribute("resolved.count", fmt.Sprintf("%d", len(healthy)))
 	return healthy, nil
 }
@@ -79,26 +92,6 @@ func (d *Discovery) ResolveEndpoint(serviceName string) (string, error) {
 
 func (d *Discovery) ListServices() map[string][]*registry.ServiceInstance {
 	return d.registry.GetAllServices()
-}
-
-func (d *Discovery) Watch(serviceName string) chan registry.RegistryEvent {
-	allEvents := d.registry.Subscribe()
-	filtered := make(chan registry.RegistryEvent, 64)
-
-	go func() {
-		defer close(filtered)
-		for event := range allEvents {
-			if event.Instance != nil && event.Instance.Name == serviceName {
-				filtered <- event
-			}
-		}
-	}()
-
-	return filtered
-}
-
-func (d *Discovery) WatchAll() chan registry.RegistryEvent {
-	return d.registry.Subscribe()
 }
 
 func (d *Discovery) buildDiagnosticError(serviceName string) error {
