@@ -98,6 +98,9 @@ func NewHealthProber(registry *Registry, config HealthProberConfig) *HealthProbe
 	if config.DefaultFailureTh <= 0 {
 		config.DefaultFailureTh = 3
 	}
+	if config.ProbeInterval <= 0 {
+		config.ProbeInterval = 5 * time.Second
+	}
 	if config.MaxConcurrent <= 0 {
 		config.MaxConcurrent = 10
 	}

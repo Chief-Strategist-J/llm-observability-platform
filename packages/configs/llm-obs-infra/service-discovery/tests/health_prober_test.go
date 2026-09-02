@@ -44,6 +44,7 @@ func TestHealthProberHTTP(t *testing.T) {
 	registered := reg.Register(inst)
 
 	prober := registry.NewHealthProber(reg, registry.HealthProberConfig{
+		ProbeInterval:    50 * time.Millisecond,
 		MaxConcurrent:    5,
 		DefaultFailureTh: 2,
 		DefaultSuccessTh: 1,
@@ -57,7 +58,13 @@ func TestHealthProberHTTP(t *testing.T) {
 		t.Fatalf("expected status UNHEALTHY, got %s", registered.Status)
 	}
 
-	prober.Start(ctx)
+	go prober.Start(ctx)
+	time.Sleep(150 * time.Millisecond)
+
+	insts := reg.GetHealthy(registered.Name)
+	if len(insts) != 1 {
+		t.Fatalf("expected 1 healthy instance after probe recovery, got %d", len(insts))
+	}
 }
 
 func fmtSscanf(str string, format string, a ...interface{}) (int, error) {
@@ -94,9 +101,19 @@ func TestHealthProberThresholds(t *testing.T) {
 	}
 
 	prober := registry.NewHealthProber(reg, registry.HealthProberConfig{
+		ProbeInterval:    50 * time.Millisecond,
 		DefaultFailureTh: 3,
 		DefaultSuccessTh: 2,
 	})
 
-	prober.Start(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go prober.Start(ctx)
+	time.Sleep(250 * time.Millisecond)
+
+	updatedInst, ok := reg.GetInstance("flapping-svc", inst.ID)
+	if !ok || updatedInst.Status != registry.StatusUnhealthy {
+		t.Fatalf("expected status UNHEALTHY after failure threshold strikes, got %v", updatedInst.Status)
+	}
 }

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/discovery"
+	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/models"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/registry"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/server"
 )
@@ -33,13 +34,15 @@ func TestRegisterEndpoint(t *testing.T) {
 		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
 	}
 
-	var result map[string]interface{}
-	json.Unmarshal(rr.Body.Bytes(), &result)
-
-	if result["name"] != "test-svc" {
-		t.Fatalf("expected test-svc, got %v", result["name"])
+	var envelope models.ApiResponse[models.ServiceInstance]
+	if err := json.Unmarshal(rr.Body.Bytes(), &envelope); err != nil {
+		t.Fatalf("failed to unmarshal register response: %v", err)
 	}
-	if result["id"] == nil || result["id"] == "" {
+
+	if envelope.Data.Name != "test-svc" {
+		t.Fatalf("expected test-svc, got %v", envelope.Data.Name)
+	}
+	if envelope.Data.ID == "" {
 		t.Fatal("expected auto-generated id")
 	}
 }
@@ -57,11 +60,13 @@ func TestResolveEndpointAPI(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
 	}
 
-	var result map[string]interface{}
-	json.Unmarshal(rr.Body.Bytes(), &result)
+	var envelope models.ApiResponse[map[string]interface{}]
+	if err := json.Unmarshal(rr.Body.Bytes(), &envelope); err != nil {
+		t.Fatalf("failed to unmarshal resolve response: %v", err)
+	}
 
-	if result["endpoint"] != "http://localhost:7070" {
-		t.Fatalf("expected http://localhost:7070, got %v", result["endpoint"])
+	if envelope.Data["endpoint"] != "http://localhost:7070" {
+		t.Fatalf("expected http://localhost:7070, got %v", envelope.Data["endpoint"])
 	}
 }
 
@@ -105,11 +110,13 @@ func TestListServicesEndpoint(t *testing.T) {
 		t.Fatalf("expected 200, got %d", rr.Code)
 	}
 
-	var result map[string]interface{}
-	json.Unmarshal(rr.Body.Bytes(), &result)
+	var envelope models.ApiResponse[map[string][]models.ServiceInstance]
+	if err := json.Unmarshal(rr.Body.Bytes(), &envelope); err != nil {
+		t.Fatalf("failed to unmarshal services response: %v", err)
+	}
 
-	if len(result) != 2 {
-		t.Fatalf("expected 2 services, got %d", len(result))
+	if len(envelope.Data) != 2 {
+		t.Fatalf("expected 2 services, got %d", len(envelope.Data))
 	}
 }
 

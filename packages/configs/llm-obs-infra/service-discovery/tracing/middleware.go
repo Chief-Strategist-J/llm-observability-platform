@@ -36,7 +36,7 @@ func (w *statusResponseWriter) WriteHeader(code int) {
 	w.ResponseWriter.WriteHeader(code)
 }
 
-func generateID(prefix string) string {
+func generatePrefixedID(prefix string) string {
 	b := make([]byte, 6)
 	_, _ = rand.Read(b)
 	return fmt.Sprintf("%s-%d-%s", prefix, time.Now().UnixMilli(), hex.EncodeToString(b))
@@ -61,7 +61,7 @@ func Middleware(next http.Handler) http.Handler {
 
 		reqID := req.Header.Get("x-request-id")
 		if reqID == "" {
-			reqID = generateID("req")
+			reqID = generatePrefixedID("req")
 		}
 
 		corrID := req.Header.Get("x-correlation-id")
@@ -149,7 +149,7 @@ func GetRequestContext(ctx context.Context) RequestContext {
 		return val
 	}
 	start := time.Now()
-	id := generateID("req")
+	id := generatePrefixedID("req")
 	return RequestContext{
 		Traceparent:    fmt.Sprintf("00-%s-%s-01", NewTraceID(), NewSpanID()),
 		RequestId:      id,

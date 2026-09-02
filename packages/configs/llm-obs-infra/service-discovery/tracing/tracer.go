@@ -29,18 +29,18 @@ type Span struct {
 	mu         sync.Mutex
 }
 
-func generateID(byteLen int) string {
+func generateRandomHex(byteLen int) string {
 	b := make([]byte, byteLen)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
 }
 
 func NewTraceID() string {
-	return generateID(16)
+	return generateRandomHex(16)
 }
 
 func NewSpanID() string {
-	return generateID(8)
+	return generateRandomHex(8)
 }
 
 func StartSpan(ctx context.Context, name string) (context.Context, *Span) {
