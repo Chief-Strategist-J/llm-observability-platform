@@ -209,46 +209,44 @@ flowchart TD
 
 ---
 
-## 6. Quick Operations & Service Management Commands
+## 6. Service Discovery & Topology Management Commands
 
-Run all commands directly from the root workspace directory (`/home/btpl-lap-22/live/llm-observability-platform`):
+Run all commands from `packages/configs/llm-obs-infra`:
 
-### A. Using `manage.sh` Orchestrator Script
-
+### A. Service Discovery & Failover Runner Script
 ```bash
-# Check current status of all 9 infrastructure services
-./packages/configs/llm-obs-infra/scripts/manage.sh status
+# Start Service Registry in Docker (Port 31426)
+./scripts/discovery/run-service-discovery.sh start
 
-# Run 41-point comprehensive health checks across containers
-./packages/configs/llm-obs-infra/scripts/manage.sh health
+# List all active registered services in memory
+./scripts/discovery/run-service-discovery.sh status
 
-# Start infrastructure stack with environment & cert pre-flight checks
-./packages/configs/llm-obs-infra/scripts/manage.sh up
+# Search and resolve active target endpoint (e.g., clickhouse, redis, grafana)
+./scripts/discovery/run-service-discovery.sh search clickhouse
 
-# Restart all infrastructure services
-./packages/configs/llm-obs-infra/scripts/manage.sh restart
+# Dynamically register a new service/device
+./scripts/discovery/run-service-discovery.sh register my-dev-app 8082
+
+# View live Traefik discovery.yml dynamic configuration
+./scripts/discovery/run-service-discovery.sh traefik-config
 
 # Follow real-time container logs
-./packages/configs/llm-obs-infra/scripts/manage.sh logs
+./scripts/discovery/run-service-discovery.sh logs
 
-# Stop all infrastructure services
-./packages/configs/llm-obs-infra/scripts/manage.sh down
+# Stop Service Registry container
+./scripts/discovery/run-service-discovery.sh stop
 ```
 
 ### B. Direct Docker Compose Commands
-
 ```bash
-# Check status of running docker compose containers
-docker compose -f packages/configs/llm-obs-infra/docker-compose.yml ps
+# Start Service Registry container in detached mode
+docker compose up -d llmobs-service-registry
 
-# Start containers in detached mode
-docker compose -f packages/configs/llm-obs-infra/docker-compose.yml up -d
+# Query registered services via HTTP API
+curl http://localhost:31426/v1/services
 
-# Tail container log output
-docker compose -f packages/configs/llm-obs-infra/docker-compose.yml logs -f
-
-# Stop containers
-docker compose -f packages/configs/llm-obs-infra/docker-compose.yml down
+# Query specific service endpoint
+curl "http://localhost:31426/v1/resolve?service=grafana"
 ```
 
 ---

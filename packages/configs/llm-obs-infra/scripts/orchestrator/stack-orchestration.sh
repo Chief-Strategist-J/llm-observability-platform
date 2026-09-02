@@ -19,6 +19,7 @@ print_service_endpoints() {
   echo -e "  - Grafana Tempo:         https://llmobs.tempo:31419"
   echo -e "  - OTel Collector HTTP:   http://localhost:31417"
   echo -e "  - OTel Collector gRPC:   localhost:31418"
+  echo -e "  - Service Registry API:  http://localhost:31426"
 }
 
 wait_with_exponential_backoff_jitter() {
@@ -122,8 +123,8 @@ start_ordered_stack() {
   echo -e "${BLUE}⚡ Step 2/3: Starting telemetry & event streams (Kafka, Tempo, OTel Collector)...${NC}"
   $bin -f "$compose_file" up -d llmobs-kafka llmobs-tempo llmobs-otel-collector || true
 
-  echo -e "${BLUE}⚡ Step 3/3: Starting web gateways & orchestration engines (Traefik, Grafana, Temporal)...${NC}"
-  $bin -f "$compose_file" up -d llmobs-traefik llmobs-grafana llmobs-temporal || true
+  echo -e "${BLUE}⚡ Step 3/3: Starting web gateways, service registry & orchestration engines...${NC}"
+  $bin -f "$compose_file" up -d llmobs-traefik llmobs-grafana llmobs-temporal llmobs-service-registry || true
   wait_for_web_gateways 20
 
   print_service_endpoints
