@@ -11,11 +11,14 @@ import (
 
 type RequestContext struct {
 	Traceparent    string
+	Tracestate     string
 	RequestId      string
 	CorrelationId  string
 	CausationId    string
 	IdempotencyKey string
 	TenantId       string
+	ClientId       string
+	UserId         string
 	StartTime      time.Time
 }
 
@@ -53,6 +56,8 @@ func Middleware(next http.Handler) http.Handler {
 			Attributes: make(map[string]string),
 		}
 
+		tracestate := req.Header.Get("tracestate")
+
 		reqID := req.Header.Get("x-request-id")
 		if reqID == "" {
 			reqID = generateID("req")
@@ -78,13 +83,19 @@ func Middleware(next http.Handler) http.Handler {
 			tenantID = "default"
 		}
 
+		clientID := req.Header.Get("x-client-id")
+		userID := req.Header.Get("x-user-id")
+
 		reqCtx := RequestContext{
 			Traceparent:    span.TraceparentHeader(),
+			Tracestate:     tracestate,
 			RequestId:      reqID,
 			CorrelationId:  corrID,
 			CausationId:    causID,
 			IdempotencyKey: idemKey,
 			TenantId:       tenantID,
+			ClientId:       clientID,
+			UserId:         userID,
 			StartTime:      start,
 		}
 
@@ -95,11 +106,21 @@ func Middleware(next http.Handler) http.Handler {
 		span.SetAttribute("x-correlation-id", corrID)
 		span.SetAttribute("x-tenant-id", tenantID)
 
-		// Inject outbound header requirements
+		// Inject outbound header requirements per specification
 		w.Header().Set("traceparent", reqCtx.Traceparent)
+		if tracestate != "" {
+			w.Header().Set("tracestate", tracestate)
+		}
 		w.Header().Set("x-request-id", reqID)
 		w.Header().Set("x-correlation-id", corrID)
 		w.Header().Set("x-causation-id", causID)
+		w.Header().Set("x-tenant-id", tenantID)
+		if clientID != "" {
+			w.Header().Set("x-client-id", clientID)
+		}
+		if userID != "" {
+			w.Header().Set("x-user-id", userID)
+		}
 
 		sw := &statusResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 		ctx := req.Context()

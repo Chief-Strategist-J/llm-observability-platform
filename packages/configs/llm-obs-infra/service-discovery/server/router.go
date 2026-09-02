@@ -93,7 +93,7 @@ func writeSuccess[T any](r *Router, w http.ResponseWriter, req *http.Request, st
 			RequestId:       reqCtx.RequestId,
 			CorrelationId:   reqCtx.CorrelationId,
 			CausationId:     reqCtx.CausationId,
-			Timestamp:       time.Now().UTC().Format(time.RFC3339Nano),
+			Timestamp:       time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
 			ExecutionTimeMs: execTime,
 		},
 	}
@@ -124,7 +124,7 @@ func writeError(w http.ResponseWriter, req *http.Request, status int, code strin
 			RequestId:       reqCtx.RequestId,
 			CorrelationId:   reqCtx.CorrelationId,
 			CausationId:     reqCtx.CausationId,
-			Timestamp:       time.Now().UTC().Format(time.RFC3339Nano),
+			Timestamp:       time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
 			ExecutionTimeMs: execTime,
 		},
 	}
