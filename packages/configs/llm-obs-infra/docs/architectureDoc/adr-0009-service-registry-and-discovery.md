@@ -519,9 +519,9 @@ packages/configs/llm-obs-infra/service-discovery/
 
 ```
 Phase 1: Deploy Lean Registry & Seed Static Catalog
-  ├── Deploy refactored `llmobs-service-registry` container with token authentication
-  ├── Seed static databases (ClickHouse, Redis, Kafka) in `services.json`
-  └── Traefik points to initial `discovery.yml`
+  ├── Deploy refactored `llmobs-service-registry` container with token authentication via `manage.sh up` / `stack-orchestration.sh`
+  ├── Automatically seed static databases (ClickHouse, Redis, Kafka, Grafana, Tempo, etc.) on boot from `config/service-registry/services.json`
+  └── Traefik points to initial dynamically generated `discovery.yml`
         ↓
 Phase 2: Microservice Self-Registration (Dual Routing Active)
   ├── Microservices initiate registration and 5s heartbeat loop

@@ -162,6 +162,12 @@ flowchart TD
 - **Host Binding**: `31415:3000`
 - **Datasources**: Tempo (`isDefault: true`), ClickHouse (`http://llmobs-clickhouse:8123`).
 
+### 9. Service Registry & Discovery Engine (`llmobs-service-registry`)
+- **Technology**: Go High-Performance Micro-Registry Engine
+- **Host Binding**: `31426:31426`
+- **Endpoints**: `GET /v1/services` (List all), `GET /v1/resolve` (Load balancer resolution), `POST /v1/register` (Dynamic registration), `POST /v1/heartbeat`.
+- **Seed Catalog**: Automatically loads 9 core infrastructure seed services on container startup from `config/service-registry/services.json`.
+
 ---
 
 ## 4. Complete Environment Variables Matrix (`.env.example`)
@@ -186,6 +192,7 @@ flowchart TD
 | `ALLOYDB_PASSWORD` | `password` | AlloyDB Omni User Password | `llmobs-alloydb` |
 | `ALLOYDB_DB` | `llm_observability` | Primary Transactional Database | `llmobs-alloydb` |
 | `PORT_TEMPORAL_UI` | `8088` | Temporal Workflow Admin UI | `llmobs-temporal` |
+| `PORT_SERVICE_REGISTRY` | `31426` | Service Registry & Discovery API Port | `llmobs-service-registry` |
 
 ---
 
