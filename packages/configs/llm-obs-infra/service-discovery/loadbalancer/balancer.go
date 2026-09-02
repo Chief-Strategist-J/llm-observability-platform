@@ -14,11 +14,11 @@ import (
 type Algorithm string
 
 const (
-	AlgorithmRoundRobin      Algorithm = "round_robin"
-	AlgorithmWeightedRR      Algorithm = "weighted_round_robin"
-	AlgorithmLeastConn       Algorithm = "least_connections"
-	AlgorithmP2C             Algorithm = "power_of_two_choices"
-	AlgorithmConsistentHash  Algorithm = "consistent_hash"
+	AlgorithmRoundRobin     Algorithm = "round_robin"
+	AlgorithmWeightedRR     Algorithm = "weighted_round_robin"
+	AlgorithmLeastConn      Algorithm = "least_connections"
+	AlgorithmP2C            Algorithm = "power_of_two_choices"
+	AlgorithmConsistentHash Algorithm = "consistent_hash"
 )
 
 type Balancer interface {
@@ -47,13 +47,20 @@ func NewBalancer(algorithm Algorithm) (Balancer, error) {
 	return factory(), nil
 }
 
+func validateInstances(instances []*registry.ServiceInstance) error {
+	if len(instances) == 0 {
+		return fmt.Errorf("no instances available")
+	}
+	return nil
+}
+
 type RoundRobin struct {
 	counter atomic.Uint64
 }
 
 func (rr *RoundRobin) Pick(instances []*registry.ServiceInstance, _ string) (*registry.ServiceInstance, error) {
-	if len(instances) == 0 {
-		return nil, fmt.Errorf("no instances available")
+	if err := validateInstances(instances); err != nil {
+		return nil, err
 	}
 	idx := rr.counter.Add(1) % uint64(len(instances))
 	return instances[idx], nil
@@ -65,8 +72,8 @@ type WeightedRoundRobin struct {
 }
 
 func (wrr *WeightedRoundRobin) Pick(instances []*registry.ServiceInstance, _ string) (*registry.ServiceInstance, error) {
-	if len(instances) == 0 {
-		return nil, fmt.Errorf("no instances available")
+	if err := validateInstances(instances); err != nil {
+		return nil, err
 	}
 
 	wrr.mu.Lock()
@@ -108,8 +115,8 @@ func NewLeastConnections() *LeastConnections {
 }
 
 func (lc *LeastConnections) Pick(instances []*registry.ServiceInstance, _ string) (*registry.ServiceInstance, error) {
-	if len(instances) == 0 {
-		return nil, fmt.Errorf("no instances available")
+	if err := validateInstances(instances); err != nil {
+		return nil, err
 	}
 
 	var best *registry.ServiceInstance
@@ -142,8 +149,8 @@ func (lc *LeastConnections) Release(instanceID string) {
 type PowerOfTwoChoices struct{}
 
 func (p2c *PowerOfTwoChoices) Pick(instances []*registry.ServiceInstance, _ string) (*registry.ServiceInstance, error) {
-	if len(instances) == 0 {
-		return nil, fmt.Errorf("no instances available")
+	if err := validateInstances(instances); err != nil {
+		return nil, err
 	}
 	if len(instances) == 1 {
 		return instances[0], nil
@@ -181,8 +188,8 @@ func NewConsistentHash(virtualNodes int) *ConsistentHash {
 }
 
 func (ch *ConsistentHash) Pick(instances []*registry.ServiceInstance, key string) (*registry.ServiceInstance, error) {
-	if len(instances) == 0 {
-		return nil, fmt.Errorf("no instances available")
+	if err := validateInstances(instances); err != nil {
+		return nil, err
 	}
 	if key == "" {
 		return instances[rand.Intn(len(instances))], nil

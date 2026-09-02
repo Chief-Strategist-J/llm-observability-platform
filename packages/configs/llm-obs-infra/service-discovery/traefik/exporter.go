@@ -1,6 +1,7 @@
 package traefik
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -8,14 +9,15 @@ import (
 	"sync"
 
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/registry"
+	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/tracing"
 	"gopkg.in/yaml.v3"
 )
 
 type ExporterConfig struct {
-	OutputPath       string            `json:"outputPath"`
-	DefaultDomain    string            `json:"defaultDomain"`
-	DefaultEntryPoints []string        `json:"defaultEntryPoints"`
-	DefaultMiddlewares []string        `json:"defaultMiddlewares"`
+	OutputPath         string   `json:"outputPath"`
+	DefaultDomain      string   `json:"defaultDomain"`
+	DefaultEntryPoints []string `json:"defaultEntryPoints"`
+	DefaultMiddlewares []string `json:"defaultMiddlewares"`
 }
 
 var DefaultExporterConfig = ExporterConfig{
@@ -86,6 +88,11 @@ func (e *Exporter) Export() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
+	_, span := tracing.StartSpan(context.Background(), "traefik-export")
+	defer span.End()
+	span.SetAttribute("output.path", e.config.OutputPath)
+	span.SetAttribute("domain", e.config.DefaultDomain)
+
 	allServices := e.registry.GetAllServices()
 
 	cfg := traefikConfig{
@@ -143,6 +150,7 @@ func (e *Exporter) Export() {
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
 		log.Printf("[traefik-exporter] marshal error: %v", err)
+		span.SetAttribute("export.error", err.Error())
 		return
 	}
 
@@ -150,8 +158,10 @@ func (e *Exporter) Export() {
 
 	if err := os.WriteFile(e.config.OutputPath, data, 0644); err != nil {
 		log.Printf("[traefik-exporter] write error: %v", err)
+		span.SetAttribute("export.error", err.Error())
 		return
 	}
 
+	span.SetAttribute("exported.services", fmt.Sprintf("%d", len(cfg.HTTP.Services)))
 	log.Printf("[traefik-exporter] exported %d services to %s", len(cfg.HTTP.Services), e.config.OutputPath)
 }

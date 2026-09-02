@@ -8,7 +8,7 @@ import (
 type HealthStatus int
 
 const (
-	StatusHealthy   HealthStatus = iota
+	StatusHealthy HealthStatus = iota
 	StatusDegraded
 	StatusUnhealthy
 	StatusDead
@@ -29,27 +29,32 @@ func (s HealthStatus) String() string {
 }
 
 type HealthCheckSpec struct {
-	Protocol string        `json:"protocol"`
-	Path     string        `json:"path,omitempty"`
-	Interval time.Duration `json:"interval,omitempty"`
-	Timeout  time.Duration `json:"timeout,omitempty"`
+	Protocol         string        `json:"protocol"`
+	Path             string        `json:"path,omitempty"`
+	Command          []string      `json:"command,omitempty"`
+	Interval         time.Duration `json:"interval,omitempty"`
+	Timeout          time.Duration `json:"timeout,omitempty"`
+	SuccessThreshold int           `json:"successThreshold,omitempty"`
+	FailureThreshold int           `json:"failureThreshold,omitempty"`
 }
 
 type ServiceInstance struct {
-	ID            string            `json:"id"`
-	Name          string            `json:"name"`
-	Host          string            `json:"host"`
-	Port          int               `json:"port"`
-	Protocol      string            `json:"protocol"`
-	Version       string            `json:"version,omitempty"`
-	Weight        int               `json:"weight,omitempty"`
-	Status        HealthStatus      `json:"status"`
-	HealthCheck   HealthCheckSpec   `json:"healthCheck"`
-	Metadata      map[string]string `json:"metadata,omitempty"`
-	RegisteredAt  time.Time         `json:"registeredAt"`
-	LastHeartbeat time.Time         `json:"lastHeartbeat"`
-	LastProbeAt   time.Time         `json:"lastProbeAt,omitempty"`
-	LastProbeErr  string            `json:"lastProbeErr,omitempty"`
+	ID                   string            `json:"id"`
+	Name                 string            `json:"name"`
+	Host                 string            `json:"host"`
+	Port                 int               `json:"port"`
+	Protocol             string            `json:"protocol"`
+	Version              string            `json:"version,omitempty"`
+	Weight               int               `json:"weight,omitempty"`
+	Status               HealthStatus      `json:"status"`
+	HealthCheck          HealthCheckSpec   `json:"healthCheck"`
+	Metadata             map[string]string `json:"metadata,omitempty"`
+	RegisteredAt         time.Time         `json:"registeredAt"`
+	LastHeartbeat        time.Time         `json:"lastHeartbeat"`
+	LastProbeAt          time.Time         `json:"lastProbeAt,omitempty"`
+	LastProbeErr         string            `json:"lastProbeErr,omitempty"`
+	ConsecutiveFails     int               `json:"consecutiveFails"`
+	ConsecutiveSuccesses int               `json:"consecutiveSuccesses"`
 }
 
 func (si *ServiceInstance) Endpoint() string {

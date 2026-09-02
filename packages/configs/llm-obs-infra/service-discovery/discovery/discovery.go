@@ -1,10 +1,12 @@
 package discovery
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/registry"
+	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/tracing"
 )
 
 type Discovery struct {
@@ -16,18 +18,32 @@ func NewDiscovery(reg *registry.Registry) *Discovery {
 }
 
 func (d *Discovery) Resolve(serviceName string) (*registry.ServiceInstance, error) {
+	_, span := tracing.StartSpan(context.Background(), "discovery.resolve")
+	defer span.End()
+	span.SetAttribute("service.name", serviceName)
+
 	healthy := d.registry.GetHealthy(serviceName)
 	if len(healthy) == 0 {
-		return nil, d.buildDiagnosticError(serviceName)
+		err := d.buildDiagnosticError(serviceName)
+		span.SetAttribute("resolve.error", err.Error())
+		return nil, err
 	}
+	span.SetAttribute("resolved.endpoint", healthy[0].Endpoint())
 	return healthy[0], nil
 }
 
 func (d *Discovery) ResolveAll(serviceName string) ([]*registry.ServiceInstance, error) {
+	_, span := tracing.StartSpan(context.Background(), "discovery.resolve-all")
+	defer span.End()
+	span.SetAttribute("service.name", serviceName)
+
 	healthy := d.registry.GetHealthy(serviceName)
 	if len(healthy) == 0 {
-		return nil, d.buildDiagnosticError(serviceName)
+		err := d.buildDiagnosticError(serviceName)
+		span.SetAttribute("resolve.error", err.Error())
+		return nil, err
 	}
+	span.SetAttribute("resolved.count", fmt.Sprintf("%d", len(healthy)))
 	return healthy, nil
 }
 

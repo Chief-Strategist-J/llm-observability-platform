@@ -8,6 +8,7 @@ import (
 
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/discovery"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/registry"
+	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/tracing"
 )
 
 type Router struct {
@@ -16,41 +17,54 @@ type Router struct {
 	discovery *discovery.Discovery
 }
 
+type RouteSpec struct {
+	Method  string
+	Path    string
+	Name    string
+	Handler http.HandlerFunc
+}
+
 func NewRouter(reg *registry.Registry, disc *discovery.Discovery) *Router {
 	r := &Router{
 		mux:       http.NewServeMux(),
 		registry:  reg,
 		discovery: disc,
 	}
-	r.registerRoutes()
+	r.registerDataDrivenRoutes()
 	return r
 }
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	r.mux.ServeHTTP(w, req)
+	tracing.Middleware(r.mux).ServeHTTP(w, req)
 }
 
-type routeDef struct {
-	method  string
-	path    string
-	handler http.HandlerFunc
+func bindJSON[T any](req *http.Request) (T, error) {
+	var target T
+	err := json.NewDecoder(req.Body).Decode(&target)
+	return target, err
 }
 
-func (r *Router) registerRoutes() {
-	routes := []routeDef{
-		{http.MethodPost, "/v1/register", r.handleRegister},
-		{http.MethodPost, "/v1/heartbeat", r.handleHeartbeat},
-		{http.MethodPost, "/v1/deregister", r.handleDeregister},
-		{http.MethodGet, "/v1/resolve", r.handleResolve},
-		{http.MethodGet, "/v1/services", r.handleListServices},
-		{http.MethodGet, "/v1/watch", r.handleWatch},
-		{http.MethodGet, "/health", r.handleHealth},
+func writeJSON(w http.ResponseWriter, status int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(data)
+}
+
+func (r *Router) registerDataDrivenRoutes() {
+	routes := []RouteSpec{
+		{http.MethodPost, "/v1/register", "register", r.handleRegister},
+		{http.MethodPost, "/v1/heartbeat", "heartbeat", r.handleHeartbeat},
+		{http.MethodPost, "/v1/deregister", "deregister", r.handleDeregister},
+		{http.MethodGet, "/v1/resolve", "resolve", r.handleResolve},
+		{http.MethodGet, "/v1/services", "services", r.handleListServices},
+		{http.MethodGet, "/v1/watch", "watch", r.handleWatch},
+		{http.MethodGet, "/health", "health", r.handleHealth},
 	}
 
-	for _, route := range routes {
-		m := route.method
-		h := route.handler
-		r.mux.HandleFunc(route.path, func(w http.ResponseWriter, req *http.Request) {
+	for _, spec := range routes {
+		m := spec.Method
+		h := spec.Handler
+		r.mux.HandleFunc(spec.Path, func(w http.ResponseWriter, req *http.Request) {
 			if req.Method != m {
 				writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 				return
@@ -69,8 +83,9 @@ type registerRequest struct {
 	Weight      int               `json:"weight,omitempty"`
 	Metadata    map[string]string `json:"metadata,omitempty"`
 	HealthCheck struct {
-		Protocol string `json:"protocol"`
-		Path     string `json:"path,omitempty"`
+		Protocol string   `json:"protocol"`
+		Path     string   `json:"path,omitempty"`
+		Command  []string `json:"command,omitempty"`
 	} `json:"healthCheck"`
 }
 
@@ -85,8 +100,8 @@ type deregisterRequest struct {
 }
 
 func (r *Router) handleRegister(w http.ResponseWriter, req *http.Request) {
-	var body registerRequest
-	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+	body, err := bindJSON[registerRequest](req)
+	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
@@ -102,6 +117,7 @@ func (r *Router) handleRegister(w http.ResponseWriter, req *http.Request) {
 		HealthCheck: registry.HealthCheckSpec{
 			Protocol: body.HealthCheck.Protocol,
 			Path:     body.HealthCheck.Path,
+			Command:  body.HealthCheck.Command,
 		},
 	}
 
@@ -110,8 +126,8 @@ func (r *Router) handleRegister(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) handleHeartbeat(w http.ResponseWriter, req *http.Request) {
-	var body heartbeatRequest
-	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+	body, err := bindJSON[heartbeatRequest](req)
+	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
@@ -125,8 +141,8 @@ func (r *Router) handleHeartbeat(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) handleDeregister(w http.ResponseWriter, req *http.Request) {
-	var body deregisterRequest
-	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+	body, err := bindJSON[deregisterRequest](req)
+	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
@@ -207,10 +223,4 @@ func (r *Router) handleHealth(w http.ResponseWriter, _ *http.Request) {
 		"status": "healthy",
 		"time":   time.Now().UTC(),
 	})
-}
-
-func writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
 }

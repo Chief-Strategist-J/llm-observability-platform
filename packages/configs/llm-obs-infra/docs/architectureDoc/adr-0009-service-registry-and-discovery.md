@@ -7,7 +7,7 @@
 | **Author(s)** | Architecture Steering Committee & Core Infrastructure Team |
 | **Target Package** | [`packages/configs/llm-obs-infra/service-discovery`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery) |
 | **Date** | 2026-09-02 |
-| **Version** | 2.0.0 (Enterprise Gold Standard) |
+| **Version** | 2.1.0 (Enterprise Durable & Traced Gold Standard) |
 
 ---
 
@@ -51,10 +51,10 @@ After evaluating off-the-shelf service discovery platforms, the architecture com
 
 #### Key Business & Strategic Drivers:
 1. **MTTR Reduction (Mean Time To Resolution)**: Automated health sweeps (3s sweep interval) and eviction routines reduce node failover times from **~45 minutes of operator triage to <3 seconds of automated re-routing**.
-2. **Zero-Downtime Rolling Upgrades**: New service versions register dynamically with custom weight factors, enabling canary deployments and instant traffic draining without configuration updates.
-3. **Blast Radius Containment**: Built-in, per-instance **Circuit Breakers** automatically isolate failing downstream services before socket pool exhaustion impacts upstream user experience.
-4. **Developer Experience & Local Fidelity**: Developer environments mirror production topology using a single Docker Compose container (`llmobs-service-registry`) seeded automatically via [`services.json`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/di/providers.go#L112-L155).
-5. **Vendor Independence & Zero External Dependencies**: Written in standard Go utilizing `net/http` and `sync` primitives, eliminating external database or consensus engine dependencies.
+2. **Durable Flapping Protection**: Consecutive failure thresholds (3 fails $\rightarrow$ `UNHEALTHY`) and consecutive success thresholds (2 passes $\rightarrow$ `HEALTHY`) prevent transient network glitches from cycling healthy nodes.
+3. **OpenTelemetry Observability & Tracing**: All HTTP REST endpoints, health probe runs, registry mutations, and Traefik dynamic file exports generate W3C `traceparent` headers and OpenTelemetry trace spans.
+4. **Go Worker Pool Concurrency**: Probe execution uses a fixed worker pool with job/result channel queues (`chan probeJob`, `chan probeResult`), preventing thread exhaustion under enterprise load.
+5. **Data-Driven Route & Probe Pipelines**: Handlers and probe execution strategies are registered in declarative data tables (`RouteSpec`, `probeStrategies`), separating business data from control logic.
 
 ---
 
@@ -75,6 +75,7 @@ graph TD
         HealthProber["Active Health Prober (health_prober.go)"]
         LoadBalancer["Client LB & Circuit Breakers (balancer.go)"]
         Exporter["Traefik Dynamic Exporter (exporter.go)"]
+        Tracer["OpenTelemetry Tracer (tracer.go)"]
     end
 
     Router --> Registry
@@ -82,6 +83,7 @@ graph TD
     HealthProber --> Registry
     LoadBalancer --> Registry
     Exporter --> Registry
+    Router --> Tracer
 
     Exporter --> DynFile["discovery.yml File Provider"]
     DynFile --> Traefik
@@ -104,8 +106,6 @@ graph TD
 
 ### 2.2 End-to-End Lifecycle & Discovery Sequence
 
-The diagram below details the exact sequence of events from service startup and seed catalog loading through heartbeat checks, failure probing, SSE event broadcast, Traefik config export, and client traffic routing.
-
 ```mermaid
 sequenceDiagram
     participant Catalog as Seed Catalog
@@ -121,15 +121,15 @@ sequenceDiagram
     Reg->>Exporter: Broadcast EventRegistered
     Exporter->>Traefik: Write discovery.yml
 
-    Note over App, Reg: 2. Registration & Heartbeat Loop
-    App->>Reg: POST /v1/register
+    Note over App, Reg: 2. Registration & Heartbeat Loop (W3C Tracing)
+    App->>Reg: POST /v1/register (Traceparent)
     Reg-->>App: Return 201 Created (HEALTHY)
     App->>Reg: POST /v1/heartbeat (Every 5s)
 
-    Note over Lease, Probe: 3. Health Monitoring & Eviction
+    Note over Lease, Probe: 3. Durable Health Monitoring & Worker Pool
     Lease->>Reg: Check heartbeat TTL (Every 3s)
-    Probe->>App: Active probe check (Every 5s)
-    Probe->>Reg: Update status (HEALTHY / UNHEALTHY)
+    Probe->>App: Active worker pool probe check (HTTP/TCP/Exec)
+    Probe->>Reg: Update status on 3 consecutive failures
 
     Note over Exporter, Traefik: 4. Dynamic Ingress Routing
     Reg->>Exporter: Emit status change event
@@ -143,17 +143,18 @@ sequenceDiagram
 
 ### 3.1 Package Hierarchy & Core Module Mapping
 
-The implementation is structured into modular Go packages under [`packages/configs/llm-obs-infra/service-discovery`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery):
-
 ```
 packages/configs/llm-obs-infra/service-discovery/
 ├── main.go                       # Application entry point & OS signal handler
 ├── di/                           # Dependency Injection container & JSON config loader
 │   └── providers.go              # AppConfig loader, Container builder, Seed catalog loader
+├── tracing/                      # OpenTelemetry & W3C TraceContext subsystem
+│   ├── tracer.go                 # Span, TraceID/SpanID generation, header inject/extract
+│   └── middleware.go              # HTTP tracing middleware for REST gateway
 ├── registry/                     # Core thread-safe memory registry & lifecycle daemons
 │   ├── instance.go               # Domain structs: ServiceInstance, HealthStatus, RegistryEvent
-│   ├── registry.go               # Thread-safe in-memory Registry & event pub/sub engine
-│   ├── health_prober.go          # Data-driven active health prober (HTTP/TCP worker pool)
+│   ├── registry.go               # Thread-safe in-memory Registry & async event emitter
+│   ├── health_prober.go          # Data-driven active health prober (Worker Pool, HTTP/TCP/Exec)
 │   └── lease_manager.go          # Periodic ticker sweep daemon for heartbeat TTL & eviction
 ├── loadbalancer/                 # Client-side load balancing algorithms & circuit breakers
 │   ├── balancer.go               # Balancer interface, algorithm strategy map & factories
@@ -161,19 +162,18 @@ packages/configs/llm-obs-infra/service-discovery/
 ├── discovery/                    # High-level lookup facade & diagnostic error generator
 │   └── discovery.go              # Resolve, ResolveAll, Watch, and detailed diagnostic error builders
 ├── server/                       # HTTP REST & SSE Gateway router
-│   ├── router.go                 # Endpoint routing logic, JSON serialization, SSE stream handler
+│   ├── router.go                 # Data-driven route table, JSON mappers, SSE stream handler
 │   └── server.go                 # http.Server wrapper with graceful shutdown timeouts
 ├── traefik/                      # External gateway topology synchronization
 │   └── exporter.go               # Registry listener writing Traefik dynamic provider YAML
 └── tests/                        # Integration & unit test suites
-    └── traefik_exporter_test.go  # Traefik exporter validation test
+    ├── traefik_exporter_test.go  # Traefik exporter validation test
+    └── health_prober_test.go     # Comprehensive durable prober & threshold test suite
 ```
 
 ---
 
 ### 3.2 Core Data Structures & Class Diagram
-
-The following Mermaid class diagram illustrates the primary Go structs, interfaces, and their relationships across the `registry`, `loadbalancer`, `discovery`, and `traefik` packages.
 
 ```mermaid
 classDiagram
@@ -187,14 +187,19 @@ classDiagram
         +int Weight
         +HealthStatus Status
         +HealthCheckSpec HealthCheck
+        +int ConsecutiveFails
+        +int ConsecutiveSuccesses
         +Endpoint() string
     }
 
     class HealthCheckSpec {
         +string Protocol
         +string Path
+        +slice Command
         +Duration Interval
         +Duration Timeout
+        +int SuccessThreshold
+        +int FailureThreshold
     }
 
     class HealthStatus {
@@ -219,6 +224,8 @@ classDiagram
         +GetHealthy(serviceName) ServiceInstanceList
         +GetAllServices() ServiceMap
         +Subscribe() EventChannel
+        -findInstanceLocked(serviceName, instanceID) ServiceInstance
+        -emitAsync(event)
     }
 
     class LeaseManager {
@@ -228,7 +235,9 @@ classDiagram
 
     class HealthProber {
         +Start(ctx)
-        -probeAll(ctx)
+        -probeAllConcurrent(ctx)
+        -executeProbe(ctx, inst)
+        -processResult(inst, probeErr)
     }
 
     class Balancer {
@@ -282,8 +291,6 @@ classDiagram
 
 ### 3.3 Lease Manager Sweep Algorithm
 
-The [`LeaseManager`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/registry/lease_manager.go#L21-L62) runs a ticker loop (default interval: 3 seconds) that sweeps the snapshot of all registered instances and applies double-threshold TTL state transitions.
-
 ```mermaid
 graph TD
     A["1. Lease Sweep (Every 3s)"] --> B["2. Take Registry Snapshot"]
@@ -299,8 +306,6 @@ graph TD
 
 ### 3.4 Circuit Breaker State Transitions
 
-Each instance target can be wrapped with a [`CircuitBreaker`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/loadbalancer/circuit_breaker.go#L41-L103) that prevents calling failing nodes.
-
 ```mermaid
 stateDiagram-v2
     [*] --> CLOSED
@@ -314,8 +319,6 @@ stateDiagram-v2
 
 ### 3.5 REST & SSE API Endpoint Specification
 
-The HTTP server exposed by [`server/router.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/server/router.go) provides the following REST & SSE interface on port `31426`:
-
 | Method | Endpoint | Description | Request Payload / Query Params | Success Response | Error Response |
 |---|---|---|---|---|---|
 | `POST` | `/v1/register` | Register a new service instance | JSON `registerRequest` | `201 Created` (Instance JSON) | `400 Bad Request` |
@@ -326,95 +329,43 @@ The HTTP server exposed by [`server/router.go`](file:///home/btpl-lap-22/live/ll
 | `GET` | `/v1/watch` | SSE stream for registry events | Query: `?service=name` (Optional) | `200 OK` (`text/event-stream`) | `500 Internal Error` |
 | `GET` | `/health` | Liveness check of registry engine | None | `200 OK` `{"status":"healthy"}` | N/A |
 
-#### API Example Payloads:
-
-##### Registration Request (`POST /v1/register`):
-```json
-{
-  "name": "ai-service",
-  "host": "ai-service-replica-1",
-  "port": 8080,
-  "protocol": "http",
-  "version": "v1.4.2",
-  "weight": 120,
-  "metadata": { "region": "us-east-1", "env": "production" },
-  "healthCheck": {
-    "protocol": "http",
-    "path": "/health"
-  }
-}
-```
-
-##### Diagnostic Error Response (`GET /v1/resolve?service=latency-engine` when all nodes are down):
-```json
-{
-  "error": "all 2 instances of \"latency-engine\" are unavailable:\n  latency-engine/a1f8b3c4 (172.18.0.5:5000) — HTTP probe returned 503\n  latency-engine/e9d2a7f1 (172.18.0.6:5000) — heartbeat expired"
-}
-```
-
 ---
 
 ## 4. Data-Driven Architecture Principles Applied
 
-To ensure maximum extensibility without modifying core code, the module implements five foundational **Data-Driven Software Patterns**:
-
 ```mermaid
 graph LR
-    PStrategies["Probe Strategies Map"] --> HealthProberEngine["Health Prober Engine"]
+    PStrategies["Probe Strategies Map (http, tcp, exec)"] --> HealthProberEngine["Health Prober Engine"]
     LBFactories["Load Balancer Factories Map"] --> LoadBalancerFactory["Load Balancer Factory"]
     ConfigJSON["config.json File"] --> DIContainer["DI Container"]
     SeedJSON["services.json Seed Catalog"] --> RegistryBootstrapper["Registry Bootstrapper"]
 ```
 
-1. **Probe Strategies as Data**: Registered in `probeStrategies` map in [`health_prober.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/registry/health_prober.go#L15-L22). New protocol support (e.g. gRPC or Redis PING) can be added via `RegisterProbeStrategy(name, fn)` at runtime without touching the prober loop.
-2. **Load Balancing Algorithms as Data**: Registered in `balancerFactories` map in [`balancer.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/loadbalancer/balancer.go#L30-L36). Algorithm selection (`round_robin`, `weighted_round_robin`, `least_connections`, `power_of_two_choices`, `consistent_hash`) is configured strictly via JSON configuration.
-3. **Lookup Maps as Data**: Enum string representation uses constant map lookups (`healthStatusNames`, `eventTypeNames`, `circuitStateNames`) instead of long `switch/case` statements.
-4. **Configuration-Driven Execution**: All timeouts, sweep frequencies, eviction TTLs, failure thresholds, and Traefik domains are controlled via [`config.json`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/di/providers.go#L16-L38).
-5. **Seed Catalog as Data**: Pre-populated infrastructure nodes (ClickHouse, Kafka, Redis, Traefik) are loaded from [`services.json`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/di/providers.go#L127-L155) upon container startup, guaranteeing zero-day service availability without waiting for client registrations.
+1. **Probe Strategies as Data**: Registered in `probeStrategies` map in [`health_prober.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/registry/health_prober.go#L15-L25). `"http"`, `"tcp"`, and `"exec"` probe implementations are registered in data maps.
+2. **Data-Driven Route Table**: Registered in `RouteSpec` slice in [`server/router.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/server/router.go#L46-L56). Route definitions specify method, path, and handler.
+3. **Load Balancing Algorithms as Data**: Registered in `balancerFactories` map in [`balancer.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/loadbalancer/balancer.go#L30-L36).
+4. **Configuration-Driven Execution**: All thresholds, intervals, sweep frequencies, eviction TTLs, and OpenTelemetry settings are managed via [`config.json`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/di/providers.go#L16-L38).
+5. **Seed Catalog as Data**: Pre-populated infrastructure nodes loaded from [`services.json`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/di/providers.go#L127-L155) upon startup.
 
 ---
 
-## 5. Operational Resilience & Failure Mode Analysis
+## 5. Verification & Test Suite
 
-| Failure Scenario | Root Cause | Discovery Mitigation | Blast Radius & System Result |
-|---|---|---|---|
-| **Service Crash / OOM** | Microservice instance terminates abruptly without sending deregistration. | Lease Manager detects missing heartbeat within `15s` (`HeartbeatTTL`), sets `UNHEALTHY`. Evicts at `60s`. Health Prober catches TCP refusal instantly (`5s`). | Traefik Exporter immediately strips the node from `discovery.yml`. Inbound traffic fails over to remaining healthy replicas. |
-| **Flapping Network / Heavy GC Pauses** | Service experiences 10-second GC pause, missing 2 heartbeats. | Status toggles to `UNHEALTHY`. Upon next successful heartbeat or health probe, registry auto-recovers status to `HEALTHY`. | Prevents stale routing during transient network degradation. Auto-healing without human intervention. |
-| **Registry Sidecar Crash** | Host memory exhaustion kills `llmobs-service-registry` container. | Traefik retains last-known-good dynamic configuration in memory. Application clients fall back to local seed catalog/DNS. | Inbound routing continues operating seamlessly. Upon container restart, seed catalog instantly reloads. |
-| **Cascading Downstream Failures** | ClickHouse or AI Model Service fails under high load. | Per-instance `CircuitBreaker` trips to `OPEN` after 5 consecutive failures. | Upstream callers fail fast immediately without holding HTTP worker connections or crashing API gateways. |
-
----
-
-## 6. Verification & Automated Test Suite
-
-The service discovery architecture is backed by automated tests, including Traefik dynamic provider export validation in [`tests/traefik_exporter_test.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/tests/traefik_exporter_test.go).
-
-### Automated Test Verification Command:
+### Automated Test Commands:
 ```bash
-go test -v -race ./packages/configs/llm-obs-infra/service-discovery/...
-```
-
-```
-=== RUN   TestTraefikExporter
---- PASS: TestTraefikExporter (0.02s)
-PASS
-ok      github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/tests  0.025s
+go test -v ./packages/configs/llm-obs-infra/service-discovery/tests/...
 ```
 
 ---
 
-## 7. Implementation File Index & References
+## 6. Implementation File Index & References
 
-All core implementation components referenced in this ADR are linked directly below:
-
-- [`main.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/main.go) — Daemon bootstrapper & signal lifecycle manager.
-- [`di/providers.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/di/providers.go) — Dependency injection container, JSON configuration, & seed catalog loader.
-- [`registry/registry.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/registry/registry.go) — Thread-safe in-memory service registry & event emitter.
-- [`registry/instance.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/registry/instance.go) — Core domain models (`ServiceInstance`, `HealthStatus`, `RegistryEvent`).
-- [`registry/health_prober.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/registry/health_prober.go) — Data-driven active health prober (HTTP/TCP).
-- [`registry/lease_manager.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/registry/lease_manager.go) — Background heartbeat TTL sweep & eviction daemon.
-- [`loadbalancer/balancer.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/loadbalancer/balancer.go) — Five client-side load balancing algorithms & factory registry.
-- [`loadbalancer/circuit_breaker.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/loadbalancer/circuit_breaker.go) — Circuit breaker state machine & registry.
-- [`discovery/discovery.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/discovery/discovery.go) — High-level resolution facade & diagnostic error generator.
-- [`server/router.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/server/router.go) — HTTP REST API & Server-Sent Events (SSE) router.
-- [`traefik/exporter.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/traefik/exporter.go) — Traefik dynamic provider YAML exporter.
+- [`tracing/tracer.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/tracing/tracer.go) — OpenTelemetry & W3C tracecontext implementation.
+- [`tracing/middleware.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/tracing/middleware.go) — HTTP tracing middleware.
+- [`registry/health_prober.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/registry/health_prober.go) — Durable health prober with worker pool concurrency & exec strategy.
+- [`registry/registry.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/registry/registry.go) — Thread-safe registry with `findInstanceLocked` helper & async event emitter.
+- [`registry/instance.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/registry/instance.go) — Core domain models with flapping threshold counters.
+- [`loadbalancer/balancer.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/loadbalancer/balancer.go) — Load balancer algorithms with `validateInstances` helper guard.
+- [`server/router.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/server/router.go) — Data-driven route table & generic JSON payload decoder.
+- [`traefik/exporter.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/traefik/exporter.go) — Traefik dynamic provider exporter with trace spans.
+- [`tests/health_prober_test.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/tests/health_prober_test.go) — Health prober test suite.

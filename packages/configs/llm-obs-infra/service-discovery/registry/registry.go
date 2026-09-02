@@ -18,7 +18,7 @@ type Registry struct {
 }
 
 type InstanceDefaults struct {
-	Weight            int           `json:"weight"`
+	Weight              int           `json:"weight"`
 	HealthCheckInterval time.Duration `json:"healthCheckInterval"`
 	HealthCheckTimeout  time.Duration `json:"healthCheckTimeout"`
 }
@@ -58,6 +58,15 @@ func (r *Registry) applyDefaults(inst *ServiceInstance) {
 	}
 }
 
+func (r *Registry) findInstanceLocked(serviceName, instanceID string) (*ServiceInstance, bool) {
+	instances, ok := r.instances[serviceName]
+	if !ok {
+		return nil, false
+	}
+	inst, ok := instances[instanceID]
+	return inst, ok
+}
+
 func (r *Registry) Register(instance *ServiceInstance) *ServiceInstance {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -75,7 +84,7 @@ func (r *Registry) Register(instance *ServiceInstance) *ServiceInstance {
 	r.instances[instance.Name][instance.ID] = instance
 
 	log.Printf("[registry] registered %s/%s at %s:%d", instance.Name, instance.ID, instance.Host, instance.Port)
-	r.emit(RegistryEvent{Type: EventRegistered, Instance: instance, Time: now})
+	r.emitAsync(RegistryEvent{Type: EventRegistered, Instance: instance, Time: now})
 
 	return instance
 }
@@ -84,22 +93,18 @@ func (r *Registry) Deregister(serviceName, instanceID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	instances, ok := r.instances[serviceName]
-	if !ok {
-		return fmt.Errorf("service %q not found", serviceName)
-	}
-	inst, ok := instances[instanceID]
+	inst, ok := r.findInstanceLocked(serviceName, instanceID)
 	if !ok {
 		return fmt.Errorf("instance %q not found in service %q", instanceID, serviceName)
 	}
 
-	delete(instances, instanceID)
-	if len(instances) == 0 {
+	delete(r.instances[serviceName], instanceID)
+	if len(r.instances[serviceName]) == 0 {
 		delete(r.instances, serviceName)
 	}
 
 	log.Printf("[registry] deregistered %s/%s", serviceName, instanceID)
-	r.emit(RegistryEvent{Type: EventDeregistered, Instance: inst, Time: time.Now()})
+	r.emitAsync(RegistryEvent{Type: EventDeregistered, Instance: inst, Time: time.Now()})
 
 	return nil
 }
@@ -108,11 +113,7 @@ func (r *Registry) Heartbeat(serviceName, instanceID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	instances, ok := r.instances[serviceName]
-	if !ok {
-		return fmt.Errorf("service %q not found", serviceName)
-	}
-	inst, ok := instances[instanceID]
+	inst, ok := r.findInstanceLocked(serviceName, instanceID)
 	if !ok {
 		return fmt.Errorf("instance %q not found in service %q", instanceID, serviceName)
 	}
@@ -122,7 +123,7 @@ func (r *Registry) Heartbeat(serviceName, instanceID string) error {
 	if inst.Status == StatusUnhealthy && inst.LastProbeErr == "heartbeat expired" {
 		inst.Status = StatusHealthy
 		inst.LastProbeErr = ""
-		r.emit(RegistryEvent{Type: EventStatusChanged, Instance: inst, Time: time.Now()})
+		r.emitAsync(RegistryEvent{Type: EventStatusChanged, Instance: inst, Time: time.Now()})
 	}
 
 	return nil
@@ -132,11 +133,7 @@ func (r *Registry) UpdateStatus(serviceName, instanceID string, status HealthSta
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	instances, ok := r.instances[serviceName]
-	if !ok {
-		return
-	}
-	inst, ok := instances[instanceID]
+	inst, ok := r.findInstanceLocked(serviceName, instanceID)
 	if !ok {
 		return
 	}
@@ -148,7 +145,7 @@ func (r *Registry) UpdateStatus(serviceName, instanceID string, status HealthSta
 
 	if oldStatus != status {
 		log.Printf("[registry] status changed %s/%s: %s -> %s (%s)", serviceName, instanceID, oldStatus, status, probeErr)
-		r.emit(RegistryEvent{Type: EventStatusChanged, Instance: inst, Time: time.Now()})
+		r.emitAsync(RegistryEvent{Type: EventStatusChanged, Instance: inst, Time: time.Now()})
 	}
 }
 
@@ -205,16 +202,11 @@ func (r *Registry) GetInstance(serviceName, instanceID string) (*ServiceInstance
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	instances, ok := r.instances[serviceName]
-	if !ok {
-		return nil, false
-	}
-	inst, ok := instances[instanceID]
-	return inst, ok
+	return r.findInstanceLocked(serviceName, instanceID)
 }
 
 func (r *Registry) Subscribe() chan RegistryEvent {
-	ch := make(chan RegistryEvent, 64)
+	ch := make(chan RegistryEvent, 128)
 	r.listenerMu.Lock()
 	r.listeners = append(r.listeners, ch)
 	r.listenerMu.Unlock()
@@ -234,40 +226,39 @@ func (r *Registry) Unsubscribe(ch chan RegistryEvent) {
 	}
 }
 
-func (r *Registry) emit(event RegistryEvent) {
+func (r *Registry) emitAsync(event RegistryEvent) {
 	r.listenerMu.RLock()
-	defer r.listenerMu.RUnlock()
+	listeners := make([]chan RegistryEvent, len(r.listeners))
+	copy(listeners, r.listeners)
+	r.listenerMu.RUnlock()
 
-	for _, ch := range r.listeners {
-		select {
-		case ch <- event:
-		default:
+	go func() {
+		for _, ch := range listeners {
+			select {
+			case ch <- event:
+			default:
+			}
 		}
-	}
+	}()
 }
 
 func (r *Registry) EvictInstance(serviceName, instanceID string) {
 	r.mu.Lock()
-	instances, ok := r.instances[serviceName]
-	if !ok {
-		r.mu.Unlock()
-		return
-	}
-	inst, ok := instances[instanceID]
+	inst, ok := r.findInstanceLocked(serviceName, instanceID)
 	if !ok {
 		r.mu.Unlock()
 		return
 	}
 
 	inst.Status = StatusDead
-	delete(instances, instanceID)
-	if len(instances) == 0 {
+	delete(r.instances[serviceName], instanceID)
+	if len(r.instances[serviceName]) == 0 {
 		delete(r.instances, serviceName)
 	}
 	r.mu.Unlock()
 
 	log.Printf("[registry] evicted %s/%s", serviceName, instanceID)
-	r.emit(RegistryEvent{Type: EventHeartbeatExpired, Instance: inst, Time: time.Now()})
+	r.emitAsync(RegistryEvent{Type: EventHeartbeatExpired, Instance: inst, Time: time.Now()})
 }
 
 func (r *Registry) Snapshot() []*ServiceInstance {
