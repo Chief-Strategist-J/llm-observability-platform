@@ -66,16 +66,16 @@ The Service Registry runs as an isolated micro-container within the `llm-obs-inf
 
 ```mermaid
 graph TD
-    subgraph "External Traffic & Edge Routing"
-        User["User / Client App"] --> Traefik["Traefik v3.7 Ingress Gateway (:80/:443)"]
+    subgraph EdgeRouting["External Traffic and Edge Routing"]
+        User["User or Client Application"] --> Traefik["Traefik v3.7 Ingress Gateway"]
     end
 
-    subgraph "Service Discovery Core Container (:31426)"
-        Router["HTTP REST & SSE Gateway (router.go)"]
+    subgraph DiscoveryCore["Service Discovery Core Container - Port 31426"]
+        Router["HTTP REST and SSE Gateway (router.go)"]
         Registry["In-Memory Registry Engine (registry.go)"]
         LeaseMgr["Lease Manager Daemon (lease_manager.go)"]
         HealthProber["Active Concurrent Health Prober (health_prober.go)"]
-        LoadBalancer["Client LB & Circuit Breakers (balancer.go)"]
+        LoadBalancer["Client LB and Circuit Breakers (balancer.go)"]
         Exporter["Traefik Dynamic Exporter (exporter.go)"]
 
         Router --> Registry
@@ -85,31 +85,31 @@ graph TD
         Exporter --> Registry
     end
 
-    subgraph "Traefik Dynamic Configuration"
-        DynFile["discovery.yml (/etc/traefik/dynamic/)"]
-        Exporter -- "Writes Dynamic Topology" --> DynFile
-        DynFile -- "Watch Reload (watch: true)" --> Traefik
+    subgraph TraefikConfig["Traefik Dynamic Configuration"]
+        DynFile["discovery.yml File Provider"]
+        Exporter -->|"Writes Dynamic Topology"| DynFile
+        DynFile -->|"Watch Reload"| Traefik
     end
 
-    subgraph "Polyglot Application Microservices"
-        PyService["Python Engine (latency-engine)"]
-        NodeService["Node.js Web App (web-app)"]
-        GoService["Go AI Service (ai-service)"]
-        InfraDB[("ClickHouse / Redis / Kafka")]
+    subgraph AppServices["Polyglot Application Microservices"]
+        PyService["Python Engine - latency-engine"]
+        NodeService["Node.js Web App - web-app"]
+        GoService["Go AI Service - ai-service"]
+        InfraDB[("ClickHouse / Redis / Kafka Databases")]
     end
 
-    PyService -- "1. HTTP Register & Heartbeat (:31426)" --> Router
-    NodeService -- "1. HTTP Register & Heartbeat (:31426)" --> Router
-    GoService -- "1. HTTP Register & Heartbeat (:31426)" --> Router
+    PyService -->|"1. HTTP Register and Heartbeat"| Router
+    NodeService -->|"1. HTTP Register and Heartbeat"| Router
+    GoService -->|"1. HTTP Register and Heartbeat"| Router
 
-    HealthProber -- "2. Active Health Probes (HTTP/TCP)" --> PyService
-    HealthProber -- "2. Active Health Probes (HTTP/TCP)" --> NodeService
-    HealthProber -- "2. Active Health Probes (HTTP/TCP)" --> GoService
-    HealthProber -- "2. Active Health Probes (TCP)" --> InfraDB
+    HealthProber -->|"2. Active Health Probes"| PyService
+    HealthProber -->|"2. Active Health Probes"| NodeService
+    HealthProber -->|"2. Active Health Probes"| GoService
+    HealthProber -->|"2. Active Health Probes"| InfraDB
 
-    Traefik -- "3. Proxies to Healthy Instances" --> PyService
-    Traefik -- "3. Proxies to Healthy Instances" --> NodeService
-    Traefik -- "3. Proxies to Healthy Instances" --> GoService
+    Traefik -->|"3. Proxies to Healthy Instances"| PyService
+    Traefik -->|"3. Proxies to Healthy Instances"| NodeService
+    Traefik -->|"3. Proxies to Healthy Instances"| GoService
 ```
 
 ---
@@ -121,67 +121,67 @@ The diagram below details the exact sequence of events from service startup and 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Catalog as Seed Catalog (services.json)
-    participant App as Python / Node / Go App
-    participant Reg as Registry Engine (Go)
+    participant Catalog as Seed Catalog
+    participant App as Application Services
+    participant Reg as Registry Engine
     participant Lease as Lease Manager
     participant Probe as Health Prober
     participant SSE as SSE Event Bus
     participant TraefikExp as Traefik Exporter
-    participant Traefik as Traefik Ingress
+    participant Traefik as Traefik Ingress Gateway
 
     rect rgb(240, 248, 255)
-        note over Reg, Traefik: Phase 1: Bootstrapping & Seed Catalog Loading
+        note over Reg, Traefik: Phase 1 - Bootstrapping and Seed Catalog Loading
         Reg->>Catalog: Read pre-populated seed services on startup
-        Reg->>Reg: Register infrastructure nodes (ClickHouse, Redis, Kafka)
+        Reg->>Reg: Register infrastructure nodes
         Reg->>SSE: Emit EventRegistered
         SSE->>TraefikExp: Notify topology update
-        TraefikExp->>Traefik: Write /etc/traefik/dynamic/discovery.yml
+        TraefikExp->>Traefik: Write discovery.yml
     end
 
     rect rgb(245, 255, 250)
-        note over App, Reg: Phase 2: Dynamic Service Registration & Heartbeat
-        App->>Reg: POST /v1/register (Host, Port, Protocol, HealthCheckSpec)
-        Reg->>Reg: Assign UUID, Set Status=HEALTHY, Record Timestamps
+        note over App, Reg: Phase 2 - Dynamic Service Registration and Heartbeat
+        App->>Reg: POST /v1/register
+        Reg->>Reg: Assign UUID and Set Status to HEALTHY
         Reg->>SSE: Emit EventRegistered
         loop Every 5 Seconds
-            App->>Reg: POST /v1/heartbeat {name, instanceId}
-            Reg->>Reg: Update LastHeartbeat = time.Now()
+            App->>Reg: POST /v1/heartbeat
+            Reg->>Reg: Update LastHeartbeat timestamp
         end
     end
 
     rect rgb(255, 250, 240)
-        note over Lease, Probe: Phase 3: Background Sweeps & Health Probing
+        note over Lease, Probe: Phase 3 - Background Sweeps and Health Probing
         loop Every 3 Seconds (Lease Sweep)
             Lease->>Reg: Check LastHeartbeat for all instances
-            alt LastHeartbeat > 15s (HeartbeatTTL)
-                Lease->>Reg: Update Status = UNHEALTHY ("heartbeat expired")
+            alt Heartbeat Expired (> 15s)
+                Lease->>Reg: Update Status to UNHEALTHY
                 Reg->>SSE: Emit EventStatusChanged
-            else LastHeartbeat > 60s (EvictionTTL)
-                Lease->>Reg: EvictInstance (Remove from registry)
+            else Eviction Timeout (> 60s)
+                Lease->>Reg: EvictInstance from registry
                 Reg->>SSE: Emit EventHeartbeatExpired
             end
         end
 
         loop Every 5 Seconds (Health Sweep)
-            Probe->>App: Execute Probe Strategy (HTTP GET /health or TCP Dial)
-            alt Probe Success (2xx / TCP OK)
-                Probe->>Reg: Confirm Status = HEALTHY
-            else Probe Failure (Timeout / 5xx / Connection Refused)
-                Probe->>Reg: Update Status = UNHEALTHY (Record LastProbeErr)
+            Probe->>App: Execute Probe Strategy (HTTP GET or TCP Dial)
+            alt Probe Success
+                Probe->>Reg: Confirm Status is HEALTHY
+            else Probe Failure
+                Probe->>Reg: Update Status to UNHEALTHY
                 Reg->>SSE: Emit EventStatusChanged
             end
         end
     end
 
     rect rgb(255, 240, 245)
-        note over SSE, Traefik: Phase 4: Topology Sync & Ingress Routing
-        SSE->>TraefikExp: Consume EventStatusChanged / EventRegistered
-        TraefikExp->>TraefikExp: Filter HEALTHY & DEGRADED instances
-        TraefikExp->>TraefikExp: Generate Traefik YAML structure
+        note over SSE, Traefik: Phase 4 - Topology Sync and Ingress Routing
+        SSE->>TraefikExp: Consume EventStatusChanged or EventRegistered
+        TraefikExp->>TraefikExp: Filter HEALTHY and DEGRADED instances
+        TraefikExp->>TraefikExp: Generate Traefik YAML configuration
         TraefikExp->>Traefik: Write updated discovery.yml
-        Traefik->>Traefik: Reload routers (watch: true)
-        Traefik->>App: Route inbound domain requests (e.g. ai-service.llmobs.local)
+        Traefik->>Traefik: Auto reload routers
+        Traefik->>App: Route inbound domain requests
     end
 ```
 
@@ -235,7 +235,7 @@ classDiagram
         +int Weight
         +HealthStatus Status
         +HealthCheckSpec HealthCheck
-        +map[string]string Metadata
+        +map Metadata
         +time.Time RegisteredAt
         +time.Time LastHeartbeat
         +time.Time LastProbeAt
@@ -252,10 +252,10 @@ classDiagram
 
     class HealthStatus {
         <<enumeration>>
-        StatusHealthy (0)
-        StatusDegraded (1)
-        StatusUnhealthy (2)
-        StatusDead (3)
+        StatusHealthy
+        StatusDegraded
+        StatusUnhealthy
+        StatusDead
         +String() string
     }
 
@@ -267,21 +267,20 @@ classDiagram
 
     class Registry {
         -sync.RWMutex mu
-        -map[string]map[string]*ServiceInstance instances
-        -[]chan RegistryEvent listeners
-        -sync.RWMutex listenerMu
+        -map instances
+        -slice listeners
         -InstanceDefaults defaults
-        +Register(instance) *ServiceInstance
+        +Register(instance) ServiceInstance
         +Deregister(serviceName, instanceID) error
         +Heartbeat(serviceName, instanceID) error
         +UpdateStatus(serviceName, instanceID, status, probeErr)
         +EvictInstance(serviceName, instanceID)
-        +GetHealthy(serviceName) []*ServiceInstance
-        +GetAll(serviceName) []*ServiceInstance
-        +GetAllServices() map[string][]*ServiceInstance
-        +Subscribe() chan RegistryEvent
+        +GetHealthy(serviceName) ServiceInstanceList
+        +GetAll(serviceName) ServiceInstanceList
+        +GetAllServices() ServiceMap
+        +Subscribe() EventChannel
         +Unsubscribe(ch)
-        +Snapshot() []*ServiceInstance
+        +Snapshot() ServiceInstanceList
     }
 
     class LeaseManager {
@@ -301,32 +300,32 @@ classDiagram
 
     class Balancer {
         <<interface>>
-        +Pick(instances, key) (*ServiceInstance, error)
+        +Pick(instances, key) ServiceInstance
     }
 
     class RoundRobin {
         -atomic.Uint64 counter
-        +Pick(instances, key) (*ServiceInstance, error)
+        +Pick(instances, key) ServiceInstance
     }
 
     class WeightedRoundRobin {
         -sync.Mutex mu
-        -map[string]int currentWeights
-        +Pick(instances, key) (*ServiceInstance, error)
+        -map currentWeights
+        +Pick(instances, key) ServiceInstance
     }
 
     class LeastConnections {
         -sync.Map inflight
-        +Pick(instances, key) (*ServiceInstance, error)
+        +Pick(instances, key) ServiceInstance
         +Release(instanceID)
     }
 
     class ConsistentHash {
         -sync.RWMutex mu
-        -[]hashRingNode ring
+        -slice ring
         -int virtualNodes
-        -map[string]*ServiceInstance instanceMap
-        +Pick(instances, key) (*ServiceInstance, error)
+        -map instanceMap
+        +Pick(instances, key) ServiceInstance
     }
 
     class CircuitBreaker {
@@ -371,23 +370,23 @@ The [`LeaseManager`](file:///home/btpl-lap-22/live/llm-observability-platform/pa
 
 ```mermaid
 graph TD
-    Start([Lease Sweep Triggered by Ticker]) --> TakeSnapshot["Snapshot = registry.Snapshot()"]
-    TakeSnapshot --> LoopInstances{For Each Instance in Snapshot}
+    Start(["Lease Sweep Triggered by Ticker"]) --> TakeSnapshot["Snapshot = registry.Snapshot()"]
+    TakeSnapshot --> LoopInstances{"For Each Instance in Snapshot"}
     
-    LoopInstances -- "Finished" --> End([Wait for Next Ticker Tick])
-    LoopInstances -- "Next Instance" --> CalcElapsed["elapsed = time.Now().Sub(inst.LastHeartbeat)"]
+    LoopInstances -->|"Finished"| End(["Wait for Next Ticker Tick"])
+    LoopInstances -->|"Next Instance"| CalcElapsed["Calculate elapsed time since LastHeartbeat"]
     
-    CalcElapsed --> CheckEviction{elapsed > EvictionTTL?}
-    CheckEviction -- "Yes (> 60s)" --> Evict["EvictInstance(inst.Name, inst.ID)\nSet Status=DEAD & Delete from Map"]
+    CalcElapsed --> CheckEviction{"Elapsed > Eviction TTL?"}
+    CheckEviction -->|"Yes (Greater than 60s)"| Evict["EvictInstance - Set Status to DEAD and delete"]
     Evict --> EmitEvictEvent["Emit EventHeartbeatExpired"] --> LoopInstances
     
-    CheckEviction -- "No" --> CheckTTL{elapsed > HeartbeatTTL?}
-    CheckTTL -- "Yes (> 15s)" --> CheckHealthy{inst.Status == HEALTHY?}
-    CheckHealthy -- "Yes" --> MarkUnhealthy["UpdateStatus(UNHEALTHY, 'heartbeat expired')"]
+    CheckEviction -->|"No"| CheckTTL{"Elapsed > Heartbeat TTL?"}
+    CheckTTL -->|"Yes (Greater than 15s)"| CheckHealthy{"Is Status HEALTHY?"}
+    CheckHealthy -->|"Yes"| MarkUnhealthy["UpdateStatus to UNHEALTHY - Heartbeat Expired"]
     MarkUnhealthy --> EmitStatusEvent["Emit EventStatusChanged"] --> LoopInstances
-    CheckHealthy -- "No (Already Unhealthy)" --> LoopInstances
+    CheckHealthy -->|"No (Already Unhealthy)"| LoopInstances
     
-    CheckTTL -- "No (<= 15s)" --> LoopInstances
+    CheckTTL -->|"No (Less than 15s)"| LoopInstances
 ```
 
 ---
@@ -402,24 +401,24 @@ stateDiagram-v2
 
     state CLOSED {
         [*] --> NormalOperation
-        NormalOperation --> SuccessRecord : Request Succeeds (Reset fail count)
-        NormalOperation --> FailureRecord : Request Fails (Increment fail count)
+        NormalOperation --> SuccessRecord : Request Succeeds
+        NormalOperation --> FailureRecord : Request Fails
     }
 
-    CLOSED --> OPEN : consecutiveFails >= FailureThreshold (5)
+    CLOSED --> OPEN : consecutiveFails >= Threshold
 
     state OPEN {
-        [*] --> RejectRequests : Block all requests (Return false)
+        [*] --> RejectRequests : Block requests
     }
 
-    OPEN --> HALF_OPEN : time.Since(lastFailTime) > CooldownDuration (30s)
+    OPEN --> HALF_OPEN : CooldownDuration Elapsed
 
     state HALF_OPEN {
-        [*] --> ProbeTrial : Allow limited trial calls (Max 1 call)
+        [*] --> ProbeTrial : Allow single trial call
     }
 
-    HALF_OPEN --> CLOSED : Trial call succeeds (RecordSuccess)
-    HALF_OPEN --> OPEN : Trial call fails (RecordFailure)
+    HALF_OPEN --> CLOSED : Trial call succeeds
+    HALF_OPEN --> OPEN : Trial call fails
 ```
 
 ---
@@ -472,22 +471,22 @@ To ensure maximum extensibility without modifying core code, the module implemen
 
 ```mermaid
 graph LR
-    subgraph "Data-Driven Strategy & Factory Registry Maps"
-        PStrategies["Probe Strategies Map\nkey: 'http' | 'tcp'"]
-        LBFactories["LB Factories Map\nkey: Algorithm string"]
-        StatusNames["Status Lookup Map\nkey: HealthStatus int"]
-        EventNames["Event Lookup Map\nkey: EventType int"]
+    subgraph StrategyMaps["Data-Driven Strategy and Factory Registry Maps"]
+        PStrategies["Probe Strategies Map - Key: http or tcp"]
+        LBFactories["LB Factories Map - Key: Algorithm string"]
+        StatusNames["Status Lookup Map - Key: HealthStatus enum"]
+        EventNames["Event Lookup Map - Key: EventType enum"]
     end
 
-    subgraph "Execution Drivers"
-        ConfigJSON["config.json\nTTLs, Intervals, Thresholds"]
-        SeedJSON["services.json\nInitial Catalog Config"]
+    subgraph ExecutionDrivers["Execution Drivers"]
+        ConfigJSON["config.json - TTLs, Intervals, Thresholds"]
+        SeedJSON["services.json - Initial Catalog Config"]
     end
 
-    PStrategies --> HealthProber Engine
-    LBFactories --> LoadBalancer Factory
-    ConfigJSON --> DI Container
-    SeedJSON --> Registry Bootstrapper
+    PStrategies --> HealthProberEngine["Health Prober Engine"]
+    LBFactories --> LoadBalancerFactory["Load Balancer Factory"]
+    ConfigJSON --> DIContainer["DI Container"]
+    SeedJSON --> RegistryBootstrapper["Registry Bootstrapper"]
 ```
 
 1. **Probe Strategies as Data**: Registered in `probeStrategies` map in [`health_prober.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/registry/health_prober.go#L15-L22). New protocol support (e.g. gRPC or Redis PING) can be added via `RegisterProbeStrategy(name, fn)` at runtime without touching the prober loop.
