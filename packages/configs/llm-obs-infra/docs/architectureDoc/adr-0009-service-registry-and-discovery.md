@@ -194,7 +194,96 @@ sequenceDiagram
     Note over Exporter, Traefik: 4. Dynamic Ingress Routing
     Reg->>Exporter: Emit status change event
     Exporter->>Traefik: Write updated discovery.yml
-    Traefik->>App: Proxy traffic to healthy nodes
+```
+
+---
+
+### 2.3 Service Registry Execution Flow (State Management & Health Monitoring)
+
+```
+                       ┌────────────────────────────────────────┐
+                       │       SERVICE REGISTRY FLOW            │
+                       └────────────────────────────────────────┘
+
+Microservice Startup / Background Ping
+    │
+    ├── 1. REGISTER INSTANCE (POST /v1/register)
+    │   ├── Request passes validation checks in router.go (name, host, port, protocol)
+    │   ├── Calls registry.Register(instance) in registry.go:
+    │   │   ├── Generates unique hex instance ID if missing
+    │   │   ├── Sets Status = HEALTHY, RegisteredAt = now, LastHeartbeat = now
+    │   │   ├── Stores in r.instances[serviceName][instanceID] under RWMutex Lock
+    │   │   └── Emits EventRegistered on async worker channel (emitAsync)
+    │   └── Returns 201 Created with ApiResponse<ServiceInstance> envelope
+    │
+    ├── 2. PERIODIC HEARTBEAT PING (POST /v1/heartbeat every 5s)
+    │   ├── Calls registry.Heartbeat(serviceName, instanceID)
+    │   ├── Updates LastHeartbeat = now under RWMutex Lock
+    │   └── Returns 200 OK with ApiResponse<{status: "ok"}> envelope
+    │
+    ├── 3. BACKGROUND LEASE SWEEP (lease_manager.go every 3s)
+    │   ├── Takes RWMutex Snapshot() of all registered instances
+    │   ├── For each instance, calculates elapsed = time.Since(LastHeartbeat):
+    │   │   ├── If elapsed > 15s (HeartbeatTTL) and Status == HEALTHY:
+    │   │   │   └── Updates status to UNHEALTHY ("heartbeat expired") & emits EventStatusChanged
+    │   │   └── If elapsed > 60s (EvictionTTL):
+    │   │       └── Calls EvictInstance() -> Removes node from map & emits EventHeartbeatExpired
+    │   └── Lock released immediately after sweep iteration
+    │
+    └── 4. DURABLE ACTIVE HEALTH PROBING (health_prober.go every 5s)
+        ├── Worker pool fan-out: dispatches jobs to MaxConcurrent worker goroutines
+        ├── Executes active probe based on strategy ("http", "tcp", "exec"):
+        │   ├── HTTP GET /health (timeout 2s)
+        │   ├── TCP Dial host:port (timeout 2s)
+        │   └── Exec shell command execution
+        ├── Applies Flapping Protection Thresholds:
+        │   ├── On Failure: ConsecutiveFails++
+        │   │   └── If ConsecutiveFails >= 3 (FailureThreshold) ➔ Flip status to UNHEALTHY
+        │   └── On Success: ConsecutiveSuccesses++
+        │       └── If ConsecutiveSuccesses >= 2 (SuccessThreshold) ➔ Restore status to HEALTHY
+        └── Updates instance status in registry & emits EventStatusChanged
+```
+
+---
+
+### 2.4 Service Discovery Execution Flow (Resolution, Diagnostics & Traefik Export)
+
+```
+                       ┌────────────────────────────────────────┐
+                       │       SERVICE DISCOVERY FLOW           │
+                       └────────────────────────────────────────┘
+
+Caller Request / Gateway Synchronization
+    │
+    ├── 1. RESOLVE HEALTHY ENDPOINT (GET /v1/resolve?service=name)
+    │   ├── Calls discovery.Resolve(serviceName) in discovery.go
+    │   ├── Queries registry.GetHealthy(serviceName):
+    │   │   ├── [HEALTHY INSTANCES FOUND]
+    │   │   │   └── Returns 200 OK with ApiResponse<{service, endpoint, instances}>
+    │   │   └── [NO HEALTHY INSTANCES AVAILABLE]
+    │   │       ├── Builds Diagnostic Error: lists all registered nodes with last probe errors
+    │   │       └── Returns 503 Service Unavailable with ApiErrorResponse envelope
+    │   └── OpenTelemetry span "discovery.resolve" records resolution duration & attributes
+    │
+    ├── 2. DUAL-RESOLUTION FALLBACK (discovery.ResolveWithFallback)
+    │   ├── Tries dynamic resolution via discovery.Resolve(serviceName)
+    │   ├── If successful ➔ Returns dynamic instance (fallbackUsed = false)
+    │   └── If failed ➔ Returns fallback instance using legacy env host/port (fallbackUsed = true)
+    │
+    ├── 3. TRAEFIK DYNAMIC INGRESS EXPORT (exporter.go)
+    │   ├── Exporter subscribes to registry event channel (Subscribe())
+    │   ├── On event (EventRegistered, EventDeregistered, EventStatusChanged, EventHeartbeatExpired):
+    │   │   ├── Takes snapshot of all HEALTHY instances across all services
+    │   │   ├── Generates Traefik v3 Dynamic Provider YAML structure:
+    │   │   │   ├── http.routers.<service>.rule = "Host(`<service>.llmobs.local`)"
+    │   │   │   └── http.services.<service>.loadBalancer.servers = [{url: "http://host:port"}]
+    │   │   └── Atomic write to /etc/traefik/dynamic/discovery.yml
+    │   └── Traefik file provider reloads routes dynamically in < 200ms
+    │
+    └── 4. REAL-TIME TOPOLOGY STREAMING (GET /v1/watch)
+        ├── Opens Server-Sent Events (SSE) HTTP connection (`text/event-stream`)
+        ├── Filters events by query `?service=name` or streams all topology events
+        └── Flushes SSE event payload `event: STATUS_CHANGED` to client on status update
 ```
 
 ---

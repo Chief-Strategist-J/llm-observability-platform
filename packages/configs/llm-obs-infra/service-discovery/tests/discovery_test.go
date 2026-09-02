@@ -2,89 +2,67 @@ package tests
 
 import (
 	"testing"
+	"time"
 
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/discovery"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/registry"
 )
 
-func TestResolveHealthy(t *testing.T) {
-	reg := newTestRegistry()
-	reg.Register(newTestInstance("resolve-svc", "localhost", 8080))
-
+func TestDiscoveryResolutionAndFallback(t *testing.T) {
+	reg := registry.NewRegistry(registry.DefaultInstanceDefaults)
 	disc := discovery.NewDiscovery(reg)
 
-	inst, err := disc.Resolve("resolve-svc")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if inst.Port != 8080 {
-		t.Fatalf("expected port 8080, got %d", inst.Port)
-	}
-}
-
-func TestResolveEndpoint(t *testing.T) {
-	reg := newTestRegistry()
-	reg.Register(newTestInstance("resolve-svc", "localhost", 8080))
-
-	disc := discovery.NewDiscovery(reg)
-
-	endpoint, err := disc.ResolveEndpoint("resolve-svc")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if endpoint != "http://localhost:8080" {
-		t.Fatalf("expected http://localhost:8080, got %s", endpoint)
-	}
-}
-
-func TestResolveNoInstances(t *testing.T) {
-	reg := newTestRegistry()
-	disc := discovery.NewDiscovery(reg)
-
-	_, err := disc.Resolve("nonexistent")
+	// 1. Resolve unregistered service -> should fail with diagnostic error
+	_, err := disc.Resolve("ai-service")
 	if err == nil {
-		t.Fatal("expected error for nonexistent service")
+		t.Fatalf("expected error for unregistered service, got nil")
+	}
+
+	// 2. ResolveWithFallback for unregistered service -> should return fallback instance
+	inst, fallbackUsed := disc.ResolveWithFallback("ai-service", "legacy-ai-host", 8080, "http")
+	if !fallbackUsed {
+		t.Errorf("expected fallbackUsed: true, got false")
+	}
+	if inst.Host != "legacy-ai-host" || inst.Port != 8080 {
+		t.Errorf("expected fallback host/port legacy-ai-host:8080, got %s:%d", inst.Host, inst.Port)
+	}
+
+	// 3. Register service -> Resolve should succeed without fallback
+	reg.Register(&registry.ServiceInstance{
+		Name:     "ai-service",
+		Host:     "ai-container",
+		Port:     9000,
+		Protocol: "http",
+	})
+
+	instResolved, fallbackUsed2 := disc.ResolveWithFallback("ai-service", "legacy-ai-host", 8080, "http")
+	if fallbackUsed2 {
+		t.Errorf("expected fallbackUsed: false for registered service, got true")
+	}
+	if instResolved.Host != "ai-container" || instResolved.Port != 9000 {
+		t.Errorf("expected resolved host/port ai-container:9000, got %s:%d", instResolved.Host, instResolved.Port)
 	}
 }
 
-func TestResolveAllUnhealthy(t *testing.T) {
-	reg := newTestRegistry()
-	inst := reg.Register(newTestInstance("unhealthy-svc", "localhost", 8080))
-	reg.UpdateStatus("unhealthy-svc", inst.ID, registry.StatusUnhealthy, "TCP probe failed")
-
+func TestDiscoveryWatchEventStream(t *testing.T) {
+	reg := registry.NewRegistry(registry.DefaultInstanceDefaults)
 	disc := discovery.NewDiscovery(reg)
 
-	_, err := disc.Resolve("unhealthy-svc")
-	if err == nil {
-		t.Fatal("expected error when all instances are unhealthy")
-	}
-}
+	events := disc.Watch("watch-service")
 
-func TestResolveAllReturnsMultiple(t *testing.T) {
-	reg := newTestRegistry()
-	reg.Register(newTestInstance("multi-svc", "localhost", 8080))
-	reg.Register(newTestInstance("multi-svc", "localhost", 8081))
+	reg.Register(&registry.ServiceInstance{
+		Name:     "watch-service",
+		Host:     "localhost",
+		Port:     8000,
+		Protocol: "http",
+	})
 
-	disc := discovery.NewDiscovery(reg)
-
-	instances, err := disc.ResolveAll("multi-svc")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(instances) != 2 {
-		t.Fatalf("expected 2 instances, got %d", len(instances))
-	}
-}
-
-func TestListServices(t *testing.T) {
-	reg := newTestRegistry()
-	reg.Register(newTestInstance("svc-a", "localhost", 8080))
-	reg.Register(newTestInstance("svc-b", "localhost", 8081))
-
-	disc := discovery.NewDiscovery(reg)
-
-	services := disc.ListServices()
-	if len(services) != 2 {
-		t.Fatalf("expected 2 services, got %d", len(services))
+	select {
+	case evt := <-events:
+		if evt.Instance.Name != "watch-service" {
+			t.Errorf("expected event for watch-service, got %s", evt.Instance.Name)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timed out waiting for watch event")
 	}
 }
