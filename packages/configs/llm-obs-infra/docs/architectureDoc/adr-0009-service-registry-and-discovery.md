@@ -362,8 +362,6 @@ graph TD
     F -->|No| H["Instance Remains HEALTHY"]
 ```
 
----
-
 ### 3.4 Circuit Breaker State Transitions
 
 ```mermaid
@@ -390,6 +388,232 @@ stateDiagram-v2
 | `GET` | `/health` | Liveness check of registry engine | None | `200 OK` `{"status":"healthy"}` | N/A |
 
 ---
+
+### 3.6 Developer Integration Guide & API Workflows
+
+#### 3.6.1 How to Register a New Service
+
+##### Workflow A: Dynamic Self-Registration via HTTP API (Recommended for Microservices)
+When a microservice boots up, it issues a `POST /v1/register` request and initiates a 5-second heartbeat ping loop.
+
+**1. Service Registration (`POST /v1/register`)**:
+```bash
+curl -X POST http://llmobs-service-registry:31426/v1/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "forecast-engine",
+    "host": "forecast-engine-container",
+    "port": 8000,
+    "protocol": "http",
+    "version": "v1.0.0",
+    "weight": 100,
+    "metadata": { "environment": "production", "region": "us-east-1" },
+    "healthCheck": {
+      "protocol": "http",
+      "path": "/health"
+    }
+  }'
+```
+
+**Success Response (`201 Created`)**:
+```json
+{
+  "id": "e9d2a7f1b8c34d5a",
+  "name": "forecast-engine",
+  "host": "forecast-engine-container",
+  "port": 8000,
+  "protocol": "http",
+  "version": "v1.0.0",
+  "weight": 100,
+  "status": 0,
+  "healthCheck": {
+    "protocol": "http",
+    "path": "/health",
+    "interval": 5000000000,
+    "timeout": 2000000000
+  },
+  "metadata": { "environment": "production", "region": "us-east-1" },
+  "registeredAt": "2026-09-02T12:00:00Z",
+  "lastHeartbeat": "2026-09-02T12:00:00Z",
+  "consecutiveFails": 0,
+  "consecutiveSuccesses": 0
+}
+```
+
+**2. Periodic Heartbeat (`POST /v1/heartbeat`)**:
+Every 5 seconds, the service pings the registry using the assigned instance ID:
+```bash
+curl -X POST http://llmobs-service-registry:31426/v1/heartbeat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "forecast-engine",
+    "instanceId": "e9d2a7f1b8c34d5a"
+  }'
+```
+
+**Success Response (`200 OK`)**:
+```json
+{
+  "status": "ok"
+}
+```
+
+**3. Graceful Shutdown Deregistration (`POST /v1/deregister`)**:
+During graceful shutdown signal handling (`SIGTERM`/`SIGINT`), the service deregisters:
+```bash
+curl -X POST http://llmobs-service-registry:31426/v1/deregister \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "forecast-engine",
+    "instanceId": "e9d2a7f1b8c34d5a"
+  }'
+```
+
+##### Workflow B: Pre-Configured Seed Catalog (`services.json`) (Recommended for Databases / Static Infra)
+For databases or infrastructure nodes (e.g. ClickHouse, Redis, Kafka, Postgres), register the service in [`services.json`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/di/providers.go):
+```json
+{
+  "services": [
+    {
+      "name": "postgres",
+      "host": "llmobs-postgres",
+      "port": 5432,
+      "protocol": "tcp",
+      "healthCheck": {
+        "protocol": "tcp"
+      }
+    }
+  ]
+}
+```
+The registry auto-loads this catalog on startup and initiates background active TCP health sweeps.
+
+---
+
+#### 3.6.2 How to Discover & Resolve Services
+
+##### Mechanism 1: Domain Routing via Traefik Ingress (Zero-Code / Recommended)
+Traefik automatically updates dynamic routing from the registry exporter ([`traefik/exporter.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/traefik/exporter.go)). Call target services directly using domain naming:
+
+```http
+GET http://forecast-engine.llmobs.local/v1/forecast
+```
+Traefik proxies traffic exclusively to verified `HEALTHY` nodes.
+
+##### Mechanism 2: Direct REST Resolution API (`GET /v1/resolve`)
+Caller services can resolve healthy target instances via HTTP:
+
+```bash
+curl -X GET "http://llmobs-service-registry:31426/v1/resolve?service=forecast-engine"
+```
+
+**Success Response (`200 OK`)**:
+```json
+{
+  "service": "forecast-engine",
+  "endpoint": "http://forecast-engine-container:8000",
+  "instances": [
+    {
+      "id": "e9d2a7f1b8c34d5a",
+      "name": "forecast-engine",
+      "host": "forecast-engine-container",
+      "port": 8000,
+      "protocol": "http",
+      "version": "v1.0.0",
+      "weight": 100,
+      "status": 0
+    }
+  ]
+}
+```
+
+**Error Response when nodes are down (`503 Service Unavailable`)**:
+```json
+{
+  "error": "all 1 instances of \"forecast-engine\" are unavailable:\n  forecast-engine/e9d2a7f1b8c34d5a (forecast-engine-container:8000) — heartbeat expired"
+}
+```
+
+##### Mechanism 3: Real-Time Event Stream (`GET /v1/watch`)
+Subscribe to live topology changes via Server-Sent Events (SSE):
+
+```bash
+curl -N -X GET "http://llmobs-service-registry:31426/v1/watch?service=forecast-engine"
+```
+
+**SSE Event Stream**:
+```http
+event: STATUS_CHANGED
+data: {"type":2,"instance":{"id":"e9d2a7f1b8c34d5a","name":"forecast-engine","status":2},"time":"2026-09-02T12:05:00Z"}
+```
+
+---
+
+#### 3.6.3 Polyglot SDK Integration Code Examples
+
+##### Python (`requests` / `asyncio`):
+```python
+import requests, time, threading
+
+REGISTRY_URL = "http://llmobs-service-registry:31426"
+
+def register_and_heartbeat(service_name, host, port):
+    # 1. Register
+    payload = {
+        "name": service_name, "host": host, "port": port, "protocol": "http",
+        "healthCheck": {"protocol": "http", "path": "/health"}
+    }
+    res = requests.post(f"{REGISTRY_URL}/v1/register", json=payload).json()
+    instance_id = res["id"]
+
+    # 2. Heartbeat thread
+    def heartbeat_loop():
+        while True:
+            time.sleep(5)
+            requests.post(f"{REGISTRY_URL}/v1/heartbeat", json={"name": service_name, "instanceId": instance_id})
+
+    threading.Thread(target=heartbeat_loop, daemon=True).start()
+
+def discover_service(service_name):
+    res = requests.get(f"{REGISTRY_URL}/v1/resolve", params={"service": service_name})
+    res.raise_for_status()
+    return res.json()["endpoint"]
+```
+
+##### Node.js (`fetch`):
+```javascript
+const REGISTRY_URL = "http://llmobs-service-registry:31426";
+
+async function registerService(name, host, port) {
+  const reg = await fetch(`${REGISTRY_URL}/v1/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name, host, port, protocol: "http",
+      healthCheck: { protocol: "http", path: "/health" }
+    })
+  });
+  const { id } = await reg.json();
+
+  setInterval(() => {
+    fetch(`${REGISTRY_URL}/v1/heartbeat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, instanceId: id })
+    }).catch(console.error);
+  }, 5000);
+}
+
+async function discoverService(serviceName) {
+  const res = await fetch(`${REGISTRY_URL}/v1/resolve?service=${serviceName}`);
+  if (!res.ok) throw new Error(`Service ${serviceName} unavailable`);
+  const data = await res.json();
+  return data.endpoint;
+}
+```
+
+---
+
 
 ## 4. Data-Driven Architecture Principles Applied
 
