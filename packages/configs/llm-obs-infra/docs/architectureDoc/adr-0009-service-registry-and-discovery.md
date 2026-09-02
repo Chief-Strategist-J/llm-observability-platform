@@ -66,15 +66,15 @@ The Service Registry runs as an isolated micro-container within the `llm-obs-inf
 
 ```mermaid
 graph TD
-    User["User or Client Application"] --> Traefik["Traefik v3.7 Ingress Gateway"]
-
     subgraph IngressGateway["Ingress Gateway and Dynamic Routing"]
-        Traefik
+        Traefik["Traefik v3.7 Ingress Gateway"]
         DynFile["discovery.yml File Provider"]
         DynFile -->|"Watch Reload"| Traefik
     end
 
-    subgraph ServiceRegistry["Go Service Discovery Core (Port 31426)"]
+    User["User or Client Application"] --> Traefik
+
+    subgraph ServiceRegistry["Go Service Discovery Core - Port 31426"]
         Router["HTTP REST and SSE Router (router.go)"]
         Registry["In-Memory Registry (registry.go)"]
         LeaseMgr["Lease Manager Sweep (lease_manager.go)"]
@@ -362,23 +362,28 @@ The [`LeaseManager`](file:///home/btpl-lap-22/live/llm-observability-platform/pa
 
 ```mermaid
 graph TD
-    Start["Lease Sweep Triggered by Ticker"] --> TakeSnapshot["Snapshot = registry.Snapshot()"]
-    TakeSnapshot --> LoopInstances["For Each Instance in Snapshot"]
+    Step1["1. Lease Sweep Triggered by Ticker (Every 3s)"] --> Step2["2. Take Registry Snapshot"]
+    Step2 --> Step3["3. Iterate Instance List"]
+    Step3 --> Step4["4. Calculate Elapsed Time (Now - LastHeartbeat)"]
     
-    LoopInstances -->|"Finished Sweep"| End["Wait for Next Ticker Tick"]
-    LoopInstances -->|"Process Instance"| CalcElapsed["Calculate elapsed time since LastHeartbeat"]
+    Step4 --> Check1{"Elapsed > Eviction TTL (60s)?"}
+    Check1 -->|Yes| Action1["Action: Evict Instance (Set Status DEAD & Remove)"]
+    Action1 --> Event1["Emit EventHeartbeatExpired"]
     
-    CalcElapsed --> CheckEviction["Elapsed > Eviction TTL (60s)?"]
-    CheckEviction -->|"Yes"| Evict["EvictInstance - Set Status DEAD & Remove"]
-    Evict --> EmitEvictEvent["Emit EventHeartbeatExpired"] --> LoopInstances
+    Check1 -->|No| Check2{"Elapsed > Heartbeat TTL (15s)?"}
+    Check2 -->|Yes| Check3{"Is Status HEALTHY?"}
+    Check3 -->|Yes| Action2["Action: Update Status to UNHEALTHY"]
+    Action2 --> Event2["Emit EventStatusChanged"]
     
-    CheckEviction -->|"No"| CheckTTL["Elapsed > Heartbeat TTL (15s)?"]
-    CheckTTL -->|"Yes"| CheckHealthy["Is Status HEALTHY?"]
-    CheckHealthy -->|"Yes"| MarkUnhealthy["UpdateStatus to UNHEALTHY"]
-    MarkUnhealthy --> EmitStatusEvent["Emit EventStatusChanged"] --> LoopInstances
-    CheckHealthy -->|"No"| LoopInstances
+    Check3 -->|No| Skip1["Retain Existing Status"]
+    Check2 -->|No| Skip2["Instance Healthy - No Action Required"]
     
-    CheckTTL -->|"No"| LoopInstances
+    Event1 --> Finish["Complete Instance Evaluation"]
+    Event2 --> Finish
+    Skip1 --> Finish
+    Skip2 --> Finish
+    
+    Finish --> Next["Proceed to Next Instance or Wait for Ticker"]
 ```
 
 ---
@@ -389,28 +394,28 @@ Each instance target can be wrapped with a [`CircuitBreaker`](file:///home/btpl-
 
 ```mermaid
 stateDiagram-v2
-    [*] --> CLOSED : Initial State
+    [*] --> CLOSED
 
     state CLOSED {
         [*] --> NormalOperation
-        NormalOperation --> SuccessRecord : Request Succeeds
-        NormalOperation --> FailureRecord : Request Fails
+        NormalOperation --> SuccessRecord : Success (Reset counter)
+        NormalOperation --> FailureRecord : Failure (Increment counter)
     }
 
-    CLOSED --> OPEN : Failure Threshold Exceeded
+    CLOSED --> OPEN : Consecutive Fails >= Threshold (5)
 
     state OPEN {
-        [*] --> RejectRequests : Block Requests
+        [*] --> RejectRequests : Block Request (Return false)
     }
 
-    OPEN --> HALF_OPEN : Cooldown Elapsed
+    OPEN --> HALF_OPEN : Cooldown Elapsed (30s)
 
     state HALF_OPEN {
-        [*] --> ProbeTrial : Limited Trial Request
+        [*] --> ProbeTrial : Trial Call (Max 1 call)
     }
 
-    HALF_OPEN --> CLOSED : Trial Request Succeeds
-    HALF_OPEN --> OPEN : Trial Request Fails
+    HALF_OPEN --> CLOSED : Trial Call Succeeds
+    HALF_OPEN --> OPEN : Trial Call Fails
 ```
 
 ---
@@ -463,14 +468,14 @@ To ensure maximum extensibility without modifying core code, the module implemen
 
 ```mermaid
 graph LR
-    subgraph StrategyMaps["Data-Driven Strategy and Factory Maps"]
+    subgraph Maps["Data-Driven Strategy & Factory Maps"]
         PStrategies["Probe Strategies Map"]
-        LBFactories["LB Factories Map"]
+        LBFactories["Load Balancer Factories Map"]
         StatusNames["Status Lookup Map"]
         EventNames["Event Lookup Map"]
     end
 
-    subgraph ExecutionDrivers["Execution Drivers"]
+    subgraph Drivers["Execution Drivers"]
         ConfigJSON["config.json Config File"]
         SeedJSON["services.json Seed Catalog"]
     end
