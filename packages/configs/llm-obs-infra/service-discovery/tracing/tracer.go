@@ -24,6 +24,7 @@ type Span struct {
 	ParentID   string
 	Name       string
 	StartTime  time.Time
+	Status     string
 	Attributes map[string]string
 	mu         sync.Mutex
 }
@@ -56,7 +57,8 @@ func StartSpan(ctx context.Context, name string) (context.Context, *Span) {
 		SpanID:     NewSpanID(),
 		ParentID:   parentID,
 		Name:       name,
-		StartTime:  time.Time{},
+		StartTime:  time.Now(),
+		Status:     "OK",
 		Attributes: make(map[string]string),
 	}
 
@@ -81,13 +83,22 @@ func (s *Span) SetAttribute(key, value string) {
 	s.Attributes[key] = value
 }
 
+func (s *Span) SetStatus(status string) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Status = status
+}
+
 func (s *Span) End() {
 	if s == nil {
 		return
 	}
 	duration := time.Since(s.StartTime)
-	log.Printf("[tracer] span=%q trace_id=%s span_id=%s parent_id=%s duration=%s attrs=%v",
-		s.Name, s.TraceID, s.SpanID, s.ParentID, duration, s.Attributes)
+	log.Printf("[tracer] span=%q trace_id=%s span_id=%s parent_id=%s status=%s duration=%s attrs=%v",
+		s.Name, s.TraceID, s.SpanID, s.ParentID, s.Status, duration, s.Attributes)
 }
 
 func (s *Span) TraceparentHeader() string {

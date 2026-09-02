@@ -22,9 +22,9 @@ type RequestContext struct {
 	StartTime      time.Time
 }
 
-type contextKey string
+type reqContextKey string
 
-const ReqContextKey contextKey = "requestContext"
+const ReqContextKey reqContextKey = "requestContext"
 
 type statusResponseWriter struct {
 	http.ResponseWriter
@@ -53,6 +53,7 @@ func Middleware(next http.Handler) http.Handler {
 			ParentID:   parentID,
 			Name:       fmt.Sprintf("HTTP %s %s", req.Method, req.URL.Path),
 			StartTime:  start,
+			Status:     "OK",
 			Attributes: make(map[string]string),
 		}
 
@@ -80,11 +81,15 @@ func Middleware(next http.Handler) http.Handler {
 
 		tenantID := req.Header.Get("x-tenant-id")
 		if tenantID == "" {
-			tenantID = "default"
+			tenantID = "tenant-default"
 		}
 
 		clientID := req.Header.Get("x-client-id")
+
 		userID := req.Header.Get("x-user-id")
+		if userID == "" {
+			userID = "anonymous"
+		}
 
 		reqCtx := RequestContext{
 			Traceparent:    span.TraceparentHeader(),
@@ -105,6 +110,7 @@ func Middleware(next http.Handler) http.Handler {
 		span.SetAttribute("x-request-id", reqID)
 		span.SetAttribute("x-correlation-id", corrID)
 		span.SetAttribute("x-tenant-id", tenantID)
+		span.SetAttribute("x-user-id", userID)
 
 		// Inject outbound header requirements per specification
 		w.Header().Set("traceparent", reqCtx.Traceparent)
@@ -118,9 +124,7 @@ func Middleware(next http.Handler) http.Handler {
 		if clientID != "" {
 			w.Header().Set("x-client-id", clientID)
 		}
-		if userID != "" {
-			w.Header().Set("x-user-id", userID)
-		}
+		w.Header().Set("x-user-id", userID)
 
 		sw := &statusResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 		ctx := req.Context()
@@ -130,6 +134,11 @@ func Middleware(next http.Handler) http.Handler {
 		next.ServeHTTP(sw, req.WithContext(ctx))
 
 		span.SetAttribute("http.status_code", fmt.Sprintf("%d", sw.statusCode))
+		if sw.statusCode >= 400 {
+			span.SetStatus("ERROR")
+		} else {
+			span.SetStatus("OK")
+		}
 		span.End()
 	})
 }
@@ -146,7 +155,8 @@ func GetRequestContext(ctx context.Context) RequestContext {
 		CorrelationId:  id,
 		CausationId:    id,
 		IdempotencyKey: id,
-		TenantId:       "default",
+		TenantId:       "tenant-default",
+		UserId:         "anonymous",
 		StartTime:      start,
 	}
 }
