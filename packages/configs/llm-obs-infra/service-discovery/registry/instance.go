@@ -91,3 +91,41 @@ type RegistryEvent struct {
 	Instance *ServiceInstance `json:"instance"`
 	Time     time.Time        `json:"time"`
 }
+
+type InstanceDefaults struct {
+	Weight              int           `json:"weight"`
+	HealthCheckInterval time.Duration `json:"healthCheckInterval"`
+	HealthCheckTimeout  time.Duration `json:"healthCheckTimeout"`
+}
+
+var DefaultInstanceDefaults = InstanceDefaults{
+	Weight:              100,
+	HealthCheckInterval: 5 * time.Second,
+	HealthCheckTimeout:  2 * time.Second,
+}
+
+type LeaseManagerConfig struct {
+	SweepInterval time.Duration `json:"sweepInterval"`
+	HeartbeatTTL  time.Duration `json:"heartbeatTTL"`
+	EvictionTTL   time.Duration `json:"evictionTTL"`
+}
+
+var DefaultLeaseManagerConfig = LeaseManagerConfig{
+	SweepInterval: 3 * time.Second,
+	HeartbeatTTL:  15 * time.Second,
+	EvictionTTL:   60 * time.Second,
+}
+
+type HealthProberConfig struct {
+	ProbeInterval    time.Duration `json:"probeInterval"`
+	MaxConcurrent    int           `json:"maxConcurrent"`
+	DefaultSuccessTh int           `json:"defaultSuccessThreshold"`
+	DefaultFailureTh int           `json:"defaultFailureThreshold"`
+}
+
+var DefaultHealthProberConfig = HealthProberConfig{
+	ProbeInterval:    5 * time.Second,
+	MaxConcurrent:    10,
+	DefaultSuccessTh: 2,
+	DefaultFailureTh: 3,
+}

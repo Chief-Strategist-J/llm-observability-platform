@@ -17,18 +17,6 @@ type Registry struct {
 	defaults   InstanceDefaults
 }
 
-type InstanceDefaults struct {
-	Weight              int           `json:"weight"`
-	HealthCheckInterval time.Duration `json:"healthCheckInterval"`
-	HealthCheckTimeout  time.Duration `json:"healthCheckTimeout"`
-}
-
-var DefaultInstanceDefaults = InstanceDefaults{
-	Weight:              100,
-	HealthCheckInterval: 5 * time.Second,
-	HealthCheckTimeout:  2 * time.Second,
-}
-
 func NewRegistry(defaults InstanceDefaults) *Registry {
 	return &Registry{
 		instances: make(map[string]map[string]*ServiceInstance),

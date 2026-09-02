@@ -86,20 +86,6 @@ func probeExec(ctx context.Context, host string, port int, spec HealthCheckSpec)
 	return nil
 }
 
-type HealthProberConfig struct {
-	ProbeInterval    time.Duration `json:"probeInterval"`
-	MaxConcurrent    int           `json:"maxConcurrent"`
-	DefaultSuccessTh int           `json:"defaultSuccessThreshold"`
-	DefaultFailureTh int           `json:"defaultFailureThreshold"`
-}
-
-var DefaultHealthProberConfig = HealthProberConfig{
-	ProbeInterval:    5 * time.Second,
-	MaxConcurrent:    10,
-	DefaultSuccessTh: 2,
-	DefaultFailureTh: 3,
-}
-
 type HealthProber struct {
 	registry *Registry
 	config   HealthProberConfig

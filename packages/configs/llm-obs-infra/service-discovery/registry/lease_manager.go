@@ -6,18 +6,6 @@ import (
 	"time"
 )
 
-type LeaseManagerConfig struct {
-	SweepInterval time.Duration `json:"sweepInterval"`
-	HeartbeatTTL  time.Duration `json:"heartbeatTTL"`
-	EvictionTTL   time.Duration `json:"evictionTTL"`
-}
-
-var DefaultLeaseManagerConfig = LeaseManagerConfig{
-	SweepInterval: 3 * time.Second,
-	HeartbeatTTL:  15 * time.Second,
-	EvictionTTL:   60 * time.Second,
-}
-
 type LeaseManager struct {
 	registry *Registry
 	config   LeaseManagerConfig
