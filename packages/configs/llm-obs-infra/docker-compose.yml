@@ -334,6 +334,34 @@ services:
       timeout: 5s
       retries: 5
 
+
+  llmobs-service-registry:
+    build:
+      context: ./service-discovery
+      dockerfile: Dockerfile
+    container_name: llmobs-service-registry
+    restart: unless-stopped
+    logging: *default-logging
+    ports:
+      - "${PORT_SERVICE_REGISTRY:-31426}:31426"
+    environment:
+      - CONFIG_PATH=/etc/service-registry/config.json
+      - CATALOG_PATH=/etc/service-registry/services.json
+      - OTEL_SERVICE_NAME=llmobs-service-registry
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://llmobs-otel-collector:4318
+    volumes:
+      - ./config/service-registry:/etc/service-registry:ro
+      - ./config/traefik/dynamic:/etc/traefik/dynamic
+    networks:
+      - llmobs-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --spider http://localhost:31426/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    depends_on:
+      - llmobs-otel-collector
+
 networks:
   llmobs-network:
     name: llmobs-network

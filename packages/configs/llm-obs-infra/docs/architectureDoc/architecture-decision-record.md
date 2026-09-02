@@ -27,6 +27,7 @@ This document provides the consolidated index of key Architectural Decision Reco
 | [ADR-0006](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docs/architectureDoc/infrastructure-resilience-and-edge-case-hardening.md) | Infrastructure Resilience & Edge Case Hardening | Accepted | Implement deterministic system pre-flight verification and active container health polling. |
 | [ADR-0007](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docs/securityDoc/critical-security-remediation-mandate.md) | Critical Security Remediation Mandate | Proposed (Blocking) | Mandatory container bridge isolation, non-root user contexts, and read-only docker socket mounts. |
 | [ADR-0008](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docs/securityDoc/audits/remediation-plan-adr-0006.md) | Ingestion Path TLS Encryption & Dynamic HMAC Verification | Accepted | Enforce TLS encryption between Traefik and OTel Collector, place PII redaction at receiver entrypoint, and require dynamic HMAC signatures. |
+| [ADR-0009](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/docs/architectureDoc/adr-0009-service-registry-and-discovery.md) | Dynamic Service Registry, Discovery & Client-Side Load Balancing | Accepted | Deploy Go-based dynamic service registry with heartbeat leases, active health probing, 5-algorithm client-side load balancer, circuit breaking, and Traefik dynamic provider integration. |
 
 ---
 
@@ -51,6 +52,11 @@ This document provides the consolidated index of key Architectural Decision Reco
 - **Context**: Static network signature claims overclaimed Zero-Trust posture, and plaintext HTTP internal hops exposed unredacted API keys before collector processing.
 - **Decision**: (1) Require TLS encryption between Traefik and OTel Collector receivers (`https://llmobs-otel-collector:4318`), (2) move `transform/pii_redaction` to the receiver entrypoint processor stage, and (3) replace static header claims with dynamic SHA-256 HMAC verification (`timestamp:request_id` context).
 - **Consequences**: Eliminates cleartext API key exposure across internal bridge hops and prevents spoofed static header claims.
+
+### ADR-0009: Dynamic Service Registry, Discovery & Client-Side Load Balancing
+- **Context**: All inter-service communication relied on hardcoded static endpoints and port numbers, causing silent failures on port changes, container restarts, and host reconfiguration.
+- **Decision**: Deploy a Go-based dynamic service registry with heartbeat TTL leases, active HTTP/TCP health probing, data-driven load balancer (5 algorithms), per-instance circuit breakers, and Traefik dynamic config exporter.
+- **Consequences**: Eliminates hardcoded endpoints, provides instant failure diagnostics, enables automatic failover, and integrates with existing Traefik gateway for domain-based routing.
 
 ---
 

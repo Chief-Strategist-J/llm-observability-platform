@@ -1,0 +1,36 @@
+{
+  "server": {
+    "port": "31426",
+    "readTimeout": "10s",
+    "writeTimeout": "30s",
+    "shutdownTimeout": "5s"
+  },
+  "registry": {
+    "weight": 100,
+    "healthCheckInterval": "5s",
+    "healthCheckTimeout": "2s"
+  },
+  "leaseManager": {
+    "sweepInterval": "3s",
+    "heartbeatTTL": "15s",
+    "evictionTTL": "60s"
+  },
+  "healthProber": {
+    "probeInterval": "5s",
+    "maxConcurrent": 10
+  },
+  "circuitBreaker": {
+    "failureThreshold": 5,
+    "cooldownDuration": "30s",
+    "halfOpenMaxCalls": 1
+  },
+  "loadBalancer": {
+    "algorithm": "round_robin"
+  },
+  "traefik": {
+    "outputPath": "/etc/traefik/dynamic/discovery.yml",
+    "defaultDomain": "llmobs.local",
+    "defaultEntryPoints": ["websecure"],
+    "defaultMiddlewares": ["security-headers@file", "rate-limit@file"]
+  }
+}

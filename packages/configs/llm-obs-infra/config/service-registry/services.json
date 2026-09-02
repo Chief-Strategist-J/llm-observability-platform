@@ -1,0 +1,67 @@
+{
+  "services": [
+    {
+      "name": "traefik",
+      "host": "localhost",
+      "port": 31410,
+      "protocol": "http",
+      "healthCheck": { "protocol": "http", "path": "/api/overview" }
+    },
+    {
+      "name": "redis",
+      "host": "localhost",
+      "port": 31413,
+      "protocol": "tcp",
+      "healthCheck": { "protocol": "tcp" }
+    },
+    {
+      "name": "kafka",
+      "host": "localhost",
+      "port": 31414,
+      "protocol": "tcp",
+      "healthCheck": { "protocol": "tcp" }
+    },
+    {
+      "name": "grafana",
+      "host": "localhost",
+      "port": 31415,
+      "protocol": "http",
+      "healthCheck": { "protocol": "http", "path": "/api/health" }
+    },
+    {
+      "name": "tempo",
+      "host": "localhost",
+      "port": 31416,
+      "protocol": "http",
+      "healthCheck": { "protocol": "http", "path": "/ready" }
+    },
+    {
+      "name": "otel-collector",
+      "host": "localhost",
+      "port": 31417,
+      "protocol": "http",
+      "healthCheck": { "protocol": "http", "path": "/" }
+    },
+    {
+      "name": "alloydb",
+      "host": "localhost",
+      "port": 31420,
+      "protocol": "tcp",
+      "healthCheck": { "protocol": "tcp" }
+    },
+    {
+      "name": "clickhouse",
+      "host": "localhost",
+      "port": 31421,
+      "protocol": "http",
+      "healthCheck": { "protocol": "http", "path": "/ping" }
+    },
+    {
+      "name": "temporal",
+      "host": "localhost",
+      "port": 31424,
+      "protocol": "tcp",
+      "healthCheck": { "protocol": "tcp" }
+    }
+  ]
+}

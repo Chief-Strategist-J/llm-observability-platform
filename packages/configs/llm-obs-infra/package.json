@@ -15,7 +15,8 @@
     "setup": "./scripts/manage.sh setup",
     "frontend": "npm --prefix ../../node/web-app run web-app",
     "frontend:dev": "npm --prefix ../../node/web-app run dev",
-    "test": "npx tsx --test tests/integration/services-health.test.ts"
+    "test": "npx tsx --test tests/integration/services-health.test.ts",
+    "test:registry": "cd service-discovery && go test -v ./tests/..."
   },
   "devDependencies": {
     "typescript": "^5.4.0",
