@@ -32,6 +32,28 @@ func (d *Discovery) Resolve(serviceName string) (*registry.ServiceInstance, erro
 	return healthy[0], nil
 }
 
+func (d *Discovery) ResolveWithFallback(serviceName string, fallbackHost string, fallbackPort int, fallbackProtocol string) (*registry.ServiceInstance, bool) {
+	inst, err := d.Resolve(serviceName)
+	if err == nil {
+		return inst, false
+	}
+
+	if fallbackProtocol == "" {
+		fallbackProtocol = "http"
+	}
+
+	fallback := &registry.ServiceInstance{
+		ID:       fmt.Sprintf("%s-fallback", serviceName),
+		Name:     serviceName,
+		Host:     fallbackHost,
+		Port:     fallbackPort,
+		Protocol: fallbackProtocol,
+		Status:   registry.StatusHealthy,
+		Metadata: map[string]string{"resolution": "fallback-legacy-env"},
+	}
+	return fallback, true
+}
+
 func (d *Discovery) ResolveAll(serviceName string) ([]*registry.ServiceInstance, error) {
 	_, span := tracing.StartSpan(context.Background(), "discovery.resolve-all")
 	defer span.End()
