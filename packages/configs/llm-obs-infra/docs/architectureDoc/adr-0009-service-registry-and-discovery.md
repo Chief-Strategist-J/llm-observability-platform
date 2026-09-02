@@ -66,15 +66,19 @@ The Service Registry runs as an isolated micro-container within the `llm-obs-inf
 
 ```mermaid
 graph TD
-    subgraph EdgeRouting["External Traffic and Edge Routing"]
-        User["User or Client Application"] --> Traefik["Traefik v3.7 Ingress Gateway"]
+    User["User or Client Application"] --> Traefik["Traefik v3.7 Ingress Gateway"]
+
+    subgraph IngressGateway["Ingress Gateway and Dynamic Routing"]
+        Traefik
+        DynFile["discovery.yml File Provider"]
+        DynFile -->|"Watch Reload"| Traefik
     end
 
-    subgraph DiscoveryCore["Service Discovery Core Container - Port 31426"]
-        Router["HTTP REST and SSE Gateway (router.go)"]
-        Registry["In-Memory Registry Engine (registry.go)"]
-        LeaseMgr["Lease Manager Daemon (lease_manager.go)"]
-        HealthProber["Active Concurrent Health Prober (health_prober.go)"]
+    subgraph ServiceRegistry["Go Service Discovery Core (Port 31426)"]
+        Router["HTTP REST and SSE Router (router.go)"]
+        Registry["In-Memory Registry (registry.go)"]
+        LeaseMgr["Lease Manager Sweep (lease_manager.go)"]
+        HealthProber["Active Health Prober (health_prober.go)"]
         LoadBalancer["Client LB and Circuit Breakers (balancer.go)"]
         Exporter["Traefik Dynamic Exporter (exporter.go)"]
 
@@ -85,31 +89,27 @@ graph TD
         Exporter --> Registry
     end
 
-    subgraph TraefikConfig["Traefik Dynamic Configuration"]
-        DynFile["discovery.yml File Provider"]
-        Exporter -->|"Writes Dynamic Topology"| DynFile
-        DynFile -->|"Watch Reload"| Traefik
-    end
-
-    subgraph AppServices["Polyglot Application Microservices"]
+    subgraph Microservices["Polyglot Microservices and Storage"]
         PyService["Python Engine - latency-engine"]
         NodeService["Node.js Web App - web-app"]
         GoService["Go AI Service - ai-service"]
-        InfraDB[("ClickHouse / Redis / Kafka Databases")]
+        InfraDB[("ClickHouse / Redis / Kafka")]
     end
 
-    PyService -->|"1. HTTP Register and Heartbeat"| Router
-    NodeService -->|"1. HTTP Register and Heartbeat"| Router
-    GoService -->|"1. HTTP Register and Heartbeat"| Router
+    Exporter -->|"Writes Dynamic Topology"| DynFile
+    
+    PyService -->|"Self Register and Heartbeat"| Router
+    NodeService -->|"Self Register and Heartbeat"| Router
+    GoService -->|"Self Register and Heartbeat"| Router
 
-    HealthProber -->|"2. Active Health Probes"| PyService
-    HealthProber -->|"2. Active Health Probes"| NodeService
-    HealthProber -->|"2. Active Health Probes"| GoService
-    HealthProber -->|"2. Active Health Probes"| InfraDB
+    HealthProber -->|"Active Health Checks"| PyService
+    HealthProber -->|"Active Health Checks"| NodeService
+    HealthProber -->|"Active Health Checks"| GoService
+    HealthProber -->|"Active Health Checks"| InfraDB
 
-    Traefik -->|"3. Proxies to Healthy Instances"| PyService
-    Traefik -->|"3. Proxies to Healthy Instances"| NodeService
-    Traefik -->|"3. Proxies to Healthy Instances"| GoService
+    Traefik -->|"Route Inbound Requests"| PyService
+    Traefik -->|"Route Inbound Requests"| NodeService
+    Traefik -->|"Route Inbound Requests"| GoService
 ```
 
 ---
@@ -130,59 +130,51 @@ sequenceDiagram
     participant TraefikExp as Traefik Exporter
     participant Traefik as Traefik Ingress Gateway
 
-    rect rgb(240, 248, 255)
-        note over Reg, Traefik: Phase 1 - Bootstrapping and Seed Catalog Loading
-        Reg->>Catalog: Read pre-populated seed services on startup
-        Reg->>Reg: Register infrastructure nodes
-        Reg->>SSE: Emit EventRegistered
-        SSE->>TraefikExp: Notify topology update
-        TraefikExp->>Traefik: Write discovery.yml
+    note over Reg, Traefik: Phase 1 - Bootstrapping and Seed Catalog Loading
+    Reg->>Catalog: Read pre-populated seed services on startup
+    Reg->>Reg: Register infrastructure nodes
+    Reg->>SSE: Emit EventRegistered
+    SSE->>TraefikExp: Notify topology update
+    TraefikExp->>Traefik: Write discovery.yml
+
+    note over App, Reg: Phase 2 - Dynamic Service Registration and Heartbeat
+    App->>Reg: POST /v1/register
+    Reg->>Reg: Assign UUID and Set Status to HEALTHY
+    Reg->>SSE: Emit EventRegistered
+    loop Every 5 Seconds
+        App->>Reg: POST /v1/heartbeat
+        Reg->>Reg: Update LastHeartbeat timestamp
     end
 
-    rect rgb(245, 255, 250)
-        note over App, Reg: Phase 2 - Dynamic Service Registration and Heartbeat
-        App->>Reg: POST /v1/register
-        Reg->>Reg: Assign UUID and Set Status to HEALTHY
-        Reg->>SSE: Emit EventRegistered
-        loop Every 5 Seconds
-            App->>Reg: POST /v1/heartbeat
-            Reg->>Reg: Update LastHeartbeat timestamp
+    note over Lease, Probe: Phase 3 - Background Sweeps and Health Probing
+    loop Every 3 Seconds (Lease Sweep)
+        Lease->>Reg: Check LastHeartbeat for all instances
+        alt Heartbeat Expired (> 15s)
+            Lease->>Reg: Update Status to UNHEALTHY
+            Reg->>SSE: Emit EventStatusChanged
+        else Eviction Timeout (> 60s)
+            Lease->>Reg: EvictInstance from registry
+            Reg->>SSE: Emit EventHeartbeatExpired
         end
     end
 
-    rect rgb(255, 250, 240)
-        note over Lease, Probe: Phase 3 - Background Sweeps and Health Probing
-        loop Every 3 Seconds (Lease Sweep)
-            Lease->>Reg: Check LastHeartbeat for all instances
-            alt Heartbeat Expired (> 15s)
-                Lease->>Reg: Update Status to UNHEALTHY
-                Reg->>SSE: Emit EventStatusChanged
-            else Eviction Timeout (> 60s)
-                Lease->>Reg: EvictInstance from registry
-                Reg->>SSE: Emit EventHeartbeatExpired
-            end
-        end
-
-        loop Every 5 Seconds (Health Sweep)
-            Probe->>App: Execute Probe Strategy (HTTP GET or TCP Dial)
-            alt Probe Success
-                Probe->>Reg: Confirm Status is HEALTHY
-            else Probe Failure
-                Probe->>Reg: Update Status to UNHEALTHY
-                Reg->>SSE: Emit EventStatusChanged
-            end
+    loop Every 5 Seconds (Health Sweep)
+        Probe->>App: Execute Probe Strategy (HTTP GET or TCP Dial)
+        alt Probe Success
+            Probe->>Reg: Confirm Status is HEALTHY
+        else Probe Failure
+            Probe->>Reg: Update Status to UNHEALTHY
+            Reg->>SSE: Emit EventStatusChanged
         end
     end
 
-    rect rgb(255, 240, 245)
-        note over SSE, Traefik: Phase 4 - Topology Sync and Ingress Routing
-        SSE->>TraefikExp: Consume EventStatusChanged or EventRegistered
-        TraefikExp->>TraefikExp: Filter HEALTHY and DEGRADED instances
-        TraefikExp->>TraefikExp: Generate Traefik YAML configuration
-        TraefikExp->>Traefik: Write updated discovery.yml
-        Traefik->>Traefik: Auto reload routers
-        Traefik->>App: Route inbound domain requests
-    end
+    note over SSE, Traefik: Phase 4 - Topology Sync and Ingress Routing
+    SSE->>TraefikExp: Consume EventStatusChanged or EventRegistered
+    TraefikExp->>TraefikExp: Filter HEALTHY and DEGRADED instances
+    TraefikExp->>TraefikExp: Generate Traefik YAML configuration
+    TraefikExp->>Traefik: Write updated discovery.yml
+    Traefik->>Traefik: Auto reload routers
+    Traefik->>App: Route inbound domain requests
 ```
 
 ---
@@ -370,23 +362,23 @@ The [`LeaseManager`](file:///home/btpl-lap-22/live/llm-observability-platform/pa
 
 ```mermaid
 graph TD
-    Start(["Lease Sweep Triggered by Ticker"]) --> TakeSnapshot["Snapshot = registry.Snapshot()"]
-    TakeSnapshot --> LoopInstances{"For Each Instance in Snapshot"}
+    Start["Lease Sweep Triggered by Ticker"] --> TakeSnapshot["Snapshot = registry.Snapshot()"]
+    TakeSnapshot --> LoopInstances["For Each Instance in Snapshot"]
     
-    LoopInstances -->|"Finished"| End(["Wait for Next Ticker Tick"])
-    LoopInstances -->|"Next Instance"| CalcElapsed["Calculate elapsed time since LastHeartbeat"]
+    LoopInstances -->|"Finished Sweep"| End["Wait for Next Ticker Tick"]
+    LoopInstances -->|"Process Instance"| CalcElapsed["Calculate elapsed time since LastHeartbeat"]
     
-    CalcElapsed --> CheckEviction{"Elapsed > Eviction TTL?"}
-    CheckEviction -->|"Yes (Greater than 60s)"| Evict["EvictInstance - Set Status to DEAD and delete"]
+    CalcElapsed --> CheckEviction["Elapsed > Eviction TTL (60s)?"]
+    CheckEviction -->|"Yes"| Evict["EvictInstance - Set Status DEAD & Remove"]
     Evict --> EmitEvictEvent["Emit EventHeartbeatExpired"] --> LoopInstances
     
-    CheckEviction -->|"No"| CheckTTL{"Elapsed > Heartbeat TTL?"}
-    CheckTTL -->|"Yes (Greater than 15s)"| CheckHealthy{"Is Status HEALTHY?"}
-    CheckHealthy -->|"Yes"| MarkUnhealthy["UpdateStatus to UNHEALTHY - Heartbeat Expired"]
+    CheckEviction -->|"No"| CheckTTL["Elapsed > Heartbeat TTL (15s)?"]
+    CheckTTL -->|"Yes"| CheckHealthy["Is Status HEALTHY?"]
+    CheckHealthy -->|"Yes"| MarkUnhealthy["UpdateStatus to UNHEALTHY"]
     MarkUnhealthy --> EmitStatusEvent["Emit EventStatusChanged"] --> LoopInstances
-    CheckHealthy -->|"No (Already Unhealthy)"| LoopInstances
+    CheckHealthy -->|"No"| LoopInstances
     
-    CheckTTL -->|"No (Less than 15s)"| LoopInstances
+    CheckTTL -->|"No"| LoopInstances
 ```
 
 ---
@@ -405,20 +397,20 @@ stateDiagram-v2
         NormalOperation --> FailureRecord : Request Fails
     }
 
-    CLOSED --> OPEN : consecutiveFails >= Threshold
+    CLOSED --> OPEN : Failure Threshold Exceeded
 
     state OPEN {
-        [*] --> RejectRequests : Block requests
+        [*] --> RejectRequests : Block Requests
     }
 
-    OPEN --> HALF_OPEN : CooldownDuration Elapsed
+    OPEN --> HALF_OPEN : Cooldown Elapsed
 
     state HALF_OPEN {
-        [*] --> ProbeTrial : Allow single trial call
+        [*] --> ProbeTrial : Limited Trial Request
     }
 
-    HALF_OPEN --> CLOSED : Trial call succeeds
-    HALF_OPEN --> OPEN : Trial call fails
+    HALF_OPEN --> CLOSED : Trial Request Succeeds
+    HALF_OPEN --> OPEN : Trial Request Fails
 ```
 
 ---
@@ -471,16 +463,16 @@ To ensure maximum extensibility without modifying core code, the module implemen
 
 ```mermaid
 graph LR
-    subgraph StrategyMaps["Data-Driven Strategy and Factory Registry Maps"]
-        PStrategies["Probe Strategies Map - Key: http or tcp"]
-        LBFactories["LB Factories Map - Key: Algorithm string"]
-        StatusNames["Status Lookup Map - Key: HealthStatus enum"]
-        EventNames["Event Lookup Map - Key: EventType enum"]
+    subgraph StrategyMaps["Data-Driven Strategy and Factory Maps"]
+        PStrategies["Probe Strategies Map"]
+        LBFactories["LB Factories Map"]
+        StatusNames["Status Lookup Map"]
+        EventNames["Event Lookup Map"]
     end
 
     subgraph ExecutionDrivers["Execution Drivers"]
-        ConfigJSON["config.json - TTLs, Intervals, Thresholds"]
-        SeedJSON["services.json - Initial Catalog Config"]
+        ConfigJSON["config.json Config File"]
+        SeedJSON["services.json Seed Catalog"]
     end
 
     PStrategies --> HealthProberEngine["Health Prober Engine"]
