@@ -49,12 +49,72 @@ After evaluating off-the-shelf service discovery platforms, the architecture com
 └────────────────────────┴──────────────────────┴──────────────────────┴──────────────────────┘
 ```
 
+
 #### Key Business & Strategic Drivers:
 1. **MTTR Reduction (Mean Time To Resolution)**: Automated health sweeps (3s sweep interval) and eviction routines reduce node failover times from **~45 minutes of operator triage to <3 seconds of automated re-routing**.
 2. **Durable Flapping Protection**: Consecutive failure thresholds (3 fails $\rightarrow$ `UNHEALTHY`) and consecutive success thresholds (2 passes $\rightarrow$ `HEALTHY`) prevent transient network glitches from cycling healthy nodes.
 3. **OpenTelemetry Observability & Tracing**: All HTTP REST endpoints, health probe runs, registry mutations, and Traefik dynamic file exports generate W3C `traceparent` headers and OpenTelemetry trace spans.
 4. **Go Worker Pool Concurrency**: Probe execution uses a fixed worker pool with job/result channel queues (`chan probeJob`, `chan probeResult`), preventing thread exhaustion under enterprise load.
 5. **Data-Driven Route & Probe Pipelines**: Handlers and probe execution strategies are registered in declarative data tables (`RouteSpec`, `probeStrategies`), separating business data from control logic.
+
+---
+
+### 1.3 Business & Architectural Decision Tree
+
+```
+LLM Observability Platform — Business & Architectural Decision Tree
+├── 1. Business Mandate & Strategic Value Drivers
+│   ├── Target Availability: 99.99% Uptime SLA (MTTR < 3s automated failover)
+│   ├── Resource Footprint: ~15MB RAM sidecar (vs Consul ~250MB+)
+│   ├── Multi-Environment Deployment: Docker Compose, Edge Nodes, & Kubernetes
+│   └── Zero Configuration Drift: Automatic registration & dynamic Traefik ingress
+│
+├── 2. Core Service Registry & State Engine (service-discovery)
+│   ├── [Data-Driven Models] models/models.go
+│   │   ├── Domain Entities: ServiceInstance, HealthCheckSpec, HealthStatus
+│   │   ├── Event Types: EventRegistered, EventDeregistered, EventStatusChanged
+│   │   └── Config Defaults: InstanceDefaults, HealthProberConfig, LeaseManagerConfig
+│   │
+│   ├── [In-Memory State Engine] registry/registry.go
+│   │   ├── Mutex Concurrency Guard: sync.RWMutex + findInstanceLocked helper
+│   │   ├── Non-Blocking Event Bus: emitAsync worker dispatcher
+│   │   └── Topology Snapshots: Snapshot(), GetHealthy(), GetAllServices()
+│   │
+│   ├── [Heartbeat Sweep Daemon] registry/lease_manager.go
+│   │   ├── Ticker Sweep: 3s interval snapshot check
+│   │   ├── Heartbeat Expired: > 15s -> UNHEALTHY status
+│   │   └── Eviction TTL: > 60s -> DEAD status & auto-removal
+│   │
+│   └── [Durable Active Health Prober] registry/health_prober.go
+│       ├── Concurrency Pipeline: Worker pool fan-out/fan-in (chan probeJob/probeResult)
+│       ├── Extensible Strategies: HTTP GET, TCP Dial, Exec Command
+│       ├── Flapping Protection: 3 consecutive fails -> UNHEALTHY; 2 passes -> HEALTHY
+│       └── OpenTelemetry Spans: traceparent propagation & duration tracking
+│
+├── 3. Gateway Ingress Routing & Dynamic Sync
+│   ├── [Traefik Topology Exporter] traefik/exporter.go
+│   │   ├── Event Consumer: Subscribes to SSE topology change events
+│   │   ├── Dynamic Config Generator: Writes discovery.yml with HEALTHY nodes
+│   │   └── Ingress Auto-Reload: Traefik watch: true reloads routers
+│   │
+│   └── [Data-Driven REST & SSE Gateway] server/router.go
+│       ├── RouteSpec Table: /v1/register, /v1/heartbeat, /v1/resolve, /v1/watch
+│       ├── OpenTelemetry Middleware: tracing/middleware.go
+│       └── Generic Payload Binding: bindJSON[T] helper
+│
+└── 4. Client Load Balancing & Resilience
+    ├── [Algorithm Strategy Map] loadbalancer/balancer.go
+    │   ├── Round Robin: atomic.Uint64 counter
+    │   ├── Weighted Round Robin: currentWeights adjustment
+    │   ├── Least Connections: sync.Map inflight tracking
+    │   ├── Power of Two Choices: P2C random pair selection
+    │   └── Consistent Hashing: 150 virtual nodes FNV-1a hash ring
+    │
+    └── [Circuit Breakers] loadbalancer/circuit_breaker.go
+        ├── CLOSED: Normal request flow
+        ├── OPEN: Consecutive fails >= 5 -> Block requests (fast fail)
+        └── HALF_OPEN: 30s Cooldown -> Single trial call for auto-recovery
+```
 
 ---
 
