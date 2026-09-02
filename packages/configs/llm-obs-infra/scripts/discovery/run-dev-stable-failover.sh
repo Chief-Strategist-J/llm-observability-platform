@@ -20,7 +20,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INFRA_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 REGISTRY_URL="http://localhost:31426"
-GATEWAY_URL="http://localhost:31410"
 
 log_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -62,13 +61,14 @@ get_compose_cmd() {
 
 start_stack() {
     check_prereqs
-    log_info "Starting Service Discovery & Traefik Infrastructure Stack in Docker..."
-    
+    log_info "Ensuring 'llmobs-network' Docker network exists..."
+    docker network create llmobs-network 2>/dev/null || true
+
+    log_info "Starting Service Discovery Registry container in Docker..."
     cd "${INFRA_ROOT}"
     COMPOSE_CMD=$(get_compose_cmd)
     
-    # 1. Start core service discovery registry and Traefik
-    ${COMPOSE_CMD} up -d --build
+    ${COMPOSE_CMD} up -d --build llmobs-service-registry
     
     log_info "Waiting for Service Registry to become healthy on port 31426..."
     local retries=15
@@ -82,12 +82,12 @@ start_stack() {
     done
 
     if [ $retries -eq 0 ]; then
-        log_warn "Service Registry health check timed out. Checking container logs..."
-        ${COMPOSE_CMD} logs --tail=20
+        log_warn "Service Registry health check timed out. Displaying container logs:"
+        ${COMPOSE_CMD} logs --tail=20 llmobs-service-registry
         exit 1
     fi
 
-    log_success "Environment Started Successfully!"
+    log_success "Service Discovery container started successfully!"
     show_status
 }
 
@@ -95,11 +95,47 @@ show_status() {
     log_info "Fetching Active Services & Devices from Registry (${REGISTRY_URL}/v1/services)..."
     echo -e "${CYAN}----------------------------------------------------------------------${NC}"
     if curl -s "${REGISTRY_URL}/v1/services" | grep -q '"success"'; then
-        curl -s "${REGISTRY_URL}/v1/services"
+        curl -s "${REGISTRY_URL}/v1/services" | tr -d '\r'
     else
-        log_warn "Unable to fetch services or no services currently registered."
+        log_warn "Unable to fetch services or registry is offline."
     fi
     echo -e "\n${CYAN}----------------------------------------------------------------------${NC}"
+}
+
+search_service() {
+    local target_svc="${1:-}"
+    if [ -z "$target_svc" ]; then
+        log_error "Please specify a service name to search (e.g. $0 search clickhouse)"
+        exit 1
+    fi
+
+    log_info "Searching and resolving endpoint for service '${target_svc}'..."
+    echo -e "${CYAN}----------------------------------------------------------------------${NC}"
+    curl -s "${REGISTRY_URL}/v1/resolve?service=${target_svc}"
+    echo -e "\n${CYAN}----------------------------------------------------------------------${NC}"
+}
+
+register_custom_service() {
+    local name="${1:-custom-service}"
+    local port="${2:-8080}"
+    local host="${3:-localhost}"
+
+    log_info "Registering Custom Service '${name}' on ${host}:${port}..."
+    curl -s -X POST "${REGISTRY_URL}/v1/register" \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"name\": \"${name}\",
+        \"host\": \"${host}\",
+        \"port\": ${port},
+        \"protocol\": \"http\",
+        \"healthCheck\": {
+          \"protocol\": \"http\",
+          \"path\": \"/health\"
+        }
+      }"
+    echo ""
+    log_success "Registered custom service '${name}'!"
+    search_service "${name}"
 }
 
 register_demo_devices() {
@@ -140,17 +176,12 @@ register_demo_devices() {
     show_status
 }
 
-test_resolve() {
-    log_info "Resolving Active Target Endpoint for 'demo-analytics'..."
-    curl -s "${REGISTRY_URL}/v1/resolve?service=demo-analytics" | grep -o '"port":[0-9]*' || true
-}
-
 stop_stack() {
     log_info "Stopping Docker Environment Stack..."
     cd "${INFRA_ROOT}"
     COMPOSE_CMD=$(get_compose_cmd)
-    ${COMPOSE_CMD} down
-    log_success "Docker environment stopped."
+    ${COMPOSE_CMD} stop llmobs-service-registry
+    log_success "Service Registry container stopped."
 }
 
 usage() {
@@ -160,11 +191,12 @@ usage() {
     echo "Usage: $0 [command]"
     echo ""
     echo "Commands:"
-    echo "  start            Build and start Docker Service Registry & Gateway"
-    echo "  status           List all registered services & health states"
-    echo "  register-demo    Register demo dev (8082) & stable (8081) devices"
-    echo "  resolve          Query active target endpoint for traffic routing"
-    echo "  stop             Stop all Docker containers"
+    echo "  start                       Build & start Service Registry container in Docker"
+    echo "  status                      List all registered services & devices in memory"
+    echo "  search <name>               Search and resolve a specific service (e.g. clickhouse, redis)"
+    echo "  register-custom <name> <port> Register a custom device/service dynamically"
+    echo "  register-demo               Register demo v2-dev (8082) & v1-stable (8081) devices"
+    echo "  stop                        Stop Service Registry Docker container"
     echo ""
 }
 
@@ -175,11 +207,14 @@ case "${1:-}" in
     status)
         show_status
         ;;
+    search)
+        search_service "${2:-}"
+        ;;
+    register-custom)
+        register_custom_service "${2:-}" "${3:-8080}" "${4:-localhost}"
+        ;;
     register-demo)
         register_demo_devices
-        ;;
-    resolve)
-        test_resolve
         ;;
     stop)
         stop_stack
