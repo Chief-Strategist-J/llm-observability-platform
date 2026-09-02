@@ -8,44 +8,25 @@ import (
 
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/discovery"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/loadbalancer"
+	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/models"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/registry"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/server"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/traefik"
 )
 
-type AppConfig struct {
-	Server         server.ServerConfig              `json:"server"`
-	Registry       registry.InstanceDefaults         `json:"registry"`
-	LeaseManager   registry.LeaseManagerConfig       `json:"leaseManager"`
-	HealthProber   registry.HealthProberConfig        `json:"healthProber"`
-	CircuitBreaker loadbalancer.CircuitBreakerConfig  `json:"circuitBreaker"`
-	LoadBalancer   struct {
-		Algorithm loadbalancer.Algorithm `json:"algorithm"`
-	} `json:"loadBalancer"`
-	Traefik traefik.ExporterConfig `json:"traefik"`
-}
+type AppConfig = models.AppConfig
 
-var DefaultAppConfig = AppConfig{
-	Server:         server.DefaultServerConfig,
-	Registry:       registry.DefaultInstanceDefaults,
-	LeaseManager:   registry.DefaultLeaseManagerConfig,
-	HealthProber:   registry.DefaultHealthProberConfig,
-	CircuitBreaker: loadbalancer.DefaultCircuitBreakerConfig,
-	LoadBalancer: struct {
-		Algorithm loadbalancer.Algorithm `json:"algorithm"`
-	}{Algorithm: loadbalancer.AlgorithmRoundRobin},
-	Traefik: traefik.DefaultExporterConfig,
-}
+var DefaultAppConfig = models.DefaultAppConfig
 
 type Container struct {
-	Config         AppConfig
-	Registry       *registry.Registry
-	LeaseManager   *registry.LeaseManager
-	HealthProber   *registry.HealthProber
-	Discovery      *discovery.Discovery
-	Balancer       loadbalancer.Balancer
-	CBRegistry     *loadbalancer.CircuitBreakerRegistry
-	Server         *server.Server
+	Config          AppConfig
+	Registry        *registry.Registry
+	LeaseManager    *registry.LeaseManager
+	HealthProber    *registry.HealthProber
+	Discovery       *discovery.Discovery
+	Balancer        loadbalancer.Balancer
+	CBRegistry      *loadbalancer.CircuitBreakerRegistry
+	Server          *server.Server
 	TraefikExporter *traefik.Exporter
 }
 
@@ -85,7 +66,7 @@ func BuildContainer(config AppConfig) *Container {
 	hp := registry.NewHealthProber(reg, config.HealthProber)
 	disc := discovery.NewDiscovery(reg)
 
-	balancer, err := loadbalancer.NewBalancer(config.LoadBalancer.Algorithm)
+	balancer, err := loadbalancer.NewBalancer(loadbalancer.Algorithm(config.LoadBalancer.Algorithm))
 	if err != nil {
 		log.Printf("[di] falling back to round_robin: %v", err)
 		balancer, _ = loadbalancer.NewBalancer(loadbalancer.AlgorithmRoundRobin)
@@ -109,21 +90,6 @@ func BuildContainer(config AppConfig) *Container {
 	}
 }
 
-type SeedService struct {
-	Name        string `json:"name"`
-	Host        string `json:"host"`
-	Port        int    `json:"port"`
-	Protocol    string `json:"protocol"`
-	HealthCheck struct {
-		Protocol string `json:"protocol"`
-		Path     string `json:"path,omitempty"`
-	} `json:"healthCheck"`
-}
-
-type SeedCatalog struct {
-	Services []SeedService `json:"services"`
-}
-
 func LoadSeedCatalog(catalogPath string, reg *registry.Registry) {
 	data, err := os.ReadFile(catalogPath)
 	if err != nil {
@@ -131,7 +97,7 @@ func LoadSeedCatalog(catalogPath string, reg *registry.Registry) {
 		return
 	}
 
-	var catalog SeedCatalog
+	var catalog models.SeedCatalog
 	if err := json.Unmarshal(data, &catalog); err != nil {
 		log.Printf("[di] seed catalog parse error: %v", err)
 		return

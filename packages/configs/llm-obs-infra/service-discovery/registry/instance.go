@@ -1,131 +1,37 @@
 package registry
 
 import (
-	"fmt"
-	"time"
+	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/models"
 )
 
-type HealthStatus int
+type HealthStatus = models.HealthStatus
 
 const (
-	StatusHealthy HealthStatus = iota
-	StatusDegraded
-	StatusUnhealthy
-	StatusDead
+	StatusHealthy   = models.StatusHealthy
+	StatusDegraded  = models.StatusDegraded
+	StatusUnhealthy = models.StatusUnhealthy
+	StatusDead      = models.StatusDead
 )
 
-var healthStatusNames = map[HealthStatus]string{
-	StatusHealthy:   "HEALTHY",
-	StatusDegraded:  "DEGRADED",
-	StatusUnhealthy: "UNHEALTHY",
-	StatusDead:      "DEAD",
-}
-
-func (s HealthStatus) String() string {
-	if name, ok := healthStatusNames[s]; ok {
-		return name
-	}
-	return "UNKNOWN"
-}
-
-type HealthCheckSpec struct {
-	Protocol         string        `json:"protocol"`
-	Path             string        `json:"path,omitempty"`
-	Command          []string      `json:"command,omitempty"`
-	Interval         time.Duration `json:"interval,omitempty"`
-	Timeout          time.Duration `json:"timeout,omitempty"`
-	SuccessThreshold int           `json:"successThreshold,omitempty"`
-	FailureThreshold int           `json:"failureThreshold,omitempty"`
-}
-
-type ServiceInstance struct {
-	ID                   string            `json:"id"`
-	Name                 string            `json:"name"`
-	Host                 string            `json:"host"`
-	Port                 int               `json:"port"`
-	Protocol             string            `json:"protocol"`
-	Version              string            `json:"version,omitempty"`
-	Weight               int               `json:"weight,omitempty"`
-	Status               HealthStatus      `json:"status"`
-	HealthCheck          HealthCheckSpec   `json:"healthCheck"`
-	Metadata             map[string]string `json:"metadata,omitempty"`
-	RegisteredAt         time.Time         `json:"registeredAt"`
-	LastHeartbeat        time.Time         `json:"lastHeartbeat"`
-	LastProbeAt          time.Time         `json:"lastProbeAt,omitempty"`
-	LastProbeErr         string            `json:"lastProbeErr,omitempty"`
-	ConsecutiveFails     int               `json:"consecutiveFails"`
-	ConsecutiveSuccesses int               `json:"consecutiveSuccesses"`
-}
-
-func (si *ServiceInstance) Endpoint() string {
-	return fmt.Sprintf("%s://%s:%d", si.Protocol, si.Host, si.Port)
-}
-
-type EventType int
+type HealthCheckSpec = models.HealthCheckSpec
+type ServiceInstance = models.ServiceInstance
+type EventType = models.EventType
 
 const (
-	EventRegistered EventType = iota
-	EventDeregistered
-	EventStatusChanged
-	EventHeartbeatExpired
-	EventWeightUpdated
+	EventRegistered       = models.EventRegistered
+	EventDeregistered     = models.EventDeregistered
+	EventStatusChanged    = models.EventStatusChanged
+	EventHeartbeatExpired = models.EventHeartbeatExpired
+	EventWeightUpdated    = models.EventWeightUpdated
 )
 
-var eventTypeNames = map[EventType]string{
-	EventRegistered:       "REGISTERED",
-	EventDeregistered:     "DEREGISTERED",
-	EventStatusChanged:    "STATUS_CHANGED",
-	EventHeartbeatExpired: "HEARTBEAT_EXPIRED",
-	EventWeightUpdated:    "WEIGHT_UPDATED",
-}
+type RegistryEvent = models.RegistryEvent
+type InstanceDefaults = models.InstanceDefaults
+type LeaseManagerConfig = models.LeaseManagerConfig
+type HealthProberConfig = models.HealthProberConfig
 
-func (e EventType) String() string {
-	if name, ok := eventTypeNames[e]; ok {
-		return name
-	}
-	return "UNKNOWN"
-}
-
-type RegistryEvent struct {
-	Type     EventType        `json:"type"`
-	Instance *ServiceInstance `json:"instance"`
-	Time     time.Time        `json:"time"`
-}
-
-type InstanceDefaults struct {
-	Weight              int           `json:"weight"`
-	HealthCheckInterval time.Duration `json:"healthCheckInterval"`
-	HealthCheckTimeout  time.Duration `json:"healthCheckTimeout"`
-}
-
-var DefaultInstanceDefaults = InstanceDefaults{
-	Weight:              100,
-	HealthCheckInterval: 5 * time.Second,
-	HealthCheckTimeout:  2 * time.Second,
-}
-
-type LeaseManagerConfig struct {
-	SweepInterval time.Duration `json:"sweepInterval"`
-	HeartbeatTTL  time.Duration `json:"heartbeatTTL"`
-	EvictionTTL   time.Duration `json:"evictionTTL"`
-}
-
-var DefaultLeaseManagerConfig = LeaseManagerConfig{
-	SweepInterval: 3 * time.Second,
-	HeartbeatTTL:  15 * time.Second,
-	EvictionTTL:   60 * time.Second,
-}
-
-type HealthProberConfig struct {
-	ProbeInterval    time.Duration `json:"probeInterval"`
-	MaxConcurrent    int           `json:"maxConcurrent"`
-	DefaultSuccessTh int           `json:"defaultSuccessThreshold"`
-	DefaultFailureTh int           `json:"defaultFailureThreshold"`
-}
-
-var DefaultHealthProberConfig = HealthProberConfig{
-	ProbeInterval:    5 * time.Second,
-	MaxConcurrent:    10,
-	DefaultSuccessTh: 2,
-	DefaultFailureTh: 3,
-}
+var (
+	DefaultInstanceDefaults   = models.DefaultInstanceDefaults
+	DefaultLeaseManagerConfig = models.DefaultLeaseManagerConfig
+	DefaultHealthProberConfig = models.DefaultHealthProberConfig
+)

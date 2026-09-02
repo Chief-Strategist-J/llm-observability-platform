@@ -3,40 +3,21 @@ package loadbalancer
 import (
 	"sync"
 	"time"
+
+	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/models"
 )
 
-type CircuitState int
+type CircuitState = models.CircuitState
 
 const (
-	CircuitClosed CircuitState = iota
-	CircuitOpen
-	CircuitHalfOpen
+	CircuitClosed   = models.CircuitClosed
+	CircuitOpen     = models.CircuitOpen
+	CircuitHalfOpen = models.CircuitHalfOpen
 )
 
-var circuitStateNames = map[CircuitState]string{
-	CircuitClosed:   "CLOSED",
-	CircuitOpen:     "OPEN",
-	CircuitHalfOpen: "HALF_OPEN",
-}
+type CircuitBreakerConfig = models.CircuitBreakerConfig
 
-func (s CircuitState) String() string {
-	if name, ok := circuitStateNames[s]; ok {
-		return name
-	}
-	return "UNKNOWN"
-}
-
-type CircuitBreakerConfig struct {
-	FailureThreshold int           `json:"failureThreshold"`
-	CooldownDuration time.Duration `json:"cooldownDuration"`
-	HalfOpenMaxCalls int           `json:"halfOpenMaxCalls"`
-}
-
-var DefaultCircuitBreakerConfig = CircuitBreakerConfig{
-	FailureThreshold: 5,
-	CooldownDuration: 30 * time.Second,
-	HalfOpenMaxCalls: 1,
-}
+var DefaultCircuitBreakerConfig = models.DefaultCircuitBreakerConfig
 
 type CircuitBreaker struct {
 	mu               sync.Mutex

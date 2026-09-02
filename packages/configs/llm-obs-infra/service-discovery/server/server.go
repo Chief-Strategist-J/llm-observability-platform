@@ -4,22 +4,13 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"time"
+
+	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/models"
 )
 
-type ServerConfig struct {
-	Port            string        `json:"port"`
-	ReadTimeout     time.Duration `json:"readTimeout"`
-	WriteTimeout    time.Duration `json:"writeTimeout"`
-	ShutdownTimeout time.Duration `json:"shutdownTimeout"`
-}
+type ServerConfig = models.ServerConfig
 
-var DefaultServerConfig = ServerConfig{
-	Port:            "31426",
-	ReadTimeout:     10 * time.Second,
-	WriteTimeout:    30 * time.Second,
-	ShutdownTimeout: 5 * time.Second,
-}
+var DefaultServerConfig = models.DefaultServerConfig
 
 type Server struct {
 	httpServer *http.Server
@@ -27,10 +18,14 @@ type Server struct {
 }
 
 func NewServer(config ServerConfig, handler http.Handler) *Server {
+	addr := config.Addr
+	if addr == "" {
+		addr = ":31426"
+	}
 	return &Server{
 		config: config,
 		httpServer: &http.Server{
-			Addr:         ":" + config.Port,
+			Addr:         addr,
 			Handler:      handler,
 			ReadTimeout:  config.ReadTimeout,
 			WriteTimeout: config.WriteTimeout,
@@ -39,7 +34,7 @@ func NewServer(config ServerConfig, handler http.Handler) *Server {
 }
 
 func (s *Server) Start() error {
-	log.Printf("[server] listening on :%s", s.config.Port)
+	log.Printf("[server] listening on %s", s.httpServer.Addr)
 	return s.httpServer.ListenAndServe()
 }
 
