@@ -4,17 +4,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/discovery"
+	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/models"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/registry"
 	"github.com/llm-observability/platform/packages/configs/llm-obs-infra/service-discovery/tracing"
 )
 
 type Router struct {
-	mux       *http.ServeMux
-	registry  *registry.Registry
-	discovery *discovery.Discovery
+	mux              *http.ServeMux
+	registry         *registry.Registry
+	discovery        *discovery.Discovery
+	idempotencyStore map[string][]byte
+	idemMu           sync.RWMutex
 }
 
 type RouteSpec struct {
@@ -26,9 +30,10 @@ type RouteSpec struct {
 
 func NewRouter(reg *registry.Registry, disc *discovery.Discovery) *Router {
 	r := &Router{
-		mux:       http.NewServeMux(),
-		registry:  reg,
-		discovery: disc,
+		mux:              http.NewServeMux(),
+		registry:         reg,
+		discovery:        disc,
+		idempotencyStore: make(map[string][]byte),
 	}
 	r.registerDataDrivenRoutes()
 	return r
@@ -44,10 +49,89 @@ func bindJSON[T any](req *http.Request) (T, error) {
 	return target, err
 }
 
-func writeJSON(w http.ResponseWriter, status int, data interface{}) {
+func (r *Router) checkIdempotency(w http.ResponseWriter, req *http.Request) bool {
+	if req.Method != http.MethodPost && req.Method != http.MethodPut && req.Method != http.MethodPatch && req.Method != http.MethodDelete {
+		return false
+	}
+	reqCtx := tracing.GetRequestContext(req.Context())
+	if reqCtx.IdempotencyKey == "" {
+		return false
+	}
+
+	r.idemMu.RLock()
+	cached, exists := r.idempotencyStore[reqCtx.IdempotencyKey]
+	r.idemMu.RUnlock()
+
+	if exists {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("x-cache-hit", "true")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(cached)
+		return true
+	}
+	return false
+}
+
+func (r *Router) saveIdempotency(key string, payload []byte) {
+	if key == "" {
+		return
+	}
+	r.idemMu.Lock()
+	defer r.idemMu.Unlock()
+	r.idempotencyStore[key] = payload
+}
+
+func writeSuccess[T any](r *Router, w http.ResponseWriter, req *http.Request, status int, data T) {
+	reqCtx := tracing.GetRequestContext(req.Context())
+	execTime := time.Since(reqCtx.StartTime).Milliseconds()
+
+	envelope := models.ApiResponse[T]{
+		Success:    true,
+		StatusCode: status,
+		Data:       data,
+		Meta: models.ApiMeta{
+			RequestId:       reqCtx.RequestId,
+			CorrelationId:   reqCtx.CorrelationId,
+			CausationId:     reqCtx.CausationId,
+			Timestamp:       time.Now().UTC().Format(time.RFC3339Nano),
+			ExecutionTimeMs: execTime,
+		},
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(data)
+	payload, _ := json.Marshal(envelope)
+	_, _ = w.Write(payload)
+
+	if req.Method == http.MethodPost || req.Method == http.MethodPut || req.Method == http.MethodPatch || req.Method == http.MethodDelete {
+		r.saveIdempotency(reqCtx.IdempotencyKey, payload)
+	}
+}
+
+func writeError(w http.ResponseWriter, req *http.Request, status int, code string, message string, details []models.ApiErrorDetail) {
+	reqCtx := tracing.GetRequestContext(req.Context())
+	execTime := time.Since(reqCtx.StartTime).Milliseconds()
+
+	envelope := models.ApiErrorResponse{
+		Success:    false,
+		StatusCode: status,
+		Error: models.ApiErrorInfo{
+			Code:    code,
+			Message: message,
+			Details: details,
+		},
+		Meta: models.ApiMeta{
+			RequestId:       reqCtx.RequestId,
+			CorrelationId:   reqCtx.CorrelationId,
+			CausationId:     reqCtx.CausationId,
+			Timestamp:       time.Now().UTC().Format(time.RFC3339Nano),
+			ExecutionTimeMs: execTime,
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(envelope)
 }
 
 func (r *Router) registerDataDrivenRoutes() {
@@ -66,7 +150,10 @@ func (r *Router) registerDataDrivenRoutes() {
 		h := spec.Handler
 		r.mux.HandleFunc(spec.Path, func(w http.ResponseWriter, req *http.Request) {
 			if req.Method != m {
-				writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+				writeError(w, req, http.StatusMethodNotAllowed, models.ErrCodeBadRequest, "Method not allowed", nil)
+				return
+			}
+			if r.checkIdempotency(w, req) {
 				return
 			}
 			h(w, req)
@@ -102,7 +189,26 @@ type deregisterRequest struct {
 func (r *Router) handleRegister(w http.ResponseWriter, req *http.Request) {
 	body, err := bindJSON[registerRequest](req)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		writeError(w, req, http.StatusBadRequest, models.ErrCodeBadRequest, "Malformed JSON request body: "+err.Error(), nil)
+		return
+	}
+
+	var details []models.ApiErrorDetail
+	if body.Name == "" {
+		details = append(details, models.ApiErrorDetail{Field: "name", Issue: "Field 'name' is required and cannot be empty."})
+	}
+	if body.Host == "" {
+		details = append(details, models.ApiErrorDetail{Field: "host", Issue: "Field 'host' is required and cannot be empty."})
+	}
+	if body.Port <= 0 || body.Port > 65535 {
+		details = append(details, models.ApiErrorDetail{Field: "port", Issue: "Field 'port' must be a valid network port between 1 and 65535."})
+	}
+	if body.Protocol == "" {
+		details = append(details, models.ApiErrorDetail{Field: "protocol", Issue: "Field 'protocol' is required (e.g. 'http', 'tcp')."})
+	}
+
+	if len(details) > 0 {
+		writeError(w, req, http.StatusBadRequest, models.ErrCodeValidationFailed, "One or more payload validation checks failed.", details)
 		return
 	}
 
@@ -122,62 +228,94 @@ func (r *Router) handleRegister(w http.ResponseWriter, req *http.Request) {
 	}
 
 	registered := r.registry.Register(instance)
-	writeJSON(w, http.StatusCreated, registered)
+	writeSuccess(r, w, req, http.StatusCreated, registered)
 }
 
 func (r *Router) handleHeartbeat(w http.ResponseWriter, req *http.Request) {
 	body, err := bindJSON[heartbeatRequest](req)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		writeError(w, req, http.StatusBadRequest, models.ErrCodeBadRequest, "Malformed JSON request body: "+err.Error(), nil)
+		return
+	}
+
+	var details []models.ApiErrorDetail
+	if body.Name == "" {
+		details = append(details, models.ApiErrorDetail{Field: "name", Issue: "Field 'name' is required."})
+	}
+	if body.InstanceID == "" {
+		details = append(details, models.ApiErrorDetail{Field: "instanceId", Issue: "Field 'instanceId' is required."})
+	}
+	if len(details) > 0 {
+		writeError(w, req, http.StatusBadRequest, models.ErrCodeValidationFailed, "One or more payload validation checks failed.", details)
 		return
 	}
 
 	if err := r.registry.Heartbeat(body.Name, body.InstanceID); err != nil {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		writeError(w, req, http.StatusNotFound, models.ErrCodeNotFound, fmt.Sprintf("Service instance '%s/%s' not found or heartbeat expired.", body.Name, body.InstanceID), nil)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	writeSuccess(r, w, req, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (r *Router) handleDeregister(w http.ResponseWriter, req *http.Request) {
 	body, err := bindJSON[deregisterRequest](req)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		writeError(w, req, http.StatusBadRequest, models.ErrCodeBadRequest, "Malformed JSON request body: "+err.Error(), nil)
+		return
+	}
+
+	var details []models.ApiErrorDetail
+	if body.Name == "" {
+		details = append(details, models.ApiErrorDetail{Field: "name", Issue: "Field 'name' is required."})
+	}
+	if body.InstanceID == "" {
+		details = append(details, models.ApiErrorDetail{Field: "instanceId", Issue: "Field 'instanceId' is required."})
+	}
+	if len(details) > 0 {
+		writeError(w, req, http.StatusBadRequest, models.ErrCodeValidationFailed, "One or more payload validation checks failed.", details)
 		return
 	}
 
 	if err := r.registry.Deregister(body.Name, body.InstanceID); err != nil {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		writeError(w, req, http.StatusNotFound, models.ErrCodeNotFound, fmt.Sprintf("Service instance '%s/%s' not found.", body.Name, body.InstanceID), nil)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]string{"status": "deregistered"})
+	writeSuccess(r, w, req, http.StatusOK, map[string]string{"status": "deregistered"})
+}
+
+type resolveResponseData struct {
+	Service   string                    `json:"service"`
+	Endpoint  string                    `json:"endpoint"`
+	Instances []*registry.ServiceInstance `json:"instances"`
 }
 
 func (r *Router) handleResolve(w http.ResponseWriter, req *http.Request) {
 	serviceName := req.URL.Query().Get("service")
 	if serviceName == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing 'service' query parameter"})
+		writeError(w, req, http.StatusBadRequest, models.ErrCodeBadRequest, "Missing mandatory 'service' query parameter.", []models.ApiErrorDetail{
+			{Field: "service", Issue: "Query parameter 'service' must be specified (e.g. ?service=ai-service)."},
+		})
 		return
 	}
 
 	instances, err := r.discovery.ResolveAll(serviceName)
 	if err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": err.Error()})
+		writeError(w, req, http.StatusServiceUnavailable, models.ErrCodeServiceUnavailable, err.Error(), nil)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"service":   serviceName,
-		"instances": instances,
-		"endpoint":  instances[0].Endpoint(),
+	writeSuccess(r, w, req, http.StatusOK, resolveResponseData{
+		Service:   serviceName,
+		Endpoint:  instances[0].Endpoint(),
+		Instances: instances,
 	})
 }
 
-func (r *Router) handleListServices(w http.ResponseWriter, _ *http.Request) {
+func (r *Router) handleListServices(w http.ResponseWriter, req *http.Request) {
 	services := r.discovery.ListServices()
-	writeJSON(w, http.StatusOK, services)
+	writeSuccess(r, w, req, http.StatusOK, services)
 }
 
 func (r *Router) handleWatch(w http.ResponseWriter, req *http.Request) {
@@ -185,7 +323,7 @@ func (r *Router) handleWatch(w http.ResponseWriter, req *http.Request) {
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "streaming not supported"})
+		writeError(w, req, http.StatusInternalServerError, models.ErrCodeInternalServerError, "Server Sent Events (SSE) streaming not supported.", nil)
 		return
 	}
 
@@ -218,9 +356,9 @@ func (r *Router) handleWatch(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (r *Router) handleHealth(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+func (r *Router) handleHealth(w http.ResponseWriter, req *http.Request) {
+	writeSuccess(r, w, req, http.StatusOK, map[string]interface{}{
 		"status": "healthy",
-		"time":   time.Now().UTC(),
+		"time":   time.Now().UTC().Format(time.RFC3339Nano),
 	})
 }

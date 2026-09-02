@@ -229,3 +229,52 @@ type SeedService struct {
 type SeedCatalog struct {
 	Services []SeedService `json:"services"`
 }
+
+// Standardized API Envelopes per policies/rules/folderStructure/api-request-response-structure.md
+
+type ApiMeta struct {
+	RequestId       string `json:"requestId"`
+	CorrelationId   string `json:"correlationId"`
+	CausationId     string `json:"causationId"`
+	Timestamp       string `json:"timestamp"`
+	ExecutionTimeMs int64  `json:"executionTimeMs"`
+}
+
+type ApiResponse[T any] struct {
+	Success    bool    `json:"success"`
+	StatusCode int     `json:"statusCode"`
+	Data       T       `json:"data"`
+	Meta       ApiMeta `json:"meta"`
+}
+
+type ApiErrorDetail struct {
+	Field string `json:"field,omitempty"`
+	Issue string `json:"issue"`
+}
+
+type ApiErrorInfo struct {
+	Code    string           `json:"code"`
+	Message string           `json:"message"`
+	Details []ApiErrorDetail `json:"details,omitempty"`
+}
+
+type ApiErrorResponse struct {
+	Success    bool         `json:"success"`
+	StatusCode int          `json:"statusCode"`
+	Error      ApiErrorInfo `json:"error"`
+	Meta       ApiMeta      `json:"meta"`
+}
+
+// Canonical Error Code Constants
+const (
+	ErrCodeBadRequest         = "BAD_REQUEST"
+	ErrCodeValidationFailed   = "VALIDATION_FAILED"
+	ErrCodeUnauthenticated   = "UNAUTHENTICATED"
+	ErrCodeForbidden          = "FORBIDDEN"
+	ErrCodeNotFound           = "NOT_FOUND"
+	ErrCodeConflict           = "CONFLICT"
+	ErrCodeUnprocessable      = "UNPROCESSABLE_ENTITY"
+	ErrCodeTooManyRequests    = "TOO_MANY_REQUESTS"
+	ErrCodeInternalServerError = "INTERNAL_SERVER_ERROR"
+	ErrCodeServiceUnavailable = "SERVICE_UNAVAILABLE"
+)

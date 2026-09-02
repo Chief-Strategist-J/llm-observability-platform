@@ -418,25 +418,57 @@ curl -X POST http://llmobs-service-registry:31426/v1/register \
 **Success Response (`201 Created`)**:
 ```json
 {
-  "id": "e9d2a7f1b8c34d5a",
-  "name": "forecast-engine",
-  "host": "forecast-engine-container",
-  "port": 8000,
-  "protocol": "http",
-  "version": "v1.0.0",
-  "weight": 100,
-  "status": 0,
-  "healthCheck": {
+  "success": true,
+  "statusCode": 201,
+  "data": {
+    "id": "e9d2a7f1b8c34d5a",
+    "name": "forecast-engine",
+    "host": "forecast-engine-container",
+    "port": 8000,
     "protocol": "http",
-    "path": "/health",
-    "interval": 5000000000,
-    "timeout": 2000000000
+    "version": "v1.0.0",
+    "weight": 100,
+    "status": 0,
+    "healthCheck": {
+      "protocol": "http",
+      "path": "/health"
+    },
+    "metadata": { "environment": "production", "region": "us-east-1" },
+    "registeredAt": "2026-09-02T12:00:00Z",
+    "lastHeartbeat": "2026-09-02T12:00:00Z"
   },
-  "metadata": { "environment": "production", "region": "us-east-1" },
-  "registeredAt": "2026-09-02T12:00:00Z",
-  "lastHeartbeat": "2026-09-02T12:00:00Z",
-  "consecutiveFails": 0,
-  "consecutiveSuccesses": 0
+  "meta": {
+    "requestId": "req-1700000000000-a1b2c3",
+    "correlationId": "corr-1700000000000-x9y8z7",
+    "causationId": "req-1700000000000-a1b2c3",
+    "timestamp": "2026-09-02T12:00:00.000Z",
+    "executionTimeMs": 8
+  }
+}
+```
+
+**Validation Error Response (`400 Bad Request`)**:
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "One or more payload validation checks failed.",
+    "details": [
+      {
+        "field": "host",
+        "issue": "Field 'host' is required and cannot be empty."
+      }
+    ]
+  },
+  "meta": {
+    "requestId": "req-1700000000000-a1b2c3",
+    "correlationId": "corr-1700000000000-x9y8z7",
+    "causationId": "req-1700000000000-a1b2c3",
+    "timestamp": "2026-09-02T12:00:00.000Z",
+    "executionTimeMs": 2
+  }
 }
 ```
 
@@ -445,6 +477,7 @@ Every 5 seconds, the service pings the registry using the assigned instance ID:
 ```bash
 curl -X POST http://llmobs-service-registry:31426/v1/heartbeat \
   -H "Content-Type: application/json" \
+  -H "x-idempotency-key: idem-hb-1001" \
   -d '{
     "name": "forecast-engine",
     "instanceId": "e9d2a7f1b8c34d5a"
@@ -454,7 +487,18 @@ curl -X POST http://llmobs-service-registry:31426/v1/heartbeat \
 **Success Response (`200 OK`)**:
 ```json
 {
-  "status": "ok"
+  "success": true,
+  "statusCode": 200,
+  "data": {
+    "status": "ok"
+  },
+  "meta": {
+    "requestId": "req-1700000000000-hb1",
+    "correlationId": "req-1700000000000-hb1",
+    "causationId": "req-1700000000000-hb1",
+    "timestamp": "2026-09-02T12:00:05.000Z",
+    "executionTimeMs": 1
+  }
 }
 ```
 
@@ -510,27 +554,50 @@ curl -X GET "http://llmobs-service-registry:31426/v1/resolve?service=forecast-en
 **Success Response (`200 OK`)**:
 ```json
 {
-  "service": "forecast-engine",
-  "endpoint": "http://forecast-engine-container:8000",
-  "instances": [
-    {
-      "id": "e9d2a7f1b8c34d5a",
-      "name": "forecast-engine",
-      "host": "forecast-engine-container",
-      "port": 8000,
-      "protocol": "http",
-      "version": "v1.0.0",
-      "weight": 100,
-      "status": 0
-    }
-  ]
+  "success": true,
+  "statusCode": 200,
+  "data": {
+    "service": "forecast-engine",
+    "endpoint": "http://forecast-engine-container:8000",
+    "instances": [
+      {
+        "id": "e9d2a7f1b8c34d5a",
+        "name": "forecast-engine",
+        "host": "forecast-engine-container",
+        "port": 8000,
+        "protocol": "http",
+        "version": "v1.0.0",
+        "weight": 100,
+        "status": 0
+      }
+    ]
+  },
+  "meta": {
+    "requestId": "req-1700000000000-res1",
+    "correlationId": "req-1700000000000-res1",
+    "causationId": "req-1700000000000-res1",
+    "timestamp": "2026-09-02T12:00:10.000Z",
+    "executionTimeMs": 3
+  }
 }
 ```
 
 **Error Response when nodes are down (`503 Service Unavailable`)**:
 ```json
 {
-  "error": "all 1 instances of \"forecast-engine\" are unavailable:\n  forecast-engine/e9d2a7f1b8c34d5a (forecast-engine-container:8000) — heartbeat expired"
+  "success": false,
+  "statusCode": 503,
+  "error": {
+    "code": "SERVICE_UNAVAILABLE",
+    "message": "all 1 instances of \"forecast-engine\" are unavailable:\n  forecast-engine/e9d2a7f1b8c34d5a (forecast-engine-container:8000) — heartbeat expired"
+  },
+  "meta": {
+    "requestId": "req-1700000000000-res2",
+    "correlationId": "req-1700000000000-res2",
+    "causationId": "req-1700000000000-res2",
+    "timestamp": "2026-09-02T12:00:15.000Z",
+    "executionTimeMs": 2
+  }
 }
 ```
 
