@@ -720,3 +720,37 @@ go test -v ./packages/configs/llm-obs-infra/service-discovery/tests/...
 - [`server/router.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/server/router.go) — Data-driven route table & generic JSON payload decoder.
 - [`traefik/exporter.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/traefik/exporter.go) — Traefik dynamic provider exporter with trace spans.
 - [`tests/health_prober_test.go`](file:///home/btpl-lap-22/live/llm-observability-platform/packages/configs/llm-obs-infra/service-discovery/tests/health_prober_test.go) — Health prober test suite.
+
+---
+
+## 7. Zero-Downtime Migration Strategy & Rollback Lifecycle
+
+To transition existing microservices (`latency-engine`, `event-cost`, `web-app`, `auth`, `ai-service`) and infrastructure targets (ClickHouse, Kafka, Redis, Traefik) from legacy static environment variable routing (`AI_SERVICE_HOST=ai-service`) to dynamic service discovery without causing production downtime, the platform executes the following 4-phase migration strategy:
+
+```log
+└── Service Discovery Migration Pipeline
+    ├── Phase 1: Static Co-existence & Seed Catalog Bootstrapping
+    │   ├── Deploy `llmobs-service-registry` container sidecar on port 31426
+    │   ├── Seed static infrastructure targets (ClickHouse, Redis, Kafka, Traefik) in `services.json`
+    │   └── Maintain legacy static env vars (`AI_SERVICE_HOST=ai-service`) as primary defaults in microservices
+    │
+    ├── Phase 2: Dual-Resolution & Background Registration
+    │   ├── Microservices start sending `POST /v1/register` & background `POST /v1/heartbeat` pings
+    │   └── Client discovery adapters implement fallback resolution:
+    │       ├── 1. Query registry `GET /v1/resolve?service=ai-service`
+    │       └── 2. On timeout (>50ms) or `503 Service Unavailable`, fall back to static env var (`AI_SERVICE_HOST`)
+    │
+    ├── Phase 3: Dynamic Traefik Ingress Routing Cutover
+    │   ├── Enable Traefik dynamic provider exporter (`traefik/exporter.go` writing `discovery.yml`)
+    │   └── Route external & inter-service domain calls (`*.llmobs.local`) through Traefik ingress
+    │
+    └── Phase 4: Legacy Deprecation & Full Circuit Breaking
+        ├── Deprecate static host/port env variables across service configuration manifests
+        └── Enforce client-side load balancing, circuit breaking, and OpenTelemetry trace propagation
+```
+
+### Rollback Strategy & Emergency Triggers
+
+1. **Immediate Fallback to Legacy Static Routing**: If the service registry becomes unreachable or experiences high latency (>100ms), client SDK adapters immediately fall back to environment variable targets without throwing exceptions.
+2. **Traefik Last-Known-Good Ingress Preservation**: If `llmobs-service-registry` crashes, Traefik retains its last valid `/etc/traefik/dynamic/discovery.yml` configuration in memory, maintaining 100% ingress routing stability.
+
