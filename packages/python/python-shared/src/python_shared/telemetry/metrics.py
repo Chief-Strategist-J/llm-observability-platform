@@ -1,20 +1,19 @@
-from prometheus_client import Counter, Histogram, Gauge, REGISTRY
+from prometheus_client import Counter, Histogram, Gauge
 
-# Common metrics templates
 REQUEST_COUNT = Counter(
     "http_requests_total",
-    "Total HTTP Requests",
+    "Total HTTP requests processed",
     ["method", "endpoint", "status"]
 )
 
 REQUEST_LATENCY = Histogram(
     "http_request_duration_seconds",
-    "HTTP request latency in seconds",
+    "HTTP request execution latency in seconds",
     ["method", "endpoint"]
 )
 
 ACTIVE_WORKERS = Gauge(
-    "active_workers_count",
-    "Number of active background worker tasks",
-    ["worker_name"]
+    "active_workers_total",
+    "Total active worker threads or tasks",
+    ["worker_type"]
 )

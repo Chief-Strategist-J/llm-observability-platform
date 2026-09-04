@@ -1,0 +1,82 @@
+class HTTP_CONSTANTS:
+    DEFAULT_SERVICE_SUB = "web-app-service"
+    DEFAULT_JWT_SECRET = "development-jwt-secret-key-32-bytes-min!!"
+    JWT_ALG = "HS256"
+    JWT_TYP = "JWT"
+    HEADER_CONTENT_TYPE = "Content-Type"
+    HEADER_ACCEPT = "Accept"
+    HEADER_AUTHORIZATION = "Authorization"
+    HEADER_TRACEPARENT = "traceparent"
+    HEADER_X_TRACE_ID = "x-trace-id"
+    HEADER_X_REQUEST_ID = "x-request-id"
+    HEADER_X_CORRELATION_ID = "x-correlation-id"
+    HEADER_X_IDEMPOTENCY_KEY = "x-idempotency-key"
+    HEADER_X_TENANT_ID = "x-tenant-id"
+    HEADER_TRACESTATE = "tracestate"
+    HEADER_RETRY_AFTER = "Retry-After"
+    HEADER_CACHE_CONTROL = "Cache-Control"
+    CONTENT_TYPE_JSON = "application/json"
+    BEARER_PREFIX = "Bearer "
+    DEFAULT_TENANT_ID = "tenant-default"
+    DEFAULT_TRACESTATE = "rojo=1"
+
+    DEFAULT_SERVICE_REGISTRY_URL = "http://localhost:31426"
+    SERVICE_NAME_LATENCY_ENGINE = "latency-engine"
+    SERVICE_NAME_AUTH_SERVICE = "auth-service"
+    SERVICE_NAME_WEB_APP = "web-app"
+    SERVICE_NAME_CLICKHOUSE = "clickhouse"
+    SERVICE_NAME_REDIS = "redis"
+    SERVICE_NAME_KAFKA = "kafka"
+    SERVICE_NAME_OTEL_COLLECTOR = "otel-collector"
+    ENDPOINT_RESOLVE = "/v1/resolve"
+    ENDPOINT_REGISTER = "/v1/register"
+    ENDPOINT_HEARTBEAT = "/v1/heartbeat"
+    ENDPOINT_DEREGISTER = "/v1/deregister"
+    ENDPOINT_HEALTH = "/api/health"
+    ENDPOINT_ROOT = "/"
+
+    ENDPOINT_AUTH_SIGN_IN = "/auth/sign-in"
+    ENDPOINT_AUTH_SIGN_UP = "/auth/sign-up"
+    ENDPOINT_AUTH_CALLBACK = "/auth/callback"
+    ENDPOINT_FAVICON = "/favicon.ico"
+    PREFIX_NEXT = "/_next"
+    PREFIX_API = "/api"
+    PARAM_CALLBACK_URL = "callbackUrl"
+
+    PARAM_SERVICE = "service"
+    HOST_LOCALHOST = "localhost"
+    PROTOCOL_HTTP = "http"
+    PROTOCOL_TCP = "tcp"
+
+    ENV_SERVICE_REGISTRY_URL = "SERVICE_REGISTRY_URL"
+    ENV_SERVICE_REGISTRY_SECRET = "SERVICE_REGISTRY_SECRET"
+    ENV_SERVICE_REGISTRY_TOKEN = "SERVICE_REGISTRY_TOKEN"
+    ENV_SERVICE_NAME = "SERVICE_NAME"
+    ENV_HOST = "HOST"
+    ENV_PORT = "PORT"
+
+    DEFAULT_RESOLVER_TTL_MS = 30000
+    DEFAULT_RESOLVER_TIMEOUT_MS = 2000
+    DEFAULT_HEARTBEAT_INTERVAL_MS = 5000
+    DEFAULT_PORT_WEB_APP = 31400
+
+    SIGNAL_SIGINT = "SIGINT"
+    SIGNAL_SIGTERM = "SIGTERM"
+    MSG_MISSING_INSTANCE_ID = "Registration response missing instance ID"
+
+    TRACER_NAME = "http-client"
+    ERROR_NAME_ABORT = "AbortError"
+    MSG_PIPELINE_FAILED = "HTTP Request Pipeline Failed"
+
+    CACHE_NO_CACHE = "no-cache"
+    CACHE_NO_STORE = "no-store"
+
+    METHOD_GET = "GET"
+    METHOD_POST = "POST"
+    METHOD_PATCH = "PATCH"
+    METHOD_PUT = "PUT"
+    METHOD_DELETE = "DELETE"
+
+    CIRCUIT_CLOSED = "CLOSED"
+    CIRCUIT_OPEN = "OPEN"
+    CIRCUIT_HALF_OPEN = "HALF_OPEN"
