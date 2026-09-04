@@ -1,48 +1,28 @@
 'use client';
 
-import React, { useEffect, useState, use } from 'react';
-import { TraceDetailWaterfallUI } from '@/features/traces/ui/TraceDetailWaterfallUI';
-import type { TraceDetailResult } from '@/features/traces/types';
+import React, { useEffect, use } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { TraceDetailWaterfallUI } from '../../../../features/traces/ui/TraceDetailWaterfallUI';
+import { tracesActions } from '../../../../features/traces/traces.slice';
+import type { RootState } from '../../../../core/store/configure-store';
 
 export default function TraceDetailPage({ params }: { params: Promise<{ traceId: string }> }) {
   const resolvedParams = use(params);
-  const [trace, setTrace] = useState<TraceDetailResult | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const dispatch = useDispatch();
+  const tracesState = useSelector((state: RootState) => state.traces);
 
   useEffect(() => {
-    let isMounted = true;
-    async function load() {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/v1/traces/${resolvedParams.traceId}`);
-        if (!res.ok) {
-          if (res.status === 404) {
-            throw new Error(`Trace ID ${resolvedParams.traceId} was not found in telemetry storage.`);
-          }
-          throw new Error(`Failed to load trace ${resolvedParams.traceId}`);
-        }
-        const data = await res.json();
-        if (isMounted) {
-          setTrace(data);
-          setLoading(false);
-        }
-      } catch (err: any) {
-        if (isMounted) {
-          setError(err.message || "Failed to load trace details");
-          setLoading(false);
-        }
-      }
+    if (resolvedParams.traceId) {
+      dispatch(tracesActions.fetchTraceDetailSubmitted({ traceId: resolvedParams.traceId }));
     }
-    load();
-    return () => { isMounted = false; };
-  }, [resolvedParams.traceId]);
+  }, [dispatch, resolvedParams.traceId]);
 
   return (
     <TraceDetailWaterfallUI
-      trace={trace}
-      loading={loading}
-      error={error}
+      trace={tracesState?.activeTrace || null}
+      loading={tracesState?.detailStatus === "loading"}
+      error={tracesState?.detailError || null}
     />
   );
 }
+

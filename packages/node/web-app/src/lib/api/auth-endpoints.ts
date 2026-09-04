@@ -37,3 +37,6 @@ export const AUTH_ENDPOINTS: Record<string, EndpointMeta> = {
   listPermissions: { path: "/api/v1/auth/permissions", method: "GET" },
   fetchAuditLogs: { path: "/api/v1/auth/audit-logs", method: "GET", requiresAuth: true },
 };
+
+export type ApiEndpointKey = keyof typeof AUTH_ENDPOINTS;
+

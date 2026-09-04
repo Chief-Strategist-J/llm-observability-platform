@@ -1,7 +1,11 @@
 'use client';
 
-import { useEffect, useState } from "react";
-import type { DashboardFilters } from "@/hooks/useDashboardFilters";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type { RootState } from "../../../core/store/configure-store";
+import type { DashboardFilters } from "../../../hooks/useDashboardFilters";
+
+import { qualityActions } from "../quality.slice";
 import type {
   QualitySummaryResult,
   QualityTrendPoint,
@@ -19,61 +23,28 @@ export interface QualityDashboardState {
 }
 
 export function useQualityDashboardData(filters: DashboardFilters): QualityDashboardState {
-  const [state, setState] = useState<QualityDashboardState>({
-    summary: null,
-    trend: [],
-    models: [],
-    flaggedAlerts: [],
-    loading: true,
-    error: null,
-  });
+  const dispatch = useDispatch();
+  const qualityState = useSelector((state: RootState) => state.quality);
 
   useEffect(() => {
-    let isMounted = true;
-    async function load() {
-      setState((prev) => ({ ...prev, loading: true }));
-      const model = filters.model || "gpt-4o";
-      const timeRange = filters.timeRange || "24h";
+    dispatch(
+      qualityActions.fetchQualitySubmitted({
+        model: filters.model || "gpt-4o",
+        timeRange: filters.timeRange || "24h",
+        service: filters.service,
+        days: 7,
+      })
+    );
+  }, [dispatch, filters.model, filters.timeRange, filters.service, filters.environment]);
 
-      try {
-        const [sumRes, trRes, modRes, flRes] = await Promise.all([
-          fetch(`/api/v1/quality/summary?model=${encodeURIComponent(model)}&time_range=${encodeURIComponent(timeRange)}`),
-          fetch(`/api/v1/quality/trend?model=${encodeURIComponent(model)}&days=7`),
-          fetch(`/api/v1/quality/models?time_range=${encodeURIComponent(timeRange)}`),
-          fetch(`/api/v1/quality/flagged?limit=20`),
-        ]);
-
-        const [sumData, trData, modData, flData] = await Promise.all([
-          sumRes.ok ? sumRes.json() : null,
-          trRes.ok ? trRes.json() : [],
-          modRes.ok ? modRes.json() : [],
-          flRes.ok ? flRes.json() : [],
-        ]);
-
-        if (isMounted) {
-          setState({
-            summary: sumData,
-            trend: Array.isArray(trData) ? trData : [],
-            models: Array.isArray(modData) ? modData : [],
-            flaggedAlerts: Array.isArray(flData) ? flData : [],
-            loading: false,
-            error: null,
-          });
-        }
-      } catch (err: any) {
-        if (isMounted) {
-          setState((prev) => ({
-            ...prev,
-            loading: false,
-            error: err.message || "Failed to fetch quality evaluation metrics",
-          }));
-        }
-      }
-    }
-
-    load();
-    return () => { isMounted = false; };
-  }, [filters.model, filters.timeRange, filters.service, filters.environment]);
-
-  return state;
+  return {
+    summary: qualityState?.summary || null,
+    trend: qualityState?.trend || [],
+    models: qualityState?.models || [],
+    flaggedAlerts: qualityState?.flaggedAlerts || [],
+    loading: qualityState?.status === "loading",
+    error: qualityState?.error || null,
+  };
 }
+
+

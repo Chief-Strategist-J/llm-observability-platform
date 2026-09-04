@@ -23,30 +23,31 @@
  */
 
 import { propagation, context } from "@opentelemetry/api";
-import { AUTH_ENDPOINTS, type EndpointMeta } from "./auth-endpoints";
+import { AUTH_ENDPOINTS, type ApiEndpointKey } from "./auth-endpoints";
+import { httpClient } from "@observability/shared-infra";
 
 export interface ExecuteParams {
-  body?: any;
   pathParams?: Record<string, string>;
-  token?: string;
   queryParams?: Record<string, string>;
+  body?: any;
+  token?: string;
 }
 
 export async function executeHttpRequest<T = any>(
   baseUrl: string,
-  actionKey: keyof typeof AUTH_ENDPOINTS,
+  key: ApiEndpointKey,
   params?: ExecuteParams
 ): Promise<T> {
-  const meta = AUTH_ENDPOINTS[actionKey] as EndpointMeta | undefined;
+  const meta = AUTH_ENDPOINTS[key];
   if (!meta) {
-    throw new Error(`Endpoint key "${String(actionKey)}" not defined in AUTH_ENDPOINTS registry`);
+    throw new Error(`Endpoint key "${key}" not registered in AUTH_ENDPOINTS.`);
   }
 
   let urlPath = meta.path;
   if (params?.pathParams) {
-    Object.entries(params.pathParams).forEach(([k, v]) => {
-      urlPath = urlPath.replace(`:${k}`, encodeURIComponent(v));
-    });
+    for (const [pKey, pVal] of Object.entries(params.pathParams)) {
+      urlPath = urlPath.replace(`:${pKey}`, encodeURIComponent(pVal));
+    }
   }
 
   if (params?.queryParams) {
@@ -72,26 +73,41 @@ export async function executeHttpRequest<T = any>(
     headers["Authorization"] = `Bearer ${params.token}`;
   }
 
-  const response = await fetch(`${baseUrl}${urlPath}`, {
-    method: meta.method,
-    headers,
-    body: params?.body ? JSON.stringify(params.body) : undefined,
-  });
+  const host = baseUrl || process.env.NEXT_PUBLIC_API_URL || "";
+  const fullUrl = `${host}${urlPath}`;
 
-  const json = await response.json();
+  try {
+    const res = await httpClient.execute<any>({
+      method: meta.method,
+      url: fullUrl,
+      headers,
+      body: params?.body,
+    });
 
-  if (!response.ok || json.status === "error" || json.error) {
-    const err = new Error(json.error?.details || json.message || `HTTP ${response.status}`);
-    (err as any).code = json.error?.code || (response.status === 401 ? "UNAUTHORIZED" : "HTTP_ERROR");
-    (err as any).status = response.status;
+    const json = res.data;
 
-    if (typeof window !== "undefined" && (response.status === 401 || json.message?.includes("expired"))) {
+    if (json?.status === "error" || json?.error) {
+      const err = new Error(json.error?.details || json.message || `HTTP ${res.status}`);
+      (err as any).code = json.error?.code || (res.status === 401 ? "UNAUTHORIZED" : "HTTP_ERROR");
+      (err as any).status = res.status;
+      throw err;
+    }
+
+    return json as T;
+  } catch (err: any) {
+    if (typeof window !== "undefined" && (err?.status === 401 || err?.message?.includes("expired"))) {
       if (!window.location.pathname.startsWith("/auth/")) {
         window.location.href = `/auth/sign-in?callbackUrl=${encodeURIComponent(window.location.pathname)}`;
       }
     }
     throw err;
   }
-
-  return json.data as T;
 }
+
+export async function executeApiRequest<T = any>(
+  key: ApiEndpointKey,
+  params?: ExecuteParams
+): Promise<T> {
+  return executeHttpRequest<T>("", key, params);
+}
+

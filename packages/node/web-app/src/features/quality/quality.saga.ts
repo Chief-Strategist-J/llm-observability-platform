@@ -2,6 +2,7 @@ import { all, call, put, takeEvery } from "redux-saga/effects";
 import { qualityActions } from "./quality.slice";
 import { qualityClientService } from "./service/quality-client.service";
 import { eventBus } from "../../core/event-bus/event-bus";
+import { QUALITY_CONFIG_DEFAULTS, QUALITY_EVENTS } from "./constants";
 import type {
   QualitySummaryResult,
   QualityTrendPoint,
@@ -9,15 +10,14 @@ import type {
   FlaggedContentAlert,
 } from "./types";
 
-import { QUALITY_CONFIG_DEFAULTS } from "./constants";
-
 function* handleFetchQuality(action: ReturnType<typeof qualityActions.fetchQualitySubmitted>): Generator<any, void, any> {
-  const {
-    model = QUALITY_CONFIG_DEFAULTS.DEFAULT_MODEL,
-    timeRange = QUALITY_CONFIG_DEFAULTS.DEFAULT_TIME_RANGE,
-    days = QUALITY_CONFIG_DEFAULTS.DEFAULT_LOOKBACK_DAYS,
-    service,
-  } = action.payload || {};
+  const payload = (action.payload || {}) as Record<string, any>;
+  const model = payload.model ?? QUALITY_CONFIG_DEFAULTS.DEFAULT_MODEL;
+  const timeRange = payload.timeRange ?? QUALITY_CONFIG_DEFAULTS.DEFAULT_TIME_RANGE;
+  const days = payload.days ?? QUALITY_CONFIG_DEFAULTS.DEFAULT_LOOKBACK_DAYS;
+  const service = payload.service;
+
+
 
   try {
     const [summary, trend, models, flaggedAlerts]: [
@@ -26,10 +26,10 @@ function* handleFetchQuality(action: ReturnType<typeof qualityActions.fetchQuali
       ModelQualityBreakdown[],
       FlaggedContentAlert[]
     ] = yield all([
-      call([qualityClientService, "getQualitySummary"], model, timeRange, service),
-      call([qualityClientService, "getQualityTrend"], model, days),
-      call([qualityClientService, "getModelBreakdown"], timeRange),
-      call([qualityClientService, "getFlaggedContent"]),
+      call(() => qualityClientService.getQualitySummary(model, timeRange, service)),
+      call(() => qualityClientService.getQualityTrend(model, days)),
+      call(() => qualityClientService.getModelBreakdown(timeRange)),
+      call(() => qualityClientService.getFlaggedContent()),
     ]);
 
     yield put(
@@ -41,13 +41,14 @@ function* handleFetchQuality(action: ReturnType<typeof qualityActions.fetchQuali
       })
     );
 
-    eventBus.emit("quality.fetched", { model, timeRange });
+    eventBus.emit(QUALITY_EVENTS.FETCHED, { model, timeRange });
   } catch (err: any) {
-    const errorMsg = err?.message || "Failed to fetch quality evaluation metrics";
+    const errorMsg = err?.message || QUALITY_CONFIG_DEFAULTS.ERROR_FETCH_FAILED;
     yield put(qualityActions.qualityFailed(errorMsg));
-    eventBus.emit("quality.failed", { error: errorMsg });
+    eventBus.emit(QUALITY_EVENTS.FAILED, { error: errorMsg });
   }
 }
+
 
 
 export function* qualitySaga() {

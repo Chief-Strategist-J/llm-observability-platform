@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+
 import { Provider } from 'react-redux';
-import { createApplicationStore } from '@observability/shared-infra';
+import { store } from '../core/store/configure-store';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink } from '@trpc/client';
 import superjson from 'superjson';
@@ -12,7 +13,8 @@ import { FeatureFlagProvider } from '../lib/feature-flags/feature-flags';
 import { trpc } from '../lib/api/trpc-client';
 import { createQueryClient } from '../lib/api/query-client';
 import { initOpenTelemetryTracer } from '../core/tracing/tracer';
-import '../features/auth';
+import '../features';
+
 
 function getBaseUrl(): string {
   if (typeof window !== 'undefined') return '';
@@ -24,7 +26,7 @@ export function Providers({ children }: { readonly children: React.ReactNode }) 
     initOpenTelemetryTracer();
   }, []);
 
-  const store = useMemo(() => createApplicationStore(), []);
+
   const [queryClient] = useState(() => createQueryClient());
   const [trpcClient] = useState(() =>
     trpc.createClient({

@@ -1,5 +1,6 @@
 import { trace, SpanKind, SpanStatusCode } from "@opentelemetry/api";
 import { HTTP_CONSTANTS } from "../../http/constants";
+import { httpClient } from "../../http/client/scalable-http-client";
 import { SERVICE_CATALOG } from "../catalog/service-catalog";
 import type { ResolveServiceResponse } from "../responses/resolve-service.response";
 
@@ -44,17 +45,14 @@ export class ServiceResolver {
     const url = new URL(HTTP_CONSTANTS.ENDPOINT_RESOLVE, this.registryUrl);
     url.searchParams.set(HTTP_CONSTANTS.PARAM_SERVICE, serviceName);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), HTTP_CONSTANTS.DEFAULT_RESOLVER_TIMEOUT_MS);
-
     try {
-      const res = await fetch(url.toString(), {
-        method: HTTP_CONSTANTS.METHOD_GET,
-        headers: this.buildHeaders(),
-        signal: controller.signal,
-      }).finally(() => clearTimeout(timeoutId));
+      const res = await httpClient.get<ResolveServiceResponse>(
+        url.toString(),
+        this.buildHeaders(),
+        { timeoutMs: HTTP_CONSTANTS.DEFAULT_RESOLVER_TIMEOUT_MS }
+      );
 
-      const json: ResolveServiceResponse = res.ok ? await res.json() : {};
+      const json = res.data;
       return json.success && json.data?.endpoint ? json.data.endpoint : null;
     } catch {
       return null;
