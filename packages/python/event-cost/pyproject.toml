@@ -19,7 +19,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-pythonpath = ["src", "../python-shared/src"]
+pythonpath = ["src", "../python-shared/src", "../instrumentation-sdk/src"]
 testpaths = ["tests"]
 
 [build-system]
@@ -31,3 +31,5 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 event_cost = ["prices/*.yaml"]
+[tool.pyright]
+extraPaths = ["src", "../python-shared/src", "../instrumentation-sdk/src"]

@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from prometheus_client import make_asgi_app
 from api.rest.v1.router import router as v1_router
 from shared.di.providers import build_alert_publisher, build_scorer_client, build_quality_score_repo
+from python_shared.discovery import register_fastapi_service
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -18,6 +19,13 @@ def create_app() -> FastAPI:
     app.state.scorer_client = build_scorer_client()
     app.state.repo = build_quality_score_repo()
     app.include_router(v1_router)
+
+    register_fastapi_service(
+        app,
+        service_name="quality-engine",
+        port=8003,
+    )
+
     return app
 
 

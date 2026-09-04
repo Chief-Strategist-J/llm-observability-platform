@@ -54,3 +54,18 @@ def test_score_composite_validation_error():
     }
     resp = client.post("/v1/score/composite", json=payload)
     assert resp.status_code == 422
+
+
+def test_service_registry_lifecycle():
+    from unittest.mock import MagicMock, AsyncMock, patch
+    from api.rest.v1.app import create_app
+
+    mock_mgr = MagicMock()
+    mock_mgr.register = AsyncMock()
+    mock_mgr.deregister = AsyncMock()
+
+    with patch("api.rest.v1.app.register_fastapi_service", return_value=mock_mgr) as mock_reg:
+        test_app = create_app()
+        mock_reg.assert_called_once()
+        assert mock_reg.call_args[1]["service_name"] == "quality-engine"
+        assert mock_reg.call_args[1]["port"] == 8003

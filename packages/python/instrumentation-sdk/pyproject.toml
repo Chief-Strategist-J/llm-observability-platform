@@ -30,7 +30,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["src", "../python-shared/src"]
 addopts = [
     "-v",
     "--tb=short",
@@ -42,4 +42,5 @@ markers = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
+[tool.pyright]
+extraPaths = ["src", "../python-shared/src"]
