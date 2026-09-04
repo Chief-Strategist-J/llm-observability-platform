@@ -3,23 +3,23 @@ import type { JsonMapOp } from "../../../core/data-driven/transform.types";
 import { QUALITY_CONFIG_DEFAULTS } from "../constants";
 
 export const QualitySummaryQuerySchema = z.object({
-  model: z.string().optional().default("gpt-4o"),
-  time_range: z.string().optional().default("24h"),
+  model: z.string().optional().default(QUALITY_CONFIG_DEFAULTS.DEFAULT_MODEL),
+  time_range: z.string().optional().default(QUALITY_CONFIG_DEFAULTS.DEFAULT_TIME_RANGE),
   service: z.string().optional(),
 });
 
 export const QualityTrendQuerySchema = z.object({
-  model: z.string().optional().default("gpt-4o"),
+  model: z.string().optional().default(QUALITY_CONFIG_DEFAULTS.DEFAULT_MODEL),
   days: z.coerce.number().int().min(1).max(90).optional().default(QUALITY_CONFIG_DEFAULTS.DEFAULT_LOOKBACK_DAYS),
 });
 
 export const ModelQualityQuerySchema = z.object({
-  time_range: z.string().optional().default("24h"),
+  time_range: z.string().optional().default(QUALITY_CONFIG_DEFAULTS.DEFAULT_TIME_RANGE),
 });
 
 export const FlaggedContentQuerySchema = z.object({
   severity: z.enum(["critical", "warning", "info"]).optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(QUALITY_CONFIG_DEFAULTS.DEFAULT_LIMIT),
 });
 
 export const QualitySummaryFromApiOps: JsonMapOp[] = [

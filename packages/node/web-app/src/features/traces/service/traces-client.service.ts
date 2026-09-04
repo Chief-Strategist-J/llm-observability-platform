@@ -1,10 +1,8 @@
 import {
-  executeQueryAdapter,
+  createServiceClient,
+  executeServiceClientQuery,
   mapJson,
-  withRetry,
-  withCache,
-  withCircuitBreaker,
-  withTracing,
+  HTTP_CONSTANTS,
 } from "@observability/shared-infra";
 import type { TraceSummary, TraceDetailResult } from "../types";
 import { TraceSummaryFromApiOps } from "../schema";
@@ -15,31 +13,30 @@ export interface TracesClientAdapter {
   getTraceDetail(traceId: string): Promise<TraceDetailResult | null>;
 }
 
-class RawTracesClientAdapter implements TracesClientAdapter {
-  private readonly baseUrl = process.env.LATENCY_ENGINE_URL || TRACES_CONFIG_DEFAULTS.DEFAULT_ENGINE_URL;
-  private readonly serviceSub = TRACES_CONFIG_DEFAULTS.DEFAULT_SERVICE_SUB;
-
+const rawAdapter: TracesClientAdapter = {
   async listTraces(
     model?: string,
     status?: string,
     service?: string,
     limit = TRACES_CONFIG_DEFAULTS.DEFAULT_PAGE_SIZE
-  ): Promise<TraceSummary[]> {
-    const raw = await executeQueryAdapter<TraceSummary[]>(
-      this.baseUrl, TRACES_ENDPOINTS.LIST, { model, status, service, limit }, this.serviceSub
+  ) {
+    const raw = await executeServiceClientQuery<TraceSummary[]>(
+      HTTP_CONSTANTS.SERVICE_NAME_LATENCY_ENGINE,
+      { endpoint: TRACES_ENDPOINTS.LIST },
+      { model, status, service, limit }
     );
     return Array.isArray(raw) ? raw.map((t) => mapJson(t as any, TraceSummaryFromApiOps) as unknown as TraceSummary) : [];
-  }
-
-  async getTraceDetail(traceId: string): Promise<TraceDetailResult | null> {
-    return executeQueryAdapter<TraceDetailResult>(
-      this.baseUrl, `${TRACES_ENDPOINTS.DETAIL}/${traceId}`, {}, this.serviceSub
+  },
+  getTraceDetail(traceId: string) {
+    return executeServiceClientQuery<TraceDetailResult>(
+      HTTP_CONSTANTS.SERVICE_NAME_LATENCY_ENGINE,
+      { endpoint: `${TRACES_ENDPOINTS.DETAIL}/${traceId}` },
+      {}
     );
-  }
-}
+  },
+};
 
-const rawAdapter = new RawTracesClientAdapter();
-export const tracesClientService: TracesClientAdapter = withTracing(
-  withCircuitBreaker(withCache(withRetry(rawAdapter, 3, 200), 5000), 5, 10000),
-  "traces-client-service"
+export const tracesClientService: TracesClientAdapter = createServiceClient(
+  HTTP_CONSTANTS.SERVICE_NAME_LATENCY_ENGINE,
+  rawAdapter
 );

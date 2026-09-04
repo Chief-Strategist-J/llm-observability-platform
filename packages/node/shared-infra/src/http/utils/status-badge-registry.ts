@@ -1,3 +1,8 @@
+/**
+ * @file status-badge-registry.ts
+ * @description HTTP & Health Status Styling Registry.
+ */
+
 export interface StatusStyle {
   label: string;
   badgeClass: string;

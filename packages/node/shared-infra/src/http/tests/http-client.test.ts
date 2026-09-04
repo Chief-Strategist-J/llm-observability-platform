@@ -115,4 +115,42 @@ describe('ScalableHttpClient Fleet Resilience Architecture', () => {
       expect(cb.canExecute(key)).toBe(true);
     });
   });
+
+  describe('Pipeline Step Combinations & Short-Circuit Verification', () => {
+    it('executes full 8-step pipeline on valid outbound GET request', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        headers: { get: (name: string) => name.toLowerCase() === 'content-type' ? 'application/json' : null },
+        json: async () => ({ status: 'ok' }),
+        text: async () => JSON.stringify({ status: 'ok' }),
+      }));
+
+      const res = await client.get('https://api.observability.com/v1/test');
+      expect(res.data).toEqual({ status: 'ok' });
+    });
+
+    it('short-circuits at Step 3 on SSRF blocked destination', async () => {
+      await expect(client.get('http://127.0.0.1/internal/admin')).rejects.toThrow(/SSRF Blocked/);
+    });
+
+    it('returns cached response early at Step 6 without triggering network fetch', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        headers: { get: (name: string) => name.toLowerCase() === 'content-type' ? 'application/json' : null },
+        json: async () => ({ value: 42 }),
+        text: async () => JSON.stringify({ value: 42 }),
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const url = 'https://api.observability.com/v1/cached-data';
+      const first = await client.get<{ value: number }>(url);
+      expect(first.data).toEqual({ value: 42 });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // Second call hits Step 6 (CacheEval) and returns early
+      const second = await client.get<{ value: number }>(url);
+      expect(second.data).toEqual({ value: 42 });
+      expect(fetchMock).toHaveBeenCalledTimes(1); // Fetch not called second time!
+    });
+  });
 });

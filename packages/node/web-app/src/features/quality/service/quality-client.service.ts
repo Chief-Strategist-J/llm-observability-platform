@@ -1,62 +1,78 @@
 import {
-  executeQueryAdapter,
-  withRetry,
-  withCache,
-  withCircuitBreaker,
-  withTracing,
+  createServiceClient,
+  executeServiceClientQuery,
+  HTTP_CONSTANTS,
 } from "@observability/shared-infra";
 import type {
   QualitySummaryResult,
   QualityTrendPoint,
-  ModelQualityMetric,
+  ModelQualityBreakdown,
   FlaggedContentAlert,
 } from "../types";
-import { QualitySummaryFromApiOps } from "../schema";
+import { QualitySummaryFromApiOps, ModelQualityFromApiOps } from "../schema";
 import { QUALITY_QUERIES } from "../queries";
 import { QUALITY_CONFIG_DEFAULTS } from "../constants";
 
+const SERVICE_NAME = HTTP_CONSTANTS.SERVICE_NAME_LATENCY_ENGINE;
+
 export interface QualityClientAdapter {
-  getQualitySummary(model?: string, timeRange?: string): Promise<QualitySummaryResult>;
-  getQualityTrend(timeRange?: string): Promise<QualityTrendPoint[]>;
-  getModelQualityMetrics(timeRange?: string): Promise<ModelQualityMetric[]>;
-  getFlaggedAlerts(limit?: number): Promise<FlaggedContentAlert[]>;
+  getQualitySummary(
+    model?: string,
+    timeRange?: string,
+    service?: string
+  ): Promise<QualitySummaryResult>;
+  getQualityTrend(model?: string, days?: number): Promise<QualityTrendPoint[]>;
+  getModelBreakdown(timeRange?: string): Promise<ModelQualityBreakdown[]>;
+  getFlaggedContent(
+    severity?: string,
+    limit?: number
+  ): Promise<FlaggedContentAlert[]>;
 }
 
-class RawQualityClientAdapter implements QualityClientAdapter {
-  private readonly baseUrl = process.env.LATENCY_ENGINE_URL || QUALITY_CONFIG_DEFAULTS.DEFAULT_ENGINE_URL;
-  private readonly serviceSub = QUALITY_CONFIG_DEFAULTS.DEFAULT_SERVICE_SUB;
-
-  async getQualitySummary(model = "gpt-4o", timeRange = "24h"): Promise<QualitySummaryResult> {
-    return executeQueryAdapter<QualitySummaryResult>(
-      this.baseUrl, QUALITY_QUERIES.QUERY_QUALITY_SUMMARY.endpoint, { model, time_range: timeRange },
-      this.serviceSub, QualitySummaryFromApiOps
+const rawAdapter: QualityClientAdapter = {
+  getQualitySummary(
+    model = QUALITY_CONFIG_DEFAULTS.DEFAULT_MODEL,
+    timeRange = QUALITY_CONFIG_DEFAULTS.DEFAULT_TIME_RANGE,
+    service?: string
+  ) {
+    return executeServiceClientQuery<QualitySummaryResult>(
+      SERVICE_NAME,
+      { ...QUALITY_QUERIES.QUERY_QUALITY_SUMMARY, transformOps: QualitySummaryFromApiOps },
+      { model, time_range: timeRange, service }
     );
-  }
-
-  async getQualityTrend(timeRange = "7d"): Promise<QualityTrendPoint[]> {
-    return executeQueryAdapter<QualityTrendPoint[]>(
-      this.baseUrl, QUALITY_QUERIES.QUERY_QUALITY_TREND.endpoint, { time_range: timeRange },
-      this.serviceSub
+  },
+  getQualityTrend(
+    model = QUALITY_CONFIG_DEFAULTS.DEFAULT_MODEL,
+    days = QUALITY_CONFIG_DEFAULTS.DEFAULT_LOOKBACK_DAYS
+  ) {
+    return executeServiceClientQuery<QualityTrendPoint[]>(
+      SERVICE_NAME,
+      QUALITY_QUERIES.QUERY_QUALITY_TREND,
+      { model, days }
     );
-  }
-
-  async getModelQualityMetrics(timeRange = "24h"): Promise<ModelQualityMetric[]> {
-    return executeQueryAdapter<ModelQualityMetric[]>(
-      this.baseUrl, QUALITY_QUERIES.QUERY_MODEL_METRICS.endpoint, { time_range: timeRange },
-      this.serviceSub
+  },
+  getModelBreakdown(
+    timeRange = QUALITY_CONFIG_DEFAULTS.DEFAULT_TIME_RANGE
+  ) {
+    return executeServiceClientQuery<ModelQualityBreakdown[]>(
+      SERVICE_NAME,
+      { ...QUALITY_QUERIES.QUERY_MODEL_BREAKDOWN, transformOps: ModelQualityFromApiOps },
+      { time_range: timeRange }
     );
-  }
-
-  async getFlaggedAlerts(limit = 10): Promise<FlaggedContentAlert[]> {
-    return executeQueryAdapter<FlaggedContentAlert[]>(
-      this.baseUrl, QUALITY_QUERIES.QUERY_FLAGGED_ALERTS.endpoint, { limit },
-      this.serviceSub
+  },
+  getFlaggedContent(
+    severity?: string,
+    limit = QUALITY_CONFIG_DEFAULTS.DEFAULT_LIMIT
+  ) {
+    return executeServiceClientQuery<FlaggedContentAlert[]>(
+      SERVICE_NAME,
+      QUALITY_QUERIES.QUERY_FLAGGED_CONTENT,
+      { severity, limit }
     );
-  }
-}
+  },
+};
 
-const rawAdapter = new RawQualityClientAdapter();
-export const qualityClientService: QualityClientAdapter = withTracing(
-  withCircuitBreaker(withCache(withRetry(rawAdapter, 3, 200), 5000), 5, 10000),
-  "quality-client-service"
+export const qualityClientService: QualityClientAdapter = createServiceClient(
+  SERVICE_NAME,
+  rawAdapter
 );

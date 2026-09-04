@@ -1,14 +1,51 @@
+export enum JsonMapOpKind {
+  RENAME = "rename",
+  PICK = "pick",
+  OMIT = "omit",
+  DEFAULT = "default",
+  COERCE = "coerce",
+}
+
+export enum CoerceTarget {
+  STRING = "string",
+  NUMBER = "number",
+  BOOLEAN = "boolean",
+  DATE = "date",
+}
+
+export enum ListOpKind {
+  FILTER = "filter",
+  SEARCH = "search",
+  SORT = "sort",
+  PAGINATE = "paginate",
+  PICK = "pick",
+  GROUP_BY = "groupBy",
+}
+
+export enum FilterComparison {
+  EQ = "eq",
+  NEQ = "neq",
+  GT = "gt",
+  LT = "lt",
+  CONTAINS = "contains",
+}
+
+export enum SortDirection {
+  ASC = "asc",
+  DESC = "desc",
+}
+
 export type JsonMapOp =
-  | { op: "rename"; from: string; to: string }
-  | { op: "pick"; keys: string[] }
-  | { op: "omit"; keys: string[] }
-  | { op: "default"; key: string; value: unknown }
-  | { op: "coerce"; key: string; to: "string" | "number" | "boolean" | "date" };
+  | { op: JsonMapOpKind.RENAME | "rename"; from: string; to: string }
+  | { op: JsonMapOpKind.PICK | "pick"; keys: string[] }
+  | { op: JsonMapOpKind.OMIT | "omit"; keys: string[] }
+  | { op: JsonMapOpKind.DEFAULT | "default"; key: string; value: unknown }
+  | { op: JsonMapOpKind.COERCE | "coerce"; key: string; to: CoerceTarget | `${CoerceTarget}` };
 
 export type ListOp =
-  | { op: "filter"; field: string; value: unknown; cmp?: "eq" | "neq" | "gt" | "lt" | "contains" }
-  | { op: "search"; fields: string[]; query: string }
-  | { op: "sort"; field: string; dir?: "asc" | "desc" }
-  | { op: "paginate"; page: number; pageSize: number }
-  | { op: "pick"; fields: string[] }
-  | { op: "groupBy"; field: string };
+  | { op: ListOpKind.FILTER | "filter"; field: string; value: unknown; cmp?: FilterComparison | `${FilterComparison}` }
+  | { op: ListOpKind.SEARCH | "search"; fields: string[]; query: string }
+  | { op: ListOpKind.SORT | "sort"; field: string; dir?: SortDirection | `${SortDirection}` }
+  | { op: ListOpKind.PAGINATE | "paginate"; page: number; pageSize: number }
+  | { op: ListOpKind.PICK | "pick"; fields: string[] }
+  | { op: ListOpKind.GROUP_BY | "groupBy"; field: string };

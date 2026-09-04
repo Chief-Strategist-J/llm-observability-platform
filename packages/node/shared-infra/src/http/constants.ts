@@ -4,6 +4,7 @@ export const HTTP_CONSTANTS = {
   JWT_ALG: "HS256",
   JWT_TYP: "JWT",
   HEADER_CONTENT_TYPE: "Content-Type",
+  HEADER_ACCEPT: "Accept",
   HEADER_AUTHORIZATION: "Authorization",
   HEADER_TRACEPARENT: "traceparent",
   HEADER_X_TRACE_ID: "x-trace-id",
@@ -19,29 +20,73 @@ export const HTTP_CONSTANTS = {
   DEFAULT_TENANT_ID: "tenant-default" as string,
   DEFAULT_TRACESTATE: "rojo=1",
 
+  DEFAULT_SERVICE_REGISTRY_URL: "http://localhost:31426",
+  SERVICE_NAME_LATENCY_ENGINE: "latency-engine",
+  SERVICE_NAME_AUTH_SERVICE: "auth-service",
+  SERVICE_NAME_WEB_APP: "web-app",
+  SERVICE_NAME_CLICKHOUSE: "clickhouse",
+  SERVICE_NAME_REDIS: "redis",
+  SERVICE_NAME_KAFKA: "kafka",
+  SERVICE_NAME_OTEL_COLLECTOR: "otel-collector",
+  ENDPOINT_RESOLVE: "/v1/resolve",
+  ENDPOINT_REGISTER: "/v1/register",
+  ENDPOINT_HEARTBEAT: "/v1/heartbeat",
+  ENDPOINT_DEREGISTER: "/v1/deregister",
+  ENDPOINT_HEALTH: "/api/health",
+  ENDPOINT_ROOT: "/",
+
+  ENDPOINT_AUTH_SIGN_IN: "/auth/sign-in",
+  ENDPOINT_AUTH_SIGN_UP: "/auth/sign-up",
+  ENDPOINT_AUTH_CALLBACK: "/auth/callback",
+  ENDPOINT_FAVICON: "/favicon.ico",
+  PREFIX_NEXT: "/_next",
+  PREFIX_API: "/api",
+  PARAM_CALLBACK_URL: "callbackUrl",
+
+  PARAM_SERVICE: "service",
+  HOST_LOCALHOST: "localhost",
+  PROTOCOL_HTTP: "http",
+  PROTOCOL_TCP: "tcp",
+
+
+  ENV_SERVICE_REGISTRY_URL: "SERVICE_REGISTRY_URL",
+  ENV_SERVICE_REGISTRY_SECRET: "SERVICE_REGISTRY_SECRET",
+  ENV_SERVICE_REGISTRY_TOKEN: "SERVICE_REGISTRY_TOKEN",
+  ENV_SERVICE_NAME: "SERVICE_NAME",
+  ENV_HOST: "HOST",
+  ENV_PORT: "PORT",
+  ENV_NEXT_RUNTIME: "NEXT_RUNTIME",
+  RUNTIME_NODEJS: "nodejs",
+
+  DEFAULT_RESOLVER_TTL_MS: 30000,
+  DEFAULT_RESOLVER_TIMEOUT_MS: 2000,
+  DEFAULT_HEARTBEAT_INTERVAL_MS: 5000,
+  DEFAULT_PORT_WEB_APP: 31400,
+
+  SIGNAL_SIGINT: "SIGINT",
+  SIGNAL_SIGTERM: "SIGTERM",
+  MSG_MISSING_INSTANCE_ID: "Registration response missing instance ID",
+
   TRACER_NAME: "http-client",
   ERROR_NAME_ABORT: "AbortError",
   MSG_PIPELINE_FAILED: "HTTP Request Pipeline Failed",
 
-  // Cache Directives
   CACHE_NO_CACHE: "no-cache",
   CACHE_NO_STORE: "no-store",
 
-  // HTTP Methods
   METHOD_GET: "GET",
   METHOD_POST: "POST",
   METHOD_PATCH: "PATCH",
   METHOD_PUT: "PUT",
   METHOD_DELETE: "DELETE",
 
-  // Circuit Breaker States
   CIRCUIT_CLOSED: "CLOSED",
   CIRCUIT_OPEN: "OPEN",
   CIRCUIT_HALF_OPEN: "HALF_OPEN",
 
-  // OTEL Span Attributes & Code Telemetry
   ATTR_HTTP_METHOD: "http.method",
   ATTR_HTTP_URL: "http.url",
+  ATTR_HTTP_TARGET: "http.target",
   ATTR_HTTP_STATUS_CODE: "http.status_code",
   ATTR_HTTP_CACHE_HIT: "http.cache_hit",
   ATTR_HTTP_CIRCUIT_STATE: "http.circuit_state",
@@ -50,6 +95,10 @@ export const HTTP_CONSTANTS = {
   ATTR_TENANT_ID: "tenant.id",
   ATTR_IDEMPOTENCY_KEY: "http.idempotency_key",
   ATTR_REQUEST_CANCELLED: "http.request_cancelled",
+  ATTR_REQUEST_ID: "request_id",
+  ATTR_CORRELATION_ID: "correlation_id",
+  DEFAULT_HTTP_SERVICE_NAME: "http-service",
+
   ATTR_EXECUTION_PATH: "execution.path",
   ATTR_RESULT_STATUS: "execution.status",
   ATTR_ERROR_DETAIL: "execution.error_detail",
@@ -57,13 +106,11 @@ export const HTTP_CONSTANTS = {
   ATTR_CODE_FILEPATH: "code.filepath",
   ATTR_CODE_LINENO: "code.lineno",
 
-  // Execution Paths
   PATH_POSITIVE: "positive_path",
   PATH_NEGATIVE: "negative_path",
   STATUS_SUCCESS: "success",
   STATUS_FAILURE: "failure",
 
-  // Decision & Step Span Events
   EVENT_SINGLEFLIGHT_HIT: "decision.singleflight_collapsed",
   EVENT_CACHE_EVALUATED: "decision.cache_evaluated",
   EVENT_CIRCUIT_EVALUATED: "decision.circuit_breaker_evaluated",
@@ -72,7 +119,6 @@ export const HTTP_CONSTANTS = {
   EVENT_EXECUTION_SUCCESS: "execution.success",
   EVENT_EXECUTION_FAILURE: "execution.failure",
 
-  // Granular Pipeline Step Span Events
   EVENT_STEP_REQUEST_INTERCEPTORS: "step.request_interceptors_executed",
   EVENT_STEP_SINGLEFLIGHT_CHECK: "step.singleflight_check_completed",
   EVENT_STEP_HEADERS_RESOLVED: "step.header_providers_resolved",
@@ -80,7 +126,6 @@ export const HTTP_CONSTANTS = {
   EVENT_STEP_RESPONSE_INTERCEPTORS: "step.response_interceptors_executed",
   EVENT_STEP_ERROR_HANDLED: "step.error_interceptors_handled",
 
-  // Attribute Keys for Decision Events
   KEY_CACHE_BYPASSED: "cache.bypassed",
   KEY_CACHE_HIT: "cache.hit",
   KEY_CACHE_KEY: "cache.key",
@@ -94,7 +139,6 @@ export const HTTP_CONSTANTS = {
   KEY_INTERCEPTORS_COUNT: "interceptors.count",
   KEY_HEADERS_COUNT: "headers.provider_count",
 
-  // Default-Deny Telemetry Attribute Allowlist
   ALLOWED_TELEMETRY_ATTRIBUTES: [
     "http.method",
     "http.url",

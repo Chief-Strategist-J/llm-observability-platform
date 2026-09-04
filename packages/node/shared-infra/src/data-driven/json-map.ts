@@ -1,15 +1,18 @@
 import type { JsonMapOp } from './transform.types';
+import { JsonMapOpKind, CoerceTarget } from './transform.types';
 
-function coerceValue(value: unknown, to: 'string' | 'number' | 'boolean' | 'date'): unknown {
+function coerceValue(value: unknown, to: CoerceTarget | `${CoerceTarget}`): unknown {
   switch (to) {
-    case 'string':
+    case CoerceTarget.STRING:
       return String(value);
-    case 'number':
+    case CoerceTarget.NUMBER:
       return Number(value);
-    case 'boolean':
+    case CoerceTarget.BOOLEAN:
       return Boolean(value);
-    case 'date':
+    case CoerceTarget.DATE:
       return new Date(value as string | number);
+    default:
+      return value;
   }
 }
 
@@ -21,38 +24,42 @@ export function mapJson(
 
   for (const op of ops) {
     switch (op.op) {
-      case 'rename': {
+      case JsonMapOpKind.RENAME: {
         if (op.from in result) {
           result[op.to] = result[op.from];
           delete result[op.from];
         }
         break;
       }
-      case 'pick': {
+      case JsonMapOpKind.PICK: {
         const picked: Record<string, unknown> = {};
-        for (const field of op.fields) {
-          if (field in result) {
-            picked[field] = result[field];
+        const keys = 'keys' in op && Array.isArray(op.keys) ? op.keys : ('fields' in op && Array.isArray(op.fields) ? op.fields : []);
+        for (const k of keys) {
+          if (k in result) {
+            picked[k] = result[k];
           }
         }
         result = picked;
         break;
       }
-      case 'omit': {
-        for (const field of op.fields) {
-          delete result[field];
+      case JsonMapOpKind.OMIT: {
+        const keys = 'keys' in op && Array.isArray(op.keys) ? op.keys : ('fields' in op && Array.isArray(op.fields) ? op.fields : []);
+        for (const k of keys) {
+          delete result[k];
         }
         break;
       }
-      case 'default': {
-        if (!(op.field in result) || result[op.field] === undefined || result[op.field] === null) {
-          result[op.field] = op.value;
+      case JsonMapOpKind.DEFAULT: {
+        const k = 'key' in op && op.key ? op.key : ('field' in op && op.field ? op.field : '');
+        if (k && (!(k in result) || result[k] === undefined || result[k] === null)) {
+          result[k] = op.value;
         }
         break;
       }
-      case 'coerce': {
-        if (op.field in result) {
-          result[op.field] = coerceValue(result[op.field], op.to);
+      case JsonMapOpKind.COERCE: {
+        const k = 'key' in op && op.key ? op.key : ('field' in op && op.field ? op.field : '');
+        if (k && k in result) {
+          result[k] = coerceValue(result[k], op.to);
         }
         break;
       }

@@ -1,4 +1,5 @@
 import type { ListOp } from './transform.types';
+import { ListOpKind, SortDirection } from './transform.types';
 
 export function transformList<T extends Record<string, unknown>>(
   rows: T[],
@@ -8,11 +9,11 @@ export function transformList<T extends Record<string, unknown>>(
 
   for (const op of ops) {
     switch (op.op) {
-      case 'filter': {
+      case ListOpKind.FILTER: {
         result = result.filter((row) => row[op.field] === op.value);
         break;
       }
-      case 'search': {
+      case ListOpKind.SEARCH: {
         const q = op.query.toLowerCase();
         result = result.filter((row) =>
           op.fields.some((field) => {
@@ -22,8 +23,9 @@ export function transformList<T extends Record<string, unknown>>(
         );
         break;
       }
-      case 'sort': {
-        const dir = op.direction === 'asc' ? 1 : -1;
+      case ListOpKind.SORT: {
+        const sortDir = 'dir' in op && op.dir ? op.dir : ('direction' in op && op.direction ? op.direction : SortDirection.ASC);
+        const dir = sortDir === SortDirection.ASC ? 1 : -1;
         result.sort((a, b) => {
           const aVal = a[op.field];
           const bVal = b[op.field];
@@ -34,12 +36,12 @@ export function transformList<T extends Record<string, unknown>>(
         });
         break;
       }
-      case 'paginate': {
+      case ListOpKind.PAGINATE: {
         const start = (op.page - 1) * op.pageSize;
         result = result.slice(start, start + op.pageSize);
         break;
       }
-      case 'pick': {
+      case ListOpKind.PICK: {
         result = result.map((row) => {
           const picked = {} as Record<string, unknown>;
           for (const field of op.fields) {
@@ -51,7 +53,7 @@ export function transformList<T extends Record<string, unknown>>(
         });
         break;
       }
-      case 'groupBy': {
+      case ListOpKind.GROUP_BY: {
         break;
       }
     }

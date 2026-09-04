@@ -1,41 +1,35 @@
 import {
-  executeQueryAdapter,
-  withRetry,
-  withCache,
-  withCircuitBreaker,
-  withTracing,
+  createServiceClient,
+  executeServiceClientQuery,
+  HTTP_CONSTANTS,
 } from "@observability/shared-infra";
 import type { CostSummaryResult, CostByProvider } from "../types";
 import { CostSummaryFromApiOps } from "../schema";
 import { COST_QUERIES } from "../queries";
-import { COSTS_CONFIG_DEFAULTS } from "../constants";
 
 export interface CostsClientAdapter {
   getCostSummary(timeRange?: string): Promise<CostSummaryResult>;
   getCostProviders(timeRange?: string): Promise<CostByProvider[]>;
 }
 
-class RawCostsClientAdapter implements CostsClientAdapter {
-  private readonly baseUrl = process.env.LATENCY_ENGINE_URL || COSTS_CONFIG_DEFAULTS.DEFAULT_ENGINE_URL;
-  private readonly serviceSub = COSTS_CONFIG_DEFAULTS.DEFAULT_SERVICE_SUB;
-
-  async getCostSummary(timeRange = "30d"): Promise<CostSummaryResult> {
-    return executeQueryAdapter<CostSummaryResult>(
-      this.baseUrl, COST_QUERIES.QUERY_COST_SUMMARY.endpoint, { time_range: timeRange },
-      this.serviceSub, CostSummaryFromApiOps
+const rawAdapter: CostsClientAdapter = {
+  getCostSummary(timeRange = "30d") {
+    return executeServiceClientQuery<CostSummaryResult>(
+      HTTP_CONSTANTS.SERVICE_NAME_LATENCY_ENGINE,
+      { ...COST_QUERIES.QUERY_COST_SUMMARY, transformOps: CostSummaryFromApiOps },
+      { time_range: timeRange }
     );
-  }
-
-  async getCostProviders(timeRange = "30d"): Promise<CostByProvider[]> {
-    return executeQueryAdapter<CostByProvider[]>(
-      this.baseUrl, COST_QUERIES.QUERY_COST_PROVIDERS.endpoint, { time_range: timeRange },
-      this.serviceSub
+  },
+  getCostProviders(timeRange = "30d") {
+    return executeServiceClientQuery<CostByProvider[]>(
+      HTTP_CONSTANTS.SERVICE_NAME_LATENCY_ENGINE,
+      COST_QUERIES.QUERY_COST_PROVIDERS,
+      { time_range: timeRange }
     );
-  }
-}
+  },
+};
 
-const rawAdapter = new RawCostsClientAdapter();
-export const costsClientService: CostsClientAdapter = withTracing(
-  withCircuitBreaker(withCache(withRetry(rawAdapter, 3, 200), 5000), 5, 10000),
-  "costs-client-service"
+export const costsClientService: CostsClientAdapter = createServiceClient(
+  HTTP_CONSTANTS.SERVICE_NAME_LATENCY_ENGINE,
+  rawAdapter
 );

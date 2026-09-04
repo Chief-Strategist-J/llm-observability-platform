@@ -1,5 +1,8 @@
 export const QUALITY_CONFIG_DEFAULTS = {
+  DEFAULT_MODEL: "gpt-4o",
+  DEFAULT_TIME_RANGE: "24h",
   DEFAULT_LOOKBACK_DAYS: 7,
+  DEFAULT_LIMIT: 20,
   DEFAULT_SLO_THRESHOLD_SCORE: 0.85,
   DEFAULT_SERVICE_SUB: "web-app-quality-service",
   DEFAULT_JWT_SECRET: "development-jwt-secret-key-32-bytes-min!!",

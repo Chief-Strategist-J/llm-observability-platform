@@ -1,3 +1,13 @@
+/**
+ * @file retry-policy.ts
+ * @description Dynamic Retryability Policy Registry.
+ * 
+ * ALGORITHM & SPECIFICATION:
+ * 1. Non-Retryable Error Code & Status Filter:
+ *    - Registers HTTP status codes (e.g. 400, 401, 403, 404, 422) and error codes (UNAUTHORIZED, FORBIDDEN, VALIDATION_ERROR, NOT_FOUND) that should never be retried.
+ *    - `isRetryable(err)`: Returns `false` for non-retryable errors to avoid wasting backoff budgets on unrecoverable request failures.
+ */
+
 export interface RetryPolicyConfig {
   nonRetryableStatuses?: number[];
   nonRetryableCodes?: string[];

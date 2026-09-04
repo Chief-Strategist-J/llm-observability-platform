@@ -18,6 +18,7 @@
  * ============================================================================
  */
 
+import { serviceResolver, HTTP_CONSTANTS } from "@observability/shared-infra";
 import { withRetry, withCache, withCircuitBreaker } from "../../core/data-driven/adapter-decorators";
 import { executeHttpRequest, type ExecuteParams } from "./executor";
 import type {
@@ -40,8 +41,12 @@ export class RawAuthApiClient {
     this.baseUrl = baseUrl;
   }
 
-  execute<T = any>(actionKey: Parameters<typeof executeHttpRequest>[1], params?: ExecuteParams): Promise<T> {
-    return executeHttpRequest<T>(this.baseUrl, actionKey, params);
+  async execute<T = any>(actionKey: Parameters<typeof executeHttpRequest>[1], params?: ExecuteParams): Promise<T> {
+    const resolvedUrl = await serviceResolver.resolve(
+      HTTP_CONSTANTS.SERVICE_NAME_AUTH_SERVICE,
+      this.baseUrl
+    );
+    return executeHttpRequest<T>(resolvedUrl, actionKey, params);
   }
 
   signUp(payload: { email: string; password?: string; name: string; organization_name: string; role?: string }): Promise<AuthResponse> {
