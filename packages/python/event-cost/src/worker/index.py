@@ -30,6 +30,7 @@ from worker.config import load_config
 from worker.registry import build_registry
 from infra.adapters.metrics.prometheus_adapter import PrometheusAdapter
 from shared.ports.metrics_port import MetricsPort
+from python_shared.discovery import ServiceRegistryManager, ServiceRegistryManagerOptions
 
 logger = logging.getLogger(__name__)
 
@@ -289,15 +290,25 @@ class _HealthHandler(BaseHTTPRequestHandler):
         pass
 
 
-def _start_health_server(port: int = 8001) -> None:
+def _start_health_server(port: int = 8005) -> HTTPServer:
     server = HTTPServer(("0.0.0.0", port), _HealthHandler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
 
 
 def main() -> None:
     _init_tracing()
     config = load_config()
-    _start_health_server()
+    _start_health_server(config.health_port)
+
+    registry_manager = ServiceRegistryManager(
+        ServiceRegistryManagerOptions(
+            name="event-cost",
+            port=config.health_port,
+            health_path="/health",
+        )
+    )
+    registry_manager.register_sync()
 
     try:
         start_http_server(config.prometheus_metrics_port)
@@ -337,6 +348,7 @@ def main() -> None:
             consumer, dlq_producer, fenwick, bucket, ewma, price_lookup, dedup, config, metrics
         )
     finally:
+        registry_manager.deregister_sync()
         consumer.close()
 
 

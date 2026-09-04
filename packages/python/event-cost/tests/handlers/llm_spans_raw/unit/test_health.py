@@ -22,3 +22,20 @@ def test_health_handler():
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_service_registry_integration(monkeypatch):
+    from unittest.mock import MagicMock, patch
+    from worker.config import load_config
+    from python_shared.discovery import ServiceRegistryManager
+
+    mock_manager = MagicMock(spec=ServiceRegistryManager)
+    mock_manager.register_sync.return_value = "inst-event-cost-123"
+
+    with patch("worker.index.ServiceRegistryManager", return_value=mock_manager) as mock_cls:
+        cfg = load_config({"HEALTH_PORT": "8005"})
+        mgr = mock_cls()
+        inst_id = mgr.register_sync()
+        assert inst_id == "inst-event-cost-123"
+        mgr.deregister_sync()
+        mock_manager.deregister_sync.assert_called_once()
