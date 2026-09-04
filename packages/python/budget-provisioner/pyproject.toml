@@ -5,15 +5,8 @@ description = "REST API for budget configuration CRUD operations"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi>=0.100.0",
-    "uvicorn>=0.22.0",
-    "redis>=5.0.0",
-    "psycopg[binary]>=3.1.0",
-    "opentelemetry-sdk>=1.26.0",
-    "pydantic>=2.0.0",
-    "pyyaml>=6.0",
-    "PyJWT>=2.8.0",
-    "prometheus-client>=0.17.0"
+    "python-shared",
+    "PyJWT>=2.8.0"
 ]
 
 [project.optional-dependencies]

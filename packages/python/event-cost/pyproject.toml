@@ -5,12 +5,7 @@ description = "LLM API cost ledger, pricing engine, and Kafka consumer worker fo
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "redis>=5.0.0",
-    "pyyaml>=6.0",
-    "confluent-kafka>=2.3.0",
-    "opentelemetry-sdk>=1.26.0",
-    "pydantic>=2.0.0",
-    "prometheus-client>=0.17.0",
+    "python-shared"
 ]
 
 [project.optional-dependencies]

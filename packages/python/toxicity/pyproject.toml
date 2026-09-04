@@ -5,19 +5,13 @@ description = "Unified toxicity service — ONNX inference + Kafka publisher + f
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "pydantic>=2.0.0",
-    "fastapi>=0.100.0",
-    "uvicorn>=0.22.0",
+    "python-shared",
     "numpy>=1.26.0",
     "transformers>=4.40.0",
     "onnxruntime>=1.17.0",
     "optimum[onnxruntime]>=1.18.0",
     "torch>=2.2.0",
-    "confluent-kafka>=2.3.0",
-    "prometheus-client>=0.17.0",
-    "opentelemetry-sdk>=1.26.0",
-    "opentelemetry-api>=1.26.0",
-    "opentelemetry-exporter-otlp-proto-grpc>=1.26.0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.26.0"
 ]
 
 [project.optional-dependencies]
