@@ -223,3 +223,18 @@ def test_get_attribution_not_found(client, mock_service):
         "queue": 0.0,
         "inference": 0.0,
     }
+
+
+def test_service_registry_lifecycle(monkeypatch):
+    from unittest.mock import AsyncMock, patch
+    from api.rest.v1.app import create_app
+
+    mock_mgr = MagicMock()
+    mock_mgr.register = AsyncMock()
+    mock_mgr.deregister = AsyncMock()
+
+    with patch("api.rest.v1.app.register_fastapi_service", return_value=mock_mgr) as mock_reg:
+        test_app = create_app()
+        mock_reg.assert_called_once()
+        assert mock_reg.call_args[1]["service_name"] == "latency-engine"
+

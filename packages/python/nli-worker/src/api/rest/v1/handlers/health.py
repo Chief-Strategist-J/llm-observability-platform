@@ -11,6 +11,7 @@ class HealthResponse(BaseModel):
     model: str
     device: str
 
+@router.get("/health", response_model=HealthResponse)
 @router.get("/healthz", response_model=HealthResponse)
 @router.post("/healthz", response_model=HealthResponse)
 def healthz(request: Request) -> Any:

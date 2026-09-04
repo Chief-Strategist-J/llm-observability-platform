@@ -12,6 +12,7 @@ from config import load_config
 from features.latency_query.service import LatencyQueryService
 from infra.adapters.redis.latency_redis_adapter import LatencyRedisAdapter
 from infra.adapters.clickhouse.latency_clickhouse_adapter import LatencyClickHouseAdapter
+from python_shared.discovery import register_fastapi_service
 from shared.tracing.tracer import init_tracer
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,12 @@ def create_app() -> FastAPI:
 
     app.state.query_service = query_service
     app.include_router(v1_router)
+
+    register_fastapi_service(
+        app,
+        service_name="latency-engine",
+        port=cfg.health_port,
+    )
     
     return app
 
