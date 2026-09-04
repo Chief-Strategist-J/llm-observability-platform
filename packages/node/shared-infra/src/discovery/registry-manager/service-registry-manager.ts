@@ -1,5 +1,6 @@
 import { trace, SpanKind, SpanStatusCode } from "@opentelemetry/api";
 import { HTTP_CONSTANTS } from "../../http/constants";
+import { httpClient } from "../../http/client/scalable-http-client";
 import { SERVICE_CATALOG } from "../catalog/service-catalog";
 import type { RegisterInstanceRequest } from "../requests/register-instance.request";
 import type { HeartbeatInstanceRequest } from "../requests/heartbeat-instance.request";
@@ -79,18 +80,13 @@ export class ServiceRegistryManager {
             },
           };
 
-          const res = await fetch(url.toString(), {
-            method: HTTP_CONSTANTS.METHOD_POST,
-            headers: this.buildHeaders(),
-            body: JSON.stringify(payload),
-          });
+          const res = await httpClient.post<RegisterInstanceResponse>(
+            url.toString(),
+            payload,
+            this.buildHeaders()
+          );
 
-          if (!res.ok) {
-            span.setStatus({ code: SpanStatusCode.ERROR, message: `Registration failed with status ${res.status}` });
-            return;
-          }
-
-          const json: RegisterInstanceResponse = await res.json();
+          const json = res.data;
           if (!json.success || !json.data?.id) {
             span.setStatus({ code: SpanStatusCode.ERROR, message: HTTP_CONSTANTS.MSG_MISSING_INSTANCE_ID });
             return;
@@ -129,18 +125,13 @@ export class ServiceRegistryManager {
             instanceId: this.instanceId!,
           };
 
-          const res = await fetch(url.toString(), {
-            method: HTTP_CONSTANTS.METHOD_POST,
-            headers: this.buildHeaders(),
-            body: JSON.stringify(payload),
-          });
+          const res = await httpClient.post<HeartbeatInstanceResponse>(
+            url.toString(),
+            payload,
+            this.buildHeaders()
+          );
 
-          if (!res.ok) {
-            span.setStatus({ code: SpanStatusCode.ERROR, message: `Heartbeat HTTP request failed with status ${res.status}` });
-            return;
-          }
-
-          const json: HeartbeatInstanceResponse = await res.json();
+          const json = res.data;
           span.setStatus({ code: json.success ? SpanStatusCode.OK : SpanStatusCode.ERROR });
         } catch (err: any) {
           span.setStatus({ code: SpanStatusCode.ERROR, message: err?.message || String(err) });
@@ -172,18 +163,13 @@ export class ServiceRegistryManager {
             instanceId: this.instanceId!,
           };
 
-          const res = await fetch(url.toString(), {
-            method: HTTP_CONSTANTS.METHOD_POST,
-            headers: this.buildHeaders(),
-            body: JSON.stringify(payload),
-          });
+          const res = await httpClient.post<DeregisterInstanceResponse>(
+            url.toString(),
+            payload,
+            this.buildHeaders()
+          );
 
-          if (!res.ok) {
-            span.setStatus({ code: SpanStatusCode.ERROR, message: `Deregistration HTTP request failed with status ${res.status}` });
-            return;
-          }
-
-          const json: DeregisterInstanceResponse = await res.json();
+          const json = res.data;
           this.instanceId = null;
           span.setStatus({ code: json.success ? SpanStatusCode.OK : SpanStatusCode.ERROR });
         } catch (err: any) {
