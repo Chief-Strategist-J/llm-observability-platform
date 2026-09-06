@@ -10,3 +10,6 @@
 [submodule "packages/llm-obs-infra"]
 	path = packages/llm-obs-infra
 	url = https://github.com/Chief-Strategist-J/llm-obs-infra.git
+[submodule "llm-obs-policies"]
+	path = llm-obs-policies
+	url = https://github.com/Chief-Strategist-J/llm-obs-policies.git
