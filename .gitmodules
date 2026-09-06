@@ -13,3 +13,6 @@
 [submodule "llm-obs-policies"]
 	path = llm-obs-policies
 	url = https://github.com/Chief-Strategist-J/llm-obs-policies.git
+[submodule "llm-obs-notebooks"]
+	path = llm-obs-notebooks
+	url = https://github.com/Chief-Strategist-J/llm-obs-notebooks.git
