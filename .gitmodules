@@ -1,0 +1,12 @@
+[submodule "packages/llm-obs-node-packages"]
+	path = packages/llm-obs-node-packages
+	url = https://github.com/Chief-Strategist-J/llm-obs-node-packages.git
+[submodule "packages/llm-obs-python-packages"]
+	path = packages/llm-obs-python-packages
+	url = https://github.com/Chief-Strategist-J/llm-obs-python-packages.git
+[submodule "packages/llm-obs-go-packages"]
+	path = packages/llm-obs-go-packages
+	url = https://github.com/Chief-Strategist-J/llm-obs-go-packages.git
+[submodule "packages/llm-obs-infra"]
+	path = packages/llm-obs-infra
+	url = https://github.com/Chief-Strategist-J/llm-obs-infra.git
