@@ -1,8 +1,0 @@
-node_modules
-.next
-dist
-build
-.cache
-coverage
-*.log
-.DS_Store

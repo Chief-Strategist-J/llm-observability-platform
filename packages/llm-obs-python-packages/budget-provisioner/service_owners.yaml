@@ -1,4 +1,0 @@
-service_owners:
-  billing_service: "@john-billing"
-  recommendation_service: "@sarah-recs"
-  chat_service: "@bob-chat"

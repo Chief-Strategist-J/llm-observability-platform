@@ -1,4 +1,0 @@
-version: 1.0
-tables:
-  latency_checkpoints: clickhouse
-  raw_logs: redis

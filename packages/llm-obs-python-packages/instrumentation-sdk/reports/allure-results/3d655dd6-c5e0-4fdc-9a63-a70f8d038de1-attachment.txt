@@ -1,1 +1,0 @@
-WARNING  kafka.producer.middleware:producer_middleware.py:49 Circuit breaker OPEN for topic: test.broken.v1

@@ -1,4 +1,0 @@
-endpoints:
-  /v1/chat/completions: 1000
-  /v1/embeddings: 200
-  default: 500

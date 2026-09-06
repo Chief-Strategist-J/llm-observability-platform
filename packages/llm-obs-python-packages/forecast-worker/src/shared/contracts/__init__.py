@@ -1,1 +1,0 @@
-# shared.contracts package

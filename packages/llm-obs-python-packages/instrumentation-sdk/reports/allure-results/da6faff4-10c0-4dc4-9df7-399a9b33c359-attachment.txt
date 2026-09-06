@@ -1,2 +1,0 @@
-ERROR    kafka.consumer.middleware:consumer_middleware.py:60 Processing failed on test.poison.v1 (attempt 3/2): Poison payload format
-WARNING  kafka.consumer.middleware:consumer_middleware.py:65 Routing message to DLQ topic for test.poison.v1 @ offset 500

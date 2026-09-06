@@ -1,7 +1,0 @@
-{
-  "extraPaths": [
-    "src",
-    "../python-shared/src",
-    "../instrumentation-sdk/src"
-  ]
-}

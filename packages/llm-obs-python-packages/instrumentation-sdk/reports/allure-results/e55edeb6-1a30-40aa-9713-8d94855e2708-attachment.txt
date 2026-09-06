@@ -1,1 +1,0 @@
-WARNING  opentelemetry.trace:__init__.py:556 Overriding of current TracerProvider is not allowed

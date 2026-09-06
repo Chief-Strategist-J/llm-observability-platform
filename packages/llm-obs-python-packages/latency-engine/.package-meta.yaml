@@ -1,6 +1,0 @@
-name: latency-engine
-language: python
-type: hybrid
-version: "0.2.0"
-owner: "@latency-team"
-description: "Kafka consumer + Temporal scheduled-workflow worker for LLM latency SLO tracking and baseline management"

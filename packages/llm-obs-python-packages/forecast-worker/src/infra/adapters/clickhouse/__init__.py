@@ -1,1 +1,0 @@
-# infra.adapters.clickhouse package
