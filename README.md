@@ -34,61 +34,61 @@ Manage all infrastructure services directly from the project root (`/home/btpl-l
 
 ```bash
 # Start all infrastructure services (runs pre-flight verification & cert generation)
-./packages/configs/llm-obs-infra/scripts/manage.sh up
+./packages/llm-obs-infra/scripts/manage.sh up
 
 # Check status of all infrastructure services
-./packages/configs/llm-obs-infra/scripts/manage.sh status
+./packages/llm-obs-infra/scripts/manage.sh status
 
 # Run comprehensive 41-point health check suite across all services
-./packages/configs/llm-obs-infra/scripts/manage.sh health
+./packages/llm-obs-infra/scripts/manage.sh health
 
 # Follow live container logs across all services
-./packages/configs/llm-obs-infra/scripts/manage.sh logs
+./packages/llm-obs-infra/scripts/manage.sh logs
 
 # Restart all infrastructure services
-./packages/configs/llm-obs-infra/scripts/manage.sh restart
+./packages/llm-obs-infra/scripts/manage.sh restart
 
 # Stop all infrastructure services
-./packages/configs/llm-obs-infra/scripts/manage.sh down
+./packages/llm-obs-infra/scripts/manage.sh down
 ```
 
 ### ⚡ Application Microservices Orchestrator (`app.sh`)
 
-Run all microservices using the CLI orchestrator from `packages/node/web-app`:
+Run all microservices using the CLI orchestrator from `packages/llm-obs-node-packages/web-app`:
 
 ```bash
 # List all 17 registered microservices and assigned unique ports
-./packages/node/web-app/scripts/app.sh list
+./packages/llm-obs-node-packages/web-app/scripts/app.sh list
 
 # Run any microservice individually (e.g. faithfulness, toxicity, latency, quality, auth)
-./packages/node/web-app/scripts/app.sh run faithfulness
-./packages/node/web-app/scripts/app.sh run toxicity
-./packages/node/web-app/scripts/app.sh run latency
+./packages/llm-obs-node-packages/web-app/scripts/app.sh run faithfulness
+./packages/llm-obs-node-packages/web-app/scripts/app.sh run toxicity
+./packages/llm-obs-node-packages/web-app/scripts/app.sh run latency
 
 # Run default development environment (Web App + Auth + Storybook)
-./packages/node/web-app/scripts/app.sh dev
+./packages/llm-obs-node-packages/web-app/scripts/app.sh dev
 
 # Run custom combination of services
-./packages/node/web-app/scripts/app.sh dev web-app auth quality faithfulness
+./packages/llm-obs-node-packages/web-app/scripts/app.sh dev web-app auth quality faithfulness
 
 # Run full health check across all microservices
-./packages/node/web-app/scripts/app.sh health
+./packages/llm-obs-node-packages/web-app/scripts/app.sh health
 ```
 
 ### 🐳 Direct Docker Compose Commands
 
 ```bash
 # Check status of running containers
-docker compose -f packages/configs/llm-obs-infra/docker-compose.yml ps
+docker compose -f packages/llm-obs-infra/docker-compose.yml ps
 
 # Start all containers in background
-docker compose -f packages/configs/llm-obs-infra/docker-compose.yml up -d
+docker compose -f packages/llm-obs-infra/docker-compose.yml up -d
 
 # View live container logs
-docker compose -f packages/configs/llm-obs-infra/docker-compose.yml logs -f
+docker compose -f packages/llm-obs-infra/docker-compose.yml logs -f
 
 # Stop containers
-docker compose -f packages/configs/llm-obs-infra/docker-compose.yml down
+docker compose -f packages/llm-obs-infra/docker-compose.yml down
 ```
 
 ### 🖥️ Self-Hosted Admin Consoles & Endpoints

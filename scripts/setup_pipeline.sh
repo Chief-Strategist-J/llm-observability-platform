@@ -77,10 +77,10 @@ docker run -d --name quality-observability-stack \
   chiefj/instrumentation-sdk-api:latest
 
 # Copy dashboard JSONs to ensure quality-engine and other updated dashboards are provisioned
-docker cp packages/python/instrumentation-sdk/build/dashboards/. quality-observability-stack:/etc/grafana/provisioning/dashboards/json/
+docker cp packages/llm-obs-python-packages/instrumentation-sdk/build/dashboards/. quality-observability-stack:/etc/grafana/provisioning/dashboards/json/
 
 # Copy prometheus.yml configuration and reload config
-docker cp packages/python/instrumentation-sdk/build/prometheus.yml quality-observability-stack:/etc/prometheus/prometheus.yml
+docker cp packages/llm-obs-python-packages/instrumentation-sdk/build/prometheus.yml quality-observability-stack:/etc/prometheus/prometheus.yml
 docker exec quality-observability-stack pkill -HUP prometheus
 
 echo "⚡ Restarting quality-engine worker to re-subscribe cleanly..."
