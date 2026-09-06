@@ -1,4 +1,4 @@
-import { trace } from '@opentelemetry/api';
+import { trace } from '@observability/shared-infra';
 
 export function withRetry<T extends (...args: any[]) => Promise<any>>(
   fn: T,

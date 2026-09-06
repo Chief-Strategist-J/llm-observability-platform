@@ -20,3 +20,4 @@ export * from './messaging/handlers/base-handler';
 export * from './messaging/producers/event-producer';
 export * from './messaging/consumers/event-consumer';
 export * from './messaging/cqrs/cqrs.types';
+export * from 'zod';

@@ -1,4 +1,5 @@
 import * as http from 'http';
+import { ServiceRegistryManager } from '@observability/shared-infra';
 import { AuthService } from './features/auth/service';
 import { AuthRestV1Router } from './api/rest/v1/router';
 import { AlloyDBOmniAuthAdapter } from './infra/adapters/postgres/alloydb-omni-auth.adapter';
@@ -10,7 +11,15 @@ import { AUTH_CONSTANTS } from './shared/constants/auth.constants';
 import { initAuthTracing } from './infra/tracing/tracer';
 import { runWithHttpTracing } from './infra/tracing/middleware';
 
+import { runMigrations } from '../database/migrate';
+
 initAuthTracing();
+
+if (process.env.USE_MOCK_DB !== 'true') {
+  runMigrations().catch((err: any) => {
+    console.warn('[db-migrate] Auto-migration status:', err?.message || err);
+  });
+}
 
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : AUTH_CONSTANTS.DEFAULT_PORT;
 
@@ -77,6 +86,14 @@ const server = http.createServer((req, res) => {
   });
 });
 
+const authRegistryManager = new ServiceRegistryManager({
+  name: 'auth-service',
+  host: process.env.HOST || process.env.SERVICE_HOST || process.env.HOSTNAME || '',
+  port,
+  protocol: 'http',
+});
+
 server.listen(port, () => {
   console.log(`[auth-service] Auth HTTP Service running live on http://localhost:${port}`);
+  authRegistryManager.register().catch(() => {});
 });

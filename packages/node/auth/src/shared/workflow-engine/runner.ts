@@ -1,4 +1,4 @@
-import { trace } from '@opentelemetry/api';
+import { trace } from '@observability/shared-infra';
 import { stepRegistry } from './step-registry';
 
 export interface WorkflowStep {

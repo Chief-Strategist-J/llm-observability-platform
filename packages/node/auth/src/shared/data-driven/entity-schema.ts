@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from '@observability/shared-infra';
 import type { JsonMapOp } from './json-map';
 
 export type FieldKind = 'text' | 'number' | 'select' | 'date' | 'boolean';

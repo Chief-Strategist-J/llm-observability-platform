@@ -3,7 +3,7 @@
  */
 
 import { call, put } from "redux-saga/effects";
-import { isUnauthorizedError, compareNormalized } from "../utils/string-utils";
+import { isUnauthorizedError, compareNormalized, formatUserFacingError } from "../utils/string-utils";
 import { eventBus } from "../event-bus/event-bus";
 import { authActions } from "../../features/auth/auth.slice";
 import { AUTH_COOKIE_KEYS, AUTH_EVENTS, AUTH_MESSAGES } from "../../features/auth/auth.constants";
@@ -33,7 +33,7 @@ export function safeSaga<T extends (...args: any[]) => Generator<any, void, any>
         eventBus.emit(AUTH_EVENTS.UNAUTHORIZED, { error: err });
       }
 
-      const errorMsg = err?.message || config?.fallbackError || AUTH_MESSAGES.UNEXPECTED_ERROR;
+      const errorMsg = formatUserFacingError(err, config?.fallbackError || AUTH_MESSAGES.UNEXPECTED_ERROR);
 
       if (config?.failureAction) {
         yield put(config.failureAction(errorMsg));

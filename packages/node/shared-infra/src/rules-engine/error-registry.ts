@@ -64,6 +64,76 @@ class CentralizedErrorRegistry {
       severity: RULES_ENGINE_CONSTANTS.SEV_WARNING,
       httpStatus: 422,
     });
+    this.register({
+      code: RULES_ENGINE_CONSTANTS.ERR_SSRF_PROTOCOL_BLOCKED,
+      message: RULES_ENGINE_CONSTANTS.MSG_SSRF_PROTOCOL_BLOCKED,
+      category: RULES_ENGINE_CONSTANTS.CAT_VALIDATION,
+      severity: RULES_ENGINE_CONSTANTS.SEV_ERROR,
+      httpStatus: 400,
+    });
+    this.register({
+      code: RULES_ENGINE_CONSTANTS.ERR_SSRF_IP_BLOCKED,
+      message: RULES_ENGINE_CONSTANTS.MSG_SSRF_IP_BLOCKED,
+      category: RULES_ENGINE_CONSTANTS.CAT_RULE_BREACH,
+      severity: RULES_ENGINE_CONSTANTS.SEV_ERROR,
+      httpStatus: 403,
+    });
+    this.register({
+      code: RULES_ENGINE_CONSTANTS.ERR_SSRF_ALLOWLIST_VIOLATION,
+      message: RULES_ENGINE_CONSTANTS.MSG_SSRF_ALLOWLIST_VIOLATION,
+      category: RULES_ENGINE_CONSTANTS.CAT_RULE_BREACH,
+      severity: RULES_ENGINE_CONSTANTS.SEV_ERROR,
+      httpStatus: 403,
+    });
+    this.register({
+      code: RULES_ENGINE_CONSTANTS.ERR_SSRF_DNS_RESOLVED_BLOCKED,
+      message: RULES_ENGINE_CONSTANTS.MSG_SSRF_DNS_RESOLVED_BLOCKED,
+      category: RULES_ENGINE_CONSTANTS.CAT_RULE_BREACH,
+      severity: RULES_ENGINE_CONSTANTS.SEV_ERROR,
+      httpStatus: 403,
+    });
+    this.register({
+      code: RULES_ENGINE_CONSTANTS.ERR_SSRF_INVALID_URL,
+      message: RULES_ENGINE_CONSTANTS.MSG_SSRF_INVALID_URL,
+      category: RULES_ENGINE_CONSTANTS.CAT_VALIDATION,
+      severity: RULES_ENGINE_CONSTANTS.SEV_ERROR,
+      httpStatus: 400,
+    });
+    this.register({
+      code: RULES_ENGINE_CONSTANTS.ERR_CONTEXT_STORAGE_INIT_FAILED,
+      message: RULES_ENGINE_CONSTANTS.MSG_CONTEXT_STORAGE_INIT_FAILED,
+      category: RULES_ENGINE_CONSTANTS.CAT_INTERNAL,
+      severity: RULES_ENGINE_CONSTANTS.SEV_INFO,
+      httpStatus: 500,
+    });
+    this.register({
+      code: RULES_ENGINE_CONSTANTS.ERR_UNAUTHORIZED,
+      message: RULES_ENGINE_CONSTANTS.MSG_UNAUTHORIZED,
+      category: RULES_ENGINE_CONSTANTS.CAT_VALIDATION,
+      severity: RULES_ENGINE_CONSTANTS.SEV_ERROR,
+      httpStatus: 401,
+    });
+    this.register({
+      code: RULES_ENGINE_CONSTANTS.ERR_FORBIDDEN,
+      message: RULES_ENGINE_CONSTANTS.MSG_FORBIDDEN,
+      category: RULES_ENGINE_CONSTANTS.CAT_RULE_BREACH,
+      severity: RULES_ENGINE_CONSTANTS.SEV_ERROR,
+      httpStatus: 403,
+    });
+    this.register({
+      code: RULES_ENGINE_CONSTANTS.ERR_NOT_FOUND,
+      message: RULES_ENGINE_CONSTANTS.MSG_NOT_FOUND,
+      category: RULES_ENGINE_CONSTANTS.CAT_VALIDATION,
+      severity: RULES_ENGINE_CONSTANTS.SEV_ERROR,
+      httpStatus: 404,
+    });
+    this.register({
+      code: RULES_ENGINE_CONSTANTS.ERR_SERVICE_UNREACHABLE,
+      message: RULES_ENGINE_CONSTANTS.MSG_SERVICE_UNREACHABLE,
+      category: RULES_ENGINE_CONSTANTS.CAT_NETWORK,
+      severity: RULES_ENGINE_CONSTANTS.SEV_ERROR,
+      httpStatus: 503,
+    });
   }
 }
 

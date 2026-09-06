@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { SpanKind } from '@opentelemetry/api';
+import { SpanKind } from '@observability/shared-infra';
 import type { AuthRepositoryPort, OrganizationRecord } from '../../../features/auth/repository';
 import type { AuthUserRecord, AuditLogRecord } from '../../../features/auth/types';
 import type { ApiKeyRecord } from '../../../shared/types/auth.types';

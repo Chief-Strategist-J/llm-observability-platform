@@ -15,8 +15,12 @@ cmd_list_services() {
 
 cmd_run_service() {
   local target_key=$1
-  local found=false
+  if [ "$target_key" = "web-app" ] || [ "$target_key" = "web-app:storybook" ]; then
+    cmd_dev "web-app" "storybook"
+    return 0
+  fi
 
+  local found=false
   for entry in "${SERVICE_REGISTRY[@]}"; do
     IFS=':' read -r key name port dir cmd <<< "$entry"
     if [ "$key" = "$target_key" ]; then
@@ -27,6 +31,14 @@ cmd_run_service() {
       fi
       load_env_variant "$dir" "$APP_ENV"
       if [ "$key" = "auth" ]; then
+        if [ -f "$dir/docker-compose.yml" ] && command -v docker >/dev/null 2>&1; then
+          log_info "Cleaning up previous auth images..."
+          docker image rm auth-auth-service auth-service observability-auth-service --force >/dev/null 2>&1 || true
+          log_info "Freeing port $port and starting Auth Service & DB in Docker Compose (Hot Reload & Force Recreate Enabled)..."
+          free_port "$port"
+          cd "$dir"
+          exec docker compose up --build --force-recreate
+        fi
         if ! nc -z localhost 31412 >/dev/null 2>&1; then
           log_warn "Auth DB (port 31412) is offline. Automatically starting DB and running migrations..."
           cmd_db_setup
@@ -35,6 +47,7 @@ cmd_run_service() {
       if [ "$key" != "kafka" ]; then
         free_port "$port"
       fi
+
       log_success "Starting ${BOLD}${name}${NC} on port ${BOLD}${port}${NC} [ENV=${APP_ENV}]..."
       cd "$dir"
       eval "$cmd"
@@ -54,17 +67,19 @@ cmd_dev() {
   local target_services=("$@")
 
   if [ "${#target_services[@]}" -eq 0 ]; then
-    target_services=("web-app" "auth" "storybook")
+    target_services=("web-app" "storybook" "auth")
   elif [ "${#target_services[@]}" -eq 1 ] && [ "${target_services[0]}" = "all" ]; then
-    target_services=("web-app" "auth" "storybook" "latency-engine")
+    target_services=("web-app" "storybook" "auth" "latency-engine")
+  elif [ "${#target_services[@]}" -eq 1 ] && [ "${target_services[0]}" = "web-app" ]; then
+    target_services=("web-app" "storybook")
   fi
 
   if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1 && [ -f "docker-compose.yaml" ]; then
     log_info "Cleaning up previous web-app image..."
-    docker image rm web-app-web-app --force >/dev/null 2>&1 || true
-    log_info "Freeing port 31400 and starting Next.js Web App in Docker Compose (Hot Reload Enabled)..."
+    docker image rm web-app-web-app web-app --force >/dev/null 2>&1 || true
+    log_info "Freeing port 31400 and starting Next.js Web App in Docker Compose (Hot Reload & Force Recreate Enabled)..."
     free_port 31400
-    exec docker compose up --build
+    exec docker compose up --build --force-recreate
   fi
 
   log_info "Preparing development environment [ENV=${APP_ENV}]..."

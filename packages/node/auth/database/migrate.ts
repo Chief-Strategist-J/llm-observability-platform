@@ -12,10 +12,17 @@ const connectionString =
 
 const pool = new pg.Pool({ connectionString });
 
+pool.on('error', (err: any) => {
+  console.warn('[db-migrate] PostgreSQL pool error handled:', err?.message || err);
+});
+
 async function connectWithRetry(maxRetries = 10, delayMs = 1500) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const client = await pool.connect();
+      client.on('error', (err: any) => {
+        console.warn('[db-migrate] PostgreSQL client error handled:', err?.message || err);
+      });
       return client;
     } catch (err) {
       if (attempt === maxRetries) throw err;
@@ -26,9 +33,10 @@ async function connectWithRetry(maxRetries = 10, delayMs = 1500) {
   throw new Error('[db-migrate] Unable to connect to database after maximum retries');
 }
 
-async function runMigrations() {
-  const client = await connectWithRetry();
+export async function runMigrations() {
+  let client: pg.PoolClient | null = null;
   try {
+    client = await connectWithRetry();
     await client.query(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
         name VARCHAR(255) PRIMARY KEY,
@@ -57,23 +65,49 @@ async function runMigrations() {
       const filePath = path.join(migrationsDir, file);
       const sql = fs.readFileSync(filePath, 'utf8');
 
-      await client.query('BEGIN');
-      await client.query(sql);
-      await client.query('INSERT INTO schema_migrations (name) VALUES ($1)', [file]);
-      await client.query('COMMIT');
-
-      console.log(`  - [DONE] ${file}`);
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          if (!client) {
+            client = await connectWithRetry();
+          }
+          await client.query('BEGIN');
+          await client.query(sql);
+          await client.query('INSERT INTO schema_migrations (name) VALUES ($1)', [file]);
+          await client.query('COMMIT');
+          console.log(`  - [DONE] ${file}`);
+          break;
+        } catch (fileErr: any) {
+          if (client) {
+            await client.query('ROLLBACK').catch(() => {});
+            try { client.release(); } catch {}
+            client = null;
+          }
+          if (attempt === 3) throw fileErr;
+          console.warn(`  - [RETRY] ${file} (attempt ${attempt}/3 failed: ${fileErr?.message || fileErr}). Retrying in 2s...`);
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+      }
     }
 
     console.log('[db-migrate] ✓ All database migrations applied successfully.');
   } catch (error) {
-    await client.query('ROLLBACK').catch(() => {});
+    if (client) {
+      await client.query('ROLLBACK').catch(() => {});
+    }
     console.error('[db-migrate] ✗ Migration failed:', error);
-    process.exit(1);
+    throw error;
   } finally {
-    client.release();
-    await pool.end();
+    if (client) {
+      try { client.release(); } catch {}
+    }
+    await pool.end().catch(() => {});
   }
 }
 
-runMigrations();
+const isDirectExecution = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+if (isDirectExecution) {
+  runMigrations().catch(() => {
+    process.exit(1);
+  });
+}
+

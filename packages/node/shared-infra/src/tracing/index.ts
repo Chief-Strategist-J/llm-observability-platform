@@ -3,3 +3,4 @@ export * from './tracer';
 export * from './http-middleware';
 export * from './messaging-tracer';
 export * from './traced-handler';
+export * from '@opentelemetry/api';

@@ -1,34 +1,34 @@
-/**
- * @file destination-validator.ts
- * @description Rules-Engine Powered Destination & SSRF URL Validator.
- * 
- * ALGORITHM & RULE SPECIFICATION:
- * 1. Declarative SSRF Rule Evaluation:
- *    - Uses `resolveRules()` from `@core/rules-engine` to evaluate destination checks.
- *    - Rule 1 (`rule-ssrf-protocol-check`): Deny if protocol is not `http:` or `https:`.
- *    - Rule 2 (`rule-ssrf-blocked-ip`): Deny if hostname matches restricted private IP regex.
- *    - Rule 3 (`rule-ssrf-allowlist-check`): Deny if `allowedHosts` is present and hostname is missing from set.
- *    - Rule 4 (`rule-ssrf-dns-resolution`): Async check performing DNS lookup to detect TOCTOU / SSRF DNS rebinding to internal subnets.
- * 2. Strict Denial Execution:
- *    - Throws structured SSRF/Security exception if any `deny` rule triggers during rule resolution.
- */
-
-import dns from "dns";
 import { resolveRules, type Rule } from "../../rules-engine";
+import { RULES_ENGINE_CONSTANTS } from "../../rules-engine/constants";
+import { errorRegistry } from "../../rules-engine/error-registry";
 
 const BLOCKED_IP_REGEX = /^(127\.|169\.254\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.|::1|0\.0\.0\.0)/;
+
+async function resolveDnsAddresses(hostname: string): Promise<{ address: string }[]> {
+  try {
+    if (typeof window === "undefined") {
+      const dns = await import(/* webpackIgnore: true */ "dns");
+      return await dns.promises.lookup(hostname, { all: true });
+    }
+  } catch (err: any) {
+    const errDesc = errorRegistry.get(RULES_ENGINE_CONSTANTS.ERR_SSRF_DNS_RESOLVED_BLOCKED);
+    throw new Error(`${errDesc.message}: '${hostname}' - ${err?.message || String(err)}`);
+  }
+  return [];
+}
 
 export async function validateDestinationUrl(urlStr: string, allowedHosts?: string[]): Promise<URL> {
   let parsedUrl: URL;
   try {
     parsedUrl = new URL(urlStr);
   } catch {
-    throw new Error(`Invalid URL: ${urlStr}`);
+    const errDesc = errorRegistry.get(RULES_ENGINE_CONSTANTS.ERR_SSRF_INVALID_URL);
+    throw new Error(`${errDesc.message}: ${urlStr}`);
   }
 
   const destinationRules: Rule[] = [
     {
-      id: "rule-ssrf-protocol-check",
+      id: RULES_ENGINE_CONSTANTS.ERR_SSRF_PROTOCOL_BLOCKED,
       name: "Enforce Secure Protocols (HTTP/HTTPS)",
       priority: 100,
       effect: "deny",
@@ -39,18 +39,22 @@ export async function validateDestinationUrl(urlStr: string, allowedHosts?: stri
       },
     },
     {
-      id: "rule-ssrf-blocked-ip",
+      id: RULES_ENGINE_CONSTANTS.ERR_SSRF_IP_BLOCKED,
       name: "Block Restricted Private Subnets & Loopback",
       priority: 90,
       effect: "deny",
       conditions: [],
       asyncCheck: async (ctx) => {
         const hostname = ctx.hostname as string;
+        const allowLoopback = ctx.allowLoopback || process.env.ALLOW_LOOPBACK_SSRF === "true" || process.env.NODE_ENV !== "production";
+        if (allowLoopback) {
+          return false;
+        }
         return BLOCKED_IP_REGEX.test(hostname);
       },
     },
     {
-      id: "rule-ssrf-allowlist-check",
+      id: RULES_ENGINE_CONSTANTS.ERR_SSRF_ALLOWLIST_VIOLATION,
       name: "Enforce Destination Host Allowlist",
       priority: 80,
       effect: "deny",
@@ -63,27 +67,34 @@ export async function validateDestinationUrl(urlStr: string, allowedHosts?: stri
       },
     },
     {
-      id: "rule-ssrf-dns-resolution",
+      id: RULES_ENGINE_CONSTANTS.ERR_SSRF_DNS_RESOLVED_BLOCKED,
       name: "Enforce DNS Resolved Subnet Check",
       priority: 70,
       effect: "deny",
       conditions: [],
       asyncCheck: async (ctx) => {
         const hostname = ctx.hostname as string;
+        const allowLoopback = ctx.allowLoopback || process.env.ALLOW_LOOPBACK_SSRF === "true" || process.env.NODE_ENV !== "production";
+        if (allowLoopback) {
+          return false;
+        }
         try {
-          const addresses = await dns.promises.lookup(hostname, { all: true });
+          const addresses = await resolveDnsAddresses(hostname);
           for (const addr of addresses) {
             if (BLOCKED_IP_REGEX.test(addr.address)) {
-              ctx.resolvedIpError = `SSRF Blocked: Resolved IP ${addr.address} for host ${hostname} is a restricted private IP`;
-              return true; // Trigger deny rule
+              const errDesc = errorRegistry.get(RULES_ENGINE_CONSTANTS.ERR_SSRF_DNS_RESOLVED_BLOCKED);
+              ctx.resolvedIpError = `${errDesc.message}: (${addr.address} for ${hostname})`;
+              return true;
             }
           }
           return false;
         } catch (dnsErr: any) {
-          if (dnsErr?.message?.includes("SSRF Blocked")) {
+          if (dnsErr?.message?.includes("SSRF")) {
             ctx.resolvedIpError = dnsErr.message;
             return true;
           }
+          const errDesc = errorRegistry.get(RULES_ENGINE_CONSTANTS.ERR_SSRF_DNS_RESOLVED_BLOCKED);
+          ctx.resolvedIpError = `${errDesc.message}: '${hostname}' - ${dnsErr?.message || String(dnsErr)}`;
           return false;
         }
       },
@@ -101,22 +112,10 @@ export async function validateDestinationUrl(urlStr: string, allowedHosts?: stri
 
   if (triggeredRules.length > 0) {
     const primaryRule = triggeredRules[0];
-    if (primaryRule?.id === "rule-ssrf-protocol-check") {
-      throw new Error(`Blocked insecure URL protocol scheme: ${parsedUrl.protocol}`);
-    }
-    if (primaryRule?.id === "rule-ssrf-blocked-ip") {
-      throw new Error(`SSRF Blocked: Destination IP/Host ${parsedUrl.hostname} is a restricted private/internal address`);
-    }
-    if (primaryRule?.id === "rule-ssrf-allowlist-check") {
-      throw new Error(`SSRF Violation: Target host ${parsedUrl.hostname} is not in destination allowlist`);
-    }
-    if (primaryRule?.id === "rule-ssrf-dns-resolution") {
-      const customMsg = evalContext.resolvedIpError as string | undefined;
-      throw new Error(customMsg || `SSRF Blocked: Resolved IP for host ${parsedUrl.hostname} is restricted`);
-    }
-    throw new Error(`SSRF Violation: Target URL failed security validation rule ${primaryRule?.name || "Unknown"}`);
+    const errDesc = errorRegistry.get(primaryRule?.id || RULES_ENGINE_CONSTANTS.ERR_RULE_DENIED);
+    const customMsg = evalContext.resolvedIpError as string | undefined;
+    throw new Error(customMsg || `${errDesc.message}: ${parsedUrl.hostname}`);
   }
-
 
   return parsedUrl;
 }

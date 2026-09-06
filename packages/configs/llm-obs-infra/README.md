@@ -274,3 +274,52 @@ curl "http://localhost:31426/v1/resolve?service=grafana"
 - **Financial Data Loss Prevention**: Mitigates un-ordered worker restarts and socket drops, guaranteeing zero-loss ingestion of LLM telemetry spans and financial cost ledger calculations.
 - **SLA & Uptime Protection**: Prevents Linux kernel Out-Of-Memory (OOM) killer panics and disk space exhaustion from un-rotated logs, guaranteeing system uptime for real-time observability dashboards.
 - **Portable Cross-Environment Deployments**: Eliminates brittle hardcoded directory paths, allowing the platform deployment stack to run across developer workstations, staging environments, and production clouds without manual path reconfiguration.
+
+---
+
+## 8. Application & Service Orchestration Commands
+
+The infrastructure deployment package supports launching frontend applications and microservices directly using dynamic folder path discovery (`dynamic-discovery.sh`).
+
+### A. NPM CLI Commands
+```bash
+# Run Next.js Web Application (Port 31400)
+npm run web-app
+
+# Run Storybook Component Explorer separately (Port 31406)
+npm run storybook
+
+# Run Auth HTTP Service (Port 3001)
+npm run auth
+
+# Run Next.js Web Application + Auth HTTP Service concurrently
+npm run web-app:auth
+
+# List all dynamically discovered runnable services
+npm run services
+
+# Run any specific named service dynamically
+npm run service <service-name>
+```
+
+### B. Direct Infrastructure Management Shell Script (`manage.sh`)
+```bash
+# Launch Next.js Web Application
+./scripts/manage.sh web-app
+
+# Launch Storybook separately
+./scripts/manage.sh storybook
+
+# Launch Auth HTTP Service
+./scripts/manage.sh auth
+
+# Launch Web Application + Auth HTTP Service together
+./scripts/manage.sh web-app-auth
+
+# List dynamically discovered services
+./scripts/manage.sh list-services
+
+# Run specific service by name
+./scripts/manage.sh service <service-name>
+```
+

@@ -15,7 +15,6 @@
  *      $\text{cap} = \min(\text{maxMs}, \text{baseMs} \times 2^{\text{attempt}-1})$, $\text{sleep} = \text{random}(0, \text{cap})$.
  */
 
-import crypto from "crypto";
 import type { Attributes } from "@opentelemetry/api";
 import { HTTP_CONSTANTS } from "../constants";
 
@@ -49,10 +48,25 @@ export function filterAllowedAttributes(attributes: Record<string, unknown>): At
   return filtered;
 }
 
+function generateFastHash(str: string): string {
+  let hash1 = 0x811c9dc5;
+  let hash2 = 0x9e3779b9;
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i);
+    hash1 ^= code;
+    hash1 = Math.imul(hash1, 0x01000193);
+    hash2 ^= code;
+    hash2 = Math.imul(hash2, 0x85ebca6b);
+  }
+  const hex1 = (hash1 >>> 0).toString(16).padStart(8, "0");
+  const hex2 = (hash2 >>> 0).toString(16).padStart(8, "0");
+  return `${hex1}${hex2}`;
+}
+
 export function generateHashedKey(tenantId: string, method: string, url: string, body?: unknown): string {
   const bodyStr = body ? JSON.stringify(body) : "";
   const rawKey = `${tenantId}:${method.toUpperCase()}:${url}:${bodyStr}`;
-  return crypto.createHash("sha256").update(rawKey).digest("hex");
+  return generateFastHash(rawKey);
 }
 
 export function deriveRouteTemplate(urlStr: string): string {

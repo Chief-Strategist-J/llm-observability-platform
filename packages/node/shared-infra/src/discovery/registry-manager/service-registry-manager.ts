@@ -35,7 +35,7 @@ export class ServiceRegistryManager {
   constructor(options: ServiceRegistryManagerOptions = {}) {
     const webAppDef = SERVICE_CATALOG[HTTP_CONSTANTS.SERVICE_NAME_WEB_APP];
     this.name = options.name || process.env[HTTP_CONSTANTS.ENV_SERVICE_NAME] || webAppDef?.name || HTTP_CONSTANTS.SERVICE_NAME_WEB_APP;
-    this.host = options.host || process.env[HTTP_CONSTANTS.ENV_HOST] || HTTP_CONSTANTS.HOST_LOCALHOST;
+    this.host = options.host || process.env[HTTP_CONSTANTS.ENV_HOST] || process.env.SERVICE_HOST || process.env.HOSTNAME || "";
     this.port = options.port || parseInt(process.env[HTTP_CONSTANTS.ENV_PORT] || String(webAppDef?.defaultPort || HTTP_CONSTANTS.DEFAULT_PORT_WEB_APP), 10);
     this.protocol = options.protocol || webAppDef?.protocol || HTTP_CONSTANTS.PROTOCOL_HTTP;
     this.registryUrl =

@@ -1,4 +1,4 @@
-import { ZodError } from 'zod';
+import { ZodError } from '@observability/shared-infra';
 import { AuthError, ValidationError } from './auth.errors';
 
 export interface StandardApiResponse<T = unknown> {

@@ -21,6 +21,7 @@ const nextConfig: NextConfig = {
       config.resolve = config.resolve || {};
       config.resolve.fallback = {
         ...config.resolve.fallback,
+        crypto: false,
         async_hooks: false,
         fs: false,
         net: false,
