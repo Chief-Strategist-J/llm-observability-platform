@@ -1,0 +1,1 @@
+{"uuid": "e26817ca-a28c-4879-bb0e-89f0f74af3f9", "children": ["123c0b07-5421-4d3e-8b32-75ba6499ed3a"], "befores": [{"name": "_asyncio_loop_factory", "status": "passed", "start": 1787723112523, "stop": 1787723112523}], "afters": [{"name": "_asyncio_loop_factory::<lambda>", "start": 1787723112643}], "start": 1787723112523, "stop": 1787723112644}

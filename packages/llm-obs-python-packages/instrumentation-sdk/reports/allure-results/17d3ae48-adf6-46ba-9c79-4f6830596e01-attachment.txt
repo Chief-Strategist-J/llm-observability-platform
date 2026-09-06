@@ -1,0 +1,115 @@
+{
+    "name": "llm_call",
+    "context": {
+        "trace_id": "0xd636b15bf92e53b065e7152401ce10cb",
+        "span_id": "0x983bc3837eb07134",
+        "trace_state": "[]"
+    },
+    "kind": "SpanKind.INTERNAL",
+    "parent_id": null,
+    "start_time": "2026-08-26T05:21:25.463421Z",
+    "end_time": "2026-08-26T05:21:25.463535Z",
+    "status": {
+        "status_code": "OK"
+    },
+    "attributes": {
+        "llm.pii_detected": false,
+        "llm.injection_attempt": false,
+        "llm.is_sampled": true,
+        "llm.prompt": "hello",
+        "llm.prompt_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "llm.latency_ms_total": 0,
+        "llm.status": "success"
+    },
+    "events": [],
+    "links": [],
+    "resource": {
+        "attributes": {
+            "telemetry.sdk.language": "python",
+            "telemetry.sdk.name": "opentelemetry",
+            "telemetry.sdk.version": "1.44.0",
+            "service.instance.id": "9b784b3b-60fd-45be-8336-5203da377f61",
+            "service.name": "instrumentation-sdk-api",
+            "deployment.env": "dev",
+            "service.version": "0.1.0",
+            "language.package-name": "instrumentation-sdk"
+        },
+        "schema_url": ""
+    }
+}
+{
+    "name": "llm_call",
+    "context": {
+        "trace_id": "0x88d730ee53a11eefce9da7f9d1a3c8ae",
+        "span_id": "0x4afabd265491fd71",
+        "trace_state": "[]"
+    },
+    "kind": "SpanKind.INTERNAL",
+    "parent_id": null,
+    "start_time": "2026-08-26T05:21:25.465870Z",
+    "end_time": "2026-08-26T05:21:25.465958Z",
+    "status": {
+        "status_code": "OK"
+    },
+    "attributes": {
+        "llm.pii_detected": false,
+        "llm.injection_attempt": false,
+        "llm.is_sampled": false,
+        "llm.prompt": "hello",
+        "llm.latency_ms_total": 0,
+        "llm.status": "success"
+    },
+    "events": [],
+    "links": [],
+    "resource": {
+        "attributes": {
+            "telemetry.sdk.language": "python",
+            "telemetry.sdk.name": "opentelemetry",
+            "telemetry.sdk.version": "1.44.0",
+            "service.instance.id": "9b784b3b-60fd-45be-8336-5203da377f61",
+            "service.name": "instrumentation-sdk-api",
+            "deployment.env": "dev",
+            "service.version": "0.1.0",
+            "language.package-name": "instrumentation-sdk"
+        },
+        "schema_url": ""
+    }
+}
+{
+    "name": "llm_call",
+    "context": {
+        "trace_id": "0xf65510fb06a70880094e8d15dc765879",
+        "span_id": "0x18826d3d002c5014",
+        "trace_state": "[]"
+    },
+    "kind": "SpanKind.INTERNAL",
+    "parent_id": null,
+    "start_time": "2026-08-26T05:21:25.480901Z",
+    "end_time": "2026-08-26T05:21:25.480996Z",
+    "status": {
+        "status_code": "OK"
+    },
+    "attributes": {
+        "llm.pii_detected": false,
+        "llm.injection_attempt": false,
+        "llm.is_sampled": false,
+        "llm.prompt": "hello",
+        "llm.latency_ms_total": 0,
+        "llm.status": "success"
+    },
+    "events": [],
+    "links": [],
+    "resource": {
+        "attributes": {
+            "telemetry.sdk.language": "python",
+            "telemetry.sdk.name": "opentelemetry",
+            "telemetry.sdk.version": "1.44.0",
+            "service.instance.id": "9b784b3b-60fd-45be-8336-5203da377f61",
+            "service.name": "instrumentation-sdk-api",
+            "deployment.env": "dev",
+            "service.version": "0.1.0",
+            "language.package-name": "instrumentation-sdk"
+        },
+        "schema_url": ""
+    }
+}

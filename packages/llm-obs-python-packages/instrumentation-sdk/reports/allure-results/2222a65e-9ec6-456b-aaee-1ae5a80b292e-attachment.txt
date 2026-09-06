@@ -1,0 +1,3 @@
+WARNING  opentelemetry.exporter.otlp.proto.grpc.exporter:exporter.py:356 Transient error StatusCode.UNAVAILABLE encountered while exporting traces, retrying in 1s.
+WARNING  opentelemetry.exporter.otlp.proto.grpc.exporter:exporter.py:356 Transient error StatusCode.UNAVAILABLE encountered while exporting traces, retrying in 2s.
+WARNING  opentelemetry.exporter.otlp.proto.grpc.exporter:exporter.py:356 Transient error StatusCode.UNAVAILABLE encountered while exporting traces, retrying in 4s.

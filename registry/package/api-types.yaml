@@ -1,8 +1,0 @@
-packages:
-  - name: api-types
-    language: node
-    version: 1.0.0
-    description: "Shared TypeScript interfaces for the LLM Observability Platform"
-    owner: "@Chief-Strategist-J"
-    stage: 1
-    dependencies: []

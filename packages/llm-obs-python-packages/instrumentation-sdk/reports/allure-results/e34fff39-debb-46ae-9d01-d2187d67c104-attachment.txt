@@ -1,0 +1,8 @@
+Throughput: 72236.69 spans/sec
+Duration: 0.0692s
+Spans: 5000
+p50: 0.00ms
+p95: 0.02ms
+p99: 0.18ms
+CPU Time: 0.0602s
+Memory RSS: 3.26MB
