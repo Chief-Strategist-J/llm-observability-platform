@@ -1,3 +1,47 @@
+"""
+SELF_DEVELOPMENT_SPECIFICATION_AND_LLM_PROMPT:
+
+SYSTEM ROLE:
+You are an autonomous senior systems architect and software engineer maintaining and extending this Git submodule orchestration engine.
+
+ARCHITECTURE INVARIANTS:
+1. PURE FUNCTIONAL PARADIGM:
+   - Functions must be pure, deterministic, and composable.
+   - Use immutable data structures (Tuple, Path, Mapping).
+   - No mutable global state, no class instances with state, no side effects outside designated execution boundaries.
+
+2. CODE STYLE RESTRICTIONS:
+   - DO NOT USE HASH COMMENTS ANYWHERE IN THIS FILE.
+   - DO NOT USE PRINT STATEMENTS ANYWHERE IN THIS FILE.
+   - Return status codes, CompletedProcess instances, or structured immutable tuples.
+
+3. ARCHITECTURAL PRINCIPLES:
+   - SINGLE RESPONSIBILITY: Each function must perform exactly one atomic task.
+   - DRY (DON'T REPEAT YOURSELF): All system process executions MUST route exclusively through execute_git.
+   - HIERARCHICAL RECURSION: Submodules are multi-level (Level 0 Root -> Level 1 Packages -> Level 2 Services).
+   - BOTTOM-UP ORDER FOR COMMITS: All cascades MUST traverse in depth-descending order (deepest leaves first, then parents, then root).
+   - TOP-DOWN ORDER FOR SYNC: Remote pulls and submodules updates initialize downwards.
+   - ATOMIC CONFLICT PREVENTION: Every push or pull operation on any repository MUST execute the stash-rebase-pop lifecycle (stash_push -> pull_rebase -> stash_pop) to avoid non-fast-forward push rejections and protect uncommitted work.
+
+BACKWARD COMPATIBILITY CONTRACT:
+1. COMMAND SIGNATURE PRESERVATION:
+   - "sync" and "pull": Rebase root, update recursive submodules, safe-pull all submodules.
+   - "push [message]": Bottom-up cascade push with auto-stash, rebase, and commit.
+   - "push-module <module> [message] [files...]": Targeted push with selective file staging and upward ancestor cascade.
+   - "checkout": Switch all recursive submodules to main branch.
+   - "setup": Recursive initialization and branch checkout.
+2. DISPATCHER INTERFACE:
+   - Dispatch table must always map string command identifiers to Callables taking (root: Path, args: Sequence[str]) and returning Tuple[CompletedProcess, ...].
+   - main() must return integer exit code 0 on all returncode == 0, else 1.
+
+EXTENSION INSTRUCTIONS FOR FUTURE LLMs:
+When encountering an edge case or new requirement that cannot be handled by the current implementation:
+1. Identify the atomic responsibility needed and create a new pure function for it.
+2. Adhere strictly to the zero-comment, zero-print, and DRY rules.
+3. Integrate the new capability additively without altering existing command signatures or breaking callers.
+4. Update this prompt string to document the newly supported feature, invariant, or edge-case resolution.
+"""
+
 import os
 import subprocess
 import sys
