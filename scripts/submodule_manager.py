@@ -3,7 +3,7 @@ import subprocess
 import sys
 from functools import partial
 from pathlib import Path
-from typing import Callable, Sequence, Tuple
+from typing import Callable, Optional, Sequence, Tuple
 
 def execute_git(cwd: Path, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
@@ -44,20 +44,58 @@ def checkout_branch(repo_path: Path, branch: str = "main") -> subprocess.Complet
     execute_git(repo_path, "checkout", branch)
     return execute_git(repo_path, "pull", "--ff-only", "origin", branch)
 
-def stage_and_commit(repo_path: Path, message: str) -> subprocess.CompletedProcess:
-    execute_git(repo_path, "add", "-A")
+def stage_files(repo_path: Path, files: Sequence[str]) -> subprocess.CompletedProcess:
+    return execute_git(repo_path, "add", *files) if files else execute_git(repo_path, "add", "-A")
+
+def stage_and_commit(repo_path: Path, message: str, files: Sequence[str] = ()) -> subprocess.CompletedProcess:
+    stage_files(repo_path, files)
     return execute_git(repo_path, "commit", "-m", message)
 
 def push_repo(repo_path: Path) -> subprocess.CompletedProcess:
     branch = read_branch(repo_path)
     return execute_git(repo_path, "push", "origin", f"HEAD:{branch}")
 
-def process_repo_push(repo_path: Path, message: str) -> Tuple[subprocess.CompletedProcess, ...]:
+def process_repo_push(repo_path: Path, message: str, files: Sequence[str] = ()) -> Tuple[subprocess.CompletedProcess, ...]:
     actions = []
     if is_dirty(repo_path):
-        actions.append(stage_and_commit(repo_path, message))
+        actions.append(stage_and_commit(repo_path, message, files))
     actions.append(push_repo(repo_path))
     return tuple(actions)
+
+def locate_module(submodules: Sequence[Path], root: Path, identifier: str) -> Optional[Path]:
+    normalized_id = identifier.strip().rstrip("/")
+    for path in submodules:
+        rel_str = str(path.relative_to(root))
+        if path.name == normalized_id or rel_str == normalized_id or rel_str.endswith(f"/{normalized_id}"):
+            return path
+    return None
+
+def collect_ancestor_repos(root: Path, target: Path) -> Tuple[Path, ...]:
+    ancestors = []
+    current = target.parent
+    while current != root and current != current.parent:
+        if (current / ".git").exists():
+            ancestors.append(current)
+        current = current.parent
+    ancestors.append(root)
+    return tuple(ancestors)
+
+def cascade_ancestors_push(ancestors: Sequence[Path], message: str) -> Tuple[subprocess.CompletedProcess, ...]:
+    return tuple(
+        action
+        for repo in ancestors
+        for action in process_repo_push(repo, message)
+    )
+
+def targeted_module_push(root: Path, target_id: str, message: str, files: Sequence[str]) -> Tuple[subprocess.CompletedProcess, ...]:
+    submodules = query_submodules(root)
+    target = locate_module(submodules, root, target_id)
+    if not target:
+        return (subprocess.CompletedProcess(args=(), returncode=1, stderr=f"Unknown module: {target_id}"),)
+    target_results = process_repo_push(target, message, files)
+    ancestors = collect_ancestor_repos(root, target)
+    ancestor_results = cascade_ancestors_push(ancestors, message)
+    return target_results + ancestor_results
 
 def cascade_push(root: Path, message: str) -> Tuple[subprocess.CompletedProcess, ...]:
     submodules = sort_by_depth_descending(query_submodules(root))
@@ -88,11 +126,20 @@ def checkout_all(root: Path) -> Tuple[subprocess.CompletedProcess, ...]:
     submodules = query_submodules(root)
     return tuple(checkout_branch(path, "main") for path in submodules)
 
+def handle_push_module(root: Path, args: Sequence[str]) -> Tuple[subprocess.CompletedProcess, ...]:
+    if not args:
+        return (subprocess.CompletedProcess(args=(), returncode=1, stderr="Module name required"),)
+    target_id = args[0]
+    message = args[1] if len(args) > 1 else f"chore({target_id}): update module"
+    files = args[2:] if len(args) > 2 else ()
+    return targeted_module_push(root, target_id, message, files)
+
 def build_dispatcher() -> dict[str, Callable[[Path, Sequence[str]], Tuple[subprocess.CompletedProcess, ...]]]:
     return {
         "sync": lambda root, args: sync_repo(root),
         "pull": lambda root, args: sync_repo(root),
         "push": lambda root, args: cascade_push(root, args[0] if args else "chore: update submodules"),
+        "push-module": lambda root, args: handle_push_module(root, args),
         "checkout": lambda root, args: checkout_all(root),
         "setup": lambda root, args: setup_repo(root),
     }
