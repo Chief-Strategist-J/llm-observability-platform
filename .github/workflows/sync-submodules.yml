@@ -1,0 +1,45 @@
+name: Sync Submodules to Main
+
+on:
+  schedule:
+    # Run daily at midnight UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+  repository_dispatch:
+    types: [submodule-update]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Sync Submodules
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN || github.token }}
+          submodules: true
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Update submodules to latest main
+        run: |
+          # Fetch and merge latest commits from remote default branch for each submodule
+          git submodule update --remote --merge
+
+          # Check if any submodule changed
+          if git diff --quiet; then
+            echo "All submodules are already up to date with their remote main branch."
+          else
+            echo "Submodules updated. Committing and pushing changes..."
+            git add -A
+            git submodule foreach 'git rev-parse HEAD'
+            git commit -m "chore(submodules): auto-sync submodules to latest commits [skip ci]"
+            git push origin main
+          fi
