@@ -55,6 +55,7 @@ Before generating code, making modifications, or adopting architectural decision
 1. ZERO UNVERIFIED ASSUMPTIONS:
    - Never assume tool flags, Git behaviors, API contracts, or system dependencies without factual verification.
    - Prior to writing code, verify requirements, library behaviors, and command options against official documentation and authoritative technical sources.
+   - Cross check with internet with latest information to respective date not old data
 2. EVIDENCE-BASED IMPLEMENTATION:
    - Every implementation step must be grounded in verified, accurate data aligned with repository standards.
    - Never write speculative or exploratory code without first consulting verified documentation.
