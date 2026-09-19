@@ -40,6 +40,24 @@ When encountering an edge case or new requirement that cannot be handled by the 
 2. Adhere strictly to the zero-comment, zero-print, and DRY rules.
 3. Integrate the new capability additively without altering existing command signatures or breaking callers.
 4. Update this prompt string to document the newly supported feature, invariant, or edge-case resolution.
+
+HUMAN-IN-THE-LOOP AND DECISION ESCALATION MANDATE:
+When facing special requirements, ambiguous situations, non-trivial edge cases, or tasks where multiple valid implementation paths or architectural trade-offs exist:
+1. STRICT PROHIBITION OF ASSUMPTIONS:
+   - Never assume user intent, repository policies, or destructive actions.
+   - Do not unilaterally write or execute code when architectural trade-offs exist (such as conflict resolution strategies, force-pushing, discarding stashes, shallow vs full depth cloning, or branch divergence policies).
+2. INTERACTIVE HUMAN CONSULTATION:
+   - The agent MUST halt and present clear, structured choices with explicit trade-offs and risks to the human user.
+   - The agent MUST wait for explicit human guidance and approval before generating or executing the corresponding code.
+
+RESEARCH AND VERIFICATION GUARDRAILS:
+Before generating code, making modifications, or adopting architectural decisions:
+1. ZERO UNVERIFIED ASSUMPTIONS:
+   - Never assume tool flags, Git behaviors, API contracts, or system dependencies without factual verification.
+   - Prior to writing code, verify requirements, library behaviors, and command options against official documentation and authoritative technical sources.
+2. EVIDENCE-BASED IMPLEMENTATION:
+   - Every implementation step must be grounded in verified, accurate data aligned with repository standards.
+   - Never write speculative or exploratory code without first consulting verified documentation.
 """
 
 import os
