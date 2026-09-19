@@ -40,6 +40,24 @@ def read_branch(repo_path: Path) -> str:
     branch = execute_git(repo_path, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
     return "main" if branch == "HEAD" or not branch else branch
 
+def stash_push(repo_path: Path) -> subprocess.CompletedProcess:
+    return execute_git(repo_path, "stash", "push", "-u", "-m", "submodule-manager-autostash")
+
+def stash_pop(repo_path: Path) -> subprocess.CompletedProcess:
+    return execute_git(repo_path, "stash", "pop")
+
+def pull_rebase(repo_path: Path, branch: str) -> subprocess.CompletedProcess:
+    return execute_git(repo_path, "pull", "--rebase", "origin", branch)
+
+def safe_pull_repo(repo_path: Path) -> Tuple[subprocess.CompletedProcess, ...]:
+    branch = read_branch(repo_path)
+    if is_dirty(repo_path):
+        push_res = stash_push(repo_path)
+        pull_res = pull_rebase(repo_path, branch)
+        pop_res = stash_pop(repo_path)
+        return (push_res, pull_res, pop_res)
+    return (pull_rebase(repo_path, branch),)
+
 def checkout_branch(repo_path: Path, branch: str = "main") -> subprocess.CompletedProcess:
     execute_git(repo_path, "checkout", branch)
     return execute_git(repo_path, "pull", "--ff-only", "origin", branch)
@@ -56,11 +74,12 @@ def push_repo(repo_path: Path) -> subprocess.CompletedProcess:
     return execute_git(repo_path, "push", "origin", f"HEAD:{branch}")
 
 def process_repo_push(repo_path: Path, message: str, files: Sequence[str] = ()) -> Tuple[subprocess.CompletedProcess, ...]:
-    actions = []
+    pull_actions = safe_pull_repo(repo_path)
+    commit_actions = []
     if is_dirty(repo_path):
-        actions.append(stage_and_commit(repo_path, message, files))
-    actions.append(push_repo(repo_path))
-    return tuple(actions)
+        commit_actions.append(stage_and_commit(repo_path, message, files))
+    push_actions = [push_repo(repo_path)]
+    return pull_actions + tuple(commit_actions) + tuple(push_actions)
 
 def locate_module(submodules: Sequence[Path], root: Path, identifier: str) -> Optional[Path]:
     normalized_id = identifier.strip().rstrip("/")
@@ -108,13 +127,17 @@ def cascade_push(root: Path, message: str) -> Tuple[subprocess.CompletedProcess,
     return submodule_results + root_results
 
 def sync_repo(root: Path) -> Tuple[subprocess.CompletedProcess, ...]:
-    pull_root = execute_git(root, "pull", "--ff-only", "origin", "main")
-    update_submodules = execute_git(
-        root, "submodule", "update", "--init", "--recursive", "--remote", "--merge"
+    pull_root = safe_pull_repo(root)
+    update_submodules = (
+        execute_git(root, "submodule", "update", "--init", "--recursive", "--remote", "--merge"),
     )
     submodules = query_submodules(root)
-    checkout_results = tuple(checkout_branch(path, "main") for path in submodules)
-    return (pull_root, update_submodules) + checkout_results
+    submodule_pulls = tuple(
+        action
+        for path in submodules
+        for action in (execute_git(path, "checkout", "main"),) + safe_pull_repo(path)
+    )
+    return pull_root + update_submodules + submodule_pulls
 
 def setup_repo(root: Path) -> Tuple[subprocess.CompletedProcess, ...]:
     init_update = execute_git(root, "submodule", "update", "--init", "--recursive")
