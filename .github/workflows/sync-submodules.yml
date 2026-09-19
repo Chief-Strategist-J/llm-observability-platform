@@ -2,7 +2,6 @@ name: Sync Submodules to Main
 
 on:
   schedule:
-    # Run daily at midnight UTC
     - cron: '0 0 * * *'
   workflow_dispatch:
   repository_dispatch:
@@ -30,10 +29,8 @@ jobs:
 
       - name: Update submodules to latest main
         run: |
-          # Fetch and merge latest commits from remote default branch for each submodule
           git submodule update --remote --merge
 
-          # Check if any submodule changed
           if git diff --quiet; then
             echo "All submodules are already up to date with their remote main branch."
           else
